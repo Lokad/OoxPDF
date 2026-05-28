@@ -12219,6 +12219,49 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)(optionsType.GetProperty("DisplayBlanksAs")?.GetValue(options) ?? default(PptxSceneChartDisplayBlanksAs)));
     }
 
+    public static void PptxChartAreaOptionsUseSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart>
+                <c:dispBlanksAs val="futureBlankPolicy"/>
+                <c:plotArea>
+                  <c:areaChart>
+                    <c:grouping val="bogus"/>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  </c:areaChart>
+                </c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+        TestAssert.Equal(PptxSceneChartGrouping.Unknown, plot.GroupingKind);
+        TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Unknown, chart.Options.DisplayBlanksAsKind);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XDocument mismatchedChartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart>
+                <c:dispBlanksAs val="span"/>
+                <c:plotArea><c:areaChart><c:grouping val="percentStacked"/></c:areaChart></c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """);
+        XElement mismatchedXmlFallback = mismatchedChartXml.Descendants(c + "areaChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartAreaOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart area-option resolver.");
+        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved area options.");
+        Type optionsType = options.GetType();
+
+        TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
+        TestAssert.True((bool)(optionsType.GetProperty("Stacked")?.GetValue(options) ?? true) == false, "Expected unknown scene grouping to use the supplied scene default, not fallback XML percentStacked.");
+        TestAssert.True((bool)(optionsType.GetProperty("PercentStacked")?.GetValue(options) ?? true) == false, "Expected unknown scene grouping to stay non-percent-stacked.");
+        TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)(optionsType.GetProperty("DisplayBlanksAs")?.GetValue(options) ?? default(PptxSceneChartDisplayBlanksAs)));
+    }
+
     public static void PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

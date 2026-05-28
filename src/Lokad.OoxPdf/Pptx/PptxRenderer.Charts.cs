@@ -437,6 +437,22 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
     }
 
+    private readonly record struct ChartAreaPlotOptions(
+        PptxSceneChartGrouping Grouping,
+        bool Stacked,
+        bool PercentStacked,
+        PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
+
+    private static ChartAreaPlotOptions ReadSceneOrXmlChartAreaOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
+    {
+        PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping);
+        return new ChartAreaPlotOptions(
+            grouping,
+            IsStackedChartGrouping(grouping),
+            IsPercentStackedChartGrouping(grouping),
+            ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
+    }
+
     private static double ReadSceneOrXmlChartGapWidth(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is not null
@@ -1190,17 +1206,15 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSceneOrXmlChartSeriesVectors(areaPlot, areaChart, workbook);
             if (CountRenderableSeries(areaSeriesVectors) != 0)
             {
-                PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(areaPlot, areaChart, PptxSceneChartGrouping.Standard);
-                bool stacked = IsStackedChartGrouping(grouping);
-                bool percentStacked = IsPercentStackedChartGrouping(grouping);
+                ChartAreaPlotOptions areaOptions = ReadSceneOrXmlChartAreaOptions(sceneChart, areaPlot, chartXml, areaChart, PptxSceneChartGrouping.Standard);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme, ChartSeriesInheritedStrokeWidth);
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, areaPlot, chartXml, areaChart).FirstOrDefault();
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, areaPlot, chartXml, areaChart);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetAreaChartValueExtents(areaSeriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: stacked && !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
-                ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), percentStacked);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetAreaChartValueExtents(areaSeriesVectors, areaOptions.Stacked, areaOptions.PercentStacked), areaOptions.PercentStacked, useNearMaximumHeadroom: areaOptions.Stacked && !areaOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
+                ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), areaOptions.PercentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueAxis.SceneAxis, valueAxis.XmlAxis);
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueAxis.SceneAxis, valueAxis.XmlAxis, theme);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, areaPlot, chartXml, theme, areaChart);
@@ -1213,8 +1227,8 @@ internal sealed partial class PptxRenderer
                     chartLayout.PlotAreaBox,
                     plotBox,
                     areaSeriesVectors,
-                    stacked,
-                    percentStacked,
+                    areaOptions.Stacked,
+                    areaOptions.PercentStacked,
                     seriesFills,
                     seriesStrokes,
                     ReadSceneOrXmlMajorGridlines(valueAxis.SceneAxis, valueAxis.XmlAxis),
@@ -1226,7 +1240,7 @@ internal sealed partial class PptxRenderer
                     axisUnits,
                     ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxis.XmlAxis, valueExtents),
                     valueAxisReversed,
-                    ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
+                    areaOptions.DisplayBlanksAs);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
                     fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis)));
@@ -1234,7 +1248,7 @@ internal sealed partial class PptxRenderer
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false, defaultNumberFormat: percentStacked ? "0%" : null));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false, defaultNumberFormat: areaOptions.PercentStacked ? "0%" : null));
                 }
 
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, areaPlot, areaChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));

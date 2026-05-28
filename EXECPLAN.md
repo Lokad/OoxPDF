@@ -12077,6 +12077,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `332` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Consolidated area-chart renderer option resolution behind `ChartAreaPlotOptions`.
+Area rendering now resolves grouping, stacked/percent-stacked state, and chart-wide `dispBlanksAs` once at the
+scene/XML boundary before computing area extents, value-axis percent formatting, and blank-point rendering.
+The XML-only fallback path remains intact, but supported scene charts no longer spread independent scalar
+bridge reads for these area options across the render branch.
+
+The new mismatch guard uses an area chart whose scene carries an unknown grouping and unknown blank policy,
+while the fallback XML says `percentStacked` and `dispBlanksAs=span`. The resolved renderer options must keep
+the scene-owned defaults (`standard`, not stacked/percent-stacked, `displayBlanksAs=gap`) rather than merging
+fallback XML into the active scene path. This continues the long-term cleanup of renderer-local XML heuristics
+without changing area layout constants or Office metric assumptions.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `92` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `333` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
 auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
 and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing
