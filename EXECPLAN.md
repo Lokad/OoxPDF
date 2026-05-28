@@ -3897,6 +3897,16 @@ High-priority actions:
   placeholder style maps. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed;
   focused non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped); focused non-slow
   `pptx-charts` passed (`128` passed, `0` failed, `0` skipped).
+  2026-05-28 progress: direct line parsing now uses a shared `PptxLineStyleReader` that accepts an explicit
+  `PptxColorMap`; scene paths continue to call it with the owning source map, while direct renderer wrappers
+  deliberately keep default-map behavior. This removes another copied line-width/color parser and makes the
+  remaining direct-renderer color-map gap explicit instead of hidden behind duplicate code. Keep this item open
+  for direct renderer-only color paths, built-in table style aliases, inherited placeholder style maps, and
+  chart-style/color-style cascade ordering. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed; focused non-slow `pptx-shapes` passed (`18 passed, 0 failed, 0 skipped`); focused non-slow
+  `pptx-charts` passed (`136 passed, 0 failed, 0 skipped`); focused non-slow `pptx-model` passed
+  (`25 passed, 0 failed, 1 skipped`); full non-slow console runner passed
+  (`409 passed, 0 failed, 7 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

@@ -5267,11 +5267,7 @@ internal sealed class PptxSceneBuilder
         out double alpha,
         double? fallbackLineWidth = null)
     {
-        XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
-        lineWidth = line?.Attribute("w") is { } widthAttribute
-            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
-            : fallbackLineWidth ?? 1d;
-        return TryReadSolidColorWithAlpha(line, theme, colorMap, out color, out alpha);
+        return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, fallbackLineWidth);
     }
 
     private static bool TryReadPresetDash(XElement? shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)

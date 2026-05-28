@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Xml.Linq;
-using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -45,10 +43,6 @@ internal sealed partial class PptxRenderer
         out double alpha,
         double? fallbackLineWidth = null)
     {
-        XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
-        lineWidth = line?.Attribute("w") is { } widthAttribute
-            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
-            : fallbackLineWidth ?? 1d;
-        return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
+        return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, PptxColorMap.Default, out color, out lineWidth, out alpha, fallbackLineWidth);
     }
 }
