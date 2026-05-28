@@ -87,7 +87,7 @@ internal sealed partial class PptxRenderer
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
-            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver));
+            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
             return;
         }
 
@@ -98,7 +98,7 @@ internal sealed partial class PptxRenderer
             {
                 EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
                 fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
-                fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver));
+                fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, workbook: null, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
                 return;
             }
         }
@@ -1095,7 +1095,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
                 var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, workbook: workbook));
-                ChartLayout chartLayout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, barPlot, barChart, barOptions, fontResolver);
+                ChartLayout chartLayout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
@@ -4232,7 +4232,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PresentationFontResolver fontResolver)
+    private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver fontResolver)
     {
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         if (string.IsNullOrWhiteSpace(title))
@@ -4265,7 +4265,7 @@ internal sealed partial class PptxRenderer
         double fallbackBaselineY = y + height * titleBaselineRatio;
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
-            : ResolveChartTitleBaselineY(document, theme, bounds, chartXml, sceneChart, fallbackBaselineY, fontSize, fontResolver);
+            : ResolveChartTitleBaselineY(document, theme, bounds, chartXml, sceneChart, workbook, plotVisibleOnly, fallbackBaselineY, fontSize, fontResolver);
         RenderChartShapeStyle(graphics, x, y, width, height, ReadSceneOrXmlChartTitleShapeStyle(theme, sceneChart, chartXml));
         double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
         double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
@@ -4797,7 +4797,7 @@ internal sealed partial class PptxRenderer
             ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Radar).Any();
     }
 
-    private static double ResolveChartTitleBaselineY(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, double fallbackBaselineY, double fontSize, PresentationFontResolver? fontResolver)
+    private static double ResolveChartTitleBaselineY(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, double fallbackBaselineY, double fontSize, PresentationFontResolver? fontResolver)
     {
         XElement? barChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
         if (barChart is null)
@@ -4808,7 +4808,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar);
         ChartBarPlotOptions barOptions = ReadSceneOrXmlChartBarOptions(barPlot, barChart, PptxSceneChartGrouping.Clustered);
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
-        ChartLayout layout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, barPlot, barChart, barOptions, fontResolver);
+        ChartLayout layout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
         ChartPlotBox titleAnchorBox = layout.PlotBox;
         if (horizontalBars && layout.ManualPlotLayoutApplied && IsAutoGeneratedChartTitle(sceneChart))
         {
@@ -4824,6 +4824,8 @@ internal sealed partial class PptxRenderer
                 ReadSceneOrXmlChartTitleText(sceneChart, chartXml),
                 legend,
                 barOptions,
+                workbook,
+                plotVisibleOnly,
                 ignoreManualPlotLayout: true,
                 fontResolver: fontResolver).PlotBox;
         }
@@ -8428,13 +8430,15 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? barPlot,
         XElement barChart,
         ChartBarPlotOptions barOptions,
+        ChartWorkbookData? workbook = null,
+        bool plotVisibleOnly = true,
         PresentationFontResolver? fontResolver = null)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, frame, chartXml, sceneChart, barPlot, barChart, title, legend, barOptions, fontResolver: fontResolver);
+        ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, frame, chartXml, sceneChart, barPlot, barChart, title, legend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
@@ -8448,6 +8452,8 @@ internal sealed partial class PptxRenderer
         string? title,
         ChartLegendLayout legend,
         ChartBarPlotOptions barOptions,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly,
         bool ignoreManualPlotLayout = false,
         PresentationFontResolver? fontResolver = null)
     {
@@ -8467,7 +8473,7 @@ internal sealed partial class PptxRenderer
         {
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.HorizontalBarTitleNoLegend);
         }
-        else if (hasTitle && !hasLegend && HasInsideValueAxisCrossing(sceneChart, barPlot, barChart, chartXml, barOptions))
+        else if (hasTitle && !hasLegend && HasInsideValueAxisCrossing(sceneChart, barPlot, barChart, chartXml, barOptions, workbook, plotVisibleOnly))
         {
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarTitleNoLegendInsideCrossing);
         }
@@ -8481,7 +8487,7 @@ internal sealed partial class PptxRenderer
         }
 
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(theme, defaultPlotBox, frame, chartXml, sceneChart, horizontalBars, fontResolver);
-        defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(theme, defaultPlotBox, frame, chartXml, sceneChart, barPlot, barChart, barOptions, fontResolver);
+        defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(theme, defaultPlotBox, frame, chartXml, sceneChart, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, frame, chartXml, sceneChart, horizontalBars, hasTitle, hasLegend);
         if (ignoreManualPlotLayout)
         {
@@ -8499,9 +8505,9 @@ internal sealed partial class PptxRenderer
         return ResolveBarManualPlotLayoutTarget(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars);
     }
 
-    private static bool HasInsideValueAxisCrossing(PptxSceneChart? sceneChart, PptxSceneChartPlot? barPlot, XElement barChart, XDocument chartXml, ChartBarPlotOptions barOptions)
+    private static bool HasInsideValueAxisCrossing(PptxSceneChart? sceneChart, PptxSceneChartPlot? barPlot, XElement barChart, XDocument chartXml, ChartBarPlotOptions barOptions, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart);
+        IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
         if (CountRenderableSeries(seriesVectors) == 0)
         {
             return false;
@@ -8747,6 +8753,8 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? barPlot,
         XElement barChart,
         ChartBarPlotOptions barOptions,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly,
         PresentationFontResolver? fontResolver)
     {
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
@@ -8768,7 +8776,7 @@ internal sealed partial class PptxRenderer
             return plotBox;
         }
 
-        IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart);
+        IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
         if (CountRenderableSeries(seriesVectors) == 0)
         {
             return plotBox;

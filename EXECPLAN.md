@@ -2307,6 +2307,15 @@ High-priority actions:
     `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, focused non-slow `pptx-charts`
     passed (`133 passed, 0 failed, 0 skipped`), and full non-slow console runner passed
     (`406 passed, 0 failed, 7 skipped`).
+  - [x] 2026-05-28 close the remaining bar-layout cache-only vector reads:
+    the bar plot-box path still re-read series vectors without workbook/`plotVisOnly` inside the inside-crossing
+    preset decision and the stacked value-axis label reserve, and chart-title baseline placement reused that
+    same degraded layout path. Bar layout and title baseline placement now carry the same workbook and
+    visibility policy as chart rendering, and an audit found no remaining two-argument
+    `ReadSceneOrXmlChartSeriesVectors(plot, chart)` calls. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, focused non-slow `pptx-charts`
+    passed (`133 passed, 0 failed, 0 skipped`), and full non-slow console runner passed
+    (`406 passed, 0 failed, 7 skipped`).
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
