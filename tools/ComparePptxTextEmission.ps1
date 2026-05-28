@@ -291,6 +291,53 @@ function Group-BranchNumericRanges($items, [hashtable] $fields) {
     )
 }
 
+function Group-BranchDistinctNumericValues($items, [hashtable] $fields, [int] $limit) {
+    $branches = @($items | ForEach-Object { BranchKey $_ } | Sort-Object -Unique)
+    return @(
+        foreach ($fieldName in ($fields.Keys | Sort-Object)) {
+            $propertyName = [string]$fields[$fieldName]
+            [pscustomobject]@{
+                Field = $fieldName
+                Property = $propertyName
+                Branches = @(
+                    foreach ($branch in $branches) {
+                        $valueCounts = @{}
+                        foreach ($item in ($items | Where-Object { (BranchKey $_) -eq $branch })) {
+                            $value = OptionalDouble $item $propertyName
+                            if ($null -eq $value) {
+                                continue
+                            }
+
+                            $key = RoundedKey $value
+                            if ($valueCounts.ContainsKey($key)) {
+                                $valueCounts[$key]++
+                            }
+                            else {
+                                $valueCounts[$key] = 1
+                            }
+                        }
+
+                        $sortedValues = @($valueCounts.Keys | Sort-Object { [double]$_ })
+                        [pscustomobject]@{
+                            Branch = $branch
+                            DistinctCount = $sortedValues.Count
+                            Values = @(
+                                foreach ($key in ($sortedValues | Select-Object -First $limit)) {
+                                    [pscustomobject]@{
+                                        Value = [double]$key
+                                        Count = $valueCounts[$key]
+                                    }
+                                }
+                            )
+                            Truncated = $sortedValues.Count -gt $limit
+                        }
+                    }
+                )
+            }
+        }
+    )
+}
+
 function Find-BranchRangeSeparators($items, [hashtable] $fields) {
     $mainItems = @($items | Where-Object { (BranchKey $_) -eq "main-grid" })
     $secondaryBranches = @($items |
@@ -323,6 +370,69 @@ function Find-BranchRangeSeparators($items, [hashtable] $fields) {
                     BranchMin = $branchRange.Min
                     BranchMax = $branchRange.Max
                     RangesOverlap = $overlaps
+                }
+            }
+        }
+    )
+}
+
+function Find-BranchDistinctValueSeparators($items, [hashtable] $fields) {
+    $mainItems = @($items | Where-Object { (BranchKey $_) -eq "main-grid" })
+    $secondaryBranches = @($items |
+        ForEach-Object { BranchKey $_ } |
+        Where-Object { $_ -ne "main-grid" -and $_ -ne "(missing)" } |
+        Sort-Object -Unique)
+
+    return @(
+        foreach ($fieldName in ($fields.Keys | Sort-Object)) {
+            $propertyName = [string]$fields[$fieldName]
+            $mainValueSet = @{}
+            foreach ($item in $mainItems) {
+                $value = OptionalDouble $item $propertyName
+                if ($null -eq $value) {
+                    continue
+                }
+
+                $mainValueSet[(RoundedKey $value)] = $true
+            }
+
+            foreach ($branch in $secondaryBranches) {
+                $branchItems = @($items | Where-Object { (BranchKey $_) -eq $branch })
+                $branchValueCounts = @{}
+                foreach ($item in $branchItems) {
+                    $value = OptionalDouble $item $propertyName
+                    if ($null -eq $value) {
+                        continue
+                    }
+
+                    $key = RoundedKey $value
+                    if ($branchValueCounts.ContainsKey($key)) {
+                        $branchValueCounts[$key]++
+                    }
+                    else {
+                        $branchValueCounts[$key] = 1
+                    }
+                }
+
+                $uniqueValues = @($branchValueCounts.Keys |
+                    Where-Object { -not $mainValueSet.ContainsKey($_) } |
+                    Sort-Object { [double]$_ })
+                [pscustomobject]@{
+                    Field = $fieldName
+                    Property = $propertyName
+                    Branch = $branch
+                    MainDistinctCount = $mainValueSet.Count
+                    BranchDistinctCount = $branchValueCounts.Count
+                    BranchDistinctValuesAbsentFromMainCount = $uniqueValues.Count
+                    BranchDistinctValuesAbsentFromMain = @(
+                        foreach ($key in ($uniqueValues | Select-Object -First 64)) {
+                            [pscustomobject]@{
+                                Value = [double]$key
+                                Count = $branchValueCounts[$key]
+                            }
+                        }
+                    )
+                    Truncated = $uniqueValues.Count -gt 64
                 }
             }
         }
@@ -578,7 +688,7 @@ if (HasValue $OutputSummaryJson) {
     $numericBranchFields = [ordered]@{
         CandidateBaselineFromPageTop = "CandBaselineFromPageTop"
         CandidateBaselineFromShapeTop = "CandBaselineFromShapeTop"
-        CandidateBaselineY = "CandidateBaselineY"
+        CandidateBaselineY = "CandBaselineY"
         CandidateFrameHeight = "CandFrameShapeHeight"
         CandidateFrameTopY = "CandFrameShapeTopY"
         CandidateLineTopFromShapeTop = "CandLineTopFromShapeTop"
@@ -597,7 +707,9 @@ if (HasValue $OutputSummaryJson) {
         FontBranchCounts = Group-Count $rowsArray { param($row) BranchKey $row }
         FontBranchExtents = Group-BranchExtents $rowsArray
         FontBranchNumericRanges = Group-BranchNumericRanges $rowsArray $numericBranchFields
+        FontBranchDistinctNumericValues = Group-BranchDistinctNumericValues $rowsArray $numericBranchFields 64
         FontBranchRangeSeparators = Find-BranchRangeSeparators $rowsArray $numericBranchFields
+        FontBranchDistinctValueSeparators = Find-BranchDistinctValueSeparators $rowsArray $numericBranchFields
         RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
         ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
         ByParagraphIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandParagraphIndex) + "|" + (BranchKey $row) }

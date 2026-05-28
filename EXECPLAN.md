@@ -1282,6 +1282,15 @@ High-priority actions:
     tempting but brittle "apply +0.024 in this Y band" implementation. The next probe needs a stronger structural
     discriminator, likely by varying page size or Office text-matrix/page-coordinate quantization while holding local
     text layout constant.
+  - [x] 2026-05-28: Add exact-value branch separator diagnostics before attempting another `/Tf` rule.
+    `tools/ComparePptxTextEmission.ps1 -OutputSummaryJson` now emits `FontBranchDistinctNumericValues` and
+    `FontBranchDistinctValueSeparators`, and the summary field map now correctly reads `CandBaselineY` instead of a
+    non-existent `CandidateBaselineY` property. Regenerating the ignored `font-size-quantization-y-scan-21pt-fine`
+    and `wrap13b` branch summaries preserves the important asymmetry: the fine Y-scan has secondary-only absolute
+    page/baseline/frame-top/line-top values but identical local line geometry, while `wrap13b` has no exact-value
+    separation on frame top or text width and only partial separation on local line offsets. This keeps the renderer
+    unchanged and strengthens the next long-term requirement: the secondary branch needs an Office page/text-matrix
+    quantization model validated across page/layout variants, not a rule keyed to any one coordinate list.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and
