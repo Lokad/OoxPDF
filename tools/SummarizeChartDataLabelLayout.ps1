@@ -59,6 +59,61 @@ function BoundsDelta($reference, $candidate) {
         Select-Object -ExpandProperty Maximum
 }
 
+function Select-PrimaryKind($items, [string] $kind) {
+    $matches = @($items | Where-Object { [string]$_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX)
+    if ($matches.Count -eq 0) {
+        return $null
+    }
+
+    return $matches[0]
+}
+
+function Quadrant($item, $box) {
+    if ($null -eq $item -or $null -eq $box) {
+        return ""
+    }
+
+    $horizontal = if ((CenterX $item) -lt (CenterX $box)) { "left" } else { "right" }
+    $vertical = if ((CenterY $item) -lt (CenterY $box)) { "top" } else { "bottom" }
+    return "$vertical-$horizontal"
+}
+
+function Manual-Quadrant($layout) {
+    $x = 0d
+    $y = 0d
+    $hasX = [double]::TryParse([string]$layout.X, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$x)
+    $hasY = [double]::TryParse([string]$layout.Y, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$y)
+    if (-not $hasX -or -not $hasY) {
+        return ""
+    }
+
+    $horizontal = if ($x -lt 0d) { "left" } else { "right" }
+    $vertical = if ($y -lt 0d) { "top" } else { "bottom" }
+    return "$vertical-$horizontal"
+}
+
+function Relative-Center($item, $box, [string] $axis) {
+    if ($null -eq $item -or $null -eq $box) {
+        return $null
+    }
+
+    if ($axis -eq "x") {
+        $width = [double]$box.Width
+        if ($width -le 0d) {
+            return $null
+        }
+
+        return Round (((CenterX $item) - (CenterX $box)) / $width)
+    }
+
+    $height = [double]$box.Height
+    if ($height -le 0d) {
+        return $null
+    }
+
+    return Round (((CenterY $item) - (CenterY $box)) / $height)
+}
+
 function Format-Bounds($item) {
     if ($null -eq $item) {
         return ""
@@ -238,6 +293,29 @@ function Match-Nearest($referenceItems, $candidateItems, [string] $kind) {
     return ,$rows.ToArray()
 }
 
+function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters, $candidateClusters, $referencePlotBox, $candidatePlotBox) {
+    $rows = New-Object System.Collections.Generic.List[object]
+    foreach ($layout in $manualLayouts) {
+        $quadrant = Manual-Quadrant $layout
+        $referenceCluster = @($referenceClusters | Where-Object { (Quadrant $_ $referencePlotBox) -eq $quadrant } | Sort-Object -Property MinY, MinX | Select-Object -First 1)[0]
+        $candidateCluster = @($candidateClusters | Where-Object { (Quadrant $_ $candidatePlotBox) -eq $quadrant } | Sort-Object -Property MinY, MinX | Select-Object -First 1)[0]
+        $rows.Add([pscustomobject]@{
+            Index = [string]$layout.Index
+            ManualQuadrant = $quadrant
+            ManualX = [string]$layout.X
+            ManualY = [string]$layout.Y
+            ReferenceClusterBounds = Format-Bounds $referenceCluster
+            ReferenceClusterRelativeX = Relative-Center $referenceCluster $referencePlotBox "x"
+            ReferenceClusterRelativeY = Relative-Center $referenceCluster $referencePlotBox "y"
+            CandidateClusterBounds = Format-Bounds $candidateCluster
+            CandidateClusterRelativeX = Relative-Center $candidateCluster $candidatePlotBox "x"
+            CandidateClusterRelativeY = Relative-Center $candidateCluster $candidatePlotBox "y"
+        })
+    }
+
+    return ,$rows.ToArray()
+}
+
 function Ensure-ChartTextStructures($side, $textOperations, $chartStructures, $chartTextStructures) {
     if (-not [string]::IsNullOrWhiteSpace($chartTextStructures) -and (Test-Path -LiteralPath $chartTextStructures)) {
         return $chartTextStructures
@@ -290,10 +368,13 @@ $candidateLabelClusters = Group-TextClusters $candidateLabels
 $referenceLeaderLines = Select-Kind $referenceGraphics "DataLabelLeaderLineCandidate"
 $candidateLeaderLines = Select-Kind $candidateGraphics "DataLabelLeaderLineCandidate"
 $chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml
+$referencePolarPlotBox = Select-PrimaryKind $referenceGraphics "PolarPlotBoxCandidate"
+$candidatePolarPlotBox = Select-PrimaryKind $candidateGraphics "PolarPlotBoxCandidate"
 
 $labelMatches = Match-Nearest $referenceLabels $candidateLabels "DataLabelText"
 $labelClusterMatches = Match-Nearest $referenceLabelClusters $candidateLabelClusters "DataLabelTextCluster"
 $leaderLineMatches = Match-Nearest $referenceLeaderLines $candidateLeaderLines "DataLabelLeaderLineCandidate"
+$manualLayoutCoordinateEvidence = Build-ManualLayoutCoordinateEvidence $chartManualLayouts $referenceLabelClusters $candidateLabelClusters $referencePolarPlotBox $candidatePolarPlotBox
 
 $summary = [pscustomobject]@{
     DataLabelTextReferenceCount = $referenceLabels.Count
@@ -307,6 +388,7 @@ $summary = [pscustomobject]@{
     DataLabelLeaderLineMaxNearestBoundsDelta = if ($leaderLineMatches.Count -eq 0) { $null } else { ($leaderLineMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
     ChartManualLayoutCount = $chartManualLayouts.Count
     ChartManualLayouts = $chartManualLayouts
+    DataLabelManualLayoutCoordinateEvidence = $manualLayoutCoordinateEvidence
     DataLabelTextReferenceClusters = $referenceLabelClusters
     DataLabelTextCandidateClusters = $candidateLabelClusters
     DataLabelTextMatches = $labelMatches
@@ -320,6 +402,12 @@ if ($chartManualLayouts.Count -gt 0) {
     Write-Host ""
     Write-Host "Chart data-label manual layouts:"
     $chartManualLayouts | Format-Table -AutoSize Index, Position, X, Y, Width, Height, XMode, YMode, WidthMode, HeightMode, ShowCategoryName, ShowPercent, ShowLeaderLines
+}
+
+if ($manualLayoutCoordinateEvidence.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Data-label manual-layout coordinate evidence:"
+    $manualLayoutCoordinateEvidence | Format-Table -AutoSize Index, ManualQuadrant, ManualX, ManualY, ReferenceClusterRelativeX, ReferenceClusterRelativeY, CandidateClusterRelativeX, CandidateClusterRelativeY
 }
 
 if ($labelMatches.Count -gt 0) {

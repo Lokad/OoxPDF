@@ -2586,6 +2586,13 @@ High-priority actions:
     into public-safe label clusters, reporting reference/candidate cluster counts `4/4` and max nearest
     cluster bounds delta `262.481pt` on run `20260528-151601`; this keeps future coordinate-basis work focused
     on whole labels instead of individual category/percent text fragments.
+    2026-05-28 update: extended the same summary tool to correlate each source manual-layout record with
+    reference/candidate label clusters by quadrant around the polar plot box. Run `20260528-152722` now records
+    public-safe relative cluster centers beside the source factors: for example the top-left label has manual
+    `x=-0.7702` and Office relative X `-0.7979`, while top-right has manual `x=0.6602` and Office relative X
+    `0.6778`; Y factors and at least one lower-left X value do not line up as directly. This is enough to
+    reject a single symmetric x/y scaling shortcut and points the next investigation at Office's conversion
+    from COM label positions into `c:manualLayout`, including label-box size and quadrant-specific anchoring.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
