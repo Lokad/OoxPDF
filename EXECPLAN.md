@@ -12560,6 +12560,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `104` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `345` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Exposed chart style/color-style provenance through private-safe scene inspection.
+`PptxSceneNodeSnapshot` now reports chart color-style presence, part name, `meth`, `id`, resolved-color
+count, chart style-part presence, part name, `id`, typed style-entry count, and entry role names. This keeps
+private diagnostics aligned with the scene-owned Office structures already used by the renderer, instead of
+forcing private investigations back to raw package relationships or XML dumps.
+
+This is intentionally structural and behavior-neutral. A gap found while adding the snapshot checks remains
+open: `ChartColorStyleColorCount` is the count of resolved palette colors, not a raw count of every
+`colorsN.xml` color declaration or variation branch. If future Office-PDF evidence needs to compare raw
+color-style declarations against resolved palette choices, the scene model should gain a typed declaration
+inventory rather than exposing raw XML through diagnostics.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted slow
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-charts` passed with `104` tests,
+`0` failures, and `0` skips; full non-slow console runner passed with `345` tests, `0` failures, and `7`
+slow skips.
+
 Revision note, 2026-05-28: Exposed rejected keyed chart overrides through private-safe scene inspection.
 `PptxSceneNodeSnapshot` now reports aggregate rejected `c:dPt` and `c:dLbl` index-token counts and raw
 index tokens for chart nodes, fed from the scene-owned sidecars instead of a second XML scan. This turns

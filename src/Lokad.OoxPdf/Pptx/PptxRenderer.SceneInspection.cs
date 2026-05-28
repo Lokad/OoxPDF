@@ -41,6 +41,9 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
         PptxSceneChartManualLayout? legendLayout = legend?.Layout;
+        IReadOnlyList<string> chartStyleEntryRoles = node.Chart?.StylePart.Entries
+            .Select(entry => entry.Role)
+            .ToArray() ?? [];
         IReadOnlyList<string> rejectedPointStyleIndexValues = ReadRejectedPointStyleIndexValues(node.Chart);
         IReadOnlyList<string> rejectedDataLabelOverrideIndexValues = ReadRejectedDataLabelOverrideIndexValues(node.Chart);
         return new PptxSceneNodeSnapshot(
@@ -78,6 +81,16 @@ internal sealed partial class PptxRenderer
             node.Chart is not null,
             node.Chart?.Plots.Count ?? 0,
             node.Chart?.Axes.Count ?? 0,
+            node.Chart?.ColorStyle.IsDefined ?? false,
+            node.Chart?.ColorStyle.PartName ?? string.Empty,
+            node.Chart?.ColorStyle.Method ?? string.Empty,
+            node.Chart?.ColorStyle.Id ?? string.Empty,
+            node.Chart?.ColorStyle.Colors.Count ?? 0,
+            node.Chart?.StylePart.IsDefined ?? false,
+            node.Chart?.StylePart.PartName ?? string.Empty,
+            node.Chart?.StylePart.Id ?? string.Empty,
+            chartStyleEntryRoles.Count,
+            chartStyleEntryRoles,
             rejectedPointStyleIndexValues.Count,
             rejectedPointStyleIndexValues,
             rejectedDataLabelOverrideIndexValues.Count,

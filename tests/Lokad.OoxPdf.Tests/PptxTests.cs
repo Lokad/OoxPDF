@@ -488,10 +488,22 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.ColorStyle.Colors[0] ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml is not null, "Expected chart color-style XML ownership in the scene model.");
         TestAssert.Equal("10", (string?)slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml?.Root?.Attribute("id") ?? string.Empty);
+        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartColorStyle, "Expected scene inspection to expose chart color-style ownership without XML contents.");
+        TestAssert.Equal("/ppt/charts/colors1.xml", slideSnapshot.SlideNodes[4].ChartColorStylePartName);
+        TestAssert.Equal("cycle", slideSnapshot.SlideNodes[4].ChartColorStyleMethod);
+        TestAssert.Equal("10", slideSnapshot.SlideNodes[4].ChartColorStyleId);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleColorCount);
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.StyleXml is not null, "Expected chart style XML ownership in the scene model.");
+        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartStylePart, "Expected scene inspection to expose chart style-part ownership without XML contents.");
+        TestAssert.Equal("/ppt/charts/style1.xml", slideSnapshot.SlideNodes[4].ChartStylePartName);
+        TestAssert.Equal("10", slideSnapshot.SlideNodes[4].ChartStylePartId);
+        TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartStyleEntryCount);
+        TestAssert.Equal("gridlineMajor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[0]);
+        TestAssert.Equal("gridlineMinor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[1]);
+        TestAssert.Equal("title", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[2]);
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
         TestAssert.Equal("gridlineMajor", majorGridlineStyle.Role ?? string.Empty);
         TestAssert.Equal(1, majorGridlineStyle.LineReferenceIndex ?? 0);
@@ -6322,6 +6334,12 @@ internal static class PptxTests
                 node.HasChart,
                 node.ChartPlotCount,
                 node.ChartAxisCount,
+                node.HasChartColorStyle,
+                node.ChartColorStyleMethod,
+                node.ChartColorStyleColorCount,
+                node.HasChartStylePart,
+                node.ChartStyleEntryCount,
+                node.ChartStyleEntryRoles,
                 node.HasGroupTransform
             };
 
