@@ -5953,11 +5953,23 @@ paths, and ExecPlan references together.
   - [ ] Private slide 15 visible remaining problem: left-side images and their matching text items are
     vertically misaligned. Inspect picture bounds, text-frame bounds, z-order, and any shared grouping
     assumptions, then reproduce with a public image-plus-text alignment fixture.
-    - [x] Fix the dominant text-frame side of the misalignment: center-anchored PPTX text frames now estimate
+  - [x] Fix the dominant text-frame side of the misalignment: center-anchored PPTX text frames now estimate
       wrapped line height before computing vertical anchor offset, instead of centering as if each paragraph
       were a single unwrapped line. Public synthetic unit
       `PptxSyntheticTextBoxVerticalAnchorUsesWrappedHeight` locks the generic rule, and private page 15 now
       places the text rows much closer to the matching images.
+    - [x] 2026-05-28 private-safe PDF inspection showed the page-15 picture draw matrices already match
+      Office to rounding for all seven images, so the remaining visible alignment gap is not image placement.
+      The generic issue found nearby was placeholder text-body inheritance: a slide title with direct zero
+      insets, an empty layout placeholder `a:bodyPr`, and a center-anchored master placeholder was using only
+      the nearest inherited body properties and losing the master anchor. Public unit
+      `PptxTextModelCascadesPlaceholderBodyPropertiesAcrossLayoutAndMaster` now locks the full
+      slide -> layout -> master placeholder body-property cascade.
+    - [x] Private validation run `20260528-131854` improved slide 15 from MAE `8.290329` to `8.002384`,
+      RMSE `36.997300` to `36.171212`, changed16 `0.095993` to `0.093922`, and SSIM `0.836110` to
+      `0.843354`. Slide 17 was unchanged. Deck-wide, 53 pages improved by MAE, 29 were neutral, and 2 had
+      small regressions, which keeps the change aligned with Office behavior but leaves residual text-flow
+      work open rather than treating the private page as solved.
   - [ ] If slide-15 issues remain after text flow improves, isolate public fixtures for connector flips,
     picture flips, and grouped transform edge cases.
 - [ ] Private slide 56 visible remaining problem: text is incorrectly boxed. Inspect whether the issue comes
@@ -12419,6 +12431,30 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: PPTX inherited placeholder text-body properties now merge across the full
+placeholder chain instead of using only the nearest inherited placeholder `txBody`. `BuildEffectiveInheritedTextBody`
+builds an effective inherited `a:bodyPr` by applying master-level attributes and child autofit elements first,
+then layout-level overrides, before direct slide `a:bodyPr` values are resolved by the existing source-tagged
+body-property readers. This preserves the structural priority order: direct slide body properties, then
+layout placeholder body properties, then master placeholder body properties, then OOXML defaults.
+
+The private slide-15 investigation that led to this change was intentionally private-safe: PDF image matrices
+showed that the left-side pictures already matched Office to rounding, while the title text frame had direct
+zero insets, an empty layout placeholder bodyPr, and a center-anchored master title placeholder. The old
+nearest-placeholder lookup dropped that master anchor. Public synthetic regression
+`PptxTextModelCascadesPlaceholderBodyPropertiesAcrossLayoutAndMaster` now locks the generic behavior without
+private content.
+
+Validation: focused non-slow `pptx-model` passed with `14` tests, `0` failures, and `1` slow skip; focused
+non-slow `pptx-typography` passed with `92` tests, `0` failures, and `2` slow skips. Private validation run
+`20260528-131854` compared 84/84 pages with zero dimension mismatches and only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`; slide 15 improved from MAE `8.290329` to `8.002384`, RMSE `36.997300` to
+`36.171212`, changed16 `0.095993` to `0.093922`, and SSIM `0.836110` to `0.843354`, while slide 17 was
+unchanged. The full non-slow console runner passed with `366` tests, `0` failures, and `7` slow skips.
+Deck-wide MAE improved on 53 pages, was neutral on 29 pages, and regressed slightly on 2 pages; the largest
+small regressions were pages 36 and 37, so the next text-flow pass should keep watching those pages rather
+than treating private acceptance as monotonic.
 
 Revision note, 2026-05-28: Extended private-safe chart scene snapshots for series-level and label-level
 structural state that was already parsed but mostly invisible to diagnostics. `PptxSceneNodeSnapshot` now

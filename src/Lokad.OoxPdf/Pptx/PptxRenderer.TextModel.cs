@@ -171,7 +171,7 @@ internal sealed partial class PptxRenderer
         XElement? textBody = shape.Element(PresentationNamespace + "txBody");
         IReadOnlyList<XElement> inheritedPlaceholders = FindInheritedPlaceholderShapes(shape, placeholderSources);
         XElement? inheritedPlaceholder = inheritedPlaceholders.LastOrDefault();
-        XElement? inheritedTextBody = inheritedPlaceholder?.Element(PresentationNamespace + "txBody");
+        XElement? inheritedTextBody = BuildEffectiveInheritedTextBody(inheritedPlaceholders);
         ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
         bool usesInheritedShapeBounds = bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is not null;
         if (bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties)
@@ -307,6 +307,41 @@ internal sealed partial class PptxRenderer
             orientation,
             shapeFontColor,
             paragraphs);
+    }
+
+    private static XElement? BuildEffectiveInheritedTextBody(IReadOnlyList<XElement> inheritedPlaceholders)
+    {
+        XElement[] inheritedTextBodies = inheritedPlaceholders
+            .Select(placeholder => placeholder.Element(PresentationNamespace + "txBody"))
+            .Where(textBody => textBody is not null)
+            .Cast<XElement>()
+            .ToArray();
+        if (inheritedTextBodies.Length == 0)
+        {
+            return null;
+        }
+
+        XElement effectiveTextBody = new(PresentationNamespace + "txBody");
+        XElement effectiveBodyProperties = new(DrawingNamespace + "bodyPr");
+        foreach (XElement bodyProperties in inheritedTextBodies
+            .Select(textBody => textBody.Element(DrawingNamespace + "bodyPr"))
+            .Where(bodyProperties => bodyProperties is not null)
+            .Cast<XElement>())
+        {
+            foreach (XAttribute attribute in bodyProperties.Attributes())
+            {
+                effectiveBodyProperties.SetAttributeValue(attribute.Name, attribute.Value);
+            }
+
+            foreach (XElement child in bodyProperties.Elements())
+            {
+                effectiveBodyProperties.Elements(child.Name).Remove();
+                effectiveBodyProperties.Add(new XElement(child));
+            }
+        }
+
+        effectiveTextBody.Add(effectiveBodyProperties);
+        return effectiveTextBody;
     }
 
     private static PptxTextFrameModel BuildTextFrameModel(
