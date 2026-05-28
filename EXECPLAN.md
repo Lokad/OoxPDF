@@ -12076,6 +12076,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
 passed with `89` tests, `0` failures, and `2` slow skips.
 
+Revision note, 2026-05-28: PPTX vertical anchoring now uses the resolved body-property model all the way to
+offset calculation. The old direct XML fallback re-read the inherited placeholder `a:bodyPr @anchor` when the
+resolved anchor was `Top`, which could let an inherited bottom/middle anchor override an explicit direct top
+anchor. That path now consumes `PptxTextBodyProperties.VerticalAnchor` and its source decision directly, and
+`anchor="t"` is recognized as the explicit Office top token instead of being classified as unknown.
+
+This also removed obsolete text-body XML helper reads for orientation, wrap, vertical overflow, compatible
+line spacing, insets, and vertical anchor from the active text-layout file where the resolved model now owns
+those decisions. The remaining text-body XML reads in the text path are centralized model construction or
+scene inspection, not render-site overrides of resolved state.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `90` tests, `0` failures, and `2` slow skips.
+
 Revision note, 2026-05-28: Inherited PPTX text-body insets now resolve structurally from the same
 shape -> inherited placeholder `a:bodyPr` chain as the other scalar body properties. `PptxTextBodyProperties`
 keeps per-edge inset source tags, `PptxTextFrameModelSnapshot` exposes both inset values and per-edge

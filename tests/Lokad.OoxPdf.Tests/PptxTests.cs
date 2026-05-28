@@ -2987,6 +2987,72 @@ internal static class PptxTests
         TestAssert.Equal("InheritedBodyPr", frame.RotationDegreesSource);
     }
 
+    public static void PptxTextModelDirectTopAnchorOverridesInheritedBottomAnchor()
+    {
+        string contentTypes = BasicContentTypes().Replace(
+            "</Types>",
+            """
+              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+            </Types>
+            """,
+            StringComparison.Ordinal);
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = contentTypes,
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideMasters/slideMaster1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree/></p:cSld>
+                </p:sldMaster>
+                """,
+            ["ppt/slideLayouts/slideLayout1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:nvSpPr><p:cNvPr id="2" name="Layout Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr anchor="b"><a:normAutofit fontScale="80000"/></a:bodyPr><a:lstStyle/><a:p/></p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sldLayout>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:nvSpPr><p:cNvPr id="3" name="Slide Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+                    <p:txBody><a:bodyPr anchor="t"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Direct top anchor</a:t></a:r></a:p></p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.Equal("Top", frame.VerticalAnchor);
+        TestAssert.Equal("t", frame.VerticalAnchorValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.VerticalAnchorSource);
+        TestAssert.Equal(0d, frame.VerticalOffset);
+    }
+
     public static void PptxTextModelPreservesRunStyleTokens()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

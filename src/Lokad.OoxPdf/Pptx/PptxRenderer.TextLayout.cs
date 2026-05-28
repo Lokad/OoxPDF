@@ -435,11 +435,6 @@ internal sealed partial class PptxRenderer
         return null;
     }
 
-    private static bool TextBodyAllowsWrapping(XElement textBody)
-    {
-        return ReadTextWrapMode(textBody) != PptxTextWrapMode.None;
-    }
-
     private static bool TextBodyAllowsWrapping(PptxTextBodyProperties bodyProperties)
     {
         return bodyProperties.WrapMode != PptxTextWrapMode.None;
@@ -2291,29 +2286,6 @@ internal sealed partial class PptxRenderer
             new TextInsetValues(leftValue, rightValue, topValue, bottomValue));
     }
 
-    private static PptxTextOrientation ReadTextOrientation(XElement textBody, XElement? inheritedTextBody)
-    {
-        return ParseTextOrientation(ReadTextOrientationValue(textBody, inheritedTextBody));
-    }
-
-    private static string? ReadTextOrientationValue(XElement textBody, XElement? inheritedTextBody)
-    {
-        string? orientation = (string?)textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Attribute("vert");
-        orientation ??= (string?)inheritedTextBody
-            ?.Element(DrawingNamespace + "bodyPr")
-            ?.Attribute("vert");
-        return orientation;
-    }
-
-    private static string? ReadTextBodyAttribute(XElement textBody, string attributeName)
-    {
-        return (string?)textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Attribute(attributeName);
-    }
-
     private static PptxTextOrientation ParseTextOrientation(string? orientation)
     {
         return orientation switch
@@ -2475,16 +2447,6 @@ internal sealed partial class PptxRenderer
         return (1d - reductionRatio, autofitSource, reduction.Value);
     }
 
-    private static bool HasCompatibleLineSpacing(XElement textBody)
-    {
-        return ParseOptionalBoolAttribute(textBody.Element(DrawingNamespace + "bodyPr"), "compatLnSpc");
-    }
-
-    private static PptxTextWrapMode ReadTextWrapMode(XElement textBody)
-    {
-        return ParseTextWrapMode(ReadTextBodyAttribute(textBody, "wrap"));
-    }
-
     private static PptxTextWrapMode ParseTextWrapMode(string? wrap)
     {
         return wrap switch
@@ -2496,11 +2458,6 @@ internal sealed partial class PptxRenderer
             _ when wrap.Equals("square", StringComparison.OrdinalIgnoreCase) => PptxTextWrapMode.Square,
             _ => PptxTextWrapMode.Unknown
         };
-    }
-
-    private static PptxTextVerticalOverflow ReadTextVerticalOverflow(XElement textBody)
-    {
-        return ParseTextVerticalOverflow(ReadTextBodyAttribute(textBody, "vertOverflow"));
     }
 
     private static PptxTextVerticalOverflow ParseTextVerticalOverflow(string? overflow)
@@ -2515,14 +2472,6 @@ internal sealed partial class PptxRenderer
             _ when !string.IsNullOrEmpty(overflow) => PptxTextVerticalOverflow.Unknown,
             _ => PptxTextVerticalOverflow.Overflow
         };
-    }
-
-    private static double ReadInset(XElement? element, string attributeName, long defaultEmu)
-    {
-        long emu = element?.Attribute(attributeName) is { } attribute
-            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
-            : defaultEmu;
-        return OoxUnits.EmuToPoints(emu);
     }
 
     private static (double Value, PptxTextBodyPropertySource Source, string? RawValue) ReadInset(
@@ -3026,17 +2975,15 @@ internal sealed partial class PptxRenderer
         return RgbColor.TryParse(hex, out color);
     }
 
-    private static TextVerticalAnchor ReadTextVerticalAnchor(XElement textBody)
-    {
-        return ParseTextVerticalAnchor(ReadTextBodyAttribute(textBody, "anchor"));
-    }
-
     private static TextVerticalAnchor ParseTextVerticalAnchor(string? anchor)
     {
         return anchor switch
         {
+            null or "" => TextVerticalAnchor.Top,
+            "t" => TextVerticalAnchor.Top,
             "ctr" => TextVerticalAnchor.Middle,
             "b" => TextVerticalAnchor.Bottom,
+            _ when anchor.Equals("t", StringComparison.OrdinalIgnoreCase) => TextVerticalAnchor.Top,
             _ when anchor?.Equals("ctr", StringComparison.OrdinalIgnoreCase) == true => TextVerticalAnchor.Middle,
             _ when anchor?.Equals("b", StringComparison.OrdinalIgnoreCase) == true => TextVerticalAnchor.Bottom,
             _ when !string.IsNullOrEmpty(anchor) => TextVerticalAnchor.Unknown,
@@ -3049,17 +2996,15 @@ internal sealed partial class PptxRenderer
         XElement? defaultParagraphProperties,
         PptxTheme theme,
         double textWidth,
-        PptxTextBodyProperties? bodyProperties = null,
+        PptxTextBodyProperties bodyProperties,
         PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
         double height = 0d;
         var advanceEstimator = new TextAdvanceEstimator();
-        double fontScale = bodyProperties?.FontScale ?? 1d;
-        double lineSpacingScale = bodyProperties?.LineSpacingScale ?? 1d;
-        bool compatibleLineSpacing = bodyProperties?.CompatibleLineSpacing ?? HasCompatibleLineSpacing(textBody);
-        bool allowWrapping = bodyProperties is { } resolvedBodyProperties
-            ? TextBodyAllowsWrapping(resolvedBodyProperties)
-            : TextBodyAllowsWrapping(textBody);
+        double fontScale = bodyProperties.FontScale;
+        double lineSpacingScale = bodyProperties.LineSpacingScale;
+        bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
+        bool allowWrapping = TextBodyAllowsWrapping(bodyProperties);
         bool hasEstimatedParagraph = false;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
