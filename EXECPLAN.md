@@ -12119,6 +12119,18 @@ more axis policy than a single unit lookup.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Moved the secondary right value-axis label helper onto the same
+`ChartValueAxisRenderOptions` boundary used by line/bar/area branches. `RenderSecondaryChartValueAxisLabels`
+now resolves secondary-axis units and reversed orientation through the typed contract instead of calling the
+unit and orientation bridges separately at label time.
+
+This closes the branch-level value-axis option cleanup for active Cartesian chart rendering. Remaining direct
+reads are helper-local computations inside lower-level drawing/layout functions or family-specific unit paths
+where a broader option record would need new Office-PDF evidence, not just mechanical grouping.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Routed the primary and extra bar-chart value-axis paths through
 `ChartValueAxisRenderOptions`. Bar rendering now uses the typed axis contract for percent-stacked units,
 crossing values, reversal, gridline visibility/style, category-axis crossing placement, value-axis labels,

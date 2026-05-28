@@ -6453,8 +6453,8 @@ internal sealed partial class PptxRenderer
         }
 
         ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(rightSceneAxis, rightValueAxis, fallback);
-        ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(rightSceneAxis, rightValueAxis);
-        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, rightSceneAxis, extents, axisUnits, ReadSceneOrXmlValueAxisReversed(rightSceneAxis, rightValueAxis), horizontalBars: false, rightSide: true);
+        ChartValueAxisRenderOptions axisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(rightSceneAxis, rightValueAxis, theme, extents, percentStacked: false);
+        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, rightSceneAxis, extents, axisOptions.Units, axisOptions.Reversed, horizontalBars: false, rightSide: true);
     }
 
     private static XElement? ReadSecondaryRightValueAxis(XDocument chartXml)
