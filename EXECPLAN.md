@@ -1093,12 +1093,21 @@ High-priority actions:
     and grouped correlations for layout font size, baseline/grid remainders, candidate frame top, candidate line top,
     line index, line span count, frame height, and text height. Re-running the existing
     `font-size-quantization-y-scan-21pt-fine` probe keeps the renderer unchanged and summarizes the evidence directly:
-    `21` exact rows remain at `21` counts, while the `secondary-0.024` branch has `7` rows with reference baseline
-    range `362.98..380.98`, candidate frame-top range `135..153`, and candidate line-top range `383.4..401.4`.
-    The summary also makes negative evidence explicit: line index, span count, frame height, text height, and
-    candidate frame/line grid remainders do not distinguish the branch in this probe. This strengthens the next
-    implementation constraint: a future `/Tf` rule must explain a page/text-matrix placement band from public evidence
-    rather than adding a per-size or per-Y lookup.
+  `21` exact rows remain at `21` counts, while the `secondary-0.024` branch has `7` rows with reference baseline
+  range `362.98..380.98`, candidate frame-top range `135..153`, and candidate line-top range `383.4..401.4`.
+  The summary also makes negative evidence explicit: line index, span count, frame height, text height, and
+  candidate frame/line grid remainders do not distinguish the branch in this probe. This strengthens the next
+  implementation constraint: a future `/Tf` rule must explain a page/text-matrix placement band from public evidence
+  rather than adding a per-size or per-Y lookup.
+  - [x] 2026-05-28: Carry the actual emitted baseline into the PPTX PDF text-emission context. The internal
+    `PptxPdfTextEmissionContext` already carried layout font size, frame geometry, insets, wrap/autofit mode,
+    line identity, line top, line advance, and line max font size; it now also carries bottom-origin `BaselineY`,
+    which is the coordinate the public-safe Office/PDF diagnostics keep implicating in the secondary `/Tf` branch.
+    Rendering remains unchanged because `PptxPdfTextEmissionProfile` still applies only the dominant 600-DPI font
+    grid, but the next context-sensitive rule can now consume the same baseline coordinate that the probe summaries
+    report instead of reopening text layout or adding a hidden Y lookup. Validation: `dotnet build Lokad.OoxPdf.slnx
+    --tl:off --nologo -v minimal` passed; focused non-slow `pptx-typography` passed with `90` tests, `0` failures,
+    and `2` slow skips.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and

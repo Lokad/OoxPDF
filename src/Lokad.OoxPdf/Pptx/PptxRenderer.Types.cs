@@ -210,6 +210,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct PptxPdfTextEmissionContext(
         double LayoutFontSize,
+        double BaselineY,
         int FrameIndex,
         int ParagraphIndex,
         int LineIndex,

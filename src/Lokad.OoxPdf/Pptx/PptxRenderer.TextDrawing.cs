@@ -906,6 +906,7 @@ internal sealed partial class PptxRenderer
         TextRun run = span.Run;
         return new PptxPdfTextEmissionContext(
             run.FontSize,
+            run.Y + run.BaselineOffset,
             span.FrameIndex,
             span.ParagraphIndex,
             span.LineIndex,
