@@ -13,6 +13,8 @@ param(
 
     [string] $CandidateChartTextStructures,
 
+    [string] $ChartXml,
+
     [string] $OutputJson
 )
 
@@ -71,6 +73,59 @@ function Format-Bounds($item) {
 
 function Select-Kind($items, [string] $kind) {
     return ,@($items | Where-Object { [string]$_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX, TextLength)
+}
+
+function Child-Val($node, [string] $name) {
+    $child = $node.SelectSingleNode("*[local-name()='$name']")
+    if ($null -eq $child -or $null -eq $child.Attributes["val"]) {
+        return ""
+    }
+
+    return [string]$child.Attributes["val"].Value
+}
+
+function Manual-Layout-Val($manualLayout, [string] $name) {
+    if ($null -eq $manualLayout) {
+        return ""
+    }
+
+    return Child-Val $manualLayout $name
+}
+
+function Read-ChartLabelManualLayouts([string] $path) {
+    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
+        return ,@()
+    }
+
+    [xml] $xml = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path
+    $labels = $xml.SelectNodes("//*[local-name()='dLbl']")
+    $rows = New-Object System.Collections.Generic.List[object]
+    foreach ($label in $labels) {
+        $manualLayout = $label.SelectSingleNode("*[local-name()='layout']/*[local-name()='manualLayout']")
+        if ($null -eq $manualLayout) {
+            continue
+        }
+
+        $rows.Add([pscustomobject]@{
+            Index = Child-Val $label "idx"
+            Position = Child-Val $label "dLblPos"
+            X = Manual-Layout-Val $manualLayout "x"
+            Y = Manual-Layout-Val $manualLayout "y"
+            Width = Manual-Layout-Val $manualLayout "w"
+            Height = Manual-Layout-Val $manualLayout "h"
+            XMode = Manual-Layout-Val $manualLayout "xMode"
+            YMode = Manual-Layout-Val $manualLayout "yMode"
+            WidthMode = Manual-Layout-Val $manualLayout "wMode"
+            HeightMode = Manual-Layout-Val $manualLayout "hMode"
+            ShowLeaderLines = Child-Val $label "showLeaderLines"
+            ShowCategoryName = Child-Val $label "showCatName"
+            ShowPercent = Child-Val $label "showPercent"
+            ShowValue = Child-Val $label "showVal"
+            ShowLegendKey = Child-Val $label "showLegendKey"
+        })
+    }
+
+    return ,$rows.ToArray()
 }
 
 function Match-Nearest($referenceItems, $candidateItems, [string] $kind) {
@@ -168,6 +223,7 @@ $referenceLabels = Select-Kind $referenceText "DataLabelText"
 $candidateLabels = Select-Kind $candidateText "DataLabelText"
 $referenceLeaderLines = Select-Kind $referenceGraphics "DataLabelLeaderLineCandidate"
 $candidateLeaderLines = Select-Kind $candidateGraphics "DataLabelLeaderLineCandidate"
+$chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml
 
 $labelMatches = Match-Nearest $referenceLabels $candidateLabels "DataLabelText"
 $leaderLineMatches = Match-Nearest $referenceLeaderLines $candidateLeaderLines "DataLabelLeaderLineCandidate"
@@ -179,11 +235,19 @@ $summary = [pscustomobject]@{
     DataLabelLeaderLineReferenceCount = $referenceLeaderLines.Count
     DataLabelLeaderLineCandidateCount = $candidateLeaderLines.Count
     DataLabelLeaderLineMaxNearestBoundsDelta = if ($leaderLineMatches.Count -eq 0) { $null } else { ($leaderLineMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
+    ChartManualLayoutCount = $chartManualLayouts.Count
+    ChartManualLayouts = $chartManualLayouts
     DataLabelTextMatches = $labelMatches
     DataLabelLeaderLineMatches = $leaderLineMatches
 }
 
-$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta
+$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount
+
+if ($chartManualLayouts.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Chart data-label manual layouts:"
+    $chartManualLayouts | Format-Table -AutoSize Index, Position, X, Y, Width, Height, XMode, YMode, WidthMode, HeightMode, ShowCategoryName, ShowPercent, ShowLeaderLines
+}
 
 if ($labelMatches.Count -gt 0) {
     Write-Host ""

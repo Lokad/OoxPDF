@@ -2555,6 +2555,13 @@ High-priority actions:
     explicit modes, including negative factors; those factors came from COM `DataLabel.Left`/`Top` writes
     and are not behaving like ordinary absolute plot-box factor boxes. Keep the next renderer change tied to
     this public structural evidence, not to a per-fixture coordinate constant.
+    2026-05-28 update: extended `tools/SummarizeChartDataLabelLayout.ps1` with an optional `-ChartXml`
+    input so the same public summary now emits the source `c:dLbl` manual-layout records (`idx`, `dLblPos`,
+    `x/y/w/h`, mode fields, and label visibility flags) beside the PDF text/leader-line nearest-match
+    deltas. On current run `20260528-150942`, it reports four source manual-layout records with omitted
+    modes and mixed negative/positive `x`/`y` values, while the PDF structural deltas remain
+    `DataLabelText` `8/4`, max text bounds delta `492.681pt`, and leader-line counts `1/4`. This is
+    preserved as correlation tooling for the next layout-rule change, not a renderer approximation.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
