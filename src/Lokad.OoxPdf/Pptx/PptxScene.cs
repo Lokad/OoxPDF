@@ -653,9 +653,13 @@ internal sealed record PptxSceneChartPlot(
     bool? MarkersEnabled,
     bool? VaryColors,
     double? GapWidth,
+    string GapWidthValue,
     double? Overlap,
+    string OverlapValue,
     double? HoleSize,
+    string HoleSizeValue,
     double? FirstSliceAngle,
+    string FirstSliceAngleValue,
     PptxSceneChartDataLabels DataLabels);
 
 internal enum PptxSceneChartGrouping
@@ -2044,6 +2048,10 @@ internal sealed class PptxSceneBuilder
             string radarStyle = ReadChartElementValue(plot, "radarStyle");
             bool? markersEnabled = ReadChartPlotMarkersEnabled(plot);
             PptxSceneChartPlotKind plotKind = ParseChartPlotKind(kind);
+            (double? gapWidth, string gapWidthValue) = ReadChartElementDoubleWithValue(plot, "gapWidth");
+            (double? overlap, string overlapValue) = ReadChartElementDoubleWithValue(plot, "overlap");
+            (double? holeSize, string holeSizeValue) = ReadChartElementDoubleWithValue(plot, "holeSize");
+            (double? firstSliceAngle, string firstSliceAngleValue) = ReadChartElementDoubleWithValue(plot, "firstSliceAng");
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
                 .Select(axis => (string?)axis.Attribute("val") ?? string.Empty)
@@ -2067,10 +2075,14 @@ internal sealed class PptxSceneBuilder
                 radarStyle,
                 markersEnabled,
                 ReadChartPlotVaryColors(plot),
-                ReadChartElementDouble(plot, "gapWidth"),
-                ReadChartElementDouble(plot, "overlap"),
-                ReadChartElementDouble(plot, "holeSize"),
-                ReadChartElementDouble(plot, "firstSliceAng"),
+                gapWidth,
+                gapWidthValue,
+                overlap,
+                overlapValue,
+                holeSize,
+                holeSizeValue,
+                firstSliceAngle,
+                firstSliceAngleValue,
                 ReadChartDataLabels(plot, theme)));
         }
 
@@ -2213,10 +2225,16 @@ internal sealed class PptxSceneBuilder
 
     private static double? ReadChartElementDouble(XElement element, string childName)
     {
-        string? value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val");
+        (double? parsed, _) = ReadChartElementDoubleWithValue(element, childName);
+        return parsed;
+    }
+
+    private static (double? Value, string RawValue) ReadChartElementDoubleWithValue(XElement element, string childName)
+    {
+        string value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? parsed
-            : null;
+            ? (parsed, value)
+            : (null, value);
     }
 
     private static int? ReadChartElementInt(XElement element, string childName)

@@ -11514,6 +11514,39 @@ internal static class PptxTests
         TestAssert.True(!scatterSeries.DataSources.BubbleSizes.HasCachedPoints, "Expected empty bubble-size cache to remain explicit.");
     }
 
+    public static void PptxScenePreservesChartPlotNumericOptionTokens()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:gapWidth val="futureGap"/>
+                  <c:overlap val="25"/>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:barChart>
+                <c:doughnutChart>
+                  <c:holeSize val="futureHole"/>
+                  <c:firstSliceAng val="450"/>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:doughnutChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartPlot barPlot = chart?.Plots[0] ?? throw new InvalidOperationException("Expected bar plot.");
+        TestAssert.Equal(null, barPlot.GapWidth);
+        TestAssert.Equal("futureGap", barPlot.GapWidthValue);
+        TestAssert.Equal(25d, barPlot.Overlap ?? double.NaN);
+        TestAssert.Equal("25", barPlot.OverlapValue);
+
+        PptxSceneChartPlot doughnutPlot = chart.Plots[1];
+        TestAssert.Equal(null, doughnutPlot.HoleSize);
+        TestAssert.Equal("futureHole", doughnutPlot.HoleSizeValue);
+        TestAssert.Equal(450d, doughnutPlot.FirstSliceAngle ?? double.NaN);
+        TestAssert.Equal("450", doughnutPlot.FirstSliceAngleValue);
+    }
+
     public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

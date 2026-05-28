@@ -313,7 +313,8 @@ High-priority actions:
   `PptxRenderer.Charts` now treats a present `PptxSceneChartPlot` as authoritative for grouping,
   bar direction, scatter style, radar style, doughnut hole size, first-slice angle, bar vary-colors,
   gap-width, and overlap values. XML fallback remains only for non-scene chart paths, while scene-backed paths
-  consume the typed/raw plot tokens already preserved by `PptxSceneBuilder`. This is deliberately narrow:
+  consume the normalized plot values preserved by `PptxSceneBuilder`. Raw malformed/future token preservation
+  for those plot options was added later as a separate model completeness slice. This is deliberately narrow:
   series data, per-point styling, labels, axes, legends, layout, and workbook cache hydration still have
   separate `ReadSceneOrXml*` bridges that need their own
   evidence and tests before removal. Validation: focused non-slow `pptx-charts` passed
@@ -12039,6 +12040,22 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
+values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
+`c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current
+rendering. The regression locks both malformed/future tokens, such as a non-numeric gap width or doughnut
+hole size, and ordinary numeric tokens, such as overlap and first-slice angle.
+
+This is not a new Office rendering rule. The current chart renderer still applies its existing defaults and
+clamps when a value cannot be parsed. The structural improvement is that schema drift or future Office tokens
+no longer disappear at scene-build time, so future `ReadSceneOrXml*` removal and Office-PDF-backed chart
+layout work can distinguish "missing option" from "present but not yet understood" without reopening chart
+XML in the renderer.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `85` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `326` tests, `0` failures, and `7` slow skips.
 
 Revision note, 2026-05-28: The PPTX vertical-anchor text-height estimator now consumes resolved
 `PptxTextBodyProperties` instead of re-reading only the local `a:bodyPr`. `EstimateTextHeight` applies the
