@@ -532,13 +532,6 @@ internal sealed partial class PptxRenderer
         return series.Count(vector => vector.DensePoints().Any(point => point?.Value is not null));
     }
 
-    private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartSeries(IEnumerable<ChartIndexedNumberVector> series)
-    {
-        return series
-            .Select(vector => vector.DenseValues())
-            .ToArray();
-    }
-
     private static IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> DensifyChartPointSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series
@@ -7503,7 +7496,7 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
+        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         {
             int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
@@ -7616,8 +7609,8 @@ internal sealed partial class PptxRenderer
                 double categoryX = plotX + category * categoryWidth + (categoryWidth - clusterWidth) / 2d;
                 for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<double?> values = denseSeries[seriesIndex];
-                    if (category >= values.Count || values[category] is not { } value)
+                    IReadOnlyList<ChartIndexedNumberPoint?> values = denseSeries[seriesIndex];
+                    if (category >= values.Count || values[category]?.Value is not { } value)
                     {
                         continue;
                     }
@@ -8266,54 +8259,10 @@ internal sealed partial class PptxRenderer
         return patternPreset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static (double Min, double Max) GetClusteredValueExtents(IReadOnlyList<IReadOnlyList<double?>> series)
-    {
-        double maxValue = Math.Max(0d, series.SelectMany(values => values).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(values => values).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Min());
-        return (minValue, maxValue);
-    }
-
     private static (double Min, double Max) GetClusteredPointValueExtents(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series)
     {
         double maxValue = Math.Max(0d, series.SelectMany(points => points).Select(point => point?.Value).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Max());
         double minValue = Math.Min(0d, series.SelectMany(points => points).Select(point => point?.Value).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Min());
-        return (minValue, maxValue);
-    }
-
-    private static (double Min, double Max) GetStackedValueExtents(IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, bool percentStacked)
-    {
-        if (percentStacked)
-        {
-            return (0d, 1d);
-        }
-
-        double minValue = 0d;
-        double maxValue = 0d;
-        for (int category = 0; category < categoryCount; category++)
-        {
-            double positive = 0d;
-            double negative = 0d;
-            foreach (IReadOnlyList<double?> values in series)
-            {
-                if (category >= values.Count || values[category] is not { } value)
-                {
-                    continue;
-                }
-
-                if (value >= 0d)
-                {
-                    positive += value;
-                }
-                else
-                {
-                    negative += value;
-                }
-            }
-
-            maxValue = Math.Max(maxValue, positive);
-            minValue = Math.Min(minValue, negative);
-        }
-
         return (minValue, maxValue);
     }
 
@@ -8354,7 +8303,7 @@ internal sealed partial class PptxRenderer
         return (minValue, maxValue);
     }
 
-    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetClusteredBarWidth(categoryHeight, series.Count, gapWidthPercent);
@@ -8365,8 +8314,8 @@ internal sealed partial class PptxRenderer
             double categoryY = plotY + category * categoryHeight + (categoryHeight - clusterHeight) / 2d;
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
-                IReadOnlyList<double?> values = series[seriesIndex];
-                if (category >= values.Count || values[category] is not { } value)
+                IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
+                if (category >= values.Count || values[category]?.Value is not { } value)
                 {
                     continue;
                 }
@@ -8382,7 +8331,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
+    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
     {
         double categoryWidth = plotWidth / categoryCount;
         double barWidth = GetStackedBarWidth(categoryWidth, gapWidthPercent);
@@ -8394,8 +8343,8 @@ internal sealed partial class PptxRenderer
             double positiveTotal = GetCategoryPositiveTotal(series, category, percentStacked);
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
-                IReadOnlyList<double?> values = series[seriesIndex];
-                if (category >= values.Count || values[category] is not { } rawValue)
+                IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
+                if (category >= values.Count || values[category]?.Value is not { } rawValue)
                 {
                     continue;
                 }
@@ -8427,7 +8376,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
+    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetStackedBarWidth(categoryHeight, gapWidthPercent);
@@ -8439,8 +8388,8 @@ internal sealed partial class PptxRenderer
             double positiveTotal = GetCategoryPositiveTotal(series, category, percentStacked);
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
-                IReadOnlyList<double?> values = series[seriesIndex];
-                if (category >= values.Count || values[category] is not { } rawValue)
+                IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
+                if (category >= values.Count || values[category]?.Value is not { } rawValue)
                 {
                     continue;
                 }
@@ -8488,17 +8437,23 @@ internal sealed partial class PptxRenderer
         return Math.Max(0d, barWidth * (1d - overlapPercent / 100d));
     }
 
-    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<double?>> series, int category, bool percentStacked)
+    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int category, bool percentStacked)
     {
         if (!percentStacked)
         {
             return 1d;
         }
 
-        return Math.Max(1d, series
-            .Where(values => category < values.Count && values[category] is not null)
-            .Select(values => Math.Max(0d, values[category]!.Value))
-            .Sum());
+        double total = 0d;
+        foreach (IReadOnlyList<ChartIndexedNumberPoint?> values in series)
+        {
+            if (category < values.Count && values[category]?.Value is { } value)
+            {
+                total += Math.Max(0d, value);
+            }
+        }
+
+        return Math.Max(1d, total);
     }
 
     private static double NormalizeStackedValue(double value, double positiveTotal, bool percentStacked)
@@ -8512,7 +8467,7 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
+        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = 0;
         double valueAxisCrossingY = 0d;
@@ -8573,7 +8528,7 @@ internal sealed partial class PptxRenderer
             double[] lower = new double[pointCount];
             for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
             {
-                IReadOnlyList<double?> values = denseSeries[seriesIndex];
+                IReadOnlyList<ChartIndexedNumberPoint?> values = denseSeries[seriesIndex];
                 if (values.Count == 0)
                 {
                     continue;
@@ -8591,7 +8546,7 @@ internal sealed partial class PptxRenderer
                 var markers = new List<(double X, double Y)>(values.Count);
                 for (int i = 0; i < values.Count; i++)
                 {
-                    if (values[i] is not { } value)
+                    if (values[i]?.Value is not { } value)
                     {
                         if (displayBlanksAs == PptxSceneChartDisplayBlanksAs.Zero)
                         {
@@ -9208,7 +9163,7 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
+        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         {
             if (minorGridlines)
@@ -9257,7 +9212,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
+    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -9267,7 +9222,7 @@ internal sealed partial class PptxRenderer
         double[] lower = new double[pointCount];
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<double?> values = series[seriesIndex];
+            IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
             if (values.Count == 0)
             {
                 continue;
@@ -9278,13 +9233,13 @@ internal sealed partial class PptxRenderer
                 int start = 0;
                 while (start < pointCount)
                 {
-                    while (start < pointCount && (start >= values.Count || values[start] is null))
+                    while (start < pointCount && (start >= values.Count || values[start]?.Value is null))
                     {
                         start++;
                     }
 
                     int end = start;
-                    while (end < pointCount && end < values.Count && values[end] is not null)
+                    while (end < pointCount && end < values.Count && values[end]?.Value is not null)
                     {
                         end++;
                     }
@@ -9304,7 +9259,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<double?>> allSeries)
+    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberPoint?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> allSeries)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -9322,7 +9277,7 @@ internal sealed partial class PptxRenderer
         for (int i = startIndex; i < endIndex; i++)
         {
             double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
-            double value = i < values.Count && values[i] is { } indexedValue ? indexedValue : 0d;
+            double value = i < values.Count && values[i]?.Value is { } indexedValue ? indexedValue : 0d;
             double lowerValue = stacked ? lower[i] : 0d;
             double positiveTotal = GetCategoryPositiveTotal(allSeries, i, percentStacked);
             double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);

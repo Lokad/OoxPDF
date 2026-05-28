@@ -2098,12 +2098,14 @@ High-priority actions:
     This preserves source indices, blank/non-numeric cache state, and workbook sidecar reachability at the
     scaling boundary. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and
     focused non-slow `pptx-charts` passed (`109 passed, 0 failed, 0 skipped`).
-  - [ ] 2026-05-28 gap from the same audit: migrate the remaining bar/line/area render-geometry loops off
+  - [x] 2026-05-28 gap from the same audit: migrate the remaining bar/line/area render-geometry loops off
     primitive dense values. `RenderBarChart`, `RenderLineChart`, `RenderAreaChart`, and their stacked/helper
-    loops still call or accept `DensifyChartSeries`/`IReadOnlyList<IReadOnlyList<double?>>` even though the
-    long-term plan requires source-indexed point records through geometry, data-label, and chart text/layout
-    decisions. Preserve current visual behavior while moving one family at a time to
-    `ChartIndexedNumberPoint?` and deriving primitive values only at the local coordinate calculation.
+    loops now carry `ChartIndexedNumberPoint?` through category slotting, gap detection, percent-stacked
+    totals, lower-bound accumulation, marker placement, per-point fill/stroke lookup, and rectangle/polygon
+    coordinate calculation. The obsolete `DensifyChartSeries` helper and primitive dense-value extent/stacking
+    helpers were removed so indexed point records are the renderer boundary for these chart families.
+    Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow
+    `pptx-charts` passed (`109 passed, 0 failed, 0 skipped`).
   - [x] Render pie/doughnut slices from source-indexed positive points instead of compacted values:
     polar slice construction now builds `ChartIndexedPieSlice` records from `ChartIndexedNumberVector`, so
     point fills, strokes, explosions, palette fallback, and visible data-label overrides resolve by OOXML
