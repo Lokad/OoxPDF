@@ -3516,8 +3516,11 @@ High-priority actions:
   replacement, and default shape style resolution should be model-visible.
 - [ ] Port `pptx-renderer` text body handling: insets, anchors, vertical overflow, fit modes, wrapping,
   text direction, vertical text, multi-column text, and unsupported diagnostics where rendering is absent.
-- [ ] Port `pptx-renderer` line-height behavior completely: `spcPct`, `spcPts`, paragraph before/after
-  spacing, `lnSpcReduction`, manual-break line wrappers, and trailing `endParaRPr` line-height effects.
+- [x] Port `pptx-renderer` line-height behavior into the PPTX text model/layout:
+  `spcPct`, `spcPts`, paragraph before/after spacing, `normAutofit @lnSpcReduction`, manual-break line
+  wrappers, compatible line spacing, and trailing/empty `endParaRPr` line-height effects are covered by focused
+  model/layout tests and public visual rungs. Remaining typography drift is tracked under the Office PDF emission
+  profile and justified-text parity items, not under missing line-height semantics.
 - [ ] Port `pptx-renderer` run style behavior: font family, size, bold/italic, underline, strike, color,
   highlight, character spacing, kerning thresholds, caps, superscript/subscript, and hyperlink style.
 - [ ] Port `pptx-renderer` whitespace behavior: regular spaces, repeated spaces, non-breaking spaces,
