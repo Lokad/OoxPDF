@@ -1014,7 +1014,7 @@ internal sealed partial class PptxRenderer
                 PptxTextRunModel modelRun = flowRun.Source;
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
-                    double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
+                    double lineFontSize = ResolveLineFontSize(maxFontSize, flowRun.Style.FontSize);
                     AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator);
                     cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                     MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineFontSize);

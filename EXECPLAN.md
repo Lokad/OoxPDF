@@ -191,6 +191,20 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-29: Fixed a high-impact PPTX leading-manual-break spacing mismatch found on the private
+  `lokad-value-based` deck. Two high-error body-text pages had paragraphs that started with `a:br` runs whose
+  resolved font size was smaller than the paragraph default. The renderer advanced the hidden break line with
+  the paragraph default size, pushing the following visible lines down; Office's PDF structure advances that
+  line from the break run's own resolved size. `BuildTextFrameLayout` now resolves manual-break line font size
+  from the break flow run when the current line has no visible text. Public regression:
+  `PptxSyntheticLeadingManualBreakUsesBreakFontForAdvance`. Validation: focused non-slow `pptx-typography`
+  passed with `113` tests, `0` failures, and `2` skips; `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+  -v minimal` passed. Private validation run `20260529-223837` compared 84/84 pages with empty diagnostics and
+  improved deck MAE `4.667523 -> 4.384577`, changed16 `0.071059 -> 0.068599`. The targeted pages improved
+  substantially: page 12 `9.07 -> 6.00`, page 31 `9.02 -> 5.29`, with related pages 18, 70, 11, and 33 also
+  improving and no page-level regressions. Private-safe PDF/text inspection confirmed the main affected line
+  bands moved to Office-like baselines (for example page 12 around `368.2` and page 31 around `368.7` after the
+  first paragraph transition).
 - [x] 2026-05-29: Split compatible-line-spacing defaults by shape-autofit state:
   `compatLnSpc` manual-break paragraphs now keep the existing tighter `1.1x` default when `a:spAutoFit` is
   present, while non-autofit text frames use the normal `1.2x` default advance. This came from private deck
