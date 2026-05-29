@@ -9,6 +9,7 @@ Useful commands:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-typography -List
+powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-typography -CasePattern "*spacing*" -Tag needs-review -List
 powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-shapes -Limit 3
 powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-images -OnlyUnsupported -UpdateCatalog
 powershell -ExecutionPolicy Bypass -File tools/CompareVisualReports.ps1 -Baseline artifacts/visual/reports/pptx-images-old.json -Current artifacts/visual/reports/pptx-images.json

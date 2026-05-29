@@ -4373,6 +4373,10 @@ High-priority actions:
     remains captured through existing `locked`, `locked-text-ops`, `approximate`, and `needs-review` tags.
 - [ ] Port `pptx-renderer` oracle tooling ideas that fit `.NET`: compact text-op diffs, visual metrics,
   cached Office references, deterministic artifact paths, and fast focused case selection.
+  - [x] Add focused family selection without bypassing family ownership: `tools/CheckVisualFamily.ps1`
+    now accepts `-CasePattern` and `-Tag` filters before `-List`, `-Limit`, `-OnlyUnsupported`, and
+    `-OnlyChanged`, making it possible to probe narrow Office-oracle cohorts such as typography spacing
+    or needs-review cases while preserving deterministic report and artifact paths.
 - [ ] Port `pptx-renderer` performance lessons: avoid repeated ZIP/XML/theme/font parsing, cache immutable
   resources per render pass, and measure large-deck hot spots before private-deck tuning.
 - [x] Prototype the smallest `ooxpdf` PPTX intermediate scene slice for slide/master/layout node lists,

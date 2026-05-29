@@ -10,6 +10,10 @@ param(
 
     [switch] $UpdateCatalog,
 
+    [string[]] $CasePattern = @(),
+
+    [string[]] $Tag = @(),
+
     [int] $Limit = 0
 )
 
@@ -198,6 +202,23 @@ $cases = @(
 )
 
 $supportCatalog = Read-SupportCatalog
+if ($CasePattern.Count -ne 0) {
+    $cases = @($cases | Where-Object {
+        $caseName = $_.Name
+        $CasePattern | Where-Object { $caseName -like $_ }
+    })
+}
+
+if ($Tag.Count -ne 0) {
+    $cases = @($cases | Where-Object {
+        $caseManifestPath = Join-Path $_.FullName "case.json"
+        $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
+        $caseTags = @($caseManifest.tags)
+        $missingTags = @($Tag | Where-Object { $caseTags -notcontains $_ })
+        $missingTags.Count -eq 0
+    })
+}
+
 if ($OnlyUnsupported) {
     $cases = @($cases | Where-Object {
         $id = $_.Name
