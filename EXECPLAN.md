@@ -17250,3 +17250,18 @@ Private run `20260530-014149` compared all `84/84` pages with empty diagnostics 
 `3.736566 -> 3.706047`, changed16 `0.061829 -> 0.061646`. Page 37 improved `4.20 -> 2.74` MAE and page 36
 improved `8.16 -> 6.97`; the largest observed regressions were small (`+0.04` MAE on pages 23 and 61, `+0.01`
 on page 78). The remaining page-37 baseline gap is now line-grid/baseline placement, not line splitting.
+
+Accepted public-structure follow-up, 2026-05-30: a public three-column `noAutofit` overflow probe exposed a
+real Office column-flow rule, but not a private-deck mover. Office distributed the probe's `70` text lines
+across columns as `24/24/22`; strict OOXPDF layout emitted `19/19/32`, and the old overflow-balance retry only
+reached `20/20/30`. The renderer now detects the structural pattern "early columns materially underfilled,
+last column materially overloaded" and retries with a line-count balance target derived from the total emitted
+line count. Public regression: `PptxSyntheticNoAutoFitTextOverflowColumnsBalanceOverloadedLastColumn`.
+Validation: targeted regressions
+`PptxSyntheticNoAutoFitTextOverflowColumnsBalanceOverloadedLastColumn` and
+`PptxSyntheticOverflowColumnsPlaceBaselineBelowFrameBottom` passed; focused non-slow `pptx-typography` passed
+(`121` passed, `0` failed, `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+passed. Private run `20260530-015539` compared all `84/84` pages with empty diagnostics and was byte-neutral
+for the candidate PDF against `20260530-014149` (`D19C8BB955DE71C6156F07ED1CFB72FD3C03381F982D2B8D4C70684EA66BACA2`),
+so the next private-deck work should continue from the high-error pages' remaining Office text-state and
+fractional font-size residuals rather than from multi-column balancing.

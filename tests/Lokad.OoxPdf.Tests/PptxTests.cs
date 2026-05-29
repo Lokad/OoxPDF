@@ -7600,6 +7600,55 @@ internal static class PptxTests
         TestAssert.True(lines.Count(line => Math.Abs(line.StartX - 367.56d) < 0.01d) == 3, "Expected balanced overflow text in the third column.");
     }
 
+    public static void PptxSyntheticNoAutoFitTextOverflowColumnsBalanceOverloadedLastColumn()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string text = string.Join(
+            " ",
+            Enumerable.Repeat(
+                "Operational planning aligns demand commitments, replenishment timing, pricing, staffing, and supplier constraints across the same weekly review cycle with finance governance checkpoints.",
+                10));
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="457200" y="914400"/><a:ext cx="6858000" cy="3657600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr numCol="3" spcCol="144000" lIns="91440" rIns="91440" tIns="45720" bIns="45720" vertOverflow="overflow"><a:noAutofit/></a:bodyPr>
+                      <a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>{text}</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        int[] columnCounts = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .GroupBy(line => Math.Round(line.StartX, 2))
+            .OrderBy(group => group.Key)
+            .Select(group => group.Count())
+            .ToArray();
+
+        TestAssert.True(columnCounts.SequenceEqual([24, 24, 22]), "Expected Office-like overflow column balance. Counts: " + string.Join(", ", columnCounts));
+    }
+
     public static void PptxSyntheticTextBoxOverflowColumnsReserveNormalLineAdvance()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
