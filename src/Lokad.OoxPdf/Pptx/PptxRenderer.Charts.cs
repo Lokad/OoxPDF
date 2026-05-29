@@ -810,18 +810,23 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, source);
         IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Count != 0
             ? scenePoints
-                .Select(point => new ChartIndexedNumberPoint(
-                    point.Index,
-                    point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-                    point.Value,
-                    point.Text,
-                    point.HasValueElement,
-                    default))
+                .Select(ToChartIndexedNumberPoint)
                 .ToArray()
             : compactValues
                 .Select((value, index) => new ChartIndexedNumberPoint(index, ChartPointIndexSource.OrdinalFallback, value, value.ToString(CultureInfo.InvariantCulture), true, default))
                 .ToArray();
         return new ChartIndexedNumberVector(points, pointCount ?? InferPointCount(points), source.Formula, formatCode, source, workbookPoints, plotVisibleOnly);
+    }
+
+    private static ChartIndexedNumberPoint ToChartIndexedNumberPoint(PptxSceneChartNumberPoint point)
+    {
+        return new ChartIndexedNumberPoint(
+            point.Index,
+            point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+            point.Value,
+            point.Text,
+            point.HasValueElement,
+            default);
     }
 
     private static ChartIndexedTextVector BuildChartIndexedTextVector(
@@ -1735,13 +1740,7 @@ internal sealed partial class PptxRenderer
 
         ChartIndexedNumberPoint[] points = PptxSceneBuilder
             .ReadChartNumberPoints(cache.Elements(ChartNamespace + "pt"), requireNonNegativeIndex: true)
-            .Select(point => new ChartIndexedNumberPoint(
-                point.Index,
-                point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-                point.Value,
-                point.Text,
-                point.HasValueElement,
-                default))
+            .Select(ToChartIndexedNumberPoint)
             .ToArray();
         return new ChartIndexedNumberVector(
             points,

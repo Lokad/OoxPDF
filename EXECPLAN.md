@@ -13646,6 +13646,17 @@ semantics, and Office-backed label placement untouched. The useful progress is r
 adapter shape before broader indexed vector work, so future chart source policy changes have fewer local
 text-point branches to audit.
 
+Revision note, 2026-05-29: Applied the same adapter consolidation to chart numeric points. Scene-backed
+numeric vectors and XML fallback numeric caches now share one conversion from `PptxSceneChartNumberPoint`
+to `ChartIndexedNumberPoint`, preserving OOXML-vs-ordinal index provenance, raw text, parsed numeric value,
+and explicit `<c:v>` presence. Workbook-range points remain separate because they intentionally carry
+`ChartWorkbookRangeCell` sidecars and a different provenance source.
+
+This still does not alter active chart data policy: saved chart caches remain render-owned, formula-only
+workbook values remain sidecars, and no axis/data-label geometry was changed. The benefit is narrower and
+architectural: future cache freshness, number-format, and blank-point decisions now have one less duplicate
+numeric adapter to audit.
+
 Revision note, 2026-05-27: Rechecked the private `lokad-value-based` case after the chart-wide data-label
 manual-layout slice. Private run `20260527-214643` compared all `84` reference pages against `84` candidate
 pages with zero dimension mismatches. Deck-level MAE stayed `7.702155`, changed-pixel ratio at threshold 16
