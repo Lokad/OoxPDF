@@ -15920,3 +15920,8 @@ points when `ptCount` is missing or invalid, and workbook/cache sidecar preceden
 chart data hydration has a structural model with Office-PDF-backed behavior. Validation: `dotnet build
 Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
 `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Validation checkpoint, 2026-05-29: after the chart text, cache-point index, and cache `ptCount` parser-boundary
+cleanup, the full non-slow console suite passed with `417` tests, `0` failures, and `7` skips via
+`dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`. This
+confirms the parser ownership slices did not disturb the shared PPTX/DOCX/PDF/image/font test surface.
