@@ -5889,7 +5889,7 @@ internal static class PptxTests
         TestAssert.Contains("[<0037><0052>] TJ", pdf);
     }
 
-    public static void PptxSyntheticTextBoxUsesPositioningForCharacterSpacing()
+    public static void PptxSyntheticTextBoxEmitsCharacterSpacingAsTextState()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -5922,7 +5922,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains(" TJ", pdf);
-        TestAssert.True(!pdf.Contains(" Tc", StringComparison.Ordinal), "Character spacing should be encoded in the TJ positioning array.");
+        TestAssert.Contains("30 Tc", pdf);
     }
 
     public static void PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns()

@@ -905,7 +905,7 @@ internal sealed partial class PptxRenderer
         };
         IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms(embedded, run);
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
-        string? positioningArray = EncodeGlyphPositioningArray(glyphs, run.FontSize, pdfFontSize, forcePositioningArray: true);
+        string? positioningArray = EncodeGlyphPositioningArray(glyphs, run.FontSize, pdfFontSize, run.CharacterSpacing, forcePositioningArray: true);
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, syntheticBold, syntheticItalic);
     }
 
@@ -1002,7 +1002,7 @@ internal sealed partial class PptxRenderer
             {
                 PptxTextGlyphLayout previousGlyph = span.Glyphs[i - 1];
                 double adjustmentBefore = PdfTextAdjustmentBefore(
-                    glyph.AdjustmentBefore,
+                    glyph.AdjustmentBefore - span.CharacterSpacing,
                     previousGlyph.Advance,
                     span.FontSize,
                     pdfFontSize);
@@ -1021,7 +1021,7 @@ internal sealed partial class PptxRenderer
         return hasPositioning || forcePositioningArray ? builder.ToString() : null;
     }
 
-    private static string? EncodeGlyphPositioningArray(IReadOnlyList<TextGlyphAtom> glyphs, double layoutFontSize, double pdfFontSize, bool forcePositioningArray)
+    private static string? EncodeGlyphPositioningArray(IReadOnlyList<TextGlyphAtom> glyphs, double layoutFontSize, double pdfFontSize, double characterSpacing, bool forcePositioningArray)
     {
         if (glyphs.Count == 0)
         {
@@ -1037,7 +1037,7 @@ internal sealed partial class PptxRenderer
             {
                 TextGlyphAtom previousGlyph = glyphs[i - 1];
                 double adjustmentBefore = PdfTextAdjustmentBefore(
-                    glyph.AdjustmentBefore,
+                    glyph.AdjustmentBefore - characterSpacing,
                     previousGlyph.Advance,
                     layoutFontSize,
                     pdfFontSize);
@@ -1257,6 +1257,7 @@ internal sealed partial class PptxRenderer
                 run.Color.Blue,
                 glyphRun.GlyphHex,
                 glyphRun.SyntheticItalic,
+                characterSpacing: run.CharacterSpacing,
                 textRenderingMode: TextRenderingMode(glyphRun),
                 strokeRed: TextStrokeColor(glyphRun).Red,
                 strokeGreen: TextStrokeColor(glyphRun).Green,
@@ -1275,6 +1276,7 @@ internal sealed partial class PptxRenderer
                 run.Color.Blue,
                 glyphRun.PositioningArray,
                 glyphRun.SyntheticItalic,
+                characterSpacing: run.CharacterSpacing,
                 textRenderingMode: TextRenderingMode(glyphRun),
                 strokeRed: TextStrokeColor(glyphRun).Red,
                 strokeGreen: TextStrokeColor(glyphRun).Green,

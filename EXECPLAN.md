@@ -16911,3 +16911,49 @@ run `20260529-205440`, deck MAE improved from `4.745248` to `4.669971`; page 22 
 private-deck pass from the remaining high-error pages after this semantic text-cascade correction, especially
 the grouped/picture/effects family on pages 24 and 39 and the residual typography pages that still exceed
 about `8` MAE.
+
+Follow-up, 2026-05-29: two tempting private-deck typography hypotheses were explicitly rejected after
+structural inspection and full private validation. First, suppressing the initial middle-anchor offset for
+`spAutoFit` frames with `anchorCtr="0"` aligned one text-frame baseline on pages 24/39 in isolation, but
+private run `20260529-212152` worsened deck MAE from `4.669971` to `4.680781` and regressed both pages 24 and
+39 by about `0.45` MAE. Keep the current guarded middle-anchor correction; do not reintroduce a broad
+`spAutoFit + anchorCtr=false` zero-offset rule without new public Office-PDF evidence.
+
+Second, changing all multi-column `vertOverflow="overflow"` frames to advance columns when the next line box
+top crosses the frame bottom passed the focused typography tests but failed the private deck: run
+`20260529-212808` worsened deck MAE from `4.669971` to `4.954241`, with large regressions on pages 54, 55, 59,
+36, 50, and 52. It did improve pages 13, 18, 33, and 49, so the remaining opportunity is a narrower
+Office-observed multi-column rule, not a blanket threshold change. Current structural evidence on page 39
+shows vector graphics buckets are near parity; the top residuals remain text positioning/splitting and
+surface-specific vertical anchoring rather than missing shape paths.
+
+Follow-up, 2026-05-29: page-39 PDF text inspection showed Office using nonzero PDF character spacing state
+(`Tc`) in several text operations while the candidate encoded uniform tracking only through `TJ` positioning
+adjustments. The retained structural change moves resolved DrawingML run character spacing into PDF `Tc` and
+leaves only residual kerning/font-size-grid adjustments in `TJ`, preserving the same layout advances while
+aligning the emitted PDF text state with Office's export model. The synthetic regression now asserts `Tc`
+emission for `a:rPr spc` and the non-slow `pptx-typography` group passed with `110` tests, `0` failures, and
+`2` slow skips. Private run `20260529-213913` compared 84/84 pages with empty diagnostics and stayed neutral
+against `20260529-211412` at report precision: deck MAE `4.669971`, changed16 `0.071079`, worst pages still
+39/24/32/12/31. Page 39 itself still reports candidate `Tc=0` because the Office `Tc` there is not sourced
+from explicit OOXML run spacing; keep investigating that residual as Office PDF text-state structure rather
+than assuming it is an `a:rPr spc` gap.
+
+A stricter follow-up hypothesis, fully suppressing vertical-anchor centering for single-column `spAutoFit`
+frames with `anchorCtr="0"` both at model-estimate time and at actual-line-box reanchor time, was rejected.
+It improved the specific grouped/effects pages 24 and 39 by about `0.13` MAE and also improved structurally
+similar narrow text pages 26 and 63, but private run `20260529-214436` worsened deck MAE to `4.721959`; page
+15 regressed by about `4.44` MAE and page 45 by about `0.98`. The shared XML flags are therefore not enough
+to distinguish the cases. Do not encode a deck-shaped width/offset threshold here; the long-term path is to
+derive Office's shape-autofit vertical-anchor timing from public Office-authored fixtures or richer PDF-line
+evidence before changing the retained middle-anchor rules.
+
+Another multi-column overflow retry was rejected after isolating page 32's visible residual. Page 32 has a
+three-column `vertOverflow="overflow"` frame where the strict pass leaves the final column underfull while
+the first two columns are slightly overfull. A symmetric retry that used the existing overflow-balance
+threshold for "last column underfull" patterns passed the typography tests but private run `20260529-215516`
+worsened deck MAE to `4.786932`, primarily because page 54 jumped to MAE `13.926612`, while page 32 remained
+unchanged at report precision. The current balance detector should therefore stay limited to the previously
+validated late-heavy-last-column pattern. Page 32 likely needs a different Office signal, such as paragraph
+boundary/keep behavior, text-width/column-width measurement, or PDF-operation ordering, rather than a second
+threshold retry.
