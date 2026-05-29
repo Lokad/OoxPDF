@@ -7844,13 +7844,9 @@ internal sealed partial class PptxRenderer
 
     private static int? ReadChartElementInt(XElement? chartElement, string elementName)
     {
-        if (chartElement?.Element(ChartNamespace + elementName)?.Attribute("val") is not { } value ||
-            !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
-        {
-            return null;
-        }
-
-        return parsed;
+        return chartElement is null
+            ? null
+            : PptxSceneBuilder.ReadChartElementIntWithValue(chartElement, elementName).Value;
     }
 
     private static double? ReadChartElementDouble(XElement? chartElement, string elementName)

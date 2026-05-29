@@ -15766,3 +15766,14 @@ headroom. Those remain renderer policies that need Office-PDF structural evidenc
 change. The useful architectural change is narrower: raw axis numeric token ownership is now shared with the
 typed scene model. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: category-axis integer token parsing now shares the scene helper in XML-only renderer
+compatibility paths. `PptxSceneBuilder.ReadChartElementIntWithValue` is internal, and fallback reads for
+`lblOffset` and `tickLblSkip` now call it instead of reparsing integer `val` attributes locally.
+
+This is intentionally only a parser-ownership change. Category-axis label offset clamping, default skip handling,
+and tick-mark placement still remain renderer policies until they can be replaced by Office-PDF-backed axis
+layout evidence. The long-term direction is to keep removing duplicate raw OOXML interpretation while resisting
+geometry changes that are not yet anchored to structural comparison probes. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
+`pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
