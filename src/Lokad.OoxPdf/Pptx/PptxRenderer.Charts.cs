@@ -4327,7 +4327,7 @@ internal sealed partial class PptxRenderer
                 ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme, colorMap)),
                 layout,
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap)),
-                ReadChartTextBodyProperties(title),
+                PptxSceneBuilder.ReadChartTextBodyProperties(title),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap),
                 ChartTextStyleOverride.Empty,
                 ReadChartTextStyleFromTxPr(title, theme, colorMap),
@@ -4398,7 +4398,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName),
                 PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val")),
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap)),
-                ReadChartTextBodyProperties(title),
+                PptxSceneBuilder.ReadChartTextBodyProperties(title),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap),
                 ChartTextStyleOverride.Empty,
                 ReadChartTextStyleFromTxPr(title, theme, colorMap),
@@ -4850,7 +4850,7 @@ internal sealed partial class PptxRenderer
         }
 
         XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
-        return ReadChartTextBodyProperties(title);
+        return PptxSceneBuilder.ReadChartTextBodyProperties(title);
     }
 
     private static IReadOnlyList<ChartTextRunOverride> ReadSceneOrXmlChartTitleTextRuns(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
@@ -5152,7 +5152,7 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, PptxSceneBuilder.ReadChartManualLayout(legend), ReadChartTextBodyProperties(legend), ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap)));
+        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, PptxSceneBuilder.ReadChartManualLayout(legend), PptxSceneBuilder.ReadChartTextBodyProperties(legend), ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap)));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
@@ -6520,26 +6520,6 @@ internal sealed partial class PptxRenderer
             typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source);
     }
 
-    private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
-    {
-        XElement? bodyProperties = parent?
-            .Element(ChartNamespace + "txPr")?
-            .Element(DrawingNamespace + "bodyPr");
-        string rotation = (string?)bodyProperties?.Attribute("rot") ?? string.Empty;
-        return new PptxSceneChartTextBodyProperties(
-            ParseChartOoxmlAngle(rotation),
-            rotation,
-            (string?)bodyProperties?.Attribute("vert") ?? string.Empty,
-            (string?)bodyProperties?.Attribute("vertOverflow") ?? string.Empty);
-    }
-
-    private static double? ParseChartOoxmlAngle(string value)
-    {
-        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long rawAngle)
-            ? rawAngle / 60000d
-            : null;
-    }
-
     private static bool? ReadChartUnderline(XElement runProperties)
     {
         string? value = (string?)runProperties.Attribute("u");
@@ -6608,7 +6588,7 @@ internal sealed partial class PptxRenderer
                 ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(labels)),
                 PptxSceneBuilder.ReadChartManualLayout(labels),
                 ReadChartTextStyleFromTxPr(labels, theme, colorMap),
-                ReadChartTextBodyProperties(labels),
+                PptxSceneBuilder.ReadChartTextBodyProperties(labels),
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartDataLabelFlagOptions(labels),
                 ReadChartDataLabelOverrides(labels, theme, colorMap),
@@ -6726,7 +6706,7 @@ internal sealed partial class PptxRenderer
                 ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(label)),
                 PptxSceneBuilder.ReadChartManualLayout(label),
                 ReadChartTextStyleFromTxPr(label, theme, colorMap),
-                ReadChartTextBodyProperties(label),
+                PptxSceneBuilder.ReadChartTextBodyProperties(label),
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartDataLabelFlagOptions(label));
         }

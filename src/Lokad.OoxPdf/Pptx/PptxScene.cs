@@ -3475,7 +3475,7 @@ internal sealed class PptxSceneBuilder
             strike);
     }
 
-    private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
+    internal static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
     {
         XElement? bodyProperties = parent?
             .Element(ChartNamespace + "txPr")?

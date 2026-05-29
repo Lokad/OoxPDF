@@ -15682,3 +15682,16 @@ the remaining long-term work is still to align format-code evaluation, workbook/
 formatting, and stale-cache decisions from structural workbook/chart evidence rather than local formatting
 shortcuts. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings
 and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart text-body property parsing is now scene-owned for XML-only renderer compatibility
+paths. Manual/default axis-title fallbacks, title body-property fallback, legend layout fallback, chart-wide
+data-label defaults, and per-label overrides now call `PptxSceneBuilder.ReadChartTextBodyProperties` instead of a
+renderer-local duplicate. This keeps `bodyPr` rotation, raw rotation token, `vert`, and `vertOverflow` parsing
+aligned with the scene fields used by unsupported-text diagnostics and private-safe scene inspection.
+
+This still does not make chart text consume the common text-frame layout model. It only removes duplicate
+`bodyPr` token interpretation so future chart text-frame work starts from a single structural source. The
+remaining long-term gap is unchanged: chart titles, legends, axis titles, and data labels need a shared
+text-frame/cascade path with Office-backed baseline, orientation, overflow, and font-fallback semantics.
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
