@@ -503,14 +503,21 @@ internal sealed partial class PptxRenderer
                 : PptxChartMetricRules.DoughnutHoleFallbackRatio;
         }
 
-        return ReadDoughnutHoleSize(doughnutChart);
+        (double? holeSize, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(doughnutChart, "holeSize");
+        return holeSize is { } xmlHoleSize
+            ? Math.Clamp(xmlHoleSize / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio)
+            : PptxChartMetricRules.DoughnutHoleFallbackRatio;
     }
 
     private static ChartBooleanOption ReadSceneOrXmlChartVaryColors(PptxSceneChartPlot? plot, XElement chartElement)
     {
-        return plot is not null
-            ? new ChartBooleanOption(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null)
-            : ReadChartVaryColorsOption(chartElement);
+        if (plot is not null)
+        {
+            return new ChartBooleanOption(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null);
+        }
+
+        (bool? varyColors, string varyColorsValue) = PptxSceneBuilder.ReadChartPlotVaryColors(chartElement);
+        return new ChartBooleanOption(varyColors ?? true, varyColorsValue, varyColors is not null);
     }
 
     private readonly record struct ChartBarPlotOptions(
@@ -589,14 +596,14 @@ internal sealed partial class PptxRenderer
     {
         return plot is not null
             ? plot.GapWidth ?? 150d
-            : ReadChartGapWidth(chartElement);
+            : ReadXmlChartGapWidth(chartElement);
     }
 
     private static double ReadSceneOrXmlChartOverlap(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is not null
             ? plot.Overlap ?? 0d
-            : ReadChartOverlap(chartElement);
+            : ReadXmlChartOverlap(chartElement);
     }
 
     private static double ReadSceneOrXmlFirstSliceAngle(PptxSceneChartPlot? plot, XElement chartElement)
@@ -608,9 +615,25 @@ internal sealed partial class PptxRenderer
                 : 0d;
         }
 
-        string? value = (string?)chartElement.Element(ChartNamespace + "firstSliceAng")?.Attribute("val");
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? NormalizeAngleDegrees(parsed)
+        (double? firstSliceAngle, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "firstSliceAng");
+        return firstSliceAngle is { } rawFirstSliceAngle
+            ? NormalizeAngleDegrees(rawFirstSliceAngle)
+            : 0d;
+    }
+
+    private static double ReadXmlChartGapWidth(XElement chartElement)
+    {
+        (double? gapWidth, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "gapWidth");
+        return gapWidth is { } rawGapWidth
+            ? Math.Clamp(rawGapWidth, 0d, 500d)
+            : 150d;
+    }
+
+    private static double ReadXmlChartOverlap(XElement chartElement)
+    {
+        (double? overlap, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "overlap");
+        return overlap is { } rawOverlap
+            ? Math.Clamp(rawOverlap, -100d, 100d)
             : 0d;
     }
 
@@ -7511,17 +7534,6 @@ internal sealed partial class PptxRenderer
             index >= 0;
     }
 
-    private static double ReadDoughnutHoleSize(XElement doughnutChart)
-    {
-        if (doughnutChart.Element(ChartNamespace + "holeSize")?.Attribute("val") is { } value &&
-            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
-        {
-            return Math.Clamp(parsed / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio);
-        }
-
-        return PptxChartMetricRules.DoughnutHoleFallbackRatio;
-    }
-
     private static bool HasMajorGridlines(XElement? axis)
     {
         return IsChartGridlineVisible(axis?.Element(ChartNamespace + "majorGridlines"));
@@ -7611,31 +7623,6 @@ internal sealed partial class PptxRenderer
             .Element(ChartNamespace + "spPr")
             ?.Element(DrawingNamespace + "ln");
         return line?.Element(DrawingNamespace + "noFill") is null;
-    }
-
-    private static ChartBooleanOption ReadChartVaryColorsOption(XElement chartElement)
-    {
-        XElement? varyColors = chartElement.Element(ChartNamespace + "varyColors");
-        return new ChartBooleanOption(
-            IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true),
-            (string?)varyColors?.Attribute("val") ?? string.Empty,
-            varyColors is not null);
-    }
-
-    private static double ReadChartGapWidth(XElement chartElement)
-    {
-        string? value = (string?)chartElement.Element(ChartNamespace + "gapWidth")?.Attribute("val");
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? Math.Clamp(parsed, 0d, 500d)
-            : 150d;
-    }
-
-    private static double ReadChartOverlap(XElement chartElement)
-    {
-        string? value = (string?)chartElement.Element(ChartNamespace + "overlap")?.Attribute("val");
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? Math.Clamp(parsed, -100d, 100d)
-            : 0d;
     }
 
     private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)

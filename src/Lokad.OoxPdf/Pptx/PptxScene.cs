@@ -2766,7 +2766,7 @@ internal sealed class PptxSceneBuilder
         return parsed;
     }
 
-    private static (double? Value, string RawValue) ReadChartElementDoubleWithValue(XElement element, string childName)
+    internal static (double? Value, string RawValue) ReadChartElementDoubleWithValue(XElement element, string childName)
     {
         string value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
@@ -2788,7 +2788,7 @@ internal sealed class PptxSceneBuilder
             : (null, value);
     }
 
-    private static (bool? Value, string RawValue) ReadChartPlotVaryColors(XElement plot)
+    internal static (bool? Value, string RawValue) ReadChartPlotVaryColors(XElement plot)
     {
         XElement? varyColors = plot.Element(ChartNamespace + "varyColors");
         return varyColors is null

@@ -15744,3 +15744,14 @@ curves are drawn; Office-backed path geometry evidence is still required before 
 line segment output with curve output. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
 passed with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures,
 and `0` skips.
+
+Follow-up, 2026-05-29: chart plot-level option token parsing now shares scene helpers in XML-only renderer
+compatibility paths. `PptxSceneBuilder.ReadChartPlotVaryColors` and
+`PptxSceneBuilder.ReadChartElementDoubleWithValue` are internal, and XML fallback paths for `varyColors`,
+`gapWidth`, `overlap`, `holeSize`, and `firstSliceAng` use those helpers instead of local attribute parsing.
+
+This keeps effective renderer policy unchanged: renderer-side defaults, clamping, and first-slice normalization
+still remain at the rendering boundary. The long-term gap is to replace those effective policies with
+Office-PDF-backed chart layout rules where they affect geometry, especially bar gap/overlap spacing and polar
+slice placement. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
