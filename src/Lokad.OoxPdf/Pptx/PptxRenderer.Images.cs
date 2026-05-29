@@ -83,7 +83,17 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        PdfImageXObject? image = GetOrCreateImage(imageResource, recolor, imageCache, diagnosticSink, slideIndex);
+        PdfImageXObject? image = null;
+        if (!crop.IsEmpty)
+        {
+            image = GetOrCreateCroppedImage(imageResource, recolor, crop, imageCache, diagnosticSink, slideIndex);
+            if (image is not null)
+            {
+                crop = default;
+            }
+        }
+
+        image ??= GetOrCreateImage(imageResource, recolor, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
             return;
@@ -697,6 +707,36 @@ internal sealed partial class PptxRenderer
         return image;
     }
 
+    private static PdfImageXObject? GetOrCreateCroppedImage(
+        PptxSceneImageResource imageResource,
+        PptxSceneImageRecolor recolor,
+        CropRect crop,
+        Dictionary<string, PdfImageXObject?>? imageCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex)
+    {
+        string cacheKey = imageResource.PartName + "\u001f" + ImageRecolorCacheKey(recolor) + "\u001fcrop:" +
+            crop.Left.ToString("R", CultureInfo.InvariantCulture) + "," +
+            crop.Top.ToString("R", CultureInfo.InvariantCulture) + "," +
+            crop.Right.ToString("R", CultureInfo.InvariantCulture) + "," +
+            crop.Bottom.ToString("R", CultureInfo.InvariantCulture);
+        if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
+        {
+            return cached;
+        }
+
+        PdfImageXObject? image = CreateCroppedImage(
+            imageResource.PartName,
+            imageResource.ContentType,
+            imageResource.Bytes,
+            recolor,
+            crop,
+            diagnosticSink,
+            slideIndex);
+        imageCache?.TryAdd(cacheKey, image);
+        return image;
+    }
+
     private static PdfImageXObject? CreateImage(
         string partName,
         string contentType,
@@ -776,6 +816,93 @@ internal sealed partial class PptxRenderer
         }
 
         return null;
+    }
+
+    private static PdfImageXObject? CreateCroppedImage(
+        string partName,
+        string contentType,
+        byte[] bytes,
+        PptxSceneImageRecolor recolor,
+        CropRect crop,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex)
+    {
+        try
+        {
+            if (contentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+            {
+                PngImage png = PngImage.Read(bytes);
+                return CreateCroppedRgbImage(png.Width, png.Height, png.Rgb, png.Alpha, recolor, crop);
+            }
+
+            if (contentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
+                contentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
+            {
+                BmpImage bmp = BmpImage.Read(bytes);
+                return CreateCroppedRgbImage(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha, recolor, crop);
+            }
+
+            if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+                contentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+            {
+                JpegImage jpeg = JpegImage.Read(bytes);
+                return CreateCroppedRgbImage(jpeg.Width, jpeg.Height, jpeg.Rgb, alpha: null, recolor, crop);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
+        {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "IMAGE_CROP_UNSUPPORTED_FORMAT",
+                OoxPdfSeverity.Warning,
+                $"Image '{partName}' could not be decoded for Office-style cropped image embedding on slide {slideIndex}; falling back to PDF clipping.",
+                partName,
+                SlideIndex: slideIndex,
+                Feature: "image crop",
+                Fallback: "PDF clipping"));
+        }
+
+        return null;
+    }
+
+    private static PdfImageXObject? CreateCroppedRgbImage(
+        int width,
+        int height,
+        byte[] rgb,
+        byte[]? alpha,
+        PptxSceneImageRecolor recolor,
+        CropRect crop)
+    {
+        int left = (int)Math.Floor(width * Math.Clamp(crop.Left, 0d, 1d));
+        int top = (int)Math.Floor(height * Math.Clamp(crop.Top, 0d, 1d));
+        int right = (int)Math.Ceiling(width * (1d - Math.Clamp(crop.Right, 0d, 1d)));
+        int bottom = (int)Math.Ceiling(height * (1d - Math.Clamp(crop.Bottom, 0d, 1d)));
+
+        left = Math.Clamp(left, 0, width);
+        top = Math.Clamp(top, 0, height);
+        right = Math.Clamp(right, left + 1, width);
+        bottom = Math.Clamp(bottom, top + 1, height);
+
+        int croppedWidth = right - left;
+        int croppedHeight = bottom - top;
+        if (croppedWidth <= 0 || croppedHeight <= 0)
+        {
+            return null;
+        }
+
+        byte[] croppedRgb = new byte[croppedWidth * croppedHeight * 3];
+        byte[]? croppedAlpha = alpha is null ? null : new byte[croppedWidth * croppedHeight];
+        for (int y = 0; y < croppedHeight; y++)
+        {
+            int sourceY = top + y;
+            Buffer.BlockCopy(rgb, (sourceY * width + left) * 3, croppedRgb, y * croppedWidth * 3, croppedWidth * 3);
+            if (alpha is not null && croppedAlpha is not null)
+            {
+                Buffer.BlockCopy(alpha, sourceY * width + left, croppedAlpha, y * croppedWidth, croppedWidth);
+            }
+        }
+
+        byte[] recoloredRgb = ApplyImageRecolor(croppedRgb, recolor);
+        return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, recoloredRgb, croppedAlpha);
     }
 
     private static byte[] ApplyImageRecolor(byte[] rgb, PptxSceneImageRecolor recolor)

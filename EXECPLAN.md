@@ -16676,3 +16676,23 @@ the right direction: page 21 `11.73` -> `7.96`, page 11 `10.58` -> `8.99`, and p
 Near-declared-height table pages stayed neutral after the cutoff: page 78 remained `3.85`, and page 48 remained
 `8.32`. The remaining top pages are now page 32, 53, 83, 50, 82, 81, and 61; continue with structural PDF
 alignment on shared template/picture/text geometry before introducing any more renderer-local metrics.
+
+Follow-up, 2026-05-29: page-32/page-50 inspection found another Office-structure mismatch in the grouped
+picture family. The OOXML crop math was correct, but the PDF structure differed: Office exports cropped raster
+pictures as already-cropped image XObjects drawn at the picture frame size, while the candidate drew the full
+source image oversized under a frame clip. On page 32, one representative picture had a frame clip around
+`304.116,376.823,39.245,37.904`; Office's image matrix matched that frame, while the candidate previously used
+an oversized `69.189 x 74.511` matrix offset under the same clip. The renderer now bakes decodable cropped PNG,
+BMP, and JPEG raster pictures into cropped image XObjects and draws them with the frame-sized matrix, falling
+back to the old PDF clipping path only when decoding the source image fails.
+
+Validation: the public `PptxSyntheticCroppedPictureUsesClipping` regression now checks that cropped raster
+pictures keep the frame clip but use the frame-sized image matrix rather than the oversized source matrix. The
+non-slow `pptx-images` group passed with `20` tests, `0` failures, and `0` skips; `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors. Private validation on
+`lokad-value-based` run `20260529-132145` compared 84/84 pages with empty diagnostics. Against run
+`20260529-131212`, deck MAE improved from `5.623536` to `5.518181`, and changed16 from `0.082612` to
+`0.079557`. The picture-heavy target pages moved in the right direction: page 32 `11.58` -> `11.51`, page 50
+`11.48` -> `11.40`, page 83 `11.52` -> `11.45`, page 61 `10.17` -> `10.14`, and page 53 `11.54` -> `11.54`
+slightly. Pages 82 and 81 stayed neutral, which is useful evidence that their remaining gap is not this cropped
+picture XObject structure.
