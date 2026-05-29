@@ -7252,7 +7252,9 @@ internal sealed partial class PptxRenderer
     {
         double? crossesAt = sceneAxis is not null
             ? sceneAxis.CrossesAt
-            : ReadChartElementDouble(valueAxis, "crossesAt");
+            : valueAxis is null
+                ? null
+                : PptxSceneBuilder.ReadChartElementDoubleWithValue(valueAxis, "crossesAt").Value;
         if (crossesAt is { } explicitCrossing)
         {
             return explicitCrossing;
@@ -7847,17 +7849,6 @@ internal sealed partial class PptxRenderer
         return chartElement is null
             ? null
             : PptxSceneBuilder.ReadChartElementIntWithValue(chartElement, elementName).Value;
-    }
-
-    private static double? ReadChartElementDouble(XElement? chartElement, string elementName)
-    {
-        if (chartElement?.Element(ChartNamespace + elementName)?.Attribute("val") is not { } value ||
-            !double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
-        {
-            return null;
-        }
-
-        return parsed;
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)

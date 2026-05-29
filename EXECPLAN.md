@@ -15777,3 +15777,14 @@ layout evidence. The long-term direction is to keep removing duplicate raw OOXML
 geometry changes that are not yet anchored to structural comparison probes. Validation: `dotnet build
 Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
 `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: value-axis `crossesAt` token parsing now shares the scene double helper in the XML-only
+renderer fallback path. The last renderer-local `ReadChartElementDouble` duplicate was removed; value-axis
+crossing fallback now calls `PptxSceneBuilder.ReadChartElementDoubleWithValue` for the raw `crossesAt` value.
+
+This keeps crossing resolution behavior unchanged. Explicit `crossesAt`, `crosses=max|min|autoZero`, and
+zero-in-range fallback still resolve in renderer layout code because they directly affect chart geometry. The
+long-term work is to verify crossing placement against Office PDF structure across reversed axes, secondary
+axes, hidden axes, and non-zero category/value crossings before moving those policies into a shared layout
+model. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and
+`0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
