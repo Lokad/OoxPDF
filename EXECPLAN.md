@@ -15640,3 +15640,21 @@ remaining bubble title/right-legend constants as derived Office layout logic. Va
 Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed with `141`
 tests, `0` failures, and `0` skips; public bubble port run `20260529-023037` passed with `FilledRegion`
 operator parity (`f*`/`f*`) under the strengthened gate.
+
+Follow-up, 2026-05-29: chart shape-style parsing now has a single structural owner. The XML-only compatibility
+fallbacks for chart area, plot area, title frames, manual/default axis-title frames, legend frames, data-label
+frames, per-label override frames, and data-label leader lines no longer use a renderer-local `ReadChartShapeStyle`
+parser. They route `c:spPr` through `PptxSceneBuilder.ReadChartShapeStyle` and then cross the existing
+`ToChartShapeStyle` renderer boundary, so explicit chart fill/stroke/gradient/pattern/glow/shadow/effect
+interpretation stays aligned with the typed scene model instead of drifting in parallel renderer code.
+
+This is intentionally a parser-ownership slice, not a chart-style cascade implementation. The next long-term gap
+remains Office-backed chart style resolution: explicit `c:spPr`, `styleN.xml` role refs, `colorsN.xml` variation
+branches, and default chart palettes still need a shared cascade/oracle before more rendered colors or effects
+should change. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips;
+public `pptx-ladder-11-chart-pie-data-label-leader-lines-probe` run `20260529-024901` passed. Public
+`pptx-ladder-11-chart-area-2series-port` run `20260529-024849` still failed its pre-existing MAE gate at
+`5.74166931905864` versus limit `3.8`; a detached clean-HEAD worktree at `346bf94` reproduced the same
+`5.74166931905864` failure in run `20260529-024925`, confirming this is an existing chart-area visual gap rather
+than a regression from centralizing the parser.

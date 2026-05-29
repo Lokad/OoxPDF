@@ -2689,12 +2689,12 @@ internal sealed class PptxSceneBuilder
                 SourceLinkedValue: (string?)numberFormat.Attribute("sourceLinked") ?? string.Empty);
     }
 
-    private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
+    internal static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
     {
         return ReadChartShapeStyle(shapeProperties, theme, PptxColorMap.Default);
     }
 
-    private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         bool noFill = shapeProperties?.Element(DrawingNamespace + "noFill") is not null;
         PptxSceneFillStyle fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)

@@ -3741,7 +3741,7 @@ internal sealed partial class PptxRenderer
     private static ChartShapeStyle ReadSceneOrXmlChartAreaStyle(PptxSceneChart? sceneChart, XDocument chartXml, PptxTheme theme, PptxColorMap colorMap)
     {
         return sceneChart is null
-            ? ReadChartShapeStyle(chartXml.Root?.Element(ChartNamespace + "spPr"), theme, colorMap)
+            ? ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(chartXml.Root?.Element(ChartNamespace + "spPr"), theme, colorMap))
             : ToChartShapeStyle(sceneChart.ChartAreaStyle);
     }
 
@@ -3758,7 +3758,7 @@ internal sealed partial class PptxRenderer
             .Descendants(ChartNamespace + "plotArea")
             .FirstOrDefault()
             ?.Element(ChartNamespace + "spPr");
-        return ReadChartShapeStyle(shapeProperties, theme, colorMap);
+        return ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(shapeProperties, theme, colorMap));
     }
 
     private static bool TryReadSceneOrXmlManualPlotLayout(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
@@ -4097,36 +4097,6 @@ internal sealed partial class PptxRenderer
             : null;
     }
 
-    private static ChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
-    {
-        return ReadChartShapeStyle(shapeProperties, theme, PptxColorMap.Default);
-    }
-
-    private static ChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
-    {
-        if (shapeProperties is null)
-        {
-            return ChartShapeStyle.Empty;
-        }
-
-        bool noFill = shapeProperties.Element(DrawingNamespace + "noFill") is not null;
-        ChartSeriesFill? fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
-            ? new ChartSeriesFill(fillColor, fillAlpha)
-            : null;
-        GradientFill? gradientFill = !noFill && PptxSceneBuilder.TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill sceneGradientFill)
-            ? ToGradientFill(sceneGradientFill)
-            : null;
-        ChartSeriesStroke? stroke = TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor strokeColor, out double lineWidth, out double strokeAlpha)
-            ? new ChartSeriesStroke(strokeColor, strokeAlpha, lineWidth)
-            : null;
-        return new ChartShapeStyle(
-            fill,
-            gradientFill,
-            stroke,
-            PptxSceneBuilder.TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
-            PptxSceneBuilder.TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
-    }
-
     private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)
     {
         if (ToGlow(style.Glow) is { } glow)
@@ -4274,7 +4244,7 @@ internal sealed partial class PptxRenderer
     private static ChartShapeStyle ReadSceneOrXmlChartTitleShapeStyle(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
     {
         return sceneChart is null
-            ? ReadChartShapeStyle(chartXml.Descendants(ChartNamespace + "title").FirstOrDefault()?.Element(ChartNamespace + "spPr"), theme, colorMap)
+            ? ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(chartXml.Descendants(ChartNamespace + "title").FirstOrDefault()?.Element(ChartNamespace + "spPr"), theme, colorMap))
             : ToChartShapeStyle(sceneChart.Title.ShapeStyle);
     }
 
@@ -4358,7 +4328,7 @@ internal sealed partial class PptxRenderer
                 text,
                 ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme, colorMap)),
                 layout,
-                ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap),
+                ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartTextBodyProperties(title),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap),
                 ChartTextStyleOverride.Empty,
@@ -4429,7 +4399,7 @@ internal sealed partial class PptxRenderer
                 ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme, colorMap)),
                 PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName),
                 PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val")),
-                ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap),
+                ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartTextBodyProperties(title),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap),
                 ChartTextStyleOverride.Empty,
@@ -5184,7 +5154,7 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, PptxSceneBuilder.ReadChartManualLayout(legend), ReadChartTextBodyProperties(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap));
+        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, PptxSceneBuilder.ReadChartManualLayout(legend), ReadChartTextBodyProperties(legend), ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap)));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
@@ -6641,7 +6611,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneBuilder.ReadChartManualLayout(labels),
                 ReadChartTextStyleFromTxPr(labels, theme, colorMap),
                 ReadChartTextBodyProperties(labels),
-                ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap),
+                ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartDataLabelFlagOptions(labels),
                 ReadChartDataLabelOverrides(labels, theme, colorMap),
                 IsDefined: true);
@@ -6759,7 +6729,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneBuilder.ReadChartManualLayout(label),
                 ReadChartTextStyleFromTxPr(label, theme, colorMap),
                 ReadChartTextBodyProperties(label),
-                ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap),
+                ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartDataLabelFlagOptions(label));
         }
 
@@ -6831,7 +6801,7 @@ internal sealed partial class PptxRenderer
             return ChartDataLabelLeaderLines.Empty;
         }
 
-        return new ChartDataLabelLeaderLines(IsDefined: true, ReadChartShapeStyle(leaderLines.Element(ChartNamespace + "spPr"), theme, colorMap).Stroke);
+        return new ChartDataLabelLeaderLines(IsDefined: true, ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(leaderLines.Element(ChartNamespace + "spPr"), theme, colorMap)).Stroke);
     }
 
     private static ChartDataLabelLeaderLines ToChartDataLabelLeaderLines(PptxSceneChartLeaderLines leaderLines)
