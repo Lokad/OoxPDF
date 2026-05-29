@@ -1005,6 +1005,17 @@ High-priority actions:
   regression now asserts model-visible `FF0000` and `Points/3000` before checking the emitted PDF font/color
   operators. Validation: focused non-slow `pptx-typography` passed (`98 passed, 0 failed, 2 skipped`); full
   non-slow console runner passed (`402 passed, 0 failed, 7 skipped`).
+- [x] 2026-05-29: Preserve inherited bullet markers when direct paragraph properties only override layout:
+  private page 32/50 evidence showed repeated list paragraphs with direct margins/hanging indents but missing
+  visible bullet markers in the candidate. The renderer paragraph-property merger now carries bullet font,
+  color, size, and marker-kind elements through the cascade when a direct `a:pPr` does not specify its own
+  `buNone`, `buChar`, `buAutoNum`, or `buBlip`, while still letting direct bullet kind override inherited
+  markers. The public regression `PptxSyntheticTextBoxInheritsListStyleBulletThroughDirectParagraphIndent`
+  locks the generic DrawingML behavior without private content. Validation: focused non-slow `pptx-typography`
+  passed (`107 passed, 0 failed, 2 skipped`); private `lokad-value-based` run `20260529-142101` compared all
+  84 pages with no diagnostics and improved deck MAE `5.306897 -> 4.901325`, changed16
+  `0.077473 -> 0.073306`; high-impact pages included page 61 `9.601 -> 4.160`, page 60 `8.998 -> 3.969`,
+  page 50 `11.404 -> 8.055`, and page 32 `11.505 -> 9.551`.
 - [x] Resolve empty PPTX paragraph spacing in the text model:
   `PptxTextParagraphModel` now carries `EmptySpacingBefore` and `EmptySpacingAfter`, computed from the resolved
   paragraph spacing ladder using the resolved end-paragraph font size. Empty-paragraph line layout and

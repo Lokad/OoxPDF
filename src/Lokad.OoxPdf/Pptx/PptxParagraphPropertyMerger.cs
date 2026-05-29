@@ -61,7 +61,50 @@ internal static class PptxParagraphPropertyMerger
         }
 
         MergeRendererChildElement(defaultRunPropertiesName, merged, fallback);
+        MergeRendererBulletProperties(merged, fallback);
         return merged;
+    }
+
+    private static void MergeRendererBulletProperties(XElement primaryParent, XElement fallbackParent)
+    {
+        XNamespace ns = primaryParent.Name.Namespace;
+        XName[] bulletKindNames =
+        [
+            ns + "buNone",
+            ns + "buChar",
+            ns + "buAutoNum",
+            ns + "buBlip"
+        ];
+        XName[] bulletPropertyNames =
+        [
+            ns + "buFont",
+            ns + "buClr",
+            ns + "buSzPct",
+            ns + "buSzPts"
+        ];
+
+        foreach (XName propertyName in bulletPropertyNames)
+        {
+            if (primaryParent.Element(propertyName) is null &&
+                fallbackParent.Element(propertyName) is { } fallbackProperty)
+            {
+                primaryParent.Add(new XElement(fallbackProperty));
+            }
+        }
+
+        if (bulletKindNames.Any(name => primaryParent.Element(name) is not null))
+        {
+            return;
+        }
+
+        foreach (XName kindName in bulletKindNames)
+        {
+            if (fallbackParent.Element(kindName) is { } fallbackKind)
+            {
+                primaryParent.Add(new XElement(fallbackKind));
+                return;
+            }
+        }
     }
 
     private static void MergeRendererChildElement(XName childName, XElement primaryParent, XElement fallbackParent)
