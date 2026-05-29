@@ -4198,12 +4198,12 @@ internal sealed class PptxSceneBuilder
             strike);
     }
 
-    private static bool IsOoxmlBooleanElementEnabled(XElement? element)
+    internal static bool IsOoxmlBooleanElementEnabled(XElement? element)
     {
         return OoxBoolean.ParseElement(element);
     }
 
-    private static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
+    internal static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
     {
         return OoxBoolean.ParseElement(element, defaultValue);
     }

@@ -15800,3 +15800,15 @@ diagnostic/default-placement behavior, and crossing/orientation policies remain 
 token ownership while leaving Office-PDF-backed layout derivation as the next long-term target. Validation:
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
 non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart XML boolean-element parsing now uses the scene helper in renderer fallbacks.
+`PptxSceneBuilder.IsOoxmlBooleanElementEnabled` is internal, and renderer checks for chart marker enablement,
+legend delete/overlay, and axis delete state now call it instead of carrying a duplicate `OoxBoolean.ParseElement`
+wrapper.
+
+This is deliberately limited to chart OOXML elements. Workbook/table attribute booleans still live in the
+workbook hydration path because they are not chart-scene element tokens and need a separate structural model if
+they are ever promoted. The immediate architectural gain is that chart element boolean semantics now have one
+owner before any layout-policy changes are considered. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off
+--nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `141`
+tests, `0` failures, and `0` skips.

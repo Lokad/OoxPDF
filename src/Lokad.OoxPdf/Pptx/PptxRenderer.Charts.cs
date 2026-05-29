@@ -1028,7 +1028,7 @@ internal sealed partial class PptxRenderer
             ? PptxSceneChartPlotKind.Unknown
             : PptxSceneBuilder.ParseChartPlotKind(chartElement.Name.LocalName);
         bool markersEnabled = chartElement.Name != ChartNamespace + "ser" &&
-            IsOoxmlBooleanElementEnabled(chartElement.Element(ChartNamespace + "marker"));
+            PptxSceneBuilder.IsOoxmlBooleanElementEnabled(chartElement.Element(ChartNamespace + "marker"));
         XElement plotElement = chartElement.Name == ChartNamespace + "ser"
             ? new XElement(ChartNamespace + "unknownChart", chartElement)
             : chartElement;
@@ -5186,7 +5186,7 @@ internal sealed partial class PptxRenderer
             return ChartLegendLayout.Hidden;
         }
 
-        if (IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")))
+        if (PptxSceneBuilder.IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")))
         {
             return ChartLegendLayout.Hidden;
         }
@@ -5196,7 +5196,7 @@ internal sealed partial class PptxRenderer
         {
             position = "r";
         }
-        bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
+        bool overlay = PptxSceneBuilder.IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
         return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, PptxSceneBuilder.ReadChartManualLayout(legend), PptxSceneBuilder.ReadChartTextBodyProperties(legend), ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap)));
     }
 
@@ -5472,16 +5472,6 @@ internal sealed partial class PptxRenderer
         return element?.Attribute(name) is { } attribute
             ? IsOoxmlTrue(attribute.Value)
             : null;
-    }
-
-    private static bool IsOoxmlBooleanElementEnabled(XElement? element)
-    {
-        return OoxBoolean.ParseElement(element);
-    }
-
-    private static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
-    {
-        return OoxBoolean.ParseElement(element, defaultValue);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver = null)
@@ -7199,14 +7189,14 @@ internal sealed partial class PptxRenderer
         }
 
         return axis is not null &&
-            !IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
+            !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
     }
 
     private static bool IsRightValueAxis(XElement? axis)
     {
         return axis is not null &&
             PptxSceneBuilder.ParseChartAxisPosition(ReadChartElementValue(axis, "axPos")) == PptxSceneChartAxisPosition.Right &&
-            !IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
+            !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
     }
 
     private static string? ReadChartAxisId(XElement? axis)
@@ -7758,7 +7748,7 @@ internal sealed partial class PptxRenderer
     private static bool IsChartAxisDeleted(XElement? axis)
     {
         XElement? delete = axis?.Element(ChartNamespace + "delete");
-        return IsOoxmlBooleanElementEnabled(delete);
+        return PptxSceneBuilder.IsOoxmlBooleanElementEnabled(delete);
     }
 
     private static bool IsChartAxisLabelVisible(XElement? axis)
