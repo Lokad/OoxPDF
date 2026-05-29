@@ -7463,6 +7463,55 @@ internal static class PptxTests
             "Expected multi-column text with overflow enabled to keep Office's slide-wide text clip instead of clipping to the second column.");
     }
 
+    public static void PptxSyntheticTextManualBreaksStayInActiveOverflowColumn()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr numCol="2" spcCol="0" lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"/>
+                      <a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>First column line</a:t></a:r><a:br/><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>Second first column</a:t></a:r></a:p>
+                      <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>Second column first</a:t></a:r><a:br/><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>Second column second</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] secondParagraphLines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .Select((paragraph, index) => new { paragraph, index })
+            .Where(item => item.index == 1)
+            .Select(item => item.paragraph)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, secondParagraphLines.Length);
+        TestAssert.True(
+            secondParagraphLines.All(line => Math.Abs(line.StartX - 216d) < 0.01d),
+            "Expected manual-break lines to align against the active second column, not the full text frame. Starts: " +
+            string.Join(", ", secondParagraphLines.Select(line => line.StartX.ToString("0.###", CultureInfo.InvariantCulture))));
+    }
+
     public static void PptxSyntheticTextBoxSplitsOverwideFirstSegmentAcrossColumns()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

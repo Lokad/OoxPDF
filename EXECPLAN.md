@@ -16957,3 +16957,27 @@ unchanged at report precision. The current balance detector should therefore sta
 validated late-heavy-last-column pattern. Page 32 likely needs a different Office signal, such as paragraph
 boundary/keep behavior, text-width/column-width measurement, or PDF-operation ordering, rather than a second
 threshold retry.
+
+Follow-up, 2026-05-29: page-39 line spacing gave another useful negative result. The main residual text frame
+is structurally `spAutoFit` plus `compatLnSpc`, with current candidate 14pt lines advancing by `15.4pt`
+(`1.1x`). Office text rows on the comparable block looked closer to `16.8pt` spacing in isolation, but changing
+`spAutoFit` compatible line spacing to the non-autofit `1.2x` factor failed both validation layers: the public
+regression `PptxSyntheticTextBoxShapeAutoFitUsesTightCompatibleLineSpacing` changed from the expected `13.2pt`
+advance to `14.4pt`, and private run `20260529-220122` worsened deck MAE from `4.669971` to `4.716479`, with
+pages 24/39 becoming the worst pages at about `11.3` MAE. Keep the existing `spAutoFit`/non-autofit compatible
+line-spacing split. The page-39 residual is therefore not solved by broad line-advance normalization; continue
+with structural PDF text-position evidence around vertical placement, wrapping, and Office text-state emission.
+
+Follow-up, 2026-05-29: page-32 then exposed a real multi-column manual-break bug rather than another balance
+threshold problem. In the dense three-column frame, a paragraph containing `a:br` had one line aligned back to
+the first-column X after the paragraph was already flowing in the second column. The cause was structural:
+the manual-break branch finalized the line against `frame.TextX/frame.TextWidth` and did not immediately run
+the same column-advance step used by wrapped lines. The renderer now aligns manual-break lines against the
+active `columnStartX/effectiveTextWidth`, advances the column after the break when needed, and refreshes the
+column clip and paragraph text origin. The public regression
+`PptxSyntheticTextManualBreaksStayInActiveOverflowColumn` locks this without private content. Validation:
+non-slow `pptx-typography` passed with `111` tests, `0` failures, and `2` slow skips;
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run `20260529-220638` compared
+84/84 pages with empty diagnostics and improved deck MAE from `4.669971` to `4.667706`; page 32 improved from
+`9.104729` to `8.914468`. Rebuilt private-safe inspection confirms the affected paragraph no longer emits the
+stray first-column X inside the later column flow.
