@@ -322,6 +322,17 @@ High-priority actions:
   `lokad-value-based` run `20260529-104353` compared 84/84 pages with zero dimension mismatches, deck MAE
   `7.117672`, changed16 `0.094155`, and no diagnostics. Page 17 remained unchanged at MAE `2.785936`,
   changed16 `0.044134`, SSIM `0.923371`.
+- [x] 2026-05-29: Align centered wrapped text with Office's trailing-space rule:
+  private slide 17 exposed centered text lines whose first glyph was shifted left by roughly half a
+  line-ending space. A public Office probe, `pptx-ladder-04-centered-trailing-space-alignment`, reproduced
+  the same structure with Cambria Math text: before the fix the first centered wrapped line was `-1.95 pt`
+  from Office, and after the fix it is `-0.09 pt` with all five public text operations inside the gate.
+  The renderer now preserves trailing spaces for PDF text emission but computes center/right alignment from
+  the last drawn non-space atom, matching observable Office PDF behavior without using private text or
+  position heuristics. Validation: focused non-slow `pptx-typography` passed (`101 passed, 0 failed,
+  2 skipped`); the new public visual case passed at run `20260529-110039`; private `lokad-value-based` run
+  `20260529-110054` compared 84/84 pages with zero dimension mismatches, no diagnostics, deck MAE
+  `6.917505`, changed16 `0.092676`, and page 17 improved from MAE `2.785936` to `2.669844`.
 - [x] Retire renderer-local shape picture-fill package fallback:
   `PptxRenderer.Shapes` no longer accepts slide relationship maps or the presentation package when resolving
   shape picture fills. It consumes the scene-owned `PptxSceneShapePictureFill.Resource` only; if the scene did

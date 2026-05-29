@@ -259,6 +259,16 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-inventory-opti-probe" -TextBo
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2200" kern="1200"><a:latin typeface="Calibri"/></a:rPr><a:t>In v e n t o r y Op t i should never appear from run splitting</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe `
+    -Id "pptx-ladder-04-centered-trailing-space-alignment" `
+    -Transform '<a:xfrm><a:off x="914400" y="1828800"/><a:ext cx="4775200" cy="1828800"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr lIns="91440" rIns="91440" tIns="45720" bIns="45720" wrap="square" vertOverflow="overflow" anchor="t"/>' `
+    -TextBody @'
+          <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1600" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Quality decisions depend on careful operational planning.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1000" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>To Va Ta AV planning quality</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1600" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Quality decisions depend on careful operational planning.</a:t></a:r></a:p>
+'@
+
 New-TypographyProbe -Id "pptx-ladder-04-typography-dense-column-probe" -TextBody @'
           <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1500"><a:latin typeface="Calibri"/></a:rPr><a:t>Lokad en quelques mots</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1300"><a:latin typeface="Calibri"/></a:rPr><a:t>Demand forecasting, replenishment and pricing depend on typography remaining legible in dense left-side columns.</a:t></a:r></a:p>

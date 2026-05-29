@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-04-centered-trailing-space-alignment",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-centered-trailing-space-alignment.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "alignment", "wrap", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.21,
+    "maxChangedPixelRatioAtThreshold16": 0.0045,
+    "maxTextOperationPositionDelta": 0.3,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

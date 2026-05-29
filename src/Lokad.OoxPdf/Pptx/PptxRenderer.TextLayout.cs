@@ -1656,7 +1656,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double paragraphWidth = Math.Max(0d, line.EndX - textX);
+        double alignmentEndX = ReadAlignmentEndX(line);
+        double paragraphWidth = Math.Max(0d, alignmentEndX - textX);
         bool justifyLine = justify && paragraphWidth > 0d && paragraphWidth < textWidth;
         double offset = alignment switch
         {
@@ -1703,6 +1704,26 @@ internal sealed partial class PptxRenderer
         }
 
         lines.Add(new PptxTextLineLayout(box, textX + offset, line.EndX + offset, line.EndX + offset, alignment, spans.ToArray()));
+    }
+
+    private static double ReadAlignmentEndX(TextLayoutLine line)
+    {
+        for (int spanIndex = line.Spans.Count - 1; spanIndex >= 0; spanIndex--)
+        {
+            PptxTextSpanLayout span = line.Spans[spanIndex];
+            for (int atomIndex = span.Atoms.Count - 1; atomIndex >= 0; atomIndex--)
+            {
+                PptxTextAtomLayout atom = span.Atoms[atomIndex];
+                if (!atom.Draw || atom.Kind == PptxTextAtomKind.HiddenAdvance || atom.Kind == PptxTextAtomKind.Space)
+                {
+                    continue;
+                }
+
+                return atom.X + atom.Width;
+            }
+        }
+
+        return line.EndX;
     }
 
     private static IReadOnlyList<PptxTextAtomLayout> OffsetAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double offset)

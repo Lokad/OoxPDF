@@ -5636,6 +5636,59 @@ internal static class PptxTests
         AssertContainsTextMatrixAtX(pdf, 177.478d);
     }
 
+    public static void PptxSyntheticTextBoxCenteredWrappedLineAlignsIgnoringTrailingSpace()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1524000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" wrap="square"/><a:lstStyle/>
+                      <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha beta gamma</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot firstLine = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames.Single()
+            .Paragraphs.Single()
+            .Lines.First();
+
+        PptxTextAtomLayoutSnapshot trailingSpace = firstLine.Spans
+            .SelectMany(span => span.Atoms)
+            .Last(atom => atom.Kind == "Space");
+        double visibleEndX = firstLine.Spans
+            .SelectMany(span => span.Atoms)
+            .Where(atom => atom.Draw && atom.Kind != "Space")
+            .Max(atom => atom.X + atom.Width);
+        double textX = 72d;
+        double textWidth = 120d;
+
+        TestAssert.True(firstLine.EndX > visibleEndX + trailingSpace.Width - 0.01d, "Expected the first wrapped line to preserve the emitted line-end space.");
+        TestAssert.True(
+            Math.Abs((firstLine.StartX - textX) - (textX + textWidth - visibleEndX)) < 0.01d,
+            "Expected centered wrapped-line alignment to ignore the trailing space while preserving it for text emission.");
+    }
+
     public static void PptxSyntheticTextBoxWrapsAcrossMixedRuns()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
