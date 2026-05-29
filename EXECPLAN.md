@@ -15696,6 +15696,18 @@ text-frame/cascade path with Office-backed baseline, orientation, overflow, and 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
 
+Follow-up, 2026-05-29: private-safe scene inspection now summarizes chart data-source structure without exposing
+workbook or chart values. `PptxSceneNodeSnapshot` reports how many chart data sources carry formulas, how many
+carry cached points, and which reference/cache kind tokens are present across series sources. The new regression
+uses a synthetic line chart to verify `strRef`, `numRef`, `multiLvlStrRef`, `strCache`, `numCache`, and
+`multiLvlStrCache` reporting while keeping formulas and point values out of private inspection output.
+
+This extends the plan deliberately because source/cache precedence remains one of the main long-term blockers.
+It does not change rendering or decide workbook-over-cache policy; it gives Office-PDF investigations a structural
+summary of formula/cache shape alongside `externalData`, `autoUpdate`, and `plotVisOnly` before any future
+behavioral change. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
+
 Follow-up, 2026-05-29: XML-only chart legend layout now reuses the scene-owned legend parser instead of
 reparsing `c:legend` locally in the renderer. `PptxSceneBuilder.ReadChartLegend` is internal, and
 `ReadChartLegendLayout` converts the typed `PptxSceneChartLegend` record into the renderer layout while

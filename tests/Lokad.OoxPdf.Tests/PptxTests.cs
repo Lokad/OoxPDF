@@ -13577,6 +13577,27 @@ internal static class PptxTests
         TestAssert.True(!scatterSeries.DataSources.BubbleSizes.HasCachedPoints, "Expected empty bubble-size cache to remain explicit.");
     }
 
+    public static void PptxSceneInspectionSummarizesChartDataSourceStructure()
+    {
+        PptxSceneNodeSnapshot snapshot = BuildSingleChartSceneSnapshot("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart><c:ser>
+                  <c:tx><c:strRef><c:f>Sheet1!$B$1</c:f><c:strCache/></c:strRef></c:tx>
+                  <c:cat><c:multiLvlStrRef><c:f>Sheet1!$A$2:$A$4</c:f><c:multiLvlStrCache/></c:multiLvlStrRef></c:cat>
+                  <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:pt idx="0"><c:v>7</c:v></c:pt></c:numCache></c:numRef></c:val>
+                </c:ser></c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        TestAssert.Equal(3, snapshot.ChartDataSourceFormulaCount);
+        TestAssert.Equal(1, snapshot.ChartDataSourceCachedPointSourceCount);
+        TestAssert.Equal("multiLvlStrRef,numRef,strRef", string.Join(",", snapshot.ChartDataSourceReferenceKinds));
+        TestAssert.Equal("multiLvlStrCache,numCache,strCache", string.Join(",", snapshot.ChartDataSourceCacheKinds));
+    }
+
     public static void PptxScenePreservesChartPlotNumericOptionTokens()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

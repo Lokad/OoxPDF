@@ -68,6 +68,19 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneChartSeries> chartSeries = chartPlots
             .SelectMany(plot => plot.Series)
             .ToArray();
+        IReadOnlyList<PptxSceneChartDataSource> chartDataSources = ReadChartDataSources(node.Chart);
+        IReadOnlyList<string> chartDataSourceReferenceKinds = chartDataSources
+            .Select(source => source.ReferenceKind)
+            .Where(kind => !string.IsNullOrWhiteSpace(kind))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        IReadOnlyList<string> chartDataSourceCacheKinds = chartDataSources
+            .Select(source => source.CacheKind)
+            .Where(kind => !string.IsNullOrWhiteSpace(kind))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
         IReadOnlyList<PptxSceneChartTextBodyProperties> chartTextBodyProperties = ReadChartTextBodyProperties(node.Chart);
         IReadOnlyList<PptxSceneChartColorDeclaration> chartColorDeclarations =
             node.Chart?.ColorStyle.Declarations ?? [];
@@ -169,6 +182,10 @@ internal sealed partial class PptxRenderer
             node.Chart?.Plots.Count ?? 0,
             node.Chart?.Axes.Count ?? 0,
             chartSeries.Count,
+            chartDataSources.Count(source => !string.IsNullOrWhiteSpace(source.Formula)),
+            chartDataSources.Count(source => source.HasCachedPoints),
+            chartDataSourceReferenceKinds,
+            chartDataSourceCacheKinds,
             chartSeries.Count(series => series.Marker.IsDefined),
             chartSeries.Sum(series => series.PointStyles.Count),
             chartSeries.Sum(series => series.PointStyles.Count(point => point.Explosion is not null)) +
@@ -300,6 +317,27 @@ internal sealed partial class PptxRenderer
         {
             properties.Add(labelOverride.TextBodyProperties);
         }
+    }
+
+    private static IReadOnlyList<PptxSceneChartDataSource> ReadChartDataSources(PptxSceneChart? chart)
+    {
+        if (chart is null)
+        {
+            return [];
+        }
+
+        var sources = new List<PptxSceneChartDataSource>();
+        foreach (PptxSceneChartSeries series in chart.Plots.SelectMany(plot => plot.Series))
+        {
+            sources.Add(series.DataSources.Name);
+            sources.Add(series.DataSources.Values);
+            sources.Add(series.DataSources.Categories);
+            sources.Add(series.DataSources.XValues);
+            sources.Add(series.DataSources.YValues);
+            sources.Add(series.DataSources.BubbleSizes);
+        }
+
+        return sources;
     }
 
     private static bool HasChartShapeStyle(PptxSceneChartShapeStyle? style)
