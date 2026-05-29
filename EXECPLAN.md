@@ -17104,3 +17104,58 @@ experiment only suppressed offsets larger than `1.2x` the largest run font and s
 use first-baseline alignment alone to override `anchorCtr`; the next pass needs a richer PDF-line grouping or
 Office-authored public fixture that explains both the extra Office row and the row spacing before changing
 middle-anchor timing again.
+
+Follow-up, 2026-05-29: page-13 line-placement inspection exposed another tempting but rejected baseline rule.
+The candidate and Office image placements match closely, so the residual is text-heavy. PDF text rows show one
+right-side paragraph band about `2.3376pt` lower than nearby Office rows, exactly matching the difference
+between the normal 12pt baseline fallback and a `1.2x` multiple-line-spacing baseline offset. A broad trial
+that kept multiple line spacing for line advance but stopped scaling the first-line baseline offset passed the
+non-slow `pptx-typography` group (`117` passed, `0` failed, `2` skipped), but private run `20260529-235929`
+rejected it: deck MAE worsened from `3.956952` to `4.776393`, pages 1 and 22 regressed by more than `6` MAE,
+and page 13 itself worsened from about `7.28` to `7.94`. Pages 19 and 20 did improve, so there is likely a real
+Office distinction here, but it is not "never scale explicit multiple first baselines." Preserve the current
+baseline rule until a structural discriminator is identified, such as authored `a:lnSpc` versus `compatLnSpc`,
+paragraph transition context, anchor mode, or public Office-authored evidence that separates the improving and
+regressing cases.
+
+Follow-up, 2026-05-30: page-48 table/text inspection rejected a broad table-cell implicit `Tc` rule. The
+reference PDF uses nonzero `Tc` values, most often `0.309pt`, across many table-cell text operations while the
+candidate emits `Tc=0`; this matches the older public `basic-table` structural audit. However, applying
+`0.309pt` implicit character spacing to every zero-`spc` table-cell run passed the non-slow `pptx-typography`
+group but failed private validation: run `20260530-000717` worsened deck MAE from `3.956952` to `4.146459`,
+made page 48 worse (`7.97` -> `9.20`), and regressed pages 21 and 79 sharply. The useful conclusion is that
+Office's non-authored `Tc` branch is real, but it is not table-scoped uniformly. Continue investigating it as a
+PDF text-emission/profile discriminator, likely tied to font/run grouping, table style state, line breaks, or
+Office's justification/fit behavior, before changing layout widths or PDF `Tc` again.
+
+Follow-up, 2026-05-30: page-48 highlighted-text wrap gave a second useful negative result. The left highlighted
+shape shows the visible mismatch clearly: Office uses `Tc=0.309pt` across the paragraph and wraps a highlighted
+span onto the next row, while the candidate keeps it on the previous row with `Tc=0`. A narrow-looking trial
+that assigned `0.309pt` implicit spacing to every zero-`spc` run in any paragraph containing `a:highlight`
+passed the non-slow `pptx-typography` group but failed private run `20260530-001124`: deck MAE worsened to
+`4.630335`, with large regressions on pages 51, 13, 53, 32, and 50. Do not use highlight presence alone as the
+implicit-`Tc` discriminator. The remaining page-48 opportunity is still text-fit/wrap and PDF text-state
+alignment, but the discriminator must be narrower than table scope or highlighted-paragraph scope.
+
+Accepted follow-up, 2026-05-30: the page-48 highlighted wrap mismatch is improved by a paragraph-scoped
+synthetic-bold/italic math-face text-state rule rather than by table scope or highlight scope. The Office PDF
+uses `Tc=0.309pt` for the highlighted paragraph's zero-`spc`, bold+italic Cambria Math runs; applying the same
+`0.01545em` spacing only when a drawable paragraph has both a highlighted run and zero-`spc` bold+italic math
+runs moves the highlighted span onto Office's next row and keeps the rest of the private deck essentially
+stable. Private run `20260530-002436` passed all `84/84` pages with no diagnostics, improved deck MAE from
+`3.956952` to `3.950370`, and reduced page 48 from about `7.97` to `7.42` while leaving other pages effectively
+unchanged. The public synthetic regression
+`PptxHighlightedSyntheticBoldItalicMathParagraphUsesOfficeCharacterSpacing` now locks the PDF text state:
+highlighted bold+italic Cambria Math emits `0.309 Tc`, while the same paragraph without highlight does not. The
+validation run after adding the regression passed non-slow `pptx-typography`: `118` passed, `0` failed, `2`
+skipped. Long term, this remains a structural proxy: replace the current typeface-name discriminator with
+font-resolver evidence for "Office would synthesize bold+italic from this math face" or an equivalent PDF-level
+text-state profile when that information becomes available.
+
+Remaining page-48 gap, 2026-05-30: the table header/fill geometry is still unresolved and should be handled
+separately. The OOXML declared row heights plus frame height produce only about `1.017x` slack; the current
+renderer uniformly scales the rows, while Office's first filled band is about `2.2pt` taller/lower even though
+the simple broad row-min expansion failed public table tests. Do not reintroduce a generic row-height slack
+override. The next table pass should compare Office and candidate PDF fill rectangles row-by-row against
+declared OOXML row heights and table-style margins, then look for a structural source such as cell margin,
+border, or band-fill ownership before touching row sizing.

@@ -1047,6 +1047,7 @@ internal sealed partial class PptxRenderer
         public const double DefaultTextOutlineWidth = 0.75d;
         public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
         public const double OfficeSyntheticBoldAdvanceTighteningEm = 0.007d;
+        public const double OfficeSyntheticBoldItalicMathCharacterSpacingEm = 0.01545d;
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
@@ -1080,6 +1081,9 @@ internal sealed partial class PptxRenderer
 
         public static double OfficeSyntheticBoldAdvanceTightening(double fontSize) =>
             Math.Max(0d, fontSize * OfficeSyntheticBoldAdvanceTighteningEm);
+
+        public static double OfficeSyntheticBoldItalicMathCharacterSpacing(double fontSize) =>
+            Math.Max(0d, fontSize * OfficeSyntheticBoldItalicMathCharacterSpacingEm);
 
         public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
         {

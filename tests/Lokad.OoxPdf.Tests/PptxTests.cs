@@ -5796,6 +5796,21 @@ internal static class PptxTests
             $"Expected synthetic bold layout width to be narrower than regular Cambria Math for Office-like centered placement. Bold width={bold.Width:0.###}, regular width={regular.Width:0.###}.");
     }
 
+    public static void PptxHighlightedSyntheticBoldItalicMathParagraphUsesOfficeCharacterSpacing()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string highlighted = RenderSyntheticMathSpacingProbe(highlightMiddleRun: true);
+        string unhighlighted = RenderSyntheticMathSpacingProbe(highlightMiddleRun: false);
+
+        TestAssert.Contains("0.309 Tc", highlighted);
+        TestAssert.DoesNotContain("0.309 Tc", unhighlighted);
+    }
+
     public static void PptxSyntheticTextBoxUsesKerningWhenAvailable()
     {
         string times = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "times.ttf");
@@ -20966,6 +20981,41 @@ internal static class PptxTests
                 """
         });
         return stream.ToArray();
+    }
+
+    private static string RenderSyntheticMathSpacingProbe(bool highlightMiddleRun)
+    {
+        string middleRunProperties = highlightMiddleRun
+            ? """<a:rPr sz="2000" b="1" i="1"><a:latin typeface="Cambria Math"/><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr>"""
+            : """<a:rPr sz="2000" b="1" i="1"><a:latin typeface="Cambria Math"/></a:rPr>""";
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr wrap="square"/><a:lstStyle/>
+                      <a:p>
+                        <a:r><a:rPr sz="2000" b="1" i="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Alpha beta gamma </a:t></a:r>
+                        <a:r>{middleRunProperties}<a:t>focus</a:t></a:r>
+                        <a:r><a:rPr sz="2000" b="1" i="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t> delta epsilon</a:t></a:r>
+                      </a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        return File.ReadAllText(output, Encoding.ASCII);
     }
 
     private static string BasicContentTypes()
