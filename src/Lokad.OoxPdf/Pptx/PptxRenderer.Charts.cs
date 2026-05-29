@@ -847,25 +847,25 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
         IReadOnlyList<ChartIndexedTextPoint> points = scenePoints.Count != 0
             ? scenePoints
-                .Select(point => new ChartIndexedTextPoint(
-                    point.Index,
-                    point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-                    point.Text,
-                    point.HasText,
-                    default))
+                .Select(point => ToChartIndexedTextPoint(point, trimText: false))
                 .ToArray()
             : compactValues
                 .Select((value, index) => new ChartIndexedTextPoint(index, ChartPointIndexSource.OrdinalFallback, value, true, default))
                 .ToArray();
         IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> levels = categoryLevels
-            .Select(level => level.Select(point => new ChartIndexedTextPoint(
-                point.Index,
-                point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-                point.Text,
-                point.HasText,
-                default)).ToArray())
+            .Select(level => level.Select(point => ToChartIndexedTextPoint(point, trimText: false)).ToArray())
             .ToArray();
         return new ChartIndexedTextVector(points, pointCount ?? InferPointCount(points), levels, source.Formula, source, workbookPoints, plotVisibleOnly);
+    }
+
+    private static ChartIndexedTextPoint ToChartIndexedTextPoint(PptxSceneChartStringPoint point, bool trimText)
+    {
+        return new ChartIndexedTextPoint(
+            point.Index,
+            point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+            trimText ? point.Text.Trim() : point.Text,
+            point.HasText,
+            default);
     }
 
     private static IReadOnlyList<ChartIndexedNumberPoint> ReadWorkbookNumberPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
@@ -4960,12 +4960,7 @@ internal sealed partial class PptxRenderer
     {
         return PptxSceneBuilder
             .ReadChartStringPoints(sourcePoints, requireNonNegativeIndex: true)
-            .Select(point => new ChartIndexedTextPoint(
-                point.Index,
-                point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-                point.Text.Trim(),
-                point.HasText,
-                default))
+            .Select(point => ToChartIndexedTextPoint(point, trimText: true))
             .ToArray();
     }
 

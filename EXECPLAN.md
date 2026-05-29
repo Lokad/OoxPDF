@@ -13635,6 +13635,17 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `143` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `419` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-29: Consolidated the renderer-side chart string-point adapter used by scene-backed
+category vectors and XML fallback category caches. This is a small ownership cleanup, not a visual parity
+claim: OOXML point-index interpretation remains scene-owned through `ReadChartStringPoints`, while the
+renderer now has one conversion point into `ChartIndexedTextPoint` and explicitly preserves the existing
+trim difference for XML fallback labels.
+
+This leaves active cache-vs-workbook policy, multi-level category layout, hidden-row `plotVisOnly`
+semantics, and Office-backed label placement untouched. The useful progress is removing another duplicate
+adapter shape before broader indexed vector work, so future chart source policy changes have fewer local
+text-point branches to audit.
+
 Revision note, 2026-05-27: Rechecked the private `lokad-value-based` case after the chart-wide data-label
 manual-layout slice. Private run `20260527-214643` compared all `84` reference pages against `84` candidate
 pages with zero dimension mismatches. Deck-level MAE stayed `7.702155`, changed-pixel ratio at threshold 16
