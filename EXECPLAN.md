@@ -16857,3 +16857,24 @@ to `4.796302`, changed16 from `0.073131` to `0.072179`, and page 53 improved fro
 `3.80`; no other page changed at the private-report precision. The next page-53 pass should therefore look at
 the residual PDF/text-operation deltas inside that now-balanced frame before returning to connector or picture
 structure.
+
+Follow-up, 2026-05-29: page-81 inspection exposed a vertical-anchor timing gap rather than another wrap or
+graphics issue. The private-safe structure is a horizontal, single-column, middle-anchored text frame whose
+model-stage `EstimateTextHeight` overestimates the wrapped block and clamps `VerticalOffset` to zero, while
+Office centers the actual two laid-out lines inside the frame. A broad "always replace anchor offset with
+actual line-box slack" rule was rejected after private run `20260529-200601`: page 81 improved, but pages 24
+and 39 regressed because they already had nonzero model-stage anchor offsets that Office's output matches more
+closely. The retained rule only repairs horizontal, single-column, non-table frames whose model-stage
+`VerticalOffset` is still zero and whose actual laid-out line boxes leave middle/bottom anchor slack. This keeps
+the correction structural, based on final line boxes, while avoiding a broad re-anchoring heuristic.
+
+Validation: the public regression `PptxSyntheticMiddleAnchorUsesActualWrappedLineHeight` locks the zero-offset
+middle-anchor case without private content. The non-slow `pptx-typography` group passed with `108` tests, `0`
+failures, and `2` slow skips; `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors. Private validation on `lokad-value-based` run `20260529-201043` compared 84/84 pages
+with empty diagnostics. Against run `20260529-194908`, deck MAE improved from `4.796302` to `4.768019`,
+changed16 from `0.072179` to `0.071944`, page 81 improved from `9.74` to `8.34`, and page 45 improved from
+`5.17` to `4.18`. Page 39 returned to neutral after the narrowed guard; page 24 moved only from `9.62` to
+`9.64`. PDF text inspection of page 81 now places the large two-line anchor frame within about `0.5pt` of the
+Office baselines, leaving residual work around character spacing/font-size grid and broader text operation
+count differences rather than block vertical placement.

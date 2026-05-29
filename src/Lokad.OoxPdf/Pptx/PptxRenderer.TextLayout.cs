@@ -334,10 +334,14 @@ internal sealed partial class PptxRenderer
             if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
             {
                 PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: false);
-                return BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator, allowWrapping: false);
+                return ApplyActualVerticalAnchorOffsetIfNeeded(
+                    BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator, allowWrapping: false),
+                    document,
+                    advanceEstimator,
+                    allowWrapping: false);
             }
 
-            return unwrappedLayout;
+            return ApplyActualVerticalAnchorOffsetIfNeeded(unwrappedLayout, document, advanceEstimator, allowWrapping: false);
         }
 
         if (HasShapeAutoFit(frameModel.BodyProperties) &&
@@ -345,10 +349,14 @@ internal sealed partial class PptxRenderer
             TextLayoutOverflowsHorizontally(layout, flowFrame.Box, PptxTextMetricRules.ShapeAutoFitWrapTolerance(ResolveLayoutMaxFontSize(layout), flowFrame.Box.TextWidth)))
         {
             PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
-            return BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
+            return ApplyActualVerticalAnchorOffsetIfNeeded(
+                BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator),
+                document,
+                advanceEstimator,
+                allowWrapping: true);
         }
 
-        return layout;
+        return ApplyActualVerticalAnchorOffsetIfNeeded(layout, document, advanceEstimator, allowWrapping: true);
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(
@@ -501,6 +509,64 @@ internal sealed partial class PptxRenderer
         return layout.Paragraphs
             .SelectMany(paragraph => paragraph.Lines)
             .Any(line => line.EndX > right + Math.Max(PptxTextMetricRules.TextStateTolerance, tolerance));
+    }
+
+    private static PptxTextFrameLayout ApplyActualVerticalAnchorOffsetIfNeeded(
+        PptxTextFrameLayout layout,
+        PptxDocument document,
+        TextAdvanceEstimator advanceEstimator,
+        bool allowWrapping)
+    {
+        if (!TryResolveActualVerticalAnchorOffset(layout, out double verticalOffset) ||
+            Math.Abs(verticalOffset - layout.Model.VerticalOffset) <= PptxTextMetricRules.CoordinateTolerance)
+        {
+            return layout;
+        }
+
+        PptxTextFrameModel anchored = layout.Model with { VerticalOffset = verticalOffset };
+        return BuildTextFrameLayout(BuildTextFlowFrame(anchored, document), document, advanceEstimator, allowWrapping);
+    }
+
+    private static bool TryResolveActualVerticalAnchorOffset(PptxTextFrameLayout layout, out double verticalOffset)
+    {
+        verticalOffset = 0d;
+        PptxTextFrameModel frame = layout.Model;
+        if (frame.Orientation != PptxTextOrientation.Horizontal ||
+            frame.ColumnCount != 1 ||
+            frame.VerticalOffset > PptxTextMetricRules.CoordinateTolerance ||
+            IsTableCellVerticalAnchorSource(frame.BodyProperties.VerticalAnchorSource))
+        {
+            return false;
+        }
+
+        double multiplier = frame.BodyProperties.VerticalAnchor switch
+        {
+            TextVerticalAnchor.Middle => PptxTextMetricRules.MiddleVerticalAnchorSlackMultiplier,
+            TextVerticalAnchor.Bottom => 1d,
+            _ => 0d
+        };
+        if (multiplier <= 0d)
+        {
+            return false;
+        }
+
+        PptxTextLineLayout[] lines = layout.Paragraphs.SelectMany(paragraph => paragraph.Lines).ToArray();
+        if (lines.Length == 0)
+        {
+            return false;
+        }
+
+        double top = lines.Max(line => line.Box.TopY);
+        double bottom = lines.Min(line => line.Box.TopY - line.Box.Advance);
+        double occupiedHeight = Math.Max(0d, top - bottom);
+        double slack = frame.TextHeight - occupiedHeight;
+        if (slack <= PptxTextMetricRules.CoordinateTolerance)
+        {
+            return false;
+        }
+
+        verticalOffset = slack * multiplier;
+        return true;
     }
 
     private static double ResolveLayoutMaxFontSize(PptxTextFrameLayout layout)

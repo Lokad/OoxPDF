@@ -7288,6 +7288,53 @@ internal static class PptxTests
         TestAssert.True(lines.Count(line => Math.Abs(line.StartX - 367.56d) < 0.01d) == 3, "Expected balanced overflow text in the third column.");
     }
 
+    public static void PptxSyntheticMiddleAnchorUsesActualWrappedLineHeight()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="457200" y="914400"/><a:ext cx="12065000" cy="567531"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr anchor="ctr" lIns="0" rIns="0" tIns="0" bIns="0"><a:noAutofit/></a:bodyPr>
+                      <a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2000"><a:latin typeface="Arial"/></a:rPr><a:t>Operational planning aligns demand commitments, replenishment timing, pricing, staffing, and supplier constraints across the same weekly review cycle with finance governance checkpoints.</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot model = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(0d, model.VerticalOffset);
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.True(
+            lines[0].BaselineY < 450.1d,
+            "Expected middle anchoring to use actual two-line layout height, not the pre-layout overestimate. Baselines: " +
+            string.Join(", ", lines.Select(line => line.BaselineY.ToString("0.###", CultureInfo.InvariantCulture))));
+    }
+
     public static void PptxSyntheticTextBoxOverflowColumnsUseSlideClip()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
