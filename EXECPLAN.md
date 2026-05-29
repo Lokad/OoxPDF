@@ -16210,6 +16210,13 @@ chart data hydration has a structural model with Office-PDF-backed behavior. Val
 Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
 `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
 
+Follow-up, 2026-05-29: renderer XML fallback plot-element selection now shares the scene-builder chart-kind
+mapping. `PptxSceneBuilder.GetChartPlotElementName` is the single inverse of `ParseChartPlotKind`, and
+`PptxRenderer.Charts` uses it instead of carrying a separate `PptxSceneChartPlotKind` -> OOXML element-name
+switch. This is source ownership only: scene-backed plot selection, fallback XML compatibility, and chart
+geometry are unchanged. Validation: focused non-slow `pptx-charts` passed with `144` tests, `0` failures, and
+`0` skips.
+
 Validation checkpoint, 2026-05-29: after the chart text, cache-point index, and cache `ptCount` parser-boundary
 cleanup, the full non-slow console suite passed with `417` tests, `0` failures, and `7` skips via
 `dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`. This

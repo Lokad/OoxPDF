@@ -1831,6 +1831,22 @@ internal sealed class PptxSceneBuilder
         };
     }
 
+    internal static string? GetChartPlotElementName(PptxSceneChartPlotKind kind)
+    {
+        return kind switch
+        {
+            PptxSceneChartPlotKind.Area => "areaChart",
+            PptxSceneChartPlotKind.Bar => "barChart",
+            PptxSceneChartPlotKind.Bubble => "bubbleChart",
+            PptxSceneChartPlotKind.Doughnut => "doughnutChart",
+            PptxSceneChartPlotKind.Line => "lineChart",
+            PptxSceneChartPlotKind.Pie => "pieChart",
+            PptxSceneChartPlotKind.Radar => "radarChart",
+            PptxSceneChartPlotKind.Scatter => "scatterChart",
+            _ => null
+        };
+    }
+
     internal static PptxSceneChartGrouping ParseChartGrouping(string? grouping)
     {
         return grouping switch
