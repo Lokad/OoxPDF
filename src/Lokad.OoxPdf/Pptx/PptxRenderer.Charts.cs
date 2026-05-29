@@ -4328,9 +4328,9 @@ internal sealed partial class PptxRenderer
                 layout,
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 PptxSceneBuilder.ReadChartTextBodyProperties(title),
-                ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap),
+                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(chartXml.Root, theme, colorMap)),
                 ChartTextStyleOverride.Empty,
-                ReadChartTextStyleFromTxPr(title, theme, colorMap),
+                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(title, theme, colorMap)),
                 fontResolver));
         }
 
@@ -4399,9 +4399,9 @@ internal sealed partial class PptxRenderer
                 PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val")),
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 PptxSceneBuilder.ReadChartTextBodyProperties(title),
-                ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap),
+                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(chartXml.Root, theme, colorMap)),
                 ChartTextStyleOverride.Empty,
-                ReadChartTextStyleFromTxPr(title, theme, colorMap),
+                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(title, theme, colorMap)),
                 fontResolver));
         }
 
@@ -6377,8 +6377,8 @@ internal sealed partial class PptxRenderer
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml, XElement? element, double fallbackFontSize)
     {
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, colorMap, fallbackFontSize);
-        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap));
-        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme, colorMap));
+        style = MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(chartXml.Root, theme, colorMap)));
+        style = MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(element, theme, colorMap)));
         return style;
     }
 
@@ -6461,77 +6461,6 @@ internal sealed partial class PptxRenderer
         return majorLatin.Typeface is null ? default : majorLatin;
     }
 
-    private static ChartTextStyleOverride ReadChartTextStyleFromTxPr(XElement? parent, PptxTheme theme)
-    {
-        return ReadChartTextStyleFromTxPr(parent, theme, PptxColorMap.Default);
-    }
-
-    private static ChartTextStyleOverride ReadChartTextStyleFromTxPr(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? defRunProperties = parent?
-            .Element(ChartNamespace + "txPr")?
-            .Elements(DrawingNamespace + "p")
-            .Select(paragraph => paragraph.Element(DrawingNamespace + "pPr")?.Element(DrawingNamespace + "defRPr"))
-            .FirstOrDefault(element => element is not null);
-        if (defRunProperties is null)
-        {
-            return ChartTextStyleOverride.Empty;
-        }
-
-        string? typeface = (string?)defRunProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
-            (string?)defRunProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
-            (string?)defRunProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
-        PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
-            ? default
-            : theme.ResolveTypefaceWithSource(typeface);
-        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
-            ? null
-            : typefaceResolution.Typeface;
-
-        double? fontSize = null;
-        if (defRunProperties.Attribute("sz") is { } sizeAttribute &&
-            int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
-            sizeHundredths > 0)
-        {
-            fontSize = sizeHundredths / 100d;
-        }
-
-        RgbColor? color = TryReadSolidColorWithAlpha(defRunProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
-            ? parsedColor
-            : null;
-        bool? bold = defRunProperties.Attribute("b") is { } boldAttribute
-            ? IsOoxmlTrue(boldAttribute.Value)
-            : null;
-        bool? italic = defRunProperties.Attribute("i") is { } italicAttribute
-            ? IsOoxmlTrue(italicAttribute.Value)
-            : null;
-        bool? underline = ReadChartUnderline(defRunProperties);
-        bool? strike = ReadChartStrike(defRunProperties);
-        return new ChartTextStyleOverride(
-            fontFamily,
-            fontSize,
-            color,
-            color is null ? null : alpha,
-            bold,
-            italic,
-            underline,
-            strike,
-            typefaceResolution.RequestedTypeface,
-            typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source);
-    }
-
-    private static bool? ReadChartUnderline(XElement runProperties)
-    {
-        string? value = (string?)runProperties.Attribute("u");
-        return value is null ? null : !value.Equals("none", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool? ReadChartStrike(XElement runProperties)
-    {
-        string? value = (string?)runProperties.Attribute("strike");
-        return value is null ? null : !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static ChartTextStyle MergeChartTextStyle(ChartTextStyle style, ChartTextStyleOverride next)
     {
         return new ChartTextStyle(
@@ -6587,7 +6516,7 @@ internal sealed partial class PptxRenderer
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
                 ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(labels)),
                 PptxSceneBuilder.ReadChartManualLayout(labels),
-                ReadChartTextStyleFromTxPr(labels, theme, colorMap),
+                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(labels, theme, colorMap)),
                 PptxSceneBuilder.ReadChartTextBodyProperties(labels),
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartDataLabelFlagOptions(labels),
@@ -6705,7 +6634,7 @@ internal sealed partial class PptxRenderer
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
                 ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(label)),
                 PptxSceneBuilder.ReadChartManualLayout(label),
-                ReadChartTextStyleFromTxPr(label, theme, colorMap),
+                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(label, theme, colorMap)),
                 PptxSceneBuilder.ReadChartTextBodyProperties(label),
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 ReadChartDataLabelFlagOptions(label));

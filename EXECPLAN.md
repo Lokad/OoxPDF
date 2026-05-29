@@ -15695,3 +15695,16 @@ remaining long-term gap is unchanged: chart titles, legends, axis titles, and da
 text-frame/cascade path with Office-backed baseline, orientation, overflow, and font-fallback semantics.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart `txPr` default-run style parsing now has one scene-builder owner for XML-only
+renderer compatibility paths. Manual/default axis titles, direct chart text-style fallback, data-label defaults,
+and per-label overrides now call `PptxSceneBuilder.ReadChartTextStyleOverride` and convert through
+`ToChartTextStyleOverride`, so font family/source, font size, solid-fill alpha, bold/italic, underline, and strike
+tokens no longer have a duplicate renderer parser.
+
+This keeps renderer style records as an adapter only; it is not yet the final chart text architecture. The
+remaining long-term step is still to replace renderer-local `ChartTextStyle` merging with a shared chart
+text-frame cascade that can participate in common text layout, Office baseline derivation, script/font fallback
+policy, and diagnostics for unsupported text choices. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off
+--nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `141`
+tests, `0` failures, and `0` skips.

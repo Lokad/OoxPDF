@@ -3426,12 +3426,12 @@ internal sealed class PptxSceneBuilder
         return ReadChartLine(shapeProperties, theme, colorMap);
     }
 
-    private static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme)
+    internal static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme)
     {
         return ReadChartTextStyleOverride(parent, theme, PptxColorMap.Default);
     }
 
-    private static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? defaultRunProperties = parent?
             .Element(ChartNamespace + "txPr")?
