@@ -5632,6 +5632,12 @@ High-priority actions:
   state. This is intentionally not a JPEG recolor implementation: DCT-backed image recolor still needs either
   dependency-free JPEG decode/re-encode or a verified Office-like PDF image/color-space strategy before the
   warning can be retired.
+- [x] PPTX built-in table style resolution now exposes a typed `PptxBuiltInTableStyleKind` in the scene model.
+  The renderer-side table-style fill/text resolver switches on that enum instead of repeatedly comparing
+  Office style-name strings, while scene inspection still exposes the private-safe style ID, name, kind, accent,
+  and conditional flags. This reduces stringly style logic without claiming table styles are complete; the
+  remaining table-style formulas still need Office table-style XML/PDF evidence before broadening beyond the
+  currently supported Light/Dark/Medium style families.
 
 ## Private Evidence
 
@@ -15728,6 +15734,20 @@ Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 `pptx-core` passed with `12` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
 `27` tests, `0` failures, and `1` skip; full non-slow console runner passed with `418` tests, `0` failures,
 and `7` skips.
+
+Follow-up, 2026-05-29: built-in PPTX table style families now have typed scene identity. `PptxSceneTableStyle`
+keeps the existing style ID, display name, accent, support flag, and conditional flag source tokens, and now also
+stores `PptxBuiltInTableStyleKind`. `PptxTableStyleResolver` consumes that enum for cell fill/text decisions
+instead of branching on repeated style-name string comparisons, and scene inspection reports the kind for
+public-safe assertions.
+
+This keeps the current table-style rendering formulas unchanged. The hard part is still ahead: the built-in
+table style catalogue is only a first supported subset, and the fill/text colors for those styles are compact
+approximations. Future work should replace those formulas with Office-authored table-style XML and PDF
+structure evidence rather than adding more style-name branches. Validation: `dotnet build Lokad.OoxPdf.slnx
+--tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-model` passed
+with `27` tests, `0` failures, and `1` skip; focused non-slow `pptx-tables` passed with `10` tests, `0`
+failures, and `0` skips.
 
 Follow-up, 2026-05-29: private-safe scene inspection now summarizes chart data-source structure without exposing
 workbook or chart values. `PptxSceneNodeSnapshot` reports how many chart data sources carry formulas, how many

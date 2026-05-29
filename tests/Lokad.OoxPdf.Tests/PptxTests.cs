@@ -456,6 +456,7 @@ internal static class PptxTests
         TestAssert.Equal("{93296810-A885-4BE3-A3E7-6D5BEEA58F35}", slideSnapshot.SlideNodes[2].TableStyleId);
         TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleIsSupported, "Expected scene inspection to expose table-style support state.");
         TestAssert.Equal("Medium-Style-2", slideSnapshot.SlideNodes[2].TableStyleName);
+        TestAssert.Equal("MediumStyle2", slideSnapshot.SlideNodes[2].TableStyleKind);
         TestAssert.Equal("accent6", slideSnapshot.SlideNodes[2].TableStyleAccent);
         TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleFirstRow, "Expected scene inspection to expose table first-row state.");
         TestAssert.Equal("1", slideSnapshot.SlideNodes[2].TableStyleFirstRowValue);
@@ -518,6 +519,7 @@ internal static class PptxTests
         TestAssert.Equal(914400d, slide.SlideNodes[2].Table?.RowHeights[0] ?? 0d);
         TestAssert.True(slide.SlideNodes[2].Table?.Style.IsSupported == true, "Expected built-in table style lookup in the scene model.");
         TestAssert.Equal("Medium-Style-2", slide.SlideNodes[2].Table?.Style.Name ?? string.Empty);
+        TestAssert.Equal(PptxBuiltInTableStyleKind.MediumStyle2, slide.SlideNodes[2].Table?.Style.Kind ?? PptxBuiltInTableStyleKind.Unknown);
         TestAssert.Equal("accent6", slide.SlideNodes[2].Table?.Style.Accent ?? string.Empty);
         TestAssert.True(slide.SlideNodes[2].Table?.Style.FirstRow == true, "Expected table first-row flag in the scene model.");
         TestAssert.True(slide.SlideNodes[2].Table?.Style.BandRow == true, "Expected table band-row flag in the scene model.");

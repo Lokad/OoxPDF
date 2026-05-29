@@ -92,6 +92,7 @@ internal sealed record PptxSceneNodeSnapshot(
     int TableCellCount,
     string TableStyleId,
     string TableStyleName,
+    string TableStyleKind,
     string TableStyleAccent,
     bool TableStyleIsSupported,
     bool TableStyleFirstRow,
@@ -1378,6 +1379,7 @@ internal sealed record PptxSceneTable(
 internal readonly record struct PptxSceneTableStyle(
     string? StyleId,
     string Name,
+    PptxBuiltInTableStyleKind Kind,
     string Accent,
     bool IsSupported,
     bool FirstRow,
@@ -1396,7 +1398,15 @@ internal readonly record struct PptxSceneTableStyle(
     public bool HasStyle => StyleId is not null;
 }
 
-internal readonly record struct PptxBuiltInTableStyle(string Name, string Accent);
+internal enum PptxBuiltInTableStyleKind
+{
+    Unknown,
+    LightStyle1,
+    DarkStyle1,
+    MediumStyle2
+}
+
+internal readonly record struct PptxBuiltInTableStyle(string Name, PptxBuiltInTableStyleKind Kind, string Accent);
 
 internal static class PptxBuiltInTableStyles
 {
@@ -1408,27 +1418,27 @@ internal static class PptxBuiltInTableStyles
     private static IReadOnlyDictionary<string, PptxBuiltInTableStyle> Styles { get; } =
         new Dictionary<string, PptxBuiltInTableStyle>(StringComparer.OrdinalIgnoreCase)
         {
-            ["{9D7B26C5-4107-4FEC-AEDC-1716B250A1EF}"] = new("Light-Style-1", "tx1"),
-            ["{3B4B98B0-60AC-42C2-AFA5-B58CD77FA1E5}"] = new("Light-Style-1", "accent1"),
-            ["{0E3FDE45-AF77-4B5C-9715-49D594BDF05E}"] = new("Light-Style-1", "accent2"),
-            ["{C083E6E3-FA7D-4D7B-A595-EF9225AFEA82}"] = new("Light-Style-1", "accent3"),
-            ["{D27102A9-8310-4765-A935-A1911B00CA55}"] = new("Light-Style-1", "accent4"),
-            ["{5FD0F851-EC5A-4D38-B0AD-8093EC10F338}"] = new("Light-Style-1", "accent5"),
-            ["{68D230F3-CF80-4859-8CE7-A43EE81993B5}"] = new("Light-Style-1", "accent6"),
-            ["{E8034E78-7F5D-4C2E-B375-FC64B27BC917}"] = new("Dark-Style-1", "dk1"),
-            ["{125E5076-3810-47DD-B79F-674D7AD40C01}"] = new("Dark-Style-1", "accent1"),
-            ["{37CE84F3-28C3-443E-9E96-99CF82512B78}"] = new("Dark-Style-1", "accent2"),
-            ["{D03447BB-5D67-496B-8E87-E561075AD55C}"] = new("Dark-Style-1", "accent3"),
-            ["{E929F9F4-4A8F-4326-A1B4-22849713DDAB}"] = new("Dark-Style-1", "accent4"),
-            ["{8FD4443E-F989-4FC4-A0C8-D5A2AF1F390B}"] = new("Dark-Style-1", "accent5"),
-            ["{AF606853-7671-496A-8E4F-DF71F8EC918B}"] = new("Dark-Style-1", "accent6"),
-            ["{073A0DAA-6AF3-43AB-8588-CEC1D06C72B9}"] = new("Medium-Style-2", "tx1"),
-            ["{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"] = new("Medium-Style-2", "accent1"),
-            ["{21E4AEA4-8DFA-4A89-87EB-49C32662AFE0}"] = new("Medium-Style-2", "accent2"),
-            ["{F5AB1C69-6EDB-4FF4-983F-18BD219EF322}"] = new("Medium-Style-2", "accent3"),
-            ["{00A15C55-8517-42AA-B614-E9B94910E393}"] = new("Medium-Style-2", "accent4"),
-            ["{7DF18680-E054-41AD-8BC1-D1AEF772440D}"] = new("Medium-Style-2", "accent5"),
-            ["{93296810-A885-4BE3-A3E7-6D5BEEA58F35}"] = new("Medium-Style-2", "accent6")
+            ["{9D7B26C5-4107-4FEC-AEDC-1716B250A1EF}"] = new("Light-Style-1", PptxBuiltInTableStyleKind.LightStyle1, "tx1"),
+            ["{3B4B98B0-60AC-42C2-AFA5-B58CD77FA1E5}"] = new("Light-Style-1", PptxBuiltInTableStyleKind.LightStyle1, "accent1"),
+            ["{0E3FDE45-AF77-4B5C-9715-49D594BDF05E}"] = new("Light-Style-1", PptxBuiltInTableStyleKind.LightStyle1, "accent2"),
+            ["{C083E6E3-FA7D-4D7B-A595-EF9225AFEA82}"] = new("Light-Style-1", PptxBuiltInTableStyleKind.LightStyle1, "accent3"),
+            ["{D27102A9-8310-4765-A935-A1911B00CA55}"] = new("Light-Style-1", PptxBuiltInTableStyleKind.LightStyle1, "accent4"),
+            ["{5FD0F851-EC5A-4D38-B0AD-8093EC10F338}"] = new("Light-Style-1", PptxBuiltInTableStyleKind.LightStyle1, "accent5"),
+            ["{68D230F3-CF80-4859-8CE7-A43EE81993B5}"] = new("Light-Style-1", PptxBuiltInTableStyleKind.LightStyle1, "accent6"),
+            ["{E8034E78-7F5D-4C2E-B375-FC64B27BC917}"] = new("Dark-Style-1", PptxBuiltInTableStyleKind.DarkStyle1, "dk1"),
+            ["{125E5076-3810-47DD-B79F-674D7AD40C01}"] = new("Dark-Style-1", PptxBuiltInTableStyleKind.DarkStyle1, "accent1"),
+            ["{37CE84F3-28C3-443E-9E96-99CF82512B78}"] = new("Dark-Style-1", PptxBuiltInTableStyleKind.DarkStyle1, "accent2"),
+            ["{D03447BB-5D67-496B-8E87-E561075AD55C}"] = new("Dark-Style-1", PptxBuiltInTableStyleKind.DarkStyle1, "accent3"),
+            ["{E929F9F4-4A8F-4326-A1B4-22849713DDAB}"] = new("Dark-Style-1", PptxBuiltInTableStyleKind.DarkStyle1, "accent4"),
+            ["{8FD4443E-F989-4FC4-A0C8-D5A2AF1F390B}"] = new("Dark-Style-1", PptxBuiltInTableStyleKind.DarkStyle1, "accent5"),
+            ["{AF606853-7671-496A-8E4F-DF71F8EC918B}"] = new("Dark-Style-1", PptxBuiltInTableStyleKind.DarkStyle1, "accent6"),
+            ["{073A0DAA-6AF3-43AB-8588-CEC1D06C72B9}"] = new("Medium-Style-2", PptxBuiltInTableStyleKind.MediumStyle2, "tx1"),
+            ["{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"] = new("Medium-Style-2", PptxBuiltInTableStyleKind.MediumStyle2, "accent1"),
+            ["{21E4AEA4-8DFA-4A89-87EB-49C32662AFE0}"] = new("Medium-Style-2", PptxBuiltInTableStyleKind.MediumStyle2, "accent2"),
+            ["{F5AB1C69-6EDB-4FF4-983F-18BD219EF322}"] = new("Medium-Style-2", PptxBuiltInTableStyleKind.MediumStyle2, "accent3"),
+            ["{00A15C55-8517-42AA-B614-E9B94910E393}"] = new("Medium-Style-2", PptxBuiltInTableStyleKind.MediumStyle2, "accent4"),
+            ["{7DF18680-E054-41AD-8BC1-D1AEF772440D}"] = new("Medium-Style-2", PptxBuiltInTableStyleKind.MediumStyle2, "accent5"),
+            ["{93296810-A885-4BE3-A3E7-6D5BEEA58F35}"] = new("Medium-Style-2", PptxBuiltInTableStyleKind.MediumStyle2, "accent6")
         };
 }
 
@@ -4361,6 +4371,7 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneTableStyle(
             styleId,
             supported ? style.Name : string.Empty,
+            supported ? style.Kind : PptxBuiltInTableStyleKind.Unknown,
             supported ? style.Accent : string.Empty,
             supported,
             ReadTablePropertyFlag(tableProperties, "firstRow"),

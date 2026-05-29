@@ -159,6 +159,7 @@ internal sealed partial class PptxRenderer
             tableCellCount,
             tableStyle.StyleId ?? string.Empty,
             tableStyle.Name,
+            tableStyle.Kind.ToString(),
             tableStyle.Accent,
             tableStyle.IsSupported,
             tableStyle.FirstRow,

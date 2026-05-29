@@ -17,7 +17,7 @@ internal static class PptxTableStyleResolver
         }
 
         int bodyColumnIndex = columnIndex - (tableStyle.FirstColumn ? 1 : 0);
-        if (string.Equals(tableStyle.Name, "Medium-Style-2", StringComparison.Ordinal) &&
+        if (tableStyle.Kind == PptxBuiltInTableStyleKind.MediumStyle2 &&
             ((tableStyle.FirstRow && rowIndex == 0) ||
                 (tableStyle.LastRow && rowIndex == rowCount - 1) ||
                 (tableStyle.FirstColumn && columnIndex == 0) ||
@@ -26,14 +26,14 @@ internal static class PptxTableStyleResolver
             return new PptxSceneFillStyle(true, accent, alpha);
         }
 
-        if (string.Equals(tableStyle.Name, "Light-Style-1", StringComparison.Ordinal) &&
+        if (tableStyle.Kind == PptxBuiltInTableStyleKind.LightStyle1 &&
             tableStyle.FirstRow &&
             rowIndex == 0)
         {
             return new PptxSceneFillStyle(true, accent, alpha);
         }
 
-        if (string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal))
+        if (tableStyle.Kind == PptxBuiltInTableStyleKind.DarkStyle1)
         {
             if (tableStyle.FirstRow && rowIndex == 0 && theme.TryResolveColor("dk1", colorMap, out RgbColor dark))
             {
@@ -53,7 +53,7 @@ internal static class PptxTableStyleResolver
         }
 
         int bodyRowIndex = rowIndex - (tableStyle.FirstRow ? 1 : 0);
-        if (string.Equals(tableStyle.Name, "Light-Style-1", StringComparison.Ordinal))
+        if (tableStyle.Kind == PptxBuiltInTableStyleKind.LightStyle1)
         {
             if (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0)
             {
@@ -68,7 +68,7 @@ internal static class PptxTableStyleResolver
             return default;
         }
 
-        if (string.Equals(tableStyle.Name, "Medium-Style-2", StringComparison.Ordinal))
+        if (tableStyle.Kind == PptxBuiltInTableStyleKind.MediumStyle2)
         {
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
@@ -78,7 +78,7 @@ internal static class PptxTableStyleResolver
             return new PptxSceneFillStyle(true, color, alpha);
         }
 
-        if (string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal))
+        if (tableStyle.Kind == PptxBuiltInTableStyleKind.DarkStyle1)
         {
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
@@ -101,9 +101,9 @@ internal static class PptxTableStyleResolver
         bool bold = false;
         RgbColor? color = null;
         bool supportedStyle = tableStyle.IsSupported &&
-            (string.Equals(tableStyle.Name, "Medium-Style-2", StringComparison.Ordinal) ||
-                string.Equals(tableStyle.Name, "Light-Style-1", StringComparison.Ordinal) ||
-                string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal));
+            tableStyle.Kind is PptxBuiltInTableStyleKind.MediumStyle2 or
+                PptxBuiltInTableStyleKind.LightStyle1 or
+                PptxBuiltInTableStyleKind.DarkStyle1;
         bool firstRow = tableStyle.FirstRow && rowIndex == 0;
         bool firstCol = tableStyle.FirstColumn && columnIndex == 0;
         bool lastRow = tableStyle.LastRow &&
@@ -122,8 +122,7 @@ internal static class PptxTableStyleResolver
         if (supportedStyle && (firstCol || lastRow || lastCol))
         {
             bold = true;
-            if ((string.Equals(tableStyle.Name, "Medium-Style-2", StringComparison.Ordinal) ||
-                    string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal)) &&
+            if (tableStyle.Kind is PptxBuiltInTableStyleKind.MediumStyle2 or PptxBuiltInTableStyleKind.DarkStyle1 &&
                 (lastRow || lastCol) &&
                 theme.TryResolveColor("lt1", colorMap, out RgbColor conditionalColor))
             {
