@@ -1733,25 +1733,15 @@ internal sealed partial class PptxRenderer
                 plotVisibleOnly);
         }
 
-        ChartIndexedNumberPoint[] points = cache
-            .Elements(ChartNamespace + "pt")
-            .Select((point, fallbackIndex) =>
-            {
-                int? parsedIndex = ReadChartCachePointIndex(point);
-                XElement? valueElement = point.Element(ChartNamespace + "v");
-                string text = valueElement?.Value ?? string.Empty;
-                bool hasValue = valueElement is not null;
-                double? value = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-                    ? parsed
-                    : null;
-                return new ChartIndexedNumberPoint(
-                    parsedIndex ?? fallbackIndex,
-                    parsedIndex is not null ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-                    value,
-                    text,
-                    hasValue,
-                    default);
-            })
+        ChartIndexedNumberPoint[] points = PptxSceneBuilder
+            .ReadChartNumberPoints(cache.Elements(ChartNamespace + "pt"), requireNonNegativeIndex: true)
+            .Select(point => new ChartIndexedNumberPoint(
+                point.Index,
+                point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+                point.Value,
+                point.Text,
+                point.HasValueElement,
+                default))
             .ToArray();
         return new ChartIndexedNumberVector(
             points,
@@ -1761,11 +1751,6 @@ internal sealed partial class PptxRenderer
             source,
             ReadWorkbookNumberPoints(workbook, source),
             plotVisibleOnly);
-    }
-
-    private static int? ReadChartCachePointIndex(XElement point)
-    {
-        return PptxSceneBuilder.ReadChartPointIndexAttribute(point, requireNonNegative: true).Value;
     }
 
     private static void HydrateChartReferenceCaches(ChartWorkbookData workbook, XDocument chartXml)
@@ -4973,19 +4958,14 @@ internal sealed partial class PptxRenderer
 
     private static ChartIndexedTextPoint[] ReadChartIndexedTextPoints(IEnumerable<XElement> sourcePoints)
     {
-        return sourcePoints
-            .Select((point, fallbackIndex) =>
-            {
-                XElement? valueElement = point.Element(ChartNamespace + "v");
-                string text = valueElement?.Value.Trim() ?? string.Empty;
-                int? parsedIndex = ReadChartCachePointIndex(point);
-                return new ChartIndexedTextPoint(
-                    parsedIndex ?? fallbackIndex,
-                    parsedIndex is not null ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-                    text,
-                    valueElement is not null,
-                    default);
-            })
+        return PptxSceneBuilder
+            .ReadChartStringPoints(sourcePoints, requireNonNegativeIndex: true)
+            .Select(point => new ChartIndexedTextPoint(
+                point.Index,
+                point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+                point.Text.Trim(),
+                point.HasText,
+                default))
             .ToArray();
     }
 

@@ -4861,6 +4861,11 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-29: Moved XML-only chart cache point token parsing behind scene-builder helpers. Renderer fallback
+  number and category vectors now reuse `PptxSceneBuilder.ReadChartNumberPoints` and
+  `ReadChartStringPoints` for point index/value extraction while preserving the renderer's nonnegative-index
+  policy for XML fallback data vectors. This is another chart parser-ownership cleanup only; workbook sidecar
+  precedence, sparse point expansion, formatting, and rendering remain unchanged.
 - [x] 2026-05-29: Added vertical-overflow provenance to PPTX glyph-run/text-emission diagnostics and used it to
   narrow the public-safe secondary `/Tf` investigation without changing rendering. `PptxInspect` glyph-run JSON and
   `ComparePptxTextEmission.ps1` summaries now expose frame wrap, vertical-overflow mode/value/source, and autofit
@@ -7625,6 +7630,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Keep chart cache point lexing in the scene builder, but keep fallback data-vector validity policy at
+  the renderer boundary for now.
+  Rationale: Scene construction preserves authored chart cache provenance, including ordinal fallback state, while
+  renderer XML fallback vectors have an existing policy that rejects negative point indices for renderable data
+  expansion. Sharing the token reader without moving that policy avoids a behavior change and still removes duplicate
+  low-level parsing.
+  Date/Author: 2026-05-29 / Codex.
+
 - Decision: Keep the secondary Office `/Tf +0.024 pt` work in diagnostic/evidence mode after adding vertical
   overflow provenance.
   Rationale: The refreshed public-safe `wrap13b` branch summary shows the main-grid and secondary branches share
@@ -7948,6 +7961,13 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Chart cache-point parser-ownership slice, 2026-05-29:
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed.
+dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow:
+142 passed, 0 failed, 0 skipped.
+```
 
 ```text
 Diagnostic text-overflow provenance slice, 2026-05-29:
@@ -16114,3 +16134,13 @@ font-size investigation, progress log, surprise log, decision log, and validatio
 negative evidence from the public-safe `wrap13b` probe: body-property wrap/overflow/autofit tokens do not explain
 Office's secondary `/Tf +0.024 pt` branch, so the long-term work remains structural page/text-matrix alignment
 rather than a renderer heuristic keyed to those tokens.
+
+Follow-up, 2026-05-29: XML-only chart number and text cache-point parsing now reuses scene-builder helpers.
+`PptxSceneBuilder.ReadChartNumberPoints` and `ReadChartStringPoints` are internal helpers, and renderer fallback
+vectors call them with the existing nonnegative-index policy instead of reparsing `c:pt/@idx` and `c:v` locally.
+
+This preserves the current data-vector behavior: scene cache provenance still accepts parsed authored indices for
+inspection, while renderer fallback vectors continue rejecting negative indices before renderable sparse-point
+expansion. Workbook sidecar precedence, `ptCount` fallback, string trimming in category labels, and number-format
+handling are unchanged. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.

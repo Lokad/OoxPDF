@@ -3226,13 +3226,18 @@ internal sealed class PptxSceneBuilder
 
     private static IReadOnlyList<PptxSceneChartNumberPoint> ReadChartSeriesNumberPoints(XElement series, string elementName)
     {
+        return ReadChartNumberPoints(series
+            .Elements(ChartNamespace + elementName)
+            .Descendants(ChartNamespace + "pt"));
+    }
+
+    internal static IReadOnlyList<PptxSceneChartNumberPoint> ReadChartNumberPoints(IEnumerable<XElement> sourcePoints, bool requireNonNegativeIndex = false)
+    {
         var points = new List<PptxSceneChartNumberPoint>();
         int ordinal = 0;
-        foreach (XElement point in series
-            .Elements(ChartNamespace + elementName)
-            .Descendants(ChartNamespace + "pt"))
+        foreach (XElement point in sourcePoints)
         {
-            (int? parsedIndex, string indexValue) = ReadChartPointIndexAttribute(point);
+            (int? parsedIndex, string indexValue) = ReadChartPointIndexAttribute(point, requireNonNegativeIndex);
             int index = parsedIndex ?? ordinal;
             XElement? valueElement = point.Element(ChartNamespace + "v");
             string text = (string?)valueElement ?? string.Empty;
@@ -3317,13 +3322,13 @@ internal sealed class PptxSceneBuilder
             .ToArray();
     }
 
-    private static IReadOnlyList<PptxSceneChartStringPoint> ReadChartStringPoints(IEnumerable<XElement> sourcePoints)
+    internal static IReadOnlyList<PptxSceneChartStringPoint> ReadChartStringPoints(IEnumerable<XElement> sourcePoints, bool requireNonNegativeIndex = false)
     {
         var points = new List<PptxSceneChartStringPoint>();
         int ordinal = 0;
         foreach (XElement point in sourcePoints)
         {
-            (int? parsedIndex, string indexValue) = ReadChartPointIndexAttribute(point);
+            (int? parsedIndex, string indexValue) = ReadChartPointIndexAttribute(point, requireNonNegativeIndex);
             int index = parsedIndex ?? ordinal;
             XElement? valueElement = point.Element(ChartNamespace + "v");
             points.Add(new PptxSceneChartStringPoint(index, indexValue, parsedIndex is not null, valueElement?.Value ?? string.Empty, valueElement is not null));
