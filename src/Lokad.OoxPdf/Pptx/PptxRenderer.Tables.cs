@@ -8,6 +8,8 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private const double OfficeTableRowContentExpansionSlackFactor = 1.05d;
+
     private sealed record TableFrameLayout(
         IReadOnlyList<PptxPositionedTextSpan> TextSpans,
         IReadOnlyList<PptxTableCellTextFrame> TextFrames,
@@ -167,6 +169,7 @@ internal sealed partial class PptxRenderer
         }
 
         double rowScale = frameHeight / rawRowHeights.Sum();
+        double[] rowHeights = ResolveTableRowHeights(context, sceneTable, rawColumnWidths, rawRowHeights, columnScale, rowScale, frameHeight, colorMap);
 
         double yTop = frameTop;
         var rowTops = new double[rows.Count + 1];
@@ -176,7 +179,7 @@ internal sealed partial class PptxRenderer
         rowTops[0] = yTop;
         for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
         {
-            double rowHeight = rawRowHeights[rowIndex] * rowScale;
+            double rowHeight = rowHeights[rowIndex];
             double cellY = yTop - rowHeight;
             IReadOnlyList<PptxSceneTableCell> cells = rows[rowIndex].Cells;
 
@@ -216,10 +219,10 @@ internal sealed partial class PptxRenderer
                         .Skip(columnIndex)
                         .Take(columnSpan)
                         .Sum() * columnScale;
-                double cellHeight = rawRowHeights
+                double cellHeight = rowHeights
                         .Skip(rowIndex)
                         .Take(rowSpan)
-                        .Sum() * rowScale;
+                        .Sum();
                 double cellTop = yTop;
                 double cellBottom = cellTop - cellHeight;
 
@@ -264,6 +267,127 @@ internal sealed partial class PptxRenderer
         }
 
         return new TableFrameLayout(textSpans, textFrames, cellFills, DefaultGrid: null, explicitBorders);
+    }
+
+    private static double[] ResolveTableRowHeights(
+        PptxRenderContext context,
+        PptxSceneTable sceneTable,
+        IReadOnlyList<double> rawColumnWidths,
+        IReadOnlyList<double> rawRowHeights,
+        double columnScale,
+        double rowScale,
+        double frameHeight,
+        PptxColorMap colorMap)
+    {
+        double[] rowHeights = rawRowHeights.Select(height => height * rowScale).ToArray();
+        double rowHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch);
+        if (rowHeightSlackFactor <= OfficeTableRowContentExpansionSlackFactor)
+        {
+            return rowHeights;
+        }
+
+        double[] minimumHeights = new double[rowHeights.Length];
+        for (int rowIndex = 0; rowIndex < sceneTable.Rows.Count; rowIndex++)
+        {
+            IReadOnlyList<PptxSceneTableCell> cells = sceneTable.Rows[rowIndex].Cells;
+            int columnIndex = 0;
+            for (int cellIndex = 0; cellIndex < cells.Count && columnIndex < rawColumnWidths.Count; cellIndex++)
+            {
+                PptxSceneTableCell sceneCell = cells[cellIndex];
+                if (sceneCell.IsMergedContinuation)
+                {
+                    columnIndex++;
+                    continue;
+                }
+
+                int columnSpan = Math.Min(sceneCell.ColumnSpan, rawColumnWidths.Count - columnIndex);
+                int rowSpan = Math.Min(sceneCell.RowSpan, rowHeights.Length - rowIndex);
+                double columnWidth = rawColumnWidths
+                    .Skip(columnIndex)
+                    .Take(columnSpan)
+                    .Sum() * columnScale;
+                double minimumHeight = EstimateTableCellMinimumHeight(context, sceneCell, columnWidth, colorMap, sceneCell.StyleText);
+                if (minimumHeight > PptxTextMetricRules.TextStateTolerance)
+                {
+                    if (rowSpan <= 1)
+                    {
+                        minimumHeights[rowIndex] = Math.Max(minimumHeights[rowIndex], minimumHeight);
+                    }
+                    else
+                    {
+                        double currentSpannedHeight = rowHeights.Skip(rowIndex).Take(rowSpan).Sum();
+                        double deficit = minimumHeight - currentSpannedHeight;
+                        if (deficit > PptxTextMetricRules.TextStateTolerance)
+                        {
+                            minimumHeights[rowIndex + rowSpan - 1] = Math.Max(
+                                minimumHeights[rowIndex + rowSpan - 1],
+                                rowHeights[rowIndex + rowSpan - 1] + deficit);
+                        }
+                    }
+                }
+
+                columnIndex += columnSpan;
+            }
+        }
+
+        for (int i = 0; i < rowHeights.Length; i++)
+        {
+            rowHeights[i] = Math.Max(rowHeights[i], minimumHeights[i]);
+        }
+
+        double minimumTotal = minimumHeights.Sum();
+        if (minimumTotal > frameHeight + PptxTextMetricRules.TextStateTolerance)
+        {
+            double scale = frameHeight / minimumTotal;
+            for (int i = 0; i < rowHeights.Length; i++)
+            {
+                rowHeights[i] = minimumHeights[i] * scale;
+            }
+
+            return rowHeights;
+        }
+
+        double overflow = rowHeights.Sum() - frameHeight;
+        if (overflow > PptxTextMetricRules.TextStateTolerance)
+        {
+            double shrinkCapacity = rowHeights
+                .Select((height, index) => Math.Max(0d, height - minimumHeights[index]))
+                .Sum();
+            if (shrinkCapacity > PptxTextMetricRules.TextStateTolerance)
+            {
+                double shrink = Math.Min(overflow, shrinkCapacity);
+                for (int i = 0; i < rowHeights.Length; i++)
+                {
+                    double capacity = Math.Max(0d, rowHeights[i] - minimumHeights[i]);
+                    rowHeights[i] -= shrink * capacity / shrinkCapacity;
+                }
+            }
+        }
+
+        return rowHeights;
+    }
+
+    private static double EstimateTableCellMinimumHeight(
+        PptxRenderContext context,
+        PptxSceneTableCell sceneCell,
+        double width,
+        PptxColorMap colorMap,
+        PptxSceneTableCellTextStyle tableStyleTextStyle)
+    {
+        PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, 0d, 0d, width, 1d, colorMap, tableStyleTextStyle);
+        if (tableTextFrame is null)
+        {
+            return 0d;
+        }
+
+        PptxTextFrameModel frame = BuildTextFrameModel(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
+        double textHeight = EstimateTextHeight(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties);
+        if (textHeight <= PptxTextMetricRules.TextStateTolerance)
+        {
+            return 0d;
+        }
+
+        return frame.Insets.Top + textHeight + frame.Insets.Bottom;
     }
 
     private static void RenderTableFrameLayout(PdfGraphicsBuilder graphics, TableFrameLayout layout)

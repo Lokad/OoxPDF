@@ -16649,3 +16649,30 @@ pages moved sharply in the right direction: page 50 `15.75` -> `11.48`, page 49 
 metrics. The remaining top pages are now page 21, 32, 53, 83, 50, 82, and 81; continue by separating shared
 template/background drift from content-specific text operation structure before touching image-resource
 cropping again.
+
+Follow-up, 2026-05-29: page-21 inspection exposed a structural PPTX table row-height gap, not a text or image
+issue. The private-safe slide inventory showed a table-heavy page with declared table rows whose raw heights sum
+to materially less than the graphic-frame height. PDF inspection gave a clean geometry anchor: Office placed the
+first row/header lower edge around `399.95 pt`, while the candidate proportional row scaling put it around
+`405.32 pt`. After content-aware row redistribution, the candidate lower edge is around `400.50 pt`.
+
+The implemented rule is deliberately structural and bounded. When a table has material vertical slack relative to
+the sum of declared OOXML row heights, the renderer estimates each non-empty cell text frame's minimum required
+height from the same text model used for rendering, expands rows that need that content height, and shrinks only
+rows with slack above their minimums to preserve the graphic-frame bottom. Tables whose declared rows already
+account for the frame height stay on the proportional path; impossible cases whose summed text minimums exceed
+the frame are scaled back into the frame instead of letting row geometry escape the table bounds. This boundary is
+important: an earlier broad version improved the target table but regressed near-declared-height table slides;
+private-safe evidence showed those cases had only about `1.02x` slack, while page 21 had about `1.54x` slack. The slack cutoff is now named as
+`OfficeTableRowContentExpansionSlackFactor` instead of leaving a dangling numeric condition in the layout code.
+
+Validation: the new public regressions `PptxSyntheticTableExpandsSlackRowsFromCellText` and
+`PptxSyntheticTableKeepsDeclaredRowsWithoutMaterialSlack` passed, and the non-slow `pptx-tables` group passed
+with `12` tests, `0` failures, and `0` skips. `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+passed with `0` warnings and `0` errors. Private validation on `lokad-value-based` run `20260529-131212`
+compared 84/84 pages with empty diagnostics. Against run `20260529-125407`, deck MAE improved from `5.706001`
+to `5.623536`, and changed16 from `0.083469` to `0.082612`. The direct target and related table pages moved in
+the right direction: page 21 `11.73` -> `7.96`, page 11 `10.58` -> `8.99`, and page 75 `4.01` -> `2.44`.
+Near-declared-height table pages stayed neutral after the cutoff: page 78 remained `3.85`, and page 48 remained
+`8.32`. The remaining top pages are now page 32, 53, 83, 50, 82, 81, and 61; continue with structural PDF
+alignment on shared template/picture/text geometry before introducing any more renderer-local metrics.
