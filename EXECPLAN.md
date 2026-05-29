@@ -191,6 +191,20 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-29: Split PPTX manual-break line-grid behavior by actual Office text-frame mode instead of
+  treating every paragraph containing `a:br` as globally manual-break-spaced. Private
+  `lokad-value-based` page-81 inspection showed a top-anchored `spAutoFit` text frame where Office keeps
+  ordinary text-before-break lines on the normal `1.2x` baseline grid, while OOXPDF applied the
+  manual-break `1.24x` advance and `0.9344x` baseline fallback to all lines in any paragraph containing a
+  break. The renderer now reserves the manual-break fallback for leading empty break lines and non-shape-
+  autofit text boxes, while `spAutoFit` text-before-break lines use the normal line advance and baseline
+  metric. Public regression: `PptxSyntheticTextBeforeManualBreakKeepsNormalLineGrid`, while the existing
+  leading-break and trailing-break tests still preserve their fallback behavior. Validation: focused non-slow
+  `pptx-typography` passed with `116` tests, `0` failures, and `2` skips; private validation run
+  `20260529-232949` compared 84/84 pages with empty diagnostics and improved deck MAE
+  `4.079796 -> 3.956952`, changed16 `0.065647 -> 0.064289`. Page 81 improved `8.182011 -> 4.825309`;
+  pages 24 and 39 stayed unchanged, confirming that their remaining gap is separate from the manual-break
+  grid and still points at Office PDF text-state/character-spacing and vertical-fit structure.
 - [x] 2026-05-29: Removed the PPTX presentation-font heuristic that substituted math-table collection faces
   with a sibling non-math text face. Private `lokad-value-based` page-81/page-39 inspection showed Office's
   exported PDF using Cambria Math resources in visible body text where OOXPDF emitted the sibling Cambria face;

@@ -1017,7 +1017,9 @@ internal sealed partial class PptxRenderer
             }
 
             bool afterManualLineBreak = false;
-            double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator, frame.UseOfficeBaselineFloor);
+            bool afterLeadingManualLineBreak = false;
+            bool shapeAutoFit = HasShapeAutoFit(frame.BodyProperties);
+            double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator, frame.UseOfficeBaselineFloor, shapeAutoFit);
             double cursorX = paragraphTextX;
             double maxFontSize = 0d;
             var line = new TextLayoutLine(paragraphTextX);
@@ -1032,8 +1034,12 @@ internal sealed partial class PptxRenderer
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
                     double lineFontSize = ResolveLineFontSize(maxFontSize, flowRun.Style.FontSize);
+                    bool leadingManualBreak = line.Spans.Count == 0;
+                    bool useManualBreakFallback = leadingManualBreak || !shapeAutoFit;
                     AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator);
-                    double lineAdvance = ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                    double lineAdvance = useManualBreakFallback
+                        ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize)
+                        : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                     cursorLineTop -= lineAdvance;
                     MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance);
                     columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
@@ -1043,6 +1049,7 @@ internal sealed partial class PptxRenderer
                         : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
                     cursorY = double.NaN;
                     afterManualLineBreak = true;
+                    afterLeadingManualLineBreak = useManualBreakFallback;
                     cursorX = paragraphTextX;
                     line.Reset(paragraphTextX);
                     maxFontSize = 0d;
@@ -1056,10 +1063,11 @@ internal sealed partial class PptxRenderer
                 ResolvedRunTextStyle runStyle = flowRun.Style;
                 if (double.IsNaN(cursorY))
                 {
-                    cursorY = cursorLineTop - (afterManualLineBreak
+                    cursorY = cursorLineTop - (afterLeadingManualLineBreak
                         ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor)
                         : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor));
                     afterManualLineBreak = false;
+                    afterLeadingManualLineBreak = false;
                 }
 
                 if (bulletPending)
@@ -2902,11 +2910,12 @@ internal sealed partial class PptxRenderer
             : normalAdvance;
     }
 
-    private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
+    private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor, bool shapeAutoFit)
     {
+        bool startsWithManualLineBreak = paragraph.Runs.FirstOrDefault()?.Kind == PptxTextRunKind.Break;
         PptxTextRunModel? firstRun = paragraph.Runs.FirstOrDefault(run => run.Kind != PptxTextRunKind.Break);
         double fontSize = firstRun?.Style.NominalFontSize ?? paragraph.FirstLineFallbackFontSize;
-        return paragraph.HasManualLineBreak
+        return startsWithManualLineBreak || (paragraph.HasManualLineBreak && !shapeAutoFit)
             ? ManualBreakBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor)
             : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator, useOfficeBaselineFloor);
     }
