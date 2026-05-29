@@ -1171,6 +1171,13 @@ High-priority actions:
   (`seg=250,line=244,curve=4,move=2,close=2`) while command-stream coordinates only pass at a very loose tolerance
   (about `153 pt` max flattened coordinate delta on the current artifact). This gives future connector work a
   structural PDF target beyond raster and count parity without introducing a renderer heuristic.
+- [x] 2026-05-29: Promote the loose curved-connector path-coordinate target into the public manifest:
+  `pptx-ladder-06-curved-connector-transform-probe` now requires flattened path-command coordinate comparison for
+  filled `f` connector regions at `153 pt` tolerance, in addition to the existing bounds, operator,
+  segment-count, path-command-count, and path-operator gates. This deliberately preserves the analytical connector
+  item as open: the tolerance documents the current sampled-body gap, while making future connector changes prove
+  they do not worsen the Office/candidate command stream before the offset-curve model is replaced. Validation:
+  public connector transform probe run `20260529-023335` passed with the new coordinate gate.
 - [ ] Track the remaining private page-17 text/font-size gap while preserving the closed clip history:
   this item started when private page 17 still had one missing high-level `W*` clip and dominant derived font-size
   differences: Office reported `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while the candidate reported

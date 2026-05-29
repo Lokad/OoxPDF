@@ -19,7 +19,9 @@
     "matchGraphicsOperationOperators": true,
     "compareGraphicsOperationSegmentCounts": true,
     "compareGraphicsOperationPathCommandCounts": true,
-    "compareGraphicsOperationPathOperators": true
+    "compareGraphicsOperationPathOperators": true,
+    "compareGraphicsOperationPathCommandCoordinates": true,
+    "maxGraphicsOperationPathCommandCoordinateDelta": 153.0
   },
   "allowedUnsupportedFeatures": []
 }
