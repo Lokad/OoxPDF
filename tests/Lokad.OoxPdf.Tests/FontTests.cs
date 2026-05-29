@@ -340,7 +340,7 @@ internal static class FontTests
         TestAssert.True(!resolved.IsFallback, "Expected exact font resolution not to be marked as fallback.");
     }
 
-    public static void WindowsFontResolverUsesCollectionTextFaceForPresentationMathText()
+    public static void WindowsFontResolverPreservesPresentationMathTextFace()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
         if (!Directory.Exists(fontsDirectory) ||
@@ -367,8 +367,8 @@ internal static class FontTests
 
         TestAssert.NotNull(resolved.FontFilePath);
         TestAssert.Equal(mathFace.FontFilePath, resolved.FontFilePath);
-        TestAssert.True(!resolved.HasMathTable, "Expected PPTX presentation text to use a non-math text face from the same font collection.");
-        TestAssert.True(!resolved.IsFallback, "Expected same-collection presentation text face not to be marked as fallback.");
+        TestAssert.True(resolved.HasMathTable, "Expected PPTX presentation text to preserve the requested math-table face.");
+        TestAssert.True(!resolved.IsFallback, "Expected the requested presentation math face not to be marked as fallback.");
     }
 
     public static void WindowsFontResolverUsesMetadataRatherThanFontNameAliases()

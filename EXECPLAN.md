@@ -191,6 +191,18 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-29: Removed the PPTX presentation-font heuristic that substituted math-table collection faces
+  with a sibling non-math text face. Private `lokad-value-based` page-81/page-39 inspection showed Office's
+  exported PDF using Cambria Math resources in visible body text where OOXPDF emitted the sibling Cambria face;
+  the mismatch was structural, not a page-specific coordinate defect. `ResolvePresentationTextFace` now keeps
+  exact font resolution, preserving the requested math-table face for presentation text instead of silently
+  changing the font family within a TTC. Public regression:
+  `WindowsFontResolverPreservesPresentationMathTextFace`. Validation: `fonts` passed with `20` tests,
+  `0` failures; focused non-slow `pptx-typography` passed with `115` tests, `0` failures, and `2` skips.
+  Private validation run `20260529-231637` compared 84/84 pages with empty diagnostics and improved deck MAE
+  `4.321723 -> 4.079796`, changed16 `0.068108 -> 0.065647`; pages 39, 24, and 81 all improved, 54 pages
+  improved overall, 18 stayed unchanged, and 12 had smaller regressions consistent with removing a global
+  font substitution.
 - [x] 2026-05-29: Fixed PPTX overflow-column fit to use the resolved line advance rather than raw font size
   when deciding whether another line still fits in the current column. Private page-32 inspection on
   `lokad-value-based` showed a direct `noAutofit`, top-anchored, three-column text frame where Office pushed a
