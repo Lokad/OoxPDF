@@ -15827,3 +15827,14 @@ lists still drop blank/whitespace IDs in renderer fallback, scene plot IDs still
 and optional axis IDs still remain nullable where fallback code uses a missing ID to choose a default.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart cache point-count and polar explosion token parsing now reuse scene-owned raw
+numeric helpers in renderer fallback code. `ptCount` reads use `ReadChartValueAttribute`, while series/point
+`explosion` and point `idx` reads use the scene double/int child-value helpers instead of reparsing child `val`
+attributes locally.
+
+This still keeps polar explosion policy in the renderer. The point-count bridge, workbook/cache sidecar
+hydration, sparse point expansion, and explosion-to-fraction clamping are geometry/data policies that need
+Office-PDF evidence before they move. The cleanup only removes duplicate low-level token interpretation.
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

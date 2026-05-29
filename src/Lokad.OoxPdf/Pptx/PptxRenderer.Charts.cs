@@ -1765,7 +1765,7 @@ internal sealed partial class PptxRenderer
 
     private static int? ReadChartPointCount(XElement cache)
     {
-        string? value = (string?)cache.Element(ChartNamespace + "ptCount")?.Attribute("val");
+        string value = PptxSceneBuilder.ReadChartValueAttribute(cache.Element(ChartNamespace + "ptCount"));
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
             ? parsed
             : null;
@@ -7466,10 +7466,10 @@ internal sealed partial class PptxRenderer
             return explosions;
         }
 
-        if (series.Element(ChartNamespace + "explosion")?.Attribute("val") is { } seriesExplosionAttribute &&
-            double.TryParse(seriesExplosionAttribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double seriesExplosion))
+        (double? seriesExplosion, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(series, "explosion");
+        if (seriesExplosion is { } seriesExplosionValue)
         {
-            double fraction = Math.Clamp(seriesExplosion / 100d, 0d, 1d);
+            double fraction = Math.Clamp(seriesExplosionValue / 100d, 0d, 1d);
             int pointCount = series
                 .Elements(ChartNamespace + "val")
                 .Descendants(ChartNamespace + "pt")
@@ -7491,10 +7491,10 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (point.Element(ChartNamespace + "explosion")?.Attribute("val") is { } explosionAttribute &&
-                double.TryParse(explosionAttribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double explosion))
+            (double? explosion, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(point, "explosion");
+            if (explosion is { } explosionValue)
             {
-                explosions[index] = Math.Clamp(explosion / 100d, 0d, 1d);
+                explosions[index] = Math.Clamp(explosionValue / 100d, 0d, 1d);
             }
         }
 
@@ -7503,12 +7503,15 @@ internal sealed partial class PptxRenderer
 
     private static bool TryReadChartNonNegativeIndex(XElement element, out int index)
     {
-        return int.TryParse(
-                element.Element(ChartNamespace + "idx")?.Attribute("val")?.Value,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out index) &&
-            index >= 0;
+        (int? parsed, _) = PptxSceneBuilder.ReadChartElementIntWithValue(element, "idx");
+        if (parsed is { } value && value >= 0)
+        {
+            index = value;
+            return true;
+        }
+
+        index = 0;
+        return false;
     }
 
     private static bool HasMajorGridlines(XElement? axis)
