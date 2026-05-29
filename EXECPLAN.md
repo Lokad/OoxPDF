@@ -16837,3 +16837,23 @@ and page 53 improved from `11.371393` to `11.023339`. Smaller movements were mix
 Office's operation count and line split for that centered shape-autofit frame, so the remaining page-53 work
 should move to residual text-position deltas, picture/color structure, or non-text geometry rather than another
 wrap-tolerance sweep.
+
+Follow-up, 2026-05-29: page-53 residual inspection found a multi-column overflow balancing rule, but only after
+rejecting a too-broad vertical-overflow interpretation. The private-safe structure is a dense three-column text
+frame with `vertOverflow` resolving to overflow. The strict candidate pass produced column line counts
+`22/22/25`, while Office places the same total line count as `23/23/23`: the last baseline in each early column
+is allowed to sit just below the frame bottom before advancing. A blanket change from the strict
+`cursorLineTop - fontSize` break test to `cursorLineTop` for all overflow columns reproduced page 53 but was
+rejected because private run `20260529-194138` regressed the deck from MAE `4.882291` to `5.069046` and worsened
+other multi-column pages including 54, 55, 59, and 36. Those rejected pages had different first-pass
+distributions, so the retained implementation keeps the strict pass as canonical and retries with the Office
+overflow-balance threshold only when the first pass exposes the specific late-last-column balance pattern.
+
+Validation: the new public regression `PptxSyntheticOverflowColumnsPlaceBaselineBelowFrameBottom` locks the
+balanced overflow-column behavior without private content, and the non-slow `pptx-typography` group passed with
+`108` tests, `0` failures, and `2` slow skips. Private validation on `lokad-value-based` run `20260529-194908`
+compared 84/84 pages with empty diagnostics. Against run `20260529-193232`, deck MAE improved from `4.882291`
+to `4.796302`, changed16 from `0.073131` to `0.072179`, and page 53 improved from MAE `11.023339` to about
+`3.80`; no other page changed at the private-report precision. The next page-53 pass should therefore look at
+the residual PDF/text-operation deltas inside that now-balanced frame before returning to connector or picture
+structure.
