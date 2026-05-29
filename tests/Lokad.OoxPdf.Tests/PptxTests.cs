@@ -5044,6 +5044,54 @@ internal static class PptxTests
         TestAssert.Contains("\u2022", string.Concat(spanTexts));
     }
 
+    public static void PptxSyntheticTextBoxDirectBulletOverridesInheritedNone()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/>
+                      <a:lstStyle><a:lvl1pPr><a:buNone/></a:lvl1pPr></a:lstStyle>
+                      <a:p><a:pPr marL="571500" indent="-571500"><a:buFont typeface="Arial"/><a:buChar char="&#x2022;"/></a:pPr><a:r><a:rPr sz="1800"/><a:t>Direct bullet item</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .Single()
+            .Paragraphs
+            .Single();
+        TestAssert.Equal("Character", paragraph.BulletKind);
+        TestAssert.Equal("\u2022", paragraph.BulletResolvedCharacter);
+        TestAssert.Equal("Arial", paragraph.BulletFontTypeface);
+        TestAssert.Equal(45d, paragraph.MarginLeft);
+        TestAssert.Equal(-45d, paragraph.HangingIndent);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        IReadOnlyList<string> spanTexts = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .Select(span => span.Text)
+            .ToArray();
+
+        TestAssert.Contains("\u2022", string.Concat(spanTexts));
+    }
+
     public static void PptxSyntheticTextBoxMapsSymbolFontBulletCharacters()
     {
         string wingdings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "wingding.ttf");

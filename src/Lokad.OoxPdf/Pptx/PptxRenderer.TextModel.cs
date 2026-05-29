@@ -920,13 +920,14 @@ internal sealed partial class PptxRenderer
         PptxParagraphStyleCascade defaultCascade,
         XElement? paragraphProperties)
     {
-        var layers = new List<PptxParagraphStyleLayer>(defaultCascade.Layers)
+        var layers = new List<PptxParagraphStyleLayer>
         {
             new(
                 "paragraph.pPr",
                 PptxParagraphStyleLayerKind.ParagraphProperties,
                 paragraphProperties)
         };
+        layers.AddRange(defaultCascade.Layers);
         return new PptxParagraphStyleCascade(defaultCascade.LevelName, layers);
     }
 

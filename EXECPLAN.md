@@ -16890,3 +16890,24 @@ changed16 from `0.072179` to `0.071944`, page 81 improved from `9.74` to `8.34`,
 `9.64`. PDF text inspection of page 81 now places the large two-line anchor frame within about `0.5pt` of the
 Office baselines, leaving residual work around character spacing/font-size grid and broader text operation
 count differences rather than block vertical placement.
+
+Follow-up, 2026-05-29: pages 1 and 22 then exposed a direct paragraph bullet precedence bug in the same
+typography pipeline. The private-safe evidence was structural: the affected paragraphs carried direct
+`a:pPr` bullet properties with matching hanging indents, but the resolved renderer model reported
+`BulletKind=None` because `paragraph.pPr` had been appended after inherited/default paragraph-style layers and
+therefore acted as the lowest-priority source for bullet resolution. This was not a rendering heuristic; it was
+an Office inheritance-order mismatch. The fix makes direct paragraph properties the highest-priority resolved
+paragraph layer, preserving inherited/default list styles only as fallback. `PptxInspect` now also emits bullet
+kind, character, font, color, and size fields in paragraph reports so future private and public investigations
+can diagnose list-style resolution without relying on screenshots.
+
+Validation: the public regression `PptxSyntheticTextBoxDirectBulletOverridesInheritedNone` locks direct
+`buChar` over inherited `buNone` without private content, and the non-slow `pptx-typography` group passed with
+`110` tests, `0` failures, and `2` slow skips. Private inspection of the target simple pages changed the
+resolved bullet paragraphs from `None` to `Character` and increased glyph runs from `22` to `32`. Private
+validation on `lokad-value-based` run `20260529-211412` compared 84/84 pages with empty diagnostics. Against
+run `20260529-205440`, deck MAE improved from `4.745248` to `4.669971`; page 22 improved from `9.14` to
+`5.55`, page 1 from `9.32` to `6.59`, and no page-level regression appeared at report precision. Continue the
+private-deck pass from the remaining high-error pages after this semantic text-cascade correction, especially
+the grouped/picture/effects family on pages 24 and 39 and the residual typography pages that still exceed
+about `8` MAE.
