@@ -15721,3 +15721,16 @@ custom label text, leader-line placement, stale cache/workbook values, and label
 need structural evidence and Office-PDF probes before more PDF output changes should be made. Validation:
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
 non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart series style parsing is now scene-owned for XML-only renderer compatibility paths.
+`PptxSceneBuilder.ReadChartSeries` is internal, and XML fallback paths for series fills, series strokes, marker
+styles, per-series point fills, and per-series point strokes now build typed `PptxSceneChartSeries` records and
+cross the existing renderer adapter functions. The renderer-local duplicate parsers for those fills, pattern
+fills, lines, marker symbol/size/style, and point `dPt` styles were removed.
+
+This is intentionally limited to style ownership. Series explosion parsing still keeps its renderer-local
+point-count bridge for workbook/cache-aware polar placement, and smooth-series flags remain a separate small
+parser cleanup because their current call site does not carry theme/color-map inputs. The long-term chart path
+is unchanged: style parsing should keep converging on typed scene records before Office-PDF-backed layout and
+cascade changes are made. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with
+`0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

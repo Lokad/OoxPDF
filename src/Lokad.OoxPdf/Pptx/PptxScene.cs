@@ -2804,7 +2804,7 @@ internal sealed class PptxSceneBuilder
             : (IsOoxmlBooleanElementEnabled(marker), (string?)marker.Attribute("val") ?? string.Empty);
     }
 
-    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
+    internal static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
     {
         var series = new List<PptxSceneChartSeries>();
         foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
