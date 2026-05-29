@@ -5590,6 +5590,21 @@ High-priority actions:
   0 skipped`); full non-slow runner passed (`371 passed, 0 failed, 7 skipped`). Private run
   `20260528-153316` remained stable at 84/84 compared pages, zero dimension mismatches, deck MAE `6.715278`,
   changed16 `0.093542`, and the single `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic.
+  2026-05-29 investigation: added a dependency-free PDF luminosity soft-mask primitive to the PDF writer, then
+  tested using it as a structural JPEG duotone route without decoding JPEG pixels. That activation was rejected
+  and left disabled: the public JPEG-duotone rung rendered without diagnostics but worsened from the guarded
+  fallback run `20260528-120756` (MAE `0.582500`, changed16 `0.020000`, SSIM `0.992915`) to experimental run
+  `20260529-095717` (MAE `1.000000`, changed16 `0.020000`, SSIM `0.916703`), and the private deck page carrying
+  the remaining JPEG recolor gap worsened from page MAE `14.28`, changed16 `0.46`, SSIM `0.62` to page MAE
+  `89.26`, changed16 `0.98`, SSIM `0.06` in experimental run `20260529-095948`. Office inspection of the public
+  reference showed materialized decoded RGB plus a grayscale `/SMask`, not a luminosity mask over the original
+  JPEG stream. Keep `PPTX_UNSUPPORTED_IMAGE_RECOLOR` for JPEG/DCT recolor until OOXPDF can materialize decoded
+  image samples or prove an Office-equivalent PDF structure on both the public rung and the private acceptance
+  deck. After disabling the activation, public run `20260529-100154` returned to the guarded fallback metrics
+  (MAE `0.582500`, changed16 `0.020000`, SSIM `0.992915` with the required diagnostic), and private run
+  `20260529-100255` returned to 84/84 compared pages, zero dimension mismatches, deck MAE `7.167255`,
+  changed16 `0.098107`, the two text-overflow ellipsis diagnostics, and the one JPEG baseline-DCT recolor
+  diagnostic. Private page 84 returned to MAE `14.28`, changed16 `0.46`, SSIM `0.62`.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
@@ -5631,6 +5646,10 @@ High-priority actions:
     0 failed, 7 skipped`); private run `20260528-153658` stayed stable at 84/84 compared pages, zero
     dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and the single
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic.
+  - [x] 2026-05-29: Added object-backed PDF luminosity soft-mask Form XObjects to support future Office-like
+    image/effect structures at the PDF layer. This is intentionally not wired into PPTX JPEG recolor after the
+    public/private visual experiment above showed a regression. Validation: focused
+    `WritesLuminositySoftMaskFormXObject` passed.
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can export Office reference PDFs for PPTX and DOCX.
 - [x] Visual validation can rasterize reference/candidate PDFs with PDFium.

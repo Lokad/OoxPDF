@@ -1588,7 +1588,7 @@ internal sealed partial class PptxRenderer
         double size = Math.Max(5d, lineWidth * 3.5d);
         double baseX = tipX - ux * size;
         double baseY = tipY - uy * size;
-        double halfWidth = size * 0.45d;
+        double halfWidth = size * OfficeTriangleTailHalfWidthFactor;
         graphics.FillPolygon(
         [
             (tipX, tipY),

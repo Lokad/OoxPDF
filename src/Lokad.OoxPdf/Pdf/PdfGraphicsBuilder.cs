@@ -115,6 +115,27 @@ internal sealed class PdfGraphicsBuilder
         builder.Append('/').Append(resourceName).AppendLine(" gs");
     }
 
+    public void SetLuminositySoftMask(PdfLuminositySoftMask mask, double fillAlpha, double strokeAlpha)
+    {
+        fillAlpha = Math.Clamp(fillAlpha, 0d, 1d);
+        strokeAlpha = Math.Clamp(strokeAlpha, 0d, 1d);
+        string resourceName = "GSM" + (extGStates.Count + 1).ToString(CultureInfo.InvariantCulture);
+        foreach (PdfExtGStateResource state in extGStates)
+        {
+            if (state.SoftMask is not null &&
+                state.SoftMask.ResourceKey.Equals(mask.ResourceKey, StringComparison.Ordinal) &&
+                Math.Abs(state.FillAlpha - fillAlpha) < 0.000001d &&
+                Math.Abs(state.StrokeAlpha - strokeAlpha) < 0.000001d)
+            {
+                builder.Append('/').Append(state.ResourceName).AppendLine(" gs");
+                return;
+            }
+        }
+
+        extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha, mask));
+        builder.Append('/').Append(resourceName).AppendLine(" gs");
+    }
+
     public void Transform(double a, double b, double c, double d, double e, double f)
     {
         builder.Append(N(a)).Append(' ').Append(N(b)).Append(' ');

@@ -183,6 +183,26 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Im2 ", pdf);
     }
 
+    public static void WritesLuminositySoftMaskFormXObject()
+    {
+        PdfImageXObject image = PdfImageXObject.Jpeg(2, 1, [0xFF, 0xD8, 0xFF, 0xD9]);
+        var mask = new PdfLuminositySoftMask(image, 10, 20, 30, 40, 0.1d, 0.2d, 0.3d, 0.4d);
+        var graphics = new PdfGraphicsBuilder();
+        graphics.SetLuminositySoftMask(mask, 0.5d, 1d);
+        graphics.FillRectangle(10, 20, 30, 40);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/SMask << /S /Luminosity /G ", pdf);
+        TestAssert.Contains("/Subtype /Form", pdf);
+        TestAssert.Contains("/Group << /S /Transparency /CS /DeviceRGB >>", pdf);
+        TestAssert.Contains("/BBox [10 20 40 60]", pdf);
+        TestAssert.Contains("/ImMask ", pdf);
+        TestAssert.Contains("/DCTDecode", pdf);
+        TestAssert.Contains("/GSM1 gs", pdf);
+    }
+
     public static void WritesStitchedAxialShadingFunctionForMultipleStops()
     {
         var graphics = new PdfGraphicsBuilder();

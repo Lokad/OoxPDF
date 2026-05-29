@@ -22,7 +22,7 @@ internal sealed class PdfDocumentWriter
             .Select(PdfEmbeddedFont.Merge)
             .ToList();
         List<PdfImageXObject> images = pages
-            .SelectMany(p => p.Images.Select(i => i.Image))
+            .SelectMany(p => p.Images.Select(i => i.Image).Concat(p.ExtGStates.Where(s => s.SoftMask is not null).Select(s => s.SoftMask!.Image)))
             .DistinctBy(i => i.ResourceKey)
             .ToList();
         List<PdfAxialShading> shadings = pages
@@ -60,7 +60,20 @@ internal sealed class PdfDocumentWriter
             shadingObjects[shadings[i].ResourceKey] = shadingObjectBase + i;
         }
 
-        int objectCount = shadingObjectBase + shadings.Count - 1;
+        int softMaskObjectBase = shadingObjectBase + shadings.Count;
+        List<PdfLuminositySoftMask> softMasks = pages
+            .SelectMany(p => p.ExtGStates)
+            .Where(s => s.SoftMask is not null)
+            .Select(s => s.SoftMask!)
+            .DistinctBy(s => s.ResourceKey)
+            .ToList();
+        var softMaskObjects = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < softMasks.Count; i++)
+        {
+            softMaskObjects[softMasks[i].ResourceKey] = softMaskObjectBase + i;
+        }
+
+        int objectCount = softMaskObjectBase + softMasks.Count - 1;
         writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
         writer.WriteObject(2, BuildPagesObject(pages));
 
@@ -71,7 +84,7 @@ internal sealed class PdfDocumentWriter
             PdfPage page = pages[i];
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
-                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects)} >>\n"));
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects, softMaskObjects)} >>\n"));
             byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
             writer.WriteObject(contentObjectNumber, FormattableString.Invariant(
                 $"<< /Length {contentBytes.Length} >>\nstream\n{page.Content}endstream\n"));
@@ -90,6 +103,11 @@ internal sealed class PdfDocumentWriter
         foreach (PdfAxialShading shading in shadings)
         {
             WriteAxialShadingObject(writer, shading, shadingObjects[shading.ResourceKey]);
+        }
+
+        foreach (PdfLuminositySoftMask softMask in softMasks)
+        {
+            WriteLuminositySoftMaskObject(writer, softMask, softMaskObjects[softMask.ResourceKey], imageObjects);
         }
 
         long xrefOffset = writer.Position;
@@ -128,7 +146,8 @@ internal sealed class PdfDocumentWriter
         PdfPage page,
         IReadOnlyDictionary<string, FontObjectNumbers> fontObjects,
         IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects,
-        IReadOnlyDictionary<string, int> shadingObjects)
+        IReadOnlyDictionary<string, int> shadingObjects,
+        IReadOnlyDictionary<string, int> softMaskObjects)
     {
         if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0)
         {
@@ -168,7 +187,13 @@ internal sealed class PdfDocumentWriter
             foreach (PdfExtGStateResource state in page.ExtGStates)
             {
                 builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(state.ResourceName));
-                builder.Append(CultureInfo.InvariantCulture, $" << /ca {FormatNumber(state.FillAlpha)} /CA {FormatNumber(state.StrokeAlpha)} >>");
+                builder.Append(CultureInfo.InvariantCulture, $" << /ca {FormatNumber(state.FillAlpha)} /CA {FormatNumber(state.StrokeAlpha)}");
+                if (state.SoftMask is not null)
+                {
+                    builder.Append(CultureInfo.InvariantCulture, $" /SMask << /S /Luminosity /G {softMaskObjects[state.SoftMask.ResourceKey]} 0 R >>");
+                }
+
+                builder.Append(" >>");
             }
 
             builder.Append(" >>");
@@ -223,6 +248,38 @@ internal sealed class PdfDocumentWriter
     {
         writer.WriteObject(objectNumber, FormattableString.Invariant(
             $"<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [{FormatNumber(shading.X0)} {FormatNumber(shading.Y0)} {FormatNumber(shading.X1)} {FormatNumber(shading.Y1)}] /Function {BuildAxialShadingFunction(shading.Stops)} /Extend [true true] >>\n"));
+    }
+
+    private static void WriteLuminositySoftMaskObject(
+        PdfObjectWriter writer,
+        PdfLuminositySoftMask softMask,
+        int objectNumber,
+        IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
+    {
+        ImageObjectNumbers image = imageObjects[softMask.Image.ResourceKey];
+        string content = BuildLuminositySoftMaskContent(softMask);
+        byte[] contentBytes = Encoding.ASCII.GetBytes(content);
+        writer.WriteObject(objectNumber, FormattableString.Invariant(
+            $"<< /Type /XObject /Subtype /Form /BBox [{FormatNumber(softMask.X)} {FormatNumber(softMask.Y)} {FormatNumber(softMask.X + softMask.Width)} {FormatNumber(softMask.Y + softMask.Height)}] /Group << /S /Transparency /CS /DeviceRGB >> /Resources << /XObject << /ImMask {image.Image} 0 R >> >> /Length {contentBytes.Length} >>\nstream\n{content}endstream\n"));
+    }
+
+    private static string BuildLuminositySoftMaskContent(PdfLuminositySoftMask softMask)
+    {
+        double visibleWidth = Math.Max(0.001d, 1d - softMask.CropLeft - softMask.CropRight);
+        double visibleHeight = Math.Max(0.001d, 1d - softMask.CropTop - softMask.CropBottom);
+        double scaledWidth = softMask.Width / visibleWidth;
+        double scaledHeight = softMask.Height / visibleHeight;
+        double imageX = softMask.X - softMask.CropLeft * scaledWidth;
+        double imageY = softMask.Y - softMask.CropBottom * scaledHeight;
+        var builder = new StringBuilder();
+        builder.AppendLine("q");
+        builder.Append(FormatNumber(softMask.X)).Append(' ').Append(FormatNumber(softMask.Y)).Append(' ');
+        builder.Append(FormatNumber(softMask.Width)).Append(' ').Append(FormatNumber(softMask.Height)).AppendLine(" re W n");
+        builder.Append(FormatNumber(scaledWidth)).Append(" 0 0 ").Append(FormatNumber(scaledHeight)).Append(' ');
+        builder.Append(FormatNumber(imageX)).Append(' ').Append(FormatNumber(imageY)).AppendLine(" cm");
+        builder.AppendLine("/ImMask Do");
+        builder.AppendLine("Q");
+        return builder.ToString();
     }
 
     private static string BuildAxialShadingFunction(IReadOnlyList<PdfShadingStop> stops)
