@@ -15696,6 +15696,18 @@ text-frame/cascade path with Office-backed baseline, orientation, overflow, and 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
 
+Follow-up, 2026-05-29: XML-only chart legend layout now reuses the scene-owned legend parser instead of
+reparsing `c:legend` locally in the renderer. `PptxSceneBuilder.ReadChartLegend` is internal, and
+`ReadChartLegendLayout` converts the typed `PptxSceneChartLegend` record into the renderer layout while
+preserving the XML-only compatibility default that a missing or empty legend position resolves to right.
+
+The same cleanup removes the renderer's redundant chart child-value wrapper; renderer fallback calls now use
+`PptxSceneBuilder.ReadChartElementValue` directly for plot options, axis side/label/crossing tokens, and
+manual-layout target detection. This narrows the remaining `ReadSceneOrXml*` bridge to policy/default
+decisions instead of duplicated low-level OOXML token reads. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors;
+focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
 Follow-up, 2026-05-29: scene-internal chart child `val` reads now use the same raw-value helpers as the XML
 fallback bridge. `ReadChartElementValue` accepts nullable containers and is used by numeric child readers,
 chart style, marker symbol/size, keyed point index, point-count, axis, manual-layout, and legend-position

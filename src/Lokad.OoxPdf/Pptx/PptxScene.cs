@@ -3770,7 +3770,7 @@ internal sealed class PptxSceneBuilder
             default);
     }
 
-    private static PptxSceneChartLegend ReadChartLegend(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneChartLegend ReadChartLegend(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? legend = chartXml?
             .Descendants(ChartNamespace + "legend")

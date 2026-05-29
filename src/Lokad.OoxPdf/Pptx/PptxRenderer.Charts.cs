@@ -412,7 +412,7 @@ internal sealed partial class PptxRenderer
         }
 
         return ResolveChartGrouping(
-            PptxSceneBuilder.ParseChartGrouping(ReadChartElementValue(plotElement, "grouping")),
+            PptxSceneBuilder.ParseChartGrouping(PptxSceneBuilder.ReadChartElementValue(plotElement, "grouping")),
             defaultGrouping);
     }
 
@@ -427,7 +427,7 @@ internal sealed partial class PptxRenderer
     {
         return scenePlot is not null
             ? ResolveChartBarDirection(scenePlot.BarDirectionKind)
-            : ResolveChartBarDirection(PptxSceneBuilder.ParseChartBarDirection(ReadChartElementValue(plotElement, "barDir")));
+            : ResolveChartBarDirection(PptxSceneBuilder.ParseChartBarDirection(PptxSceneBuilder.ReadChartElementValue(plotElement, "barDir")));
     }
 
     private static PptxSceneChartBarDirection ResolveChartBarDirection(PptxSceneChartBarDirection value)
@@ -441,7 +441,7 @@ internal sealed partial class PptxRenderer
     {
         return scenePlot is not null
             ? scenePlot.ScatterStyleKind
-            : PptxSceneBuilder.ParseChartScatterStyle(ReadChartElementValue(plotElement, "scatterStyle"));
+            : PptxSceneBuilder.ParseChartScatterStyle(PptxSceneBuilder.ReadChartElementValue(plotElement, "scatterStyle"));
     }
 
     private static bool ResolveChartScatterLineConnection(PptxSceneChartScatterStyle scatterStyle)
@@ -457,7 +457,7 @@ internal sealed partial class PptxRenderer
     {
         return scenePlot is not null
             ? ResolveChartRadarStyle(scenePlot.RadarStyleKind)
-            : ResolveChartRadarStyle(PptxSceneBuilder.ParseChartRadarStyle(ReadChartElementValue(plotElement, "radarStyle")));
+            : ResolveChartRadarStyle(PptxSceneBuilder.ParseChartRadarStyle(PptxSceneBuilder.ReadChartElementValue(plotElement, "radarStyle")));
     }
 
     private static PptxSceneChartRadarStyle ResolveChartRadarStyle(PptxSceneChartRadarStyle value)
@@ -4435,7 +4435,7 @@ internal sealed partial class PptxRenderer
                 text,
                 ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme, colorMap)),
                 PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName),
-                PptxSceneBuilder.ParseChartAxisPosition(ReadChartElementValue(axis, "axPos")),
+                PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos")),
                 ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap)),
                 PptxSceneBuilder.ReadChartTextBodyProperties(title),
                 ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(chartXml.Root, theme, colorMap)),
@@ -4486,7 +4486,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneBuilder.ReadChartManualLayout(title).HasLayout ||
                 IsRenderableDefaultChartAxisTitle(
                     PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName),
-                    PptxSceneBuilder.ParseChartAxisPosition(ReadChartElementValue(axis, "axPos"))))
+                    PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos"))))
             {
                 continue;
             }
@@ -4756,7 +4756,7 @@ internal sealed partial class PptxRenderer
             XElement? title = axis.Element(ChartNamespace + "title");
             string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
             PptxSceneChartAxisKind axisKind = PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName);
-            PptxSceneChartAxisPosition positionKind = PptxSceneBuilder.ParseChartAxisPosition(ReadChartElementValue(axis, "axPos"));
+            PptxSceneChartAxisPosition positionKind = PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos"));
             if (title is null ||
                 string.IsNullOrWhiteSpace(text) ||
                 PptxSceneBuilder.ReadChartManualLayout(title).HasLayout ||
@@ -5176,26 +5176,21 @@ internal sealed partial class PptxRenderer
 
     private static ChartLegendLayout ReadChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml)
     {
-        XElement? legend = chartXml
-            .Descendants(ChartNamespace + "legend")
-            .FirstOrDefault();
-        if (legend is null)
+        PptxSceneChartLegend legend = PptxSceneBuilder.ReadChartLegend(chartXml, theme, colorMap);
+        if (!legend.IsDefined || legend.IsDeleted == true)
         {
             return ChartLegendLayout.Hidden;
         }
 
-        if (PptxSceneBuilder.IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")))
-        {
-            return ChartLegendLayout.Hidden;
-        }
-
-        string position = ReadChartElementValue(legend, "legendPos");
-        if (string.IsNullOrEmpty(position))
-        {
-            position = "r";
-        }
-        bool overlay = PptxSceneBuilder.IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, PptxSceneBuilder.ReadChartManualLayout(legend), PptxSceneBuilder.ReadChartTextBodyProperties(legend), ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap)));
+        string position = string.IsNullOrEmpty(legend.Position) ? "r" : legend.Position;
+        return new ChartLegendLayout(
+            ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)),
+            position,
+            legend.Overlay == true,
+            Visible: true,
+            legend.Layout,
+            legend.TextBodyProperties,
+            ToChartShapeStyle(legend.ShapeStyle));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
@@ -7193,7 +7188,7 @@ internal sealed partial class PptxRenderer
     private static bool IsRightValueAxis(XElement? axis)
     {
         return axis is not null &&
-            PptxSceneBuilder.ParseChartAxisPosition(ReadChartElementValue(axis, "axPos")) == PptxSceneChartAxisPosition.Right &&
+            PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos")) == PptxSceneChartAxisPosition.Right &&
             !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
     }
 
@@ -7254,7 +7249,7 @@ internal sealed partial class PptxRenderer
 
         PptxSceneChartAxisCrosses crosses = sceneAxis is not null
             ? ResolveChartAxisCrosses(sceneAxis.CrossesKind)
-            : ResolveChartAxisCrosses(PptxSceneBuilder.ParseChartAxisCrosses(ReadChartElementValue(valueAxis, "crosses")));
+            : ResolveChartAxisCrosses(PptxSceneBuilder.ParseChartAxisCrosses(PptxSceneBuilder.ReadChartElementValue(valueAxis, "crosses")));
         if (crosses == PptxSceneChartAxisCrosses.Maximum)
         {
             return extents.Max;
@@ -7288,7 +7283,7 @@ internal sealed partial class PptxRenderer
         }
 
         return ResolveChartAxisReversed(PptxSceneBuilder.ParseChartAxisOrientation(
-            ReadChartElementValue(valueAxis?.Element(ChartNamespace + "scaling"), "orientation")));
+            PptxSceneBuilder.ReadChartElementValue(valueAxis?.Element(ChartNamespace + "scaling"), "orientation")));
     }
 
     private static bool ResolveChartAxisReversed(PptxSceneChartAxisOrientation orientation)
@@ -7643,7 +7638,7 @@ internal sealed partial class PptxRenderer
             return ResolveChartAxisTickMark(sceneAxis.MajorTickMarkKind);
         }
 
-        string majorTickMark = ReadChartElementValue(xmlAxis, "majorTickMark");
+        string majorTickMark = PptxSceneBuilder.ReadChartElementValue(xmlAxis, "majorTickMark");
         return ResolveChartAxisTickMark(PptxSceneBuilder.ParseChartAxisTickMark(
             string.IsNullOrEmpty(majorTickMark) ? "none" : majorTickMark));
     }
@@ -7674,7 +7669,7 @@ internal sealed partial class PptxRenderer
             };
         }
 
-        string position = ReadChartElementValue(axis, "axPos");
+        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
         return PptxSceneBuilder.ParseChartAxisPosition(position) switch
         {
             PptxSceneChartAxisPosition.Right => true,
@@ -7695,7 +7690,7 @@ internal sealed partial class PptxRenderer
             };
         }
 
-        string position = ReadChartElementValue(axis, "axPos");
+        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
         return PptxSceneBuilder.ParseChartAxisPosition(position) switch
         {
             PptxSceneChartAxisPosition.Bottom => true,
@@ -7716,7 +7711,7 @@ internal sealed partial class PptxRenderer
             };
         }
 
-        string position = ReadChartElementValue(axis, "axPos");
+        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
         return PptxSceneBuilder.ParseChartAxisPosition(position) switch
         {
             PptxSceneChartAxisPosition.Right => true,
@@ -7737,7 +7732,7 @@ internal sealed partial class PptxRenderer
             };
         }
 
-        string position = ReadChartElementValue(axis, "axPos");
+        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
         return PptxSceneBuilder.ParseChartAxisPosition(position) switch
         {
             PptxSceneChartAxisPosition.Top => true,
@@ -7759,7 +7754,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        string tickLabelPosition = ReadChartElementValue(axis, "tickLblPos");
+        string tickLabelPosition = PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos");
         return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) != PptxSceneChartTickLabelPosition.None;
     }
 
@@ -7776,7 +7771,7 @@ internal sealed partial class PptxRenderer
 
     private static bool ResolveValueAxisLabelsRightSide(XElement? axis, bool defaultRightSide)
     {
-        string tickLabelPosition = ReadChartElementValue(axis, "tickLblPos");
+        string tickLabelPosition = PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos");
         return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) switch
         {
             PptxSceneChartTickLabelPosition.High => true,
@@ -7830,7 +7825,7 @@ internal sealed partial class PptxRenderer
             return ResolveChartAxisCrossBetween(sceneAxis.CrossBetweenKind) == PptxSceneChartAxisCrossBetween.MidpointCategory;
         }
 
-        string crossBetween = ReadChartElementValue(axis, "crossBetween");
+        string crossBetween = PptxSceneBuilder.ReadChartElementValue(axis, "crossBetween");
         return ResolveChartAxisCrossBetween(PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween)) == PptxSceneChartAxisCrossBetween.MidpointCategory;
     }
 
@@ -7846,13 +7841,6 @@ internal sealed partial class PptxRenderer
         return chartElement is null
             ? null
             : PptxSceneBuilder.ReadChartElementIntWithValue(chartElement, elementName).Value;
-    }
-
-    private static string ReadChartElementValue(XElement? chartElement, string elementName)
-    {
-        return chartElement is null
-            ? string.Empty
-            : PptxSceneBuilder.ReadChartElementValue(chartElement, elementName);
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)
@@ -8184,7 +8172,7 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault()
             ?.Element(ChartNamespace + "layout")
             ?.Element(ChartNamespace + "manualLayout");
-        return PptxSceneBuilder.ParseChartManualLayoutTarget(ReadChartElementValue(manualLayout, "layoutTarget")) != PptxSceneChartManualLayoutTarget.Unknown;
+        return PptxSceneBuilder.ParseChartManualLayoutTarget(PptxSceneBuilder.ReadChartElementValue(manualLayout, "layoutTarget")) != PptxSceneChartManualLayoutTarget.Unknown;
     }
 
     private static ChartPlotBox GetHorizontalBarManualLayoutTargetDefaultPlotBox(ChartFrameBox frame, ChartPlotBox defaultPlotBox)
