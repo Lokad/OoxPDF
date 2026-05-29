@@ -15708,3 +15708,16 @@ text-frame cascade that can participate in common text layout, Office baseline d
 policy, and diagnostics for unsupported text choices. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off
 --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `141`
 tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart data-label option and override parsing now has one scene-builder owner for XML-only
+renderer compatibility paths. `PptxSceneBuilder.ReadChartDataLabels` is internal, and the renderer fallback now
+converts the typed `PptxSceneChartDataLabels` record through the existing `ToChartDataLabelOptions` boundary
+instead of reparsing `dLbls`, per-label `dLbl` overrides, leader lines, raw boolean flags, number formats,
+manual layouts, text runs, `txPr` body/style fields, and `spPr` shape styles locally.
+
+This deliberately keeps the rendered data-label layout policy unchanged. The remaining long-term gap is Office
+data-label layout and cascade alignment: chart style data-label roles, per-series and per-point overrides,
+custom label text, leader-line placement, stale cache/workbook values, and label collision/position rules still
+need structural evidence and Office-PDF probes before more PDF output changes should be made. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
+non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

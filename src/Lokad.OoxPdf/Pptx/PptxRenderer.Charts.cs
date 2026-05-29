@@ -6493,35 +6493,10 @@ internal sealed partial class PptxRenderer
 
     private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? labels = chartElement.Element(ChartNamespace + "dLbls") ??
-            chartElement.Elements(ChartNamespace + "ser")
-                .Select(series => series.Element(ChartNamespace + "dLbls"))
-                .FirstOrDefault(element => element is not null);
-        return labels is null
-            ? ChartDataLabelOptions.None
-            : new ChartDataLabelOptions(
-                IsChartLabelFlagEnabled(labels, "showVal"),
-                IsChartLabelFlagEnabled(labels, "showPercent"),
-                IsChartLabelFlagEnabled(labels, "showCatName"),
-                IsChartLabelFlagEnabled(labels, "showSerName"),
-                IsChartLabelFlagEnabled(labels, "showLeaderLines"),
-                IsChartLabelFlagEnabled(labels, "showLegendKey"),
-                IsChartLabelFlagEnabled(labels, "showBubbleSize"),
-                ReadChartDataLabelLeaderLines(labels, theme, colorMap),
-                string.Empty,
-                [],
-                PptxSceneBuilder.ParseChartDataLabelPosition(labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty),
-                labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
-                labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
-                ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(labels)),
-                PptxSceneBuilder.ReadChartManualLayout(labels),
-                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(labels, theme, colorMap)),
-                PptxSceneBuilder.ReadChartTextBodyProperties(labels),
-                ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap)),
-                ReadChartDataLabelFlagOptions(labels),
-                ReadChartDataLabelOverrides(labels, theme, colorMap),
-                IsDefined: true);
+        PptxSceneChartDataLabels labels = PptxSceneBuilder.ReadChartDataLabels(chartElement, theme, colorMap);
+        return labels.IsDefined
+            ? ToChartDataLabelOptions(sceneChart: null, labels)
+            : ChartDataLabelOptions.None;
     }
 
     private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
@@ -6607,42 +6582,6 @@ internal sealed partial class PptxRenderer
         return MergeChartTextStyleOverride(style, ToChartTextStyleOverride(labels.TextStyle));
     }
 
-    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme, PptxColorMap colorMap)
-    {
-        var overrides = new Dictionary<int, ChartDataLabelOverride>();
-        foreach (XElement label in labels.Elements(ChartNamespace + "dLbl"))
-        {
-            if (!TryReadChartNonNegativeIndex(label, out int index))
-            {
-                continue;
-            }
-
-            overrides[index] = new ChartDataLabelOverride(
-                ReadOptionalChartLabelFlagEnabled(label, "showVal"),
-                ReadOptionalChartLabelFlagEnabled(label, "showPercent"),
-                ReadOptionalChartLabelFlagEnabled(label, "showCatName"),
-                ReadOptionalChartLabelFlagEnabled(label, "showSerName"),
-                ReadOptionalChartLabelFlagEnabled(label, "showLeaderLines"),
-                ReadOptionalChartLabelFlagEnabled(label, "showLegendKey"),
-                ReadOptionalChartLabelFlagEnabled(label, "showBubbleSize"),
-                ReadChartDataLabelLeaderLines(label, theme, colorMap),
-                ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
-                ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme, colorMap)),
-                PptxSceneBuilder.ParseChartDataLabelPosition(label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty),
-                label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
-                label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
-                ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(label)),
-                PptxSceneBuilder.ReadChartManualLayout(label),
-                ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(label, theme, colorMap)),
-                PptxSceneBuilder.ReadChartTextBodyProperties(label),
-                ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap)),
-                ReadChartDataLabelFlagOptions(label));
-        }
-
-        return overrides.Count == 0 ? EmptyChartDataLabelOverrides : overrides;
-    }
-
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides)
     {
         if (overrides.Count == 0)
@@ -6686,17 +6625,6 @@ internal sealed partial class PptxRenderer
             : default;
     }
 
-    private static ChartDataLabelLeaderLines ReadChartDataLabelLeaderLines(XElement labels, PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? leaderLines = labels.Element(ChartNamespace + "leaderLines");
-        if (leaderLines is null)
-        {
-            return ChartDataLabelLeaderLines.Empty;
-        }
-
-        return new ChartDataLabelLeaderLines(IsDefined: true, ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(leaderLines.Element(ChartNamespace + "spPr"), theme, colorMap)).Stroke);
-    }
-
     private static ChartDataLabelLeaderLines ToChartDataLabelLeaderLines(PptxSceneChartLeaderLines leaderLines)
     {
         return leaderLines.IsDefined
@@ -6709,33 +6637,6 @@ internal sealed partial class PptxRenderer
         return runs.Count == 0
             ? []
             : runs.Select(run => new ChartTextRunOverride(run.Text, ToChartTextStyleOverride(run.TextStyle))).ToArray();
-    }
-
-    private static bool? ReadOptionalChartLabelFlagEnabled(XElement labels, string elementName)
-    {
-        XElement? element = labels.Element(ChartNamespace + elementName);
-        return element is null ? null : IsOoxmlBooleanElementEnabled(element);
-    }
-
-    private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)
-    {
-        XElement? element = labels.Element(ChartNamespace + elementName);
-        return IsOoxmlBooleanElementEnabled(element);
-    }
-
-    private static IReadOnlyDictionary<string, ChartBooleanOption> ReadChartDataLabelFlagOptions(XElement labels)
-    {
-        var flags = new Dictionary<string, ChartBooleanOption>(ChartDataLabelFlagNames.Length, StringComparer.Ordinal);
-        foreach (string flagName in ChartDataLabelFlagNames)
-        {
-            XElement? element = labels.Element(ChartNamespace + flagName);
-            flags[flagName] = new ChartBooleanOption(
-                IsOoxmlBooleanElementEnabled(element),
-                (string?)element?.Attribute("val") ?? string.Empty,
-                element is not null);
-        }
-
-        return flags;
     }
 
     private static IReadOnlyDictionary<string, ChartBooleanOption> ToChartDataLabelFlagOptions(PptxSceneChartDataLabels labels)

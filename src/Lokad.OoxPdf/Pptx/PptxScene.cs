@@ -2517,7 +2517,7 @@ internal sealed class PptxSceneBuilder
         return plots;
     }
 
-    private static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? labels = plot.Element(ChartNamespace + "dLbls") ??
             plot.Elements(ChartNamespace + "ser")
