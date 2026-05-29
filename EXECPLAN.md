@@ -16696,3 +16696,23 @@ Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 `11.48` -> `11.40`, page 83 `11.52` -> `11.45`, page 61 `10.17` -> `10.14`, and page 53 `11.54` -> `11.54`
 slightly. Pages 82 and 81 stayed neutral, which is useful evidence that their remaining gap is not this cropped
 picture XObject structure.
+
+Follow-up, 2026-05-29: page-53 PDF inspection exposed a structural text-clip mismatch in the same
+three-column text family, but not the rendering-impact cause of the current page-53 MAE. The private-safe OOXML
+inventory showed the main dense text block as a `numCol=3`, `spcCol=108000` text frame with `vertOverflow`
+unspecified, which resolves to overflow. Office's PDF text operations for that frame use slide-wide text clips,
+while the candidate emitted repeated column-width clips such as `383.51..546.11`, `554.61..717.20`, and
+`725.71..888.30`. The renderer now keeps multi-column layout for line placement but only uses local text clips
+when `vertOverflow` resolves to `clip` or `ellipsis`; multi-column overflow text uses the slide-wide text clip,
+matching Office's observable PDF structure.
+
+Validation: the new public regression `PptxSyntheticTextBoxOverflowColumnsUseSlideClip` passed, and the
+non-slow `pptx-typography` group passed with `105` tests, `0` failures, and `2` slow skips. `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors. Private validation on
+`lokad-value-based` run `20260529-132834` compared 84/84 pages with empty diagnostics. Against run
+`20260529-132145`, this was metric-neutral: deck MAE `5.518181` -> `5.518224`, changed16 `0.079557` ->
+`0.079557`, and page 53 stayed `11.54` at displayed precision. Follow-up page-53 PDF inspection confirmed the
+candidate no longer emits the column-width text clips; the remaining page-53 gap is therefore text
+layout/emission ordering or shape/connector geometry, not text clipping. A search for the reported dangling
+`) * 0.45d` pattern found no remaining occurrence; the current `0.45d` hits are already named constants or
+chart metric values.

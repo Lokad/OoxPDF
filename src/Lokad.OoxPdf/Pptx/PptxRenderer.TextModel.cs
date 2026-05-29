@@ -286,8 +286,7 @@ internal sealed partial class PptxRenderer
         int columnCount = bodyProperties.ColumnCount;
         double columnSpacing = bodyProperties.ColumnSpacing;
         bool clipsVerticalOverflow = ClipsTextVerticalOverflow(bodyProperties.VerticalOverflow);
-        bool canOverflowToSlideClip = columnCount == 1;
-        bool clipsTextLocally = clipsVerticalOverflow || !canOverflowToSlideClip;
+        bool clipsTextLocally = clipsVerticalOverflow;
         double textClipX = clipsTextLocally ? textX : 0d;
         double textClipWidth = clipsTextLocally ? textWidth : document.SlideWidthPoints;
         double textClipY = 0d;
@@ -460,7 +459,7 @@ internal sealed partial class PptxRenderer
         int columnCount = bodyProperties.ColumnCount;
         double columnSpacing = bodyProperties.ColumnSpacing;
         bool clipsVerticalOverflow = ClipsTextVerticalOverflow(bodyProperties.VerticalOverflow);
-        bool clipsTextLocally = clipsVerticalOverflow || columnCount != 1;
+        bool clipsTextLocally = clipsVerticalOverflow;
         double textClipX = clipsTextLocally ? textX : 0d;
         double textClipWidth = clipsTextLocally ? textWidth : document.SlideWidthPoints;
         double textClipY = 0d;

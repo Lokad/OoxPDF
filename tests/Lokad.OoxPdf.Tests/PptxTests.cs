@@ -6992,6 +6992,48 @@ internal static class PptxTests
         TestAssert.True(glyphRuns.All(run => Math.Abs(run.FrameColumnSpacing - 144000d / 12700d) < 0.01d), "Expected glyph-run inspection to preserve text-frame column spacing.");
     }
 
+    public static void PptxSyntheticTextBoxOverflowColumnsUseSlideClip()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="685800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr numCol="3" spcCol="144000" lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"/>
+                      <a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0 720 540 re W* n", pdf);
+        TestAssert.True(
+            !pdf.Contains("72 414 135.78 54 re W* n", StringComparison.Ordinal),
+            "Expected multi-column text with overflow enabled to keep Office's slide-wide text clip instead of clipping to the first column.");
+        TestAssert.True(
+            !pdf.Contains("219.78 414 135.78 54 re W* n", StringComparison.Ordinal),
+            "Expected multi-column text with overflow enabled to keep Office's slide-wide text clip instead of clipping to the second column.");
+    }
+
     public static void PptxSyntheticTextBoxSplitsOverwideFirstSegmentAcrossColumns()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
