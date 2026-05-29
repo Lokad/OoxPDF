@@ -15658,3 +15658,15 @@ public `pptx-ladder-11-chart-pie-data-label-leader-lines-probe` run `20260529-02
 `5.74166931905864` versus limit `3.8`; a detached clean-HEAD worktree at `346bf94` reproduced the same
 `5.74166931905864` failure in run `20260529-024925`, confirming this is an existing chart-area visual gap rather
 than a regression from centralizing the parser.
+
+Follow-up, 2026-05-29: chart-wide option XML fallback now shares the scene parser for `dispBlanksAs` and
+`plotVisOnly`. `PptxSceneBuilder.ReadChartOptions` is the single owner of those chart-space tokens; XML-only
+renderer compatibility paths for display-blanks behavior and plot-visible-only data filtering now consume the
+typed `PptxSceneChartOptions` record instead of reparsing `c:chart` locally.
+
+This is behavior-neutral cleanup, but it removes another small place where chart-wide option defaults could drift
+between scene-backed and XML-only rendering. The broader chart options gap remains the same: rounded corners,
+show-data-labels-over-maximum, date-system, and chart-style interactions need typed renderer consumers or explicit
+unsupported diagnostics before they can affect output with Office-like semantics. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
+`pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

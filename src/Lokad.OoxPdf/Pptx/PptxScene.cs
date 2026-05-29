@@ -2427,7 +2427,7 @@ internal sealed class PptxSceneBuilder
                 ?.Element(ChartNamespace + "spPr"), theme, colorMap));
     }
 
-    private static PptxSceneChartOptions ReadChartOptions(XDocument? chartXml)
+    internal static PptxSceneChartOptions ReadChartOptions(XDocument? chartXml)
     {
         XElement? chartSpace = chartXml?.Root;
         XElement? chart = chartSpace?.Element(ChartNamespace + "chart");

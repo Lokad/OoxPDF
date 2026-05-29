@@ -474,8 +474,7 @@ internal sealed partial class PptxRenderer
             return ResolveChartDisplayBlanksAs(sceneChart.Options.DisplayBlanksAsKind);
         }
 
-        XElement? chart = chartXml.Root?.Element(ChartNamespace + "chart");
-        return ResolveChartDisplayBlanksAs(PptxSceneBuilder.ParseChartDisplayBlanksAs((string?)chart?.Element(ChartNamespace + "dispBlanksAs")?.Attribute("val")));
+        return ResolveChartDisplayBlanksAs(PptxSceneBuilder.ReadChartOptions(chartXml).DisplayBlanksAsKind);
     }
 
     private static PptxSceneChartDisplayBlanksAs ResolveChartDisplayBlanksAs(PptxSceneChartDisplayBlanksAs value)
@@ -492,8 +491,7 @@ internal sealed partial class PptxRenderer
             return sceneChart.Options.PlotVisibleOnly ?? true;
         }
 
-        XElement? chart = chartXml.Root?.Element(ChartNamespace + "chart");
-        return IsOoxmlBooleanElementEnabled(chart?.Element(ChartNamespace + "plotVisOnly"), defaultValue: true);
+        return PptxSceneBuilder.ReadChartOptions(chartXml).PlotVisibleOnly ?? true;
     }
 
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
