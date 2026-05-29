@@ -15696,6 +15696,19 @@ text-frame/cascade path with Office-backed baseline, orientation, overflow, and 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
 
+Follow-up, 2026-05-29: scene-internal chart child `val` reads now use the same raw-value helpers as the XML
+fallback bridge. `ReadChartElementValue` accepts nullable containers and is used by numeric child readers,
+chart style, marker symbol/size, keyed point index, point-count, axis, manual-layout, and legend-position
+token reads.
+
+This is parser hygiene, not an Office layout change. The existing interpretation policies remain where they
+belong: marker defaults still come from `PptxChartMarkerMetricRules`, legend position still defaults to right
+only when the token is absent, axis units still reject non-positive numbers, and point `idx` attributes remain
+separate from child `val` option elements. The cleanup narrows future schema drift by keeping chart child-value
+lexing in one scene-owned path before more renderer-local chart XML reads are retired.
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
 Follow-up, 2026-05-29: chart `txPr` default-run style parsing now has one scene-builder owner for XML-only
 renderer compatibility paths. Manual/default axis titles, direct chart text-style fallback, data-label defaults,
 and per-label overrides now call `PptxSceneBuilder.ReadChartTextStyleOverride` and convert through

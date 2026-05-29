@@ -2413,7 +2413,7 @@ internal sealed class PptxSceneBuilder
             paletteColors,
             colorStyle,
             stylePart,
-            (string?)chartXml?.Root?.Element(ChartNamespace + "style")?.Attribute("val") ?? string.Empty,
+            ReadChartElementValue(chartXml?.Root, "style"),
             plots,
             axes,
             ReadChartTitle(chartXml, theme, colorMap, plots),
@@ -2755,9 +2755,9 @@ internal sealed class PptxSceneBuilder
         return IsUnsupportedDirectEffect(effect);
     }
 
-    internal static string ReadChartElementValue(XElement element, string childName)
+    internal static string ReadChartElementValue(XElement? element, string childName)
     {
-        return ReadChartValueAttribute(element.Element(ChartNamespace + childName));
+        return ReadChartValueAttribute(element?.Element(ChartNamespace + childName));
     }
 
     internal static string ReadChartValueAttribute(XElement? element)
@@ -2778,7 +2778,7 @@ internal sealed class PptxSceneBuilder
 
     internal static (double? Value, string RawValue) ReadChartElementDoubleWithValue(XElement element, string childName)
     {
-        string value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
+        string value = ReadChartElementValue(element, childName);
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? (parsed, value)
             : (null, value);
@@ -2792,7 +2792,7 @@ internal sealed class PptxSceneBuilder
 
     internal static (int? Value, string RawValue) ReadChartElementIntWithValue(XElement element, string childName)
     {
-        string value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
+        string value = ReadChartElementValue(element, childName);
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
             ? (parsed, value)
             : (null, value);
@@ -2949,9 +2949,9 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
     {
         XElement? marker = series.Element(ChartNamespace + "marker");
-        string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ??
+        string symbol = ReadOptionalChartValueAttribute(marker?.Element(ChartNamespace + "symbol")) ??
             ReadDefaultChartMarkerSymbol(plotKind, chartMarkersEnabled, seriesIndex);
-        string? sizeValue = (string?)marker?.Element(ChartNamespace + "size")?.Attribute("val");
+        string? sizeValue = ReadOptionalChartValueAttribute(marker?.Element(ChartNamespace + "size"));
         double size = PptxChartMarkerMetricRules.ResolveSize(
             sizeValue,
             plotKind,
@@ -3003,7 +3003,7 @@ internal sealed class PptxSceneBuilder
 
     private static bool TryReadChartNonNegativeIndex(XElement element, out int index, out string indexValue)
     {
-        indexValue = (string?)element.Element(ChartNamespace + "idx")?.Attribute("val") ?? string.Empty;
+        indexValue = ReadChartElementValue(element, "idx");
         return int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&
             index >= 0;
     }
@@ -3232,9 +3232,7 @@ internal sealed class PptxSceneBuilder
                  child.Name.LocalName == "strLit" ||
                  child.Name.LocalName == "strCache" ||
                  child.Name.LocalName == "multiLvlStrCache"));
-        string value = (string?)cache?
-            .Element(ChartNamespace + "ptCount")
-            ?.Attribute("val") ?? string.Empty;
+        string value = ReadChartElementValue(cache, "ptCount");
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
             ? (parsed, value)
             : (null, value);
@@ -3329,12 +3327,12 @@ internal sealed class PptxSceneBuilder
                 continue;
             }
 
-            string axisPosition = (string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty;
-            string crosses = (string?)axis.Element(ChartNamespace + "crosses")?.Attribute("val") ?? string.Empty;
-            string crossBetween = (string?)axis.Element(ChartNamespace + "crossBetween")?.Attribute("val") ?? string.Empty;
-            string orientation = (string?)axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val") ?? string.Empty;
+            string axisPosition = ReadChartElementValue(axis, "axPos");
+            string crosses = ReadChartElementValue(axis, "crosses");
+            string crossBetween = ReadChartElementValue(axis, "crossBetween");
+            string orientation = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), "orientation");
             PptxSceneChartAxisOrientation orientationKind = ParseChartAxisOrientation(orientation);
-            string tickLabelPosition = (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty;
+            string tickLabelPosition = ReadChartElementValue(axis, "tickLblPos");
             string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
             string minorTickMark = ReadChartElementValue(axis, "minorTickMark");
             (double? crossesAt, string crossesAtValue) = ReadChartElementDoubleWithValue(axis, "crossesAt");
@@ -3355,7 +3353,7 @@ internal sealed class PptxSceneBuilder
                 axis.Name.LocalName,
                 ParseChartAxisPosition(axisPosition),
                 axisPosition,
-                (string?)axis.Element(ChartNamespace + "crossAx")?.Attribute("val") ?? string.Empty,
+                ReadChartElementValue(axis, "crossAx"),
                 ParseChartAxisCrosses(crosses),
                 crosses,
                 crossesAt,
@@ -3612,7 +3610,7 @@ internal sealed class PptxSceneBuilder
 
     private static (double? Value, string RawValue) ReadChartManualLayoutFactorWithValue(XElement manualLayout, string elementName)
     {
-        string value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
+        string value = ReadChartElementValue(manualLayout, elementName);
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? (parsed, value)
             : (null, value);
@@ -3643,10 +3641,7 @@ internal sealed class PptxSceneBuilder
 
     internal static (double? Value, string RawValue) ReadChartAxisScalingValueWithValue(XElement axis, string elementName)
     {
-        string value = (string?)axis
-            .Element(ChartNamespace + "scaling")
-            ?.Element(ChartNamespace + elementName)
-            ?.Attribute("val") ?? string.Empty;
+        string value = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), elementName);
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? (parsed, value)
             : (null, value);
@@ -3660,7 +3655,7 @@ internal sealed class PptxSceneBuilder
 
     internal static (double? Value, string RawValue) ReadChartAxisUnitValueWithValue(XElement axis, string elementName)
     {
-        string value = (string?)axis.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
+        string value = ReadChartElementValue(axis, elementName);
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) && parsed > 0d
             ? (parsed, value)
             : (null, value);
@@ -3796,7 +3791,7 @@ internal sealed class PptxSceneBuilder
                 default);
         }
 
-        string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
+        string position = ReadOptionalChartValueAttribute(legend.Element(ChartNamespace + "legendPos")) ?? "r";
         (bool? overlay, string overlayValue) = ReadOptionalOoxmlBooleanElementWithValue(legend, "overlay");
         (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(legend, "delete");
         return new PptxSceneChartLegend(
