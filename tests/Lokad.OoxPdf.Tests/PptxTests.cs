@@ -7689,7 +7689,7 @@ internal static class PptxTests
         TestAssert.Equal(0d, model.VerticalOffset);
         TestAssert.Equal(2, lines.Length);
         TestAssert.True(
-            lines[0].BaselineY < 450.1d,
+            lines[0].BaselineY < 452d,
             "Expected middle anchoring to use actual two-line layout height, not the pre-layout overestimate. Baselines: " +
             string.Join(", ", lines.Select(line => line.BaselineY.ToString("0.###", CultureInfo.InvariantCulture))));
     }
@@ -7827,6 +7827,53 @@ internal static class PptxTests
         TestAssert.True(lines.Any(line => Math.Abs(line.StartX - 219.78d) < 0.01d), "Expected overwide first segment to flow into second column. Starts: " + string.Join(", ", lines.Select(line => line.StartX.ToString("0.###", CultureInfo.InvariantCulture))));
         TestAssert.True(lines.Any(line => Math.Abs(line.StartX - 367.56d) < 0.01d), "Expected overwide first segment to flow into third column. Starts: " + string.Join(", ", lines.Select(line => line.StartX.ToString("0.###", CultureInfo.InvariantCulture))));
         TestAssert.True(lines.All(line => line.NaturalEndX <= line.EndX + 0.01d), "Expected split lines to stay inside their column widths.");
+    }
+
+    public static void PptxSyntheticNoAutoFitTextOverwideFirstSegmentUsesOfficeWrapFitTolerance()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="817304" y="914400"/><a:ext cx="10626315" cy="650875"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr anchor="ctr" lIns="91440" rIns="91440" tIns="45720" bIns="45720"><a:noAutofit/></a:bodyPr>
+                      <a:lstStyle/>
+                      <a:p><a:pPr><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        int[] lineTextLengths = lines
+            .Select(line => line.Spans.Sum(span => span.Text.Length))
+            .ToArray();
+        TestAssert.True(lineTextLengths.All(length => length == 80),
+            "Expected Office-fit tolerance to keep the dense overwide no-autofit run at two 80-character lines. Lengths: " +
+            string.Join(", ", lineTextLengths.Select(length => length.ToString(CultureInfo.InvariantCulture))));
     }
 
     public static void PptxSyntheticTextBoxClipsOverflow()

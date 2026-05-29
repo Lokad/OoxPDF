@@ -17235,3 +17235,18 @@ are not counterexamples to signed slack: page 36's affected right-edge text base
 after signed slack, while its residual still shows missing Office text-state spacing/font-size variants; page
 37's visible mismatch is a wrapping/width failure where Office emits two title text operations and the
 candidate emits three. Continue with text-state/font metric alignment rather than undoing signed anchoring.
+
+Accepted follow-up, 2026-05-30: the page-37 title wrap residual is reduced by applying the existing named
+Office wrap-fit tolerance to overwide first-segment chunking. This removes a narrow splitter inconsistency:
+ordinary wrap decisions already had Office-fit tolerances, but the special path for a single overwide first
+segment split strictly at the raw text-frame width. Private PDF inspection showed Office splitting the
+affected 160-character `noAutofit` Cambria Math title into two `80/80` text operations with `Tc=0`, while the
+candidate split it as `79/79/2`; after the change the candidate also emits two `80/80` title operations.
+Public regression: `PptxSyntheticNoAutoFitTextOverwideFirstSegmentUsesOfficeWrapFitTolerance`. Validation:
+targeted regressions `PptxSyntheticNoAutoFitTextOverwideFirstSegmentUsesOfficeWrapFitTolerance` and
+`PptxSyntheticMiddleAnchorUsesActualWrappedLineHeight` passed; focused non-slow `pptx-typography` passed
+(`120` passed, `0` failed, `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
+Private run `20260530-014149` compared all `84/84` pages with empty diagnostics and improved deck MAE
+`3.736566 -> 3.706047`, changed16 `0.061829 -> 0.061646`. Page 37 improved `4.20 -> 2.74` MAE and page 36
+improved `8.16 -> 6.97`; the largest observed regressions were small (`+0.04` MAE on pages 23 and 61, `+0.01`
+on page 78). The remaining page-37 baseline gap is now line-grid/baseline placement, not line splitting.

@@ -1185,7 +1185,8 @@ internal sealed partial class PptxRenderer
                         double chunkMaxWidth = frame.Orientation == PptxTextOrientation.Horizontal
                             ? effectiveTextWidth
                             : frame.TextWidth;
-                        string[] chunks = SplitTextIntoFittingChunks(currentSegment, chunkMaxWidth, fragmentFontSize, runStyle, advanceEstimator);
+                        double chunkFitTolerance = PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
+                        string[] chunks = SplitTextIntoFittingChunks(currentSegment, chunkMaxWidth + chunkFitTolerance, fragmentFontSize, runStyle, advanceEstimator);
                         for (int chunkIndex = 0; chunkIndex < chunks.Length; chunkIndex++)
                         {
                             string chunk = chunks[chunkIndex];
