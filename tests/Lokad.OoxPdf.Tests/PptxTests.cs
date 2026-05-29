@@ -5192,6 +5192,36 @@ internal static class PptxTests
         TestAssert.True(Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ [0-9.]+ Tm").Count == 1, "Synthetic bold should use fill-and-stroke text rather than duplicate offset glyph draws.");
     }
 
+    public static void PptxSyntheticBoldCambriaCenteredTextUsesOfficeTightenedAdvance()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string input = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "Lokad.OoxPdf.Tests",
+            "Cases",
+            "pptx-ladder-04-centered-bold-cambria-width.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot bold = glyphRuns.Single(run => run.FrameIndex == 0);
+        PptxTextGlyphRunSnapshot regular = glyphRuns.Single(run => run.FrameIndex == 1);
+
+        TestAssert.True(
+            bold.X > regular.X + 1.5d,
+            $"Expected synthetic bold centered text to use Office's tighter synthetic-bold advance. Bold X={bold.X:0.###}, regular X={regular.X:0.###}.");
+        TestAssert.True(
+            bold.Width < regular.Width - 3d,
+            $"Expected synthetic bold layout width to be narrower than regular Cambria Math for Office-like centered placement. Bold width={bold.Width:0.###}, regular width={regular.Width:0.###}.");
+    }
+
     public static void PptxSyntheticTextBoxUsesKerningWhenAvailable()
     {
         string times = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "times.ttf");

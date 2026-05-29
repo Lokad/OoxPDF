@@ -810,6 +810,11 @@ internal sealed partial class PptxRenderer
                     points += font.GetKerning(previousGlyph, glyph) * fontSize / font.UnitsPerEm;
                 }
 
+                if (previousFont == font && previousGlyph != 0 && resolved.SyntheticBold)
+                {
+                    points -= PptxTextMetricRules.OfficeSyntheticBoldAdvanceTightening(fontSize);
+                }
+
                 points += font.GetAdvanceWidth(glyph) * fontSize / font.UnitsPerEm;
                 previousFont = font;
                 previousGlyph = glyph;
@@ -854,7 +859,7 @@ internal sealed partial class PptxRenderer
             OpenTypeFont? primaryFont = LoadFont(primaryResolution);
             if (primaryResolution is not null && primaryFont is not null && primaryFont.MapCodePoint(codePoint) != 0)
             {
-                cached = new ResolvedGlyphFont(requestedFamily, requestedFamily, PptxGlyphTypefaceResolutionSource.Primary, primaryFont);
+                cached = new ResolvedGlyphFont(requestedFamily, requestedFamily, PptxGlyphTypefaceResolutionSource.Primary, primaryFont, bold && !primaryResolution.Bold);
                 glyphFonts[key] = cached;
                 return cached;
             }
@@ -878,7 +883,7 @@ internal sealed partial class PptxRenderer
                 OpenTypeFont? font = LoadFont(resolution);
                 if (font is not null && font.MapCodePoint(codePoint) != 0)
                 {
-                    cached = new ResolvedGlyphFont(requestedFamily, resolution.FamilyName, PptxGlyphTypefaceResolutionSource.Fallback, font);
+                    cached = new ResolvedGlyphFont(requestedFamily, resolution.FamilyName, PptxGlyphTypefaceResolutionSource.Fallback, font, bold && !resolution.Bold);
                     glyphFonts[key] = cached;
                     return cached;
                 }
@@ -972,7 +977,8 @@ internal sealed partial class PptxRenderer
         string RequestedTypeface,
         string Typeface,
         PptxGlyphTypefaceResolutionSource Source,
-        OpenTypeFont Font);
+        OpenTypeFont Font,
+        bool SyntheticBold);
 
     private enum PptxGlyphTypefaceResolutionSource
     {
@@ -1018,6 +1024,7 @@ internal sealed partial class PptxRenderer
         public const double SmallCapsFallbackScale = 0.8d;
         public const double DefaultTextOutlineWidth = 0.75d;
         public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
+        public const double OfficeSyntheticBoldAdvanceTighteningEm = 0.007d;
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
@@ -1046,6 +1053,9 @@ internal sealed partial class PptxRenderer
         public static double TextOutlineWidth(double? width) => Math.Max(MinimumStrokeWidth, width ?? DefaultTextOutlineWidth);
 
         public static double SyntheticBoldStrokeWidth(double fontSize) => Math.Max(0d, fontSize * SyntheticBoldStrokeWidthRatio);
+
+        public static double OfficeSyntheticBoldAdvanceTightening(double fontSize) =>
+            Math.Max(0d, fontSize * OfficeSyntheticBoldAdvanceTighteningEm);
 
         public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
         {

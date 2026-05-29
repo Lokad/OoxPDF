@@ -269,6 +269,18 @@ New-TypographyProbe `
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1600" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Quality decisions depend on careful operational planning.</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe `
+    -Id "pptx-ladder-04-centered-bold-cambria-width" `
+    -Transform '<a:xfrm><a:off x="6096000" y="914400"/><a:ext cx="4775200" cy="4419600"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr vertOverflow="overflow" vert="horz" wrap="square" rtlCol="0" anchor="t" anchorCtr="0"><a:noAutofit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1600" b="1"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Operations expect the plan it doesn&#x2019;t use.</a:t></a:r><a:endParaRPr lang="en-US" sz="1600"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
+          <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1600"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Operations expect the plan it doesn&#x2019;t use.</a:t></a:r><a:endParaRPr lang="en-US" sz="1600"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
+          <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1600" b="1"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Planning controls the task it doesn&#x2019;t need.</a:t></a:r><a:endParaRPr lang="en-US" sz="1600"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
+          <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1600" b="1"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Managers adjust the work it doesn&#x2019;t need.</a:t></a:r><a:endParaRPr lang="en-US" sz="1600"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
+          <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="1600" b="1"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Demand shapes the model it doesn&#x2019;t use.</a:t></a:r><a:endParaRPr lang="en-US" sz="1600"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
+'@
+
 New-TypographyProbe -Id "pptx-ladder-04-typography-dense-column-probe" -TextBody @'
           <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1500"><a:latin typeface="Calibri"/></a:rPr><a:t>Lokad en quelques mots</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1300"><a:latin typeface="Calibri"/></a:rPr><a:t>Demand forecasting, replenishment and pricing depend on typography remaining legible in dense left-side columns.</a:t></a:r></a:p>

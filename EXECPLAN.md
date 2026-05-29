@@ -16449,3 +16449,36 @@ placement/font-emission branch or JPEG duotone recolor rather than expecting the
 private raster metrics. Validation: focused `PptxSyntheticTextBoxEllipsisUsesLocalClip` passed; focused
 `PptxUnsupportedTextDiagnosticsUseSceneTextBodyProperties` passed; focused non-slow `pptx-typography` passed
 with `100` tests, `0` failures, and `2` slow skips.
+
+Follow-up, 2026-05-29: continued the private slide-17 typography path through public evidence and closed the
+large centered synthetic-bold Cambria Math X drift. The private-safe text comparison had five centered rows with
+large left shifts after the trailing-space fix: indices `7`, `8`, `9`, `16`, and `26` were at `-2.34`, `-2.24`,
+`-2.76`, `-1.04`, and `-0.82 pt`. Public probes ruled out final punctuation, explicit `noAutofit`, and ordinary
+ligature-heavy text as sufficient causes. Inspecting the private source structure without private text exposed
+the missing generic property: those rows are single-run centered `Cambria Math` text with `b="1"`, and Office
+represents that case as fill-and-stroke PDF text with tighter per-glyph `TJ` advances.
+
+The implementation adds an Office-observed synthetic-bold advance tightening to the glyph layout model, not a
+slide- or coordinate-specific offset. `PptxTextMetricRules.OfficeSyntheticBoldAdvanceTighteningEm` is applied
+when a bold request resolves to a non-bold face and synthetic bold is therefore used. Because the adjustment is
+part of `PptxTextGlyphSpanLayout`, it feeds wrapping, center/right alignment, glyph-run inspection, and emitted
+PDF `TJ` arrays through the same structure. The new public fixture
+`pptx-ladder-04-centered-bold-cambria-width` reproduces the drift: before the fix, its 16 pt centered bold rows
+were `-2.28` to `-3.28 pt` from Office while the matching non-bold row was only `-0.36 pt`; after the fix, all
+ten decoded text operations are inside the `0.8 pt` structural gate.
+
+Private validation improved materially without private-specific logic. Run
+`artifacts/private-visual/lokad-value-based/20260529-112437` compared 84/84 pages with zero dimension
+mismatches. Deck MAE improved from `6.917505` to `6.238250`, changed16 from `0.092676` to `0.088209`.
+Slide/page 17 improved from MAE `2.669053` to `1.690602`, changed16 from `0.042103` to `0.034539`, and SSIM
+from `0.925466` to `0.964049`. The refreshed private-safe page-17 text comparison moved the five target rows to
+`-0.38`, `-0.44`, `-0.75`, `-0.16`, and `+0.02 pt`. The remaining text-op table still has one known pairing/order
+outlier and several sub-point baseline/position deltas, so the long-term slide-17 track should continue at
+generic text ordering, baseline quantization, and PDF structure rather than synthetic-bold width.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors. The public visual case `pptx-ladder-04-centered-bold-cambria-width` passed at
+`artifacts/visual/pptx-ladder-04-centered-bold-cambria-width/20260529-112437`; all 10 decoded text operations
+were `ok`. The new unit test `PptxSyntheticBoldCambriaCenteredTextUsesOfficeTightenedAdvance` passed during a
+console-run attempt, but the runner ignored the supplied `--filter` option and executed the broader suite,
+surfacing three pre-existing unsupported-diagnostic failures unrelated to this typography slice.

@@ -1582,6 +1582,11 @@ internal sealed partial class PptxRenderer
                 {
                     adjustmentBefore += font.GetKerning(previousGlyph, glyph) * run.FontSize / font.UnitsPerEm;
                 }
+
+                if (previousFont == font && previousGlyph != 0 && resolved.SyntheticBold)
+                {
+                    adjustmentBefore -= PptxTextMetricRules.OfficeSyntheticBoldAdvanceTightening(run.FontSize);
+                }
             }
 
             double advance = font.GetAdvanceWidth(glyph) * run.FontSize / font.UnitsPerEm;
