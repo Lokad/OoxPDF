@@ -17105,6 +17105,26 @@ use first-baseline alignment alone to override `anchorCtr`; the next pass needs 
 Office-authored public fixture that explains both the extra Office row and the row spacing before changing
 middle-anchor timing again.
 
+Follow-up, 2026-05-30: the same family was rechecked after the later typography/table gains, and the broad
+actual-line-box anchor reset for `spAutoFit` is still rejected. Extending the accepted `noAutofit` reset to
+single-column `spAutoFit` middle/bottom frames passed the focused non-slow `pptx-typography` group (`119`
+passed, `0` failed, `2` skipped), but private run `20260530-005811` worsened deck MAE from `3.930537` to
+`3.941045` and changed16 from `0.064022` to `0.064159`; pages 24 and 39 both regressed from about `8.91/8.94`
+to about `9.35/9.39` MAE. PDF matrices showed the trial shifted the page-24 main-frame candidate baselines up
+by about `7.7pt`, improving the first-line coincidence but leaving the candidate row step at about `15.4pt`
+while Office rows in the comparable block are closer to `16.8pt`. The residual is therefore not an anchor-only
+problem. Keep `spAutoFit` out of the actual-line-box reset until the line grid, grouping, or authored-spacing
+structure is explained by public Office evidence.
+
+Follow-up, 2026-05-30: authored paragraph spacing is also not the missing discriminator for the p24/p39
+`spAutoFit + compatLnSpc` frame. The private source structure has `spcBef=0%` and `spcAft=6pt` on both
+manual-break paragraphs, so a narrow trial let such paragraphs bypass the tight compatible-line-spacing model
+and keep the normal default grid. The focused non-slow `pptx-typography` group still passed (`119` passed,
+`0` failed, `2` skipped), but private run `20260530-010741` worsened deck MAE from `3.930537` to `3.943696`,
+with pages 24/39 becoming the worst pages at about `11.03/11.07` MAE. Do not use explicit `spcBef/spcAft` as a
+switch for `compatLnSpc`; the residual needs evidence from PDF row grouping, break-run handling, or Office
+text-state emission rather than another paragraph-spacing gate.
+
 Follow-up, 2026-05-29: page-13 line-placement inspection exposed another tempting but rejected baseline rule.
 The candidate and Office image placements match closely, so the residual is text-heavy. PDF text rows show one
 right-side paragraph band about `2.3376pt` lower than nearby Office rows, exactly matching the difference
