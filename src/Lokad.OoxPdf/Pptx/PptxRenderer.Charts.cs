@@ -1542,7 +1542,7 @@ internal sealed partial class PptxRenderer
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, valueAxisReversed: false, horizontalBars: true, fontResolver: fontResolver));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, valueAxisReversed: false, horizontalBars: false, fontResolver: fontResolver));
                 fonts.AddRange(RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver));
-                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver));
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.BubbleTitleRightLegend));
                 return true;
             }
         }
@@ -5285,7 +5285,7 @@ internal sealed partial class PptxRenderer
         return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Legend.TextStyle));
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver = null)
+    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver = null, ChartLegendPlacement placement = ChartLegendPlacement.Default)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -5293,7 +5293,7 @@ internal sealed partial class PptxRenderer
         }
 
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer);
+        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
@@ -5373,7 +5373,7 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CL", fontResolver);
     }
 
-    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer)
+    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement)
     {
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
@@ -5409,6 +5409,7 @@ internal sealed partial class PptxRenderer
             PptxSceneChartLegendPosition.Left => Math.Max(0d, plotBox.X - width - sideGap),
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             _ when sideFillLegendInFullFrame => frame.X + frame.Width - width,
+            _ when sideFillLegend && placement == ChartLegendPlacement.BubbleTitleRightLegend => frame.X + frame.Width * PptxChartMetricRules.BubbleTitleRightLegendSwatchXRatio,
             _ when sideFillLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillContentBoxReservedBandOffsetFactor,
             _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
             _ => plotBox.X + plotBox.Width + sideGap
@@ -5422,6 +5423,7 @@ internal sealed partial class PptxRenderer
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
                 fontSize * GetLegendSideStrokeBaselineCenterOffsetFactor(entries) +
                 (entries.Count - 1) * lineHeight / 2d,
+            _ when sideFillLegend && placement == ChartLegendPlacement.BubbleTitleRightLegend => frame.Y + frame.Height * PptxChartMetricRules.BubbleTitleRightLegendSwatchYRatio,
             _ when sideFillLegend => frame.Y + frame.Height / 2d -
                 fontSize * PptxChartMetricRules.LegendSideFillBaselineCenterOffsetFactor +
                 (entries.Count - 1) * lineHeight / 2d,
@@ -9831,21 +9833,18 @@ internal sealed partial class PptxRenderer
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         ChartPlotBox defaultPlotBox = hasTitle && hasRightLegend
-            ? GetBubbleTitleRightLegendPlotBox(frame, bubblePlot, bubbleChart, workbook, fontResolver, legendTextStyle)
+            ? GetBubbleTitleRightLegendPlotBox(frame)
             : GetDefaultChartPlotBox(frame);
         return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
             ? manualPlotLayout
             : ChartPlotLayout.FromPlotBox(defaultPlotBox);
     }
 
-    private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, ChartWorkbookData? workbook, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
+    private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame)
     {
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart, workbook);
-        ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(frame, seriesNames, legendTextStyle, includeAreaReserve: false, fontResolver: fontResolver);
-
         double x = frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio;
         double y = frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio;
-        double width = Math.Max(1d, frame.Width - (x - frame.X) - rightLegendReserve.Width);
+        double width = frame.Width * PptxChartMetricRules.BubbleTitleRightLegendPlotBoxWidthRatio;
         double height = frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxHeightRatio;
         return new ChartPlotBox(x, y, width, height);
     }
@@ -11241,6 +11240,12 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartMarkerStyle? Marker, ChartSeriesNameRecord? SeriesName);
+
+    private enum ChartLegendPlacement
+    {
+        Default,
+        BubbleTitleRightLegend
+    }
 
     private readonly record struct ChartBooleanOption(bool Value, string RawValue, bool IsDefined);
 

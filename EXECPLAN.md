@@ -5299,10 +5299,19 @@ High-priority actions:
     `pptx-ladder-11-chart-bubble-port` case now has empty diagnostics and tighter native-rendering gates
     (MAE `4.85`, changed16 `0.05`); focused chart tests include
     `PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles`.
+  - [x] 2026-05-29: Fixed the public `pptx-ladder-11-chart-bubble-port` plot-box regression by separating
+    bubble title/right-legend layout from line-chart right-legend geometry. Fresh run
+    `artifacts/visual/pptx-ladder-11-chart-bubble-port/20260529-022742` passes with structural gates for
+    the axis plot box, horizontal and vertical axes, legend swatch bounds, bubble `FilledRegion` bounds/path
+    shape, legend text, category ticks, and value ticks. This replaces the earlier failed
+    `20260529-021408` attempt, where the four bubble regions were shifted left by roughly `9.5`, `15.9`,
+    `19.3`, and `33.0` pt because the candidate plot box was too narrow.
   - [ ] Bubble chart layout still uses Office-observed title/right-legend plot-box and bubble headroom
-    constants. Keep these as explicit temporary `PptxChartMetricRules` inventory until chart structural
-    oracle tooling can derive plot box, legend reserve, and bubble extent from Office PDF structures across
-    more public bubble variants.
+    constants, now including separate bubble plot-width and right-legend swatch placement ratios. Keep these
+    as explicit temporary `PptxChartMetricRules` inventory until chart structural oracle tooling can derive
+    plot box, legend reserve, and bubble extent from Office PDF structures across more public bubble variants.
+    Also close the remaining PDF paint-rule gap: Office emits bubble fills as `f*` while the candidate emits
+    `f`, so the current marker guard verifies geometry/path shape but not the exact fill operator.
 - [ ] 2026-05-25: Continue the private slide-17 typography investigation through public fixtures: use private
   evidence only to identify generic missing text behavior, then lock the behavior with synthetic
   Office-backed cases.

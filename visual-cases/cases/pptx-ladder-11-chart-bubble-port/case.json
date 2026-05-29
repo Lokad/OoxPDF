@@ -21,13 +21,32 @@
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,
     "compareChartGraphicsStructurePathOperators": true,
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": [
+          "LegendSwatchCandidate"
+        ],
+        "maxBoundsDelta": 0.1
+      },
+      {
+        "kinds": [
+          "FilledRegion"
+        ],
+        "maxBoundsDelta": 2.2,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true,
+        "matchPathOperators": true
+      }
+    ],
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": [
       "CategoryAxisTickLabel",
+      "LegendText",
       "ValueAxisTickLabel"
     ],
     "maxChartTextStructurePositionDeltaByKind": {
       "CategoryAxisTickLabel": 0.9,
+      "LegendText": 2.0,
       "ValueAxisTickLabel": 0.1
     }
   }

@@ -1168,6 +1168,9 @@ internal sealed partial class PptxRenderer
         public const double LineTitleRightLegendPlotBoxYRatio = 0.0924d;
         public const double LineTitleRightLegendPlotBoxWidthRatio = 0.7391d;
         public const double LineTitleRightLegendPlotBoxHeightRatio = 0.7888d;
+        public const double BubbleTitleRightLegendPlotBoxWidthRatio = 0.7863333333333333d;
+        public const double BubbleTitleRightLegendSwatchXRatio = 0.8818333333333334d;
+        public const double BubbleTitleRightLegendSwatchYRatio = 0.4476157407407407d;
         public const double PieCenterXRatio = 0.42d;
         public const double PieNoLegendCenterXRatio = 0.5d;
         public const double DoughnutRightLegendCenterXRatio = 0.3988d;
