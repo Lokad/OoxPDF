@@ -937,7 +937,14 @@ internal sealed partial class PptxRenderer
     {
         return plot is not null
             ? plot.Series.Select(series => new ChartBooleanOption(series.Smooth ?? false, series.SmoothValue, series.Smooth is not null)).ToArray()
-            : ReadChartSeriesSmoothOptions(chartElement);
+            : chartElement
+                .Elements(ChartNamespace + "ser")
+                .Select(series =>
+                {
+                    (bool? smooth, string smoothValue) = PptxSceneBuilder.ReadChartSeriesSmooth(series);
+                    return new ChartBooleanOption(smooth ?? false, smoothValue, smooth is not null);
+                })
+                .ToArray();
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
@@ -7513,21 +7520,6 @@ internal sealed partial class PptxRenderer
         }
 
         return PptxChartMetricRules.DoughnutHoleFallbackRatio;
-    }
-
-    private static IReadOnlyList<ChartBooleanOption> ReadChartSeriesSmoothOptions(XElement chartElement)
-    {
-        var smooth = new List<ChartBooleanOption>();
-        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
-        {
-            XElement? smoothElement = element.Element(ChartNamespace + "smooth");
-            smooth.Add(new ChartBooleanOption(
-                IsOoxmlBooleanElementEnabled(smoothElement),
-                (string?)smoothElement?.Attribute("val") ?? string.Empty,
-                smoothElement is not null));
-        }
-
-        return smooth;
     }
 
     private static bool HasMajorGridlines(XElement? axis)

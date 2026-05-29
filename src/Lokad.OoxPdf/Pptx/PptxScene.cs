@@ -3067,7 +3067,7 @@ internal sealed class PptxSceneBuilder
                 : default;
     }
 
-    private static (bool? Value, string RawValue) ReadChartSeriesSmooth(XElement series)
+    internal static (bool? Value, string RawValue) ReadChartSeriesSmooth(XElement series)
     {
         XElement? smooth = series.Element(ChartNamespace + "smooth");
         return smooth is null

@@ -15734,3 +15734,13 @@ parser cleanup because their current call site does not carry theme/color-map in
 is unchanged: style parsing should keep converging on typed scene records before Office-PDF-backed layout and
 cascade changes are made. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with
 `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart series `smooth` boolean parsing now shares the scene helper in XML-only renderer
+compatibility paths. `PptxSceneBuilder.ReadChartSeriesSmooth` is internal, and `ReadSceneOrXmlSmoothSeries`
+uses it for fallback `c:ser` elements instead of keeping a renderer-local raw boolean parser.
+
+This closes the small parser gap left by the prior series-style slice. It still does not change how smooth
+curves are drawn; Office-backed path geometry evidence is still required before the renderer should replace
+line segment output with curve output. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+passed with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures,
+and `0` skips.
