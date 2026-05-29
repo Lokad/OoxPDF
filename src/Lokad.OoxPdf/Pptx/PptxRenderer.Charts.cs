@@ -3791,16 +3791,7 @@ internal sealed partial class PptxRenderer
 
     private static bool TryReadManualPlotLayout(XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
     {
-        plotLayout = default;
-        XElement? plotArea = chartXml
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault();
-        if (plotArea is null)
-        {
-            return false;
-        }
-
-        return TryBuildManualPlotLayout(PptxSceneBuilder.ReadChartManualLayout(plotArea), frame, defaultPlotBox, out plotLayout);
+        return TryBuildManualPlotLayout(PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml), frame, defaultPlotBox, out plotLayout);
     }
 
     private static bool TryBuildManualPlotLayout(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
@@ -7995,12 +7986,9 @@ internal sealed partial class PptxRenderer
                 sceneChart.PlotAreaLayout.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Unknown;
         }
 
-        XElement? manualLayout = chartXml
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault()
-            ?.Element(ChartNamespace + "layout")
-            ?.Element(ChartNamespace + "manualLayout");
-        return PptxSceneBuilder.ParseChartManualLayoutTarget(PptxSceneBuilder.ReadChartElementValue(manualLayout, "layoutTarget")) != PptxSceneChartManualLayoutTarget.Unknown;
+        PptxSceneChartManualLayout layout = PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml);
+        return layout.HasLayout &&
+            layout.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Unknown;
     }
 
     private static ChartPlotBox GetHorizontalBarManualLayoutTargetDefaultPlotBox(ChartFrameBox frame, ChartPlotBox defaultPlotBox)

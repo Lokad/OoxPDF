@@ -3657,7 +3657,7 @@ internal sealed class PptxSceneBuilder
         return value is null ? null : !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static PptxSceneChartManualLayout ReadChartPlotAreaManualLayout(XDocument? chartXml)
+    internal static PptxSceneChartManualLayout ReadChartPlotAreaManualLayout(XDocument? chartXml)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")

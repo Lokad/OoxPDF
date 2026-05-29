@@ -16217,6 +16217,13 @@ switch. This is source ownership only: scene-backed plot selection, fallback XML
 geometry are unchanged. Validation: focused non-slow `pptx-charts` passed with `144` tests, `0` failures, and
 `0` skips.
 
+Follow-up, 2026-05-29: plot-area manual-layout XML fallback now shares the same scene-builder reader used by
+scene construction. `PptxSceneBuilder.ReadChartPlotAreaManualLayout` is internal, and fallback chart layout
+paths consume the resulting `PptxSceneChartManualLayout` instead of reopening `plotArea/layout/manualLayout`
+locally. This keeps the layout math and horizontal-bar target policy unchanged while removing another
+renderer-owned XML traversal. Validation: focused non-slow `pptx-charts` passed with `144` tests, `0` failures,
+and `0` skips.
+
 Validation checkpoint, 2026-05-29: after the chart text, cache-point index, and cache `ptCount` parser-boundary
 cleanup, the full non-slow console suite passed with `417` tests, `0` failures, and `7` skips via
 `dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`. This
