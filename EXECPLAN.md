@@ -13618,6 +13618,23 @@ role-specific structural gates are claimed.
 
 Validation: focused non-slow `pptx-charts` passed with `58` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-29: Added a narrow chart rich-text transparency guard without broadening chart text
+geometry claims. A synthetic chart-title rich run now authors its own `a:rPr/a:solidFill/a:alpha`, the scene
+model assertion locks that run-level alpha before renderer adaptation, and the emitted PDF assertion locks
+the shared transparent glyph-outline path plus the matching graphics-state alpha. This preserves the
+source-owned override boundary: a rich run can override chart-level `txPr` color/alpha without a
+renderer-local reparse or a role-specific transparency heuristic.
+
+This does not settle Office visual parity for every transparent chart-text surface. Data-label, legend,
+axis-label, axis-title, inherited chart-style, and mixed rich-run precedence still need public Office-PDF
+probes before tightening placement or declaring role-specific structural gates. The useful closure is narrower:
+run-level chart text alpha is no longer merely metadata, and the test keeps it connected to the shared PDF
+text emission path.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `143` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `419` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Rechecked the private `lokad-value-based` case after the chart-wide data-label
 manual-layout slice. Private run `20260527-214643` compared all `84` reference pages against `84` candidate
 pages with zero dimension mismatches. Deck-level MAE stayed `7.702155`, changed-pixel ratio at threshold 16
