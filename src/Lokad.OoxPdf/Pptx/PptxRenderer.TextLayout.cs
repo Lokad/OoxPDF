@@ -806,7 +806,7 @@ internal sealed partial class PptxRenderer
             ? frame.TextWrapWidth
             : Math.Max(1d, (frame.TextWrapWidth - totalColumnSpacing) / frame.ColumnCount);
         double columnStartX = frame.TextX;
-        bool strictClip = frame.BodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip;
+        bool strictClip = ClipsTextVerticalOverflow(frame.BodyProperties.VerticalOverflow);
         int autoNumberValue = 1;
         bool hasPlacedParagraph = false;
         var paragraphLayouts = new List<PptxTextParagraphLayout>();
@@ -1094,6 +1094,11 @@ internal sealed partial class PptxRenderer
     private static bool UsesRotatedFrameAutoFit(PptxTextOrientation orientation)
     {
         return orientation is PptxTextOrientation.Vertical or PptxTextOrientation.Vertical270;
+    }
+
+    private static bool ClipsTextVerticalOverflow(PptxTextVerticalOverflow overflow)
+    {
+        return overflow is PptxTextVerticalOverflow.Clip or PptxTextVerticalOverflow.Ellipsis;
     }
 
     private static bool IsShortWordSegment(string text)

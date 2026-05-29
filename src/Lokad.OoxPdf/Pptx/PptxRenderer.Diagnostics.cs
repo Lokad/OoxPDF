@@ -31,6 +31,24 @@ internal sealed partial class PptxRenderer
                 Fallback: "Ignored"));
         }
 
+        void EmitTextOverflow()
+        {
+            const string id = "PPTX_UNSUPPORTED_TEXT_OVERFLOW";
+            if (!emitted.Add(id))
+            {
+                return;
+            }
+
+            diagnosticSink(new OoxPdfDiagnostic(
+                id,
+                OoxPdfSeverity.Warning,
+                "PPTX text vertical overflow uses ellipsis; local clipping was applied, but the ellipsis marker is not rendered.",
+                partName,
+                SlideIndex: slideIndex,
+                Feature: "text vertical overflow ellipsis marker",
+                Fallback: "Local clip"));
+        }
+
         if (sceneSlide.HasTransition ||
             slideXml.Descendants(PresentationNamespace + "transition").Any())
         {
@@ -91,7 +109,7 @@ internal sealed partial class PptxRenderer
 
         if (HasUnsupportedTextVerticalOverflow(sceneSlide, slideXml))
         {
-            Emit("PPTX_UNSUPPORTED_TEXT_OVERFLOW", "text vertical overflow");
+            EmitTextOverflow();
         }
 
         if (HasUnsupportedPictureFill(sceneSlide))

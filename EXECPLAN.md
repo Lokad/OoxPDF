@@ -16356,3 +16356,18 @@ and workbook-only series-name sidecars still do not become active chart text in 
 new regression covers cache-backed scene/raw records, workbook-backed scene fallback, and raw no-cache default
 fallback. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and
 `0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: `vertOverflow="ellipsis"` text frames now use the same structural local text clipping as
+`vertOverflow="clip"` for shape and table text-frame layout, and strict baseline clipping now treats `Ellipsis`
+as a clipping overflow mode. The new public synthetic regression verifies both the emitted local PDF clip
+rectangle and the dropped glyph run whose baseline falls outside the frame.
+
+This deliberately does not fake the visible Office ellipsis marker. The diagnostic remains active but now reports
+the precise unsupported subfeature: the ellipsis marker is not rendered and the fallback is local clipping, not
+ignored overflow. Private run `20260529-093029` on `lokad-value-based` stayed metric-neutral against
+`20260529-092025` (84/84 pages, zero dimension mismatches, deck MAE `7.167255`, changed16 `0.098107`; pages
+17/42/44/84 unchanged), which indicates that the next rendering-impact work should target the remaining text
+placement/font-emission branch or JPEG duotone recolor rather than expecting the clipping slice to move the
+private raster metrics. Validation: focused `PptxSyntheticTextBoxEllipsisUsesLocalClip` passed; focused
+`PptxUnsupportedTextDiagnosticsUseSceneTextBodyProperties` passed; focused non-slow `pptx-typography` passed
+with `100` tests, `0` failures, and `2` slow skips.
