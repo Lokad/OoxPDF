@@ -17172,3 +17172,13 @@ the table-cell inset, because the previous literal baseline was already stale on
 `3.930537`; only page 48 changed materially, improving from MAE `7.420661` to `5.754763` and changed16 from
 `0.101773` to `0.084360`. Non-slow `pptx-typography` still passes (`118` passed, `0` failed, `2` skipped), and
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passes.
+
+Follow-up, 2026-05-30: page-39/page-24 `Tc` inspection rejected a `compatLnSpc`-scoped implicit character
+spacing rule. Current PDF comparison still shows Office emitting small positive text-state spacing on page 39
+(`0.022`, `0.03`, and `0.051pt`) while the candidate emits `0` everywhere, and the main left text frame has
+`compatLnSpc` plus middle anchoring. A trial that applied `0.00365em` spacing to zero-`spc` drawable runs in
+compatible-line-spacing frames passed the non-slow `pptx-typography` and `pptx-tables` groups, but failed
+private run `20260530-004458`: deck MAE worsened from `3.930537` to `4.091426`; pages 39 and 24 each worsened by
+about `0.497` MAE; pages 50, 15, and 32 regressed by about `2.0-2.4` MAE. Do not use `compatLnSpc` as the
+implicit-`Tc` discriminator. The remaining text-state gap needs a narrower Office PDF profile, likely involving
+run grouping, fit/scale behavior, or exact font-face/style synthesis rather than line-spacing compatibility.
