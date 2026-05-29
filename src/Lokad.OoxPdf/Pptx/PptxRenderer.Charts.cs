@@ -3947,9 +3947,8 @@ internal sealed partial class PptxRenderer
     {
         string[] axisIds = chartElement
             .Elements(ChartNamespace + "axId")
-            .Select(axis => (string?)axis.Attribute("val"))
+            .Select(PptxSceneBuilder.ReadChartValueAttribute)
             .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id!)
             .ToArray();
         if (axisIds.Length == 0)
         {
@@ -3975,9 +3974,8 @@ internal sealed partial class PptxRenderer
     {
         string[] axisIds = chartElement
             .Elements(ChartNamespace + "axId")
-            .Select(axis => (string?)axis.Attribute("val"))
+            .Select(PptxSceneBuilder.ReadChartValueAttribute)
             .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id!)
             .ToArray();
         if (axisIds.Length == 0)
         {
@@ -7201,7 +7199,7 @@ internal sealed partial class PptxRenderer
 
     private static string? ReadChartAxisId(XElement? axis)
     {
-        return (string?)axis?.Element(ChartNamespace + "axId")?.Attribute("val");
+        return PptxSceneBuilder.ReadOptionalChartValueAttribute(axis?.Element(ChartNamespace + "axId"));
     }
 
     private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints, double autoTickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount)

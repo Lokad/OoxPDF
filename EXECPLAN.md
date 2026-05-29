@@ -15817,3 +15817,13 @@ Validation checkpoint, 2026-05-29: after the chart parser-boundary cleanup seque
 suite passed with `417` tests, `0` failures, and `7` skips via `dotnet run --no-build --project
 tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`. This covers the chart slices plus the
 shared text, table, image, DOCX, font, and PDF primitive tests without changing any public visual baselines.
+
+Follow-up, 2026-05-29: chart `val` attribute reads for axis identity now have a scene-owned helper. The scene
+builder exposes `ReadChartValueAttribute`/`ReadOptionalChartValueAttribute`; plot `c:axId` collections and axis
+`c:axId` IDs now use those helpers in both scene construction and XML-only renderer source matching.
+
+This is source plumbing, not geometry. It keeps the existing caller-level filtering semantics: plot axis-ID
+lists still drop blank/whitespace IDs in renderer fallback, scene plot IDs still preserve non-empty raw tokens,
+and optional axis IDs still remain nullable where fallback code uses a missing ID to choose a default.
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

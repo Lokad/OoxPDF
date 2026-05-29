@@ -2479,7 +2479,7 @@ internal sealed class PptxSceneBuilder
             (double? firstSliceAngle, string firstSliceAngleValue) = ReadChartElementDoubleWithValue(plot, "firstSliceAng");
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
-                .Select(axis => (string?)axis.Attribute("val") ?? string.Empty)
+                .Select(ReadChartValueAttribute)
                 .Where(value => value.Length != 0)
                 .ToArray();
             plots.Add(new PptxSceneChartPlot(
@@ -2757,7 +2757,17 @@ internal sealed class PptxSceneBuilder
 
     internal static string ReadChartElementValue(XElement element, string childName)
     {
-        return (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
+        return ReadChartValueAttribute(element.Element(ChartNamespace + childName));
+    }
+
+    internal static string ReadChartValueAttribute(XElement? element)
+    {
+        return ReadOptionalChartValueAttribute(element) ?? string.Empty;
+    }
+
+    internal static string? ReadOptionalChartValueAttribute(XElement? element)
+    {
+        return (string?)element?.Attribute("val");
     }
 
     private static double? ReadChartElementDouble(XElement element, string childName)
@@ -3313,7 +3323,7 @@ internal sealed class PptxSceneBuilder
         var axes = new List<PptxSceneChartAxis>();
         foreach (XElement axis in plotArea.Elements().Where(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Ax", StringComparison.Ordinal)))
         {
-            string id = (string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty;
+            string id = ReadChartValueAttribute(axis.Element(ChartNamespace + "axId"));
             if (id.Length == 0)
             {
                 continue;
