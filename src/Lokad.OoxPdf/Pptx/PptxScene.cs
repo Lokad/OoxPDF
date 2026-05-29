@@ -3101,7 +3101,7 @@ internal sealed class PptxSceneBuilder
             ReadChartDataSource(series.Element(ChartNamespace + "bubbleSize"), "numRef"));
     }
 
-    private static PptxSceneChartDataSource ReadChartDataSource(XElement? container, params string[] referenceKinds)
+    internal static PptxSceneChartDataSource ReadChartDataSource(XElement? container, params string[] referenceKinds)
     {
         if (container is null)
         {

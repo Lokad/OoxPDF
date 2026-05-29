@@ -15708,6 +15708,18 @@ decisions instead of duplicated low-level OOXML token reads. Validation:
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors;
 focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
 
+Follow-up, 2026-05-29: chart data-source reference parsing is now scene-owned for renderer fallback paths.
+`PptxSceneBuilder.ReadChartDataSource` is internal and is used by XML-only numeric vectors, category-label
+vectors, and series-name records instead of keeping a duplicate renderer parser for `strRef`/`numRef`/
+`multiLvlStrRef` formula and cache-kind metadata.
+
+This keeps active rendering policy unchanged: workbook sidecars, cache-vs-workbook precedence, synthetic
+series-name defaults, and indexed-vector visibility remain renderer-owned until the chart data object can own
+those decisions structurally. The parser boundary is now narrower: source formula, reference kind, cache kind,
+and cached-point presence are read by the scene helper everywhere they are needed. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors;
+focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
 Follow-up, 2026-05-29: scene-internal chart child `val` reads now use the same raw-value helpers as the XML
 fallback bridge. `ReadChartElementValue` accepts nullable containers and is used by numeric child readers,
 chart style, marker symbol/size, keyed point index, point-count, axis, manual-layout, and legend-position
