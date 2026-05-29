@@ -15708,6 +15708,10 @@ summary of formula/cache shape alongside `externalData`, `autoUpdate`, and `plot
 behavioral change. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
 
+Validation checkpoint, 2026-05-29: after the scene-owned chart text cascade and private-safe chart data-source
+inspection changes, the full non-slow console suite passed with `418` tests, `0` failures, and `7` skips via
+`dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`.
+
 Follow-up, 2026-05-29: XML-only chart legend layout now reuses the scene-owned legend parser instead of
 reparsing `c:legend` locally in the renderer. `PptxSceneBuilder.ReadChartLegend` is internal, and
 `ReadChartLegendLayout` converts the typed `PptxSceneChartLegend` record into the renderer layout while
