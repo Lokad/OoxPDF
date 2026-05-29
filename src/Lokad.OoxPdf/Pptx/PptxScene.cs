@@ -3447,6 +3447,58 @@ internal sealed class PptxSceneBuilder
         return ReadChartTextStyleOverride(parent, theme, PptxColorMap.Default);
     }
 
+    internal static PptxSceneChartTextStyleOverride ResolveChartTitleTextStyleOverride(PptxSceneChart chart)
+    {
+        return ResolveChartElementTextStyleOverride(chart, chart.Title.TextStyle, "title");
+    }
+
+    internal static PptxSceneChartTextStyleOverride ResolveChartLegendTextStyleOverride(PptxSceneChart chart)
+    {
+        return ResolveChartElementTextStyleOverride(chart, chart.Legend.TextStyle, "legend");
+    }
+
+    internal static PptxSceneChartTextStyleOverride ResolveChartAxisTextStyleOverride(PptxSceneChart chart, PptxSceneChartAxis? axis, string? chartStyleRole)
+    {
+        return ResolveChartElementTextStyleOverride(chart, axis?.TextStyle ?? default, chartStyleRole);
+    }
+
+    internal static PptxSceneChartTextStyleOverride ResolveChartElementTextStyleOverride(PptxSceneChart chart, PptxSceneChartTextStyleOverride elementTextStyle, string? chartStyleRole)
+    {
+        PptxSceneChartTextStyleOverride style = chart.TextStyle;
+        if (!string.IsNullOrWhiteSpace(chartStyleRole))
+        {
+            style = MergeChartTextStyleOverride(style, ReadChartStyleRoleTextStyleOverride(chart.StylePart, chartStyleRole));
+        }
+
+        return MergeChartTextStyleOverride(style, elementTextStyle);
+    }
+
+    internal static PptxSceneChartTextStyleOverride ResolveChartDataLabelTextStyleOverride(PptxSceneChart chart, PptxSceneChartDataLabels labels)
+    {
+        return ResolveChartElementTextStyleOverride(chart, labels.TextStyle, "dataLabel");
+    }
+
+    internal static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyleOverride(PptxSceneChartStyle stylePart, string role)
+    {
+        PptxSceneChartStyleEntry entry = stylePart.Entries.FirstOrDefault(item => item.Role == role);
+        return entry.TextStyle;
+    }
+
+    internal static PptxSceneChartTextStyleOverride MergeChartTextStyleOverride(PptxSceneChartTextStyleOverride style, PptxSceneChartTextStyleOverride next)
+    {
+        return new PptxSceneChartTextStyleOverride(
+            next.FontFamily ?? style.FontFamily,
+            next.FontFamily is null ? style.RequestedTypeface : next.RequestedTypeface,
+            next.FontFamily is null ? style.TypefaceSource : next.TypefaceSource,
+            next.FontSize ?? style.FontSize,
+            next.Color ?? style.Color,
+            next.Alpha ?? style.Alpha,
+            next.Bold ?? style.Bold,
+            next.Italic ?? style.Italic,
+            next.Underline ?? style.Underline,
+            next.Strike ?? style.Strike);
+    }
+
     internal static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? defaultRunProperties = parent?

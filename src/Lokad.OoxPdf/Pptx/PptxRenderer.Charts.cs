@@ -4313,9 +4313,9 @@ internal sealed partial class PptxRenderer
                     axis.Title.Layout,
                     ToChartShapeStyle(axis.Title.ShapeStyle),
                     axis.Title.TextBodyProperties,
-                    ToChartTextStyleOverride(sceneChart.TextStyle),
-                    ReadChartStyleRoleTextStyle(sceneChart.StylePart, GetChartAxisStyleRole(axis.AxisKind)),
-                    ToChartTextStyleOverride(axis.Title.TextStyle),
+                    ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind))),
+                    ChartTextStyleOverride.Empty,
+                    ChartTextStyleOverride.Empty,
                     fontResolver));
             }
 
@@ -4377,7 +4377,6 @@ internal sealed partial class PptxRenderer
         var fonts = new List<PdfFontResource>();
         if (sceneChart is not null)
         {
-            ChartTextStyleOverride chartTextStyle = ToChartTextStyleOverride(sceneChart.TextStyle);
             foreach (PptxSceneChartAxis axis in sceneChart.Axes)
             {
                 if (axis.IsDeleted == true ||
@@ -4397,9 +4396,9 @@ internal sealed partial class PptxRenderer
                     axis.PositionKind,
                     ToChartShapeStyle(axis.Title.ShapeStyle),
                     axis.Title.TextBodyProperties,
-                    chartTextStyle,
-                    ReadChartStyleRoleTextStyle(sceneChart.StylePart, GetChartAxisStyleRole(axis.AxisKind)),
-                    ToChartTextStyleOverride(axis.Title.TextStyle),
+                    ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind))),
+                    ChartTextStyleOverride.Empty,
+                    ChartTextStyleOverride.Empty,
                     fontResolver));
             }
 
@@ -4833,10 +4832,9 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
-        style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
-        style = MergeChartTextStyle(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, "title"));
+        style = MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartTitleTextStyleOverride(sceneChart)));
         ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(sceneChart.Title.TextStyle);
-        return ResolveAutoChartTitleTextStyle(MergeChartTextStyle(style, titleStyle), titleStyle, isAutoTitle);
+        return ResolveAutoChartTitleTextStyle(style, titleStyle, isAutoTitle);
     }
 
     private static ChartTextStyle ResolveAutoChartTitleTextStyle(ChartTextStyle style, ChartTextStyleOverride titleStyle, bool isAutoTitle)
@@ -5165,9 +5163,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize: PptxChartMetricRules.LegendFallbackFontSize);
-        style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
-        style = MergeChartTextStyle(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, "legend"));
-        return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Legend.TextStyle));
+        return MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver = null, ChartLegendPlacement placement = ChartLegendPlacement.Default)
@@ -6357,18 +6353,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize);
-        style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
-        if (!string.IsNullOrWhiteSpace(chartStyleRole))
-        {
-            style = MergeChartTextStyle(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, chartStyleRole));
-        }
-
-        if (sceneAxis is not null)
-        {
-            style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneAxis.TextStyle));
-        }
-
-        return style;
+        return MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartAxisTextStyleOverride(sceneChart, sceneAxis, chartStyleRole)));
     }
 
     private static ChartTextStyle CreateDefaultChartTextStyle(PptxTheme theme, double fallbackFontSize)
@@ -6410,12 +6395,6 @@ internal sealed partial class PptxRenderer
             style.TypefaceSource);
     }
 
-    private static ChartTextStyleOverride ReadChartStyleRoleTextStyle(PptxSceneChartStyle stylePart, string role)
-    {
-        PptxSceneChartStyleEntry entry = stylePart.Entries.FirstOrDefault(item => item.Role == role);
-        return ToChartTextStyleOverride(entry.TextStyle);
-    }
-
     private static PptxThemeTypefaceResolution ResolveChartThemeTypeface(PptxTheme theme)
     {
         PptxThemeTypefaceResolution minorLatin = theme.ResolveTypefaceWithSource("+mn-lt");
@@ -6431,21 +6410,6 @@ internal sealed partial class PptxRenderer
     private static ChartTextStyle MergeChartTextStyle(ChartTextStyle style, ChartTextStyleOverride next)
     {
         return new ChartTextStyle(
-            next.FontFamily ?? style.FontFamily,
-            next.FontSize ?? style.FontSize,
-            next.Color ?? style.Color,
-            next.Alpha ?? style.Alpha,
-            next.Bold ?? style.Bold,
-            next.Italic ?? style.Italic,
-            next.Underline ?? style.Underline,
-            next.Strike ?? style.Strike,
-            next.FontFamily is null ? style.RequestedTypeface : next.RequestedTypeface,
-            next.FontFamily is null ? style.TypefaceSource : next.TypefaceSource);
-    }
-
-    private static ChartTextStyleOverride MergeChartTextStyleOverride(ChartTextStyleOverride style, ChartTextStyleOverride next)
-    {
-        return new ChartTextStyleOverride(
             next.FontFamily ?? style.FontFamily,
             next.FontSize ?? style.FontSize,
             next.Color ?? style.Color,
@@ -6542,11 +6506,11 @@ internal sealed partial class PptxRenderer
         ChartTextStyleOverride style = ChartTextStyleOverride.Empty;
         if (sceneChart is not null)
         {
-            style = MergeChartTextStyleOverride(style, ToChartTextStyleOverride(sceneChart.TextStyle));
-            style = MergeChartTextStyleOverride(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, "dataLabel"));
+            style = ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartDataLabelTextStyleOverride(sceneChart, labels));
+            return style;
         }
 
-        return MergeChartTextStyleOverride(style, ToChartTextStyleOverride(labels.TextStyle));
+        return ToChartTextStyleOverride(labels.TextStyle);
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides)

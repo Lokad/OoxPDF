@@ -15925,3 +15925,15 @@ Validation checkpoint, 2026-05-29: after the chart text, cache-point index, and 
 cleanup, the full non-slow console suite passed with `417` tests, `0` failures, and `7` skips via
 `dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`. This
 confirms the parser ownership slices did not disturb the shared PPTX/DOCX/PDF/image/font test surface.
+
+Follow-up, 2026-05-29: chart text-style cascade order is now scene-owned for typed chart paths. The scene builder
+exposes helpers that merge chart-wide `txPr`, chart-style role text defaults, and element-local text overrides for
+titles, legends, axes, axis titles, and data labels before the renderer adapts the result to its current
+`ChartTextStyle` records. This removes renderer-local copies of style-role lookup and override merging for typed
+chart text, while preserving XML-only compatibility paths and the existing PDF layout behavior.
+
+This is a cascade-boundary cleanup, not the final chart text architecture. Concrete fallback font selection,
+auto-title scaling, text measurement, baseline/orientation/overflow handling, and rich chart text emission still
+remain renderer-owned until they can be replaced by a shared text-frame path backed by Office PDF structure.
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
