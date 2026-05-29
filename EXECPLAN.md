@@ -17113,8 +17113,8 @@ passed, `0` failed, `2` skipped), but private run `20260530-005811` worsened dec
 to about `9.35/9.39` MAE. PDF matrices showed the trial shifted the page-24 main-frame candidate baselines up
 by about `7.7pt`, improving the first-line coincidence but leaving the candidate row step at about `15.4pt`
 while Office rows in the comparable block are closer to `16.8pt`. The residual is therefore not an anchor-only
-problem. Keep `spAutoFit` out of the actual-line-box reset until the line grid, grouping, or authored-spacing
-structure is explained by public Office evidence.
+problem. Keep broad `spAutoFit` out of the actual-line-box reset until the line grid, grouping, or
+authored-spacing structure is explained by public Office evidence.
 
 Follow-up, 2026-05-30: authored paragraph spacing is also not the missing discriminator for the p24/p39
 `spAutoFit + compatLnSpc` frame. The private source structure has `spcBef=0%` and `spcAft=6pt` on both
@@ -17124,6 +17124,21 @@ and keep the normal default grid. The focused non-slow `pptx-typography` group s
 with pages 24/39 becoming the worst pages at about `11.03/11.07` MAE. Do not use explicit `spcBef/spcAft` as a
 switch for `compatLnSpc`; the residual needs evidence from PDF row grouping, break-run handling, or Office
 text-state emission rather than another paragraph-spacing gate.
+
+Follow-up, 2026-05-30: the same evidence became useful once the line-grid and anchor hypotheses were combined
+instead of applied separately. The accepted rule is now structural: single-column horizontal `spAutoFit` frames
+with `compatLnSpc`, manual line breaks, and explicit paragraph spacing keep the normal default line grid and
+are allowed to discard the preliminary middle/bottom anchor estimate so the actual line boxes own vertical
+placement. This is not a broad `spAutoFit` reset and not a broad paragraph-spacing switch; both one-factor
+trials above remain rejected. Public regression:
+`PptxSyntheticShapeAutoFitExplicitParagraphSpacingKeepsActualAnchorLineGrid`, paired with the existing
+`PptxSyntheticTextBoxShapeAutoFitUsesTightCompatibleLineSpacing` guard for ordinary shape-autofit manual
+breaks. Validation: focused non-slow `pptx-typography` passed (`119` passed, `0` failed, `2` skipped);
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; private run `20260530-011224` improved
+deck MAE `3.930537 -> 3.787764` and changed16 `0.064022 -> 0.062845` with empty diagnostics. Pages 24/39
+moved from `8.91/8.94` MAE to `4.48/4.52`; smaller improvements appeared on pages 32, 50, 26, and 63, with no
+observed top-delta regressions. Continue from the remaining worst pages rather than reworking this family with
+another scalar heuristic.
 
 Follow-up, 2026-05-29: page-13 line-placement inspection exposed another tempting but rejected baseline rule.
 The candidate and Office image placements match closely, so the residual is text-heavy. PDF text rows show one

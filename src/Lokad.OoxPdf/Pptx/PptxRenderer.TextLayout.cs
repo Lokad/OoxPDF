@@ -365,7 +365,7 @@ internal sealed partial class PptxRenderer
         if (frame.VerticalOffset <= PptxTextMetricRules.CoordinateTolerance ||
             frame.Orientation != PptxTextOrientation.Horizontal ||
             frame.ColumnCount != 1 ||
-            !HasNoAutoFit(frame.BodyProperties) ||
+            !UsesActualLineBoxVerticalAnchor(frame) ||
             IsTableCellVerticalAnchorSource(frame.BodyProperties.VerticalAnchorSource) ||
             frame.BodyProperties.VerticalAnchor is not (TextVerticalAnchor.Middle or TextVerticalAnchor.Bottom))
         {
@@ -373,6 +373,18 @@ internal sealed partial class PptxRenderer
         }
 
         return frame with { VerticalOffset = 0d };
+    }
+
+    private static bool UsesActualLineBoxVerticalAnchor(PptxTextFrameModel frame)
+    {
+        if (HasNoAutoFit(frame.BodyProperties))
+        {
+            return true;
+        }
+
+        return HasShapeAutoFit(frame.BodyProperties) &&
+            frame.BodyProperties.CompatibleLineSpacing &&
+            frame.Paragraphs.Any(paragraph => paragraph.HasManualLineBreak && HasExplicitParagraphSpacing(paragraph.Properties));
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(
@@ -2292,7 +2304,10 @@ internal sealed partial class PptxRenderer
             fontSize,
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", fontSize),
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", fontSize),
-            ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing && HasManualLineBreak(paragraph), compatibleDefaultLineSpacingFactor).ScaleExplicit(lineSpacingScale),
+            ApplyCompatibleLineSpacing(
+                ReadLineSpacing(paragraphProperties, defaultParagraphProperties),
+                compatibleLineSpacing && HasManualLineBreak(paragraph) && !HasExplicitParagraphSpacing(paragraphProperties),
+                compatibleDefaultLineSpacingFactor).ScaleExplicit(lineSpacingScale),
             ReadParagraphIndent(paragraphProperties, defaultParagraphProperties),
             ReadTabStops(paragraphProperties, defaultParagraphProperties));
     }
@@ -2300,6 +2315,12 @@ internal sealed partial class PptxRenderer
     private static bool HasManualLineBreak(XElement paragraph)
     {
         return paragraph.Elements(DrawingNamespace + "br").Any();
+    }
+
+    private static bool HasExplicitParagraphSpacing(XElement? paragraphProperties)
+    {
+        return paragraphProperties?.Element(DrawingNamespace + "spcBef") is not null ||
+            paragraphProperties?.Element(DrawingNamespace + "spcAft") is not null;
     }
 
     private static ResolvedRunTextStyle ResolveRunTextStyle(

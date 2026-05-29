@@ -4620,6 +4620,52 @@ internal static class PptxTests
         TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 13.2d) < 0.01d, $"Expected shape-autofit compatible line spacing to tighten default baseline steps, got {(lines[0].BaselineY - lines[1].BaselineY).ToString("0.###", CultureInfo.InvariantCulture)}.");
     }
 
+    public static void PptxSyntheticShapeAutoFitExplicitParagraphSpacingKeepsActualAnchorLineGrid()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                  <p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2286000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr compatLnSpc="1" anchor="ctr" anchorCtr="0" lIns="0" rIns="0" tIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:pPr><a:spcBef><a:spcPct val="0"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200"/><a:t>Control first</a:t></a:r><a:br/><a:r><a:rPr sz="1200"/><a:t>Control second</a:t></a:r><a:br/><a:r><a:rPr sz="1200"/><a:t>Control third</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp>
+                  <p:sp>
+                    <p:spPr><a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="2286000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr compatLnSpc="1" anchor="ctr" anchorCtr="0" lIns="0" rIns="0" tIns="0" bIns="0"><a:spAutoFit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:pPr><a:spcBef><a:spcPct val="0"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200"/><a:t>Autofit first</a:t></a:r><a:br/><a:r><a:rPr sz="1200"/><a:t>Autofit second</a:t></a:r><a:br/><a:r><a:rPr sz="1200"/><a:t>Autofit third</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameLayoutSnapshot[] frames = PptxRenderer.InspectTextLayout(document, package, 0).Frames.ToArray();
+        PptxTextLineLayoutSnapshot[] controlLines = frames[0].Paragraphs.SelectMany(paragraph => paragraph.Lines).ToArray();
+        PptxTextLineLayoutSnapshot[] autofitLines = frames[1].Paragraphs.SelectMany(paragraph => paragraph.Lines).ToArray();
+
+        TestAssert.Equal(3, controlLines.Length);
+        TestAssert.Equal(3, autofitLines.Length);
+        TestAssert.True(autofitLines.All(line => line.LineSpacingKind == "Default"), "Expected explicit paragraph spacing to keep shape-autofit compatLnSpc on the normal default line-spacing model.");
+        TestAssert.True(autofitLines.All(line => Math.Abs(line.Advance - 14.4d) < 0.01d), $"Expected explicit paragraph spacing to keep the normal 12pt default advance, got {string.Join(",", autofitLines.Select(line => line.Advance.ToString("0.###", CultureInfo.InvariantCulture)))}.");
+        TestAssert.True(Math.Abs(autofitLines[0].BaselineY - controlLines[0].BaselineY) < 0.25d, $"Expected shape-autofit explicit paragraph spacing to use the same actual-line-box middle anchor as noAutofit, got {autofitLines[0].BaselineY.ToString("0.###", CultureInfo.InvariantCulture)} vs {controlLines[0].BaselineY.ToString("0.###", CultureInfo.InvariantCulture)}.");
+    }
+
     public static void PptxSyntheticTextBoxCompatibleLineSpacingKeepsWrappedDefaultAdvance()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
