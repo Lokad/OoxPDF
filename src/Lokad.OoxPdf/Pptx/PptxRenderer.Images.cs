@@ -712,6 +712,19 @@ internal sealed partial class PptxRenderer
                 JpegInfo info = JpegInfo.Read(bytes);
                 if (!IsNoImageRecolor(recolor))
                 {
+                    if (info.IsBaselineDct && info.BitsPerComponent == 8 && info.ComponentCount is 1 or 3)
+                    {
+                        try
+                        {
+                            JpegImage jpeg = JpegImage.Read(bytes);
+                            byte[] rgb = ApplyImageRecolor(jpeg.Rgb, recolor);
+                            return PdfImageXObject.RgbPng(jpeg.Width, jpeg.Height, rgb, alpha: null);
+                        }
+                        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
+                        {
+                        }
+                    }
+
                     diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                         "PPTX_UNSUPPORTED_IMAGE_RECOLOR",
                         OoxPdfSeverity.Warning,

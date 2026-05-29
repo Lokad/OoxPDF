@@ -295,6 +295,18 @@ High-priority actions:
   (`259 passed, 0 failed, 7 skipped`); private run `20260527-013804` remained behavior-neutral with 84/84
   compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Decode baseline JPEGs for Office-like PPTX image recolor instead of approximating with PDF masks:
+  `JpegImage` now decodes dependency-free 8-bit Huffman SOF0 grayscale and three-component JPEGs through
+  quantization/Huffman/IDCT and YCbCr-to-RGB conversion. The public 2x1 JPEG oracle locks decoded source pixels
+  at `(150,24,150)` and `(103,0,103)`. The renderer still passes unrecolored JPEGs through as `/DCTDecode`, but
+  recolored baseline JPEGs are materialized as decoded RGB image XObjects before applying the existing
+  luminance/grayscale/bilevel/duotone transforms, matching Office's observable decoded-image strategy and avoiding
+  the rejected luminosity-soft-mask shortcut. The public case was promoted from diagnostic-only to supported as
+  `pptx-ladder-07-jpeg-duotone-recolor`, passing with empty diagnostics at MAE `0.0375`, changed16 `0`, and SSIM
+  `0.999789`. Private `lokad-value-based` run `20260529-103335` removed `PPTX_UNSUPPORTED_IMAGE_RECOLOR`; page 84
+  improved from MAE `14.28`, changed16 `0.458` to MAE `10.11`, changed16 `0.126`, while page 17 stayed unchanged.
+  Remaining image recolor debt is broader JPEG coverage (progressive/arithmetic/CMYK/Adobe-transform cases) and
+  any Office color-transform edge cases exposed by future public fixtures.
 - [x] Retire renderer-local shape picture-fill package fallback:
   `PptxRenderer.Shapes` no longer accepts slide relationship maps or the presentation package when resolving
   shape picture fills. It consumes the scene-owned `PptxSceneShapePictureFill.Resource` only; if the scene did
