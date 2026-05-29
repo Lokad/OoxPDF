@@ -17152,10 +17152,23 @@ skipped. Long term, this remains a structural proxy: replace the current typefac
 font-resolver evidence for "Office would synthesize bold+italic from this math face" or an equivalent PDF-level
 text-state profile when that information becomes available.
 
-Remaining page-48 gap, 2026-05-30: the table header/fill geometry is still unresolved and should be handled
-separately. The OOXML declared row heights plus frame height produce only about `1.017x` slack; the current
-renderer uniformly scales the rows, while Office's first filled band is about `2.2pt` taller/lower even though
-the simple broad row-min expansion failed public table tests. Do not reintroduce a generic row-height slack
-override. The next table pass should compare Office and candidate PDF fill rectangles row-by-row against
-declared OOXML row heights and table-style margins, then look for a structural source such as cell margin,
-border, or band-fill ownership before touching row sizing.
+Accepted follow-up, 2026-05-30: the page-48 table header/fill geometry is improved by treating small positive
+table-frame slack as structural row slack, not as content-minimum expansion. The private table has six
+non-uniform declared row heights, with the two shortest declared rows tied. Its table frame is about `1.017x`
+taller than the declared row sum. Uniform scaling made the first filled band about `39.27pt` tall, while Office
+kept the band top fixed and made the bottom land at `377.59pt`, about `41.48pt` tall. Distributing the small
+positive surplus across the tied shortest rows matches that Office PDF geometry: candidate page-48 header fill
+now has `MinY=377.59` and `MaxY=419.08`, matching the reference `MinY=377.59`/`MaxY=419.07` at report
+precision. This is deliberately separate from the rejected broad table-cell content expansion: the old
+content-minimum branch remains guarded for material slack, while the new branch only applies for small positive
+slack, multiple tied shortest rows, and non-uniform row declarations.
+
+Validation: public `pptx-tables --skip-slow` passes (`13` passed, `0` failed), including the new synthetic
+`PptxSyntheticTableDistributesSmallPositiveSlackToShortestRows` regression that locks the same declared-row
+structure without private content. The stale exact-Y assertion in
+`PptxSyntheticTableKeepsSlide6HeaderOnOneLine` was narrowed to its actual invariant, one rendered baseline at
+the table-cell inset, because the previous literal baseline was already stale on `aa2d390^`. Private run
+`20260530-003929` compared all `84/84` pages with no diagnostics and improved deck MAE from `3.950370` to
+`3.930537`; only page 48 changed materially, improving from MAE `7.420661` to `5.754763` and changed16 from
+`0.101773` to `0.084360`. Non-slow `pptx-typography` still passes (`118` passed, `0` failed, `2` skipped), and
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passes.

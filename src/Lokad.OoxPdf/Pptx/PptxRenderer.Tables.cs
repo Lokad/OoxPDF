@@ -9,6 +9,7 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     private const double OfficeTableRowContentExpansionSlackFactor = 1.05d;
+    private const double OfficeTableRowSmallPositiveSlackFactor = 1.05d;
 
     private sealed record TableFrameLayout(
         IReadOnlyList<PptxPositionedTextSpan> TextSpans,
@@ -283,6 +284,11 @@ internal sealed partial class PptxRenderer
         double rowHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch);
         if (rowHeightSlackFactor <= OfficeTableRowContentExpansionSlackFactor)
         {
+            if (TryDistributeSmallPositiveTableRowSlack(rawRowHeights, frameHeight, rowHeightSlackFactor, out double[] slackAdjustedRows))
+            {
+                return slackAdjustedRows;
+            }
+
             return rowHeights;
         }
 
@@ -365,6 +371,50 @@ internal sealed partial class PptxRenderer
         }
 
         return rowHeights;
+    }
+
+    private static bool TryDistributeSmallPositiveTableRowSlack(
+        IReadOnlyList<double> rawRowHeights,
+        double frameHeight,
+        double rowHeightSlackFactor,
+        out double[] rowHeights)
+    {
+        rowHeights = [];
+        if (rawRowHeights.Count <= 1 ||
+            rowHeightSlackFactor <= 1d + PptxTextMetricRules.TextStateTolerance ||
+            rowHeightSlackFactor > OfficeTableRowSmallPositiveSlackFactor)
+        {
+            return false;
+        }
+
+        double[] declaredRows = rawRowHeights
+            .Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch)
+            .ToArray();
+        double declaredTotal = declaredRows.Sum();
+        double slack = frameHeight - declaredTotal;
+        if (slack <= PptxTextMetricRules.CoordinateTolerance)
+        {
+            return false;
+        }
+
+        double shortestRow = declaredRows.Min();
+        int shortestCount = declaredRows.Count(height => Math.Abs(height - shortestRow) <= PptxTextMetricRules.CoordinateTolerance);
+        if (shortestCount <= 1 || shortestCount >= declaredRows.Length)
+        {
+            return false;
+        }
+
+        double slackPerShortestRow = slack / shortestCount;
+        for (int i = 0; i < declaredRows.Length; i++)
+        {
+            if (Math.Abs(declaredRows[i] - shortestRow) <= PptxTextMetricRules.CoordinateTolerance)
+            {
+                declaredRows[i] += slackPerShortestRow;
+            }
+        }
+
+        rowHeights = declaredRows;
+        return true;
     }
 
     private static double EstimateTableCellMinimumHeight(

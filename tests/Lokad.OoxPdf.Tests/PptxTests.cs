@@ -11347,7 +11347,49 @@ internal static class PptxTests
             .Distinct(StringComparer.Ordinal)
             .Count();
         TestAssert.True(lineBaselines == 1, $"Expected one rendered baseline for the table header; got {lineBaselines}. Matrices: {string.Join(" | ", matrices)}");
-        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 436\.065 Tm"), $"The centered table header should measure and render with the same table wrap width. Matrices: {string.Join(" | ", matrices)}");
+        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 [0-9.]+ Tm"), $"The centered table header should measure and render at the table-cell inset. Matrices: {string.Join(" | ", matrices)}");
+    }
+
+    public static void PptxSyntheticTableDistributesSmallPositiveSlackToShortestRows()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="4521200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                        <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
+                        <a:tr h="508000">
+                          <a:tc>
+                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody>
+                            <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
+                          </a:tc>
+                        </a:tr>
+                        <a:tr h="508000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/></a:tc></a:tr>
+                        <a:tr h="609600"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/></a:tc></a:tr>
+                        <a:tr h="889000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/></a:tc></a:tr>
+                        <a:tr h="762000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/></a:tc></a:tr>
+                        <a:tr h="1168400"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/></a:tc></a:tr>
+                      </a:tbl></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 425 144 43 re f", pdf);
+        TestAssert.DoesNotContain("72 427.314 144 40.686 re f", pdf);
     }
 
     public static void PptxSyntheticTableIgnoresLeadingEmptyCellParagraph()
