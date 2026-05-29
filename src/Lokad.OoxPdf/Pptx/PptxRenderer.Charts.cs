@@ -7766,7 +7766,7 @@ internal sealed partial class PptxRenderer
     {
         int offset = sceneAxis is not null
             ? sceneAxis.LabelOffset ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset
-            : ReadChartElementInt(axis, "lblOffset") ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
+            : PptxSceneBuilder.ReadChartElementIntWithValue(axis, "lblOffset").Value ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
 
         offset = Math.Clamp(
             offset,
@@ -7780,7 +7780,7 @@ internal sealed partial class PptxRenderer
     {
         int skip = sceneAxis is not null
             ? sceneAxis.TickLabelSkip ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip
-            : ReadChartElementInt(axis, "tickLblSkip") ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip;
+            : PptxSceneBuilder.ReadChartElementIntWithValue(axis, "tickLblSkip").Value ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip;
 
         return Math.Max(PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip, skip);
     }
@@ -7801,13 +7801,6 @@ internal sealed partial class PptxRenderer
         return crossBetween == PptxSceneChartAxisCrossBetween.Unknown
             ? PptxSceneChartAxisCrossBetween.Between
             : crossBetween;
-    }
-
-    private static int? ReadChartElementInt(XElement? chartElement, string elementName)
-    {
-        return chartElement is null
-            ? null
-            : PptxSceneBuilder.ReadChartElementIntWithValue(chartElement, elementName).Value;
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)

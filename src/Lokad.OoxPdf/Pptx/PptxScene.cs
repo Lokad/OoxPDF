@@ -2790,7 +2790,7 @@ internal sealed class PptxSceneBuilder
         return parsed;
     }
 
-    internal static (int? Value, string RawValue) ReadChartElementIntWithValue(XElement element, string childName)
+    internal static (int? Value, string RawValue) ReadChartElementIntWithValue(XElement? element, string childName)
     {
         string value = ReadChartElementValue(element, childName);
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)

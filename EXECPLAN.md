@@ -15733,6 +15733,17 @@ lexing in one scene-owned path before more renderer-local chart XML reads are re
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
 
+Follow-up, 2026-05-29: chart integer child parsing is now scene-owned in renderer XML fallbacks.
+`ReadChartElementIntWithValue` accepts nullable containers, and category-axis `lblOffset`/`tickLblSkip`
+fallbacks call the scene helper directly instead of using a renderer-local nullable wrapper.
+
+This preserves the existing rendering policy boundary: missing or invalid `lblOffset` still falls back to
+`CategoryAxisDefaultLabelOffset`, missing or invalid `tickLblSkip` still falls back to
+`CategoryAxisDefaultTickLabelSkip`, and offset clamping / minimum-skip enforcement remain renderer-owned
+because those are layout decisions rather than OOXML lexing. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
+`pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
 Follow-up, 2026-05-29: chart `txPr` default-run style parsing now has one scene-builder owner for XML-only
 renderer compatibility paths. Manual/default axis titles, direct chart text-style fallback, data-label defaults,
 and per-label overrides now call `PptxSceneBuilder.ReadChartTextStyleOverride` and convert through
