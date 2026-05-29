@@ -3559,7 +3559,7 @@ internal sealed class PptxSceneBuilder
         return ReadChartManualLayout(plotArea);
     }
 
-    private static PptxSceneChartManualLayout ReadChartManualLayout(XElement? container)
+    internal static PptxSceneChartManualLayout ReadChartManualLayout(XElement? container)
     {
         XElement? manualLayout = container
             ?.Element(ChartNamespace + "layout")
@@ -3598,12 +3598,6 @@ internal sealed class PptxSceneBuilder
             widthMode,
             ParseChartManualLayoutMode(heightMode),
             heightMode);
-    }
-
-    private static double? ReadChartManualLayoutFactor(XElement manualLayout, string elementName)
-    {
-        (double? parsed, _) = ReadChartManualLayoutFactorWithValue(manualLayout, elementName);
-        return parsed;
     }
 
     private static (double? Value, string RawValue) ReadChartManualLayoutFactorWithValue(XElement manualLayout, string elementName)

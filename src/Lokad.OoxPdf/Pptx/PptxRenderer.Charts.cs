@@ -3782,7 +3782,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        return TryBuildManualPlotLayout(ReadManualLayout(plotArea), frame, defaultPlotBox, out plotLayout);
+        return TryBuildManualPlotLayout(PptxSceneBuilder.ReadChartManualLayout(plotArea), frame, defaultPlotBox, out plotLayout);
     }
 
     private static bool TryBuildManualPlotLayout(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
@@ -3885,66 +3885,6 @@ internal sealed partial class PptxRenderer
     private static bool IsManualLayoutFactorMode(PptxSceneChartManualLayoutMode mode, string modeValue, bool missingModeIsFactor)
     {
         return IsManualLayoutFactorMode(mode) || (missingModeIsFactor && string.IsNullOrEmpty(modeValue));
-    }
-
-    private static PptxSceneChartManualLayout ReadManualLayout(XElement parent)
-    {
-        XElement? manualLayout = parent
-            .Element(ChartNamespace + "layout")
-            ?.Element(ChartNamespace + "manualLayout");
-        if (manualLayout is null)
-        {
-            return default;
-        }
-
-        string layoutTarget = ReadManualLayoutValue(manualLayout, "layoutTarget");
-        string xMode = ReadManualLayoutValue(manualLayout, "xMode");
-        string yMode = ReadManualLayoutValue(manualLayout, "yMode");
-        string widthMode = ReadManualLayoutValue(manualLayout, "wMode");
-        string heightMode = ReadManualLayoutValue(manualLayout, "hMode");
-        (double? x, string xValue) = ReadManualLayoutFactorWithValue(manualLayout, "x");
-        (double? y, string yValue) = ReadManualLayoutFactorWithValue(manualLayout, "y");
-        (double? width, string widthValue) = ReadManualLayoutFactorWithValue(manualLayout, "w");
-        (double? height, string heightValue) = ReadManualLayoutFactorWithValue(manualLayout, "h");
-        return new PptxSceneChartManualLayout(
-            true,
-            x,
-            xValue,
-            y,
-            yValue,
-            width,
-            widthValue,
-            height,
-            heightValue,
-            PptxSceneBuilder.ParseChartManualLayoutTarget(layoutTarget),
-            layoutTarget,
-            PptxSceneBuilder.ParseChartManualLayoutMode(xMode),
-            xMode,
-            PptxSceneBuilder.ParseChartManualLayoutMode(yMode),
-            yMode,
-            PptxSceneBuilder.ParseChartManualLayoutMode(widthMode),
-            widthMode,
-            PptxSceneBuilder.ParseChartManualLayoutMode(heightMode),
-            heightMode);
-    }
-
-    private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
-    {
-        (double? parsed, _) = ReadManualLayoutFactorWithValue(manualLayout, elementName);
-        return parsed;
-    }
-
-    private static (double? Value, string RawValue) ReadManualLayoutFactorWithValue(XElement manualLayout, string elementName)
-    {
-        string value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? (parsed, value)
-            : (null, value);
-    }
-
-    private static string ReadManualLayoutValue(XElement manualLayout, string elementName)
-    {
-        return (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
     }
 
     private static IReadOnlyList<XElement> ReadChartValueAxesForChart(XDocument chartXml, XElement chartElement)
@@ -4400,7 +4340,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            PptxSceneChartManualLayout layout = ReadManualLayout(title);
+            PptxSceneChartManualLayout layout = PptxSceneBuilder.ReadChartManualLayout(title);
             if (!layout.HasLayout)
             {
                 if (emitDefaultLayoutDiagnostics)
@@ -4476,7 +4416,7 @@ internal sealed partial class PptxRenderer
             string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
             if (title is null ||
                 string.IsNullOrWhiteSpace(text) ||
-                ReadManualLayout(title).HasLayout)
+                PptxSceneBuilder.ReadChartManualLayout(title).HasLayout)
             {
                 continue;
             }
@@ -4536,7 +4476,7 @@ internal sealed partial class PptxRenderer
             string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
             if (title is null ||
                 string.IsNullOrWhiteSpace(text) ||
-                ReadManualLayout(title).HasLayout ||
+                PptxSceneBuilder.ReadChartManualLayout(title).HasLayout ||
                 IsRenderableDefaultChartAxisTitle(
                     PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName),
                     PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"))))
@@ -4812,7 +4752,7 @@ internal sealed partial class PptxRenderer
             PptxSceneChartAxisPosition positionKind = PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"));
             if (title is null ||
                 string.IsNullOrWhiteSpace(text) ||
-                ReadManualLayout(title).HasLayout ||
+                PptxSceneBuilder.ReadChartManualLayout(title).HasLayout ||
                 !IsRenderableDefaultChartAxisTitle(axisKind, positionKind))
             {
                 continue;
@@ -5244,7 +5184,7 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, ReadManualLayout(legend), ReadChartTextBodyProperties(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap));
+        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, PptxSceneBuilder.ReadChartManualLayout(legend), ReadChartTextBodyProperties(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
@@ -6698,7 +6638,7 @@ internal sealed partial class PptxRenderer
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
                 ReadChartNumberFormat(labels),
-                ReadManualLayout(labels),
+                PptxSceneBuilder.ReadChartManualLayout(labels),
                 ReadChartTextStyleFromTxPr(labels, theme, colorMap),
                 ReadChartTextBodyProperties(labels),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap),
@@ -6816,7 +6756,7 @@ internal sealed partial class PptxRenderer
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
                 ReadChartNumberFormat(label),
-                ReadManualLayout(label),
+                PptxSceneBuilder.ReadChartManualLayout(label),
                 ReadChartTextStyleFromTxPr(label, theme, colorMap),
                 ReadChartTextBodyProperties(label),
                 ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap),

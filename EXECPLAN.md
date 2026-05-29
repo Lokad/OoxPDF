@@ -3816,6 +3816,16 @@ High-priority actions:
 - [ ] Consume plot-area manual-layout target and mode semantics in geometry: `layoutTarget=inner`,
   edge/factor modes, title/legend overlay interactions, and non-bar/line chart-family plot boxes still need
   Office-evidenced rendering rules.
+  2026-05-29 update: removed the renderer-local chart manual-layout XML parser. Raw XML fallback for
+  plot-area, title, legend, and data-label manual layouts now materializes `PptxSceneChartManualLayout`
+  through `PptxSceneBuilder.ReadChartManualLayout`, so the scene parser remains the single owner of
+  layout-target/mode/raw-factor token semantics. This is intentionally behavior-neutral and does not close
+  geometry parity: the public inner/outer plot-layout target probes still pass their bounds/text gates, but
+  both continue to show Office `PlotAreaClipBoxCandidate` segment count `5` versus candidate `8`. The next
+  long-term step is a shared chart-layout oracle for chart area, plot area, inner plot, axes, title, legend,
+  and clip boxes, not another fixture-specific coordinate rule. Validation: `dotnet build Lokad.OoxPdf.slnx
+  --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed (`141 passed, 0 failed,
+  0 skipped`); plot-layout visual probes passed in runs `20260529-024411` and `20260529-024423`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero

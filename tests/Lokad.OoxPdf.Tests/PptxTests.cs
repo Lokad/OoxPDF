@@ -12606,8 +12606,15 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.784 0.392 0.196 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ 14\.04 Tf"), "Expected chart-style title role font size to drive title rendering when c:title has no direct txPr.");
-        int decorationRectangleCount = Regex.Matches(pdf, @"0\.784 0\.392 0\.196 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
-        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style title role underline and strike to emit filled decoration rectangles through the common text renderer.");
+        int decorationPathCount = CountFilledDecorationPaths(pdf, @"0\.784 0\.392 0\.196");
+        TestAssert.True(decorationPathCount >= 2, "Expected chart-style title role underline and strike to emit filled decoration paths through the common text renderer.");
+    }
+
+    private static int CountFilledDecorationPaths(string pdf, string rgbPattern)
+    {
+        return Regex.Matches(
+            pdf,
+            $@"{rgbPattern} rg\s+(?:-?[0-9.]+ -?[0-9.]+ m\s+)(?:-?[0-9.]+ -?[0-9.]+ l\s+){{5}}h\s+f\*").Count;
     }
 
     public static void PptxSyntheticChartStyleTitleAlphaUsesGlyphOutlinePaths()
@@ -12820,8 +12827,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.141 0.408 0.675 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CL[0-9]+ 11\.52 Tf"), "Expected chart-style legend role font size to drive legend rendering when c:legend has no direct txPr.");
-        int decorationRectangleCount = Regex.Matches(pdf, @"0\.141 0\.408 0\.675 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
-        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style legend role underline and strike to emit filled decoration rectangles through the common text renderer.");
+        int decorationPathCount = CountFilledDecorationPaths(pdf, @"0\.141 0\.408 0\.675");
+        TestAssert.True(decorationPathCount >= 2, "Expected chart-style legend role underline and strike to emit filled decoration paths through the common text renderer.");
     }
 
     public static void PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering()
@@ -12895,8 +12902,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.2 0.667 0.4 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 14\.04 Tf"), "Expected chart-style dataLabel role font size to drive data-label rendering when c:dLbls has no direct txPr.");
-        int decorationRectangleCount = Regex.Matches(pdf, @"0\.2 0\.667 0\.4 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
-        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style dataLabel role underline and strike to emit filled decoration rectangles through the common text renderer.");
+        int decorationPathCount = CountFilledDecorationPaths(pdf, @"0\.2 0\.667 0\.4");
+        TestAssert.True(decorationPathCount >= 2, "Expected chart-style dataLabel role underline and strike to emit filled decoration paths through the common text renderer.");
     }
 
     public static void PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering()
@@ -12992,10 +12999,10 @@ internal static class PptxTests
         TestAssert.True(Regex.IsMatch(pdf, @"/CVA[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive value tick labels when c:valAx has no direct txPr.");
         TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 12\.96 Tf"), "Expected chart-style categoryAxis role font size to drive default category axis-title rendering.");
         TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive default value axis-title rendering.");
-        int categoryDecorationRectangleCount = Regex.Matches(pdf, @"0\.667 0\.333 0 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
-        int valueDecorationRectangleCount = Regex.Matches(pdf, @"0 0\.333 0\.667 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
-        TestAssert.True(categoryDecorationRectangleCount >= 2, "Expected chart-style categoryAxis role underline and strike to emit filled decoration rectangles.");
-        TestAssert.True(valueDecorationRectangleCount >= 2, "Expected chart-style valueAxis role underline and strike to emit filled decoration rectangles.");
+        int categoryDecorationPathCount = CountFilledDecorationPaths(pdf, @"0\.667 0\.333 0");
+        int valueDecorationPathCount = CountFilledDecorationPaths(pdf, @"0 0\.333 0\.667");
+        TestAssert.True(categoryDecorationPathCount >= 2, "Expected chart-style categoryAxis role underline and strike to emit filled decoration paths.");
+        TestAssert.True(valueDecorationPathCount >= 2, "Expected chart-style valueAxis role underline and strike to emit filled decoration paths.");
     }
 
     public static void PptxSyntheticChartStyleAxisDefaultsDriveManualAxisTitleRendering()
@@ -13084,8 +13091,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.333 0.667 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive manual-layout value axis-title rendering.");
-        int decorationRectangleCount = Regex.Matches(pdf, @"0 0\.333 0\.667 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
-        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style valueAxis role underline and strike to emit filled decoration rectangles for manual-layout axis titles.");
+        int decorationPathCount = CountFilledDecorationPaths(pdf, @"0 0\.333 0\.667");
+        TestAssert.True(decorationPathCount >= 2, "Expected chart-style valueAxis role underline and strike to emit filled decoration paths for manual-layout axis titles.");
     }
 
     public static void PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox()
