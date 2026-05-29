@@ -16048,3 +16048,20 @@ Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 Validation checkpoint, 2026-05-29: after the chart axis/gridline parser-ownership cleanups, the full non-slow
 console suite passed with `418` tests, `0` failures, and `7` skips via `dotnet run --no-build --project
 tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`.
+
+Private-safe evidence refresh, 2026-05-29: `SummarizePrivateCase.ps1` over `lokad-value-based` still reports
+84/84 pages, zero dimension mismatches, MAE `7.167206`, max MAE `16.511236`, changed16 `0.098106`, and the
+same diagnostics surface: two `PPTX_UNSUPPORTED_TEXT_OVERFLOW` warnings and one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`
+warning. The fresh slide-17 inventory remains ordinary shape/text work: 31 slide shapes, 31 text bodies, two
+pictures, no charts, no tables, no effects, no picture recolor, and the known connector/preset-shape mix.
+
+Private-safe text inspection for slide 17 produced 31 text-frame models and 44 glyph runs without including
+document text. Frame ownership is now clear enough to avoid a private-specific fix: 11 frames explicitly clip
+vertical overflow, 18 explicitly allow overflow, and two use the default overflow mode; all are single-column,
+and 22 frames explicitly use `noAutofit`. PDF text-operation inspection still shows exact operation-count parity
+(`44` reference, `44` candidate) and zero character-spacing drift. The remaining font-size distribution is the
+known secondary Office branch: Office has one `9.024 pt` and two `12.984 pt` operations where the candidate stays
+on the dominant `9 pt` / `12.96 pt` grid. With a `0.75 pt` position tolerance, 35 of 44 text operations are
+matched; the remaining deltas are mostly right-edge X offsets around `0.8-2.8 pt` plus one likely pairing/order
+outlier. Rendering should stay unchanged until the public font-size/geometry probes explain the secondary branch
+structurally.
