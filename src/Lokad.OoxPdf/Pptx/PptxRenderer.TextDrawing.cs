@@ -1202,14 +1202,13 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        if (run.StrictClip)
+        if (!run.StrictClip)
         {
-            return baselineY + run.FontSize >= run.ClipY - PptxTextMetricRules.TextStateTolerance &&
-                baselineY - run.FontSize <= run.ClipY + run.ClipHeight + PptxTextMetricRules.TextStateTolerance;
+            return true;
         }
 
-        return baselineY + run.FontSize >= run.ClipY &&
-            baselineY - run.FontSize <= run.ClipY + run.ClipHeight;
+        return baselineY + run.FontSize >= run.ClipY - PptxTextMetricRules.TextStateTolerance &&
+            baselineY - run.FontSize <= run.ClipY + run.ClipHeight + PptxTextMetricRules.TextStateTolerance;
     }
 
     private static bool HasTextTransform(TextRun run)

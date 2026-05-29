@@ -191,6 +191,19 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-29: Kept slide-wide PPTX text overflow as PDF structure instead of pre-culling it in the
+  renderer. Private page-36 inspection showed a text frame whose layout model contained off-slide overflow
+  lines that Office still exported as PDF text operations under a slide-wide clipping path; OOXPDF dropped the
+  same lines before PDF emission because `BaselineIntersectsClip` treated the slide clip as a culling rule.
+  Strict local text clipping (`vertOverflow="clip"` and `ellipsis`) still uses the font-size band intersection
+  rule, but non-strict slide-wide overflow now emits the text and leaves visibility to the PDF clip/page box.
+  Public regression: `PptxSyntheticTextBoxOverflowKeepsOffSlidePdfStructure`. Validation: focused non-slow
+  `pptx-typography` passed with `117` tests, `0` failures, and `2` skips; private run `20260529-235217`
+  compared 84/84 pages with empty diagnostics and no raster metric movement versus `20260529-232949`
+  (deck MAE `3.956952`, changed16 `0.064289`). The structural PDF delta is material on page 36: candidate
+  text operations increased from `92` to `133`, close to Office's `135`, while the raster stayed unchanged
+  because the additional structure lies outside the visible page clip. Continue from actual pixel-moving
+  residuals, especially Office text-state/`Tc`, table text inspection, and grouped-picture/text placement.
 - [x] 2026-05-29: Split PPTX manual-break line-grid behavior by actual Office text-frame mode instead of
   treating every paragraph containing `a:br` as globally manual-break-spaced. Private
   `lokad-value-based` page-81 inspection showed a top-anchored `spAutoFit` text frame where Office keeps
@@ -6493,6 +6506,11 @@ document-specific business content into public notes.
 
 - [ ] Text layout: preserve spaces, tabs, line breaks, soft line breaks, kerning-like advances, font
   fallback, mixed run spacing, character spacing, superscript/subscript, and baseline offsets.
+- [ ] Text emission: derive Office's implicit PDF `Tc` text-state behavior for presentation text where OOXML
+  has no explicit `a:rPr @spc`. Private pages 24, 36, 39, and 48 show Office exporting nonzero positive or
+  negative `Tc` while OOXPDF currently encodes equivalent or residual advances only through `TJ` positioning.
+  Do not add a private-deck threshold or a font-name exception; build a public Office-authored probe that
+  compares decoded text matrices, `Tc`, `TJ`, and font-size-grid choices for the same layout.
 - [ ] Text layout: replace the temporary default-spacing empty-paragraph middle-anchor estimate with a
   structural Office rule. Public Office probes show visible lines use the resolved OS/2 Windows font box,
   while a trailing empty paragraph sits between the normal paragraph advance and the same font box. The
@@ -8222,6 +8240,16 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+PPTX slide-wide overflow PDF-structure alignment, 2026-05-29:
+dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow:
+117 passed, 0 failed, 2 skipped.
+pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json:
+run 20260529-235217, 84/84 compared, diagnostics [], deck MAE 3.956952, changed16 0.064289.
+Private page-36 candidate PDF text operations increased from 92 to 133 after the structural overflow
+emission change; raster metrics were unchanged versus 20260529-232949.
+```
 
 ```text
 Public-safe font-emission page-height probe, 2026-05-29:
