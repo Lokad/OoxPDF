@@ -2677,7 +2677,7 @@ internal sealed class PptxSceneBuilder
             : (IsOoxmlBooleanElementEnabled(element), (string?)element.Attribute("val") ?? string.Empty);
     }
 
-    private static PptxSceneChartNumberFormat ReadChartNumberFormat(XElement parent)
+    internal static PptxSceneChartNumberFormat ReadChartNumberFormat(XElement parent)
     {
         XElement? numberFormat = parent.Element(ChartNamespace + "numFmt");
         return numberFormat is null

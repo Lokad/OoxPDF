@@ -15670,3 +15670,15 @@ show-data-labels-over-maximum, date-system, and chart-style interactions need ty
 unsupported diagnostics before they can affect output with Office-like semantics. Validation: `dotnet build
 Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
 `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart number-format token parsing now has one scene-builder owner. XML-only renderer
+fallbacks for chart data-label defaults, per-label overrides, and axis number formats call
+`PptxSceneBuilder.ReadChartNumberFormat` and then cross the existing `ToChartNumberFormat` boundary, instead of
+using a separate renderer-local `numFmt` parser. This keeps `formatCode`, parsed `sourceLinked`, and the raw
+`sourceLinked` token aligned between scene-backed and compatibility paths.
+
+This is not a replacement for Office's full number-format engine. It only removes duplicate OOXML token parsing;
+the remaining long-term work is still to align format-code evaluation, workbook/date semantics, locale-sensitive
+formatting, and stale-cache decisions from structural workbook/chart evidence rather than local formatting
+shortcuts. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings
+and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

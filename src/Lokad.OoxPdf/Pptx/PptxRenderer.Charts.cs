@@ -6605,7 +6605,7 @@ internal sealed partial class PptxRenderer
                 labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
-                ReadChartNumberFormat(labels),
+                ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(labels)),
                 PptxSceneBuilder.ReadChartManualLayout(labels),
                 ReadChartTextStyleFromTxPr(labels, theme, colorMap),
                 ReadChartTextBodyProperties(labels),
@@ -6723,7 +6723,7 @@ internal sealed partial class PptxRenderer
                 label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
-                ReadChartNumberFormat(label),
+                ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(label)),
                 PptxSceneBuilder.ReadChartManualLayout(label),
                 ReadChartTextStyleFromTxPr(label, theme, colorMap),
                 ReadChartTextBodyProperties(label),
@@ -6768,20 +6768,6 @@ internal sealed partial class PptxRenderer
         }
 
         return result;
-    }
-
-    private static ChartNumberFormat ReadChartNumberFormat(XElement parent)
-    {
-        XElement? numberFormat = parent.Element(ChartNamespace + "numFmt");
-        return numberFormat is null
-            ? default
-            : new ChartNumberFormat(
-                IsDefined: true,
-                FormatCode: (string?)numberFormat.Attribute("formatCode") ?? string.Empty,
-                SourceLinked: numberFormat.Attribute("sourceLinked") is { } sourceLinked
-                    ? IsOoxmlTrue(sourceLinked.Value)
-                    : null,
-                SourceLinkedValue: (string?)numberFormat.Attribute("sourceLinked") ?? string.Empty);
     }
 
     private static ChartNumberFormat ToChartNumberFormat(PptxSceneChartNumberFormat numberFormat)
@@ -7579,7 +7565,7 @@ internal sealed partial class PptxRenderer
             return ToChartNumberFormat(sceneAxis.NumberFormatInfo);
         }
 
-        return axis is null ? default : ReadChartNumberFormat(axis);
+        return axis is null ? default : ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(axis));
     }
 
     private static bool IsRenderableChartNumberFormat(ChartNumberFormat numberFormat)
