@@ -16260,3 +16260,14 @@ Follow-up, 2026-05-29: `tools/SummarizePptxFontEmissionHeightScan.ps1` now summa
 families from existing per-probe JSON. It keeps the evidence public-safe by reporting only source geometry, Office
 font-size branch counts, baseline ranges, and grid remainders. The script regenerated the six-case ignored family
 summary successfully and should be reused before any future secondary `/Tf` implementation.
+
+Follow-up, 2026-05-29: chart series-name records now preserve the provenance of their active rendered text.
+`ChartSeriesNameRecord` carries `ActiveNameSource` as `Cache`, `Workbook`, or `Default`, so later legend,
+data-label, auto-title, and right-legend sizing work can distinguish cached chart text, workbook-derived scene
+fallback text, and synthetic `Series N` defaults without re-reading XML or guessing from string contents.
+
+This intentionally does not change raw XML fallback rendering policy: cached series names remain authoritative,
+and workbook-only series-name sidecars still do not become active chart text in XML-only compatibility mode. The
+new regression covers cache-backed scene/raw records, workbook-backed scene fallback, and raw no-cache default
+fallback. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and
+`0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.

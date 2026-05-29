@@ -17211,6 +17211,7 @@ internal static class PptxTests
 
         TestAssert.True(records.Length == 1, "Expected one series-name record.");
         TestAssert.Equal("Cached Name", (string?)records[0].GetType().GetProperty("ActiveName")?.GetValue(records[0]) ?? string.Empty);
+        TestAssert.Equal("Cache", records[0].GetType().GetProperty("ActiveNameSource")?.GetValue(records[0])?.ToString() ?? string.Empty);
         object[] workbookPoints = (((System.Collections.IEnumerable?)records[0].GetType().GetProperty("WorkbookPoints")?.GetValue(records[0])) ?? throw new InvalidOperationException("Expected workbook series-name sidecar points.")).Cast<object>().ToArray();
         TestAssert.True(workbookPoints.Length == 1, "Expected series-name sidecar to preserve the workbook source name.");
         TestAssert.Equal("Workbook Name", (string?)workbookPoints[0].GetType().GetProperty("Text")?.GetValue(workbookPoints[0]) ?? string.Empty);
@@ -17227,6 +17228,7 @@ internal static class PptxTests
         object[] rawRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [null, chartElement, workbook])) ?? throw new InvalidOperationException("Expected raw fallback series-name records.")).Cast<object>().ToArray();
         TestAssert.True(rawRecords.Length == 1, "Expected raw XML fallback to preserve one series-name record.");
         TestAssert.Equal("Cached Name", (string?)rawRecords[0].GetType().GetProperty("ActiveName")?.GetValue(rawRecords[0]) ?? string.Empty);
+        TestAssert.Equal("Cache", rawRecords[0].GetType().GetProperty("ActiveNameSource")?.GetValue(rawRecords[0])?.ToString() ?? string.Empty);
         object rawSource = rawRecords[0].GetType().GetProperty("Source")?.GetValue(rawRecords[0]) ?? throw new InvalidOperationException("Expected raw series-name source metadata.");
         TestAssert.Equal("Sheet1!$B$1", (string?)rawSource.GetType().GetProperty("Formula")?.GetValue(rawSource) ?? string.Empty);
         object[] rawWorkbookPoints = (((System.Collections.IEnumerable?)rawRecords[0].GetType().GetProperty("WorkbookPoints")?.GetValue(rawRecords[0])) ?? throw new InvalidOperationException("Expected raw series-name workbook sidecar points.")).Cast<object>().ToArray();
@@ -17237,6 +17239,29 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, (PptxSceneChartDataSourceCacheKind?)rawSource.GetType().GetProperty("CacheKindValue")?.GetValue(rawSource) ?? default);
         TestAssert.Equal("strCache", (string?)rawSource.GetType().GetProperty("CacheKind")?.GetValue(rawSource) ?? string.Empty);
         TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected raw series-name cache point presence to survive fallback parsing.");
+
+        const string noCacheChartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:ser>
+                  <c:tx><c:strRef><c:f>Sheet1!$B$1</c:f></c:strRef></c:tx>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        PptxSceneChartPlot noCachePlot = BuildSingleChartScene(noCacheChartXml)?.Plots.Single()
+            ?? throw new InvalidOperationException("Expected one no-cache chart plot.");
+        XElement noCacheChartElement = XDocument.Parse(noCacheChartXml).Descendants(chartNamespace + "lineChart").Single();
+        object[] noCacheSceneRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [noCachePlot, noCacheChartElement, workbook])) ?? throw new InvalidOperationException("Expected no-cache scene series-name records.")).Cast<object>().ToArray();
+        TestAssert.Equal("Workbook Name", (string?)noCacheSceneRecords[0].GetType().GetProperty("ActiveName")?.GetValue(noCacheSceneRecords[0]) ?? string.Empty);
+        TestAssert.Equal("Workbook", noCacheSceneRecords[0].GetType().GetProperty("ActiveNameSource")?.GetValue(noCacheSceneRecords[0])?.ToString() ?? string.Empty);
+
+        object[] noCacheRawRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [null, noCacheChartElement, workbook])) ?? throw new InvalidOperationException("Expected no-cache raw series-name records.")).Cast<object>().ToArray();
+        TestAssert.Equal("Series 1", (string?)noCacheRawRecords[0].GetType().GetProperty("ActiveName")?.GetValue(noCacheRawRecords[0]) ?? string.Empty);
+        TestAssert.Equal("Default", noCacheRawRecords[0].GetType().GetProperty("ActiveNameSource")?.GetValue(noCacheRawRecords[0])?.ToString() ?? string.Empty);
     }
 
     public static void PptxChartCategoryAxisSourceAcceptsDateAxes()

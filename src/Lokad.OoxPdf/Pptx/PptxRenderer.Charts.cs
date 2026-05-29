@@ -5048,7 +5048,12 @@ internal sealed partial class PptxRenderer
                     IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, series.DataSources.Name);
                     if (!string.IsNullOrWhiteSpace(series.Name))
                     {
-                        return new ChartSeriesNameRecord(series.Name.Trim(), series.Name.Trim(), series.DataSources.Name, workbookPoints);
+                        return new ChartSeriesNameRecord(
+                            series.Name.Trim(),
+                            series.Name.Trim(),
+                            ChartSeriesNameSource.Cache,
+                            series.DataSources.Name,
+                            workbookPoints);
                     }
 
                     string? workbookName = workbookPoints
@@ -5058,6 +5063,7 @@ internal sealed partial class PptxRenderer
                     return new ChartSeriesNameRecord(
                         string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim(),
                         string.Empty,
+                        string.IsNullOrWhiteSpace(workbookName) ? ChartSeriesNameSource.Default : ChartSeriesNameSource.Workbook,
                         series.DataSources.Name,
                         workbookPoints);
                 })
@@ -5076,7 +5082,11 @@ internal sealed partial class PptxRenderer
                 string cacheName = ReadChartSeriesName(series)?.Trim() ?? string.Empty;
                 string activeName = string.IsNullOrWhiteSpace(cacheName) ? $"Series {index + 1}" : cacheName;
                 PptxSceneChartDataSource source = ReadChartSeriesNameDataSource(series);
-                return new ChartSeriesNameRecord(activeName, cacheName, source, ReadWorkbookTextPoints(workbook, source));
+                IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
+                ChartSeriesNameSource activeNameSource = !string.IsNullOrWhiteSpace(cacheName)
+                    ? ChartSeriesNameSource.Cache
+                    : ChartSeriesNameSource.Default;
+                return new ChartSeriesNameRecord(activeName, cacheName, activeNameSource, source, workbookPoints);
             })
             .ToArray();
     }
@@ -10572,9 +10582,17 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
 
+    private enum ChartSeriesNameSource
+    {
+        Default,
+        Cache,
+        Workbook
+    }
+
     private readonly record struct ChartSeriesNameRecord(
         string ActiveName,
         string CacheName,
+        ChartSeriesNameSource ActiveNameSource,
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
 
