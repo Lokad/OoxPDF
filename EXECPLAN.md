@@ -1398,6 +1398,14 @@ High-priority actions:
     strong negative result against a fixed source-Y, top-origin baseline, or local text-frame rule. Rendering remains
     unchanged; the next model must explain an Office page/export quantization interaction that depends on slide
     geometry as well as text-matrix placement.
+  - [x] 2026-05-29: Expand the page-height scan before deriving a secondary `/Tf` rule. Additional ignored variants
+    at slide heights `490`, `590`, and `690 pt` show that the secondary window is not monotonic with height:
+    `490 pt -> Y 120..129` (`4` rows), `540 pt -> Y 135..153` (`7` rows),
+    `590 pt -> Y 120..138` (`7` rows), and `690 pt -> Y 183..198` (`6` rows), alongside the earlier
+    `440 pt -> Y 165..183` and `640 pt -> Y 150..171`. The branch also carries different top-origin baseline grid
+    remainders across variants (`0.083333`, `0.166667`, `0.5`, `0.833333`). This rules out another tempting
+    shortcut: a simple page-height offset applied to a fixed source-Y band. The next durable step is a model of
+    Office's PDF export quantization cycle, likely involving page box height and text-object baseline rounding.
   - [x] 2026-05-29: Expose vertical-overflow provenance in glyph-run and text-emission diagnostics before
     attempting the secondary `/Tf` branch. `PptxTextGlyphRunSnapshot`, `PptxPositionedTextSpan`,
     `PptxPdfTextEmissionContext`, `tools/Lokad.OoxPdf.PptxInspect`, and
@@ -4875,6 +4883,10 @@ High-priority actions:
   `+100 pt`. The secondary branch remains, but the source-Y window shifts from `135..153` on the 540 pt slide to
   `165..183` on the 440 pt slide and `150..171` on the 640 pt slide. This keeps the renderer unchanged and rules
   out a fixed Y-band or purely local text-frame condition.
+- [x] 2026-05-29: Extended the same page-height scan to `490`, `590`, and `690 pt` slide heights. The secondary
+  branch windows are now explicitly non-monotonic (`490 -> 120..129`, `590 -> 120..138`, `690 -> 183..198`) and
+  have differing branch counts/remainders. This is valuable negative evidence: do not implement the secondary font
+  branch until the Office PDF export quantization cycle is understood.
 - [x] 2026-05-29: Shared chart nonnegative point-index parsing for XML-only polar point explosions. The scene
   builder's `TryReadChartNonNegativeIndex` is now the owner for `dPt/idx` validation, and renderer fallback
   series-wide explosion point counts reuse `ReadChartNumberPoints` instead of reparsing value-point indices.
@@ -7358,6 +7370,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Evidence: Public-safe ignored variants of `font-size-quantization-y-scan-21pt-fine` report secondary rows at
   source Y `135..153` on a 540 pt slide, `165..183` on a 440 pt slide, and `150..171` on a 640 pt slide. The rule is
   therefore not a fixed source-coordinate, fixed top-origin baseline, or local text-frame condition.
+- Observation: The secondary `/Tf +0.024 pt` page-height dependence is not monotonic.
+  Evidence: Additional 21 pt fine Y-scan variants show `490 pt` slide height branching at source Y `120..129`,
+  `590 pt` at `120..138`, and `690 pt` at `183..198`. Top-origin baseline grid remainders differ by variant, while
+  most secondary rows still share bottom-origin remainder `0.833333`; neither value alone separates the branch.
 - Observation: The public wrapped-text secondary `/Tf +0.024 pt` branch is not explained by body-property wrap,
   vertical overflow, vertical-overflow source, or autofit mode.
   Evidence: The refreshed `font-size-quantization-wrap13b` branch summary has `32` main-grid rows and `6`
@@ -7656,8 +7672,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - Decision: Do not implement the secondary Office `/Tf +0.024 pt` branch as a fixed Y-band, top-origin baseline
   band, or local text-frame rule.
   Rationale: Page-height variants of the public-safe fine 21 pt Y-scan shift the secondary source-Y window even
-  though the local textbox coordinates and formatting are unchanged. A renderer rule keyed to one coordinate band
-  would fail across page geometry and would not be structural Office alignment.
+  though the local textbox coordinates and formatting are unchanged. Additional intermediate heights show a
+  non-monotonic branch cycle, so a renderer rule keyed to one coordinate band or a simple page-height offset would
+  fail across page geometry and would not be structural Office alignment.
   Date/Author: 2026-05-29 / Codex.
 
 - Decision: Keep chart cache point lexing in the scene builder, but keep fallback data-vector validity policy at
@@ -7997,6 +8014,8 @@ Public-safe font-emission page-height probe, 2026-05-29:
 Original font-size-quantization-y-scan-21pt-fine, slide height 540 pt: secondary 21.024 pt at source Y 135..153.
 Short-page variant, slide height 440 pt: secondary 21.024 pt at source Y 165..183.
 Tall-page variant, slide height 640 pt: secondary 21.024 pt at source Y 150..171.
+Intermediate variants: 490 pt -> source Y 120..129 (4 rows); 590 pt -> 120..138 (7 rows);
+690 pt -> 183..198 (6 rows).
 Office references were rendered with tools\RenderReference.ps1, inspected with tools\InspectPdf.ps1 -TextOnly,
 and summarized with tools\SummarizePptxFontEmissionProbe.ps1. Rendering unchanged.
 ```
@@ -16221,3 +16240,8 @@ at source Y `135..153` on the original 540 pt slide, at `165..183` on the 440 pt
 640 pt slide. Local textbox geometry is unchanged in those probes, so the still-open rule depends on Office's
 page/export quantization or PDF text-matrix construction rather than a local frame property alone. Rendering
 remains unchanged.
+
+The page-height scan was expanded in the same ignored artifact family to `490`, `590`, and `690 pt`. Those variants
+produce secondary windows at source Y `120..129`, `120..138`, and `183..198`, respectively. This makes the negative
+evidence stronger: the rule is not a fixed Y band and not a simple page-height offset. The next useful work is to
+derive the quantization cycle from Office's PDF text matrices/page boxes before touching `PptxPdfTextEmissionProfile`.
