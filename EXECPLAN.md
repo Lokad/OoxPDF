@@ -1406,6 +1406,12 @@ High-priority actions:
     remainders across variants (`0.083333`, `0.166667`, `0.5`, `0.833333`). This rules out another tempting
     shortcut: a simple page-height offset applied to a fixed source-Y band. The next durable step is a model of
     Office's PDF export quantization cycle, likely involving page box height and text-object baseline rounding.
+  - [x] 2026-05-29: Add a reusable public-safe height-scan summarizer for the secondary `/Tf` investigation.
+    `tools/SummarizePptxFontEmissionHeightScan.ps1` consumes one or more
+    `SummarizePptxFontEmissionProbe.ps1` JSON outputs, accepts comma/semicolon-separated path lists, and emits a
+    compact per-case table with slide height, secondary branch count, source-Y range, top/bottom baseline ranges,
+    and 600-DPI baseline remainders. The ignored family summary for the six current 21 pt page-height probes lives
+    under `artifacts/probes/font-size-quantization-y-scan-21pt-fine-height-family-summary.json`.
   - [x] 2026-05-29: Expose vertical-overflow provenance in glyph-run and text-emission diagnostics before
     attempting the secondary `/Tf` branch. `PptxTextGlyphRunSnapshot`, `PptxPositionedTextSpan`,
     `PptxPdfTextEmissionContext`, `tools/Lokad.OoxPdf.PptxInspect`, and
@@ -4887,6 +4893,9 @@ High-priority actions:
   branch windows are now explicitly non-monotonic (`490 -> 120..129`, `590 -> 120..138`, `690 -> 183..198`) and
   have differing branch counts/remainders. This is valuable negative evidence: do not implement the secondary font
   branch until the Office PDF export quantization cycle is understood.
+- [x] 2026-05-29: Added `tools/SummarizePptxFontEmissionHeightScan.ps1` so the page-height branch evidence is
+  reproducible from ignored probe summaries instead of one-off shell grouping. The script writes a compact JSON/table
+  with secondary branch counts and baseline ranges per slide height.
 - [x] 2026-05-29: Shared chart nonnegative point-index parsing for XML-only polar point explosions. The scene
   builder's `TryReadChartNonNegativeIndex` is now the owner for `dPt/idx` validation, and renderer fallback
   series-wide explosion point counts reuse `ReadChartNumberPoints` instead of reparsing value-point indices.
@@ -8018,6 +8027,7 @@ Intermediate variants: 490 pt -> source Y 120..129 (4 rows); 590 pt -> 120..138 
 690 pt -> 183..198 (6 rows).
 Office references were rendered with tools\RenderReference.ps1, inspected with tools\InspectPdf.ps1 -TextOnly,
 and summarized with tools\SummarizePptxFontEmissionProbe.ps1. Rendering unchanged.
+tools\SummarizePptxFontEmissionHeightScan.ps1 regenerated the six-case compact family summary successfully.
 ```
 
 ```text
@@ -16245,3 +16255,8 @@ The page-height scan was expanded in the same ignored artifact family to `490`, 
 produce secondary windows at source Y `120..129`, `120..138`, and `183..198`, respectively. This makes the negative
 evidence stronger: the rule is not a fixed Y band and not a simple page-height offset. The next useful work is to
 derive the quantization cycle from Office's PDF text matrices/page boxes before touching `PptxPdfTextEmissionProfile`.
+
+Follow-up, 2026-05-29: `tools/SummarizePptxFontEmissionHeightScan.ps1` now summarizes these page-height probe
+families from existing per-probe JSON. It keeps the evidence public-safe by reporting only source geometry, Office
+font-size branch counts, baseline ranges, and grid remainders. The script regenerated the six-case ignored family
+summary successfully and should be reused before any future secondary `/Tf` implementation.
