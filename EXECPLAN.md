@@ -1389,6 +1389,15 @@ High-priority actions:
     separation on frame top or text width and only partial separation on local line offsets. This keeps the renderer
     unchanged and strengthens the next long-term requirement: the secondary branch needs an Office page/text-matrix
     quantization model validated across page/layout variants, not a rule keyed to any one coordinate list.
+  - [x] 2026-05-29: Add public-safe page-height variants for the fine 21 pt Y-scan before attempting a secondary
+    `/Tf` implementation. Two ignored probes cloned `font-size-quantization-y-scan-21pt-fine` and changed only the
+    presentation slide height by `-100 pt` and `+100 pt`, leaving the textbox source coordinates, font size, width,
+    height, insets, and no-autofit state unchanged. Office still emits a secondary `21.024 pt` branch, but the
+    source-Y window moves with page geometry: the original 540 pt slide branches at source Y `135..153`, the 440 pt
+    short-page variant branches at `165..183`, and the 640 pt tall-page variant branches at `150..171`. This is a
+    strong negative result against a fixed source-Y, top-origin baseline, or local text-frame rule. Rendering remains
+    unchanged; the next model must explain an Office page/export quantization interaction that depends on slide
+    geometry as well as text-matrix placement.
   - [x] 2026-05-29: Expose vertical-overflow provenance in glyph-run and text-emission diagnostics before
     attempting the secondary `/Tf` branch. `PptxTextGlyphRunSnapshot`, `PptxPositionedTextSpan`,
     `PptxPdfTextEmissionContext`, `tools/Lokad.OoxPdf.PptxInspect`, and
@@ -4861,6 +4870,11 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-29: Added page-height public-safe evidence for the secondary Office `/Tf +0.024 pt` branch.
+  Ignored variants of `font-size-quantization-y-scan-21pt-fine` changed only slide height by `-100 pt` and
+  `+100 pt`. The secondary branch remains, but the source-Y window shifts from `135..153` on the 540 pt slide to
+  `165..183` on the 440 pt slide and `150..171` on the 640 pt slide. This keeps the renderer unchanged and rules
+  out a fixed Y-band or purely local text-frame condition.
 - [x] 2026-05-29: Shared chart nonnegative point-index parsing for XML-only polar point explosions. The scene
   builder's `TryReadChartNonNegativeIndex` is now the owner for `dPt/idx` validation, and renderer fallback
   series-wide explosion point counts reuse `ReadChartNumberPoints` instead of reparsing value-point indices.
@@ -7339,6 +7353,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: Changing slide height while holding 21 pt textbox source coordinates fixed shifts Office's
+  secondary `/Tf +0.024 pt` window.
+  Evidence: Public-safe ignored variants of `font-size-quantization-y-scan-21pt-fine` report secondary rows at
+  source Y `135..153` on a 540 pt slide, `165..183` on a 440 pt slide, and `150..171` on a 640 pt slide. The rule is
+  therefore not a fixed source-coordinate, fixed top-origin baseline, or local text-frame condition.
 - Observation: The public wrapped-text secondary `/Tf +0.024 pt` branch is not explained by body-property wrap,
   vertical overflow, vertical-overflow source, or autofit mode.
   Evidence: The refreshed `font-size-quantization-wrap13b` branch summary has `32` main-grid rows and `6`
@@ -7633,6 +7652,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   at `84.88`; the public visual gate drops from MAE `13.6832895688657` to `3.3798655719521604`.
 
 ## Decision Log
+
+- Decision: Do not implement the secondary Office `/Tf +0.024 pt` branch as a fixed Y-band, top-origin baseline
+  band, or local text-frame rule.
+  Rationale: Page-height variants of the public-safe fine 21 pt Y-scan shift the secondary source-Y window even
+  though the local textbox coordinates and formatting are unchanged. A renderer rule keyed to one coordinate band
+  would fail across page geometry and would not be structural Office alignment.
+  Date/Author: 2026-05-29 / Codex.
 
 - Decision: Keep chart cache point lexing in the scene builder, but keep fallback data-vector validity policy at
   the renderer boundary for now.
@@ -7965,6 +7991,15 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Public-safe font-emission page-height probe, 2026-05-29:
+Original font-size-quantization-y-scan-21pt-fine, slide height 540 pt: secondary 21.024 pt at source Y 135..153.
+Short-page variant, slide height 440 pt: secondary 21.024 pt at source Y 165..183.
+Tall-page variant, slide height 640 pt: secondary 21.024 pt at source Y 150..171.
+Office references were rendered with tools\RenderReference.ps1, inspected with tools\InspectPdf.ps1 -TextOnly,
+and summarized with tools\SummarizePptxFontEmissionProbe.ps1. Rendering unchanged.
+```
 
 ```text
 Full non-slow checkpoint after chart cache-point and polar index parser cleanups, 2026-05-29:
@@ -16175,3 +16210,14 @@ non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
 Validation checkpoint, 2026-05-29: after the chart cache-point and polar point-index parser-ownership cleanups,
 the full non-slow console suite passed with `418` tests, `0` failures, and `7` skips via
 `dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`.
+
+Follow-up, 2026-05-29: public-safe page-height probes were added for the fine 21 pt Office font-emission scan.
+Two ignored variants of `font-size-quantization-y-scan-21pt-fine` changed only `p:sldSz/@cy`: one from 540 pt to
+440 pt and one from 540 pt to 640 pt. Office references were rendered through `tools\RenderReference.ps1`,
+inspected with `tools\InspectPdf.ps1 -TextOnly`, and summarized with `tools\SummarizePptxFontEmissionProbe.ps1`.
+
+The evidence rules out the tempting fixed-coordinate implementations. The secondary `21.024 pt` branch appears
+at source Y `135..153` on the original 540 pt slide, at `165..183` on the 440 pt slide, and at `150..171` on the
+640 pt slide. Local textbox geometry is unchanged in those probes, so the still-open rule depends on Office's
+page/export quantization or PDF text-matrix construction rather than a local frame property alone. Rendering
+remains unchanged.
