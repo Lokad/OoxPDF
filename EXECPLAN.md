@@ -4379,6 +4379,10 @@ High-priority actions:
     or needs-review cases while preserving deterministic report and artifact paths.
 - [ ] Port `pptx-renderer` performance lessons: avoid repeated ZIP/XML/theme/font parsing, cache immutable
   resources per render pass, and measure large-deck hot spots before private-deck tuning.
+  - [x] Route PPTX text font embedding through the render pass's `PresentationFontResolver` OpenType cache:
+    repeated slide/page font subsets still get independent PDF resources, but they no longer reload and parse
+    the same font file for every slide. This is a structural cache boundary, not a rendering heuristic, and
+    keeps future large-deck tuning centered on immutable package/font resources.
 - [x] Prototype the smallest `ooxpdf` PPTX intermediate scene slice for slide/master/layout node lists,
   node kind classification, placeholder metadata, and bounds extraction.
 - [x] Extend the `ooxpdf` scene slice to text bodies: body properties, list style, paragraphs, levels,
