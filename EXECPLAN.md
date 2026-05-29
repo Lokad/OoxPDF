@@ -15755,3 +15755,14 @@ still remain at the rendering boundary. The long-term gap is to replace those ef
 Office-PDF-backed chart layout rules where they affect geometry, especially bar gap/overlap spacing and polar
 slice placement. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: value-axis scale and unit token parsing now shares scene helpers in XML-only renderer
+compatibility paths. `PptxSceneBuilder.ReadChartAxisScalingValueWithValue` and
+`PptxSceneBuilder.ReadChartAxisUnitValueWithValue` are internal, and fallback value-axis extents and unit reads
+use them instead of local `min`/`max`/`majorUnit`/`minorUnit` attribute parsers.
+
+This does not change nice-axis derivation, percent-stacked overrides, bubble-axis tick choices, or near-maximum
+headroom. Those remain renderer policies that need Office-PDF structural evidence before they should move or
+change. The useful architectural change is narrower: raw axis numeric token ownership is now shared with the
+typed scene model. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

@@ -4047,8 +4047,8 @@ internal sealed partial class PptxRenderer
             return fallback;
         }
 
-        double min = ReadAxisScalingValue(scaling, ChartAxisScalingBound.Minimum) ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = ReadAxisScalingValue(scaling, ChartAxisScalingBound.Maximum) ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+        double min = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis!, "min").Value ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
+        double max = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis!, "max").Value ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -4103,15 +4103,6 @@ internal sealed partial class PptxRenderer
             ?.Element(ChartNamespace + elementName) is not null;
     }
 
-    private static double? ReadAxisScalingValue(XElement scaling, ChartAxisScalingBound bound)
-    {
-        string elementName = bound == ChartAxisScalingBound.Minimum ? "min" : "max";
-        string? value = (string?)scaling.Element(ChartNamespace + elementName)?.Attribute("val");
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? parsed
-            : null;
-    }
-
     private static ChartAxisUnits ReadChartValueAxisUnits(XElement? valueAxis)
     {
         if (valueAxis is null)
@@ -4120,8 +4111,8 @@ internal sealed partial class PptxRenderer
         }
 
         return new ChartAxisUnits(
-            ReadAxisUnitValue(valueAxis, "majorUnit"),
-            ReadAxisUnitValue(valueAxis, "minorUnit"));
+            PptxSceneBuilder.ReadChartAxisUnitValueWithValue(valueAxis, "majorUnit").Value,
+            PptxSceneBuilder.ReadChartAxisUnitValueWithValue(valueAxis, "minorUnit").Value);
     }
 
     private static ChartAxisUnits ReadSceneOrXmlChartValueAxisUnits(PptxSceneChartAxis? axis, XElement? valueAxis)
@@ -4143,14 +4134,6 @@ internal sealed partial class PptxRenderer
         return axisUnits.MajorUnit is null
             ? axisUnits with { MajorUnit = ChooseChartAxisMajorUnit(Math.Max(1d, extents.Max - extents.Min), PptxChartMetricRules.BubbleAxisNiceTickTargetCount) }
             : axisUnits;
-    }
-
-    private static double? ReadAxisUnitValue(XElement valueAxis, string elementName)
-    {
-        string? value = (string?)valueAxis.Element(ChartNamespace + elementName)?.Attribute("val");
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) && parsed > 0d
-            ? parsed
-            : null;
     }
 
     private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)

@@ -3631,7 +3631,7 @@ internal sealed class PptxSceneBuilder
         return parsed;
     }
 
-    private static (double? Value, string RawValue) ReadChartAxisScalingValueWithValue(XElement axis, string elementName)
+    internal static (double? Value, string RawValue) ReadChartAxisScalingValueWithValue(XElement axis, string elementName)
     {
         string value = (string?)axis
             .Element(ChartNamespace + "scaling")
@@ -3648,7 +3648,7 @@ internal sealed class PptxSceneBuilder
         return parsed;
     }
 
-    private static (double? Value, string RawValue) ReadChartAxisUnitValueWithValue(XElement axis, string elementName)
+    internal static (double? Value, string RawValue) ReadChartAxisUnitValueWithValue(XElement axis, string elementName)
     {
         string value = (string?)axis.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) && parsed > 0d
