@@ -10503,7 +10503,7 @@ internal sealed partial class PptxRenderer
 
     private static void FillBubbleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double pointX, double pointY, double radius)
     {
-        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d));
+        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.FillEllipseEvenOdd(pointX - radius, pointY - radius, radius * 2d, radius * 2d));
     }
 
     private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits)

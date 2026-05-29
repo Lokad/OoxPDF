@@ -33,6 +33,7 @@
           "FilledRegion"
         ],
         "maxBoundsDelta": 2.2,
+        "matchOperators": true,
         "matchSegmentCounts": true,
         "matchPathCommandCounts": true,
         "matchPathOperators": true

@@ -15593,3 +15593,16 @@ heuristics and fallback reads before the broader typed chart axis/layout model i
 focused non-slow `pptx-charts` group passed with `139` tests, `0` failures, and `0` skips. A concurrent first
 test invocation hit a transient Defender file lock while the solution build was writing obj outputs, then the
 same chart group passed with `--no-build`.
+
+Follow-up, 2026-05-29: bubble chart marker fills now use the existing even-odd ellipse fill primitive inside
+the plot-area clip. The public bubble port had already aligned plot-box and legend geometry, but inspection
+still showed Office writing closed bubble marker regions with `f*` while the candidate emitted `f`. The renderer
+now routes only bubble marker ellipses through `PdfGraphicsBuilder.FillEllipseEvenOdd`; ordinary scatter marker
+dots and pattern ellipses remain unchanged until Office-backed evidence says their PDF spelling should move too.
+
+The public bubble manifest now requires `FilledRegion` operator parity in addition to the existing bounds,
+segment-count, and path-command checks. This closes a small structural PDF mismatch without treating the
+remaining bubble title/right-legend constants as derived Office layout logic. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed with `141`
+tests, `0` failures, and `0` skips; public bubble port run `20260529-023037` passed with `FilledRegion`
+operator parity (`f*`/`f*`) under the strengthened gate.
