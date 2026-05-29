@@ -4808,7 +4808,7 @@ internal sealed partial class PptxRenderer
     {
         if (sceneChart is null)
         {
-            XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
+            XElement? title = ReadChartTitleElement(chartXml);
             return ResolveAutoChartTitleTextStyle(
                 ReadChartTextStyle(theme, colorMap, chartXml, title, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize),
                 ChartTextStyleOverride.Empty,
@@ -4859,7 +4859,7 @@ internal sealed partial class PptxRenderer
             return sceneChart.Title.TextBodyProperties;
         }
 
-        XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
+        XElement? title = ReadChartTitleElement(chartXml);
         return PptxSceneBuilder.ReadChartTextBodyProperties(title);
     }
 
@@ -4875,16 +4875,13 @@ internal sealed partial class PptxRenderer
             return ToChartTextRuns(sceneChart.Title.TextRuns);
         }
 
-        XElement? titleText = chartXml
-            .Descendants(ChartNamespace + "title")
-            .FirstOrDefault()
-            ?.Element(ChartNamespace + "tx");
+        XElement? titleText = ReadChartTitleElement(chartXml)?.Element(ChartNamespace + "tx");
         return ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(titleText, theme, colorMap));
     }
 
     private static string? ReadChartTitleText(XDocument chartXml)
     {
-        XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
+        XElement? title = ReadChartTitleElement(chartXml);
         if (title is null)
         {
             return null;
@@ -4902,6 +4899,11 @@ internal sealed partial class PptxRenderer
         return (string?)title
             .Descendants(ChartNamespace + "v")
             .FirstOrDefault();
+    }
+
+    private static XElement? ReadChartTitleElement(XDocument chartXml)
+    {
+        return chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
     }
 
     private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)

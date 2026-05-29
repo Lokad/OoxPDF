@@ -13657,6 +13657,16 @@ workbook values remain sidecars, and no axis/data-label geometry was changed. Th
 architectural: future cache freshness, number-format, and blank-point decisions now have one less duplicate
 numeric adapter to audit.
 
+Revision note, 2026-05-29: Centralized the renderer-only chart-title XML fallback lookup. Title text style,
+text-body properties, rich text runs, and XML-only title text now share a single `ReadChartTitleElement`
+entry point when no typed `PptxSceneChart` is available. This keeps scene-owned title metadata authoritative
+for the supported path and makes the compatibility path easier to audit without changing rich-text, literal,
+auto-title, or deletion behavior.
+
+This is intentionally not a chart-title placement claim. Manual layout, auto-title sizing, polar fallback
+baseline, and Office-PDF title box evidence remain separate open concerns; the useful closure is only that
+new fallback title code has one raw XML source lookup instead of several repeated scans.
+
 Revision note, 2026-05-27: Rechecked the private `lokad-value-based` case after the chart-wide data-label
 manual-layout slice. Private run `20260527-214643` compared all `84` reference pages against `84` candidate
 pages with zero dimension mismatches. Deck-level MAE stayed `7.702155`, changed-pixel ratio at threshold 16
