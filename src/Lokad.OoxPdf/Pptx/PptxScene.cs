@@ -3439,12 +3439,12 @@ internal sealed class PptxSceneBuilder
         return entry.Line;
     }
 
-    private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme)
+    internal static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme)
     {
         return ReadChartAxisLine(axis, theme, PptxColorMap.Default);
     }
 
-    private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? shapeProperties = axis.Element(ChartNamespace + "spPr");
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
@@ -3690,12 +3690,12 @@ internal sealed class PptxSceneBuilder
             : (null, value);
     }
 
-    private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
+    internal static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
     {
         return ReadChartGridlineLine(gridlines, theme, PptxColorMap.Default);
     }
 
-    private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? shapeProperties = gridlines?.Element(ChartNamespace + "spPr");
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");

@@ -16023,3 +16023,14 @@ auto-title scaling, text measurement, baseline/orientation/overflow handling, an
 remain renderer-owned until they can be replaced by a shared text-frame path backed by Office PDF structure.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: XML-only chart axis and gridline stroke fallbacks now reuse the scene builder's chart
+line readers. `PptxSceneBuilder.ReadChartAxisLine` and `ReadChartGridlineLine` are internal, and the renderer
+adapts their `PptxSceneLineStyle` results through `ToChartSeriesStroke` instead of reparsing `c:spPr/a:ln`,
+`a:noFill`, solid colors, alpha, and widths locally for fallback axes/gridlines.
+
+This is intentionally not a chart geometry change. Axis side selection, gridline visibility, style-role fallback
+priority, and Office-backed plot-box negotiation remain separate layout concerns. The useful long-term movement is
+that chart line-token interpretation now has one owner before those layout policies are replaced with structural
+Office-PDF evidence. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.

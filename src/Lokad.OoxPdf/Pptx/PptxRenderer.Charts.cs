@@ -7477,16 +7477,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke? ReadChartGridlineStroke(XElement? gridlines, PptxTheme theme)
     {
-        XElement? shapeProperties = gridlines?.Element(ChartNamespace + "spPr");
-        if (shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
-        {
-            return new ChartSeriesStroke(new RgbColor(0, 0, 0), 0d, 0d);
-        }
-
-        return shapeProperties is not null &&
-            TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha)
-                ? new ChartSeriesStroke(color, alpha, width)
-                : null;
+        return ToChartSeriesStroke(PptxSceneBuilder.ReadChartGridlineLine(gridlines, theme));
     }
 
     private static bool IsChartGridlineVisible(XElement? gridlines)
@@ -7740,16 +7731,9 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)
     {
-        XElement? shapeProperties = axis?.Element(ChartNamespace + "spPr");
-        if (shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
-        {
-            return new ChartSeriesStroke(new RgbColor(0, 0, 0), 0d, 0d);
-        }
-
-        return shapeProperties is not null &&
-            TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha)
-                ? new ChartSeriesStroke(color, alpha, width)
-                : null;
+        return axis is null
+            ? null
+            : ToChartSeriesStroke(PptxSceneBuilder.ReadChartAxisLine(axis, theme));
     }
 
     private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
