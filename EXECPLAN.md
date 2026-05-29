@@ -15788,3 +15788,15 @@ long-term work is to verify crossing placement against Office PDF structure acro
 axes, hidden axes, and non-zero category/value crossings before moving those policies into a shared layout
 model. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and
 `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: raw chart child `val` token reads now have a shared scene helper for XML-only renderer
+fallbacks. `PptxSceneBuilder.ReadChartElementValue` is internal, and fallback reads for plot grouping/direction
+style, legend position, axis position, crossing mode, orientation, major tick marks, tick-label position,
+cross-between mode, and manual plot-layout target now use it instead of open-coded child-attribute reads.
+
+Defaults remain renderer-owned where they are effective layout policy: missing legend position still resolves to
+right, missing major tick mark still resolves to none, unknown axis positions still trigger the existing
+diagnostic/default-placement behavior, and crossing/orientation policies remain unchanged. This narrows raw OOXML
+token ownership while leaving Office-PDF-backed layout derivation as the next long-term target. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
+non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

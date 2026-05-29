@@ -2755,7 +2755,7 @@ internal sealed class PptxSceneBuilder
         return IsUnsupportedDirectEffect(effect);
     }
 
-    private static string ReadChartElementValue(XElement element, string childName)
+    internal static string ReadChartElementValue(XElement element, string childName)
     {
         return (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
     }
