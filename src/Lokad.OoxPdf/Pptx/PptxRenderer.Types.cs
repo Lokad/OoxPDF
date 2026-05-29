@@ -115,6 +115,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct CurvedConnectorFillPath(
         IReadOnlyList<(double X, double Y)> Points,
+        IReadOnlyList<(double X, double Y)>? TailSubpath,
         double TipX,
         double TipY,
         double DirectionX,

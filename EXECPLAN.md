@@ -16318,6 +16318,18 @@ Two ignored variants of `font-size-quantization-y-scan-21pt-fine` changed only `
 440 pt and one from 540 pt to 640 pt. Office references were rendered through `tools\RenderReference.ps1`,
 inspected with `tools\InspectPdf.ps1 -TextOnly`, and summarized with `tools\SummarizePptxFontEmissionProbe.ps1`.
 
+Follow-up, 2026-05-29: private slide-17 connector work moved forward on rendering rather than ownership cleanup.
+The four ordinary `curvedConnector2` shapes with triangle tails now emit Office-like filled connector regions as
+two closed subpaths: a denser sampled connector body plus a separate triangle marker subpath. This supersedes the
+earlier note that triangle-tail curved connectors should stay on the single-polygon route. The fresh private run
+`20260529-092025` still compared 84/84 pages with zero dimension mismatches, deck MAE `7.167255`, changed16
+`0.098107`, and the same two text-overflow plus one image-recolor diagnostics. The focused page-17 metric is
+MAE `2.785937`, changed16 `0.044134`, SSIM `0.923371`. More importantly, direct page-17 PDF graphics inspection
+now matches the previously divergent Office structure for the four connector fills: reference and candidate both
+show `100` segments and path-command counts `2/98/0/2` for each fill. Remaining deltas are coordinate-level
+outline differences, so the long-term connector track should move toward analytical Office offset geometry rather
+than another hard-coded slide-17 path-count tweak.
+
 The evidence rules out the tempting fixed-coordinate implementations. The secondary `21.024 pt` branch appears
 at source Y `135..153` on the original 540 pt slide, at `165..183` on the 440 pt slide, and at `150..171` on the
 640 pt slide. Local textbox geometry is unchanged in those probes, so the still-open rule depends on Office's

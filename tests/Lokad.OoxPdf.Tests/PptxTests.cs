@@ -1810,6 +1810,44 @@ internal static class PptxTests
         TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
     }
 
+    public static void PptxSyntheticCurvedConnector2TriangleTailUsesOfficeSeparateMarkerSubpath()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:cxnSp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="curvedConnector2"><a:avLst/></a:prstGeom>
+                          <a:ln w="25400"><a:solidFill><a:srgbClr val="DDDDDD"/></a:solidFill><a:tailEnd type="triangle"/></a:ln>
+                        </p:spPr>
+                      </p:cxnSp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.867 g", pdf);
+        TestAssert.True(Regex.Matches(pdf, " m\r\n").Count >= 2, "Expected separate body and triangle marker subpaths.");
+        TestAssert.True(Regex.Matches(pdf, " l\r\n").Count >= 98, "Expected Office-like dense connector body sampling.");
+        TestAssert.True(Regex.Matches(pdf, "h\r\n").Count >= 2, "Expected both connector body and triangle marker to be closed before filling.");
+        TestAssert.Contains("h\r\nf", pdf);
+        TestAssert.DoesNotContain(" c\r\nS", pdf);
+    }
+
     public static void PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
