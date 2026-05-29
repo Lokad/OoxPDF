@@ -5626,12 +5626,27 @@ High-priority actions:
   boundary / data midpoint structure for category axes.
 - [x] The public no-title/right-legend line-chart case now uses an Office-PDF-observed plot box instead of
   the older generic chart plot box, while explicit manual plot layouts still override the default.
+- [x] PPTX picture recolor rendering now consumes the scene-owned `PptxSceneImageRecolor` record directly.
+  The renderer-local duplicate recolor record, duplicate parser bridge, and duplicate color reader were removed;
+  image cache keys, JPEG unsupported diagnostics, and PNG/BMP pixel transforms now derive from the typed scene
+  state. This is intentionally not a JPEG recolor implementation: DCT-backed image recolor still needs either
+  dependency-free JPEG decode/re-encode or a verified Office-like PDF image/color-space strategy before the
+  warning can be retired.
 
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260529-035838` before the image recolor
+  renderer-boundary cleanup:
+  - 84/84 pages compared with zero dimension mismatches.
+  - Mean absolute error: `7.167206`; max mean absolute error: `16.511236`; mean changed-pixel ratio at
+    threshold 16: `0.098106`.
+  - Diagnostics were limited to two `PPTX_UNSUPPORTED_TEXT_OVERFLOW` warnings and one
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR` warning.
+  - The recolor warning remains a generic JPEG/DCT picture-recolor architecture gap. No private slide text,
+    image content, or screenshots were inspected or copied.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260528-141612` after the text-height
   estimator and schema-inspection pass:
   - 84/84 pages compared with zero dimension mismatches.
@@ -15695,6 +15710,24 @@ remaining long-term gap is unchanged: chart titles, legends, axis titles, and da
 text-frame/cascade path with Office-backed baseline, orientation, overflow, and font-fallback semantics.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: PPTX picture recolor rendering now uses the scene model as its only recolor source.
+`RenderPicture`, picture-fill image creation, image cache keys, JPEG unsupported diagnostics, and PNG/BMP pixel
+transforms consume `PptxSceneImageRecolor` directly; the renderer-local `ImageRecolor` record, conversion
+helper, and unused renderer-side recolor XML/color readers were removed. A follow-on sweep removed the now-unused
+renderer wrappers for picture crop, fill-rectangle, and alpha XML reads, leaving those authored tokens owned by
+the scene builder.
+
+This is a source-boundary cleanup, not a heuristic fix for the private JPEG duotone signal. The private-safe
+rerun `20260529-035838` still showed one image-recolor warning alongside two text-overflow warnings, so the
+remaining long-term choice is explicit: either add a dependency-free JPEG decode/re-encode path and reuse the
+same scene recolor transform over decoded pixels, or prove an Office-like PDF-level color-space/soft-mask
+composition that can recolor DCT images structurally. Until that evidence exists, retaining
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR` for JPEG/DCT recolor is the honest behavior. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
+`pptx-core` passed with `12` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`27` tests, `0` failures, and `1` skip; full non-slow console runner passed with `418` tests, `0` failures,
+and `7` skips.
 
 Follow-up, 2026-05-29: private-safe scene inspection now summarizes chart data-source structure without exposing
 workbook or chart values. `PptxSceneNodeSnapshot` reports how many chart data sources carry formulas, how many

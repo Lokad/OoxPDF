@@ -25,7 +25,6 @@ internal sealed partial class PptxRenderer
 
         RenderPicture(
             context.Document,
-            context.Theme,
             graphics,
             context.DiagnosticSink,
             context.SlideNumber,
@@ -39,12 +38,11 @@ internal sealed partial class PptxRenderer
             ToCropRect(picture.Picture.Crop),
             ToFillRect(picture.Picture.Fill),
             picture.Picture.Alpha,
-            ToImageRecolor(picture.Picture.Recolor));
+            picture.Picture.Recolor);
     }
 
     private static void RenderPicture(
         PptxDocument document,
-        PptxTheme theme,
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
@@ -58,7 +56,7 @@ internal sealed partial class PptxRenderer
         CropRect crop,
         FillRect fillRect,
         double alpha,
-        ImageRecolor recolor)
+        PptxSceneImageRecolor recolor)
     {
         if (targetPartName is null)
         {
@@ -177,18 +175,6 @@ internal sealed partial class PptxRenderer
     private static FillRect ToFillRect(PptxSceneRect rect)
     {
         return new FillRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
-    }
-
-    private static ImageRecolor ToImageRecolor(PptxSceneImageRecolor recolor)
-    {
-        return recolor.Kind switch
-        {
-            PptxSceneImageRecolorKind.Luminance => ImageRecolor.Luminance(recolor.Brightness, recolor.Contrast),
-            PptxSceneImageRecolorKind.Duotone => ImageRecolor.Duotone(recolor.Dark, recolor.Light),
-            PptxSceneImageRecolorKind.Grayscale => ImageRecolor.Grayscale(),
-            PptxSceneImageRecolorKind.BiLevel => ImageRecolor.BiLevel(recolor.Threshold),
-            _ => ImageRecolor.None
-        };
     }
 
     private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect)
@@ -682,7 +668,7 @@ internal sealed partial class PptxRenderer
 
     private static PdfImageXObject? GetOrCreateImage(
         PptxSceneImageResource imageResource,
-        ImageRecolor recolor,
+        PptxSceneImageRecolor recolor,
         Dictionary<string, PdfImageXObject?>? imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex)
@@ -694,12 +680,12 @@ internal sealed partial class PptxRenderer
         string partName,
         string contentType,
         byte[] bytes,
-        ImageRecolor recolor,
+        PptxSceneImageRecolor recolor,
         Dictionary<string, PdfImageXObject?>? imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex)
     {
-        string cacheKey = partName + "\u001f" + recolor.CacheKey;
+        string cacheKey = partName + "\u001f" + ImageRecolorCacheKey(recolor);
         if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
         {
             return cached;
@@ -714,7 +700,7 @@ internal sealed partial class PptxRenderer
         string partName,
         string contentType,
         byte[] bytes,
-        ImageRecolor recolor,
+        PptxSceneImageRecolor recolor,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex)
     {
@@ -724,12 +710,12 @@ internal sealed partial class PptxRenderer
                 contentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
             {
                 JpegInfo info = JpegInfo.Read(bytes);
-                if (!recolor.IsNone)
+                if (!IsNoImageRecolor(recolor))
                 {
                     diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                         "PPTX_UNSUPPORTED_IMAGE_RECOLOR",
                         OoxPdfSeverity.Warning,
-                        $"PPTX {recolor.KindName} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.",
+                        $"PPTX {ImageRecolorKindName(recolor)} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.",
                         partName,
                         SlideIndex: slideIndex,
                         Feature: "image recolor",
@@ -778,32 +764,9 @@ internal sealed partial class PptxRenderer
         return null;
     }
 
-    private static ImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
+    private static byte[] ApplyImageRecolor(byte[] rgb, PptxSceneImageRecolor recolor)
     {
-        return ToImageRecolor(PptxSceneBuilder.ReadImageRecolor(picture, theme));
-    }
-
-    private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, out RgbColor color)
-    {
-        if (colorElement.Name == DrawingNamespace + "prstClr")
-        {
-            string? preset = (string?)colorElement.Attribute("val");
-            color = preset switch
-            {
-                "black" => new RgbColor(0, 0, 0),
-                "white" => new RgbColor(255, 255, 255),
-                _ => default
-            };
-            return preset is "black" or "white";
-        }
-
-        XElement wrapper = new(DrawingNamespace + "solidFill", new XElement(colorElement));
-        return TryReadSolidColorWithAlpha(wrapper, theme, out color, out _);
-    }
-
-    private static byte[] ApplyImageRecolor(byte[] rgb, ImageRecolor recolor)
-    {
-        if (recolor.IsNone)
+        if (IsNoImageRecolor(recolor))
         {
             return rgb;
         }
@@ -814,7 +777,7 @@ internal sealed partial class PptxRenderer
             double red = rgb[i];
             double green = rgb[i + 1];
             double blue = rgb[i + 2];
-            if (recolor.Kind == ImageRecolorKind.Luminance)
+            if (recolor.Kind == PptxSceneImageRecolorKind.Luminance)
             {
                 transformed[i] = ApplyBrightnessContrast(red, recolor.Brightness, recolor.Contrast);
                 transformed[i + 1] = ApplyBrightnessContrast(green, recolor.Brightness, recolor.Contrast);
@@ -823,7 +786,7 @@ internal sealed partial class PptxRenderer
             }
 
             double luma = (0.2126d * red + 0.7152d * green + 0.0722d * blue) / 255d;
-            if (recolor.Kind == ImageRecolorKind.Grayscale)
+            if (recolor.Kind == PptxSceneImageRecolorKind.Grayscale)
             {
                 byte gray = ToByte(luma * 255d);
                 transformed[i] = gray;
@@ -832,7 +795,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (recolor.Kind == ImageRecolorKind.BiLevel)
+            if (recolor.Kind == PptxSceneImageRecolorKind.BiLevel)
             {
                 byte value = luma >= recolor.Threshold ? (byte)255 : (byte)0;
                 transformed[i] = value;
@@ -849,6 +812,35 @@ internal sealed partial class PptxRenderer
         return transformed;
     }
 
+    private static bool IsNoImageRecolor(PptxSceneImageRecolor recolor)
+    {
+        return recolor.Kind == PptxSceneImageRecolorKind.None;
+    }
+
+    private static string ImageRecolorKindName(PptxSceneImageRecolor recolor)
+    {
+        return recolor.Kind switch
+        {
+            PptxSceneImageRecolorKind.Luminance => "luminance",
+            PptxSceneImageRecolorKind.Duotone => "duotone",
+            PptxSceneImageRecolorKind.Grayscale => "grayscale",
+            PptxSceneImageRecolorKind.BiLevel => "bi-level",
+            _ => "none"
+        };
+    }
+
+    private static string ImageRecolorCacheKey(PptxSceneImageRecolor recolor)
+    {
+        return recolor.Kind switch
+        {
+            PptxSceneImageRecolorKind.Luminance => FormattableString.Invariant($"lum:{recolor.Brightness:0.#####}:{recolor.Contrast:0.#####}"),
+            PptxSceneImageRecolorKind.Duotone => FormattableString.Invariant($"duo:{recolor.Dark.Red:X2}{recolor.Dark.Green:X2}{recolor.Dark.Blue:X2}:{recolor.Light.Red:X2}{recolor.Light.Green:X2}{recolor.Light.Blue:X2}"),
+            PptxSceneImageRecolorKind.Grayscale => "gray",
+            PptxSceneImageRecolorKind.BiLevel => FormattableString.Invariant($"bi:{recolor.Threshold:0.#####}"),
+            _ => "none"
+        };
+    }
+
     private static byte ApplyBrightnessContrast(double channel, double brightness, double contrast)
     {
         double value = channel / 255d;
@@ -862,81 +854,6 @@ internal sealed partial class PptxRenderer
     private static byte Interpolate(byte from, byte to, double ratio)
     {
         return ToByte(from + (to - from) * Math.Clamp(ratio, 0d, 1d));
-    }
-
-    private static CropRect ReadCrop(XElement picture)
-    {
-        return ToCropRect(PptxSceneBuilder.ReadPictureCrop(picture));
-    }
-
-    private static FillRect ReadFillRect(XElement picture)
-    {
-        return ToFillRect(PptxSceneBuilder.ReadPictureFill(picture));
-    }
-
-    private static double ReadPictureAlpha(XElement picture)
-    {
-        return PptxSceneBuilder.ReadPictureAlpha(picture);
-    }
-
-    private enum ImageRecolorKind
-    {
-        None,
-        Luminance,
-        Duotone,
-        Grayscale,
-        BiLevel
-    }
-
-    private readonly record struct ImageRecolor(ImageRecolorKind Kind, double Brightness, double Contrast, RgbColor Dark, RgbColor Light, double Threshold)
-    {
-        public static ImageRecolor None { get; } = new(ImageRecolorKind.None, 0d, 0d, default, default, 0d);
-
-        public bool IsNone => Kind == ImageRecolorKind.None;
-
-        public string KindName => Kind switch
-        {
-            ImageRecolorKind.Luminance => "luminance",
-            ImageRecolorKind.Duotone => "duotone",
-            ImageRecolorKind.Grayscale => "grayscale",
-            ImageRecolorKind.BiLevel => "bi-level",
-            _ => "none"
-        };
-
-        public string CacheKey => Kind switch
-        {
-            ImageRecolorKind.Luminance => FormattableString.Invariant($"lum:{Brightness:0.#####}:{Contrast:0.#####}"),
-            ImageRecolorKind.Duotone => FormattableString.Invariant($"duo:{Dark.Red:X2}{Dark.Green:X2}{Dark.Blue:X2}:{Light.Red:X2}{Light.Green:X2}{Light.Blue:X2}"),
-            ImageRecolorKind.Grayscale => "gray",
-            ImageRecolorKind.BiLevel => FormattableString.Invariant($"bi:{Threshold:0.#####}"),
-            _ => "none"
-        };
-
-        public static ImageRecolor Luminance(double brightness, double contrast)
-        {
-            return new ImageRecolor(
-                ImageRecolorKind.Luminance,
-                Math.Clamp(brightness, -1d, 1d),
-                Math.Clamp(contrast, -1d, 1d),
-                default,
-                default,
-                0d);
-        }
-
-        public static ImageRecolor Duotone(RgbColor dark, RgbColor light)
-        {
-            return new ImageRecolor(ImageRecolorKind.Duotone, 0d, 0d, dark, light, 0d);
-        }
-
-        public static ImageRecolor Grayscale()
-        {
-            return new ImageRecolor(ImageRecolorKind.Grayscale, 0d, 0d, default, default, 0d);
-        }
-
-        public static ImageRecolor BiLevel(double threshold)
-        {
-            return new ImageRecolor(ImageRecolorKind.BiLevel, 0d, 0d, default, default, Math.Clamp(threshold, 0d, 1d));
-        }
     }
 
     [GeneratedRegex(@"[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
