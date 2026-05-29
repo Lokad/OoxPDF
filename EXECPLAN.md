@@ -98,10 +98,10 @@ The next architecture push is seven linked work tracks:
    the destination. Each chart ratio, offset, and text metric should either be replaced by an Office-PDF
    observed rule or explicitly classified as a temporary approximation with a public case that demonstrates
    the remaining gap.
-4. Continue the slide-17 typography path through public evidence. The current private evidence suggests the
-   remaining issue is broader text placement, not connector geometry or chart manual layout. Use private
-   slide evidence only to identify generic missing text behavior, then lock that behavior with public
-   synthetic Office-PDF-backed fixtures.
+4. Continue the private-deck typography path through public evidence. Slide 17 has mostly moved from graphics
+   parity to small text-emission residuals, while high-error pages such as page 50 now point to broader
+   text-fit/wrap and grouped cropped-picture structure. Use private slide evidence only to identify generic
+   missing behavior, then lock that behavior with public synthetic Office-PDF-backed fixtures.
 5. Migrate text frames to the model-first path. PPTX text should keep its four observable stages explicit:
    style cascade, line layout, glyph positioning, and PDF emission. Shared text-frame layout should become
    the source for shape text, chart text, and table text instead of each surface estimating height and
@@ -1156,11 +1156,29 @@ High-priority actions:
 - [x] Align raster picture clipping with Office's picture-frame structure:
   public `pptx-ladder-07-basic-image` Office PDF inspection shows one page `W*` clip and one image-frame `W*`
   clip, not an additional picture-node full-slide clip. Raster pictures now emit an even-odd frame clip around
-  their drawn image, cropped pictures retain their inner crop clip, and picture scene nodes no longer add a
+  their drawn image, cropped pictures originally retained their inner crop clip, and picture scene nodes no longer add a
   redundant full-slide wrapper. The public `pptx-images` family stayed green at 13/13, and basic-image
   Office/candidate `W*` clip comparison is exact with two clips and zero deltas. Private page-17 small picture
   clips now line up at the two picture-frame bounds, but the high-level page-17 count remains Office
   `W*:68` versus candidate `W*:67`, so the remaining clip gap is not an image-frame issue.
+- [x] 2026-05-29: Remove redundant cropped-picture inner clips after page-50 private evidence:
+  private page 50 showed four cropped, grouped raster pictures whose visible frame clips match Office to
+  rounding, while the candidate PDF added a second internal `W` crop clip and drew a larger image matrix.
+  `PdfGraphicsBuilder.DrawImageCropped` now relies on the caller's frame/shape clip, matching the existing PPTX
+  picture and picture-fill render contract and moving the PDF operation stream closer to Office's single
+  frame-clip structure. This is intentionally raster-neutral: Office still appears to draw already-cropped image
+  XObjects, while OOXPDF still draws the source image with a crop matrix. Validation: `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-images` passed (`19 passed,
+  0 failed, 0 skipped`); public `pptx-ladder-07-image-crop` and `pptx-ladder-07-image-crop-fill-rect` passed at
+  zero MAE/changed-pixel thresholds; private run `20260529-114336` compared all 84 pages with zero metric
+  changes and no diagnostics, while page-50 candidate graphics operations dropped from `188` to `184`.
+- [ ] Align cropped raster-image PDF resources with Office's cropped-XObject strategy:
+  Office's inspected PDFs for the private recurring picture pattern draw the cropped image at the final frame
+  matrix, while OOXPDF still emits the full source image scaled larger and clipped to the frame. The visible
+  pixels are already stable in public crop cases, so this should not become a coordinate heuristic. The durable
+  target is a public synthetic crop/fill/group fixture that compares image draw matrices, clip counts, and image
+  resource identity, then a dependency-free image-resource pipeline that can materialize cropped image XObjects
+  when Office does so without breaking alpha/recolor/SVG paths.
 - [ ] Replace sampled curved-connector filled outlines with analytical Office-like curve-rich paths:
   the public connector transform probe now matches Office at the high-level fill/clip/stroke operator count, but
   PDF inspection still shows candidate filled connector paths as sampled outlines. Arrow-tail connectors now emit
@@ -1244,6 +1262,15 @@ High-priority actions:
     has exact high-level graphics parity (`f:4,f*:14,S:4,W*:68` on both sides) and 44 text operations on both sides;
     the only font-size branch left is Office's secondary `9.024`/`12.984` versus the candidate's dominant
     `9`/`12.96` grid.
+- [ ] Resolve the recurring high-error private page text-fit pattern through public-safe probes:
+  the latest private deck baselines put page 50, 32, 36, 49, 13, 21, 83, 53, 82, and 81 above the remaining
+  deck error floor. Private-safe inventory shows the top cluster is picture/group/connector heavy, but page-50
+  inspection split the evidence: image frame clips match Office after rounding, while reference text has more
+  operations (`161` versus `143`) and many negative `Tc` values on no-explicit-spacing text where the candidate
+  emits `0 Tc`. The public `spAutoFit`/tracking probes do not reproduce this negative-spacing branch, so do not
+  add a blanket character-spacing compression rule. The next useful public probes should isolate no-autofit,
+  inherited centered anchor, Cambria Math, `spcPct=90%`, multi-run highlight, long-line wrapping, and multi-column
+  body properties until the Office condition for export-time negative `Tc` and line splitting is observable.
 - [x] 2026-05-27: Close the remaining private page-17 graphics-operator clip gap with an Office-like
   stroke-phase slide clip:
   public `pptx-ladder-05-basic-shapes` showed the same pattern as the private slide: Office emits a slide-sized

@@ -9511,7 +9511,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("72 396 144 72 re W* n", pdf);
-        TestAssert.Contains(" re W n", pdf);
+        TestAssert.DoesNotContain(" re W n", pdf);
         TestAssert.Contains("/Im1 Do", pdf);
     }
 

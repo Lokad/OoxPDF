@@ -423,7 +423,6 @@ internal sealed class PdfGraphicsBuilder
         double imageY = y - cropBottom * scaledHeight;
 
         builder.AppendLine("q");
-        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W n");
         builder.Append(N(scaledWidth)).Append(" 0 0 ").Append(N(scaledHeight)).Append(' ').Append(N(imageX)).Append(' ').Append(N(imageY)).AppendLine(" cm");
         builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(imageResourceName)).AppendLine(" Do");
         builder.AppendLine("Q");
