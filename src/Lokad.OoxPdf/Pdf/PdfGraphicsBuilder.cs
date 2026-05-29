@@ -10,10 +10,13 @@ internal sealed class PdfGraphicsBuilder
     private readonly StringBuilder builder = new();
     private readonly List<PdfExtGStateResource> extGStates = [];
     private readonly List<PdfShadingResource> shadings = [];
+    private int stateDepth;
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
 
     public IReadOnlyList<PdfShadingResource> Shadings => shadings;
+
+    public int StateDepth => stateDepth;
 
     public void SetFillRgb(byte red, byte green, byte blue)
     {
@@ -74,11 +77,25 @@ internal sealed class PdfGraphicsBuilder
     public void SaveState()
     {
         builder.AppendLine("q");
+        stateDepth++;
     }
 
     public void RestoreState()
     {
         builder.AppendLine("Q");
+        if (stateDepth > 0)
+        {
+            stateDepth--;
+        }
+    }
+
+    public void RestoreToStateDepth(int targetDepth)
+    {
+        targetDepth = Math.Max(0, targetDepth);
+        while (stateDepth > targetDepth)
+        {
+            RestoreState();
+        }
     }
 
     public void SetAlpha(double fillAlpha, double strokeAlpha)

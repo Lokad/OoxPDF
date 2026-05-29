@@ -8584,6 +8584,75 @@ internal static class PptxTests
         TestAssert.Contains("0.012 0 0.988 rg", pdf);
     }
 
+    public static void PptxMalformedSvgPictureEmitsNodeDiagnosticAndKeepsSiblings()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="svg" ContentType="image/svg+xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
+                  <p:cSld><p:spTree>
+                    <p:pic>
+                      <p:nvPicPr><p:cNvPr id="2" name="Malformed SVG"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+                      <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
+                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    </p:pic>
+                    <p:sp>
+                      <p:nvSpPr><p:cNvPr id="3" name="Sibling"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+                      <p:spPr>
+                        <a:xfrm><a:off x="1828800" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                        <a:prstGeom prst="rect"/>
+                        <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+                      </p:spPr>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+                  <defs>
+                    <linearGradient id="g" x1="bad">
+                      <stop offset="0" stop-color="#FF0000"/>
+                    </linearGradient>
+                  </defs>
+                  <path fill="url(#g)" d="M 0 0 L 10 0 L 10 10 L 0 10 Z"/>
+                </svg>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 1 0 rg", pdf);
+        TestAssert.True(
+            diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED" && d.Feature == "Picture"),
+            "Malformed SVG picture rendering should emit a node-level diagnostic.");
+    }
+
     public static void PptxSyntheticPngPictureAppliesLuminanceRecolor()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

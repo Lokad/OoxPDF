@@ -4358,6 +4358,12 @@ High-priority actions:
     growing renderer-side URI heuristics; the real renderer remains open.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
+  - [x] Add the first ordered-dispatch recovery boundary: `PdfGraphicsBuilder` now tracks graphics-state
+    depth, and `RenderOrderedSceneNodes` restores that depth after recoverable node render exceptions
+    (`FormatException`, `InvalidDataException`, `NotSupportedException`, `ArgumentException`) before
+    emitting `PPTX_NODE_RENDER_FAILED` and continuing with later siblings. The regression uses a malformed
+    SVG picture that fails during vector rendering while a following shape still renders, covering recovery
+    without swallowing package/read-time failures or introducing content-specific SVG heuristics.
 - [ ] Port `pptx-renderer` generated public visual-suite organization: normalized case names, grouped
   fixtures, Office reference caching, and separate approximate, needs-review, and locked thresholds.
 - [ ] Port `pptx-renderer` oracle tooling ideas that fit `.NET`: compact text-op diffs, visual metrics,
