@@ -16044,3 +16044,7 @@ No number-format or gridline drawing policy changed here. The remaining work is 
 format fidelity and axis/gridline layout, not a duplicate XML parser in the renderer. Validation: `dotnet build
 Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
 `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
+
+Validation checkpoint, 2026-05-29: after the chart axis/gridline parser-ownership cleanups, the full non-slow
+console suite passed with `418` tests, `0` failures, and `7` skips via `dotnet run --no-build --project
+tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`.
