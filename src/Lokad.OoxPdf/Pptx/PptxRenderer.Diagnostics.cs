@@ -552,9 +552,7 @@ internal sealed partial class PptxRenderer
     {
         foreach (PptxSceneNode node in nodes)
         {
-            if ((node.TextBody?.HasUnsupportedVerticalOverflow == true) ||
-                HasUnsupportedTableTextVerticalOverflow(node.Table) ||
-                HasUnsupportedChartTextVerticalOverflow(node.Chart) ||
+            if (HasUnsupportedChartTextVerticalOverflow(node.Chart) ||
                 HasUnsupportedSceneTextVerticalOverflow(node.Children))
             {
                 return true;
@@ -562,11 +560,6 @@ internal sealed partial class PptxRenderer
         }
 
         return false;
-    }
-
-    private static bool HasUnsupportedTableTextVerticalOverflow(PptxSceneTable? table)
-    {
-        return table?.Rows.Any(row => row.Cells.Any(cell => cell.HasUnsupportedVerticalOverflow)) == true;
     }
 
     private static bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)

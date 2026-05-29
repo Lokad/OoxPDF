@@ -6864,7 +6864,7 @@ internal static class PptxTests
         TestAssert.Contains("72 432 72 36 re W* n", pdf);
     }
 
-    public static void PptxSyntheticTextBoxEllipsisUsesLocalClip()
+    public static void PptxSyntheticTextBoxEllipsisAddsMarkerAtLastVisibleLine()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -6909,15 +6909,18 @@ internal static class PptxTests
             TestAssert.True(
                 !glyphRunTexts.Contains("Clipped line", StringComparer.Ordinal),
                 "Expected vertOverflow=\"ellipsis\" to use local vertical clipping for text whose baseline falls outside the text rectangle.");
+            TestAssert.True(
+                glyphRunTexts.Contains("…", StringComparer.Ordinal),
+                "Expected vertOverflow=\"ellipsis\" to render an Office-style ellipsis marker after the last visible line.");
         }
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("72 432 216 36 re W* n", pdf);
-        OoxPdfDiagnostic diagnostic = diagnostics.Single(diagnostic => diagnostic.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW");
-        TestAssert.Equal("Local clip", diagnostic.Fallback ?? string.Empty);
-        TestAssert.Contains("ellipsis marker", diagnostic.Message);
+        TestAssert.True(
+            diagnostics.All(diagnostic => diagnostic.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"),
+            "Expected shape text ellipsis overflow to be handled by the shared text-frame renderer.");
     }
 
     public static void PptxTextFrameVerticalClipDropsBaselinesOutsideClip()

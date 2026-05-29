@@ -229,6 +229,15 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-repeated-spaces" -TextBody @'
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Calibri"/></a:rPr><a:t>Left  middle   right</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe `
+    -Id "pptx-ladder-04-text-overflow-ellipsis" `
+    -Transform '<a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="457200"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="ellipsis" anchor="t"/>' `
+    -TextBody @'
+          <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Visible line</a:t></a:r></a:p>
+          <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Hidden line</a:t></a:r></a:p>
+'@
+
 New-TypographyProbe -Id "pptx-ladder-04-typography-nbsp-narrow-space" -TextBody @'
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha&#xA0;beta&#x202F;gamma</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Calibri"/></a:rPr><a:t>Stock&#xA0;available&#x202F;today</a:t></a:r></a:p>

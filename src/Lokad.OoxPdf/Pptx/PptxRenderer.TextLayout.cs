@@ -291,7 +291,7 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return FlattenTextLayoutToSpans(BuildTextLayoutModel(context, source, includePlaceholders, placeholderSources));
+        return FlattenTextLayoutToSpans(BuildTextLayoutModel(context, source, includePlaceholders, placeholderSources), context.FontResolver);
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModel(
@@ -733,9 +733,9 @@ internal sealed partial class PptxRenderer
         return FlattenTextLayoutToSpans(layout).Select(span => span.Run).ToArray();
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout)
+    private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout, PresentationFontResolver? fontResolver = null)
     {
-        return layout.Frames
+        PptxPositionedTextSpan[] spans = layout.Frames
             .SelectMany((frame, frameIndex) => frame.Paragraphs.Select((paragraph, paragraphIndex) => new
             {
                 Frame = frame,
@@ -790,6 +790,79 @@ internal sealed partial class PptxRenderer
                 span.Atoms,
                 span.GlyphSpan)))
             .ToArray();
+        return AddEllipsisOverflowMarkers(spans, fontResolver);
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> AddEllipsisOverflowMarkers(
+        IReadOnlyList<PptxPositionedTextSpan> spans,
+        PresentationFontResolver? fontResolver)
+    {
+        if (spans.Count == 0)
+        {
+            return spans;
+        }
+
+        var result = new List<PptxPositionedTextSpan>(spans.Count);
+        var advanceEstimator = new TextAdvanceEstimator(fontResolver);
+        foreach (IGrouping<int, PptxPositionedTextSpan> frameSpans in spans.GroupBy(span => span.FrameIndex))
+        {
+            PptxPositionedTextSpan[] frame = frameSpans.ToArray();
+            result.AddRange(frame);
+            if (!frame.Any(span => string.Equals(span.FrameVerticalOverflowMode, nameof(PptxTextVerticalOverflow.Ellipsis), StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            PptxPositionedTextSpan[] visible = frame
+                .Where(span => BaselineIntersectsClip(span.Run, span.Run.Y + span.Run.BaselineOffset))
+                .ToArray();
+            if (visible.Length == 0 || visible.Length == frame.Length)
+            {
+                continue;
+            }
+
+            PptxPositionedTextSpan last = visible
+                .OrderBy(span => span.ParagraphIndex)
+                .ThenBy(span => span.LineIndex)
+                .ThenBy(span => span.SpanIndex)
+                .Last();
+            result.Add(CreateEllipsisOverflowMarker(last, advanceEstimator));
+        }
+
+        return result
+            .OrderBy(span => span.FrameIndex)
+            .ThenBy(span => span.ParagraphIndex)
+            .ThenBy(span => span.LineIndex)
+            .ThenBy(span => span.SpanIndex)
+            .ToArray();
+    }
+
+    private static PptxPositionedTextSpan CreateEllipsisOverflowMarker(PptxPositionedTextSpan anchor, TextAdvanceEstimator advanceEstimator)
+    {
+        const string ellipsis = "…";
+        double width = PptxTextMetricRules.MinimumWidth(
+            advanceEstimator.Measure(ellipsis, anchor.Run.FontSize, anchor.Run.FontFamily, anchor.Run.Bold, anchor.Run.Italic, anchor.Run.CharacterSpacing, anchor.Run.KerningEnabled));
+        TextRun run = anchor.Run with
+        {
+            Text = ellipsis,
+            X = anchor.EndX,
+            Width = width,
+            PreventCoalesce = true,
+            HighlightColor = null,
+            Underline = false,
+            Strike = false,
+            Outline = null
+        };
+
+        return anchor with
+        {
+            SpanIndex = anchor.LineSpanCount,
+            LineSpanCount = anchor.LineSpanCount + 1,
+            Run = run,
+            EndX = run.X + width,
+            Atoms = BuildTextAtoms(run, advanceEstimator, PptxTextAtomKind.Word),
+            GlyphSpan = BuildGlyphSpan(run, advanceEstimator)
+        };
     }
 
     private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping = true)
@@ -1225,14 +1298,14 @@ internal sealed partial class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver));
+        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver), fontResolver);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
         PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
         PptxTextFrameLayout layout = BuildTextFrameLayout(frameModel, context.Document, new TextAdvanceEstimator(context.FontResolver));
-        return FlattenTextLayoutToSpans(new PptxTextLayoutModel([layout]));
+        return FlattenTextLayoutToSpans(new PptxTextLayoutModel([layout]), context.FontResolver);
     }
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)

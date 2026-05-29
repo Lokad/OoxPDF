@@ -1237,6 +1237,15 @@ High-priority actions:
   `pptx-ladder-04-fontref-centered-text`, and `pptx-ladder-08-text-shape-zorder`). Private page-17 no longer has
   the frame-wide candidate strip bucket; the remaining page-17 `W*` difference is Office's open full-slide clip
   form/count and the already-known small object bounds/font-size gaps.
+- [x] Render shared text-frame `vertOverflow="ellipsis"` markers from Office/PDF evidence:
+  a public-safe Office probe showed that a vertically clipped shape text frame emits the last visible line and then
+  a separate `…` text operation at the same baseline, positioned at the visible line end. Shared PPTX text-frame
+  flattening now appends that marker when an ellipsis frame has hidden clipped spans, and shape/table text ellipsis
+  no longer emits `PPTX_UNSUPPORTED_TEXT_OVERFLOW`. The new locked public case
+  `pptx-ladder-04-text-overflow-ellipsis` gates decoded text operations (`Visible line`, then `…`) with the current
+  structural tolerance (`X` delta about `0.33 pt`, `Y` delta about `0.04 pt`). Private `lokad-value-based` run
+  `20260529-102327` stayed stable overall and confirms the two remaining text-overflow diagnostics are chart-local
+  ellipsis cases on slides 42 and 44, not shared shape/table text.
 - [ ] Complete the Office PPTX-to-PDF text font-size emission profile:
   ignored Office-generated probes under `artifacts/probes/font-size-quantization*` show the generic export rule
   outside the private deck (`7->6.96`, `8->8.04`, `10->9.96`, `13->12.96`, `14->14.04`, `16->15.96`,
