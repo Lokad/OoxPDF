@@ -4861,6 +4861,10 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-29: Shared chart nonnegative point-index parsing for XML-only polar point explosions. The scene
+  builder's `TryReadChartNonNegativeIndex` is now the owner for `dPt/idx` validation, and renderer fallback
+  series-wide explosion point counts reuse `ReadChartNumberPoints` instead of reparsing value-point indices.
+  Existing behavior is preserved: negative explosion indices are still rejected before rendering.
 - [x] 2026-05-29: Moved XML-only chart cache point token parsing behind scene-builder helpers. Renderer fallback
   number and category vectors now reuse `PptxSceneBuilder.ReadChartNumberPoints` and
   `ReadChartStringPoints` for point index/value extraction while preserving the renderer's nonnegative-index
@@ -7961,6 +7965,13 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Chart polar explosion index parser-ownership slice, 2026-05-29:
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed.
+dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow:
+142 passed, 0 failed, 0 skipped.
+```
 
 ```text
 Chart cache-point parser-ownership slice, 2026-05-29:
@@ -16144,3 +16155,13 @@ inspection, while renderer fallback vectors continue rejecting negative indices 
 expansion. Workbook sidecar precedence, `ptCount` fallback, string trimming in category labels, and number-format
 handling are unchanged. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: XML-only polar point explosion fallback now shares the same scene-owned nonnegative index
+reader. `PptxSceneBuilder.TryReadChartNonNegativeIndex` is internal, and renderer fallback `dPt` explosion parsing
+uses it instead of keeping a duplicate `idx` parser. The series-wide explosion point count also reuses
+`ReadChartNumberPoints` with nonnegative index policy.
+
+This still leaves polar explosion layout policy in the renderer. Series-wide explosion fan-out, explosion
+clamping, and sparse-point expansion affect geometry and need Office-PDF evidence before they move. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
+non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.

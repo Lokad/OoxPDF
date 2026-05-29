@@ -3035,7 +3035,7 @@ internal sealed class PptxSceneBuilder
         return styles;
     }
 
-    private static bool TryReadChartNonNegativeIndex(XElement element, out int index, out string indexValue)
+    internal static bool TryReadChartNonNegativeIndex(XElement element, out int index, out string indexValue)
     {
         indexValue = ReadChartElementValue(element, "idx");
         return int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&

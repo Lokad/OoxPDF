@@ -7345,10 +7345,13 @@ internal sealed partial class PptxRenderer
         if (seriesExplosion is { } seriesExplosionValue)
         {
             double fraction = Math.Clamp(seriesExplosionValue / 100d, 0d, 1d);
-            int pointCount = series
-                .Elements(ChartNamespace + "val")
-                .Descendants(ChartNamespace + "pt")
-                .Select(point => PptxSceneBuilder.ReadChartPointIndexAttribute(point, requireNonNegative: true).Value ?? -1)
+            int pointCount = PptxSceneBuilder
+                .ReadChartNumberPoints(
+                    series
+                        .Elements(ChartNamespace + "val")
+                        .Descendants(ChartNamespace + "pt"),
+                    requireNonNegativeIndex: true)
+                .Select(point => point.HasParsedIndex ? point.Index : -1)
                 .Where(index => index >= 0)
                 .DefaultIfEmpty(-1)
                 .Max() + 1;
@@ -7360,7 +7363,7 @@ internal sealed partial class PptxRenderer
 
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (!TryReadChartNonNegativeIndex(point, out int index))
+            if (!PptxSceneBuilder.TryReadChartNonNegativeIndex(point, out int index, out _))
             {
                 continue;
             }
@@ -7373,19 +7376,6 @@ internal sealed partial class PptxRenderer
         }
 
         return explosions;
-    }
-
-    private static bool TryReadChartNonNegativeIndex(XElement element, out int index)
-    {
-        (int? parsed, _) = PptxSceneBuilder.ReadChartElementIntWithValue(element, "idx");
-        if (parsed is { } value && value >= 0)
-        {
-            index = value;
-            return true;
-        }
-
-        index = 0;
-        return false;
     }
 
     private static bool HasMajorGridlines(XElement? axis)
