@@ -1647,6 +1647,13 @@ High-priority actions:
   rectangles, strike rectangles, and highlight color, so future Office-PDF rectangle comparisons can target
   layout-owned geometry directly instead of inferring it from legacy `TextRun` drawing. Validation: focused non-slow
   `pptx-typography` passed (`87 passed, 0 failed, 2 skipped`), and `PptxInspect` builds warning-free.
+- [x] 2026-05-29: Tighten the public highlight rectangle gate where Office structure already matches:
+  `pptx-ladder-04-highlight-single` now requires segment counts, path-command counts, and path operators for its
+  `f*` filled highlight regions in addition to bounds and operator parity. The same audit intentionally left
+  underline and strikethrough on bounds/operator gates because Office currently emits their decoration rectangles
+  with `seg=6,line=5` while the candidate emits `seg=4,line=3`; that remains visible evidence for a future
+  rectangle path-construction slice rather than a manifest omission. Validation: public highlight run
+  `20260529-023516` passed with the strengthened structural gate.
 - [x] Re-run the justified typography probe after glyph-span emission:
   `pptx-ladder-04-typography-justify-port` stayed behavior-compatible at MAE `4.210743`; remaining drift is
   Office word-position and line-box parity, not a glyph-span bridge regression.
