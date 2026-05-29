@@ -160,6 +160,7 @@ internal sealed partial class PptxRenderer
         {
             if ((node.Shape is { PictureFill.HasPicture: true } shape &&
                     !CanRenderPictureFillPreset(shape.Preset)) ||
+                HasUnsupportedChartPictureFill(node.Chart) ||
                 HasUnsupportedPictureFill(node.Children))
             {
                 return true;
@@ -167,6 +168,39 @@ internal sealed partial class PptxRenderer
         }
 
         return false;
+    }
+
+    private static bool HasUnsupportedChartPictureFill(PptxSceneChart? chart)
+    {
+        return chart is not null &&
+            (HasUnsupportedChartPictureFill(chart.ChartAreaStyle) ||
+                HasUnsupportedChartPictureFill(chart.PlotAreaStyle) ||
+                HasUnsupportedChartPictureFill(chart.Title.ShapeStyle) ||
+                HasUnsupportedChartPictureFill(chart.Legend.ShapeStyle) ||
+                chart.StylePart.Entries.Any(entry => HasUnsupportedChartPictureFill(entry.ShapeStyle)) ||
+                chart.Plots.Any(HasUnsupportedChartPictureFill));
+    }
+
+    private static bool HasUnsupportedChartPictureFill(PptxSceneChartPlot plot)
+    {
+        return HasUnsupportedChartPictureFill(plot.DataLabels) ||
+            plot.Series.Any(HasUnsupportedChartPictureFill);
+    }
+
+    private static bool HasUnsupportedChartPictureFill(PptxSceneChartSeries series)
+    {
+        return HasUnsupportedChartPictureFill(series.DataLabels);
+    }
+
+    private static bool HasUnsupportedChartPictureFill(PptxSceneChartDataLabels labels)
+    {
+        return HasUnsupportedChartPictureFill(labels.ShapeStyle) ||
+            labels.Overrides.Any(label => HasUnsupportedChartPictureFill(label.ShapeStyle));
+    }
+
+    private static bool HasUnsupportedChartPictureFill(PptxSceneChartShapeStyle style)
+    {
+        return style.PictureFill.HasPicture;
     }
 
     private static bool IsUnsupportedCalloutPreset(string? preset)

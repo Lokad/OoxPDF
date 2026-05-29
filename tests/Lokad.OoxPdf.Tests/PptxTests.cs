@@ -18860,6 +18860,58 @@ internal static class PptxTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Unsupported chart shape-style gradients should be diagnostic-covered from scene-owned gradient provenance.");
     }
 
+    public static void PptxUnsupportedPictureFillDiagnosticsUseSceneChartShapeStylePictureFill()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <c:spPr>
+                <a:blipFill>
+                  <a:blip r:embed="rIdImage"><a:alphaModFix amt="42000"/></a:blip>
+                  <a:srcRect l="10000" t="20000"/>
+                  <a:stretch><a:fillRect r="30000" b="40000"/></a:stretch>
+                </a:blipFill>
+              </c:spPr>
+              <c:chart><c:plotArea>
+                <c:spPr>
+                  <a:blipFill>
+                    <a:blip><a:alphaModFix amt="62500"/></a:blip>
+                    <a:tile algn="ctr" flip="x"/>
+                  </a:blipFill>
+                </c:spPr>
+                <c:lineChart>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        PptxSceneChart chart = sceneSlide.SlideNodes[0].Chart
+            ?? throw new InvalidOperationException("Expected chart scene node.");
+
+        TestAssert.True(chart.ChartAreaStyle.PictureFill.HasPicture, "Expected chart-area picture-fill state to remain scene-owned.");
+        TestAssert.True(chart.PlotAreaStyle.PictureFill.HasPicture, "Expected plot-area picture-fill state to remain scene-owned.");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutPictureFills = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutPictureFills, "/ppt/slides/slide1.xml", 1, sink]);
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_PICTURE_FILL"), "Unsupported chart shape-style picture fills should be diagnostic-covered from scene-owned picture-fill provenance.");
+    }
+
     public static void PptxUnsupportedPatternDiagnosticsUseSceneShapePattern()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

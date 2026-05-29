@@ -3050,6 +3050,14 @@ High-priority actions:
     `PptxUnsupportedGradientDiagnosticsUseSceneChartShapeStyleGradient` passed; focused non-slow `pptx-charts`
     passed (`140 passed, 0 failed, 0 skipped`); full non-slow console runner passed
     (`414 passed, 0 failed, 7 skipped`).
+  - [x] 2026-05-29: Route unsupported chart shape-style picture fills through scene-owned diagnostics.
+    `PPTX_UNSUPPORTED_PICTURE_FILL` now walks chart area, plot area, title, legend, chart-style part entries,
+    and data-label shape styles for preserved `a:blipFill` state. This intentionally treats every chart
+    shape-style picture fill as unsupported until chart drawing can reuse the shared image-fill pipeline,
+    avoiding chart-specific XML scans or narrow rendering heuristics. Validation: focused non-slow
+    `pptx-charts` passed (`144 passed, 0 failed, 0 skipped`);
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; full non-slow console runner passed
+    (`420 passed, 0 failed, 7 skipped`).
   - [x] 2026-05-28 Consume direct glow and outer-shadow effects on chart shape rectangles:
     `RenderChartShapeStyle` now renders preserved direct `PptxSceneGlow` and `PptxSceneOuterShadow` for chart
     area, plot area, title, legend, and data-label rectangles through the same rectangle fill primitives used
@@ -4354,7 +4362,9 @@ High-priority actions:
       crop/fill rectangles, and tile tokens in scene shape-style records, including malformed picture fills
       without a resolvable relationship id. Rendering remains intentionally deferred until chart picture-fill
       drawing can share the same image/pattern pipeline as other shape fills instead of adding chart-specific
-      XML scans.
+      XML scans. Follow-up, 2026-05-29: diagnostics now consume that preserved chart picture-fill state as
+      well; `PPTX_UNSUPPORTED_PICTURE_FILL` is emitted from scene-owned chart shape styles for chart/plot
+      area, title, legend, chart-style part, and data-label surfaces while rendering remains deferred.
     - [x] Preserve chart-area/plot-area effect-family provenance in scene shape-style records: `a:effectLst`
       presence, unsupported effect element names, and `a:effectDag` presence now survive beside parsed
       `a:glow`/`a:outerShdw`. This keeps unsupported chart effects and chart-style entries visible without
