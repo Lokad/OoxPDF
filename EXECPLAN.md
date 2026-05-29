@@ -1424,6 +1424,17 @@ High-priority actions:
     overflow source, and autofit as sufficient discriminators for the wrapped `12.984 pt` branch. Rendering remains
     unchanged; the next rule still has to come from Office's page/text-matrix quantization or another structural
     export condition, not from bodyPr mode tokens alone.
+  - [x] 2026-05-29: Add a branch-family summarizer and use it to compare secondary `/Tf` windows across public-safe
+    probe variants before changing emission. `tools/SummarizePptxTextEmissionBranchFamily.ps1` consumes one or more
+    `ComparePptxTextEmission.ps1 -OutputSummaryJson` files and reports per-case branch counts plus Office top-origin
+    baseline and candidate frame/line extents. The current wrapped `13 pt` family keeps the secondary branch stable
+    in the base/short/tall variants (`6` rows, `4` unmatched Office operations) and reduces it in the wide variant
+    (`5` rows, no unmatched Office operations), so wrapping width and operation matching matter but still do not
+    provide a clean branch discriminator. The six fine `21 pt` page-height variants show the stronger negative
+    result: secondary top-origin baseline windows move between `144.06..153.06`, `143.98..161.98`,
+    `159.02..177.02`, `174.06..195.06`, `189.01..207.01`, and `207.02..222.02` depending on page geometry and
+    generated layout. This rules out fixed page-top baseline bands as well as fixed source-Y bands; the renderer
+    remains on the dominant Office 600-DPI `/Tf` grid until the export quantization cycle is structurally explained.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and
