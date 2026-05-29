@@ -566,14 +566,7 @@ internal sealed partial class PptxRenderer
     {
         return chart is not null &&
             (HasUnsupportedTextVerticalOverflow(chart.Title.TextBodyProperties.VerticalOverflowValue) ||
-                HasUnsupportedTextVerticalOverflow(chart.Legend.TextBodyProperties.VerticalOverflowValue) ||
-                chart.Axes.Any(axis => HasUnsupportedTextVerticalOverflow(axis.Title.TextBodyProperties.VerticalOverflowValue)) ||
-                chart.Plots.Any(plot =>
-                    HasUnsupportedTextVerticalOverflow(plot.DataLabels.TextBodyProperties.VerticalOverflowValue) ||
-                    plot.DataLabels.Overrides.Any(label => HasUnsupportedTextVerticalOverflow(label.TextBodyProperties.VerticalOverflowValue)) ||
-                    plot.Series.Any(series =>
-                        HasUnsupportedTextVerticalOverflow(series.DataLabels.TextBodyProperties.VerticalOverflowValue) ||
-                        series.DataLabels.Overrides.Any(label => HasUnsupportedTextVerticalOverflow(label.TextBodyProperties.VerticalOverflowValue)))));
+                chart.Axes.Any(axis => HasUnsupportedTextVerticalOverflow(axis.Title.TextBodyProperties.VerticalOverflowValue)));
     }
 
     private static bool IsUnsupportedNonShapeTextVerticalOverflow(XElement bodyProperties)

@@ -19190,6 +19190,49 @@ internal static class PptxTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported chart text overflow should be diagnostic-covered from scene-owned text-body provenance.");
     }
 
+    public static void PptxChartLegendAndDataLabelEllipsisDoesNotWarnWithoutObservedOverflow()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>
+                <c:plotArea><c:lineChart>
+                  <c:dLbls>
+                    <c:txPr><a:bodyPr vertOverflow="ellipsis"/><a:lstStyle/><a:p/></c:txPr>
+                    <c:showVal val="1"/>
+                  </c:dLbls>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart></c:plotArea>
+                <c:legend>
+                  <c:legendPos val="r"/>
+                  <c:overlay val="0"/>
+                  <c:txPr><a:bodyPr vertOverflow="ellipsis"/><a:lstStyle/><a:p/></c:txPr>
+                </c:legend>
+              </c:chart>
+            </c:chartSpace>
+            """;
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
+        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
+        TestAssert.Equal(2, snapshot.ChartTextBodyVerticalOverflowCount);
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutBodyProperties = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [new PptxSceneBuilder().Build(document, package).Slides[0], slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink]);
+
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Chart legend/data-label ellipsis defaults should not warn unless an overflowing chart text-frame surface is unsupported.");
+    }
+
     public static void PptxUnsupportedTableTextDiagnosticsUseSceneCellBodyProperties()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

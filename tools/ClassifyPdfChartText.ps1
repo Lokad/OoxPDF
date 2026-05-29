@@ -13,6 +13,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$ChartTitleCenterToleranceFactor = 0.45d
+
 function Read-JsonArray($path) {
     if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
         return ,@()
@@ -246,7 +248,7 @@ function Looks-LikeChartTitle($op, $plotBox) {
 
     return $text.Length -gt 6 -and
         $fontSize -ge 10d -and
-        [Math]::Abs($x - $plotCenter) -le ($plotWidth * 0.45d)
+        [Math]::Abs($x - $plotCenter) -le ($plotWidth * $ChartTitleCenterToleranceFactor)
 }
 
 function Looks-LikeAbovePlotChartTitle($op, $plotBox, [double]$tolerance) {

@@ -307,6 +307,21 @@ High-priority actions:
   improved from MAE `14.28`, changed16 `0.458` to MAE `10.11`, changed16 `0.126`, while page 17 stayed unchanged.
   Remaining image recolor debt is broader JPEG coverage (progressive/arithmetic/CMYK/Adobe-transform cases) and
   any Office color-transform edge cases exposed by future public fixtures.
+- [x] Narrow chart-local text-overflow diagnostics to Office-observed overflowing text-frame surfaces:
+  public temporary probes added `vertOverflow="ellipsis"` to chart data-label `txPr` on
+  `pptx-ladder-11-chart-data-label-legend-keys-probe` and to legend `txPr` on
+  `pptx-ladder-11-chart-doughnut-left-legend-probe`. Office exported the normal data-label and legend text
+  operations with zero ellipsis-marker text operations in both probes, matching `ooxpdf`'s emitted text set for
+  those non-overflowing chart labels. The old diagnostic was therefore overbroad for chart legend/data-label
+  defaults: it warned from the presence of `vertOverflow="ellipsis"` alone even when Office emitted no marker
+  and no rendered marker was missing. Diagnostics now keep chart title and axis-title ellipsis covered, because
+  those are explicit chart text-frame surfaces where overflow can visibly affect text, while legend/data-label
+  `txPr` values remain preserved in scene inspection without emitting a warning unless future public evidence
+  shows an actual overflow marker gap. Validation: focused non-slow `pptx-charts` passed (`145 passed, 0 failed,
+  0 skipped`), `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and private
+  `lokad-value-based` run `20260529-104353` compared 84/84 pages with zero dimension mismatches, deck MAE
+  `7.117672`, changed16 `0.094155`, and no diagnostics. Page 17 remained unchanged at MAE `2.785936`,
+  changed16 `0.044134`, SSIM `0.923371`.
 - [x] Retire renderer-local shape picture-fill package fallback:
   `PptxRenderer.Shapes` no longer accepts slide relationship maps or the presentation package when resolving
   shape picture fills. It consumes the scene-owned `PptxSceneShapePictureFill.Resource` only; if the scene did
@@ -5204,8 +5219,9 @@ High-priority actions:
     a real chart-title layout gap. The apparent `~57 pt` value-axis drift was the chart title being classified
     as `ValueAxisTickLabel`: the title sits above the plot and uses title-sized text, but this probe places it
     far enough off the plot center that the old `0.35 * plotWidth` title-center tolerance missed it.
-    `ClassifyPdfChartText.ps1` now uses a `0.45 * plotWidth` chart-title center tolerance, which moves the
-    title into `ChartTitleText` and leaves the six value-axis tick labels with `0.10 pt` maximum drift.
+    `ClassifyPdfChartText.ps1` now uses the named `$ChartTitleCenterToleranceFactor` value
+    `0.45 * plotWidth` for chart-title center tolerance, which moves the title into `ChartTitleText` and
+    leaves the six value-axis tick labels with `0.10 pt` maximum drift.
 
     `pptx-ladder-11-chart-plot-layout-target-inner-probe` now gates `ValueAxisTickLabel` at `0.2 pt` and
     `CategoryAxisTickLabel` at `20 pt`. The category residual is still mostly horizontal label anchoring, and
