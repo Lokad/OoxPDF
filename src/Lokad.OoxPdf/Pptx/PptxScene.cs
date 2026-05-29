@@ -3134,11 +3134,11 @@ internal sealed class PptxSceneBuilder
         return default;
     }
 
-    private static string? ReadChartText(XElement? text)
+    internal static string? ReadChartText(XElement? text, bool trimLiteral = false)
     {
         string? literal = text?
             .Descendants(ChartNamespace + "v")
-            .Select(value => value.Value)
+            .Select(value => trimLiteral ? value.Value.Trim() : value.Value)
             .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
         if (!string.IsNullOrWhiteSpace(literal))
         {

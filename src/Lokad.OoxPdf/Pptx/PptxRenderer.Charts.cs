@@ -4341,7 +4341,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string? text = ReadChartText(title.Element(ChartNamespace + "tx"));
+            string? text = PptxSceneBuilder.ReadChartText(title.Element(ChartNamespace + "tx"), trimLiteral: true);
             if (string.IsNullOrWhiteSpace(text))
             {
                 continue;
@@ -4420,7 +4420,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement axis in ReadChartAxisElements(chartXml))
         {
             XElement? title = axis.Element(ChartNamespace + "title");
-            string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
+            string? text = PptxSceneBuilder.ReadChartText(title?.Element(ChartNamespace + "tx"), trimLiteral: true);
             if (title is null ||
                 string.IsNullOrWhiteSpace(text) ||
                 PptxSceneBuilder.ReadChartManualLayout(title).HasLayout)
@@ -4480,7 +4480,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement axis in ReadChartAxisElements(chartXml))
         {
             XElement? title = axis.Element(ChartNamespace + "title");
-            string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
+            string? text = PptxSceneBuilder.ReadChartText(title?.Element(ChartNamespace + "tx"), trimLiteral: true);
             if (title is null ||
                 string.IsNullOrWhiteSpace(text) ||
                 PptxSceneBuilder.ReadChartManualLayout(title).HasLayout ||
@@ -4754,7 +4754,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement axis in ReadChartAxisElements(chartXml))
         {
             XElement? title = axis.Element(ChartNamespace + "title");
-            string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
+            string? text = PptxSceneBuilder.ReadChartText(title?.Element(ChartNamespace + "tx"), trimLiteral: true);
             PptxSceneChartAxisKind axisKind = PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName);
             PptxSceneChartAxisPosition positionKind = PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos"));
             if (title is null ||
@@ -5116,29 +5116,12 @@ internal sealed partial class PptxRenderer
 
     private static string? ReadChartSeriesName(XElement series)
     {
-        return ReadChartText(series.Element(ChartNamespace + "tx"));
+        return PptxSceneBuilder.ReadChartText(series.Element(ChartNamespace + "tx"), trimLiteral: true);
     }
 
     private static PptxSceneChartDataSource ReadChartSeriesNameDataSource(XElement series)
     {
         return PptxSceneBuilder.ReadChartDataSource(series.Element(ChartNamespace + "tx"), "strRef", "numRef");
-    }
-
-    private static string? ReadChartText(XElement? text)
-    {
-        string? literal = text?
-            .Descendants(ChartNamespace + "v")
-            .Select(value => value.Value.Trim())
-            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
-        if (!string.IsNullOrWhiteSpace(literal))
-        {
-            return literal;
-        }
-
-        string? richText = text?
-            .Descendants(DrawingNamespace + "t")
-            .Aggregate(string.Empty, (current, textElement) => current + textElement.Value);
-        return string.IsNullOrWhiteSpace(richText) ? null : richText;
     }
 
     private static ChartLegendLayout ReadChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml)

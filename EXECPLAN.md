@@ -15886,3 +15886,14 @@ hydration, sparse point expansion, and explosion-to-fraction clamping are geomet
 Office-PDF evidence before they move. The cleanup only removes duplicate low-level token interpretation.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
 errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart text content extraction now has one scene-builder owner for renderer XML fallback
+paths. `PptxSceneBuilder.ReadChartText` is internal, and title, axis-title, and series-name fallback reads call
+it instead of keeping a duplicate renderer parser for literal `c:v` and rich-text `a:t` content.
+
+This deliberately preserves the prior boundary behavior: scene construction still keeps literal chart `c:v`
+text as authored, while renderer fallback paths pass `trimLiteral: true` because they historically normalized
+literal visible title/series-name text before layout and auto-title decisions. The remaining long-term work is
+not string extraction; it is the shared chart text-frame cascade, baseline, and font fallback model already
+tracked above. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
