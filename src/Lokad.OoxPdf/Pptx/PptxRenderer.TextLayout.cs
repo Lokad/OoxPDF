@@ -3025,6 +3025,7 @@ internal sealed partial class PptxRenderer
         bool attachSpacesToFollowingWord = HasNoAutoFit(bodyProperties);
         bool useWindowsFontBoxForDefaultLineSpacing = !IsTableCellVerticalAnchorSource(bodyProperties.VerticalAnchorSource);
         bool hasEstimatedParagraph = false;
+        double pendingSpacingAfter = 0d;
         foreach (PptxTextParagraphModel paragraph in paragraphs)
         {
             ResolvedParagraphTextStyle paragraphStyle = paragraph.Style;
@@ -3038,14 +3039,14 @@ internal sealed partial class PptxRenderer
                         : paragraph.EndParagraphStyle.FontSize;
                     if (hasEstimatedParagraph)
                     {
-                        height += paragraph.EmptySpacingBefore;
+                        height += pendingSpacingAfter + paragraph.EmptySpacingBefore;
                     }
 
                     string? emptyTypeface = paragraph.EndParagraphStyle.Typeface;
                     bool emptyBold = paragraph.EndParagraphStyle.Bold;
                     bool emptyItalic = paragraph.EndParagraphStyle.Italic;
                     height += ReadEstimatedAnchorEmptyLineAdvance(lineSpacing, emptyFontSize, emptyTypeface, emptyBold, emptyItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
-                    height += paragraph.EmptySpacingAfter;
+                    pendingSpacingAfter = paragraph.EmptySpacingAfter;
                     hasEstimatedParagraph = true;
                 }
 
@@ -3055,7 +3056,7 @@ internal sealed partial class PptxRenderer
             double paragraphFontSize = paragraphStyle.FontSize;
             if (hasEstimatedParagraph)
             {
-                height += paragraphStyle.SpacingBefore;
+                height += pendingSpacingAfter + paragraphStyle.SpacingBefore;
             }
 
             PptxTextFlowParagraph flowParagraph = BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord);
@@ -3133,7 +3134,7 @@ internal sealed partial class PptxRenderer
                 height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
             }
 
-            height += paragraphStyle.SpacingAfter;
+            pendingSpacingAfter = paragraphStyle.SpacingAfter;
             hasEstimatedParagraph = true;
         }
 

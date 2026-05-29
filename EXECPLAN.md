@@ -16509,3 +16509,33 @@ errors. The public visual case `pptx-ladder-04-centered-bold-cambria-width` pass
 were `ok`. The new unit test `PptxSyntheticBoldCambriaCenteredTextUsesOfficeTightenedAdvance` passed during a
 console-run attempt, but the runner ignored the supplied `--filter` option and executed the broader suite,
 surfacing three pre-existing unsupported-diagnostic failures unrelated to this typography slice.
+
+Follow-up, 2026-05-29: continued the private high-error typography path through a public no-autofit Cambria Math
+fit probe and found an Office anchoring rule rather than another local offset. The public fixture
+`pptx-ladder-04-typography-noautofit-cambria-fit-probe` isolates centered, zero-inset, `noAutofit` text with
+explicit paragraph spacing after the final paragraph. Before the fix, the candidate vertically centered that
+frame too low because `EstimateTextHeight` counted terminal `spcAft` as occupied text height. Office evidence
+shows that paragraph spacing-after contributes only between paragraphs for middle/bottom anchoring; terminal
+spacing-after does not enlarge the anchored text block.
+
+The implementation keeps the rule structural: text height estimation now carries pending paragraph spacing and
+only applies it when another paragraph follows. The final pending spacing-after is deliberately not added to the
+height. A new unit regression, `PptxSyntheticVerticalAnchorIgnoresTerminalSpacingAfter`, locks the centered
+no-autofit case without depending on private text or slide coordinates. The same pass also corrected the
+vertical-overflow diagnostic provenance: horizontal shape/table ellipsis remains handled by shared clipping and
+marker logic, while vertical or unknown-orientation ellipsis still emits `PPTX_UNSUPPORTED_TEXT_OVERFLOW`.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors. Focused tests for terminal spacing, horizontal ellipsis, shape/table unsupported-overflow diagnostics,
+and aggregate unsupported-feature diagnostics passed. The non-slow `pptx-typography` group passed with `102`
+tests, `0` failures, and `2` slow skips. The public visual probe improved from MAE `2.589805`, changed16
+`0.020290`, SSIM `0.222597` to MAE `1.769525`, changed16 `0.017459`, SSIM `0.537816` in run
+`artifacts/visual/pptx-ladder-04-typography-noautofit-cambria-fit-probe/20260529-115651`.
+
+Private-safe validation on `lokad-value-based` run `20260529-115914` compared 84/84 pages with zero dimension
+mismatches, deck MAE `5.948935`, max MAE `15.280707`, changed16 `0.085688`, and no diagnostics. Against run
+`20260529-112437`, the centered-text-heavy high-error pages moved in the right direction: page 50 MAE improved
+from about `16.26` to `15.02`, page 32 from `15.38` to `13.98`, and page 13 from `14.47` to `13.19`. Page 36 is
+now the leading unchanged error page, so the next rendering-impact step should inspect its private-safe
+structure and derive another public probe before changing renderer behavior. Avoid magic constants here; the
+useful path is Office PDF text/object structure alignment.

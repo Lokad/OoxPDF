@@ -4107,6 +4107,43 @@ internal static class PptxTests
             $"Expected middle-anchor offset to use resolved OS/2 Windows font-box height; expected {expectedOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt, got {frame.VerticalOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
     }
 
+    public static void PptxSyntheticVerticalAnchorIgnoresTerminalSpacingAfter()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" anchor="ctr"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p>
+                        <a:pPr><a:lnSpc><a:spcPct val="90000"/></a:lnSpc><a:spcAft><a:spcPts val="1200"/></a:spcAft></a:pPr>
+                        <a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Centered</a:t></a:r>
+                      </a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        double expectedOffset = (frame.TextHeight - 18d * 1.2d * 0.9d) / 2d;
+
+        TestAssert.Equal("Middle", frame.VerticalAnchor);
+        TestAssert.True(Math.Abs(frame.VerticalOffset - expectedOffset) < 0.01d,
+            $"Expected terminal paragraph spacing-after to be excluded from middle-anchor height; expected {expectedOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt, got {frame.VerticalOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+    }
+
     public static void PptxSyntheticTextWrapKeepsBreakSpaceAtLineEnd()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

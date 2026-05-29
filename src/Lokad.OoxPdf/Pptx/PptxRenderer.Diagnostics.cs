@@ -552,7 +552,9 @@ internal sealed partial class PptxRenderer
     {
         foreach (PptxSceneNode node in nodes)
         {
-            if (HasUnsupportedChartTextVerticalOverflow(node.Chart) ||
+            if (SceneTextBodyNeedsVerticalOverflowDiagnostic(node.TextBody) ||
+                HasUnsupportedTableTextVerticalOverflow(node.Table) ||
+                HasUnsupportedChartTextVerticalOverflow(node.Chart) ||
                 HasUnsupportedSceneTextVerticalOverflow(node.Children))
             {
                 return true;
@@ -560,6 +562,26 @@ internal sealed partial class PptxRenderer
         }
 
         return false;
+    }
+
+    private static bool SceneTextBodyNeedsVerticalOverflowDiagnostic(PptxSceneTextBody? textBody)
+    {
+        return textBody?.HasUnsupportedVerticalOverflow == true &&
+            TextBodyOrientationNeedsOverflowDiagnostic(textBody.BodyProperties);
+    }
+
+    private static bool HasUnsupportedTableTextVerticalOverflow(PptxSceneTable? table)
+    {
+        return table?.Rows.Any(row => row.Cells.Any(cell =>
+            cell.HasUnsupportedVerticalOverflow &&
+            TextBodyOrientationNeedsOverflowDiagnostic(cell.TextBody?.Element(DrawingNamespace + "bodyPr")))) == true;
+    }
+
+    private static bool TextBodyOrientationNeedsOverflowDiagnostic(XElement? bodyProperties)
+    {
+        string? orientation = (string?)bodyProperties?.Attribute("vert");
+        return !string.IsNullOrEmpty(orientation) &&
+            !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)
