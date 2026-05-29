@@ -16999,3 +16999,13 @@ to `4.667523`; changed16 stayed effectively neutral (`0.071057` -> `0.071059`) a
 39, 24, 12, 31, and 32. Follow-up PDF inspection still shows page-39 residuals in text operation grouping,
 Office-style `Tc` text state, and positioning rather than in baseline-only clipping, so the next rendering pass
 should continue from those PDF-structure deltas.
+
+Follow-up, 2026-05-29: a narrower `spAutoFit + anchorCtr="0" + compatLnSpc` middle-anchor hypothesis was also
+rejected. New inspection showed the main high-error text frames on pages 24/39 have a computed `21pt`
+middle-anchor offset, and suppressing that offset makes the first candidate baseline line up with one Office
+baseline in isolation. However, preserving that local alignment still failed at deck level: the guarded
+experiment only suppressed offsets larger than `1.2x` the largest run font and still worsened private run
+`20260529-222739` from deck MAE `4.667523` to `4.678333`, with pages 24/39 moving to about `10.1` MAE. Do not
+use first-baseline alignment alone to override `anchorCtr`; the next pass needs a richer PDF-line grouping or
+Office-authored public fixture that explains both the extra Office row and the row spacing before changing
+middle-anchor timing again.
