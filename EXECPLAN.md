@@ -7967,6 +7967,12 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 Latest public validation:
 
 ```text
+Full non-slow checkpoint after chart cache-point and polar index parser cleanups, 2026-05-29:
+dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow:
+418 passed, 0 failed, 7 skipped.
+```
+
+```text
 Chart polar explosion index parser-ownership slice, 2026-05-29:
 dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed.
 dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow:
@@ -16165,3 +16171,7 @@ This still leaves polar explosion layout policy in the renderer. Series-wide exp
 clamping, and sparse-point expansion affect geometry and need Office-PDF evidence before they move. Validation:
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
 non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
+
+Validation checkpoint, 2026-05-29: after the chart cache-point and polar point-index parser-ownership cleanups,
+the full non-slow console suite passed with `418` tests, `0` failures, and `7` skips via
+`dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`.
