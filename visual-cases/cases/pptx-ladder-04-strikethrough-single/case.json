@@ -19,7 +19,10 @@
     "compareGraphicsOperationKinds": ["Fill"],
     "compareGraphicsOperationOperators": ["f*"],
     "matchGraphicsOperationOperators": true,
-    "matchGraphicsOperationsByBounds": true
+    "matchGraphicsOperationsByBounds": true,
+    "compareGraphicsOperationSegmentCounts": true,
+    "compareGraphicsOperationPathCommandCounts": true,
+    "compareGraphicsOperationPathOperators": true
   },
   "allowedUnsupportedFeatures": []
 }

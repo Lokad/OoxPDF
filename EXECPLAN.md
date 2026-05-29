@@ -1654,6 +1654,16 @@ High-priority actions:
   with `seg=6,line=5` while the candidate emits `seg=4,line=3`; that remains visible evidence for a future
   rectangle path-construction slice rather than a manifest omission. Validation: public highlight run
   `20260529-023516` passed with the strengthened structural gate.
+- [x] 2026-05-29: Emit underline and strikethrough rectangles with Office-like segmented rectangle paths:
+  PPTX text decorations now use a narrow decoration-only even-odd fill helper that writes the rectangle top and
+  bottom edges through explicit midpoints (`m/l/l/l/l/l/h`) before `f*`, matching the Office path-command shape
+  observed in the public underline and strikethrough probes. Generic rectangle fills and highlight rectangles stay
+  on the normal four-edge path. The underline and strikethrough manifests now gate segment counts, path-command
+  counts, and path operators in addition to bounds and fill operator parity. Validation: `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; public underline run `20260529-023705` and
+  strikethrough run `20260529-023729` passed with the strengthened gates; focused non-slow `pptx-typography`
+  passed with `99` tests, `0` failures, and `2` slow skips. A parallel first strikethrough invocation hit the
+  known transient `obj` file lock while another build was writing outputs, then passed serially.
 - [x] Re-run the justified typography probe after glyph-span emission:
   `pptx-ladder-04-typography-justify-port` stayed behavior-compatible at MAE `4.210743`; remaining drift is
   Office word-position and line-box parity, not a glyph-span bridge regression.

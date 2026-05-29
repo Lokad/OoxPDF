@@ -812,7 +812,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
                 {
-                    graphics.FillRectangleEvenOdd(underline.X, underline.Y, underline.Width, underline.Height);
+                    FillTextDecorationRectangleEvenOdd(graphics, underline);
                 }
             }
 
@@ -821,7 +821,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
                 {
-                    graphics.FillRectangleEvenOdd(strike.X, strike.Y, strike.Width, strike.Height);
+                    FillTextDecorationRectangleEvenOdd(graphics, strike);
                 }
             }
 
@@ -862,7 +862,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
                 {
-                    graphics.FillRectangleEvenOdd(underline.X, underline.Y, underline.Width, underline.Height);
+                    FillTextDecorationRectangleEvenOdd(graphics, underline);
                 }
             }
 
@@ -871,7 +871,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
                 {
-                    graphics.FillRectangleEvenOdd(strike.X, strike.Y, strike.Width, strike.Height);
+                    FillTextDecorationRectangleEvenOdd(graphics, strike);
                 }
             }
 
@@ -1169,6 +1169,24 @@ internal sealed partial class PptxRenderer
             glyphRun.Width,
             PptxTextMetricRules.StrikeThickness(embedded, run.FontSize));
         return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && rectangle.Height > 0d;
+    }
+
+    private static void FillTextDecorationRectangleEvenOdd(PdfGraphicsBuilder graphics, TextDecorationRectangle rectangle)
+    {
+        double x = rectangle.X;
+        double midX = rectangle.X + rectangle.Width / 2d;
+        double right = rectangle.X + rectangle.Width;
+        double bottom = rectangle.Y;
+        double top = rectangle.Y + rectangle.Height;
+
+        graphics.MoveTo(x, top);
+        graphics.LineTo(midX, top);
+        graphics.LineTo(right, top);
+        graphics.LineTo(right, bottom);
+        graphics.LineTo(midX, bottom);
+        graphics.LineTo(x, bottom);
+        graphics.ClosePath();
+        graphics.FillCurrentPathEvenOdd();
     }
 
     private static bool BaselineIntersectsClip(TextRun run, double baselineY)
