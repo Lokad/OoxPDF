@@ -1645,7 +1645,12 @@ internal static class PptxTests
         TestAssert.Contains("212 326 l", pdf);
         TestAssert.Contains("212 322 l", pdf);
         TestAssert.Contains("1 -0 -0 -1 0 864 cm", pdf);
-        TestAssert.Contains("216 468 m 216 396 l S", pdf);
+        TestAssert.Contains("216.5 468 m", pdf);
+        TestAssert.Contains("216.5 398 l", pdf);
+        TestAssert.Contains("215.5 468 l", pdf);
+        TestAssert.Contains("216 396 m", pdf);
+        TestAssert.Contains("217.5 399 l", pdf);
+        TestAssert.DoesNotContain("216 468 m 216 396 l S", pdf);
         TestAssert.Contains("0.184 0.522 0.416 rg", pdf);
         TestAssert.Contains("0.753 0 0 rg", pdf);
         TestAssert.Contains("90 468 m", pdf);
@@ -2339,9 +2344,10 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("216 468 m", pdf);
-        TestAssert.Contains("208 471.2 l", pdf);
-        TestAssert.Contains("210.4 468 l", pdf);
-        TestAssert.Contains("208 464.8 l", pdf);
+        TestAssert.Contains("210 471 l", pdf);
+        TestAssert.Contains("212 468 l", pdf);
+        TestAssert.Contains("210 465 l", pdf);
+        TestAssert.DoesNotContain("72 468 m 216 468 l S", pdf);
         TestAssert.Contains("212 435.2 l", pdf);
         TestAssert.Contains("208 432 l", pdf);
         TestAssert.Contains("212 428.8 l", pdf);

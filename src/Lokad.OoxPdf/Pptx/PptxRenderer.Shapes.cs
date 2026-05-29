@@ -18,6 +18,9 @@ internal sealed partial class PptxRenderer
     private const double OfficeStraightTriangleLineEndLengthFactor = 4d;
     private const double OfficeStraightTriangleLineEndHalfWidthFactor = 2d;
     private const double OfficeStraightTriangleLineEndOverlapFactor = 2d / 3d;
+    private const double OfficeStraightStealthLineEndLengthFactor = 3d;
+    private const double OfficeStraightStealthLineEndWidthFactor = 3d;
+    private const double OfficeStraightStealthLineEndNotchFactor = 2d / 3d;
 
     private static void RenderBackground(PptxRenderContext context, PptxSceneBackground background, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
     {
@@ -305,7 +308,13 @@ internal sealed partial class PptxRenderer
                 LineEndStyle tailEnd = tailEndOverride ?? ReadLineEnd(shapeProperties, "tailEnd");
                 bool hasHeadArrow = IsFilledTriangleArrow(headEnd);
                 bool hasTailArrow = IsFilledTriangleArrow(tailEnd);
-                if ((hasHeadArrow || hasTailArrow) && headEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && tailEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && !hasDash && lineCap is null)
+                bool hasStealthEnd = headEnd.Kind == LineEndKind.Stealth || tailEnd.Kind == LineEndKind.Stealth;
+                if (hasStealthEnd && headEnd.Kind is LineEndKind.None or LineEndKind.Stealth && tailEnd.Kind is LineEndKind.None or LineEndKind.Stealth && !hasDash && lineCap is null)
+                {
+                    graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+                    FillStealthEndedLine(graphics, x1, y1, x2, y2, lineWidth, headEnd, tailEnd);
+                }
+                else if ((hasHeadArrow || hasTailArrow) && headEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && tailEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && !hasDash && lineCap is null)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     bool usesOfficeArrowType = headEnd.Kind == LineEndKind.Arrow || tailEnd.Kind == LineEndKind.Arrow;
@@ -1619,8 +1628,12 @@ internal sealed partial class PptxRenderer
         double uy = directionY / length;
         double nx = -uy;
         double ny = ux;
-        double markerLength = Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
-        double markerWidth = Math.Max(5d, lineWidth * 3.2d) * style.WidthScale;
+        double markerLength = style.Kind == LineEndKind.Stealth
+            ? lineWidth * OfficeStraightStealthLineEndLengthFactor * style.LengthScale
+            : Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
+        double markerWidth = style.Kind == LineEndKind.Stealth
+            ? lineWidth * OfficeStraightStealthLineEndWidthFactor * style.WidthScale
+            : Math.Max(5d, lineWidth * 3.2d) * style.WidthScale;
 
         (double X, double Y) Point(double along, double normal)
         {
@@ -1634,7 +1647,7 @@ internal sealed partial class PptxRenderer
                 [
                     (tipX, tipY),
                     Point(markerLength, markerWidth / 2d),
-                    Point(markerLength * 0.7d, 0d),
+                    Point(markerLength * OfficeStraightStealthLineEndNotchFactor, 0d),
                     Point(markerLength, -markerWidth / 2d)
                 ]);
                 break;
@@ -1652,6 +1665,101 @@ internal sealed partial class PptxRenderer
                 graphics.FillEllipse(center.X - markerLength / 2d, center.Y - markerWidth / 2d, markerLength, markerWidth);
                 break;
         }
+    }
+
+    private static void FillStealthEndedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, LineEndStyle headEnd, LineEndStyle tailEnd)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        if (length <= 0.001d)
+        {
+            return;
+        }
+
+        double ux = dx / length;
+        double uy = dy / length;
+        double nx = -uy;
+        double ny = ux;
+        double half = lineWidth / 2d;
+        double headInset = headEnd.Kind == LineEndKind.Stealth
+            ? lineWidth * OfficeStraightStealthLineEndLengthFactor * headEnd.LengthScale * OfficeStraightStealthLineEndNotchFactor
+            : 0d;
+        double tailInset = tailEnd.Kind == LineEndKind.Stealth
+            ? lineWidth * OfficeStraightStealthLineEndLengthFactor * tailEnd.LengthScale * OfficeStraightStealthLineEndNotchFactor
+            : 0d;
+        double startX = x1 + ux * headInset;
+        double startY = y1 + uy * headInset;
+        double endX = x2 - ux * tailInset;
+        double endY = y2 - uy * tailInset;
+
+        if (Distance(startX, startY, endX, endY) > 0.001d)
+        {
+            AppendClosedPolygon(graphics,
+            [
+                (startX + nx * half, startY + ny * half),
+                (endX + nx * half, endY + ny * half),
+                (endX - nx * half, endY - ny * half),
+                (startX - nx * half, startY - ny * half)
+            ]);
+        }
+
+        if (headEnd.Kind == LineEndKind.Stealth)
+        {
+            AppendStealthLineEndMarker(graphics, headEnd, x1, y1, x1 - x2, y1 - y2, lineWidth);
+        }
+
+        if (tailEnd.Kind == LineEndKind.Stealth)
+        {
+            AppendStealthLineEndMarker(graphics, tailEnd, x2, y2, x2 - x1, y2 - y1, lineWidth);
+        }
+
+        graphics.FillCurrentPath();
+    }
+
+    private static void AppendStealthLineEndMarker(PdfGraphicsBuilder graphics, LineEndStyle style, double tipX, double tipY, double directionX, double directionY, double lineWidth)
+    {
+        double length = Math.Sqrt(directionX * directionX + directionY * directionY);
+        if (length <= 0.001d)
+        {
+            return;
+        }
+
+        double ux = directionX / length;
+        double uy = directionY / length;
+        double nx = -uy;
+        double ny = ux;
+        double markerLength = lineWidth * OfficeStraightStealthLineEndLengthFactor * style.LengthScale;
+        double markerWidth = lineWidth * OfficeStraightStealthLineEndWidthFactor * style.WidthScale;
+
+        (double X, double Y) Point(double along, double normal)
+        {
+            return (tipX - ux * along + nx * normal, tipY - uy * along + ny * normal);
+        }
+
+        AppendClosedPolygon(graphics,
+        [
+            (tipX, tipY),
+            Point(markerLength, markerWidth / 2d),
+            Point(markerLength * OfficeStraightStealthLineEndNotchFactor, 0d),
+            Point(markerLength, -markerWidth / 2d)
+        ]);
+    }
+
+    private static void AppendClosedPolygon(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    {
+        if (points.Count == 0)
+        {
+            return;
+        }
+
+        graphics.MoveTo(points[0].X, points[0].Y);
+        for (int i = 1; i < points.Count; i++)
+        {
+            graphics.LineTo(points[i].X, points[i].Y);
+        }
+
+        graphics.ClosePath();
     }
 
     private static void FillArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)

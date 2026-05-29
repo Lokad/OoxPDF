@@ -16601,3 +16601,30 @@ missing candidate operations. The secondary font-size branches include `secondar
 `secondary-3.96`, and related offsets, but the existing public quantization probes already ruled out a simple
 Y-band or local-frame-size trigger. The next implementation step should therefore derive a public probe for
 Office text emission/layout structure, not add a private-page-specific font-size or coordinate rule.
+
+Follow-up, 2026-05-29: page-50 graphics inspection exposed a non-text Office-structure gap in the same high-error
+page cluster. The private-safe PDF comparison showed one vertical red connector where Office emitted a single
+filled path made of a rectangular shaft plus a stealth line-end marker. The candidate instead stroked the
+centerline and filled an oversized standalone stealth marker. The Office path geometry is structural rather than
+content-specific: for the observed straight connector it uses a shaft of the source line width, a stealth marker
+with length and width equal to `3x` the line width, and a notch at `2/3` of the marker length. This also explains
+the earlier `0.45d` concern: the triangle-tail constant is not the relevant gap here; straight stealth line ends
+need their own named Office metrics.
+
+The renderer now handles undashed, default-cap straight connectors with only `none`/`stealth` line ends as filled
+Office-style geometry instead of a stroked centerline. `FillLineEndMarker` also uses the same named stealth
+length/width/notch factors for fallback marker emission. Focused regressions
+`PptxSyntheticArrowAndConnectorShapesRender` and `PptxSyntheticLineEndPresetVariantsRender` passed, and
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors. The
+Office-backed public `pptx-ladder-06-line-arrowheads` case remained stable at MAE `0.001575`, changed16
+`0.0000236`; the broader `pptx-ladder-06-connector-arrow` case still has its pre-existing zero-gate miss at MAE
+`0.004051`, unchanged by this work.
+
+Private validation on `lokad-value-based` run `20260529-124259` compared 84/84 pages with empty diagnostics.
+Against run `20260529-122212`, deck MAE improved slightly from `5.896815` to `5.896053`, and changed16 from
+`0.085603` to `0.085587`. The target high-error grouped-picture pages moved in the right direction but only
+slightly: page 50 MAE `15.76` -> `15.75`, page 49 `13.75` -> `13.74`, page 32 `14.22` -> `14.21`, and page 13
+`14.04` -> `14.02`. New page-50 candidate PDF inspection confirms that the red connector path now matches the
+Office reference bounds and subpath structure (`64.56..78.06` by `84.38..376.40`, filled shaft plus stealth
+marker). The remaining page-50/page-32 error is therefore no longer this connector primitive; continue with
+picture/group crop geometry and Office text-operation structure before adding any more local metric constants.
