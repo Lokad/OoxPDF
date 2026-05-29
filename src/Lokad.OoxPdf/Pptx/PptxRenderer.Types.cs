@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Fonts;
@@ -691,6 +692,7 @@ internal sealed partial class PptxRenderer
         Text,
         Tab,
         HiddenAdvance,
+        NoBreakHiddenAdvance,
         BoundaryPunctuation,
         Break
     }
@@ -704,6 +706,8 @@ internal sealed partial class PptxRenderer
 
     private sealed class TextLayoutLine(double startX)
     {
+        private double startX = startX;
+
         public List<PptxTextSpanLayout> Spans { get; } = [];
 
         public double EndX { get; private set; } = startX;
@@ -724,8 +728,24 @@ internal sealed partial class PptxRenderer
             EndX = Math.Max(EndX, x);
         }
 
+        public bool TryRemoveLastSpan([NotNullWhen(true)] out PptxTextSpanLayout? span)
+        {
+            if (Spans.Count == 0)
+            {
+                span = null;
+                return false;
+            }
+
+            int lastIndex = Spans.Count - 1;
+            span = Spans[lastIndex];
+            Spans.RemoveAt(lastIndex);
+            EndX = Spans.Count == 0 ? startX : Spans.Max(item => item.EndX);
+            return true;
+        }
+
         public void Reset(double startX)
         {
+            this.startX = startX;
             Spans.Clear();
             EndX = startX;
         }

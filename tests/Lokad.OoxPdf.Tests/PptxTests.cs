@@ -4666,8 +4666,50 @@ internal static class PptxTests
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Runs)
             .SelectMany(run => run.Segments)
-            .Single(segment => segment.Kind == "HiddenAdvance");
+            .Single(segment => segment.Kind == "NoBreakHiddenAdvance");
         TestAssert.Equal("\u202F", hiddenAdvance.AdvanceText);
+    }
+
+    public static void PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3175000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha beta gamma +2&#x202F;points omega</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .Where(line => line.Spans.Count > 0)
+            .ToArray();
+
+        int tokenLine = Array.FindIndex(lines, line => line.Spans.Any(span => span.Text == "+2"));
+        int followingLine = Array.FindIndex(lines, line => line.Spans.Any(span => span.Text == "points"));
+
+        TestAssert.True(tokenLine >= 0, "Expected the no-break cluster's leading token to be present.");
+        TestAssert.Equal(tokenLine, followingLine);
+        TestAssert.True(!lines.Take(tokenLine).Any(line => line.Spans.Any(span => span.Text == "+2")), "Expected the leading token to move with the following no-break word.");
+        TestAssert.True(lines[tokenLine].Spans.All(span => !span.Text.Contains('\u202F', StringComparison.Ordinal)), "Expected no-break space to remain a hidden advance after wrapping.");
     }
 
     public static void PptxSyntheticTextBoxTreatsNoBreakSpaceAsHiddenRegularSpaceAdvance()

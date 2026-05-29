@@ -932,6 +932,8 @@ internal sealed partial class PptxRenderer
             var line = new TextLayoutLine(paragraphTextX);
             int? previousAdvanceCodePoint = null;
             double pendingVisibleLeadingAdjustment = 0d;
+            PptxTextSpanLayout? noBreakAnchorSpan = null;
+            string pendingNoBreakAdvanceText = string.Empty;
             int remainingDrawableSegments = CountDrawableTextSegments(flowParagraph);
             foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
@@ -948,6 +950,8 @@ internal sealed partial class PptxRenderer
                     maxFontSize = 0d;
                     previousAdvanceCodePoint = null;
                     pendingVisibleLeadingAdjustment = 0d;
+                    noBreakAnchorSpan = null;
+                    pendingNoBreakAdvanceText = string.Empty;
                     continue;
                 }
 
@@ -982,12 +986,15 @@ internal sealed partial class PptxRenderer
                         line.AdvanceTo(cursorX);
                         previousAdvanceCodePoint = null;
                         pendingVisibleLeadingAdjustment = 0d;
+                        noBreakAnchorSpan = null;
+                        pendingNoBreakAdvanceText = string.Empty;
                         continue;
                     }
 
                     double fragmentFontSize = runStyle.FontSize * flowSegment.FontScale;
                     string currentSegment = flowSegment.Text;
                     string currentAdvanceText = flowSegment.AdvanceText;
+                    bool isNoBreakHiddenAdvance = flowSegment.Kind == PptxTextFlowSegmentKind.NoBreakHiddenAdvance;
                     bool isDrawableTextSegment = flowSegment.Draw && currentAdvanceText.TrimStart().Length > 0;
                     bool isFinalShortWordSegment = isDrawableTextSegment &&
                         remainingDrawableSegments == 1 &&
@@ -1052,10 +1059,14 @@ internal sealed partial class PptxRenderer
                                 maxFontSize = 0d;
                                 previousAdvanceCodePoint = null;
                                 pendingVisibleLeadingAdjustment = 0d;
+                                noBreakAnchorSpan = null;
+                                pendingNoBreakAdvanceText = string.Empty;
                             }
                         }
 
                         previousAdvanceCodePoint = LastCodePoint(currentAdvanceText);
+                        noBreakAnchorSpan = null;
+                        pendingNoBreakAdvanceText = string.Empty;
                         if (isDrawableTextSegment)
                         {
                             remainingDrawableSegments--;
@@ -1081,6 +1092,22 @@ internal sealed partial class PptxRenderer
                         cursorX + segmentWidth > columnStartX + effectiveTextWidth + wrapTolerance;
                     if (overflowsLine)
                     {
+                        bool movedNoBreakCluster = false;
+                        PptxTextSpanLayout? movedNoBreakSpan = null;
+                        string movedNoBreakAdvanceText = string.Empty;
+                        if (flowSegment.Draw &&
+                            noBreakAnchorSpan is not null &&
+                            pendingNoBreakAdvanceText.Length != 0 &&
+                            line.Spans.Count > 0 &&
+                            line.Spans[^1].Equals(noBreakAnchorSpan) &&
+                            line.TryRemoveLastSpan(out PptxTextSpanLayout? removedNoBreakSpan))
+                        {
+                            movedNoBreakCluster = true;
+                            movedNoBreakSpan = removedNoBreakSpan;
+                            movedNoBreakAdvanceText = pendingNoBreakAdvanceText;
+                            cursorX = line.EndX;
+                        }
+
                         if (flowSegment.Draw)
                         {
                             int leadingSpaceCount = CountLeadingSpaces(currentSegment);
@@ -1110,6 +1137,31 @@ internal sealed partial class PptxRenderer
                         maxFontSize = 0d;
                         previousAdvanceCodePoint = null;
                         pendingVisibleLeadingAdjustment = 0d;
+                        noBreakAnchorSpan = null;
+                        pendingNoBreakAdvanceText = string.Empty;
+                        if (movedNoBreakCluster)
+                        {
+                            TextRun movedRun = movedNoBreakSpan!.Run with { X = cursorX, Y = cursorY };
+                            double movedEndX = cursorX + movedRun.Width;
+                            maxFontSize = Math.Max(maxFontSize, movedRun.FontSize);
+                            line.Add(
+                                movedNoBreakSpan.SourceRun,
+                                movedRun,
+                                movedEndX,
+                                BuildTextAtoms(movedRun, advanceEstimator),
+                                BuildGlyphSpan(movedRun, advanceEstimator));
+                            cursorX = movedEndX;
+                            previousAdvanceCodePoint = LastCodePoint(movedRun.Text);
+
+                            double hiddenIntrinsicWidth = advanceEstimator.Measure(movedNoBreakAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                            double hiddenBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, movedNoBreakAdvanceText, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                            double hiddenWidth = Math.Max(0d, hiddenIntrinsicWidth + hiddenBoundaryAdjustment);
+                            pendingVisibleLeadingAdjustment = hiddenBoundaryAdjustment;
+                            cursorX += hiddenWidth;
+                            line.AdvanceTo(cursorX);
+                            previousAdvanceCodePoint = LastCodePoint(movedNoBreakAdvanceText);
+                        }
+
                         currentSegment = currentSegment.TrimStart();
                         currentAdvanceText = currentAdvanceText.TrimStart();
                         segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
@@ -1130,6 +1182,8 @@ internal sealed partial class PptxRenderer
                         double leadingAdjustment = pendingVisibleLeadingAdjustment + segmentBoundaryAdjustment;
                         line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator, leadingAdjustment));
                         pendingVisibleLeadingAdjustment = 0d;
+                        noBreakAnchorSpan = null;
+                        pendingNoBreakAdvanceText = string.Empty;
                     }
                     else
                     {
@@ -1139,6 +1193,11 @@ internal sealed partial class PptxRenderer
                     cursorX += segmentWidth;
                     line.AdvanceTo(cursorX);
                     previousAdvanceCodePoint = LastCodePoint(currentAdvanceText);
+                    if (isNoBreakHiddenAdvance)
+                    {
+                        noBreakAnchorSpan = line.Spans.LastOrDefault();
+                        pendingNoBreakAdvanceText = currentAdvanceText;
+                    }
                     if (isDrawableTextSegment)
                     {
                         remainingDrawableSegments--;
@@ -1460,7 +1519,7 @@ internal sealed partial class PptxRenderer
                     builder.Clear();
                 }
 
-                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true);
+                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.NoBreakHiddenAdvance, Draw: false, PreventCoalesce: true);
                 nextPreventsCoalesce = true;
                 continue;
             }

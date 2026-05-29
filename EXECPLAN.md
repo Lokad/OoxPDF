@@ -16773,3 +16773,26 @@ to `0.077473`. The direct card-heavy pages moved sharply: page 82 `11.20` -> `5.
 `5.36`; related pages 61 and 81 also improved (`10.14` -> `9.60` and `10.93` -> `10.44`). The remaining top
 pages are now page 53, 32, 50, 81, 39, 24, 13, and 49; continue with PDF-structural alignment there, especially
 the remaining page-53 connector flattening and the picture/text families on pages 32/50.
+
+Follow-up, 2026-05-29: pages 24 and 39 exposed a private-safe text wrapping rule in the high-error headline
+family. PDF text inspection showed that Office treats the narrow no-break space cluster as an unbreakable wrap
+unit: when the following word no longer fits, the short preceding token moves to the next line with it. The
+candidate already modeled U+00A0/U+202F as hidden advances for PDF emission, but the line breaker still allowed
+the wrap between that hidden advance and the following visible word. A broader rollback hypothesis for ordinary
+trailing separators was rejected because private validation worsened materially; the retained fix is therefore
+limited to no-break hidden advances.
+
+The renderer now distinguishes ordinary hidden advances from no-break hidden advances. At wrap time, if the next
+visible segment overflows immediately after a no-break hidden advance, the layout moves the preceding visible
+span plus the hidden advance to the new line before placing the following word. This preserves the existing
+hidden-advance PDF structure while aligning the line-break contract with Office. The public regression
+`PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether` locks the behavior without using private text.
+
+Validation: the non-slow `pptx-typography` group passed with `108` tests, `0` failures, and `2` slow skips;
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors. Private
+validation on `lokad-value-based` run `20260529-190614` compared 84/84 pages with empty diagnostics. Against
+run `20260529-142101`, deck MAE improved from `4.901325` to `4.886412`, and changed16 from `0.073306` to
+`0.073162`. The expected headline pages moved in the right direction: pages 24 and 39 each improved by about
+`0.43` MAE, with smaller wins on pages 23, 28, and 67 and no meaningful page-level regression. The remaining
+top pages are now page 53, 81, 39, 24, and 32; continue with page-53 connector/text structure and page-81/card
+residuals before broader chart or ownership cleanup.
