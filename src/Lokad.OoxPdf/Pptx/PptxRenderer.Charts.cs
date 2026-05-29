@@ -7273,13 +7273,10 @@ internal sealed partial class PptxRenderer
 
     private static string FormatChartAxisLabel(double value, XElement? axis = null)
     {
-        string? formatCode = (string?)axis?
-            .Element(ChartNamespace + "numFmt")
-            ?.Attribute("formatCode");
-        if (!string.IsNullOrWhiteSpace(formatCode) &&
-            !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
+        ChartNumberFormat numberFormat = axis is null ? default : ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(axis));
+        if (IsRenderableChartNumberFormat(numberFormat))
         {
-            return FormatChartNumber(value, formatCode);
+            return FormatChartNumber(value, numberFormat.FormatCode);
         }
 
         double rounded = Math.Round(value);
@@ -7413,12 +7410,12 @@ internal sealed partial class PptxRenderer
 
     private static bool HasMajorGridlines(XElement? axis)
     {
-        return IsChartGridlineVisible(axis?.Element(ChartNamespace + "majorGridlines"));
+        return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "majorGridlines"));
     }
 
     private static bool HasMinorGridlines(XElement? axis)
     {
-        return IsChartGridlineVisible(axis?.Element(ChartNamespace + "minorGridlines"));
+        return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "minorGridlines"));
     }
 
     private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
@@ -7478,19 +7475,6 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke? ReadChartGridlineStroke(XElement? gridlines, PptxTheme theme)
     {
         return ToChartSeriesStroke(PptxSceneBuilder.ReadChartGridlineLine(gridlines, theme));
-    }
-
-    private static bool IsChartGridlineVisible(XElement? gridlines)
-    {
-        if (gridlines is null)
-        {
-            return false;
-        }
-
-        XElement? line = gridlines
-            .Element(ChartNamespace + "spPr")
-            ?.Element(DrawingNamespace + "ln");
-        return line?.Element(DrawingNamespace + "noFill") is null;
     }
 
     private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)

@@ -16034,3 +16034,13 @@ priority, and Office-backed plot-box negotiation remain separate layout concerns
 that chart line-token interpretation now has one owner before those layout policies are replaced with structural
 Office-PDF evidence. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-charts` passed with `142` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: two adjacent chart axis token reads now share the same scene-builder ownership. Gridline
+visibility checks use `PptxSceneBuilder.IsChartGridlineVisible` in XML-only fallbacks, and the legacy axis-label
+formatter obtains `c:numFmt` through `PptxSceneBuilder.ReadChartNumberFormat` before applying the renderer's
+existing renderable-format policy.
+
+No number-format or gridline drawing policy changed here. The remaining work is still Office-backed numeric
+format fidelity and axis/gridline layout, not a duplicate XML parser in the renderer. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
+`pptx-charts` passed with `142` tests, `0` failures, and `0` skips.

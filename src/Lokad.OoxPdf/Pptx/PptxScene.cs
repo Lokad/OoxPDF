@@ -3735,7 +3735,7 @@ internal sealed class PptxSceneBuilder
             : (null, value);
     }
 
-    private static bool IsChartGridlineVisible(XElement? gridlines)
+    internal static bool IsChartGridlineVisible(XElement? gridlines)
     {
         XElement? line = gridlines?
             .Element(ChartNamespace + "spPr")
