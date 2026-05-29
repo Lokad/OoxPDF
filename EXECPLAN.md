@@ -4366,6 +4366,11 @@ High-priority actions:
     without swallowing package/read-time failures or introducing content-specific SVG heuristics.
 - [ ] Port `pptx-renderer` generated public visual-suite organization: normalized case names, grouped
   fixtures, Office reference caching, and separate approximate, needs-review, and locked thresholds.
+  - [x] Add a catalog validation slice before doing any case renames: `tools/ValidateVisualCases.ps1`
+    now checks public visual case/family id normalization, directory/id consistency, input existence,
+    family pattern coverage, and overlapping ownership. The six broad pre-ladder PPTX smoke cases now live
+    in an explicit `pptx-smoke` family, so every public case has one family owner while threshold maturity
+    remains captured through existing `locked`, `locked-text-ops`, `approximate`, and `needs-review` tags.
 - [ ] Port `pptx-renderer` oracle tooling ideas that fit `.NET`: compact text-op diffs, visual metrics,
   cached Office references, deterministic artifact paths, and fast focused case selection.
 - [ ] Port `pptx-renderer` performance lessons: avoid repeated ZIP/XML/theme/font parsing, cache immutable
