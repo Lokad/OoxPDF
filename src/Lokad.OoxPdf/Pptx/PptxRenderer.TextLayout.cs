@@ -917,6 +917,8 @@ internal sealed partial class PptxRenderer
             {
                 cursorLineTop -= paragraphStyle.SpacingBefore;
                 MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, paragraphStyle.FontSize);
+                columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
+                columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
                 bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
                 paragraphTextX = bulletText is null
                     ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
@@ -994,14 +996,25 @@ internal sealed partial class PptxRenderer
                     double segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                     double segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                     double segmentWidth = Math.Max(0d, segmentIntrinsicWidth + segmentBoundaryAdjustment);
-                    if (frame.Orientation != PptxTextOrientation.Horizontal &&
+                    bool splitOverwideFirstSegment = allowWrapping &&
                         flowSegment.Kind == PptxTextFlowSegmentKind.Text &&
                         flowSegment.Draw &&
                         currentSegment == currentAdvanceText &&
                         currentSegment.Length > 1 &&
-                        segmentWidth > frame.TextWidth)
+                        line.Spans.Count == 0 &&
+                        segmentWidth > effectiveTextWidth + PptxTextMetricRules.CoordinateTolerance;
+                    if ((frame.Orientation != PptxTextOrientation.Horizontal &&
+                            flowSegment.Kind == PptxTextFlowSegmentKind.Text &&
+                            flowSegment.Draw &&
+                            currentSegment == currentAdvanceText &&
+                            currentSegment.Length > 1 &&
+                            segmentWidth > frame.TextWidth) ||
+                        splitOverwideFirstSegment)
                     {
-                        string[] chunks = SplitTextIntoFittingChunks(currentSegment, frame.TextWidth, fragmentFontSize, runStyle, advanceEstimator);
+                        double chunkMaxWidth = frame.Orientation == PptxTextOrientation.Horizontal
+                            ? effectiveTextWidth
+                            : frame.TextWidth;
+                        string[] chunks = SplitTextIntoFittingChunks(currentSegment, chunkMaxWidth, fragmentFontSize, runStyle, advanceEstimator);
                         for (int chunkIndex = 0; chunkIndex < chunks.Length; chunkIndex++)
                         {
                             string chunk = chunks[chunkIndex];
@@ -1012,7 +1025,9 @@ internal sealed partial class PptxRenderer
                             double chunkTotalWidth = Math.Max(0d, chunkWidth + chunkBoundaryAdjustment);
                             maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
                             double chunkX = cursorX + chunkBoundaryAdjustment;
-                            TextRun textRun = new(chunk, chunkX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, frame.TextClipX, frame.TextClipY, frame.TextClipWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline, StrictClip: strictClip);
+                            double chunkClipX = frame.Orientation == PptxTextOrientation.Horizontal ? columnClipX : frame.TextClipX;
+                            double chunkClipWidth = frame.Orientation == PptxTextOrientation.Horizontal ? columnClipWidth : frame.TextClipWidth;
+                            TextRun textRun = new(chunk, chunkX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, chunkClipX, frame.TextClipY, chunkClipWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline, StrictClip: strictClip);
                             double chunkLeadingAdjustment = pendingVisibleLeadingAdjustment + chunkBoundaryAdjustment;
                             line.Add(modelRun, textRun, cursorX + chunkTotalWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator, chunkLeadingAdjustment));
                             pendingVisibleLeadingAdjustment = 0d;
@@ -1021,8 +1036,16 @@ internal sealed partial class PptxRenderer
                             if (chunkIndex < chunks.Length - 1)
                             {
                                 double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
-                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                                double lineTextX = frame.Orientation == PptxTextOrientation.Horizontal ? columnStartX : frame.TextX;
+                                double lineTextWidth = frame.Orientation == PptxTextOrientation.Horizontal ? effectiveTextWidth : frame.TextWidth;
+                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, lineTextX, lineTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
                                 cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                                MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, lineFontSize);
+                                columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
+                                columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+                                paragraphTextX = bulletText is null
+                                    ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                                    : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
                                 cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor);
                                 cursorX = paragraphTextX;
                                 line.Reset(paragraphTextX);
@@ -1076,6 +1099,8 @@ internal sealed partial class PptxRenderer
                         AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
                         cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                         MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, lineFontSize);
+                        columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
+                        columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
                         paragraphTextX = bulletText is null
                             ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                             : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);

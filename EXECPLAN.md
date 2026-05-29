@@ -16539,3 +16539,35 @@ from about `16.26` to `15.02`, page 32 from `15.38` to `13.98`, and page 13 from
 now the leading unchanged error page, so the next rendering-impact step should inspect its private-safe
 structure and derive another public probe before changing renderer behavior. Avoid magic constants here; the
 useful path is Office PDF text/object structure alignment.
+
+Follow-up, 2026-05-29: page-36 investigation found a genuine structural text-flow gap. Private-safe inventory
+showed slide 36 has 16 text bodies, no charts/tables/effects/recolor, and one direct `bodyPr` multi-column text
+frame with `numCol=3` and `spcCol` around `8.5 pt`. Office emitted 135 text operations on the page while the
+candidate emitted 45. The missing structure was not a font-size heuristic: Office's text operation X clusters
+included the three column starts around `375.9`, `544.5`, and `713.0 pt`, while the candidate only used the first
+column for that frame.
+
+The root cause was that an over-wide first text segment on an otherwise empty line was allowed to run through
+the whole frame. Because it never wrapped to the column width, the line cursor did not overflow the first column
+and therefore never advanced into columns two and three. The renderer now splits drawable over-wide first
+segments when wrapping is enabled, using the active column width for horizontal text, and refreshes the local text
+clip after column transitions. The new unit regression
+`PptxSyntheticTextBoxSplitsOverwideFirstSegmentAcrossColumns` covers the public version of the page-36 failure:
+a long unspaced first segment in a three-column text frame must produce lines in all three columns and stay inside
+the per-column line bounds.
+
+Validation: focused `PptxSyntheticTextBoxSplitsOverwideFirstSegmentAcrossColumns` passed; existing
+`PptxSyntheticTextBoxFlowsAcrossColumns` passed; non-slow `pptx-typography` passed with `103` tests, `0`
+failures, and `2` slow skips; `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors. The public dense-column visual case ran at
+`artifacts/visual/pptx-ladder-04-typography-dense-column-probe/20260529-121124` with MAE `1.608143`,
+changed16 `0.016101`, and matching dimensions.
+
+Private validation on `lokad-value-based` run `20260529-120913` compared 84/84 pages with zero dimension
+mismatches, deck MAE `5.896815` and changed16 `0.085603`, improving from run `20260529-115914` at deck MAE
+`5.948935` and changed16 `0.085688`. Page 36 moved materially: MAE `15.280707` -> `8.655771` and changed16
+roughly `0.172213` -> `0.127747`. Candidate page-36 text operations rose from `45` to `89`, and the missing
+three-column X clusters are now present. The change is not universally positive on every page: pages 50, 13, 49,
+and 32 worsened by roughly `0.24-0.84` MAE, while page 36 improved by `6.62` MAE. The next long-view target should
+therefore inspect the remaining page-50/page-32 typography or image structure before broadening the column rule
+again; do not turn this into a page-specific compensation.
