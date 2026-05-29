@@ -16981,3 +16981,21 @@ non-slow `pptx-typography` passed with `111` tests, `0` failures, and `2` slow s
 84/84 pages with empty diagnostics and improved deck MAE from `4.669971` to `4.667706`; page 32 improved from
 `9.104729` to `8.914468`. Rebuilt private-safe inspection confirms the affected paragraph no longer emits the
 stray first-column X inside the later column flow.
+
+Follow-up, 2026-05-29: page-39 inspection exposed an over-aggressive strict vertical text-clip pre-cull. The
+candidate had a clipped text frame whose layout model still contained lines, but PDF text emission dropped
+glyphs because `StrictClip` tested only whether the text baseline was inside the clip rectangle. Office exports
+the text under a clipping path; glyph outlines can legitimately intersect the clip even when their baseline is
+outside it. The renderer now keeps glyphs whose font-size band intersects the clip and lets the PDF clip path be
+authoritative. This is a structural Office-alignment fix, not a page-shaped threshold: the visible output
+remains governed by the emitted `W*` rectangle.
+
+Validation: the public regressions around vertical clipping and ellipsis overflow were updated to assert
+outline-intersection behavior, and the new synthetic clipping case fails on baseline-only culling. The non-slow
+`pptx-typography` group passed with `112` tests, `0` failures, and `2` slow skips; `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run `20260529-221935` compared 84/84 pages with
+empty diagnostics and zero dimension mismatches. Against run `20260529-220638`, deck MAE moved from `4.667706`
+to `4.667523`; changed16 stayed effectively neutral (`0.071057` -> `0.071059`) and the worst pages remained
+39, 24, 12, 31, and 32. Follow-up PDF inspection still shows page-39 residuals in text operation grouping,
+Office-style `Tc` text state, and positioning rather than in baseline-only clipping, so the next rendering pass
+should continue from those PDF-structure deltas.

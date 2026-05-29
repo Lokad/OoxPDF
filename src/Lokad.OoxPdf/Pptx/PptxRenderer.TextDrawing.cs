@@ -1204,8 +1204,8 @@ internal sealed partial class PptxRenderer
 
         if (run.StrictClip)
         {
-            return baselineY >= run.ClipY - PptxTextMetricRules.TextStateTolerance &&
-                baselineY <= run.ClipY + run.ClipHeight + PptxTextMetricRules.TextStateTolerance;
+            return baselineY + run.FontSize >= run.ClipY - PptxTextMetricRules.TextStateTolerance &&
+                baselineY - run.FontSize <= run.ClipY + run.ClipHeight + PptxTextMetricRules.TextStateTolerance;
         }
 
         return baselineY + run.FontSize >= run.ClipY &&

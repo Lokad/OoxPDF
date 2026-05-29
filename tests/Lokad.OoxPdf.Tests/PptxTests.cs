@@ -102,6 +102,45 @@ internal static class PptxTests
         TestAssert.True(resolver.ResolveCalls > 0, "PPTX conversion should use the supplied font resolver for text layout and embedding.");
     }
 
+    public static void PptxSyntheticTextClipKeepsGlyphsWhoseBaselineIsOutsideClip()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="0"/><a:ext cx="3657600" cy="152400"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                          <a:noFill/>
+                        </p:spPr>
+                        <p:txBody>
+                          <a:bodyPr vertOverflow="clip" lIns="0" tIns="0" rIns="0" bIns="0"/>
+                          <a:lstStyle/>
+                          <a:p><a:r><a:rPr lang="en-US" sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>clipped cap</a:t></a:r></a:p>
+                        </p:txBody>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = ReadPdfDecodedAscii(output);
+        TestAssert.Contains(" W* n", pdf);
+        TestAssert.True(CountTextMatrices(pdf) > 0, "A vertical text clip should not drop glyphs whose outlines intersect the clip even when the baseline is outside it.");
+    }
+
     public static void PptxChartTextConversionUsesCustomFontResolver()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -7609,7 +7648,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="228600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="ellipsis"/><a:lstStyle/>
                       <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Visible line</a:t></a:r></a:p>
@@ -7635,7 +7674,7 @@ internal static class PptxTests
                 "Expected vertOverflow=\"ellipsis\" to keep text whose baseline remains inside the text rectangle.");
             TestAssert.True(
                 !glyphRunTexts.Contains("Clipped line", StringComparer.Ordinal),
-                "Expected vertOverflow=\"ellipsis\" to use local vertical clipping for text whose baseline falls outside the text rectangle.");
+                "Expected vertOverflow=\"ellipsis\" to drop text whose glyph outline does not intersect the text rectangle.");
             TestAssert.True(
                 glyphRunTexts.Contains("…", StringComparer.Ordinal),
                 "Expected vertOverflow=\"ellipsis\" to render an Office-style ellipsis marker after the last visible line.");
@@ -7644,13 +7683,13 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 432 216 36 re W* n", pdf);
+        TestAssert.Contains("72 450 216 18 re W* n", pdf);
         TestAssert.True(
             diagnostics.All(diagnostic => diagnostic.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"),
             "Expected shape text ellipsis overflow to be handled by the shared text-frame renderer.");
     }
 
-    public static void PptxTextFrameVerticalClipDropsBaselinesOutsideClip()
+    public static void PptxTextFrameVerticalClipKeepsGlyphsThatIntersectClip()
     {
         string input = Path.Combine(
             Directory.GetCurrentDirectory(),
@@ -7670,8 +7709,8 @@ internal static class PptxTests
             glyphRunTexts.Contains("Clip one", StringComparer.Ordinal),
             "Expected first clipped line to remain visible.");
         TestAssert.True(
-            !glyphRunTexts.Contains("Clip two", StringComparer.Ordinal),
-            "Expected vertOverflow=\"clip\" to drop text whose baseline is outside the text rectangle.");
+            glyphRunTexts.Contains("Clip two", StringComparer.Ordinal),
+            "Expected vertOverflow=\"clip\" to keep text whose glyph outline intersects the text rectangle even when the baseline is outside it.");
         TestAssert.True(
             glyphRunTexts.Contains("Flow one", StringComparer.Ordinal),
             "Expected overflow-enabled companion frame to keep its first line.");
