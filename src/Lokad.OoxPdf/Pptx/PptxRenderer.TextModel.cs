@@ -659,13 +659,8 @@ internal sealed partial class PptxRenderer
 
     private static TextInsets ReadPresetTextRectInsets(XElement shape, double width, double height)
     {
-        if (IsTextBoxShape(shape))
-        {
-            return TextInsets.Empty;
-        }
-
-        string? preset = shape
-            .Element(PresentationNamespace + "spPr")
+        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
+        string? preset = shapeProperties
             ?.Element(DrawingNamespace + "prstGeom")
             ?.Attribute("prst")
             ?.Value;
@@ -677,19 +672,24 @@ internal sealed partial class PptxRenderer
                 width * PptxTextMetricRules.EllipseTextRectInsetRatio,
                 0d,
                 0d),
+            "roundRect" when shapeProperties is not null => RoundRectTextRectInsets(shapeProperties, width, height),
             _ => TextInsets.Empty
         };
     }
 
-    private static bool IsTextBoxShape(XElement shape)
+    private static TextInsets RoundRectTextRectInsets(XElement shapeProperties, double width, double height)
     {
-        return string.Equals(
-            (string?)shape
-                .Element(PresentationNamespace + "nvSpPr")
-                ?.Element(PresentationNamespace + "cNvSpPr")
-                ?.Attribute("txBox"),
-            "1",
-            StringComparison.Ordinal);
+        double adjustment = Math.Clamp(
+            ReadPresetGeometryGuide(
+                shapeProperties,
+                presetAdjustmentsOverride: null,
+                "adj",
+                PptxTextMetricRules.RoundRectDefaultAdjustment),
+            0d,
+            50000d) / 100000d;
+        double radius = Math.Min(width, height) * adjustment;
+        double inset = radius * PptxTextMetricRules.RoundRectTextRectRadiusInsetFactor;
+        return new TextInsets(inset, inset, inset, inset);
     }
 
     private static IReadOnlyList<PptxTextParagraphModel> BuildParagraphModels(

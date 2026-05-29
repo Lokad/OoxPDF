@@ -2980,6 +2980,62 @@ internal static class PptxTests
         TestAssert.DoesNotContain("72 522 72 21.6 re W* n", pdf);
     }
 
+    public static void PptxSyntheticRoundRectUsesPresetTextRectangle()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:nvSpPr><p:cNvPr id="2" name="RectTextBox"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="1371600"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                        </p:spPr>
+                        <p:txBody>
+                          <a:bodyPr/>
+                          <a:lstStyle/>
+                          <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>RECT</a:t></a:r></a:p>
+                        </p:txBody>
+                      </p:sp>
+                      <p:sp>
+                        <p:nvSpPr><p:cNvPr id="3" name="RoundRectTextBox"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+                        <p:spPr>
+                          <a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="1828800" cy="1371600"/></a:xfrm>
+                          <a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom>
+                        </p:spPr>
+                        <p:txBody>
+                          <a:bodyPr/>
+                          <a:lstStyle/>
+                          <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>ROUND</a:t></a:r></a:p>
+                        </p:txBody>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        IReadOnlyList<PptxTextFrameModelSnapshot> frames = PptxRenderer.InspectTextFrameModels(document, package, 0);
+
+        PptxTextFrameModelSnapshot rect = frames.Single(frame => frame.Paragraphs[0].Runs[0].Text == "RECT");
+        PptxTextFrameModelSnapshot round = frames.Single(frame => frame.Paragraphs[0].Runs[0].Text == "ROUND");
+        double roundInset = (108d * 16667d / 100000d) * (1d - Math.Sqrt(0.5d));
+        TestAssert.Equal(79.2d, rect.TextX);
+        TestAssert.Equal(Math.Round(288d + 7.2d + roundInset, 6), Math.Round(round.TextX, 6));
+        TestAssert.Equal(Math.Round(144d - 14.4d - (2d * roundInset), 6), Math.Round(round.TextWidth, 6));
+    }
+
     public static void PptxSyntheticTextBoxAppliesOfficePdfFontSizeGridOnlyAtEmission()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

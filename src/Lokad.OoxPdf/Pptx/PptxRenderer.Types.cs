@@ -1037,6 +1037,8 @@ internal sealed partial class PptxRenderer
         public const double ShapeAutoFitWrapToleranceWidthScale = 0.011d;
         public const double FallbackAdvanceWidthScale = 0.42d;
         public const double EllipseTextRectInsetRatio = 0.1464466094067262d;
+        public const double RoundRectDefaultAdjustment = 16667d;
+        public const double RoundRectTextRectRadiusInsetFactor = 0.2928932188134525d;
         public const int ShapeAutoFitSearchIterations = 10;
 
         public static double ClampNonNegative(double value) => Math.Max(0d, value);

@@ -16739,3 +16739,26 @@ three-cubic path. The remaining gap is the known connector/custom-path flattenin
 filled outline is denser (`line` count around `393` on this private page), so the long-term connector item
 should replace fixed sample-count flattening with an Office-like path flattening policy rather than adding
 page-specific sample constants.
+
+Follow-up, 2026-05-29: page-82/page-83 inspection exposed a high-impact text-placement mismatch in the
+rounded-card family. Private-safe PDF text clusters showed candidate card text starting around `306.5` and
+`465.8` while Office placed the corresponding columns around `312.4` and `471.8`; the shape XML used
+`roundRect` preset geometry, `txBox="1"`, default bodyPr insets, and `spAutoFit`. A public Office probe with
+matched rectangle and rounded-rectangle text boxes confirmed that Office applies the preset geometry's
+inscribed text rectangle even when `cNvSpPr@txBox="1"` is present: the rectangle stayed at the generic
+`7.2pt` body inset, while the rounded rectangle gained the geometry-derived corner inset. The renderer now
+keeps the generic body inset unchanged and adds the `roundRect` preset text rectangle as
+`radius * (1 - sqrt(1/2))`, where `radius = min(width,height) * adj / 100000` and `adj` defaults to the
+OOXML preset value `16667`.
+
+Validation: the new public regression `PptxSyntheticRoundRectUsesPresetTextRectangle` locks the `txBox="1"`
+rounded-rectangle case without changing plain rectangular text boxes. The non-slow `pptx-typography` group
+passed with `106` tests, `0` failures, and `2` slow skips; `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+-v minimal` passed with `0` warnings and `0` errors. Public PDF inspection of the modified Office probe showed
+the rounded-rectangle X delta drop from about `5.26pt` to `0.06pt` while the rectangle stayed within `0.01pt`.
+Private validation on `lokad-value-based` run `20260529-140154` compared 84/84 pages with empty diagnostics.
+Against run `20260529-134420`, deck MAE improved from `5.518052` to `5.306897`, and changed16 from `0.079553`
+to `0.077473`. The direct card-heavy pages moved sharply: page 82 `11.20` -> `5.43`, page 83 `11.45` ->
+`5.36`; related pages 61 and 81 also improved (`10.14` -> `9.60` and `10.93` -> `10.44`). The remaining top
+pages are now page 53, 32, 50, 81, 39, 24, 13, and 49; continue with PDF-structural alignment there, especially
+the remaining page-53 connector flattening and the picture/text families on pages 32/50.
