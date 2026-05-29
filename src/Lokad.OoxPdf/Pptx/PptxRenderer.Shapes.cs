@@ -11,6 +11,7 @@ internal sealed partial class PptxRenderer
 {
     private const int OfficeArrowTailConnectorSamplesPerSegment = 61;
     private const int OfficeTriangleTailConnectorSamplesPerSegment = 54;
+    private const int OfficeStealthTailConnectorSamplesPerSegment = 66;
     private const double OfficeArrowheadLengthFactor = 4.423333d;
     private const double OfficeTriangleTailMinimumLength = 5d;
     private const double OfficeTriangleTailLengthFactor = 3.5d;
@@ -2335,9 +2336,12 @@ internal sealed partial class PptxRenderer
         LineEndStyle tailEnd)
     {
         LineEndKind tailKind = tailEnd.Kind;
-        int samplesPerSegment = tailKind == LineEndKind.Arrow
-            ? OfficeArrowTailConnectorSamplesPerSegment
-            : OfficeTriangleTailConnectorSamplesPerSegment;
+        int samplesPerSegment = tailKind switch
+        {
+            LineEndKind.Arrow => OfficeArrowTailConnectorSamplesPerSegment,
+            LineEndKind.Stealth => OfficeStealthTailConnectorSamplesPerSegment,
+            _ => OfficeTriangleTailConnectorSamplesPerSegment
+        };
         List<CurveSample> samples = SampleBezierSegments(segments, samplesPerSegment);
         if (samples.Count < 2)
         {

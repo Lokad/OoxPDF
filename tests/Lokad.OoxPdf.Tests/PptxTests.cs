@@ -1983,7 +1983,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.502 0 rg", pdf);
         TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
-        TestAssert.True(Regex.Matches(pdf, " l\r\n").Count > 50, "Expected sampled Office-like filled outline rather than a single stroked cubic path.");
+        TestAssert.True(Regex.Matches(pdf, " l\r\n").Count >= 120, "Expected Office-like dense stealth-tail connector body sampling.");
         TestAssert.DoesNotContain(" c\r\nS", pdf);
     }
 

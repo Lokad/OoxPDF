@@ -16796,3 +16796,23 @@ run `20260529-142101`, deck MAE improved from `4.901325` to `4.886412`, and chan
 `0.43` MAE, with smaller wins on pages 23, 28, and 67 and no meaningful page-level regression. The remaining
 top pages are now page 53, 81, 39, 24, and 32; continue with page-53 connector/text structure and page-81/card
 residuals before broader chart or ownership cleanup.
+
+Follow-up, 2026-05-29: page-53 PDF graphics inspection showed that the previous custom-geometry line-end fix
+had the right object kind but still used the triangle-tail curve sampling density for `tailEnd type="stealth"`.
+Office's corresponding filled path on this private page uses two closed subpaths and a much denser flattened
+curved body: Office reported about `move=2`, `line=393`, `close=2`, while the candidate was still at
+`move=2`, `line=321`, `close=2`. This is generic connector evidence, not private text/content evidence. The
+renderer now keeps arrow, triangle, and stealth connector-tail sample densities distinct instead of sharing
+triangle density for stealth tails.
+
+Validation: the public `PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline` regression now
+requires dense stealth-tail body sampling, and the non-slow `pptx-shapes` group passed with `23` tests, `0`
+failures, and `0` skips. Private validation on `lokad-value-based` run `20260529-191329` compared 84/84 pages
+with empty diagnostics. Against run `20260529-190614`, deck MAE was effectively neutral (`4.886412` ->
+`4.886410`) and changed16 stayed `0.073162`; page 53 improved only in the fourth decimal place (`11.371471` ->
+`11.371393`). The structural PDF target improved materially: candidate page-53 inspection now reports the
+target filled connector outline at `move=2`, `line=391`, `close=2`, much closer to Office's `move=2`,
+`line=393`, `close=2`. The remaining page-53 error should therefore be investigated through text/layout,
+image/color structure, or residual geometry bounds rather than connector flattening density alone. Long-term,
+fixed sample counts remain a temporary approximation; the architectural target is an Office-like path
+flattening policy derived from public fixtures across connector presets and custom paths.
