@@ -7,7 +7,9 @@ param(
 
     [switch] $ShowBounds,
 
-    [switch] $ByRegion
+    [switch] $ByRegion,
+
+    [string[]] $Kind = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,6 +55,24 @@ function Normalize-CaseIds([string[]] $caseIds) {
         }
 
         foreach ($part in ($caseId -split '[,;]')) {
+            $trimmed = $part.Trim()
+            if (-not [string]::IsNullOrWhiteSpace($trimmed)) {
+                $normalized.Add($trimmed)
+            }
+        }
+    }
+
+    return ,$normalized.ToArray()
+}
+
+function Normalize-Values([string[]] $values) {
+    $normalized = New-Object System.Collections.Generic.List[string]
+    foreach ($value in $values) {
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            continue
+        }
+
+        foreach ($part in ($value -split '[,;]')) {
             $trimmed = $part.Trim()
             if (-not [string]::IsNullOrWhiteSpace($trimmed)) {
                 $normalized.Add($trimmed)
@@ -243,6 +263,7 @@ $caseFiles = Get-ChildItem "visual-cases/cases" -Directory |
     ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -File -Filter "case.json" }
 
 $normalizedCases = Normalize-CaseIds $Case
+$normalizedKinds = Normalize-Values $Kind
 if ($normalizedCases.Count -gt 0) {
     $selected = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($caseId in $normalizedCases) {
@@ -288,6 +309,17 @@ foreach ($caseFile in $caseFiles) {
         }
         else {
             @($referenceItems.Kind + $candidateItems.Kind | Where-Object { $_ } | Sort-Object -Unique)
+        }
+        if ($normalizedKinds.Count -gt 0) {
+            $selectedKinds = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($kindValue in $normalizedKinds) {
+                [void]$selectedKinds.Add($kindValue)
+            }
+
+            $keys = @($keys | Where-Object {
+                $keyKind = if ($ByRegion) { (Parse-SummaryKey $_).Kind } else { [string]$_ }
+                $selectedKinds.Contains($keyKind)
+            })
         }
 
         $rows = foreach ($key in $keys) {

@@ -15723,6 +15723,12 @@ No rendering constants were changed from this evidence. The long-term fix remain
 plot/legend negotiation from Office PDF structure, but the investigation tool now makes the direction of the
 remaining right-legend/plot-area error explicit instead of requiring manual bounds subtraction.
 
+Follow-up, 2026-05-29: the same structure-delta summary tool now accepts `-Kind` filters so chart layout probes
+can focus on the structural surfaces under investigation. For the area right-legend gap, filtering to
+`AxisPairPlotBoxCandidate`, `PlotAreaClipBoxCandidate`, `LegendSwatchCandidate`, `LegendText`, and
+`ValueAxisTickLabel` keeps the evidence compact enough to compare across public chart families without manually
+post-filtering PowerShell output.
+
 Follow-up, 2026-05-29: XML-only chart legend layout now reuses the scene-owned legend parser instead of
 reparsing `c:legend` locally in the renderer. `PptxSceneBuilder.ReadChartLegend` is internal, and
 `ReadChartLegendLayout` converts the typed `PptxSceneChartLegend` record into the renderer layout while
