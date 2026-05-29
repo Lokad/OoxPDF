@@ -16716,3 +16716,26 @@ candidate no longer emits the column-width text clips; the remaining page-53 gap
 layout/emission ordering or shape/connector geometry, not text clipping. A search for the reported dangling
 `) * 0.45d` pattern found no remaining occurrence; the current `0.45d` hits are already named constants or
 chart metric values.
+
+Follow-up, 2026-05-29: page-53 graphics inspection then exposed a second structural mismatch, this time in
+custom geometry line-end emission rather than text clipping. The private-safe OOXML evidence is a no-fill
+custom geometry shape with one open path (`moveTo` plus three `cubicBezTo` commands), a solid green line, and
+`tailEnd type="stealth"`. Office's PDF represents that object as one filled outline with two closed subpaths
+for the widened curved body and stealth marker, while the candidate still stroked the cubic centerline. The
+renderer now resolves line-end styles before custom-geometry rendering, converts simple open custom paths
+(`lnTo`, `quadBezTo`, and `cubicBezTo`) into Bezier segments, and routes solid undashed default-cap paths with
+no head marker and triangle/arrow/stealth tails through the same Office-style filled connector path builder
+used by curved connector presets. The guard uses effective fill: path-level fill defaults do not block the
+line-end outline when the shape itself has `noFill`.
+
+Validation: the public regression `PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline` now locks
+the no-fill/default-path-fill custom cubic case, and the non-slow `pptx-shapes` group passed with `23` tests,
+`0` failures, and `0` skips. Private validation on `lokad-value-based` run `20260529-134420` compared 84/84
+pages with empty diagnostics. Against run `20260529-132834`, deck MAE improved slightly from `5.518224` to
+`5.518052`, changed16 from `0.079557` to `0.079553`, page 53 from `11.54` to `11.53`, and page 59 from `6.45`
+to `6.44`, with no page-level regressions. Candidate page-53 PDF inspection now shows the target object as a
+filled two-subpath outline (`f`, `move=2`, `line=321`, `curve=0`, `close=2`) instead of the prior stroked
+three-cubic path. The remaining gap is the known connector/custom-path flattening model: Office's corresponding
+filled outline is denser (`line` count around `393` on this private page), so the long-term connector item
+should replace fixed sample-count flattening with an Office-like path flattening policy rather than adding
+page-specific sample constants.

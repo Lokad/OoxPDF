@@ -81,6 +81,7 @@ internal static class TestCatalog
         }
 
         if (name.Contains("Shape", StringComparison.Ordinal) ||
+            name.Contains("Geometry", StringComparison.Ordinal) ||
             name.Contains("Connector", StringComparison.Ordinal) ||
             name.Contains("Arrow", StringComparison.Ordinal))
         {
