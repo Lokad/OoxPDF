@@ -104,6 +104,7 @@ internal sealed partial class PptxRenderer
         if (hasTransform)
         {
             graphics.SaveState();
+            ClipSlideBoundsEvenOdd(document, graphics);
             ApplyShapeTransform(graphics, x, y, width, height, transformedBounds);
         }
 

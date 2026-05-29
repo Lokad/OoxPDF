@@ -16571,3 +16571,33 @@ three-column X clusters are now present. The change is not universally positive 
 and 32 worsened by roughly `0.24-0.84` MAE, while page 36 improved by `6.62` MAE. The next long-view target should
 therefore inspect the remaining page-50/page-32 typography or image structure before broadening the column rule
 again; do not turn this into a page-specific compensation.
+
+2026-05-29 transformed-picture slide-clip alignment:
+
+The page-50 grouped-picture investigation showed that Office repeatedly re-establishes slide-sized clips around
+picture/group structures, including transformed pictures. Untransformed pictures already intersect their frame
+clip with the slide bounds, but the transformed picture path applied the local transform before any slide clip,
+leaving one structural mismatch in the PDF stream. The renderer now emits the slide clip before applying a
+transformed raster-picture matrix, then keeps the local picture-frame clip inside that transform. The public
+regression `PptxSyntheticTransformedPngPictureUsesSlideClip` checks the slide clip, transformed local frame clip,
+and image draw operation without depending on private content.
+
+Validation: focused `PptxSyntheticTransformedPngPictureUsesSlideClip` passed; the existing synthetic PNG picture
+tests passed; `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private validation on
+`lokad-value-based` run `20260529-122212` compared 84/84 pages with no diagnostics and remained metric-neutral
+against run `20260529-120913`: deck MAE `5.896815`, changed16 `0.085603`. This is useful structural alignment,
+but it is not the rendering-impact fix for the remaining high-error pages.
+
+Private-safe page-50 follow-up evidence:
+
+The top remaining private pages still share a grouped-picture and text-heavy layout pattern, but the latest
+page-50 evidence points more strongly at text than at picture clipping. The relevant private-safe inventory for
+pages 13, 32, 49, and 50 has no charts, tables, effects, or transparency; it is dominated by grouped pictures,
+connectors, picture fills, and ordinary text bodies. Page-50 text inspection after the column-flow fix has
+`7` frames, `103` layout lines, and `143` emitted glyph runs; the large three-column frame now has the expected
+three X clusters. Office reference PDF text inspection still has `161` text operations versus candidate `143`.
+`ComparePptxTextEmission.ps1` classifies `25` rows as OK, `118` as position/font-size deltas, and `18` as
+missing candidate operations. The secondary font-size branches include `secondary-0.024`, `secondary--3.96`,
+`secondary-3.96`, and related offsets, but the existing public quantization probes already ruled out a simple
+Y-band or local-frame-size trigger. The next implementation step should therefore derive a public probe for
+Office text emission/layout structure, not add a private-page-specific font-size or coordinate rule.
