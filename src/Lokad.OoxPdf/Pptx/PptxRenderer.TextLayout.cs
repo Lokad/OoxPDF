@@ -588,7 +588,7 @@ internal sealed partial class PptxRenderer
         double bottom = lines.Min(line => line.Box.TopY - line.Box.Advance);
         double occupiedHeight = Math.Max(0d, top - bottom);
         double slack = frame.TextHeight - occupiedHeight;
-        if (slack <= PptxTextMetricRules.CoordinateTolerance)
+        if (Math.Abs(slack) <= PptxTextMetricRules.CoordinateTolerance)
         {
             return false;
         }

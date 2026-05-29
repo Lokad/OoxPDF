@@ -17217,3 +17217,21 @@ private run `20260530-004458`: deck MAE worsened from `3.930537` to `4.091426`; 
 about `0.497` MAE; pages 50, 15, and 32 regressed by about `2.0-2.4` MAE. Do not use `compatLnSpc` as the
 implicit-`Tc` discriminator. The remaining text-state gap needs a narrower Office PDF profile, likely involving
 run grouping, fit/scale behavior, or exact font-face/style synthesis rather than line-spacing compatibility.
+
+Accepted follow-up, 2026-05-30: middle/bottom actual-line-box anchoring now preserves the sign of actual
+layout slack instead of clamping overflowing wrapped text back to the frame top. This is a structural Office
+rule, not a private-coordinate adjustment: public probe `offslide-inset-anchor-overflow` has an off-slide,
+middle-anchored, overflowing text body where Office's first baseline is `723.34pt`; the old candidate emitted
+about `699.93pt`, while the signed-slack candidate emits `723.30pt` with matching `26/26` text operations.
+The same public probe with three intentionally empty paragraphs still matches Office within about `0.04pt`
+and emits matching `23/23` text operations, rejecting an empty-paragraph exclusion. The locked regression is
+`PptxSyntheticMiddleAnchorUsesSignedActualSlackWhenWrappedTextOverflows`. Validation: focused non-slow
+`pptx-typography` passed (`119` passed, `0` failed, `2` skipped); `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run `20260530-012954` compared all `84/84`
+pages with empty diagnostics and improved deck MAE `3.787764 -> 3.736566`, changed16 `0.062845 -> 0.061829`.
+The biggest private gain was page 23 (`7.27 -> 4.28` MAE), with additional gains on pages 24, 39, 56, 57, 58,
+60, 40, 38, 4, and 3. Pages 36 and 37 worsened in the raster report, but follow-up PDF inspection shows they
+are not counterexamples to signed slack: page 36's affected right-edge text baseline moved closer to Office
+after signed slack, while its residual still shows missing Office text-state spacing/font-size variants; page
+37's visible mismatch is a wrapping/width failure where Office emits two title text operations and the
+candidate emits three. Continue with text-state/font metric alignment rather than undoing signed anchoring.

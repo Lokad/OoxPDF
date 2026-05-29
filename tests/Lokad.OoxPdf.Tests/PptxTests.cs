@@ -4343,7 +4343,7 @@ internal static class PptxTests
             $"Expected terminal paragraph spacing-after to be excluded from middle-anchor height; expected {expectedOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt, got {frame.VerticalOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
     }
 
-    public static void PptxSyntheticMiddleAnchorDoesNotUseEstimatedSlackWhenWrappedTextOverflows()
+    public static void PptxSyntheticMiddleAnchorUsesSignedActualSlackWhenWrappedTextOverflows()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -4376,8 +4376,8 @@ internal static class PptxTests
             .ToArray();
 
         TestAssert.True(lines.Length > 1, "Expected narrow text to wrap before evaluating vertical anchoring.");
-        TestAssert.True(Math.Abs(lines[0].TopY - 468d) < 0.01d,
-            $"Expected overflowing middle-anchored text to start at the frame top after actual layout, got top Y {lines[0].TopY.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+        TestAssert.True(Math.Abs(lines[0].TopY - 496.8d) < 0.01d,
+            $"Expected overflowing middle-anchored text to use signed actual-layout slack instead of clamping to the frame top, got top Y {lines[0].TopY.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
     }
 
     public static void PptxSyntheticTextWrapKeepsBreakSpaceAtLineEnd()
