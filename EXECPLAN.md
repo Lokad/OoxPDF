@@ -15712,6 +15712,17 @@ Validation checkpoint, 2026-05-29: after the scene-owned chart text cascade and 
 inspection changes, the full non-slow console suite passed with `418` tests, `0` failures, and `7` skips via
 `dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`.
 
+Follow-up, 2026-05-29: chart structure delta summaries now report signed plot/text bounds deltas in addition to
+the maximum absolute bounds delta. This makes Office-PDF layout investigations directional: the current public
+`pptx-ladder-11-chart-area-2series-port` run `20260529-035344` still fails the MAE gate at `5.74166931905864`
+versus limit `3.8`, and the signed structural summary shows the candidate plot/axis region shifted inward
+(`DeltaMinX` about `+12.5 pt`, `DeltaMaxX` about `-45 pt`) while right-legend swatches/text sit about `30-32 pt`
+left of Office.
+
+No rendering constants were changed from this evidence. The long-term fix remains to derive the joint
+plot/legend negotiation from Office PDF structure, but the investigation tool now makes the direction of the
+remaining right-legend/plot-area error explicit instead of requiring manual bounds subtraction.
+
 Follow-up, 2026-05-29: XML-only chart legend layout now reuses the scene-owned legend parser instead of
 reparsing `c:legend` locally in the renderer. `PptxSceneBuilder.ReadChartLegend` is internal, and
 `ReadChartLegendLayout` converts the typed `PptxSceneChartLegend` record into the renderer layout while

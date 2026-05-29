@@ -122,6 +122,14 @@ function BoundsDelta($reference, $candidate) {
         Select-Object -ExpandProperty Maximum
 }
 
+function SignedDelta($reference, $candidate, [string]$property) {
+    if ($null -eq $reference -or $null -eq $candidate) {
+        return $null
+    }
+
+    return [Math]::Round([double]$candidate.$property - [double]$reference.$property, 2)
+}
+
 function Format-Bounds($item) {
     if ($null -eq $item) {
         return ""
@@ -220,6 +228,10 @@ function Summarize-Kind($kind, $regionIndex, $referenceItems, $candidateItems, $
         ReferenceCount = $reference.Count
         CandidateCount = $candidate.Count
         MaxBoundsDelta = if ($null -eq $maxDelta) { $null } else { [Math]::Round($maxDelta, 2) }
+        DeltaMinX = SignedDelta $maxReferenceItem $maxCandidateItem "MinX"
+        DeltaMinY = SignedDelta $maxReferenceItem $maxCandidateItem "MinY"
+        DeltaMaxX = SignedDelta $maxReferenceItem $maxCandidateItem "MaxX"
+        DeltaMaxY = SignedDelta $maxReferenceItem $maxCandidateItem "MaxY"
         ReferenceBounds = $referenceBounds
         CandidateBounds = $candidateBounds
     }
@@ -292,12 +304,12 @@ foreach ($caseFile in $caseFiles) {
             if ($ByRegion) {
                 $rows |
                     Sort-Object Set, Kind, RegionIndex |
-                    Format-List Set, Kind, RegionIndex, ReferenceCount, CandidateCount, MaxBoundsDelta, ReferenceBounds, CandidateBounds
+                    Format-List Set, Kind, RegionIndex, ReferenceCount, CandidateCount, MaxBoundsDelta, DeltaMinX, DeltaMinY, DeltaMaxX, DeltaMaxY, ReferenceBounds, CandidateBounds
             }
             else {
                 $rows |
                     Sort-Object Set, Kind |
-                    Format-List Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta, ReferenceBounds, CandidateBounds
+                    Format-List Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta, DeltaMinX, DeltaMinY, DeltaMaxX, DeltaMaxY, ReferenceBounds, CandidateBounds
             }
         }
         else {
