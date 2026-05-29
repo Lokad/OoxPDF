@@ -1773,10 +1773,7 @@ internal sealed partial class PptxRenderer
 
     private static int? ReadChartCachePointIndex(XElement point)
     {
-        string? value = (string?)point.Attribute("idx");
-        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-            ? parsed
-            : null;
+        return PptxSceneBuilder.ReadChartPointIndexAttribute(point, requireNonNegative: true).Value;
     }
 
     private static void HydrateChartReferenceCaches(ChartWorkbookData workbook, XDocument chartXml)
@@ -7418,8 +7415,7 @@ internal sealed partial class PptxRenderer
             int pointCount = series
                 .Elements(ChartNamespace + "val")
                 .Descendants(ChartNamespace + "pt")
-                .Select(point => (string?)point.Attribute("idx"))
-                .Select(value => int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ? index : -1)
+                .Select(point => PptxSceneBuilder.ReadChartPointIndexAttribute(point, requireNonNegative: true).Value ?? -1)
                 .Where(index => index >= 0)
                 .DefaultIfEmpty(-1)
                 .Max() + 1;

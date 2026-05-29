@@ -15897,3 +15897,15 @@ literal visible title/series-name text before layout and auto-title decisions. T
 not string extraction; it is the shared chart text-frame cascade, baseline, and font fallback model already
 tracked above. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart cache-point `idx` attribute parsing now has a shared scene-builder helper.
+`PptxSceneBuilder.ReadChartPointIndexAttribute` returns the raw token plus an optional parsed integer, and scene
+numeric/string cache points, renderer indexed vectors, and polar series explosion expansion all use it instead
+of open-coded `int.TryParse` over `c:pt/@idx`.
+
+The validity policy remains explicit at the caller boundary. Scene cache-point provenance keeps the previous
+behavior of accepting any parsed integer and marking malformed/missing indices as ordinal fallbacks, while
+renderer geometry/data expansion passes `requireNonNegative: true` to preserve the existing rejection of
+negative point indices. This removes duplicate lexing without changing sparse-point or explosion placement
+policy. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and
+`0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

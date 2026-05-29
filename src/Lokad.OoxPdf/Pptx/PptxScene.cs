@@ -2770,6 +2770,15 @@ internal sealed class PptxSceneBuilder
         return (string?)element?.Attribute("val");
     }
 
+    internal static (int? Value, string RawValue) ReadChartPointIndexAttribute(XElement? point, bool requireNonNegative = false)
+    {
+        string value = (string?)point?.Attribute("idx") ?? string.Empty;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
+            (!requireNonNegative || parsed >= 0)
+            ? (parsed, value)
+            : (null, value);
+    }
+
     private static double? ReadChartElementDouble(XElement element, string childName)
     {
         (double? parsed, _) = ReadChartElementDoubleWithValue(element, childName);
@@ -3198,17 +3207,14 @@ internal sealed class PptxSceneBuilder
             .Elements(ChartNamespace + elementName)
             .Descendants(ChartNamespace + "pt"))
         {
-            string indexValue = (string?)point.Attribute("idx") ?? string.Empty;
-            bool hasParsedIndex = int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex);
-            int index = hasParsedIndex
-                ? parsedIndex
-                : ordinal;
+            (int? parsedIndex, string indexValue) = ReadChartPointIndexAttribute(point);
+            int index = parsedIndex ?? ordinal;
             XElement? valueElement = point.Element(ChartNamespace + "v");
             string text = (string?)valueElement ?? string.Empty;
             double? value = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                 ? parsed
                 : null;
-            points.Add(new PptxSceneChartNumberPoint(index, indexValue, hasParsedIndex, value, text, valueElement is not null));
+            points.Add(new PptxSceneChartNumberPoint(index, indexValue, parsedIndex is not null, value, text, valueElement is not null));
             ordinal++;
         }
 
@@ -3295,13 +3301,10 @@ internal sealed class PptxSceneBuilder
         int ordinal = 0;
         foreach (XElement point in sourcePoints)
         {
-            string indexValue = (string?)point.Attribute("idx") ?? string.Empty;
-            bool hasParsedIndex = int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex);
-            int index = hasParsedIndex
-                ? parsedIndex
-                : ordinal;
+            (int? parsedIndex, string indexValue) = ReadChartPointIndexAttribute(point);
+            int index = parsedIndex ?? ordinal;
             XElement? valueElement = point.Element(ChartNamespace + "v");
-            points.Add(new PptxSceneChartStringPoint(index, indexValue, hasParsedIndex, valueElement?.Value ?? string.Empty, valueElement is not null));
+            points.Add(new PptxSceneChartStringPoint(index, indexValue, parsedIndex is not null, valueElement?.Value ?? string.Empty, valueElement is not null));
             ordinal++;
         }
 
