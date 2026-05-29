@@ -16816,3 +16816,24 @@ target filled connector outline at `move=2`, `line=391`, `close=2`, much closer 
 image/color structure, or residual geometry bounds rather than connector flattening density alone. Long-term,
 fixed sample counts remain a temporary approximation; the architectural target is an Office-like path
 flattening policy derived from public fixtures across connector presets and custom paths.
+
+Follow-up, 2026-05-29: page-53 text-operation comparison then exposed a centered `spAutoFit` wrap mismatch,
+not another connector-density issue. The private-safe evidence was structural: Office and candidate text
+operation counts differed by one, and the mismatch localized to a centered 16pt shape-autofit paragraph whose
+first line should wrap before a small right-edge overflow. The old candidate accepted the nearly fitting word
+under the broad shape-autofit wrap tolerance, producing a `33/30` line split where Office used `30/33`. A broad
+strict shape-autofit rule was rejected because it broke the public left/default `spAutoFit` headline behavior;
+the retained rule is scoped to centered shape-autofit paragraphs, including the final-short-word tolerance
+branch.
+
+Validation: the public regression `PptxSyntheticCenteredShapeAutoFitWrapsBeforeRightOverflow` fails on the old
+centered shape-autofit tolerance (`33/30` split with visible right overflow) and passes with the scoped rule.
+The non-slow `pptx-typography` group passed with `108` tests, `0` failures, and `2` slow skips; `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors. Private validation on
+`lokad-value-based` run `20260529-193232` compared 84/84 pages with empty diagnostics. Against run
+`20260529-191329`, deck MAE improved from `4.886410` to `4.882291`, changed16 from `0.073162` to `0.073131`,
+and page 53 improved from `11.371393` to `11.023339`. Smaller movements were mixed but bounded: pages 4, 28,
+67 improved, while pages 19, 20, and 54 regressed modestly. Text inspection of the target page now matches
+Office's operation count and line split for that centered shape-autofit frame, so the remaining page-53 work
+should move to residual text-position deltas, picture/color structure, or non-text geometry rather than another
+wrap-tolerance sweep.

@@ -1075,14 +1075,20 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    double wrapTolerance = HasShapeAutoFit(frame.BodyProperties)
+                    bool usesCenteredShapeAutoFit = HasShapeAutoFit(frame.BodyProperties) &&
+                        paragraphStyle.Alignment == TextAlignment.Center;
+                    double wrapTolerance = usesCenteredShapeAutoFit
+                        ? PptxTextMetricRules.CoordinateTolerance
+                        : HasShapeAutoFit(frame.BodyProperties)
                         ? PptxTextMetricRules.ShapeAutoFitWrapTolerance(fragmentFontSize, effectiveTextWidth)
                         : !HasNoAutoFit(frame.BodyProperties) ||
                         IsWordJustifiedAlignment(paragraphStyle.Alignment) ||
                         paragraphStyle.Alignment == TextAlignment.Distributed
                         ? PptxTextMetricRules.CoordinateTolerance
                         : PptxTextMetricRules.CoordinateTolerance;
-                    if (isFinalShortWordSegment && HasShapeAutoFit(frame.BodyProperties))
+                    if (isFinalShortWordSegment &&
+                        HasShapeAutoFit(frame.BodyProperties) &&
+                        !usesCenteredShapeAutoFit)
                     {
                         wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize, effectiveTextWidth);
                     }

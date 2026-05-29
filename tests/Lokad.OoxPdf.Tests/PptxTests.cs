@@ -4015,6 +4015,56 @@ internal static class PptxTests
         TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 24d) < 0.01d, "Expected manual line break baselines to step by the absolute line spacing.");
     }
 
+    public static void PptxSyntheticCenteredShapeAutoFitWrapsBeforeRightOverflow()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2984500" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"><a:spAutoFit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1600"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Forecasting models align compact labels with structural intent.</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFlowFrameSnapshot flowFrame = PptxRenderer.InspectTextFlow(document, package, 0).Frames.Single();
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .Single()
+            .Paragraphs
+            .Single()
+            .Lines
+            .ToArray();
+
+        TestAssert.True(lines.Length >= 2, $"Expected wrapped centered shape-autofit text, got {lines.Length} line.");
+        double textRight = flowFrame.TextX + flowFrame.TextWidth;
+        int[] lineLengths = lines.Select(line => line.Spans.Sum(span => span.Text.Length)).ToArray();
+        TestAssert.True(lineLengths[0] < lineLengths[1],
+            $"Centered shape-autofit wrapping should break before the almost-fitting word; got line lengths {string.Join(",", lineLengths)} with textRight={textRight.ToString("0.###", CultureInfo.InvariantCulture)}, ends={string.Join(",", lines.Select(line => line.EndX.ToString("0.###", CultureInfo.InvariantCulture)))}.");
+        TestAssert.True(lines[0].StartX > flowFrame.TextX + 5d,
+            "Expected the first centered shape-autofit line to be re-centered after wrapping instead of filling the box through tolerated overflow.");
+    }
+
     public static void PptxSyntheticTrailingBreakUsesEndParagraphFontSize()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
