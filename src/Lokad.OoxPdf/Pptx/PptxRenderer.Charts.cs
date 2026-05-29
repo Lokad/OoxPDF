@@ -1755,20 +1755,12 @@ internal sealed partial class PptxRenderer
             .ToArray();
         return new ChartIndexedNumberVector(
             points,
-            ReadChartPointCount(cache) ?? InferPointCount(points),
+            PptxSceneBuilder.ReadChartCachePointCount(cache).Value ?? InferPointCount(points),
             source.Formula,
             (string?)cache.Element(ChartNamespace + "formatCode"),
             source,
             ReadWorkbookNumberPoints(workbook, source),
             plotVisibleOnly);
-    }
-
-    private static int? ReadChartPointCount(XElement cache)
-    {
-        string value = PptxSceneBuilder.ReadChartValueAttribute(cache.Element(ChartNamespace + "ptCount"));
-        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-            ? parsed
-            : null;
     }
 
     private static int? ReadChartCachePointIndex(XElement point)
@@ -4973,7 +4965,7 @@ internal sealed partial class PptxRenderer
             : [];
         return new ChartIndexedTextVector(
             points,
-            ReadChartPointCount(cache) ?? InferPointCount(points),
+            PptxSceneBuilder.ReadChartCachePointCount(cache).Value ?? InferPointCount(points),
             levels,
             source.Formula,
             source,

@@ -15909,3 +15909,14 @@ renderer geometry/data expansion passes `requireNonNegative: true` to preserve t
 negative point indices. This removes duplicate lexing without changing sparse-point or explosion placement
 policy. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and
 `0` errors; focused non-slow `pptx-charts` passed with `141` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-29: chart cache `ptCount` parsing now has a shared scene-builder helper.
+`PptxSceneBuilder.ReadChartCachePointCount` reads the raw `c:ptCount/@val` token and applies the existing
+nonnegative integer parse rule for both scene series point-count preservation and renderer XML fallback vectors.
+The renderer-local `ReadChartPointCount` wrapper was removed.
+
+This remains a token-ownership change only. Renderer fallback still infers a point count from sparse cached
+points when `ptCount` is missing or invalid, and workbook/cache sidecar precedence stays in the renderer until
+chart data hydration has a structural model with Office-PDF-backed behavior. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
+`pptx-charts` passed with `141` tests, `0` failures, and `0` skips.

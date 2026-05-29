@@ -2807,6 +2807,14 @@ internal sealed class PptxSceneBuilder
             : (null, value);
     }
 
+    internal static (int? Value, string RawValue) ReadChartCachePointCount(XElement? cache)
+    {
+        string value = ReadChartValueAttribute(cache?.Element(ChartNamespace + "ptCount"));
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
+            ? (parsed, value)
+            : (null, value);
+    }
+
     internal static (bool? Value, string RawValue) ReadChartPlotVaryColors(XElement plot)
     {
         XElement? varyColors = plot.Element(ChartNamespace + "varyColors");
@@ -3238,10 +3246,7 @@ internal sealed class PptxSceneBuilder
                  child.Name.LocalName == "strLit" ||
                  child.Name.LocalName == "strCache" ||
                  child.Name.LocalName == "multiLvlStrCache"));
-        string value = ReadChartElementValue(cache, "ptCount");
-        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-            ? (parsed, value)
-            : (null, value);
+        return ReadChartCachePointCount(cache);
     }
 
     private static string? ReadChartSeriesNumberFormatCode(XElement series, string elementName)
