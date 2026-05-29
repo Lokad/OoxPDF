@@ -577,6 +577,11 @@ foreach ($pair in $pairs) {
             CandFrameShapeHeight = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameShapeHeight" }
             CandFrameInsetTop = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameInsetTop" }
             CandFrameInsetBottom = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameInsetBottom" }
+            CandFrameWrapMode = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "FrameWrapMode" }
+            CandFrameVerticalOverflowMode = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "FrameVerticalOverflowMode" }
+            CandFrameVerticalOverflowValue = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "FrameVerticalOverflowValue" }
+            CandFrameVerticalOverflowSource = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "FrameVerticalOverflowSource" }
+            CandFrameAutofitMode = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "FrameAutofitMode" }
             CandFrameTextWidth = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.FrameTextWidth, 6) }
             CandFrameTextHeight = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameTextHeight" }
             CandFrameColumnCount = if ($null -eq $candidate) { $null } else { $candidate.FrameColumnCount }
@@ -661,6 +666,11 @@ foreach ($pair in $pairs) {
         CandFrameShapeHeight = OptionalRoundedDouble $candidate "FrameShapeHeight"
         CandFrameInsetTop = OptionalRoundedDouble $candidate "FrameInsetTop"
         CandFrameInsetBottom = OptionalRoundedDouble $candidate "FrameInsetBottom"
+        CandFrameWrapMode = OptionalValue $candidate "FrameWrapMode"
+        CandFrameVerticalOverflowMode = OptionalValue $candidate "FrameVerticalOverflowMode"
+        CandFrameVerticalOverflowValue = OptionalValue $candidate "FrameVerticalOverflowValue"
+        CandFrameVerticalOverflowSource = OptionalValue $candidate "FrameVerticalOverflowSource"
+        CandFrameAutofitMode = OptionalValue $candidate "FrameAutofitMode"
         CandFrameTextWidth = [Math]::Round([double]$candidate.FrameTextWidth, 6)
         CandFrameTextHeight = OptionalRoundedDouble $candidate "FrameTextHeight"
         CandFrameColumnCount = $candidate.FrameColumnCount
@@ -722,6 +732,10 @@ if (HasValue $OutputSummaryJson) {
         ByCandidateFrameXAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeX) + "|" + (BranchKey $row) }
         ByCandidateFrameTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeTopY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateFrameWidthAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeWidth) + "|" + (BranchKey $row) }
+        ByCandidateWrapModeAndBranch = Group-Count $rowsArray { param($row) (OptionalValue $row "CandFrameWrapMode") + "|" + (BranchKey $row) }
+        ByCandidateVerticalOverflowAndBranch = Group-Count $rowsArray { param($row) (OptionalValue $row "CandFrameVerticalOverflowMode") + "|" + (BranchKey $row) }
+        ByCandidateVerticalOverflowSourceAndBranch = Group-Count $rowsArray { param($row) (OptionalValue $row "CandFrameVerticalOverflowSource") + "|" + (BranchKey $row) }
+        ByCandidateAutofitModeAndBranch = Group-Count $rowsArray { param($row) (OptionalValue $row "CandFrameAutofitMode") + "|" + (BranchKey $row) }
         ByCandidateTextWidthAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameTextWidth) + "|" + (BranchKey $row) }
         ByCandidateLineTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineTopY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateLineTopFromShapeTopAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineTopFromShapeTop) + "|" + (BranchKey $row) }

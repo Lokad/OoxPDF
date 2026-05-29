@@ -1389,6 +1389,18 @@ High-priority actions:
     separation on frame top or text width and only partial separation on local line offsets. This keeps the renderer
     unchanged and strengthens the next long-term requirement: the secondary branch needs an Office page/text-matrix
     quantization model validated across page/layout variants, not a rule keyed to any one coordinate list.
+  - [x] 2026-05-29: Expose vertical-overflow provenance in glyph-run and text-emission diagnostics before
+    attempting the secondary `/Tf` branch. `PptxTextGlyphRunSnapshot`, `PptxPositionedTextSpan`,
+    `PptxPdfTextEmissionContext`, `tools/Lokad.OoxPdf.PptxInspect`, and
+    `tools/ComparePptxTextEmission.ps1` now carry the resolved vertical-overflow mode, raw token value, and source
+    alongside the existing wrap/autofit/frame fields. Regenerating the public-safe
+    `font-size-quantization-wrap13b` diagnostics shows an important negative result: the four missing reference
+    operations have no candidate frame metadata, while all matched candidate operations are
+    `Wrap=Square`, `VerticalOverflow=Overflow`, `VerticalOverflowSource=DefaultValue`, and `Autofit=noAutofit`
+    across both branches (`32` main-grid rows and `6` secondary rows). That rules out wrap, vertical overflow,
+    overflow source, and autofit as sufficient discriminators for the wrapped `12.984 pt` branch. Rendering remains
+    unchanged; the next rule still has to come from Office's page/text-matrix quantization or another structural
+    export condition, not from bodyPr mode tokens alone.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and
@@ -4849,6 +4861,12 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-29: Added vertical-overflow provenance to PPTX glyph-run/text-emission diagnostics and used it to
+  narrow the public-safe secondary `/Tf` investigation without changing rendering. `PptxInspect` glyph-run JSON and
+  `ComparePptxTextEmission.ps1` summaries now expose frame wrap, vertical-overflow mode/value/source, and autofit
+  together. The refreshed `font-size-quantization-wrap13b` summary shows the `main-grid` and `secondary-0.024`
+  branches share `Square` wrap, default-source `Overflow`, and `noAutofit`, so those body-property modes are not
+  enough to explain Office's secondary font-size branch.
 - [x] 2026-05-28: Extended the private-safe PPTX text inspector from glyph runs alone to the resolved text
   frame model, paragraph model, and line layout model. `tools/Lokad.OoxPdf.PptxInspect` now writes
   `text-frame-models.json`, `text-paragraph-models.json`, and `text-layout-lines.json` beside
@@ -7312,6 +7330,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: The public wrapped-text secondary `/Tf +0.024 pt` branch is not explained by body-property wrap,
+  vertical overflow, vertical-overflow source, or autofit mode.
+  Evidence: The refreshed `font-size-quantization-wrap13b` branch summary has `32` main-grid rows and `6`
+  secondary rows, and every matched candidate row in both branches reports `Wrap=Square`,
+  `VerticalOverflow=Overflow`, `VerticalOverflowSource=DefaultValue`, and `Autofit=noAutofit`.
 - Observation: Public COM-authored middle-anchor probes split visible and empty paragraph behavior.
   Evidence: A two-line Arial 18 pt text box with no trailing empty paragraph matches Office within about
   `0.05 pt` when the estimator uses OS/2 Windows ascender plus descender. The same probe with a trailing
@@ -7601,6 +7624,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   at `84.88`; the public visual gate drops from MAE `13.6832895688657` to `3.3798655719521604`.
 
 ## Decision Log
+
+- Decision: Keep the secondary Office `/Tf +0.024 pt` work in diagnostic/evidence mode after adding vertical
+  overflow provenance.
+  Rationale: The refreshed public-safe `wrap13b` branch summary shows the main-grid and secondary branches share
+  the same wrap, vertical-overflow source, and autofit modes. Adding a renderer rule keyed to those body-property
+  tokens would therefore be a hidden heuristic rather than structural Office alignment.
+  Date/Author: 2026-05-29 / Codex.
 
 - Decision: Render default-placement chart axis titles from inside the native chart branches that own the
   resolved `ChartLayout`, rather than from the older frame-only post-render axis-title pass.
@@ -7918,6 +7948,19 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Diagnostic text-overflow provenance slice, 2026-05-29:
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed.
+dotnet build tools\Lokad.OoxPdf.PptxInspect\Lokad.OoxPdf.PptxInspect.csproj --tl:off --nologo -v minimal: passed.
+dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow:
+99 passed, 0 failed, 2 skipped.
+dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-model --skip-slow:
+27 passed, 0 failed, 1 skipped.
+Public-safe wrap13b diagnostic refresh: 42 Office text operations, 38 candidate glyph runs, 26 deltas,
+with branch summary showing 32 main-grid and 6 secondary rows all sharing Square wrap, default-source Overflow,
+and noAutofit. Rendering unchanged.
+```
 
 ```powershell
 dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
@@ -16065,3 +16108,9 @@ on the dominant `9 pt` / `12.96 pt` grid. With a `0.75 pt` position tolerance, 3
 matched; the remaining deltas are mostly right-edge X offsets around `0.8-2.8 pt` plus one likely pairing/order
 outlier. Rendering should stay unchanged until the public font-size/geometry probes explain the secondary branch
 structurally.
+
+Plan update note, 2026-05-29: added the vertical-overflow provenance diagnostic slice to the active text
+font-size investigation, progress log, surprise log, decision log, and validation section. This preserves the
+negative evidence from the public-safe `wrap13b` probe: body-property wrap/overflow/autofit tokens do not explain
+Office's secondary `/Tf +0.024 pt` branch, so the long-term work remains structural page/text-matrix alignment
+rather than a renderer heuristic keyed to those tokens.
