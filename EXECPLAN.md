@@ -191,6 +191,18 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-29: Fixed PPTX overflow-column fit to use the resolved line advance rather than raw font size
+  when deciding whether another line still fits in the current column. Private page-32 inspection on
+  `lokad-value-based` showed a direct `noAutofit`, top-anchored, three-column text frame where Office pushed a
+  bottom-edge 12 pt line to the next column while OOXPDF kept it in the prior column. The structural mismatch
+  came from testing remaining column space with `fontSize` even though the default normal line advance is
+  `1.2x` the font size. `MoveToNextColumnIfNeeded` now receives the consumed line/paragraph advance from the
+  layout path, so column breaks reserve the same vertical advance used to place lines. Public regression:
+  `PptxSyntheticTextBoxOverflowColumnsReserveNormalLineAdvance`. Validation: focused non-slow
+  `pptx-typography` passed with `115` tests, `0` failures, and `2` skips. Private validation run
+  `20260529-225806` compared 84/84 pages with empty diagnostics and improved deck MAE
+  `4.356251 -> 4.321723`, changed16 `0.068478 -> 0.068108`; page 32 improved `8.914468 -> 6.014183`, and
+  no other page changed in the metrics.
 - [x] 2026-05-29: Moved `noAutofit` middle/bottom anchored PPTX text rendering away from preliminary
   estimate-based slack when actual wrapping overflows the frame. Private page-36 inspection showed a
   middle-anchored inherited-placeholder header where `EstimateTextHeight` treated the text as one line, applied

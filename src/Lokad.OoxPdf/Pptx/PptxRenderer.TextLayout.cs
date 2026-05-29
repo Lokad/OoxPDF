@@ -1006,7 +1006,8 @@ internal sealed partial class PptxRenderer
             if (hasPlacedParagraph)
             {
                 cursorLineTop -= paragraphStyle.SpacingBefore;
-                MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, paragraphStyle.FontSize);
+                double nextLineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, paragraphStyle.FontSize);
+                MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, nextLineAdvance);
                 columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
                 columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
                 bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
@@ -1032,8 +1033,9 @@ internal sealed partial class PptxRenderer
                 {
                     double lineFontSize = ResolveLineFontSize(maxFontSize, flowRun.Style.FontSize);
                     AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator);
-                    cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
-                    MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineFontSize);
+                    double lineAdvance = ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                    cursorLineTop -= lineAdvance;
+                    MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance);
                     columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
                     columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
                     paragraphTextX = bulletText is null
@@ -1142,8 +1144,9 @@ internal sealed partial class PptxRenderer
                                 double lineTextX = frame.Orientation == PptxTextOrientation.Horizontal ? columnStartX : frame.TextX;
                                 double lineTextWidth = frame.Orientation == PptxTextOrientation.Horizontal ? effectiveTextWidth : frame.TextWidth;
                                 AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, lineTextX, lineTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
-                                cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
-                                MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineFontSize);
+                                double lineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                                cursorLineTop -= lineAdvance;
+                                MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance);
                                 columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
                                 columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
                                 paragraphTextX = bulletText is null
@@ -1226,8 +1229,9 @@ internal sealed partial class PptxRenderer
 
                         double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
                         AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
-                        cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
-                        MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineFontSize);
+                        double lineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                        cursorLineTop -= lineAdvance;
+                        MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance);
                         columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
                         columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
                         paragraphTextX = bulletText is null
@@ -1323,8 +1327,9 @@ internal sealed partial class PptxRenderer
             }
 
             AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, paragraphLineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
-            cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, paragraphLineFontSize) + paragraphStyle.SpacingAfter;
-            MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, paragraphLineFontSize);
+            double paragraphAdvance = ReadParagraphAdvance(paragraphStyle.LineSpacing, paragraphLineFontSize);
+            cursorLineTop -= paragraphAdvance + paragraphStyle.SpacingAfter;
+            MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, paragraphAdvance);
             hasPlacedParagraph = true;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
         }
@@ -1450,7 +1455,7 @@ internal sealed partial class PptxRenderer
         PptxTextFlowBox box,
         PptxTextVerticalOverflow verticalOverflow,
         PptxTextColumnBreakMode columnBreakMode,
-        double fontSize)
+        double lineAdvance)
     {
         if (columnCount <= 1 || columnIndex >= columnCount - 1)
         {
@@ -1461,7 +1466,7 @@ internal sealed partial class PptxRenderer
         double nextLineThreshold = verticalOverflow == PptxTextVerticalOverflow.Overflow &&
             columnBreakMode == PptxTextColumnBreakMode.OverflowBalance
             ? cursorLineTop
-            : cursorLineTop - fontSize;
+            : cursorLineTop - lineAdvance;
         if (nextLineThreshold >= bottom - PptxTextMetricRules.TextStateTolerance)
         {
             return;
