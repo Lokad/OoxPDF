@@ -2196,7 +2196,8 @@ internal sealed partial class PptxRenderer
         XElement? defaultParagraphProperties,
         double fontScale,
         double lineSpacingScale,
-        bool compatibleLineSpacing)
+        bool compatibleLineSpacing,
+        double compatibleDefaultLineSpacingFactor)
     {
         XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
             defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
@@ -2210,7 +2211,7 @@ internal sealed partial class PptxRenderer
             fontSize,
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", fontSize),
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", fontSize),
-            ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing && HasManualLineBreak(paragraph)).ScaleExplicit(lineSpacingScale),
+            ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing && HasManualLineBreak(paragraph), compatibleDefaultLineSpacingFactor).ScaleExplicit(lineSpacingScale),
             ReadParagraphIndent(paragraphProperties, defaultParagraphProperties),
             ReadTabStops(paragraphProperties, defaultParagraphProperties));
     }
@@ -2849,10 +2850,10 @@ internal sealed partial class PptxRenderer
         return LineSpacing.Multiple(1d, false);
     }
 
-    private static LineSpacing ApplyCompatibleLineSpacing(LineSpacing lineSpacing, bool compatibleLineSpacing)
+    private static LineSpacing ApplyCompatibleLineSpacing(LineSpacing lineSpacing, bool compatibleLineSpacing, double defaultLineSpacingFactor)
     {
         return compatibleLineSpacing && !lineSpacing.IsExplicit
-            ? LineSpacing.Multiple(PptxTextMetricRules.OfficeCompatibleDefaultLineSpacingFactor, isExplicit: true, useNormalLineAdvance: false)
+            ? LineSpacing.Multiple(defaultLineSpacingFactor, isExplicit: true, useNormalLineAdvance: false)
             : lineSpacing;
     }
 

@@ -191,6 +191,18 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-29: Split compatible-line-spacing defaults by shape-autofit state:
+  `compatLnSpc` manual-break paragraphs now keep the existing tighter `1.1x` default when `a:spAutoFit` is
+  present, while non-autofit text frames use the normal `1.2x` default advance. This came from private deck
+  evidence where broad `1.2x` improved two high-error pages but regressed the middle-anchored `spAutoFit`
+  frames on two paired pages; the implemented split preserves the `spAutoFit` pages while retaining the
+  non-autofit gains. Validation: focused `CompatibleLineSpacing` tests passed (`3 passed, 0 failed, 0 skipped`);
+  focused non-slow `pptx-typography` passed (`109 passed, 0 failed, 2 skipped`);
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; private run `20260529-205440`
+  compared 84/84 pages with zero dimension mismatches and moved deck MAE `4.768019 -> 4.745248`, with page 50
+  `8.06 -> 6.08`, page 32 `9.55 -> 9.10`, pages 24/39 neutral, and two mild residual regressions to
+  investigate (`+0.26`, `+0.25` MAE). The full non-slow runner still has two unrelated existing PPTX assertion
+  failures in grouped connector and theme color-map tests.
 - [x] 2026-05-28 full public validation after chart scene-source and placeholder-cascade slices:
   the dependency-free console runner passed with `363 passed, 0 failed, 0 skipped`. `dotnet test
   Lokad.OoxPdf.slnx` only restored projects because this repo does not use SDK test adapters; keep using the

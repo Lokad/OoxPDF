@@ -241,6 +241,7 @@ internal sealed partial class PptxRenderer
         double fontScale = bodyProperties.FontScale;
         double lineSpacingScale = bodyProperties.LineSpacingScale;
         bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
+        double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(bodyProperties);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
         double flowX = x;
@@ -313,6 +314,7 @@ internal sealed partial class PptxRenderer
             fontScale,
             lineSpacingScale,
             compatibleLineSpacing,
+            compatibleDefaultLineSpacingFactor,
             shapeFontColor);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
@@ -428,6 +430,7 @@ internal sealed partial class PptxRenderer
         double fontScale = bodyProperties.FontScale;
         double lineSpacingScale = bodyProperties.LineSpacingScale;
         bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
+        double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(bodyProperties);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
         double flowX = x;
@@ -483,6 +486,7 @@ internal sealed partial class PptxRenderer
             fontScale,
             lineSpacingScale,
             compatibleLineSpacing,
+            compatibleDefaultLineSpacingFactor,
             shapeFontColor: null,
             tableFrame.TextStyle);
         double verticalOffset = bodyProperties.VerticalAnchor switch
@@ -703,6 +707,7 @@ internal sealed partial class PptxRenderer
         double fontScale,
         double lineSpacingScale,
         bool compatibleLineSpacing,
+        double compatibleDefaultLineSpacingFactor,
         RgbColor? shapeFontColor,
         PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
@@ -716,7 +721,7 @@ internal sealed partial class PptxRenderer
             string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
-            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
+            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing, compatibleDefaultLineSpacingFactor);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, colorMap, slideNumber, fontScale, tableStyleTextStyle);
@@ -743,6 +748,13 @@ internal sealed partial class PptxRenderer
         }
 
         return paragraphs;
+    }
+
+    private static double ResolveCompatibleDefaultLineSpacingFactor(PptxTextBodyProperties bodyProperties)
+    {
+        return HasShapeAutoFit(bodyProperties)
+            ? PptxTextMetricRules.OfficeCompatibleDefaultLineSpacingFactor
+            : PptxTextMetricRules.OfficeCompatibleNoAutoFitDefaultLineSpacingFactor;
     }
 
     private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)

@@ -4413,8 +4413,46 @@ internal static class PptxTests
 
         TestAssert.Equal(2, lines.Length);
         TestAssert.True(lines.All(line => line.LineSpacingKind == "Multiple"), "Expected compatLnSpc to keep a multiple line-spacing model.");
-        TestAssert.True(lines.All(line => Math.Abs(line.Advance - 13.2d) < 0.01d), $"Expected compatLnSpc to use Office's tight default line advance, got {string.Join(",", lines.Select(line => line.Advance.ToString("0.###", CultureInfo.InvariantCulture)))}.");
-        TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 13.2d) < 0.01d, $"Expected compatible line spacing to tighten default baseline steps, got {(lines[0].BaselineY - lines[1].BaselineY).ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(lines.All(line => Math.Abs(line.Advance - 14.4d) < 0.01d), $"Expected non-autofit compatLnSpc to use Office's normal default line advance, got {string.Join(",", lines.Select(line => line.Advance.ToString("0.###", CultureInfo.InvariantCulture)))}.");
+        TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 14.4d) < 0.01d, $"Expected compatible line spacing to keep normal default baseline steps without shape autofit, got {(lines[0].BaselineY - lines[1].BaselineY).ToString("0.###", CultureInfo.InvariantCulture)}.");
+    }
+
+    public static void PptxSyntheticTextBoxShapeAutoFitUsesTightCompatibleLineSpacing()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr compatLnSpc="1"><a:spAutoFit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1200"/><a:t>First</a:t></a:r><a:br/><a:r><a:rPr sz="1200"/><a:t>Second</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.True(lines.All(line => line.LineSpacingKind == "Multiple"), "Expected shape-autofit compatLnSpc to keep a multiple line-spacing model.");
+        TestAssert.True(lines.All(line => Math.Abs(line.Advance - 13.2d) < 0.01d), $"Expected shape-autofit compatLnSpc to use Office's tight default line advance, got {string.Join(",", lines.Select(line => line.Advance.ToString("0.###", CultureInfo.InvariantCulture)))}.");
+        TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 13.2d) < 0.01d, $"Expected shape-autofit compatible line spacing to tighten default baseline steps, got {(lines[0].BaselineY - lines[1].BaselineY).ToString("0.###", CultureInfo.InvariantCulture)}.");
     }
 
     public static void PptxSyntheticTextBoxCompatibleLineSpacingKeepsWrappedDefaultAdvance()
