@@ -2030,9 +2030,14 @@ internal sealed partial class PptxRenderer
             fontSize,
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", fontSize),
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", fontSize),
-            ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing).ScaleExplicit(lineSpacingScale),
+            ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing && HasManualLineBreak(paragraph)).ScaleExplicit(lineSpacingScale),
             ReadParagraphIndent(paragraphProperties, defaultParagraphProperties),
             ReadTabStops(paragraphProperties, defaultParagraphProperties));
+    }
+
+    private static bool HasManualLineBreak(XElement paragraph)
+    {
+        return paragraph.Elements(DrawingNamespace + "br").Any();
     }
 
     private static ResolvedRunTextStyle ResolveRunTextStyle(

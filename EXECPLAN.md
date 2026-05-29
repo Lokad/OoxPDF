@@ -16628,3 +16628,24 @@ slightly: page 50 MAE `15.76` -> `15.75`, page 49 `13.75` -> `13.74`, page 32 `1
 Office reference bounds and subpath structure (`64.56..78.06` by `84.38..376.40`, filled shaft plus stealth
 marker). The remaining page-50/page-32 error is therefore no longer this connector primitive; continue with
 picture/group crop geometry and Office text-operation structure before adding any more local metric constants.
+
+Follow-up, 2026-05-29: the next page-50/page-32 pass found a rendering-impact text-layout rule rather than a
+picture-crop issue. Private-safe PDF/text inspection showed the dense three-column text frame uses
+`compatLnSpc=1` but no manual line breaks. The candidate applied the compatibility tight default to ordinary
+wrapped lines, producing mostly `13.2 pt` advances for 12 pt text. Office's PDF text rows in the same frame use
+the normal wrapped-line advance: the relevant page-50 column ladder is `318.46`, `304.06`, `289.66`, `275.26`,
+and `260.86 pt`, i.e. `14.4 pt` steps. The existing tight `compatLnSpc` behavior is still valid for manual
+`a:br` paragraphs, so the renderer now scopes that compatibility advance to paragraphs that actually contain a
+manual break. Ordinary wrapped paragraphs keep the default line-spacing model.
+
+Validation: focused `PptxSyntheticTextBoxUsesCompatibleLineSpacing` and the new
+`PptxSyntheticTextBoxCompatibleLineSpacingKeepsWrappedDefaultAdvance` passed; the non-slow `pptx-typography`
+group passed with `104` tests, `0` failures, and `2` slow skips; `dotnet build Lokad.OoxPdf.slnx --tl:off
+--nologo -v minimal` passed with `0` warnings and `0` errors. Private validation on `lokad-value-based` run
+`20260529-125407` compared 84/84 pages with empty diagnostics. Against run `20260529-124259`, deck MAE improved
+from `5.896053` to `5.706001`, and changed16 from `0.085587` to `0.083469`. The major recurring high-error
+pages moved sharply in the right direction: page 50 `15.75` -> `11.48`, page 49 `13.74` -> `9.71`, page 13
+`14.02` -> `10.00`, and page 32 `14.21` -> `11.58`, with no measurable page-level regressions in the private
+metrics. The remaining top pages are now page 21, 32, 53, 83, 50, 82, and 81; continue by separating shared
+template/background drift from content-specific text operation structure before touching image-resource
+cropping again.
