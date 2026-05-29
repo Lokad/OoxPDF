@@ -326,6 +326,7 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFrameModel frameModel, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
+        frameModel = ResetEstimatedVerticalAnchorOffset(frameModel);
         PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
         PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
         if (HasShapeAutoFit(frameModel.BodyProperties) && UsesRotatedFrameAutoFit(frameModel.Orientation))
@@ -357,6 +358,21 @@ internal sealed partial class PptxRenderer
         }
 
         return ApplyActualVerticalAnchorOffsetIfNeeded(layout, document, advanceEstimator, allowWrapping: true);
+    }
+
+    private static PptxTextFrameModel ResetEstimatedVerticalAnchorOffset(PptxTextFrameModel frame)
+    {
+        if (frame.VerticalOffset <= PptxTextMetricRules.CoordinateTolerance ||
+            frame.Orientation != PptxTextOrientation.Horizontal ||
+            frame.ColumnCount != 1 ||
+            !HasNoAutoFit(frame.BodyProperties) ||
+            IsTableCellVerticalAnchorSource(frame.BodyProperties.VerticalAnchorSource) ||
+            frame.BodyProperties.VerticalAnchor is not (TextVerticalAnchor.Middle or TextVerticalAnchor.Bottom))
+        {
+            return frame;
+        }
+
+        return frame with { VerticalOffset = 0d };
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(

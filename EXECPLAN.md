@@ -191,6 +191,21 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-29: Moved `noAutofit` middle/bottom anchored PPTX text rendering away from preliminary
+  estimate-based slack when actual wrapping overflows the frame. Private page-36 inspection showed a
+  middle-anchored inherited-placeholder header where `EstimateTextHeight` treated the text as one line, applied
+  a positive offset, and then actual layout wrapped into multiple lines too low. Rendering now resets the
+  preliminary vertical offset for horizontal single-column `noAutofit` middle/bottom text frames and lets the
+  existing actual-layout anchor resolver reapply an offset only if real wrapped layout leaves slack. The reset
+  is deliberately not applied to `spAutoFit`, because an unconstrained experiment improved page 36 but regressed
+  the already-sensitive page 24/page 39 family. Public regression:
+  `PptxSyntheticMiddleAnchorDoesNotUseEstimatedSlackWhenWrappedTextOverflows`. Validation: focused non-slow
+  `pptx-typography` passed with `114` tests, `0` failures, and `2` skips; `dotnet build Lokad.OoxPdf.slnx
+  --tl:off --nologo -v minimal` passed. Private validation run `20260529-224924` compared 84/84 pages with empty
+  diagnostics and improved deck MAE `4.384577 -> 4.356251`, changed16 `0.068599 -> 0.068478`; page 36 improved
+  `8.59 -> 7.31`, page 37 `4.42 -> 2.98`, page 83 `5.31 -> 5.15`, while pages 24 and 39 stayed neutral. The
+  remaining small paired regressions on pages 27 and 65 (`+0.17` MAE) should be checked before broadening this
+  rule beyond `noAutofit`.
 - [x] 2026-05-29: Fixed a high-impact PPTX leading-manual-break spacing mismatch found on the private
   `lokad-value-based` deck. Two high-error body-text pages had paragraphs that started with `a:br` runs whose
   resolved font size was smaller than the paragraph default. The renderer advanced the hidden break line with
