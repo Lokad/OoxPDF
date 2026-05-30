@@ -433,6 +433,13 @@ internal sealed record PdfTextOperation(
     double EffectiveY,
     string Operator,
     string Payload,
+    int TextChunkCount,
+    int AdjustmentCount,
+    double AdjustmentSum,
+    double AdjustmentMin,
+    double AdjustmentMax,
+    double AverageAdjustmentPoints,
+    double NetAverageCharacterSpacing,
     string DecodedText)
 {
     private static readonly Regex SaveGraphicsStateRegex = new(
@@ -461,6 +468,10 @@ internal sealed record PdfTextOperation(
 
     private static readonly Regex ShowRegex = new(
         @"(?<payload>\[(?:[^\[\]]|\([^)]*\)|<[^>]*>)*\]|\([^)]*\)|<[^>]*>)\s*(?<operator>TJ|Tj)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex PayloadTokenRegex = new(
+        @"\((?:\\.|[^\\)])*\)|<[^>]*>|-?(?:\d+\.?\d*|\.\d+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static IReadOnlyList<PdfTextOperation> Extract(
@@ -530,6 +541,10 @@ internal sealed record PdfTextOperation(
                 string decodedText = DecodePayload(payload, fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMap)
                     ? unicodeMap
                     : null);
+                PdfTextPayloadProfile payloadProfile = ReadPayloadProfile(payload);
+                double averageAdjustmentPoints = payloadProfile.AdjustmentCount == 0
+                    ? 0d
+                    : -payloadProfile.AdjustmentSum / payloadProfile.AdjustmentCount * fontSize / 1000d;
                 operations.Add(new PdfTextOperation(
                     pageNumber,
                     objectNumber,
@@ -551,6 +566,13 @@ internal sealed record PdfTextOperation(
                     effective.Y,
                     match.Groups["operator"].Value,
                     payload,
+                    payloadProfile.TextChunkCount,
+                    payloadProfile.AdjustmentCount,
+                    payloadProfile.AdjustmentSum,
+                    payloadProfile.AdjustmentMin,
+                    payloadProfile.AdjustmentMax,
+                    averageAdjustmentPoints,
+                    characterSpacing + averageAdjustmentPoints,
                     decodedText));
             }
 
@@ -564,6 +586,46 @@ internal sealed record PdfTextOperation(
     }
 
     private static double ReadDouble(string value) => double.Parse(value, CultureInfo.InvariantCulture);
+
+    private static PdfTextPayloadProfile ReadPayloadProfile(string payload)
+    {
+        int textChunkCount = 0;
+        int adjustmentCount = 0;
+        double adjustmentSum = 0d;
+        double adjustmentMin = 0d;
+        double adjustmentMax = 0d;
+        foreach (Match match in PayloadTokenRegex.Matches(payload))
+        {
+            string token = match.Value;
+            if (token.StartsWith('(') || token.StartsWith('<'))
+            {
+                textChunkCount++;
+                continue;
+            }
+
+            double adjustment = ReadDouble(token);
+            if (adjustmentCount == 0)
+            {
+                adjustmentMin = adjustment;
+                adjustmentMax = adjustment;
+            }
+            else
+            {
+                adjustmentMin = Math.Min(adjustmentMin, adjustment);
+                adjustmentMax = Math.Max(adjustmentMax, adjustment);
+            }
+
+            adjustmentCount++;
+            adjustmentSum += adjustment;
+        }
+
+        return new PdfTextPayloadProfile(
+            textChunkCount,
+            adjustmentCount,
+            adjustmentSum,
+            adjustmentCount == 0 ? 0d : adjustmentMin,
+            adjustmentCount == 0 ? 0d : adjustmentMax);
+    }
 
     private static string DecodePayload(string payload, IReadOnlyDictionary<int, string>? unicodeMap)
     {
@@ -652,6 +714,13 @@ internal sealed record PdfTextOperation(
         return builder.ToString();
     }
 }
+
+internal sealed record PdfTextPayloadProfile(
+    int TextChunkCount,
+    int AdjustmentCount,
+    double AdjustmentSum,
+    double AdjustmentMin,
+    double AdjustmentMax);
 
 internal sealed record PdfPathCommand(string Operator, IReadOnlyList<double> Values);
 

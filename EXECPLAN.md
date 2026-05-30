@@ -401,6 +401,22 @@ High-priority actions:
   derives table-cell PDF `Tc` from resolved text metrics and `TJ` residuals, then emit an equivalent
   layout-preserving PDF decomposition. Do not key on page 79's private font family, row/column coordinates, or
   a fixed bucket table.
+  Follow-up, 2026-05-30: added PDF-inspection fields for `TextChunkCount`, raw `TJ` adjustment counts/ranges,
+  average adjustment in points, and net average character spacing. This made the page-79 structural gap
+  observable without private text: Office usually emits nonzero `Tc` with one text chunk, while the candidate
+  represented many table-cell residuals as `Tc=0` plus uniform `TJ` adjustments. The renderer now promotes
+  uniform table-cell PDF residuals into `Tc` at emission time and compensates the `TJ` array, preserving glyph
+  positions by construction. This is structural, font-agnostic, and content-agnostic; it is not keyed to
+  page 79, row/column coordinates, or a fixed Office bucket. The same pass exposed and fixed a PDF text-state
+  bug: `Tc` must be emitted for every text operation, including `0 Tc`, because it is inherited PDF state.
+  Public `pptx-ladder-10-composite-table-port` now shows promoted body rows as nonzero `Tc` with zero residual
+  `TJ`; `pptx-ladder-10-basic-table` remains at its pre-existing narrow visual gate miss (`0.0508098` vs
+  `0.05`) because its affected candidate rows had no residual to promote. Private run `20260530-204050`
+  compared all `84/84` pages with empty diagnostics and stable deck metrics (`MAE=2.947966`, changed16
+  `0.053572`); page 79 moved slightly (`5.014204 -> 5.014172` MAE) while structurally gaining nonzero `Tc`
+  buckets such as `-0.099`, `-0.025`, and `-0.022` for promoted table operations. Remaining page-79 debt is
+  now the non-uniform residual branch and the Office-specific extra text-operation splits, not all-zero table
+  `Tc`.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,

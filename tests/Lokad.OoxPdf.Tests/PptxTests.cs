@@ -6609,6 +6609,93 @@ internal static class PptxTests
         TestAssert.Equal(30d, glyphRun.PdfCharacterSpacing);
     }
 
+    public static void PptxSyntheticTextBoxResetsCharacterSpacingTextState()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp>
+                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="3600" spc="3000"><a:latin typeface="Arial"/></a:rPr><a:t>AB</a:t></a:r></a:p></p:txBody>
+                    </p:sp>
+                    <p:sp>
+                      <p:spPr><a:xfrm><a:off x="914400" y="1828800"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="3600"><a:latin typeface="Arial"/></a:rPr><a:t>CD</a:t></a:r></a:p></p:txBody>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        int explicitSpacing = pdf.IndexOf("30 Tc", StringComparison.Ordinal);
+        int resetSpacing = pdf.IndexOf("0 Tc", explicitSpacing + 1, StringComparison.Ordinal);
+        TestAssert.True(explicitSpacing >= 0 && resetSpacing > explicitSpacing, "Expected text operations to reset inherited PDF character spacing.");
+    }
+
+    public static void PptxSyntheticTablePromotesUniformPdfSpacingResidualToTextState()
+    {
+        string calibri = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "calibri.ttf");
+        if (!File.Exists(calibri))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                        <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
+                        <a:tr h="914400"><a:tc>
+                          <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"><a:latin typeface="Calibri"/></a:rPr><a:t>$120K</a:t></a:r></a:p></a:txBody>
+                          <a:tcPr/>
+                        </a:tc></a:tr>
+                      </a:tbl></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single();
+        TestAssert.True(glyphRun.TableRowIndex == 0, "Expected the inspected run to come from the table cell.");
+        TestAssert.True(glyphRun.PdfCharacterSpacing < -0.001d, $"Expected uniform table PDF residual to be promoted to Tc, got {glyphRun.PdfCharacterSpacing.ToString("0.###", CultureInfo.InvariantCulture)}.");
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains(glyphRun.PdfCharacterSpacing.ToString("0.###", CultureInfo.InvariantCulture) + " Tc", pdf);
+    }
+
     public static void PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

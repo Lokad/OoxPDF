@@ -409,10 +409,7 @@ internal sealed class PdfGraphicsBuilder
         }
 
         builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(' ').Append(N(fontSize)).AppendLine(" Tf");
-        if (Math.Abs(characterSpacing) > 0.001d)
-        {
-            builder.Append(N(characterSpacing)).AppendLine(" Tc");
-        }
+        builder.Append(Math.Abs(characterSpacing) > 0.001d ? N(characterSpacing) : "0").AppendLine(" Tc");
 
         double shear = italic ? SyntheticItalicShear : 0d;
         builder.Append("1 0 ").Append(N(shear)).Append(" 1 ").Append(N(x)).Append(' ').Append(N(y)).AppendLine(" Tm");
