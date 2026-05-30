@@ -1633,6 +1633,48 @@ internal static class PptxTests
         TestAssert.Contains("72 396 144 72 re S", pdf);
     }
 
+    public static void PptxSyntheticShapeExplicitLineWithoutWidthUsesOfficeDefault()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                          <a:noFill/>
+                          <a:ln><a:solidFill><a:srgbClr val="336699"/></a:solidFill></a:ln>
+                        </p:spPr>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(scene.Slides[0].SlideNodes[0].Shape?.Line.HasLine == true, "Expected explicit <a:ln> to produce a scene line.");
+        TestAssert.Equal(0.75d, scene.Slides[0].SlideNodes[0].Shape?.Line.Width ?? 0d);
+        TestAssert.Contains("0.75 w", pdf);
+        TestAssert.Contains("0.2 0.4 0.6 RG", pdf);
+        TestAssert.Contains("72 396 144 72 re S", pdf);
+    }
+
     public static void PptxSyntheticArrowAndConnectorShapesRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

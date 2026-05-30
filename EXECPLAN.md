@@ -191,6 +191,20 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Accepted the Office default line width for explicit DrawingML shape lines that omit `w`,
+  discovered on private page 36 while comparing PDF graphics operations. The private slide contains ordinary
+  rectangle shapes with explicit `<a:ln>` but no `w`; Office emits the corresponding PDF strokes at `0.75 pt`,
+  while OOXPDF previously used a generic `1 pt` fallback. `PptxLineStyleReader` now names this as
+  `OfficeDefaultLineWidthPoints` and uses `0.75d` only when neither an authored width nor an inherited style
+  width is available. Public regression `PptxSyntheticShapeExplicitLineWithoutWidthUsesOfficeDefault` locks
+  both scene-model width and emitted PDF state for a no-fill rectangle with an explicit widthless line.
+  Validation: focused non-slow `pptx-shapes` passed (`25` passed, `0` failed); `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run `20260530-101512` on
+  `lokad-value-based` compared all `84/84` pages with empty diagnostics and was raster-metric neutral against
+  `20260530-100001` (`MAE 3.439664`, changed16 `0.058849`), but page-36 PDF inspection no longer reports the
+  four stroke-width deltas (`0.75 pt` reference vs `1 pt` candidate). This is a structural PDF-alignment gain,
+  not a raster-tuned private heuristic. The remaining page-36 raster gap is still dominated by Office
+  text-state/`Tc` families and fractional font-size emission.
 - [x] 2026-05-30: Accepted a structural table text-frame wrap-width correction discovered while focusing on
   private slide 21. The private evidence showed centered table-cell baseline residuals that still form a
   row-position curve, but the table text model had an objectively inconsistent geometry: `TextWidth` was
