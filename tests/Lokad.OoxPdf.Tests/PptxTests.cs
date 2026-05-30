@@ -9095,6 +9095,36 @@ internal static class PptxTests
             "Expected the Office character-spacing state to be an emission-only decomposition, not layout tracking.");
     }
 
+    public static void PptxHighlightedTextStateContinuesAcrossFollowingParagraph()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-slide3-narrow-cambria-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
+            .Where(run => Math.Abs(run.PdfCharacterSpacing + 0.036d) < 0.001d)
+            .ToArray();
+
+        TestAssert.Equal(7, trackedRuns.Length);
+        TestAssert.True(
+            trackedRuns.Any(run => run.HighlightColor is not null),
+            "Expected the highlighted run to start Office's PDF character-spacing state.");
+        TestAssert.True(
+            trackedRuns.Any(run => run.ParagraphIndex == 2),
+            "Expected the following paragraph in the same frame to keep Office's PDF character-spacing state.");
+        TestAssert.True(
+            trackedRuns.All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
+            "Expected paragraph-spanning highlight continuation spacing to be an emission-only PDF text state.");
+    }
+
     public static void PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState()
     {
         string input = Path.GetFullPath(Path.Combine(

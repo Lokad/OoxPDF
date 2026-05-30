@@ -258,6 +258,21 @@ High-priority actions:
   versus accepted run `20260530-212639` (deck MAE delta about `+0.000000023`, changed16 delta about
   `+0.000000046`). Keep the broader private-deck `Tc` item open; this closes only the highlight-continuation
   subcase and removes one overly narrow autofit precondition.
+  2026-05-30 second continuation: corrected the same rule's lifetime from paragraph-scoped to text-frame
+  scoped. A public slide-3 typography probe showed Office keeps the highlighted-run PDF character-spacing
+  state into the following paragraph in the same frame: reference text operations bucket as `Tc 0:5,
+  -0.036:7`, while the previous candidate stopped at the paragraph boundary and bucketed `Tc 0:8,
+  -0.036:4`. The renderer now resets this emission-only text state on frame changes, not paragraph changes.
+  This is still deliberately structural rather than typeface-specific: the trigger is Office's observable
+  PDF text-state lifetime after highlight, with zero authored/layout tracking, and not `Cambria Math` or any
+  other font name. Public regression `PptxHighlightedTextStateContinuesAcrossFollowingParagraph` locks the
+  paragraph-spanning case; `pptx-typography --skip-slow` passed (`134` passed, `2` skipped). Public visual
+  `pptx-ladder-04-typography-slide3-narrow-cambria-probe` run `20260530-215839` kept the same raster metrics
+  while matching Office's `Tc` bucket counts; private `lokad-value-based` run `20260530-220006` compared all
+  `84/84` pages with empty diagnostics and stayed raster-neutral versus `20260530-215130` (deck MAE delta
+  about `+0.00000093`, changed16 delta about `-0.000000046`, with only pages 2, 32, and 35 moving at tiny
+  floating-point scale). Keep page 36/page 81 typography open: this removes another text-state lifetime
+  mismatch but does not explain Office's no-autofit `Tc` buckets or the secondary `+0.024` font-size branch.
 - [ ] 2026-05-30: Generalize the new emission-only `Tc` hook beyond highlighted `spAutoFit`. Private page 81 now
   shows the real target shape of the problem without exposing private text: Office and candidate both emit
   `83` text operations, but Office buckets `Tc` as `0:30`, `-0.048:20`, `0.0173:13`, `-0.0535:11`, and

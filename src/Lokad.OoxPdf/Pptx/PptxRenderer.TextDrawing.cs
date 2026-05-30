@@ -291,15 +291,13 @@ internal sealed partial class PptxRenderer
         var adjusted = new PptxPositionedTextSpan[textSpans.Count];
         Dictionary<int, double> numberedAutofitFrameSpacing = ReadOfficeNumberedAutofitFrameCharacterSpacing(textSpans);
         int currentFrame = -1;
-        int currentParagraph = -1;
         bool useHighlightContinuationSpacing = false;
         for (int i = 0; i < textSpans.Count; i++)
         {
             PptxPositionedTextSpan span = textSpans[i];
-            if (span.FrameIndex != currentFrame || span.ParagraphIndex != currentParagraph)
+            if (span.FrameIndex != currentFrame)
             {
                 currentFrame = span.FrameIndex;
-                currentParagraph = span.ParagraphIndex;
                 useHighlightContinuationSpacing = false;
             }
 
