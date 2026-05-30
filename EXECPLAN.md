@@ -490,6 +490,15 @@ High-priority actions:
   passed, `pptx-tables --skip-slow` passed (`17` passed), `PptxInspect` build passed, and private
   `lokad-value-based` run `20260530-210736` stayed identical to the rendering baseline (`MAE=2.947933`,
   changed16 `0.053571`, empty diagnostics). This is diagnostic scaffolding, not a rendering change.
+  Follow-up, 2026-05-30: refreshed the public/private table-row split after run `20260530-220006`. The public
+  `pptx-ladder-10-table-center-explicit-wrapped` case is now known to be a high-slack, explicit-margin,
+  middle-anchored table whose current candidate cells are all single-line (`1` line in every row/column);
+  private page 21 has the same slack factor and row ladder but many multi-line cells and larger content-minimum
+  pressure. This is the missing discriminator behind the rejected broad declared-row preservation trial. The
+  next acceptable row-height slice should first create a public Office probe that separates high-slack
+  single-line explicit-margin tables from high-slack wrapped/multi-line explicit-margin tables, then apply
+  the rule only if it predicts both the public counterexample and private page 21. Do not encode a text-length,
+  row-index, or private coordinate proxy for this split.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,
