@@ -1897,6 +1897,43 @@ internal static class PptxTests
         TestAssert.DoesNotContain("294 456 l", pdf);
     }
 
+    public static void PptxSyntheticStraightConnectorTriangleUsesOfficeMarkerWidth()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:cxnSp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="0" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="straightConnector1"/>
+                          <a:ln w="38100"><a:solidFill><a:srgbClr val="156082"/></a:solidFill><a:headEnd type="triangle" w="med" len="med"/></a:ln>
+                        </p:spPr>
+                      </p:cxnSp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("288 468 m", pdf);
+        TestAssert.Contains("282 456 l", pdf);
+        TestAssert.Contains("294 456 l", pdf);
+        TestAssert.DoesNotContain("283.5 456 l", pdf);
+        TestAssert.DoesNotContain("292.5 456 l", pdf);
+    }
+
     public static void PptxSyntheticGroupedConnectorHonorsGroupFlip()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

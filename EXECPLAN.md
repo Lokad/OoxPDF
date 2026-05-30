@@ -406,6 +406,19 @@ High-priority actions:
   `2.947934 -> 2.934171`, changed16 improved `0.053571 -> 0.053412`, and page 12 improved
   `5.132980 -> 3.976896` with no other page changed at report precision. Private-safe PDF inspection confirms
   the three gray page-12 fill rectangles now match Office bounds to inspected precision.
+- [x] 2026-05-30: Accepted a straight-connector triangle line-end width correction from private page-20 PDF
+  structure. Page 20 has multiple default `straightConnector1` connectors with `triangle` line ends and theme
+  line style width `1.5 pt`. Office paints the triangle end bands at `6 pt` width, while the candidate used
+  `4.5 pt`; the underlying connector strokes already matched at `1.5 pt`, so the gap was the straight-connector
+  triangle marker half-width multiplier, not line-style resolution or a chart/table issue. `FillArrowedLine`
+  now receives a preset-specific half-width factor: the existing `line` preset keeps the previously validated
+  `1.5x` branch, while `straightConnector1` uses the Office-observed `2x` branch. Public regressions now cover
+  both branches (`PptxSyntheticVerticalTriangleConnectorUsesOfficeMarkerWidth` for `line` and
+  `PptxSyntheticStraightConnectorTriangleUsesOfficeMarkerWidth` for `straightConnector1`). Validation: focused
+  `pptx-shapes --skip-slow` passed (`28` passed); private `lokad-value-based` run `20260530-225148` compared
+  all `84/84` pages with empty diagnostics. Deck MAE improved `2.934171 -> 2.933702`, changed16 improved
+  `0.053412 -> 0.053398`; page 20 improved slightly and private-safe PDF inspection confirms the page-20
+  triangle fill bounds now match Office to inspected precision.
 - [ ] 2026-05-30: Continue page-79 table/text work from structural table text evidence, not a new private
   coordinate rule. Page 79 is table-heavy (`42` table text frames, no effects/pictures/transparency), and
   inspection of run `20260530-160928` showed Office/candidate graphics are broadly the same table/grid class
@@ -8687,6 +8700,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   78 has about `1.0198x` positive slack but a dense filled table; the same declared-row rule regressed that page
   and had to be rejected. Future table work must classify sparse decoration rows separately from dense filled
   grids before changing row allocation.
+- Observation: Office exports `triangle` line ends differently for `line` and `straightConnector1` presets.
+  Evidence: The existing public vertical `line` connector test still matches Office with the `1.5x` triangle
+  half-width branch. Private page 20's `straightConnector1` triangles, with the same `triangle` line-end token
+  and `1.5 pt` stroke width, match Office only with a `2x` half-width branch. Treating all straight triangle
+  line ends as one geometry family would either break the existing public `line` evidence or leave page 20's
+  connector markers narrow.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -8952,6 +8971,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   counterexample regressed under the broader declared-row rule. Office can preserve declared row heights for a
   single filled decoration row while still behaving closer to frame-height allocation for dense styled tables.
   Until a public Office ladder explains the full row-allocation rule, keep the branch narrow and evidence-bound.
+  Date/Author: 2026-05-30 / Codex.
+
+- Decision: Split straight triangle line-end marker geometry by connector preset.
+  Rationale: Public evidence already protected the `line` preset's narrower triangle marker width. Private
+  page-20 PDF structure shows `straightConnector1` uses a wider Office marker with the same line-end token and
+  stroke width. A preset-specific branch is more structural than tuning by private coordinates, and it preserves
+  both observable Office behaviors.
   Date/Author: 2026-05-30 / Codex.
 
 - Decision: Render default-placement chart axis titles from inside the native chart branches that own the
@@ -9270,6 +9296,16 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Straight-connector triangle line-end marker alignment, 2026-05-30:
+dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-shapes --skip-slow:
+28 passed, 0 failed, 0 skipped.
+pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json:
+run 20260530-225148, 84/84 compared, diagnostics [], deck MAE 2.933702, changed16 0.053398.
+Page 20's `straightConnector1` triangle fill bounds now match Office to inspected precision; the existing
+`line` preset triangle-marker branch remains covered separately.
+```
 
 ```text
 Sparse positive-slack table row-fill alignment, 2026-05-30:

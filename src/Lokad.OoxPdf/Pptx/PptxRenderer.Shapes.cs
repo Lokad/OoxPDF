@@ -18,6 +18,7 @@ internal sealed partial class PptxRenderer
     private const double OfficeTriangleTailHalfWidthFactor = 0.45d;
     private const double OfficeStraightTriangleLineEndLengthFactor = 4d;
     private const double OfficeStraightTriangleLineEndHalfWidthFactor = 1.5d;
+    private const double OfficeStraightConnectorTriangleLineEndHalfWidthFactor = 2d;
     private const double OfficeStraightTriangleLineEndOverlapFactor = 2d / 3d;
     private const double OfficeStraightStealthLineEndLengthFactor = 3d;
     private const double OfficeStraightStealthLineEndWidthFactor = 3d;
@@ -337,7 +338,10 @@ internal sealed partial class PptxRenderer
                     }
                     else
                     {
-                        FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow);
+                        double arrowHalfWidthFactor = string.Equals(preset, "straightConnector1", StringComparison.Ordinal)
+                            ? OfficeStraightConnectorTriangleLineEndHalfWidthFactor
+                            : OfficeStraightTriangleLineEndHalfWidthFactor;
+                        FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow, arrowHalfWidthFactor);
                     }
                 }
                 else
@@ -2178,7 +2182,16 @@ internal sealed partial class PptxRenderer
         graphics.ClosePath();
     }
 
-    private static void FillArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)
+    private static void FillArrowedLine(
+        PdfGraphicsBuilder graphics,
+        double x1,
+        double y1,
+        double x2,
+        double y2,
+        double lineWidth,
+        bool headArrow,
+        bool tailArrow,
+        double arrowHalfWidthFactor)
     {
         double dx = x2 - x1;
         double dy = y2 - y1;
@@ -2194,7 +2207,7 @@ internal sealed partial class PptxRenderer
         double ny = ux;
         double half = lineWidth / 2d;
         double arrowLength = lineWidth * OfficeStraightTriangleLineEndLengthFactor;
-        double arrowHalfWidth = lineWidth * OfficeStraightTriangleLineEndHalfWidthFactor;
+        double arrowHalfWidth = lineWidth * arrowHalfWidthFactor;
         double shaftInset = Math.Max(0d, arrowLength - lineWidth * OfficeStraightTriangleLineEndOverlapFactor);
         double startX = headArrow ? x1 + ux * shaftInset : x1;
         double startY = headArrow ? y1 + uy * shaftInset : y1;
