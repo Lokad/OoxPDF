@@ -180,6 +180,9 @@ internal sealed partial class PptxRenderer
         PptxTextLineBoxLayout? LineBox,
         int FrameIndex,
         int ParagraphIndex,
+        string ParagraphBulletKind,
+        string? ParagraphAutoNumberType,
+        int? ParagraphAutoNumberStartAt,
         int LineIndex,
         int SpanIndex,
         int LineSpanCount,
@@ -1093,6 +1096,8 @@ internal sealed partial class PptxRenderer
         public const double OfficeSyntheticBoldAdvanceTighteningEm = 0.007d;
         public const double OfficeSyntheticBoldItalicCharacterSpacingEm = 0.01545d;
         public const double OfficeHighlightedAutofitCharacterSpacingEm = -0.003d;
+        public const double OfficeAutofitNumberedDenseCharacterSpacingEm = -0.002d;
+        public const double OfficeAutofitNumberedDefaultCharacterSpacingEm = -0.004d;
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
@@ -1134,6 +1139,12 @@ internal sealed partial class PptxRenderer
 
         public static double OfficeHighlightedAutofitCharacterSpacing(double fontSize) =>
             fontSize * OfficeHighlightedAutofitCharacterSpacingEm;
+
+        public static double OfficeAutofitNumberedDenseCharacterSpacing(double fontSize) =>
+            fontSize * OfficeAutofitNumberedDenseCharacterSpacingEm;
+
+        public static double OfficeAutofitNumberedDefaultCharacterSpacing(double fontSize) =>
+            fontSize * OfficeAutofitNumberedDefaultCharacterSpacingEm;
 
         public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
         {

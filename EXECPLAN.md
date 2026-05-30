@@ -262,6 +262,20 @@ High-priority actions:
   `pptx-ladder-04-typography-spautofit-numbered-tc-probe`: Office emits `Tc` buckets `0:7`, `-0.048:12`,
   and `-0.024:16`, while the current candidate still emits `Tc=0:35` and has raster metrics MAE `5.162535`,
   changed16 `0.058189`, SSIM `0.648233`.
+  2026-05-30 renderer slice: the candidate now carries paragraph bullet kind and auto-number metadata from
+  the text model into positioned spans, glyph-run snapshots, `PptxInspect`, and
+  `ComparePptxTextEmission.ps1`. The emission layer uses that structural metadata, plus `spAutoFit` frame
+  state and zero OOXML layout tracking, to reproduce the public numbered-autofit probe's Office `Tc` buckets:
+  candidate PDF text state moved from `0:35` to `0:7`, `-0.048:12`, and `-0.024:16`. The implementation keeps
+  layout character spacing at zero and compensates `Tc` inside `TJ`, so this is still an Office-like PDF
+  decomposition slice rather than a raster nudge. Private page 81 moved from candidate `Tc=0:83` to
+  `0:41`, `-0.048:20`, and `-0.024:22`; that closes the whole `-0.048` frame bucket but deliberately leaves
+  the item open because Office still has an uncaptured non-numbered `-0.0535:11` bucket and a later frame-10
+  split where Office changes from `-0.024:9` to `+0.0173:13`. Full private run `20260530-195414` compared all
+  `84/84` pages with empty diagnostics and unchanged raster metrics (`2.947966` deck MAE, changed16
+  `0.053572`), as expected for an emission-compensated text-state change. Next work should isolate the
+  remaining frame-10 line/paragraph split and the non-numbered `spAutoFit` bucket with additional public
+  probes before touching page 79's table-heavy `Tc` branch.
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was

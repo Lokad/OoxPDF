@@ -8992,6 +8992,35 @@ internal static class PptxTests
             "Expected the Office character-spacing state to be an emission-only decomposition, not layout tracking.");
     }
 
+    public static void PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-spautofit-numbered-tc-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        Dictionary<double, int> buckets = glyphRuns
+            .GroupBy(run => Math.Round(run.PdfCharacterSpacing, 3))
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        TestAssert.Equal(7, buckets[0d]);
+        TestAssert.Equal(12, buckets[-0.048d]);
+        TestAssert.Equal(16, buckets[-0.024d]);
+        TestAssert.True(
+            glyphRuns.Where(run => Math.Abs(run.PdfCharacterSpacing) > 0.001d).All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
+            "Expected numbered autofit character spacing to be an emission-only PDF text state.");
+        TestAssert.True(
+            glyphRuns.Any(run => run.ParagraphBulletKind == "AutoNumber"),
+            "Expected the probe to expose auto-numbered paragraph metadata to the emission layer.");
+    }
+
     public static void PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

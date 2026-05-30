@@ -724,6 +724,9 @@ foreach ($pair in $pairs) {
         CandTableRowSpan = OptionalValue $candidate "TableRowSpan"
         CandTableColumnSpan = OptionalValue $candidate "TableColumnSpan"
         CandParagraphIndex = OptionalValue $candidate "ParagraphIndex"
+        CandParagraphBulletKind = OptionalValue $candidate "ParagraphBulletKind"
+        CandParagraphAutoNumberType = OptionalValue $candidate "ParagraphAutoNumberType"
+        CandParagraphAutoNumberStartAt = OptionalValue $candidate "ParagraphAutoNumberStartAt"
         CandLineIndex = $candidate.LineIndex
         CandSpanIndex = OptionalValue $candidate "SpanIndex"
         CandLineSpanCount = OptionalValue $candidate "LineSpanCount"
@@ -805,6 +808,9 @@ if (HasValue $OutputSummaryJson) {
         ByCandidateTableColumnAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }
         ByCandidateTableCellAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableRowIndex")) + "," + (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }
         ByParagraphIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandParagraphIndex) + "|" + (BranchKey $row) }
+        ByParagraphBulletKindAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandParagraphBulletKind")) + "|" + (BranchKey $row) }
+        ByParagraphAutoNumberTypeAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandParagraphAutoNumberType")) + "|" + (BranchKey $row) }
+        ByParagraphAutoNumberStartAtAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandParagraphAutoNumberStartAt")) + "|" + (BranchKey $row) }
         BySpanIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandSpanIndex) + "|" + (BranchKey $row) }
         ByRefBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandBaselineY600Remainder) + "|" + (BranchKey $row) }

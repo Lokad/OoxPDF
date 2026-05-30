@@ -895,6 +895,7 @@ internal sealed partial class PptxRenderer
             {
                 paragraphState.Frame,
                 paragraphState.FrameIndex,
+                paragraphState.Paragraph,
                 paragraphState.ParagraphIndex,
                 Line = line,
                 LineIndex = lineIndex
@@ -904,6 +905,9 @@ internal sealed partial class PptxRenderer
                 lineState.Line.Box,
                 lineState.FrameIndex,
                 lineState.ParagraphIndex,
+                lineState.Paragraph.Model.Bullet.Kind.ToString(),
+                lineState.Paragraph.Model.Bullet.AutoNumberType,
+                lineState.Paragraph.Model.Bullet.AutoNumberStartAt,
                 lineState.LineIndex,
                 spanIndex,
                 lineState.Line.Spans.Count,
