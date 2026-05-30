@@ -10463,6 +10463,9 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(CountOccurrences(pdf, "/Subtype /Image") >= 2, "The same image part with and without recolor must use distinct cached image XObjects.");
+        List<byte[]> imageRgbStreams = ReadPdfDeviceRgbImageStreams(output, width: 1, height: 1);
+        TestAssert.True(imageRgbStreams.Any(rgb => rgb.SequenceEqual(new byte[] { 32, 64, 96 })), "Expected the original image RGB stream to remain unchanged.");
+        TestAssert.True(imageRgbStreams.Any(rgb => rgb.SequenceEqual(new byte[] { 255, 255, 255 })), "Expected OOXML luminance brightness to add an offset after contrast.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Supported PNG luminance recolor should not emit unsupported diagnostics.");
     }
 
@@ -21618,6 +21621,57 @@ internal static class PptxTests
         }
 
         return text.ToString();
+    }
+
+    private static List<byte[]> ReadPdfDeviceRgbImageStreams(string path, int width, int height)
+    {
+        byte[] bytes = File.ReadAllBytes(path);
+        string pdf = Encoding.ASCII.GetString(bytes);
+        var streams = new List<byte[]>();
+        int searchStart = 0;
+        while (true)
+        {
+            int streamMarker = pdf.IndexOf("stream", searchStart, StringComparison.Ordinal);
+            if (streamMarker < 0)
+            {
+                break;
+            }
+
+            int streamStart = streamMarker + "stream".Length;
+            if (streamStart < bytes.Length && bytes[streamStart] == (byte)'\r')
+            {
+                streamStart++;
+            }
+
+            if (streamStart < bytes.Length && bytes[streamStart] == (byte)'\n')
+            {
+                streamStart++;
+            }
+
+            int streamEnd = pdf.IndexOf("endstream", streamStart, StringComparison.Ordinal);
+            if (streamEnd < 0)
+            {
+                break;
+            }
+
+            int dictionaryStart = Math.Max(0, pdf.LastIndexOf("<<", streamMarker, StringComparison.Ordinal));
+            string dictionary = pdf.Substring(dictionaryStart, streamMarker - dictionaryStart);
+            if (dictionary.Contains("/Subtype /Image", StringComparison.Ordinal) &&
+                dictionary.Contains("/ColorSpace /DeviceRGB", StringComparison.Ordinal) &&
+                dictionary.Contains(FormattableString.Invariant($"/Width {width} /Height {height}"), StringComparison.Ordinal) &&
+                dictionary.Contains("/Filter /FlateDecode", StringComparison.Ordinal))
+            {
+                using var input = new MemoryStream(bytes, streamStart, streamEnd - streamStart);
+                using var deflate = new ZLibStream(input, CompressionMode.Decompress);
+                using var output = new MemoryStream();
+                deflate.CopyTo(output);
+                streams.Add(output.ToArray());
+            }
+
+            searchStart = streamEnd + "endstream".Length;
+        }
+
+        return streams;
     }
 
     private static double ReadOnlyTextBaseline(string pdf)

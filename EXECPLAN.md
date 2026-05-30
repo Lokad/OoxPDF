@@ -191,6 +191,23 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Aligned PPTX image luminance brightness with Office's additive OOXML behavior while
+  continuing the private page-21 pass. Private inspection isolated a small but real residual to the slide's
+  lone luminance-recolored picture: the Office reference raster averaged about `252.68` RGB in the affected
+  region, while the old candidate averaged about `226.86` because brightness was interpolated toward white
+  instead of added after contrast. Local prior-art survey of `C:\Users\JoannesVermorel\code\pptx-renderer`
+  independently described `<a:lum>` brightness as an additive offset, matching the Office evidence. The
+  renderer now applies contrast around midpoint, then adds the brightness offset and clamps. Public regression
+  `PptxSyntheticPngPictureAppliesLuminanceRecolor` now decompresses the emitted PDF image streams and asserts
+  both the unchanged original RGB triplet and the additive-brightness recolored triplet, so the test protects
+  actual PDF image data rather than only checking that image XObjects exist. Validation: focused non-slow
+  `pptx-images` passed (`21` passed); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
+  Private run `20260530-133407` on `lokad-value-based` compared all `84/84` pages with empty diagnostics,
+  changed only page 21 materially, improved deck MAE `3.424450 -> 3.422687`, changed16
+  `0.058585 -> 0.058496`, and improved page-21 MAE `6.097517 -> 5.949429` with changed16
+  `0.100179 -> 0.092731`. The affected region now averages `255` RGB in the candidate against Office's
+  `252.68`, leaving the residual as antialiasing/edge structure rather than the previous luminance formula
+  mismatch.
 - [x] 2026-05-30: Replaced ignored rectangular PPTX glow on the private deck with a first structural soft-mask
   image path. Private page 21 had the only remaining unsupported-effect diagnostic, and local OOXML/PDF
   inspection reduced it to two rectangular `a:glow` effects with low alpha and small radius; fills and

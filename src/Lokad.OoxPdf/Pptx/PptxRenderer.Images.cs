@@ -1075,9 +1075,7 @@ internal sealed partial class PptxRenderer
     {
         double value = channel / 255d;
         value = (value - 0.5d) * Math.Max(0d, 1d + contrast) + 0.5d;
-        value = brightness >= 0d
-            ? value + (1d - value) * brightness
-            : value * (1d + brightness);
+        value += brightness;
         return ToByte(value * 255d);
     }
 
