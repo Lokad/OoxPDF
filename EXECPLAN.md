@@ -389,6 +389,18 @@ High-priority actions:
   punctuation splitting over-decomposes cases that Office represents with character spacing. Keep future
   attempts layout-preserving, but derive operation boundaries and `Tc` together from the positioned glyph
   residuals rather than from punctuation categories alone.
+  Follow-up, 2026-05-30: extended `PptxInspect` so table text paragraph snapshots are emitted separately as
+  `table-text-paragraph-models.json`, avoiding ad hoc private XML parsing when investigating table text.
+  Re-inspection of page 79 shows the table paragraphs resolve through the normal paragraph/style cascade
+  (`paragraph.pPr`, `shape.lstStyle`, inherited text style, default text style), with ordinary left/right
+  alignment and zero OOXML run `spc`; the private `Tc` buckets are therefore not a hidden distributed/justify
+  alignment rule and not a typeface discriminator. Public table fixtures already expose the same Office PDF
+  behavior: `pptx-table` has Office table-cell `Tc` buckets `0.06`, `0.036`, `-0.024`, and `-0.048` against
+  candidate `0`, and `pptx-ladder-10-composite-table-port` has Calibri table-cell buckets `0.0551` and
+  `-0.0383` against candidate `0`. Keep the next renderer slice public and structural: isolate how Office
+  derives table-cell PDF `Tc` from resolved text metrics and `TJ` residuals, then emit an equivalent
+  layout-preserving PDF decomposition. Do not key on page 79's private font family, row/column coordinates, or
+  a fixed bucket table.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,

@@ -32,6 +32,7 @@ var records = new List<PptxGlyphRunRecord>();
 var frameRecords = new List<PptxTextFrameRecord>();
 var tableFrameRecords = new List<PptxTextFrameRecord>();
 var paragraphRecords = new List<PptxTextParagraphRecord>();
+var tableParagraphRecords = new List<PptxTextParagraphRecord>();
 var lineRecords = new List<PptxTextLineRecord>();
 foreach (PptxSlide slide in slides)
 {
@@ -44,69 +45,19 @@ foreach (PptxSlide slide in slides)
         for (int paragraphIndex = 0; paragraphIndex < frame.Paragraphs.Count; paragraphIndex++)
         {
             PptxTextParagraphModelSnapshot paragraph = frame.Paragraphs[paragraphIndex];
-            paragraphRecords.Add(new PptxTextParagraphRecord(
-                slideNumber,
-                frameIndex,
-                paragraphIndex,
-                paragraph.Level,
-                paragraph.CascadeLevelName,
-                paragraph.ResolvedCascadeSourceCount,
-                paragraph.CascadeLayerNames,
-                paragraph.CascadeLayerKinds,
-                paragraph.ResolvedStyleSourceCount,
-                paragraph.ResolvedStyleLayerNames,
-                paragraph.ResolvedStyleLayerKinds,
-                paragraph.Alignment,
-                paragraph.AlignmentValue,
-                Round(paragraph.FontSize),
-                paragraph.BulletKind,
-                paragraph.BulletCharacter,
-                paragraph.BulletResolvedCharacter,
-                paragraph.BulletAutoNumberType,
-                paragraph.BulletAutoNumberStartAtValue,
-                paragraph.BulletFontTypeface,
-                paragraph.BulletFontCharset,
-                paragraph.BulletResolvedFontTypeface,
-                paragraph.BulletFontTypefaceSource,
-                paragraph.BulletColor,
-                paragraph.BulletSizeKind,
-                paragraph.BulletSizeValue,
-                Round(paragraph.SpacingBefore),
-                Round(paragraph.SpacingAfter),
-                Round(paragraph.LineSpacingValue),
-                paragraph.LineSpacingKind,
-                paragraph.LineSpacingUseNormalLineAdvance,
-                Round(paragraph.MarginLeft),
-                Round(paragraph.HangingIndent),
-                paragraph.Runs.Count,
-                paragraph.Runs.Sum(run => run.Text.Length),
-                paragraph.Runs.Select(run => new PptxTextRunRecord(
-                    run.RunIndex,
-                    run.Kind,
-                    includeText ? run.Text : null,
-                    run.Text.Length,
-                    run.ResolvedCascadeSourceCount,
-                    run.CascadeLayerNames,
-                    run.CascadeLayerKinds,
-                    Round(run.FontSize),
-                    Round(run.CharacterSpacing),
-                    run.Typeface,
-                    run.ColorSource,
-                    run.HasHyperlinkClick,
-                    run.HyperlinkClickId,
-                    run.Underline,
-                    run.UnderlineValue,
-                    run.Strike,
-                    run.StrikeValue,
-                    run.CapsValue,
-                    FormatColor(run.Highlight))).ToArray()));
+            paragraphRecords.Add(ToParagraphRecord(slideNumber, frameIndex, paragraphIndex, paragraph, includeText));
         }
     }
 
     IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(document, package, slide.Index);
     for (int frameIndex = 0; frameIndex < tableFrameModels.Count; frameIndex++)
     {
-        tableFrameRecords.Add(ToFrameRecord(slideNumber, frameIndex, tableFrameModels[frameIndex]));
+        PptxTextFrameModelSnapshot frame = tableFrameModels[frameIndex];
+        tableFrameRecords.Add(ToFrameRecord(slideNumber, frameIndex, frame));
+        for (int paragraphIndex = 0; paragraphIndex < frame.Paragraphs.Count; paragraphIndex++)
+        {
+            tableParagraphRecords.Add(ToParagraphRecord(slideNumber, frameIndex, paragraphIndex, frame.Paragraphs[paragraphIndex], includeText));
+        }
     }
 
     PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index);
@@ -273,6 +224,8 @@ string tableFrameOutputPath = Path.Combine(outputDirectory, "table-text-frame-mo
 File.WriteAllText(tableFrameOutputPath, JsonSerializer.Serialize(tableFrameRecords, options), Encoding.UTF8);
 string paragraphOutputPath = Path.Combine(outputDirectory, "text-paragraph-models.json");
 File.WriteAllText(paragraphOutputPath, JsonSerializer.Serialize(paragraphRecords, options), Encoding.UTF8);
+string tableParagraphOutputPath = Path.Combine(outputDirectory, "table-text-paragraph-models.json");
+File.WriteAllText(tableParagraphOutputPath, JsonSerializer.Serialize(tableParagraphRecords, options), Encoding.UTF8);
 string lineOutputPath = Path.Combine(outputDirectory, "text-layout-lines.json");
 File.WriteAllText(lineOutputPath, JsonSerializer.Serialize(lineRecords, options), Encoding.UTF8);
 
@@ -283,6 +236,7 @@ Console.WriteLine(FormattableString.Invariant($"Output: {outputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Frame output: {frameOutputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Table frame output: {tableFrameOutputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Paragraph output: {paragraphOutputPath}"));
+Console.WriteLine(FormattableString.Invariant($"Table paragraph output: {tableParagraphOutputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Layout output: {lineOutputPath}"));
 
 return 0;
@@ -358,6 +312,66 @@ static PptxTextFrameRecord ToFrameRecord(int slideNumber, int frameIndex, PptxTe
         frame.Paragraphs.Count,
         frame.Paragraphs.Sum(paragraph => paragraph.Runs.Count),
         frame.Paragraphs.Sum(paragraph => paragraph.Runs.Sum(run => run.Text.Length)));
+}
+
+static PptxTextParagraphRecord ToParagraphRecord(int slideNumber, int frameIndex, int paragraphIndex, PptxTextParagraphModelSnapshot paragraph, bool includeText)
+{
+    return new PptxTextParagraphRecord(
+        slideNumber,
+        frameIndex,
+        paragraphIndex,
+        paragraph.Level,
+        paragraph.CascadeLevelName,
+        paragraph.ResolvedCascadeSourceCount,
+        paragraph.CascadeLayerNames,
+        paragraph.CascadeLayerKinds,
+        paragraph.ResolvedStyleSourceCount,
+        paragraph.ResolvedStyleLayerNames,
+        paragraph.ResolvedStyleLayerKinds,
+        paragraph.Alignment,
+        paragraph.AlignmentValue,
+        Round(paragraph.FontSize),
+        paragraph.BulletKind,
+        paragraph.BulletCharacter,
+        paragraph.BulletResolvedCharacter,
+        paragraph.BulletAutoNumberType,
+        paragraph.BulletAutoNumberStartAtValue,
+        paragraph.BulletFontTypeface,
+        paragraph.BulletFontCharset,
+        paragraph.BulletResolvedFontTypeface,
+        paragraph.BulletFontTypefaceSource,
+        paragraph.BulletColor,
+        paragraph.BulletSizeKind,
+        paragraph.BulletSizeValue,
+        Round(paragraph.SpacingBefore),
+        Round(paragraph.SpacingAfter),
+        Round(paragraph.LineSpacingValue),
+        paragraph.LineSpacingKind,
+        paragraph.LineSpacingUseNormalLineAdvance,
+        Round(paragraph.MarginLeft),
+        Round(paragraph.HangingIndent),
+        paragraph.Runs.Count,
+        paragraph.Runs.Sum(run => run.Text.Length),
+        paragraph.Runs.Select(run => new PptxTextRunRecord(
+            run.RunIndex,
+            run.Kind,
+            includeText ? run.Text : null,
+            run.Text.Length,
+            run.ResolvedCascadeSourceCount,
+            run.CascadeLayerNames,
+            run.CascadeLayerKinds,
+            Round(run.FontSize),
+            Round(run.CharacterSpacing),
+            run.Typeface,
+            run.ColorSource,
+            run.HasHyperlinkClick,
+            run.HyperlinkClickId,
+            run.Underline,
+            run.UnderlineValue,
+            run.Strike,
+            run.StrikeValue,
+            run.CapsValue,
+            FormatColor(run.Highlight))).ToArray());
 }
 
 static HashSet<int>? ReadSlideFilter(string[] args)
