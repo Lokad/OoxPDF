@@ -5466,6 +5466,56 @@ internal static class PptxTests
         TestAssert.Contains("0032", pdf);
     }
 
+    public static void PptxSyntheticTextBoxRestartsAutoNumberingAfterPlainParagraph()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/><a:lstStyle/>
+                      <a:p><a:pPr><a:buAutoNum type="arabicPeriod"/></a:pPr><a:r><a:rPr sz="1800"/><a:t>Alpha</a:t></a:r></a:p>
+                      <a:p><a:pPr><a:buAutoNum type="arabicPeriod"/></a:pPr><a:r><a:rPr sz="1800"/><a:t>Beta</a:t></a:r></a:p>
+                      <a:p><a:pPr/><a:r><a:rPr sz="1800"/><a:t>Plain separator</a:t></a:r></a:p>
+                      <a:p><a:pPr><a:buAutoNum type="arabicPeriod"/></a:pPr><a:r><a:rPr sz="1800"/><a:t>Gamma</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxTextFrameLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0).Frames.Single();
+            string[] bulletTexts = layout.Paragraphs
+                .SelectMany(paragraph => paragraph.Lines)
+                .SelectMany(line => line.Spans)
+                .Select(span => span.Text)
+                .Where(text => text is "1." or "2.")
+                .ToArray();
+
+            TestAssert.Equal("1.|2.|1.", string.Join("|", bulletTexts));
+        }
+
+        OoxPdfConverter.Convert(input, output);
+    }
+
     public static void PptxSyntheticTextBoxRendersRomanAutoNumberedBullets()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -5227,6 +5227,16 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-30: Matched Office's contiguous PPTX auto-numbering restart for visible non-numbered paragraph
+  interruptions. Private page 36 exposed a generic list-state gap: a text frame contains one auto-numbered block,
+  a visible plain paragraph, then another auto-numbered block with no explicit `startAt`; Office restarts the
+  second block at `1`, while OOXPDF had one frame-wide counter and continued the second block. The renderer now
+  resets the auto-number counter when a visible paragraph is not `buAutoNum`; empty/non-visible paragraphs keep
+  their existing layout behavior and do not consume a number. Public regression:
+  `PptxSyntheticTextBoxRestartsAutoNumberingAfterPlainParagraph`. Validation: focused non-slow `pptx-typography`
+  passed with `122` tests, `0` failures, and `2` skips. Private run `20260530-044628` compared all `84/84` pages
+  with empty diagnostics and improved deck MAE `3.499723 -> 3.499458`; page 36 improved
+  `6.523259548611111 -> 6.500986689814815` with no page-level regressions.
 - [x] 2026-05-29: Added page-height public-safe evidence for the secondary Office `/Tf +0.024 pt` branch.
   Ignored variants of `font-size-quantization-y-scan-21pt-fine` changed only slide height by `-100 pt` and
   `+100 pt`. The secondary branch remains, but the source-Y window shifts from `135..153` on the 540 pt slide to

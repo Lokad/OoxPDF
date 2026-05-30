@@ -1056,6 +1056,11 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
+            if (paragraph.Bullet.Kind != PptxParagraphBulletKind.AutoNumber)
+            {
+                autoNumberValue = 1;
+            }
+
             string? bulletText = ReadBulletText(paragraph.Bullet, ref autoNumberValue);
             bool bulletPending = bulletText is not null;
             double effectiveTextWidth = columnWrapWidth;
