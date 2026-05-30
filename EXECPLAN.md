@@ -225,6 +225,31 @@ High-priority actions:
   missing shape. The color-transform midpoint mismatch is closed; the remaining dominant branch is the
   already-open Office text-state issue (`Tc`, secondary `/Tf`, and text-operation splitting). Keep this work on
   the public typography ladder and avoid private text or coordinate shortcuts.
+- [x] 2026-05-30: Added the first emission-only `Tc` decomposition hook for highlighted `spAutoFit` continuation
+  text without using a font-family discriminator. The public narrow tracking probe showed Office emits
+  `Tc=-0.036` for a highlighted run and its same-paragraph continuation while OOXML layout spacing remains
+  zero. `PptxPositionedTextSpan` now has an explicit PDF-character-spacing override, and
+  `ApplyOfficeHighlightedAutofitPdfCharacterSpacing` applies `-0.003em` only after a highlighted span has been
+  seen in the same `spAutoFit` paragraph. The glyph positioning array still compensates the emitted `Tc`, so
+  the public probe raster metrics stayed unchanged while candidate PDF text-state buckets moved from all-zero
+  to Office-matching `-0.036` for the three affected operations. Validation: `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, `pptx-typography --skip-slow` passed (`129` passed,
+  `2` skipped), public `pptx-ladder-04-typography-spautofit-tracking-probe` and
+  `pptx-ladder-04-typography-spautofit-tracking-narrow-probe` reran with unchanged visual metrics, and private
+  `lokad-value-based` run `20260530-192341` compared all `84/84` pages with empty diagnostics and unchanged
+  deck metrics (`2.947966` MAE, changed16 `0.053572`). This does not yet move the private deck: page 81 and
+  page 79 still emit candidate `Tc=0` for all text operations. The useful outcome is architectural: PDF
+  character spacing can now be decided at emission time independently from layout spacing, which is the hook
+  needed for the broader private-deck `Tc` decomposition.
+- [ ] 2026-05-30: Generalize the new emission-only `Tc` hook beyond highlighted `spAutoFit`. Private page 81 now
+  shows the real target shape of the problem without exposing private text: Office and candidate both emit
+  `83` text operations, but Office buckets `Tc` as `0:30`, `-0.048:20`, `0.0173:13`, `-0.0535:11`, and
+  `-0.024:9` while the candidate remains `0:83`. The nonzero buckets cluster by text frame and line group,
+  not by highlight, and include both `spAutoFit` and `noAutofit` frames. Private page 79 remains table-heavy
+  and still shows Office `Tc` buckets across the table while the candidate is `0:249`. The next implementation
+  should derive a reusable PDF-state split from positioned glyph residuals, frame/line context, and Office-like
+  font-grid branch selection, then lock that behavior with public synthetic frames/tables before accepting it
+  against the private deck.
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was

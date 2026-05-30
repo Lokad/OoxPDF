@@ -940,7 +940,8 @@ internal sealed partial class PptxRenderer
                 span.Run,
                 span.EndX,
                 span.Atoms,
-                span.GlyphSpan)))
+                span.GlyphSpan,
+                PdfCharacterSpacingOverride: null)))
             .ToArray();
         return AddEllipsisOverflowMarkers(spans, fontResolver);
     }

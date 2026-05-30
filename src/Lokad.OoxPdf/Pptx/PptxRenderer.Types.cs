@@ -216,7 +216,8 @@ internal sealed partial class PptxRenderer
         TextRun Run,
         double EndX,
         IReadOnlyList<PptxTextAtomLayout> Atoms,
-        PptxTextGlyphSpanLayout GlyphSpan);
+        PptxTextGlyphSpanLayout GlyphSpan,
+        double? PdfCharacterSpacingOverride);
 
     private readonly record struct PptxPdfTextEmissionContext(
         double LayoutFontSize,
@@ -1091,6 +1092,7 @@ internal sealed partial class PptxRenderer
         public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
         public const double OfficeSyntheticBoldAdvanceTighteningEm = 0.007d;
         public const double OfficeSyntheticBoldItalicCharacterSpacingEm = 0.01545d;
+        public const double OfficeHighlightedAutofitCharacterSpacingEm = -0.003d;
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
@@ -1129,6 +1131,9 @@ internal sealed partial class PptxRenderer
 
         public static double OfficeSyntheticBoldItalicCharacterSpacing(double fontSize) =>
             Math.Max(0d, fontSize * OfficeSyntheticBoldItalicCharacterSpacingEm);
+
+        public static double OfficeHighlightedAutofitCharacterSpacing(double fontSize) =>
+            fontSize * OfficeHighlightedAutofitCharacterSpacingEm;
 
         public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
         {

@@ -17,6 +17,7 @@ internal sealed partial class PptxRenderer
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
+        textSpans = ApplyOfficeHighlightedAutofitPdfCharacterSpacing(textSpans);
         var glyphRuns = new List<PptxTextGlyphRunSnapshot>();
         foreach (PptxPositionedTextSpan span in textSpans)
         {
@@ -262,6 +263,7 @@ internal sealed partial class PptxRenderer
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
+        textSpans = ApplyOfficeHighlightedAutofitPdfCharacterSpacing(textSpans);
         foreach (PptxPositionedTextSpan span in textSpans)
         {
             foreach (PptxPositionedTextSpan emissionSpan in SplitSpanByGlyphTypeface(span))
@@ -273,6 +275,43 @@ internal sealed partial class PptxRenderer
                 }
             }
         }
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ApplyOfficeHighlightedAutofitPdfCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
+    {
+        if (textSpans.Count == 0)
+        {
+            return textSpans;
+        }
+
+        var adjusted = new PptxPositionedTextSpan[textSpans.Count];
+        int currentFrame = -1;
+        int currentParagraph = -1;
+        bool useHighlightedAutofitSpacing = false;
+        for (int i = 0; i < textSpans.Count; i++)
+        {
+            PptxPositionedTextSpan span = textSpans[i];
+            if (span.FrameIndex != currentFrame || span.ParagraphIndex != currentParagraph)
+            {
+                currentFrame = span.FrameIndex;
+                currentParagraph = span.ParagraphIndex;
+                useHighlightedAutofitSpacing = false;
+            }
+
+            bool eligibleAutofitSpan =
+                string.Equals(span.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) &&
+                Math.Abs(span.GlyphSpan.CharacterSpacing) < PptxTextMetricRules.TextStateTolerance;
+            if (eligibleAutofitSpan && span.Run.HighlightColor is not null)
+            {
+                useHighlightedAutofitSpacing = true;
+            }
+
+            adjusted[i] = eligibleAutofitSpan && useHighlightedAutofitSpacing
+                ? span with { PdfCharacterSpacingOverride = PptxTextMetricRules.OfficeHighlightedAutofitCharacterSpacing(span.Run.FontSize) }
+                : span;
+        }
+
+        return adjusted;
     }
 
     private static void DrawHighlightSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
@@ -930,7 +969,8 @@ internal sealed partial class PptxRenderer
         };
         PptxPdfTextEmissionContext emissionContext = CreatePdfTextEmissionContext(span);
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(emissionContext);
-        double pdfCharacterSpacing = PptxPdfTextEmissionProfile.CharacterSpacing(emissionContext, span.GlyphSpan.CharacterSpacing);
+        double pdfCharacterSpacing = span.PdfCharacterSpacingOverride
+            ?? PptxPdfTextEmissionProfile.CharacterSpacing(emissionContext, span.GlyphSpan.CharacterSpacing);
         string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.TypefaceResolutionSource, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))

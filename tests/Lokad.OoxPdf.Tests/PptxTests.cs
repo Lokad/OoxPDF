@@ -8962,6 +8962,36 @@ internal static class PptxTests
         TestAssert.True(following.FontSize > 0d, "Expected the following run to remain present in text flow.");
     }
 
+    public static void PptxHighlightedAutofitContinuationEmitsOfficeCharacterSpacingTextState()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-spautofit-tracking-narrow-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
+            .Where(run => Math.Abs(run.PdfCharacterSpacing + 0.036d) < 0.001d)
+            .ToArray();
+
+        TestAssert.Equal(3, trackedRuns.Length);
+        TestAssert.True(
+            trackedRuns.Any(run => run.HighlightColor is not null),
+            "Expected the highlighted autofit run to receive Office's PDF character-spacing state.");
+        TestAssert.True(
+            trackedRuns.Any(run => run.HighlightColor is null),
+            "Expected same-paragraph autofit continuation text to keep the same PDF character-spacing state.");
+        TestAssert.True(
+            trackedRuns.All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
+            "Expected the Office character-spacing state to be an emission-only decomposition, not layout tracking.");
+    }
+
     public static void PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
