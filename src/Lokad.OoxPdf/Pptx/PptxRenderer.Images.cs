@@ -353,8 +353,16 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
-        double scaleX = imageWidth / viewWidth;
-        double scaleY = imageHeight / viewHeight;
+        double sourceLeft = Math.Clamp(crop.Left, 0d, 0.999d);
+        double sourceTop = Math.Clamp(crop.Top, 0d, 0.999d);
+        double sourceRight = Math.Clamp(crop.Right, 0d, 0.999d);
+        double sourceBottom = Math.Clamp(crop.Bottom, 0d, 0.999d);
+        double sourceMinX = minX + sourceLeft * viewWidth;
+        double sourceMinY = minY + sourceTop * viewHeight;
+        double sourceWidth = viewWidth * Math.Max(0.001d, 1d - sourceLeft - sourceRight);
+        double sourceHeight = viewHeight * Math.Max(0.001d, 1d - sourceTop - sourceBottom);
+        double scaleX = imageWidth / sourceWidth;
+        double scaleY = imageHeight / sourceHeight;
         var gradients = ReadSvgGradients(svg);
         foreach (XElement path in svg.Descendants().Where(element => element.Name.LocalName == "path"))
         {
@@ -368,13 +376,13 @@ internal sealed partial class PptxRenderer
             {
                 if (TryReadSvgPathBounds(data, out SvgPathBounds pathBounds))
                 {
-                    RenderSvgGradientPath(graphics, data, gradient, pathBounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY);
+                    RenderSvgGradientPath(graphics, data, gradient, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
                 }
             }
             else if (paint.Color is { } color)
             {
                 graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-                if (TryAppendSvgPath(graphics, data, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+                if (TryAppendSvgPath(graphics, data, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                 {
                     graphics.FillCurrentPath();
                 }

@@ -191,6 +191,29 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Fixed SVG picture crop mapping from private page-33 evidence. The page has a cropped
+  SVG-backed picture; OOXPDF was passing the OOXML crop rectangle to the SVG renderer but using it only as a
+  destination clip, so the full SVG viewBox was still scaled into the picture frame. Office's picture crop
+  semantics instead select a source sub-rectangle first and then scale that source region to the destination.
+  `RenderSvgPicture` now derives source min/extent from `a:srcRect` before applying SVG path coordinates,
+  preserving the existing vector renderer while making cropped SVG pictures obey the same source-region model
+  as raster pictures. Public regression `PptxSyntheticSvgPictureAppliesSourceCropBeforeScaling` locks the
+  geometry shift for a bottom-cropped SVG. Validation: focused regression passed, focused
+  `pptx-images --skip-slow` passed (`23` passed), and private run `20260530-162112` on
+  `lokad-value-based` compared all `84/84` pages with empty diagnostics. Deck MAE improved
+  `2.975644 -> 2.949601`, changed16 improved `0.053776 -> 0.053584`, and page 33 improved
+  `4.570521 -> 3.870887`, moving it out of the top-five worst pages. Remaining page-33 residuals are the
+  same text-state branch (`Tc`, secondary `/Tf`, and PDF text-operation splitting) plus the broader question
+  of when Office rasterizes SVG pictures into image resources rather than exposing vector path fills.
+- [ ] 2026-05-30: Continue page-79 table/text work from structural table text evidence, not a new private
+  coordinate rule. Page 79 is table-heavy (`42` table text frames, no effects/pictures/transparency), and
+  inspection of run `20260530-160928` showed Office/candidate graphics are broadly the same table/grid class
+  while text remains divergent: Office emits `258` text operations against candidate `249`, mostly `11.04pt`
+  table text, with Office-only `Tc` families (`0.00384`, `0.0509`, `-0.0216`, `-0.116`, and related small
+  clusters) while candidate emits `Tc=0`. Text comparison shows most runs are sub-point close, but a few
+  wrapped cells have large row-internal line-placement mismatches. The next acceptable page-79 push needs a
+  public Office-authored table ladder that isolates wrapped middle-anchored cell line placement and text-state
+  emission; do not add a private row/column coordinate shortcut.
 - [x] 2026-05-30: Extended no-autofit overflow column balancing for even continued-paragraph cases, moving the
   private page-59 three-column body from OOXPDF's even `22/22/22` layout to Office's observed `22/23/21`
   layout. This is the sibling of the earlier private page-55 continued-paragraph rule: when all columns
