@@ -170,6 +170,7 @@ foreach (PptxSlide slide in slides)
 
     foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(document, package, slide.Index))
     {
+        GlyphCategoryCounts categories = CountGlyphCategories(run.Text);
         records.Add(new PptxGlyphRunRecord(
             slideNumber,
             includeText ? run.Text : null,
@@ -245,7 +246,13 @@ foreach (PptxSlide slide in slides)
             Round(run.LayoutCharacterSpacing),
             Round(run.PdfCharacterSpacing),
             run.GlyphCount,
-            Round(run.FirstAdjustmentAfterOrigin)));
+            Round(run.FirstAdjustmentAfterOrigin),
+            categories.LetterCount,
+            categories.DecimalDigitCount,
+            categories.PunctuationCount,
+            categories.SymbolCount,
+            categories.SpaceCount,
+            categories.OtherCount));
     }
 }
 
@@ -383,6 +390,57 @@ static double? RoundNullable(double? value)
     return value is null ? null : Round(value.Value);
 }
 
+static GlyphCategoryCounts CountGlyphCategories(string text)
+{
+    int letterCount = 0;
+    int decimalDigitCount = 0;
+    int punctuationCount = 0;
+    int symbolCount = 0;
+    int spaceCount = 0;
+    int otherCount = 0;
+    foreach (Rune rune in text.EnumerateRunes())
+    {
+        switch (Rune.GetUnicodeCategory(rune))
+        {
+            case UnicodeCategory.UppercaseLetter:
+            case UnicodeCategory.LowercaseLetter:
+            case UnicodeCategory.TitlecaseLetter:
+            case UnicodeCategory.ModifierLetter:
+            case UnicodeCategory.OtherLetter:
+                letterCount++;
+                break;
+            case UnicodeCategory.DecimalDigitNumber:
+                decimalDigitCount++;
+                break;
+            case UnicodeCategory.ConnectorPunctuation:
+            case UnicodeCategory.DashPunctuation:
+            case UnicodeCategory.OpenPunctuation:
+            case UnicodeCategory.ClosePunctuation:
+            case UnicodeCategory.InitialQuotePunctuation:
+            case UnicodeCategory.FinalQuotePunctuation:
+            case UnicodeCategory.OtherPunctuation:
+                punctuationCount++;
+                break;
+            case UnicodeCategory.MathSymbol:
+            case UnicodeCategory.CurrencySymbol:
+            case UnicodeCategory.ModifierSymbol:
+            case UnicodeCategory.OtherSymbol:
+                symbolCount++;
+                break;
+            case UnicodeCategory.SpaceSeparator:
+            case UnicodeCategory.LineSeparator:
+            case UnicodeCategory.ParagraphSeparator:
+                spaceCount++;
+                break;
+            default:
+                otherCount++;
+                break;
+        }
+    }
+
+    return new GlyphCategoryCounts(letterCount, decimalDigitCount, punctuationCount, symbolCount, spaceCount, otherCount);
+}
+
 static string? FormatColor(RgbColor? color)
 {
     return color is null
@@ -467,7 +525,21 @@ internal sealed record PptxGlyphRunRecord(
     double LayoutCharacterSpacing,
     double PdfCharacterSpacing,
     int GlyphCount,
-    double FirstAdjustmentAfterOrigin);
+    double FirstAdjustmentAfterOrigin,
+    int LetterCount,
+    int DecimalDigitCount,
+    int PunctuationCount,
+    int SymbolCount,
+    int SpaceCount,
+    int OtherCount);
+
+internal readonly record struct GlyphCategoryCounts(
+    int LetterCount,
+    int DecimalDigitCount,
+    int PunctuationCount,
+    int SymbolCount,
+    int SpaceCount,
+    int OtherCount);
 
 internal sealed record PptxTextFrameRecord(
     int Slide,

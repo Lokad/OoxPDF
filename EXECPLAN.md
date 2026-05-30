@@ -250,6 +250,14 @@ High-priority actions:
   should derive a reusable PDF-state split from positioned glyph residuals, frame/line context, and Office-like
   font-grid branch selection, then lock that behavior with public synthetic frames/tables before accepting it
   against the private deck.
+  2026-05-30 follow-up: added private-safe glyph category counts to `PptxInspect` and threaded them through
+  `ComparePptxTextEmission.ps1`. Page 81's nonzero `Tc` buckets do not collapse to a glyph-class rule:
+  category shapes are mixed inside each bucket, while the strongest signal remains frame/paragraph/line
+  structure. A disposable public probe with generic text, `spAutoFit`, matching frame geometry, and numbered
+  paragraphs reproduced Office `Tc` buckets `-0.048`, `-0.024`, and `0` without using Cambria Math or private
+  content. A separate public `startAt` sweep rejected the simpler numbering-start ladder: four numbered
+  `spAutoFit` frames with starts 1-4 all emitted `Tc=-0.048`. The next renderer slice must therefore model
+  Office's text-body/glyph-emission decomposition, not a font-name, page, or numbering-value shortcut.
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was
@@ -6691,6 +6699,17 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
+- Private PPTX text-emission inspection after run `artifacts/private-visual/lokad-value-based/20260530-192341`:
+  - Page 81 has matching Office/candidate text-operation counts (`83/83`) but candidate `Tc` is still `0:83`
+    while Office emits `0:30`, `-0.048:20`, `0.0173:13`, `-0.0535:11`, and `-0.024:9`.
+  - The nonzero buckets are frame/paragraph/line clustered and are not explained by highlight, font family, or
+    private text categories. Private-safe glyph category counts were added to the local inspection tooling to
+    verify this without recording private text.
+  - Page 79 remains table-heavy with Office nonzero `Tc` buckets and candidate `Tc=0:249`; because its text
+    operation count is still `249/258`, use it as corroborating evidence after page-81-style one-to-one cases
+    are understood.
+  - A disposable public probe with generic text reproduced the same class of Office `Tc` decomposition, so the
+    follow-up should be public-fixture-backed and structural rather than private-deck or font-name tuning.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260529-035838` before the image recolor
   renderer-boundary cleanup:
   - 84/84 pages compared with zero dimension mismatches.

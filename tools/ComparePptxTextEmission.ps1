@@ -751,6 +751,12 @@ foreach ($pair in $pairs) {
         CandLineAdvance = OptionalRoundedDouble $candidate "LineAdvance"
         CandGlyphCount = OptionalValue $candidate "GlyphCount"
         CandFirstAdjustmentAfterOrigin = OptionalRoundedDouble $candidate "FirstAdjustmentAfterOrigin"
+        CandLetterCount = OptionalValue $candidate "LetterCount"
+        CandDecimalDigitCount = OptionalValue $candidate "DecimalDigitCount"
+        CandPunctuationCount = OptionalValue $candidate "PunctuationCount"
+        CandSymbolCount = OptionalValue $candidate "SymbolCount"
+        CandSpaceCount = OptionalValue $candidate "SpaceCount"
+        CandOtherCount = OptionalValue $candidate "OtherCount"
         RefText = if ($IncludeText) { RefText $reference } else { $null }
         CandText = if ($IncludeText) { CandText $candidate } else { $null }
     })
@@ -823,6 +829,13 @@ if (HasValue $OutputSummaryJson) {
         ByCandidateTextHeightAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameTextHeight) + "|" + (BranchKey $row) }
         ByCandidateGlyphCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandGlyphCount")) + "|" + (BranchKey $row) }
         ByCandidateFirstAdjustmentAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandFirstAdjustmentAfterOrigin")) + "|" + (BranchKey $row) }
+        ByCandidateLetterCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandLetterCount")) + "|" + (BranchKey $row) }
+        ByCandidateDecimalDigitCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandDecimalDigitCount")) + "|" + (BranchKey $row) }
+        ByCandidatePunctuationCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandPunctuationCount")) + "|" + (BranchKey $row) }
+        ByCandidateSymbolCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandSymbolCount")) + "|" + (BranchKey $row) }
+        ByCandidateSpaceCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandSpaceCount")) + "|" + (BranchKey $row) }
+        ByCandidateOtherCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandOtherCount")) + "|" + (BranchKey $row) }
+        ByCandidateContentShapeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandLetterCount")) + "," + (RoundedKey (OptionalValue $row "CandDecimalDigitCount")) + "," + (RoundedKey (OptionalValue $row "CandPunctuationCount")) + "," + (RoundedKey (OptionalValue $row "CandSymbolCount")) + "," + (RoundedKey (OptionalValue $row "CandSpaceCount")) + "," + (RoundedKey (OptionalValue $row "CandOtherCount")) + "|" + (BranchKey $row) }
     }
 
     $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputSummaryJson -Encoding UTF8
