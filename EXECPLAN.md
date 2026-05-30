@@ -261,6 +261,24 @@ High-priority actions:
   explained by OOXPDF's current layout residual and must not be implemented as "spread residual width over
   glyph gaps." The durable gap remains an Office text-state emission branch, not a private-slide coordinate
   adjustment.
+- [x] 2026-05-30: Rejected a second implicit `Tc` shortcut on private page 36. The hypothesis was to factor
+  the uniform component of OOXPDF inter-glyph adjustments into PDF `Tc` while leaving glyph positions
+  unchanged through residual `TJ` arrays. It was structural but wrong: private run `20260530-035024` regressed
+  deck MAE `3.523017 -> 3.524152` and changed16 `0.059707 -> 0.059728`, page 36 stayed at `6.523261`, and the
+  derived candidate `Tc` population was mostly positive or zero while Office page 36 clusters are negative
+  (`-0.036`, `-0.012`, `-0.0574`, and related families). Slide-local and inherited XML inspection found no
+  authored nonzero `spc`, and OOXPDF run models still resolve `CharacterSpacing=0`, so future `Tc` work must
+  explain Office's export text-state branch from public probes rather than OOXPDF's kerning residual average
+  or private-page constants.
+- [x] 2026-05-30: Rejected the broad page 21 text-box style-fill shortcut. Page 21 has two `txBox="1"`
+  rectangle text boxes with no direct `spPr` fill, direct colored lines, glow effects, and `p:style/a:fillRef
+  idx="1"`. PDF inspection made the candidate's resolved fills look suspicious because Office's reference
+  stream exposes only strokes at those colored text-box extents, but suppressing style-only fill references
+  for all text boxes was visually wrong: private run `20260530-040642` regressed deck MAE `3.523017 ->
+  3.540257`, changed16 `0.059707 -> 0.060329`, and made page 21 the worst page (`6.263637 -> 7.711794`,
+  changed16 `0.107068 -> 0.159307`). Keep OOXPDF's current style fill resolution until an Office-aligned
+  model explains why the reference PDF's page-level object inspection and raster result diverge; likely
+  suspects are transparency/effect compositing, clipping, or object grouping, not a blanket `txBox` fill rule.
 - [x] 2026-05-30: Preserved authored PPTX run boundaries as PDF text-operation boundaries for model-first
   shape text. Private page 13 exposed a small same-line frame where Office emitted three text objects at the
   original OOXML run boundaries while OOXPDF collapsed the same resolved visual style into one object. The
