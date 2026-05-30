@@ -205,6 +205,26 @@ High-priority actions:
   `4.570521 -> 3.870887`, moving it out of the top-five worst pages. Remaining page-33 residuals are the
   same text-state branch (`Tc`, secondary `/Tf`, and PDF text-operation splitting) plus the broader question
   of when Office rasterizes SVG pictures into image resources rather than exposing vector path fills.
+- [x] 2026-05-30: Fixed the page-81 color-transform quantization slice from the two generic gaps exposed by
+  run `20260530-162112`, without adding page-specific geometry logic. Inspection showed Office and candidate
+  had matching text operation counts (`83/83`) and matching graphics operation counts (`107/107`), with
+  identical graphics operator buckets (`95` clips, `8` strokes, `2` nonzero fills, `2` even-odd fills). The
+  visible residual was therefore not a missing shape. A disposable public Office probe under
+  `artifacts/tmp/color-midpoint-probe` confirmed that `schemeClr accent1 + lumMod=50000` on white exports as
+  `0.498 g`, while direct `scrgbClr 50000` remains `0.502 g`; OOXPDF now applies Office-observed half-down
+  midpoint quantization only to transformed colors, leaving raw percentage color conversion unchanged.
+  `PptxSyntheticThemeColorsAndFontsResolve` locks the `lumMod=50000` case, `pptx-typography --skip-slow`
+  passed (`128` passed, `2` skipped), and private run `20260530-163148` compared all `84/84` pages with empty
+  diagnostics. Page 81 improved slightly (`4.542712191 -> 4.542356289` MAE) and its candidate graphics colors
+  now include the Office-matching `g:0.498` bucket. Remaining page-81 work is the already-open Office text-state
+  branch (`Tc`, secondary `/Tf`, and text-operation splitting).
+- [ ] 2026-05-30: Continue page-81 text-state work from the generic typography branch, without adding
+  page-specific geometry logic. Inspection showed Office and candidate have matching text operation counts
+  (`83/83`) and matching graphics operation counts (`107/107`), with identical graphics operator buckets
+  (`95` clips, `8` strokes, `2` nonzero fills, `2` even-odd fills). The visible residual is therefore not a
+  missing shape. The color-transform midpoint mismatch is closed; the remaining dominant branch is the
+  already-open Office text-state issue (`Tc`, secondary `/Tf`, and text-operation splitting). Keep this work on
+  the public typography ladder and avoid private text or coordinate shortcuts.
 - [ ] 2026-05-30: Continue page-79 table/text work from structural table text evidence, not a new private
   coordinate rule. Page 79 is table-heavy (`42` table text frames, no effects/pictures/transparency), and
   inspection of run `20260530-160928` showed Office/candidate graphics are broadly the same table/grid class

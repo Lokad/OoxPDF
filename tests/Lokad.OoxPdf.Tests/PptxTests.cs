@@ -9532,6 +9532,12 @@ internal static class PptxTests
                       <a:prstGeom prst="rect"/>
                       <a:solidFill><a:schemeClr val="bg1"><a:lumMod val="65000"/></a:schemeClr></a:solidFill>
                     </p:spPr>
+                  </p:sp><p:sp>
+                    <p:spPr>
+                      <a:xfrm><a:off x="5029200" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                      <a:prstGeom prst="rect"/>
+                      <a:solidFill><a:schemeClr val="bg1"><a:lumMod val="50000"/></a:schemeClr></a:solidFill>
+                    </p:spPr>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
@@ -9543,6 +9549,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.Contains("0.651 g", pdf);
+        TestAssert.Contains("0.498 g", pdf);
         TestAssert.Contains("0.067 g", pdf);
     }
 

@@ -138,6 +138,17 @@ internal static class PptxColorResolver
         return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
     }
 
+    private static byte ToTransformByte(double value)
+    {
+        double rounded = Math.Round(value, MidpointRounding.AwayFromZero);
+        if (Math.Abs(value - Math.Floor(value) - 0.5d) < 1e-9)
+        {
+            rounded = Math.Floor(value);
+        }
+
+        return (byte)Math.Clamp((int)rounded, 0, 255);
+    }
+
     private static RgbColor ApplyColorTransforms(XElement? colorElement, RgbColor color)
     {
         if (colorElement is null)
@@ -172,7 +183,7 @@ internal static class PptxColorResolver
             }
         }
 
-        return new RgbColor(ToByte(red), ToByte(green), ToByte(blue));
+        return new RgbColor(ToTransformByte(red), ToTransformByte(green), ToTransformByte(blue));
     }
 
     private static byte ReadPercentageByte(XElement element, string attributeName)
