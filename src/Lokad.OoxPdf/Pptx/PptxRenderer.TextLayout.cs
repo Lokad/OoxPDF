@@ -1447,7 +1447,42 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        if (ShouldResolveOverflowColumnBalanceAcrossContinuedParagraph(layout, lines.Length, counts, balancedCeiling))
+        {
+            lineBalanceTarget = balancedCeiling;
+            return true;
+        }
+
         return false;
+    }
+
+    private static bool ShouldResolveOverflowColumnBalanceAcrossContinuedParagraph(PptxTextFrameLayout layout, int lineCount, int[] counts, int balancedCeiling)
+    {
+        PptxTextFrameModel frame = layout.Model;
+        if (lineCount % frame.ColumnCount != frame.ColumnCount - 1 ||
+            counts[^1] != balancedCeiling ||
+            counts.Take(frame.ColumnCount - 1).Sum() != balancedCeiling * (frame.ColumnCount - 1) - 1 ||
+            counts[^2] != balancedCeiling - 1)
+        {
+            return false;
+        }
+
+        var columns = layout.Paragraphs
+            .SelectMany((paragraph, paragraphIndex) => paragraph.Lines.Select(line => new
+            {
+                Line = line,
+                ParagraphIndex = paragraphIndex
+            }))
+            .GroupBy(item => Math.Round(item.Line.StartX, 2))
+            .OrderBy(group => group.Key)
+            .Select(group => group.ToArray())
+            .ToArray();
+        if (columns.Length != frame.ColumnCount || columns[^2].Length == 0 || columns[^1].Length == 0)
+        {
+            return false;
+        }
+
+        return columns[^2][^1].ParagraphIndex == columns[^1][0].ParagraphIndex;
     }
 
     private static bool TryReadOverflowColumnLineCounts(PptxTextFrameLayout layout, out PptxTextLineLayout[] lines, out int[] counts)

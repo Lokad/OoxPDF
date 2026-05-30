@@ -237,6 +237,18 @@ High-priority actions:
   against Office's `132`; nearest-position matches improved from `107` to `112`, and the remaining
   mismatch is concentrated in wrapped multi-column body text. Treat that residual as part of the open
   wrapped-text `/Tf`/`Tc` emission branch, not as license for a private-page run-count special case.
+- [x] 2026-05-30: Accepted a continued-paragraph discriminator for the remaining three-column overflow
+  balance issue on private page 55. The broad trial for `3n-1` line totals (`22/21/22 -> 22/22/21`) improved
+  page 55 but regressed page 36 badly (`6.971960 -> 8.253987` MAE), proving that this cannot be a numeric
+  column-count rule. The accepted structural rule only applies when the underfilled penultimate column and the
+  first line of the last column are the same paragraph, so Office is continuing a paragraph across the column
+  boundary rather than starting a fresh paragraph in the last column. This keeps the page-55 gain while leaving
+  the page-36 paragraph-boundary case unchanged. Validation: focused non-slow `pptx-typography` passed with
+  `121` tests, `0` failures, and `2` skips; private run `20260530-025202` compared 84/84 pages with empty
+  diagnostics and improved deck MAE `3.692693 -> 3.636644`, changed16 `0.061514 -> 0.060923`. Page 55 improved
+  `7.081205 -> 2.373083` MAE and changed16 `0.106202 -> 0.056547`; page 36 stayed at `6.971960` MAE. Keep the
+  rejected broader `3n-1` balance out unless public Office probes show a different paragraph-continuation
+  condition.
 - [x] 2026-05-29: Kept slide-wide PPTX text overflow as PDF structure instead of pre-culling it in the
   renderer. Private page-36 inspection showed a text frame whose layout model contained off-slide overflow
   lines that Office still exported as PDF text operations under a slide-wide clipping path; OOXPDF dropped the
