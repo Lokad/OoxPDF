@@ -3389,7 +3389,8 @@ internal sealed partial class PptxRenderer
             advanceEstimator.RequestedTypefaceHasMathTable(runStyle.Typeface, runStyle.Bold, runStyle.Italic) ||
             ascenderRatio <= 0d ||
             ascenderRatio > PptxTextMetricRules.MaximumBaselineMetricRatio ||
-            ascenderRatio < PptxTextMetricRules.OfficeBaselineFloorMetricThreshold;
+            ascenderRatio < PptxTextMetricRules.OfficeBaselineFloorMetricThreshold ||
+            font.Os2.WindowsDescender / (double)font.UnitsPerEm <= PptxTextMetricRules.OfficeBaselineFloorMaximumWindowsDescenderRatio;
     }
 
     private static string? ReadBulletText(PptxParagraphBulletModel bullet, ref int autoNumberValue)

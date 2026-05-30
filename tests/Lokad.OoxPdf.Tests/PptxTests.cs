@@ -7872,6 +7872,51 @@ internal static class PptxTests
             "Expected Calibri rectangular text to keep its resolved font metric instead of the Office fallback floor. Actual ratio: " + metric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
     }
 
+    public static void PptxSyntheticRectTextUsesOfficeBaselineFloorForSmallDescenderFonts()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" wrap="none"/>
+                      <a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Cambria"/></a:rPr><a:t>Cambria</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextBaselineMetricSnapshot metric = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .Single()
+            .BaselineMetric;
+
+        TestAssert.True(
+            Math.Abs(metric.Ratio - 0.974d) < 0.001d,
+            "Expected rectangular text whose resolved font has a small Windows descender to use Office's fallback baseline floor. Actual ratio: " + metric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
+    }
+
     public static void PptxSyntheticRectTextUsesOfficeBaselineFloorForMathFonts()
     {
         string cambriaMath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");

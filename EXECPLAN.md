@@ -191,6 +191,24 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Aligned rectangular PPTX text baselines for small-descender fonts through public
+  Office-PDF evidence, while continuing the private `lokad-value-based` typography pass. Private page-36 and
+  page-59 inspection showed their largest residuals are still dominated by text-state/font-size and line
+  placement rather than graphics: page 36 graphics are nearly structurally matched while candidate text emits
+  `0` character spacing across the page, and page 59 strokes match Office by count, width, and bounds even
+  though its text still shows the same text-state family. A public neutral font survey then isolated a
+  different, actionable baseline gap without private content: Office floors rectangular top-anchored Arial and
+  Cambria text to the `0.974` baseline ratio, but keeps Calibri near its resolved `0.952` metric. The accepted
+  rule is metric-based, not a font-name branch: rectangular top-anchored text now uses the Office baseline
+  floor when the resolved font's OS/2 Windows descender is at or below `0.24em`, while the existing Calibri
+  guard remains covered. Public regression
+  `PptxSyntheticRectTextUsesOfficeBaselineFloorForSmallDescenderFonts` locks the Cambria case beside the
+  existing Arial/Calibri/Cambria Math baseline-floor tests. Validation: focused non-slow `pptx-typography`
+  passed (`126` passed, `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
+  Private run `20260530-135656` on `lokad-value-based` compared all `84/84` pages with empty diagnostics,
+  improved deck MAE `3.422687 -> 3.421583`, changed16 `0.058496 -> 0.058475`, and improved page 17 MAE
+  `1.094233 -> 1.001562` with changed16 `0.026834 -> 0.025058`. Pages 36, 20, 21, and 59 remained
+  effectively unchanged, so their open text-state/line-placement items stay active.
 - [x] 2026-05-30: Aligned PPTX image luminance brightness with Office's additive OOXML behavior while
   continuing the private page-21 pass. Private inspection isolated a small but real residual to the slide's
   lone luminance-recolored picture: the Office reference raster averaged about `252.68` RGB in the affected
@@ -17714,3 +17732,24 @@ MAE `3.432160 -> 3.432084`, changed16 `0.058733 -> 0.058719`; page 21 improved M
 changed16 `0.106715 -> 0.105519`. The run now correctly reports one unsupported effect diagnostic for the
 unrendered shape glow. Continue on page 21's larger residual as table text/row geometry and Office text-state,
 not as glow/fill output.
+
+Follow-up, 2026-05-30: the latest high-error-page pass adds two private-safe negative results and one accepted
+public baseline rule. Rechecking pages 36 and 59 after the page-17/page-21 fixes showed that a new graphics
+change is not the right lever: page 36 has nearly matched clip/fill/stroke structure and the remaining
+candidate/reference difference is concentrated in text state, secondary Office font-size branches, and
+sub-point line placement; page 59 has matching stroke counts, stroke widths, and stroke bounds, and its
+remaining residual again clusters around text-state emission. Do not implement a family/style/first-span
+secondary-`/Tf` rule from this private evidence. The public baseline-font survey exposed a safer structural
+rule instead: Office floors rectangular top-anchored text to the `0.974` fallback for fonts with a small OS/2
+Windows descender ratio, while preserving Calibri's larger-descender metric. The renderer now applies that
+metric discriminator at `0.24em`, and the new public regression
+`PptxSyntheticRectTextUsesOfficeBaselineFloorForSmallDescenderFonts` covers the Cambria case without
+weakening the existing Calibri guard.
+
+Validation: focused non-slow `pptx-typography` passed with `126` tests, `0` failures, and `2` slow skips.
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors.
+Private validation on `lokad-value-based` run `20260530-135656` compared `84/84` pages with empty diagnostics,
+deck MAE `3.421583`, and changed16 `0.058475`. Against run `20260530-133407`, only page 17 moved materially:
+MAE `1.094233 -> 1.001562` and changed16 `0.026834 -> 0.025058`. Pages 36, 20, 21, and 59 remain the top
+private rendering targets, so the next long-view pass should stay on Office text-state/font-size/baseline
+structure rather than on additional graphics proxies.
