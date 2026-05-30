@@ -18768,3 +18768,12 @@ Tooling refinement, 2026-05-31: `ComparePptxTextEmission.ps1` now carries the in
 aggregate fields into comparison rows and summary groupings. This removes the manual join previously needed
 between `PptxInspect` glyph-runs and Office/candidate text-operation comparisons, and keeps future page-36
 and page-21 `Tc` investigations reproducible.
+
+Rejected table-anchor trial, 2026-05-31: page 79's table-heavy residual made it tempting to remove the
+guard that keeps table cells on the estimated vertical-anchor offset and let table-cell text use the shared
+actual-line-box anchoring pass used by shape text. This is not a valid broad fix. The reversible change moved
+the public `PptxSyntheticTableCentersTextByContentHeight` baseline from the Office-backed expected
+`499.667pt` to `500.337pt`, failing non-slow `pptx-tables` (`18` passed, `1` failed). The trial was reverted
+without running the private deck. Keep table cells excluded from the actual-line-box anchoring pass until a
+public table fixture demonstrates the narrower Office condition; page 79 should continue through table row
+geometry, text-state decomposition, and PDF operation splitting rather than a blanket table anchor rewrite.
