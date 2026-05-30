@@ -373,13 +373,7 @@ internal sealed partial class PptxRenderer
         double minimumTotal = minimumHeights.Sum();
         if (minimumTotal > frameHeight + PptxTextMetricRules.TextStateTolerance)
         {
-            double scale = frameHeight / minimumTotal;
-            for (int i = 0; i < rowHeights.Length; i++)
-            {
-                rowHeights[i] = minimumHeights[i] * scale;
-            }
-
-            return rowHeights;
+            return minimumHeights;
         }
 
         double overflow = rowHeights.Sum() - frameHeight;

@@ -12275,6 +12275,62 @@ internal static class PptxTests
         TestAssert.DoesNotContain("72 390.", pdf);
     }
 
+    public static void PptxSyntheticTableKeepsOverflowingContentMinimumRowsUnscaled()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="508000"/></p:xfrm>
+                      <a:graphic>
+                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                          <a:tbl>
+                            <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+                            <a:tr h="63500">
+                              <a:tc>
+                                <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha Beta Gamma Delta</a:t></a:r></a:p></a:txBody>
+                                <a:tcPr/>
+                              </a:tc>
+                            </a:tr>
+                            <a:tr h="63500">
+                              <a:tc>
+                                <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Epsilon Zeta Eta Theta</a:t></a:r></a:p></a:txBody>
+                                <a:tcPr/>
+                              </a:tc>
+                            </a:tr>
+                          </a:tbl>
+                        </a:graphicData>
+                      </a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextFrameModelSnapshot[] tableFrames = PptxRenderer.InspectTableTextFrameModels(document, package, 0).ToArray();
+
+        TestAssert.Equal(2, tableFrames.Length);
+        double totalRenderedRows = tableFrames.Sum(frame => frame.FrameHeight);
+        TestAssert.True(totalRenderedRows > 40.01d, $"Expected overflowing content-minimum rows to exceed the 40pt graphicFrame instead of being scaled down, got {totalRenderedRows.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+        TestAssert.True(tableFrames.All(frame => frame.FrameHeight > 20d), "Expected each row to preserve its content minimum rather than the declared 20pt row height.");
+    }
+
     public static void PptxSyntheticTableTextFrameModelPreservesCellPropertySources()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

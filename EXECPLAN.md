@@ -569,6 +569,18 @@ High-priority actions:
   Office PDFs contradict, but keep the page-21/page-79 table text-state item open: Office's small nonzero table
   `Tc` families and extra text-operation splits still need a public structural rule rather than a resurrected
   average-residual promotion.
+  Follow-up, 2026-05-31: accepted the content-minimum overflow row-allocation rule for slack tables. Public
+  `pptx-ladder-10-table-center-explicit-multiline` showed that Office lets row content minima exceed the
+  `graphicFrame` height instead of compressing all rows back into the frame when the minimum total is too tall.
+  Returning the computed minimum row heights in that case moved the public multiline table from MAE
+  `13.537929` to `10.442563` (run `20260531-002537`) and produced the Office-like `27.37pt` row cadence
+  seen in `PptxInspect`, while `pptx-ladder-10-table-center-explicit-wrapped` stayed unchanged at MAE
+  `8.201281`. Private `lokad-value-based` run `20260531-002604` stayed neutral versus the table-`Tc` cleanup
+  checkpoint (`2.933659` deck MAE, changed16 `0.053398`; page 21 remained `5.943068`). Keep this as a
+  structural table-layout correction, not a page-21 fix: page 21 remains dominated by table text-state,
+  smaller-row baseline residuals, and extra Office text-operation splitting. Public regression
+  `PptxSyntheticTableKeepsOverflowingContentMinimumRowsUnscaled` locks the branch; validation passed with
+  solution build and non-slow `pptx-tables` (`19` passed).
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,
