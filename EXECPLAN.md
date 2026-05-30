@@ -385,10 +385,12 @@ High-priority actions:
   A structural trial that used `max(authored row height, content minimum)` for high-slack tables improved the
   public `pptx-ladder-10-table-center-explicit-wrapped` target (`MAE 8.201281 -> 3.713218`, changed16
   `0.067583 -> 0.040461`) but regressed the private target (`lokad-value-based` page 21 `6.241450 -> 6.990027`
-  MAE, deck `3.439664 -> 3.448634`). The rendering change was reverted. Conclusion: the public case needs a
-  narrower Office rule than "do not stretch high-slack rows", and private page 21 still requires the current
-  content-minimum expansion branch; the next attempt must explain Office's row-internal centered text-band
-  placement without discarding private row expansion.
+  MAE, deck `3.439664 -> 3.448634`). A narrower follow-up that enforced authored row heights as a floor for
+  high-slack content-minimum rows and trimmed only trailing surplus rows produced the same private regression
+  signature. Both rendering changes were reverted. Conclusion: the public case needs a narrower Office rule
+  than "do not stretch high-slack rows", and private page 21 still requires the current content-minimum
+  expansion branch; the next attempt must explain Office's row-internal centered text-band placement without
+  discarding private row expansion.
 - [x] 2026-05-30: Accepted a moderate-slack table row-height rule and rejected the broad declared-row version.
   A public-safe row-ladder probe built from the private page-21 geometry showed that when a table frame is much
   taller than its declared row sum and cell text does not require expansion, Office keeps text bands close to
