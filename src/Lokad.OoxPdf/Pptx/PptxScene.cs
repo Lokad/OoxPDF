@@ -526,6 +526,8 @@ internal sealed record PptxTextGlyphRunSnapshot(
     double LineMaxFontSize,
     double LayoutFontSize,
     double PdfFontSize,
+    double LayoutCharacterSpacing,
+    double PdfCharacterSpacing,
     int GlyphCount,
     double FirstAdjustmentAfterOrigin,
     IReadOnlyList<PptxTextGlyphRunAtomSnapshot> Glyphs);

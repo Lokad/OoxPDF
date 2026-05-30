@@ -569,6 +569,10 @@ foreach ($pair in $pairs) {
             CandPdfFontSize = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.PdfFontSize, 6) }
             DeltaFontSize = $null
             CandLayoutFontSize = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.LayoutFontSize, 6) }
+            RefCharacterSpacing = if ($null -eq $reference) { $null } else { [Math]::Round([double]$reference.CharacterSpacing, 6) }
+            CandLayoutCharacterSpacing = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LayoutCharacterSpacing" }
+            CandPdfCharacterSpacing = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "PdfCharacterSpacing" }
+            DeltaPdfCharacterSpacing = if ($null -eq $reference -or $null -eq $candidate) { $null } else { Delta -left ([double]$reference.CharacterSpacing) -right ([double](OptionalValue $candidate "PdfCharacterSpacing")) }
             MainFontGrid = if ($null -eq $candidate) { $null } else { RoundAway (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) }
             RefSecondaryFontDelta = if ($null -eq $reference -or $null -eq $candidate) { $null } else { Delta -left (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) -right ([double]$reference.FontSize) }
             CandPdfGridDelta = if ($null -eq $candidate) { $null } else { Delta -left (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) -right ([double]$candidate.PdfFontSize) }
@@ -669,6 +673,10 @@ foreach ($pair in $pairs) {
         CandPdfFontSize = [Math]::Round($candFontSize, 6)
         DeltaFontSize = $deltaFontSize
         CandLayoutFontSize = [Math]::Round([double]$candidate.LayoutFontSize, 6)
+        RefCharacterSpacing = [Math]::Round([double]$reference.CharacterSpacing, 6)
+        CandLayoutCharacterSpacing = OptionalRoundedDouble $candidate "LayoutCharacterSpacing"
+        CandPdfCharacterSpacing = OptionalRoundedDouble $candidate "PdfCharacterSpacing"
+        DeltaPdfCharacterSpacing = Delta -left ([double]$reference.CharacterSpacing) -right ([double](OptionalValue $candidate "PdfCharacterSpacing"))
         MainFontGrid = RoundAway $mainFontGrid
         RefSecondaryFontDelta = Delta -left $mainFontGrid -right $refFontSize
         CandPdfGridDelta = Delta -left $mainFontGrid -right $candFontSize
@@ -763,6 +771,9 @@ if (HasValue $OutputSummaryJson) {
         FontBranchRangeSeparators = Find-BranchRangeSeparators $rowsArray $numericBranchFields
         FontBranchDistinctValueSeparators = Find-BranchDistinctValueSeparators $rowsArray $numericBranchFields
         RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
+        RefCharacterSpacingCounts = Group-Count $rowsArray { param($row) RoundedKey $row.RefCharacterSpacing }
+        PdfCharacterSpacingDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.DeltaPdfCharacterSpacing }
+        ByPdfCharacterSpacingAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandPdfCharacterSpacing) + "|" + (BranchKey $row) }
         ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
         ByCandidateFontFamilyAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandFontFamily")) + "|" + (BranchKey $row) }
         ByCandidateStyleAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandBold")) + "," + (StringKey (OptionalValue $row "CandItalic")) + "," + (StringKey (OptionalValue $row "CandSyntheticBold")) + "," + (StringKey (OptionalValue $row "CandSyntheticItalic")) + "|" + (BranchKey $row) }

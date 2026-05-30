@@ -327,7 +327,7 @@ internal sealed partial class PptxRenderer
     private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFrameModel frameModel, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
         frameModel = ResetEstimatedVerticalAnchorOffset(frameModel);
-        PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
+        PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document, advanceEstimator);
         PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
         if (HasShapeAutoFit(frameModel.BodyProperties) && UsesRotatedFrameAutoFit(frameModel.Orientation))
         {
@@ -336,7 +336,7 @@ internal sealed partial class PptxRenderer
             {
                 PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: false);
                 return ApplyActualVerticalAnchorOffsetIfNeeded(
-                    BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator, allowWrapping: false),
+                    BuildTextFrameLayout(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, allowWrapping: false),
                     document,
                     advanceEstimator,
                     allowWrapping: false);
@@ -351,7 +351,7 @@ internal sealed partial class PptxRenderer
         {
             PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
             return ApplyActualVerticalAnchorOffsetIfNeeded(
-                BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator),
+                BuildTextFrameLayout(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator),
                 document,
                 advanceEstimator,
                 allowWrapping: true);
@@ -410,10 +410,11 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextFlowModel BuildTextFlowModel(IReadOnlyList<PptxTextFrameModel> frames, PptxDocument document)
     {
-        return new PptxTextFlowModel(frames.Select(frame => BuildTextFlowFrame(frame, document)).ToArray());
+        var advanceEstimator = new TextAdvanceEstimator();
+        return new PptxTextFlowModel(frames.Select(frame => BuildTextFlowFrame(frame, document, advanceEstimator)).ToArray());
     }
 
-    private static PptxTextFlowFrame BuildTextFlowFrame(PptxTextFrameModel frame, PptxDocument document)
+    private static PptxTextFlowFrame BuildTextFlowFrame(PptxTextFrameModel frame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
         var box = new PptxTextFlowBox(
             frame.FlowYTop,
@@ -429,7 +430,7 @@ internal sealed partial class PptxRenderer
             frame.RotationCenterX,
             frame.RotationCenterY);
         bool attachSpacesToFollowingWord = HasNoAutoFit(frame.BodyProperties);
-        return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(paragraph => BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord)).ToArray());
+        return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(paragraph => BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord, advanceEstimator)).ToArray());
     }
 
     private static bool HasShapeAutoFit(PptxTextBodyProperties bodyProperties)
@@ -506,7 +507,7 @@ internal sealed partial class PptxRenderer
         {
             double candidateScale = (low + high) / 2d;
             PptxTextFrameModel candidate = ScaleTextFrameModel(frame, candidateScale);
-            PptxTextFlowFrame candidateFlow = BuildTextFlowFrame(candidate, document);
+            PptxTextFlowFrame candidateFlow = BuildTextFlowFrame(candidate, document, advanceEstimator);
             PptxTextFrameLayout candidateLayout = BuildTextFrameLayout(candidateFlow, document, advanceEstimator, allowWrapping);
             if (TextLayoutOverflows(candidateLayout, candidateFlow.Box))
             {
@@ -559,7 +560,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxTextFrameModel anchored = layout.Model with { VerticalOffset = verticalOffset };
-        return BuildTextFrameLayout(BuildTextFlowFrame(anchored, document), document, advanceEstimator, allowWrapping);
+        return BuildTextFrameLayout(BuildTextFlowFrame(anchored, document, advanceEstimator), document, advanceEstimator, allowWrapping);
     }
 
     private static bool TryResolveActualVerticalAnchorOffset(PptxTextFrameLayout layout, out double verticalOffset)
@@ -661,7 +662,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph, bool attachSpacesToFollowingWord)
+    private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph, bool attachSpacesToFollowingWord, TextAdvanceEstimator advanceEstimator)
     {
         var runs = new List<PptxTextFlowRun>(paragraph.Runs.Count);
         PptxTextFlowRun? previousDrawableRun = null;
@@ -686,12 +687,12 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        if (UsesHighlightedSyntheticBoldItalicMathParagraphSpacing(runs))
+        if (UsesHighlightedSyntheticBoldItalicMathParagraphSpacing(runs, advanceEstimator))
         {
             for (int i = 0; i < runs.Count; i++)
             {
                 PptxTextFlowRun run = runs[i];
-                if (UsesSyntheticBoldItalicMathSpacing(run.Style))
+                if (UsesSyntheticBoldItalicMathSpacing(run.Style, advanceEstimator))
                 {
                     runs[i] = run with
                     {
@@ -707,7 +708,7 @@ internal sealed partial class PptxRenderer
         return new PptxTextFlowParagraph(paragraph, paragraph.Style, runs.ToArray());
     }
 
-    private static bool UsesHighlightedSyntheticBoldItalicMathParagraphSpacing(IReadOnlyList<PptxTextFlowRun> runs)
+    private static bool UsesHighlightedSyntheticBoldItalicMathParagraphSpacing(IReadOnlyList<PptxTextFlowRun> runs, TextAdvanceEstimator advanceEstimator)
     {
         bool hasHighlightedRun = false;
         bool hasMatchingDrawableRun = false;
@@ -720,19 +721,25 @@ internal sealed partial class PptxRenderer
             }
 
             hasHighlightedRun |= run.Style.Highlight is not null;
-            hasMatchingDrawableRun |= UsesSyntheticBoldItalicMathSpacing(run.Style);
+            hasMatchingDrawableRun |= UsesSyntheticBoldItalicMathSpacing(run.Style, advanceEstimator);
         }
 
         return hasHighlightedRun && hasMatchingDrawableRun;
     }
 
-    private static bool UsesSyntheticBoldItalicMathSpacing(ResolvedRunTextStyle style)
+    private static bool UsesSyntheticBoldItalicMathSpacing(ResolvedRunTextStyle style, TextAdvanceEstimator advanceEstimator)
     {
         return Math.Abs(style.CharacterSpacing) <= PptxTextMetricRules.TextStateTolerance &&
             style.Bold &&
             style.Italic &&
-            style.Typeface is not null &&
-            style.Typeface.Contains("Math", StringComparison.OrdinalIgnoreCase);
+            UsesMathTableFont(style, advanceEstimator);
+    }
+
+    private static bool UsesMathTableFont(ResolvedRunTextStyle style, TextAdvanceEstimator advanceEstimator)
+    {
+        OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(style.Typeface, style.Bold, style.Italic);
+        return font?.TableTags.Contains("MATH") == true ||
+            advanceEstimator.RequestedTypefaceHasMathTable(style.Typeface, style.Bold, style.Italic);
     }
 
     private static bool StartsWithDrawableRegularSpace(IReadOnlyList<PptxTextFlowSegment> segments)
@@ -3699,7 +3706,7 @@ internal sealed partial class PptxRenderer
                 height += pendingSpacingAfter + paragraphStyle.SpacingBefore;
             }
 
-            PptxTextFlowParagraph flowParagraph = BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord);
+            PptxTextFlowParagraph flowParagraph = BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord, advanceEstimator);
             double maxFontSize = 0d;
             string? lineTypeface = null;
             bool lineBold = false;

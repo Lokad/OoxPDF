@@ -671,6 +671,25 @@ High-priority actions:
   do not encode private-page font/column constants as implicit text state. Keep the open work on the
   Office secondary `/Tf` branch and only revisit non-authored `Tc` once a public Office-authored probe
   reproduces the trigger.
+- [x] 2026-05-30: Audited and upgraded the remaining font/style-name keyed text-state proxy before adding
+  any new implicit `Tc` or secondary `/Tf` renderer branch. Current evidence shows why this must be explicit:
+  the private page-36/public narrow-column probe correlation around `Tc=-0.036` was not enough to justify a
+  Cambria Math or family/size branch, and the newer emission context intentionally does not expose raw
+  family/style names to `PptxPdfTextEmissionProfile`. Similar suspects to check systematically:
+  `UsesSyntheticBoldItalicMathSpacing` plus `OfficeSyntheticBoldItalicMathCharacterSpacing`, any secondary
+  font-size branch notes keyed by family/style/synthetic flags, and diagnostics or tests that accidentally
+  lock a typeface name as the behavior rather than as a public probe fixture. Keep default font fallback and
+  fixture font choices separate from renderer behavior. The desired replacement is structural evidence:
+  resolved font-face availability, actual synthetic-style generation, OpenType metrics, run splitting, fit
+  scaling, table/frame context, and PDF text-state normalization. The audit should start from the existing
+  font-table path already used by baseline metrics (`MATH` table checks and requested-face math-table
+  resolution) instead of using `Typeface.Contains("Math")`. The renderer now uses that structural
+  MATH-table evidence for the highlighted synthetic bold+italic spacing gate; a follow-up source scan found
+  no remaining PPTX renderer predicates keyed to concrete family names other than the centralized default
+  Latin fallback. Validation: focused non-slow `pptx-typography` passed (`128` passed, `0` failed, `2`
+  skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; private run
+  `20260530-180316` remained neutral against the current baseline with deck MAE `2.948045`, changed16
+  `0.053572`, `84/84` compared pages, and no diagnostics.
 - [x] 2026-05-30: Rejected the broad page 21 text-box style-fill shortcut. Page 21 has two `txBox="1"`
   rectangle text boxes with no direct `spPr` fill, direct colored lines, glow effects, and `p:style/a:fillRef
   idx="1"`. PDF inspection made the candidate's resolved fills look suspicious because Office's reference
@@ -17992,6 +18011,21 @@ shows the same secondary-`/Tf` family plus small baseline/line-position drift wi
 counts. Continue investigating Office text-state emission structurally, but only after finding a discriminator
 that survives public probes and multiple private pages; avoid another private-coordinate or style-name
 shortcut.
+
+Revision note, 2026-05-30: the page-36 `Tc=-0.036` investigation added a useful guardrail rather than a
+renderer rule. A local branch that keyed PDF character spacing on raw typeface evidence was rejected on
+architecture grounds before being retained: Office behavior must be modeled from resolved font properties,
+synthetic-style availability, shaping/run segmentation, frame/table context, and emitted PDF text-state
+normalization, not from names such as Cambria Math. The codebase search found one existing proxy needing the
+same treatment, `UsesSyntheticBoldItalicMathSpacing` feeding `OfficeSyntheticBoldItalicMathCharacterSpacing`;
+it has now been upgraded from `Typeface.Contains("Math")` to resolved/requested font MATH-table evidence, with
+private run `20260530-180316` confirming deck-level neutrality. The structural split between layout character
+spacing and PDF emitted `Tc` is still useful and private-run neutral, but `PptxPdfTextEmissionProfile` should
+not gain raw family, bold, or italic discriminators. Public probe evidence to preserve for the next audit: the
+`pptx-ladder-04-typography-slide3-narrow-cambria-probe` reference has a `Tc=-0.036` bucket on only part of the
+text operations, while private page 36 has several Office `Tc` buckets (`-0.036`, `-0.012`, `-0.0574`, and
+others). That distribution is a signal for the text-state profile work, not permission to add another
+typeface-name heuristic.
 
 Accepted follow-up, 2026-05-30: page-21 exposed a real effect-rendering mismatch from a renderer-side proxy,
 not from table text. Office's PDF for the slide has `9` fills and `6` strokes; the old candidate had matching

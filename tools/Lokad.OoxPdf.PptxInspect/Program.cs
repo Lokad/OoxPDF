@@ -242,6 +242,8 @@ foreach (PptxSlide slide in slides)
             Round(run.LineMaxFontSize),
             Round(run.LayoutFontSize),
             Round(run.PdfFontSize),
+            Round(run.LayoutCharacterSpacing),
+            Round(run.PdfCharacterSpacing),
             run.GlyphCount,
             Round(run.FirstAdjustmentAfterOrigin)));
     }
@@ -462,6 +464,8 @@ internal sealed record PptxGlyphRunRecord(
     double LineMaxFontSize,
     double LayoutFontSize,
     double PdfFontSize,
+    double LayoutCharacterSpacing,
+    double PdfCharacterSpacing,
     int GlyphCount,
     double FirstAdjustmentAfterOrigin);
 

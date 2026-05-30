@@ -6600,6 +6600,13 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains(" TJ", pdf);
         TestAssert.Contains("30 Tc", pdf);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single();
+        TestAssert.Equal(30d, glyphRun.LayoutCharacterSpacing);
+        TestAssert.Equal(30d, glyphRun.PdfCharacterSpacing);
     }
 
     public static void PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns()

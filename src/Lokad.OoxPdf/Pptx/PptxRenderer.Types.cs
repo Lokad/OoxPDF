@@ -167,6 +167,7 @@ internal sealed partial class PptxRenderer
         double BaselineY,
         double Width,
         double PdfFontSize,
+        double PdfCharacterSpacing,
         bool SyntheticBold,
         bool SyntheticItalic);
 
@@ -230,6 +231,10 @@ internal sealed partial class PptxRenderer
         double FrameShapeTopY,
         double FrameShapeWidth,
         double FrameShapeHeight,
+        int? TableRowIndex,
+        int? TableColumnIndex,
+        int? TableRowSpan,
+        int? TableColumnSpan,
         double FrameInsetLeft,
         double FrameInsetRight,
         double FrameInsetTop,
@@ -1153,6 +1158,8 @@ internal sealed partial class PptxRenderer
         private const double PointsPerInch = 72d;
 
         public static double FontSize(PptxPdfTextEmissionContext context) => FontSize(context.LayoutFontSize);
+
+        public static double CharacterSpacing(PptxPdfTextEmissionContext context, double layoutCharacterSpacing) => layoutCharacterSpacing;
 
         public static double FontSize(double layoutFontSize)
         {
