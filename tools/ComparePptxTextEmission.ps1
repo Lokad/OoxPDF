@@ -653,6 +653,11 @@ foreach ($pair in $pairs) {
             CandLineAdvance = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LineAdvance" }
             CandGlyphCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "GlyphCount" }
             CandFirstAdjustmentAfterOrigin = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FirstAdjustmentAfterOrigin" }
+            CandInterGlyphAdjustmentCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "InterGlyphAdjustmentCount" }
+            CandInterGlyphAdjustmentSum = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "InterGlyphAdjustmentSum" }
+            CandInterGlyphAdjustmentMin = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "InterGlyphAdjustmentMin" }
+            CandInterGlyphAdjustmentMax = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "InterGlyphAdjustmentMax" }
+            CandInterGlyphAdjustmentAverage = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "InterGlyphAdjustmentAverage" }
             RefText = if ($IncludeText -and $null -ne $reference) { RefText $reference } else { $null }
             CandText = if ($IncludeText -and $null -ne $candidate) { CandText $candidate } else { $null }
         })
@@ -771,6 +776,11 @@ foreach ($pair in $pairs) {
         CandLineAdvance = OptionalRoundedDouble $candidate "LineAdvance"
         CandGlyphCount = OptionalValue $candidate "GlyphCount"
         CandFirstAdjustmentAfterOrigin = OptionalRoundedDouble $candidate "FirstAdjustmentAfterOrigin"
+        CandInterGlyphAdjustmentCount = OptionalValue $candidate "InterGlyphAdjustmentCount"
+        CandInterGlyphAdjustmentSum = OptionalRoundedDouble $candidate "InterGlyphAdjustmentSum"
+        CandInterGlyphAdjustmentMin = OptionalRoundedDouble $candidate "InterGlyphAdjustmentMin"
+        CandInterGlyphAdjustmentMax = OptionalRoundedDouble $candidate "InterGlyphAdjustmentMax"
+        CandInterGlyphAdjustmentAverage = OptionalRoundedDouble $candidate "InterGlyphAdjustmentAverage"
         CandLetterCount = OptionalValue $candidate "LetterCount"
         CandDecimalDigitCount = OptionalValue $candidate "DecimalDigitCount"
         CandPunctuationCount = OptionalValue $candidate "PunctuationCount"
@@ -853,6 +863,8 @@ if (HasValue $OutputSummaryJson) {
         ByCandidateTextHeightAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameTextHeight) + "|" + (BranchKey $row) }
         ByCandidateGlyphCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandGlyphCount")) + "|" + (BranchKey $row) }
         ByCandidateFirstAdjustmentAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandFirstAdjustmentAfterOrigin")) + "|" + (BranchKey $row) }
+        ByCandidateInterGlyphAdjustmentCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandInterGlyphAdjustmentCount")) + "|" + (BranchKey $row) }
+        ByCandidateInterGlyphAdjustmentAverageAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandInterGlyphAdjustmentAverage")) + "|" + (BranchKey $row) }
         ByCandidateLetterCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandLetterCount")) + "|" + (BranchKey $row) }
         ByCandidateDecimalDigitCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandDecimalDigitCount")) + "|" + (BranchKey $row) }
         ByCandidatePunctuationCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandPunctuationCount")) + "|" + (BranchKey $row) }

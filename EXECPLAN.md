@@ -18763,3 +18763,8 @@ Office uses a mix of `Tc=0`, positive `Tc=0.0195`, and `Tc=-0.036` for the same 
 reverted. Do not add a blanket noAutofit-column or all-letter-column rule; the viable long-term path needs a
 PDF-level decomposition rule that also explains when Office keeps zero, goes positive, emits the negative
 `-0.003em` state, or changes the secondary `/Tf` branch.
+
+Tooling refinement, 2026-05-31: `ComparePptxTextEmission.ps1` now carries the inter-glyph adjustment
+aggregate fields into comparison rows and summary groupings. This removes the manual join previously needed
+between `PptxInspect` glyph-runs and Office/candidate text-operation comparisons, and keeps future page-36
+and page-21 `Tc` investigations reproducible.
