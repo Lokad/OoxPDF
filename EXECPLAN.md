@@ -367,6 +367,19 @@ High-priority actions:
   a replacement for the base grid. Do not add a broad implicit `Tc` rule from page 55 until a public probe
   reproduces the non-authored `Tc` trigger; current evidence says the safer next rendering slice is
   context-aware `/Tf` emission for wrapped PPTX text.
+- [ ] 2026-05-30: Extend the secondary `/Tf` investigation with the public-safe y-sweep probe under
+  `artifacts/tmp/office-probes/font-grid-y-sweep/`. While checking current private top-five pages, slide 20
+  and slide 59 both reduced to text-state divergence: their Office/candidate fill and stroke buckets match,
+  but Office emits non-authored `Tc` families and secondary font sizes while OOXPDF emits `Tc=0` and only the
+  first-order 600-DPI font grid. The y-sweep probe uses plain 10 pt Arial text boxes with no table, chart, or
+  private content; Office still emits `9.984 Tf` for selected boxes while the base grid remains `9.96 Tf`.
+  This rejects a table-only explanation for the secondary font branch and also rejects any private-slide
+  coordinate shortcut. Follow-up public-safe probes under `font-grid-y-fine/` and `font-grid-xy-grid/` further
+  rejected a simple position-only rule: a finer y sweep triggered one secondary `Tf` while a comparable x/y
+  grid triggered none. The next step is to derive the Office export rule from public probes that vary frame
+  top, frame height, body insets, wrap/autofit mode, baseline grid, text length, run splitting, and text matrix
+  placement, then encode the rule in `PptxPdfTextEmissionProfile` only after it predicts the y-sweep,
+  fine-grid, x/y-grid, and multicol probes.
 - [x] 2026-05-30: Added private-deck-safe inspection fields for PPTX glyph-run natural/layout widths and
   used them to reject the tempting page-55 `Tc` shortcut. On page 55, all candidate glyph runs had
   `LayoutWidth - NaturalWidth = 0`, while Office still emitted nonzero `Tc` families (`-0.252`, `-0.123`,
