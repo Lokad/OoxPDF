@@ -1488,7 +1488,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct Glow(RgbColor Color, double Alpha, double Radius);
 
-    private readonly record struct OuterShadow(RgbColor Color, double Alpha, double OffsetX, double OffsetY);
+    private readonly record struct OuterShadow(RgbColor Color, double Alpha, double OffsetX, double OffsetY, double BlurRadius);
 
     private readonly record struct SvgPaint(RgbColor? Color, SvgGradient? Gradient);
 

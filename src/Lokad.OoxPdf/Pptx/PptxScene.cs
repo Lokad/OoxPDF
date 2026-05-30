@@ -698,7 +698,8 @@ internal readonly record struct PptxSceneOuterShadow(
     RgbColor Color,
     double Alpha,
     double OffsetX,
-    double OffsetY);
+    double OffsetY,
+    double BlurRadius);
 
 internal readonly record struct PptxSceneShapeEffectFamily(
     bool HasEffectList,
@@ -765,7 +766,8 @@ internal sealed record PptxScenePicture(
     bool HasVideo,
     bool HasAudio,
     PptxScenePictureTile Tile,
-    PptxSceneLineStyle Line);
+    PptxSceneLineStyle Line,
+    PptxSceneOuterShadow OuterShadow);
 
 internal sealed record PptxSceneImageResource(
     string PartName,
@@ -2440,7 +2442,8 @@ internal sealed class PptxSceneBuilder
             HasPictureVideo(picture),
             HasPictureAudio(picture),
             ReadPictureTile(picture),
-            line);
+            line,
+            TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
     }
 
     private static bool IsLineWidthSpecified(XElement? shapeProperties)
@@ -5303,6 +5306,7 @@ internal sealed class PptxSceneBuilder
             TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
         {
             double alpha = ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
+            double blurRadius = OoxUnits.EmuToPoints(ReadLong(outerShadow, "blurRad", 0));
             double distance = OoxUnits.EmuToPoints(ReadLong(outerShadow, "dist", 0));
             double direction = ReadLong(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
             shadow = new PptxSceneOuterShadow(
@@ -5310,7 +5314,8 @@ internal sealed class PptxSceneBuilder
                 color,
                 alpha,
                 distance * Math.Cos(direction),
-                -distance * Math.Sin(direction));
+                -distance * Math.Sin(direction),
+                blurRadius);
             return true;
         }
 

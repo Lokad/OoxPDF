@@ -191,6 +191,22 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Added first-class PPTX picture outer-shadow rendering from private page-12 evidence. Private
+  slide inspection found two rectangular pictures with `a:outerShdw` effects (`blurRad`, `dist`, `dir`, and
+  alpha) while OOXPDF rendered only the image content and picture outlines. This was a structural gap, not a
+  page-coordinate problem: Office represents the effect as picture-backed compositing, so the scene model now
+  carries `PptxScenePicture.OuterShadow`, `PptxSceneOuterShadow` preserves `BlurRadius`, and picture rendering
+  emits a shadow image XObject with a soft mask before the picture. The existing unblurred shadow path remains
+  available for non-blurred effects. Public regression `PptxSyntheticPngPictureOuterShadowUsesRasterSoftMask`
+  locks the `/SMask` image structure and draw order through the normal scene-to-renderer picture path.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, focused
+  `pptx-images --skip-slow` passed (`22` passed), and private run `20260530-155829` on
+  `lokad-value-based` compared all `84/84` pages with empty diagnostics. Deck MAE improved
+  `3.009260 -> 3.008014`, changed16 improved `0.054138 -> 0.054128`, and page 12 improved
+  `5.294456 -> 5.259580`. Candidate page-12 inspection now shows the two added shadow image draws
+  (`25 -> 27` image draws) and graphics operation count moved closer to Office (`138 -> 140` against Office
+  `141`). Remaining page-12 gaps are now text-state/font-size, hyperlink/table residuals, and precise shadow
+  softness/color alignment, not complete omission of picture shadows.
 - [x] 2026-05-30: Split multi-value-axis chart plot-box reserves between same-side and opposite-side value
   axes, improving the active private page-40 stacked-bar geometry without weakening the public same-side
   secondary-axis probes. The private chart has one visible value-axis label strip on the left and one on the
@@ -443,6 +459,11 @@ High-priority actions:
   simply enabling the shape-text actual-line-box anchor branch for table cells; the next table-anchor attempt
   needs a public Office-authored table ladder that separates explicit insets, default-inset adjustments, row
   height expansion, and center-anchor occupied-height measurement.
+  A later retry after intervening table changes passed the non-slow `pptx-tables` group (`15` passed), but the
+  private deck still rejected the broad migration: run `20260530-154645` regressed deck MAE
+  `3.009260 -> 3.023688` and made page 21 the worst page (`5.949429 -> 6.063976`). That second rejection is
+  useful because it proves the issue is not merely stale public coverage. The target remains narrower:
+  Office's row-internal centered text-band allocation for explicit-margin, wrapped cells.
 - [x] 2026-05-30: Accepted a private-deck typography rule that separates explicit percentage line advance
   from baseline ascent in multi-column `noAutofit` overflow text frames. Private page-13/page-49 PDF
   inspection showed Office keeping 12 pt body-text baselines on the same top-column rows while still using
@@ -506,6 +527,14 @@ High-priority actions:
   a replacement for the base grid. Do not add a broad implicit `Tc` rule from page 55 until a public probe
   reproduces the non-authored `Tc` trigger; current evidence says the safer next rendering slice is
   context-aware `/Tf` emission for wrapped PPTX text.
+  Follow-up private page-36 inspection after the chart reserve/pattern work keeps this item active: graphics
+  are no longer the dominant p36 gap, while Office emits selected secondary font sizes (`12.024`, `14.064`,
+  `15.984`, and related branches) and non-authored text-state families where OOXPDF still emits integer
+  sizes and mostly `Tc=0`. The relevant visible frame is an ordinary three-column `noAutofit` overflow text
+  frame with explicit column spacing; Office's secondary-size rows cluster by wrapped line position rather
+  than by any private text content. Do not shortcut this with private slide coordinates or a blanket `Tc`
+  rule; the next acceptable change needs a public probe that predicts the multicol and y-sweep evidence
+  together.
 - [ ] 2026-05-30: Extend the secondary `/Tf` investigation with the public-safe y-sweep probe under
   `artifacts/tmp/office-probes/font-grid-y-sweep/`. While checking current private top-five pages, slide 20
   and slide 59 both reduced to text-state divergence: their Office/candidate fill and stroke buckets match,

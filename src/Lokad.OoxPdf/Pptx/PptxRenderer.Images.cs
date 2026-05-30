@@ -39,7 +39,8 @@ internal sealed partial class PptxRenderer
             ToFillRect(picture.Picture.Fill),
             picture.Picture.Alpha,
             picture.Picture.Recolor,
-            ToLineStyle(picture.Picture.Line));
+            ToLineStyle(picture.Picture.Line),
+            ToOuterShadow(picture.Picture.OuterShadow));
     }
 
     private static void RenderPicture(
@@ -58,7 +59,8 @@ internal sealed partial class PptxRenderer
         FillRect fillRect,
         double alpha,
         PptxSceneImageRecolor recolor,
-        LineStyle line)
+        LineStyle line,
+        OuterShadow? outerShadow)
     {
         if (targetPartName is null)
         {
@@ -85,6 +87,7 @@ internal sealed partial class PptxRenderer
         double height = OoxUnits.EmuToPoints(transformedBounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
         bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
+        RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index);
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
             RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect);
@@ -169,6 +172,43 @@ internal sealed partial class PptxRenderer
         images.Add(new PdfImageResource(name, image));
 
         StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
+    }
+
+    private static void RenderPictureOuterShadow(
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        ShapeBounds bounds,
+        double x,
+        double y,
+        double width,
+        double height,
+        bool transformed,
+        OuterShadow? outerShadow,
+        List<PdfImageResource> images,
+        ref int imageIndex)
+    {
+        if (outerShadow is not { } shadow)
+        {
+            return;
+        }
+
+        graphics.SaveState();
+        ClipSlideBoundsEvenOdd(document, graphics);
+        if (transformed)
+        {
+            ApplyShapeTransform(graphics, x, y, width, height, bounds);
+        }
+
+        if (shadow.BlurRadius > 0d)
+        {
+            DrawRasterOuterShadow(graphics, x, y, width, height, shadow, images, ref imageIndex);
+        }
+        else
+        {
+            DrawOuterShadow(graphics, "rect", x, y, width, height, shadow);
+        }
+
+        graphics.RestoreState();
     }
 
     private static void StrokePictureFrame(

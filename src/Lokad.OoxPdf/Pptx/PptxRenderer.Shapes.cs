@@ -242,7 +242,16 @@ internal sealed partial class PptxRenderer
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
             customGeometry is null && sceneCustomGeometry is null)
         {
-            DrawOuterShadow(graphics, preset, x, y, width, height, outerShadow);
+            if (outerShadow.BlurRadius > 0d &&
+                preset == "rect" &&
+                images is not null)
+            {
+                DrawRasterOuterShadow(graphics, x, y, width, height, outerShadow, images, ref imageIndex);
+            }
+            else
+            {
+                DrawOuterShadow(graphics, preset, x, y, width, height, outerShadow);
+            }
         }
 
         if ((sceneCustomGeometry is not null && TryRenderCustomGeometry(
@@ -668,6 +677,64 @@ internal sealed partial class PptxRenderer
         graphics.SetFillRgb(shadow.Color.Red, shadow.Color.Green, shadow.Color.Blue);
         DrawPresetFill(graphics, preset, x + shadow.OffsetX, y + shadow.OffsetY, width, height);
         graphics.RestoreState();
+    }
+
+    private static void DrawRasterOuterShadow(
+        PdfGraphicsBuilder graphics,
+        double x,
+        double y,
+        double width,
+        double height,
+        OuterShadow shadow,
+        List<PdfImageResource> images,
+        ref int imageIndex)
+    {
+        if (shadow.BlurRadius <= 0d ||
+            shadow.Alpha <= 0d ||
+            width <= 0d ||
+            height <= 0d)
+        {
+            return;
+        }
+
+        double shadowX = x + shadow.OffsetX - shadow.BlurRadius;
+        double shadowY = y + shadow.OffsetY - shadow.BlurRadius;
+        double shadowWidth = width + 2d * shadow.BlurRadius;
+        double shadowHeight = height + 2d * shadow.BlurRadius;
+        int pixelWidth = Math.Clamp((int)Math.Ceiling(shadowWidth * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
+        int pixelHeight = Math.Clamp((int)Math.Ceiling(shadowHeight * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
+        double scaleX = pixelWidth / shadowWidth;
+        double scaleY = pixelHeight / shadowHeight;
+
+        byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
+        byte[] alpha = new byte[pixelWidth * pixelHeight];
+        for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
+        {
+            double localY = (pixelY + 0.5d) / scaleY - shadow.BlurRadius;
+            double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
+            for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
+            {
+                double localX = (pixelX + 0.5d) / scaleX - shadow.BlurRadius;
+                double dx = localX < 0d ? -localX : localX > width ? localX - width : 0d;
+                int pixel = pixelY * pixelWidth + pixelX;
+                int rgbOffset = pixel * 3;
+                rgb[rgbOffset] = shadow.Color.Red;
+                rgb[rgbOffset + 1] = shadow.Color.Green;
+                rgb[rgbOffset + 2] = shadow.Color.Blue;
+
+                double distance = Math.Sqrt(dx * dx + dy * dy);
+                double t = Math.Clamp(distance / shadow.BlurRadius, 0d, 1d);
+                double falloff = (1d - t) * (1d - t);
+                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * shadow.Alpha * falloff), 0, 255);
+            }
+        }
+
+        var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
+        string name = "Im" + imageIndex++;
+        graphics.SaveState();
+        graphics.DrawImage(name, shadowX, shadowY, shadowWidth, shadowHeight);
+        graphics.RestoreState();
+        images.Add(new PdfImageResource(name, image));
     }
 
     private static void DrawPresetFill(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height)
@@ -2806,7 +2873,7 @@ internal sealed partial class PptxRenderer
     private static OuterShadow? ToOuterShadow(PptxSceneOuterShadow shadow)
     {
         return shadow.HasShadow
-            ? new OuterShadow(shadow.Color, shadow.Alpha, shadow.OffsetX, shadow.OffsetY)
+            ? new OuterShadow(shadow.Color, shadow.Alpha, shadow.OffsetX, shadow.OffsetY, shadow.BlurRadius)
             : null;
     }
 
