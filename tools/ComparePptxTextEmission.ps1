@@ -578,6 +578,10 @@ foreach ($pair in $pairs) {
             CandStrikeWidth = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "StrikeWidth" }
             CandStrikeHeight = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "StrikeHeight" }
             CandFrameIndex = if ($null -eq $candidate) { $null } else { $candidate.FrameIndex }
+            CandTableRowIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "TableRowIndex" }
+            CandTableColumnIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "TableColumnIndex" }
+            CandTableRowSpan = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "TableRowSpan" }
+            CandTableColumnSpan = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "TableColumnSpan" }
             CandParagraphIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "ParagraphIndex" }
             CandLineIndex = if ($null -eq $candidate) { $null } else { $candidate.LineIndex }
             CandSpanIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "SpanIndex" }
@@ -667,6 +671,10 @@ foreach ($pair in $pairs) {
         CandStrikeWidth = OptionalRoundedDouble $candidate "StrikeWidth"
         CandStrikeHeight = OptionalRoundedDouble $candidate "StrikeHeight"
         CandFrameIndex = $candidate.FrameIndex
+        CandTableRowIndex = OptionalValue $candidate "TableRowIndex"
+        CandTableColumnIndex = OptionalValue $candidate "TableColumnIndex"
+        CandTableRowSpan = OptionalValue $candidate "TableRowSpan"
+        CandTableColumnSpan = OptionalValue $candidate "TableColumnSpan"
         CandParagraphIndex = OptionalValue $candidate "ParagraphIndex"
         CandLineIndex = $candidate.LineIndex
         CandSpanIndex = OptionalValue $candidate "SpanIndex"
@@ -734,6 +742,9 @@ if (HasValue $OutputSummaryJson) {
         FontBranchDistinctValueSeparators = Find-BranchDistinctValueSeparators $rowsArray $numericBranchFields
         RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
         ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
+        ByCandidateTableRowAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableRowIndex")) + "|" + (BranchKey $row) }
+        ByCandidateTableColumnAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }
+        ByCandidateTableCellAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableRowIndex")) + "," + (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }
         ByParagraphIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandParagraphIndex) + "|" + (BranchKey $row) }
         BySpanIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandSpanIndex) + "|" + (BranchKey $row) }
         ByRefBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineY600Remainder) + "|" + (BranchKey $row) }

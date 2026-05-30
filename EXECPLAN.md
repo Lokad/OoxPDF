@@ -363,6 +363,20 @@ High-priority actions:
   table probes and private table pages can match Office PDF text operations by exact decoded text before
   nearest-position scoring. This avoids false row matches when repeated table strings drift vertically and
   keeps future table fixes grounded in structural PDF/glyph evidence rather than raster-only inspection.
+- [x] 2026-05-30: Extended PPTX text inspection and comparison snapshots with table cell identity. Candidate
+  glyph runs and text-frame snapshots now carry table row/column indices and spans, and
+  `tools/ComparePptxTextEmission.ps1` propagates those fields into detailed rows and summary groupings. This
+  is diagnostic-only, but it removes a major blind spot from the private page-21 work: the same Office-PDF
+  text-operation comparison can now group residuals by actual table row/cell without manual joins or private
+  text disclosure. Re-running page-21 PDF/text comparison against private run `20260530-101512` produced `92`
+  reliable table matches. The font branch was mostly aligned (`86` matches at `9.96 -> 9.96`, `6` at
+  `9.984 -> 9.96`), while baseline drift grouped by row formed a cumulative curve: near zero on row `0`,
+  about `0.5 pt` on row `1`, around `1.6 pt` by row `3`, peaking around `3.3 pt` on row `6`, then falling
+  back toward `0.5 pt` on the last row. This confirms the next rendering target is Office's table
+  row-height/text-band allocation for wrapped centered cells, not per-run font sizing and not another broad
+  non-authored `Tc` rule. Validation: `dotnet build tools/Lokad.OoxPdf.PptxInspect/Lokad.OoxPdf.PptxInspect.csproj
+  --tl:off --nologo -v minimal`, full solution build, non-slow `pptx-typography`, and non-slow `pptx-tables`
+  all passed.
 - [x] 2026-05-30: Accepted a moderate-slack table row-height rule and rejected the broad declared-row version.
   A public-safe row-ladder probe built from the private page-21 geometry showed that when a table frame is much
   taller than its declared row sum and cell text does not require expansion, Office keeps text bands close to
