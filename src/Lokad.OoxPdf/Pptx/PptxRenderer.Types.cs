@@ -1082,7 +1082,7 @@ internal sealed partial class PptxRenderer
         public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
         public const double OfficeSyntheticBoldAdvanceTighteningEm = 0.007d;
         public const double OfficeSyntheticBoldItalicCharacterSpacingEm = 0.01545d;
-        public const double OfficeHighlightedAutofitCharacterSpacingEm = -0.003d;
+        public const double OfficeHighlightContinuationCharacterSpacingEm = -0.003d;
         public const double OfficeAutofitNumberedDenseCharacterSpacingEm = -0.002d;
         public const double OfficeAutofitNumberedDefaultCharacterSpacingEm = -0.004d;
         public const double OfficeStrikePositionFontScale = 0.211d;
@@ -1124,8 +1124,8 @@ internal sealed partial class PptxRenderer
         public static double OfficeSyntheticBoldItalicCharacterSpacing(double fontSize) =>
             Math.Max(0d, fontSize * OfficeSyntheticBoldItalicCharacterSpacingEm);
 
-        public static double OfficeHighlightedAutofitCharacterSpacing(double fontSize) =>
-            fontSize * OfficeHighlightedAutofitCharacterSpacingEm;
+        public static double OfficeHighlightContinuationCharacterSpacing(double fontSize) =>
+            fontSize * OfficeHighlightContinuationCharacterSpacingEm;
 
         public static double OfficeAutofitNumberedDenseCharacterSpacing(double fontSize) =>
             fontSize * OfficeAutofitNumberedDenseCharacterSpacingEm;

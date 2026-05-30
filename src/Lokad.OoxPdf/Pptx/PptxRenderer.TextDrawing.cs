@@ -17,7 +17,7 @@ internal sealed partial class PptxRenderer
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
-        textSpans = ApplyOfficeAutofitPdfCharacterSpacing(textSpans);
+        textSpans = ApplyOfficePdfCharacterSpacing(textSpans);
         var glyphRuns = new List<PptxTextGlyphRunSnapshot>();
         foreach (PptxPositionedTextSpan span in textSpans)
         {
@@ -267,7 +267,7 @@ internal sealed partial class PptxRenderer
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
-        textSpans = ApplyOfficeAutofitPdfCharacterSpacing(textSpans);
+        textSpans = ApplyOfficePdfCharacterSpacing(textSpans);
         foreach (PptxPositionedTextSpan span in textSpans)
         {
             foreach (PptxPositionedTextSpan emissionSpan in SplitSpanByGlyphTypeface(span))
@@ -281,7 +281,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ApplyOfficeAutofitPdfCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
+    private static IReadOnlyList<PptxPositionedTextSpan> ApplyOfficePdfCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
     {
         if (textSpans.Count == 0)
         {
@@ -292,7 +292,7 @@ internal sealed partial class PptxRenderer
         Dictionary<int, double> numberedAutofitFrameSpacing = ReadOfficeNumberedAutofitFrameCharacterSpacing(textSpans);
         int currentFrame = -1;
         int currentParagraph = -1;
-        bool useHighlightedAutofitSpacing = false;
+        bool useHighlightContinuationSpacing = false;
         for (int i = 0; i < textSpans.Count; i++)
         {
             PptxPositionedTextSpan span = textSpans[i];
@@ -300,21 +300,23 @@ internal sealed partial class PptxRenderer
             {
                 currentFrame = span.FrameIndex;
                 currentParagraph = span.ParagraphIndex;
-                useHighlightedAutofitSpacing = false;
+                useHighlightContinuationSpacing = false;
+            }
+
+            bool hasZeroAuthoredCharacterSpacing =
+                Math.Abs(span.GlyphSpan.CharacterSpacing) < PptxTextMetricRules.TextStateTolerance;
+            if (hasZeroAuthoredCharacterSpacing && span.Run.HighlightColor is not null)
+            {
+                useHighlightContinuationSpacing = true;
             }
 
             bool eligibleAutofitSpan =
                 string.Equals(span.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) &&
-                Math.Abs(span.GlyphSpan.CharacterSpacing) < PptxTextMetricRules.TextStateTolerance;
-            if (eligibleAutofitSpan && span.Run.HighlightColor is not null)
-            {
-                useHighlightedAutofitSpacing = true;
-            }
-
+                hasZeroAuthoredCharacterSpacing;
             double? pdfCharacterSpacingOverride = null;
-            if (eligibleAutofitSpan && useHighlightedAutofitSpacing)
+            if (hasZeroAuthoredCharacterSpacing && useHighlightContinuationSpacing)
             {
-                pdfCharacterSpacingOverride = PptxTextMetricRules.OfficeHighlightedAutofitCharacterSpacing(span.Run.FontSize);
+                pdfCharacterSpacingOverride = PptxTextMetricRules.OfficeHighlightContinuationCharacterSpacing(span.Run.FontSize);
             }
             else if (eligibleAutofitSpan && numberedAutofitFrameSpacing.TryGetValue(span.FrameIndex, out double frameSpacingEm))
             {

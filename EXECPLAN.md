@@ -241,6 +241,23 @@ High-priority actions:
   page 79 still emit candidate `Tc=0` for all text operations. The useful outcome is architectural: PDF
   character spacing can now be decided at emission time independently from layout spacing, which is the hook
   needed for the broader private-deck `Tc` decomposition.
+  2026-05-30 continuation: upgraded this hook from an `spAutoFit`-only highlight rule into a generic
+  highlight-continuation PDF text-state rule. A public base probe showed that even a non-`spAutoFit` frame
+  has Office `Tc=-0.036` starting at the highlighted run and continuing for the following same-paragraph text,
+  while the prior candidate emitted `Tc=0` for those two operations. `ApplyOfficePdfCharacterSpacing` now
+  applies the named `OfficeHighlightContinuationCharacterSpacing` whenever authored/layout character spacing
+  is zero after a highlighted span has appeared in the current paragraph; numbered-autofit `Tc` remains scoped
+  to `spAutoFit`. This is a structural correction, not a font rule: it uses highlight/run sequencing and
+  authored character-spacing state, not typeface names or MATH-table evidence. Public text inspection for
+  `pptx-ladder-04-typography-spautofit-tracking-probe` now matches Office's `Tc` buckets (`0:3`,
+  `-0.036:2`); the narrow and wide tracking probes keep their prior Office-matching buckets. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; `pptx-typography --skip-slow` passed
+  (`133` passed, `2` skipped); targeted highlight-continuation tests passed. The public visual probe rasters
+  were unchanged, as expected from compensated `TJ` positioning. Private `lokad-value-based` run
+  `20260530-215130` compared all `84/84` pages with empty diagnostics and was effectively raster-neutral
+  versus accepted run `20260530-212639` (deck MAE delta about `+0.000000023`, changed16 delta about
+  `+0.000000046`). Keep the broader private-deck `Tc` item open; this closes only the highlight-continuation
+  subcase and removes one overly narrow autofit precondition.
 - [ ] 2026-05-30: Generalize the new emission-only `Tc` hook beyond highlighted `spAutoFit`. Private page 81 now
   shows the real target shape of the problem without exposing private text: Office and candidate both emit
   `83` text operations, but Office buckets `Tc` as `0:30`, `-0.048:20`, `0.0173:13`, `-0.0535:11`, and

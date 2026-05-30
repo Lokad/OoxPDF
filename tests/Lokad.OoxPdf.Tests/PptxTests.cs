@@ -9020,7 +9020,7 @@ internal static class PptxTests
         TestAssert.True(distributed.Spans.Last().X - distributed.StartX > distributed.Advance * 0.75d, "Expected distributed alignment to stretch glyph positions across the text frame.");
     }
 
-    public static void PptxHighlightedRunDoesNotApplyImplicitTracking()
+    public static void PptxHighlightedTextRunDoesNotApplyImplicitTracking()
     {
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -9047,9 +9047,25 @@ internal static class PptxTests
         TestAssert.True(highlighted.Segments.All(segment => Math.Abs(segment.FontScale - 1d) < 0.01d), "Expected highlight tracking to avoid fake font scaling.");
 
         TestAssert.True(following.FontSize > 0d, "Expected the following run to remain present in text flow.");
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
+            .Where(run => Math.Abs(run.PdfCharacterSpacing + 0.036d) < 0.001d)
+            .ToArray();
+
+        TestAssert.Equal(2, trackedRuns.Length);
+        TestAssert.True(
+            trackedRuns.Any(run => run.HighlightColor is not null),
+            "Expected Office's PDF character-spacing state to start at the highlighted run.");
+        TestAssert.True(
+            trackedRuns.Any(run => run.HighlightColor is null),
+            "Expected the same-paragraph continuation after the highlight to keep Office's PDF character-spacing state.");
+        TestAssert.True(
+            trackedRuns.All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
+            "Expected highlight continuation character spacing to be an emission-only PDF text state.");
     }
 
-    public static void PptxHighlightedAutofitContinuationEmitsOfficeCharacterSpacingTextState()
+    public static void PptxHighlightedContinuationEmitsOfficeCharacterSpacingTextStateAcrossAutofitWrap()
     {
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
