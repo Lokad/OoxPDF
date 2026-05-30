@@ -6689,7 +6689,7 @@ internal static class PptxTests
         TestAssert.True(explicitSpacing >= 0 && resetSpacing > explicitSpacing, "Expected text operations to reset inherited PDF character spacing.");
     }
 
-    public static void PptxSyntheticTablePromotesAveragePdfSpacingResidualToTextState()
+    public static void PptxSyntheticTableKeepsAveragePdfSpacingResidualInPositioningArray()
     {
         string calibri = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "calibri.ttf");
         if (!File.Exists(calibri))
@@ -6730,10 +6730,11 @@ internal static class PptxTests
         PptxDocument document = new PptxReader().Read(package);
         PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single();
         TestAssert.True(glyphRun.TableRowIndex == 0, "Expected the inspected run to come from the table cell.");
-        TestAssert.True(glyphRun.PdfCharacterSpacing < -0.001d, $"Expected average table PDF residual to be promoted to Tc, got {glyphRun.PdfCharacterSpacing.ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(Math.Abs(glyphRun.PdfCharacterSpacing) < 0.001d, $"Expected table text to keep residual PDF spacing in TJ positioning instead of promoting it to Tc, got {glyphRun.PdfCharacterSpacing.ToString("0.###", CultureInfo.InvariantCulture)}.");
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains(glyphRun.PdfCharacterSpacing.ToString("0.###", CultureInfo.InvariantCulture) + " Tc", pdf);
+        TestAssert.Contains("0 Tc", pdf);
+        TestAssert.Contains(" TJ", pdf);
     }
 
     public static void PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns()

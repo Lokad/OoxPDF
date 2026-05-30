@@ -552,6 +552,23 @@ High-priority actions:
   emission layer is supposed to decompose. Conclusion: table-cell PDF font-grid alignment must stay in
   emission/text-state decomposition unless a future Office-authored probe proves a narrower layout metric
   rule. Do not retry a blanket table layout font-size rounding rule.
+  Superseding follow-up, 2026-05-31: public table evidence overturned the average table-`Tc` promotion branch.
+  `pptx-ladder-10-rich-text-cell` Office reference emits rich table text as `Tc=0` while carrying positioning
+  differences in `TJ`; the promoted candidate emitted nonzero `Tc` buckets for the same public table spans.
+  Private page 21 showed the same structural mismatch: the promoted candidate had table `Tc` buckets around
+  `+0.018pt` and `-0.052pt`, while Office table-body text is mostly `9.96pt/Tc=0` with only a smaller
+  secondary `Tc=-0.00888` family. The renderer therefore removed `PromoteAverageTablePdfCharacterSpacing`;
+  residuals remain in the glyph positioning array and table text no longer invents a PDF text-state bucket.
+  Public regression `PptxSyntheticTableKeepsAveragePdfSpacingResidualInPositioningArray` replaces the old
+  heuristic-locking unit. Validation: solution build passed; `pptx-tables --skip-slow` passed (`18` passed);
+  public `pptx-ladder-10-rich-text-cell` passed in run `20260531-001800`; the full `pptx-tables` visual
+  family still has the same three pre-existing narrow gate failures (`basic-table`, `border-alpha`, and
+  `explicit-borders`). Private `lokad-value-based` run `20260531-001809` compared all `84/84` pages with empty
+  diagnostics; deck MAE was effectively neutral/slightly better (`2.933667 -> 2.933659`) while page 21 worsened
+  slightly (`5.939469 -> 5.943068`). Keep this change because it removes a renderer-local heuristic that public
+  Office PDFs contradict, but keep the page-21/page-79 table text-state item open: Office's small nonzero table
+  `Tc` families and extra text-operation splits still need a public structural rule rather than a resurrected
+  average-residual promotion.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,

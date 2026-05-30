@@ -1042,51 +1042,11 @@ internal sealed partial class PptxRenderer
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(emissionContext);
         double pdfCharacterSpacing = span.PdfCharacterSpacingOverride
             ?? PptxPdfTextEmissionProfile.CharacterSpacing(emissionContext, span.GlyphSpan.CharacterSpacing);
-        if (span.PdfCharacterSpacingOverride is null)
-        {
-            pdfCharacterSpacing = PromoteAverageTablePdfCharacterSpacing(span, pdfFontSize, pdfCharacterSpacing);
-        }
-
         string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.TypefaceResolutionSource, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
-    }
-
-    private static double PromoteAverageTablePdfCharacterSpacing(PptxPositionedTextSpan span, double pdfFontSize, double pdfCharacterSpacing)
-    {
-        if (span.TableRowIndex is null ||
-            span.GlyphSpan.Glyphs.Count < 2 ||
-            Math.Abs(span.GlyphSpan.CharacterSpacing) > PptxTextMetricRules.TextStateTolerance)
-        {
-            return pdfCharacterSpacing;
-        }
-
-        double residualSum = 0d;
-        int residualCount = 0;
-        for (int i = 1; i < span.GlyphSpan.Glyphs.Count; i++)
-        {
-            PptxTextGlyphLayout glyph = span.GlyphSpan.Glyphs[i];
-            PptxTextGlyphLayout previousGlyph = span.GlyphSpan.Glyphs[i - 1];
-            double residual = PdfTextAdjustmentBefore(
-                glyph.AdjustmentBefore - pdfCharacterSpacing,
-                previousGlyph.Advance,
-                span.GlyphSpan.FontSize,
-                pdfFontSize);
-            residualSum += residual;
-            residualCount++;
-        }
-
-        if (residualCount == 0)
-        {
-            return pdfCharacterSpacing;
-        }
-
-        double averageResidual = residualSum / residualCount;
-        return Math.Abs(averageResidual) <= PptxTextMetricRules.TextStateTolerance
-            ? pdfCharacterSpacing
-            : pdfCharacterSpacing + averageResidual;
     }
 
     private static PptxPdfTextEmissionContext CreatePdfTextEmissionContext(PptxPositionedTextSpan span)
