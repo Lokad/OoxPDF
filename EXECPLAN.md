@@ -251,6 +251,17 @@ High-priority actions:
   249 delta, 9 missing`; `81: 44 delta, 39 ok`). The page-79 "missing" rows are clustered in table-cell text
   bands where Office emits extra same-line text operations with distinct `Tc` buckets; they should drive a
   structural public probe for Office's text-state splitting rather than a content-loss or coordinate patch.
+- [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
+  font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
+  spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,
+  and `pptx-ladder-04-typography-spautofit-tracking-narrow-probe` has Office `9.984pt` and `Tc=-0.036`
+  against candidate `9.96pt/Tc=0`. A temporary public-safe font-agnostic probe under
+  `artifacts/tmp/tracking-font-agnostic-probe` showed the same highlighted-boundary structure producing
+  different Office `Tc` buckets across fonts (`0.02`, `0.012`, `-0.036`) and secondary font-size buckets
+  on only some spans. Local font table inspection did not find an OpenType `trak` table in the common Windows
+  fonts tested, so the next acceptable implementation path is resolved font metrics/GPOS/kerning plus
+  Office-like run-boundary PDF text-state splitting. Do not key this branch on `Cambria Math` or any other
+  family name.
 - [x] 2026-05-30: Narrowed centered table-cell wrapping from private page-12 evidence without changing table
   geometry or adding a private coordinate rule. Fresh inspection of accepted run `20260530-170544` showed page 12
   was not dominated by missing graphics: table strokes and fills were structurally aligned, while centered table
