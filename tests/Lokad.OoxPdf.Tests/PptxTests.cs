@@ -12680,7 +12680,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int lineStarts = Regex.Matches(pdf, $@"1 0 0 1 {Regex.Escape(FormatPdfNumber(79.2d))} [0-9.]+ Tm").Count;
         TestAssert.True(lineStarts >= 2, "Expected narrow table-cell text to wrap onto multiple lines at the cell text inset.");
-        TestAssert.Contains("79.2 399.6 57.6 64.8 re W* n", pdf);
+        TestAssert.Contains("79.2 396 57.6 72 re W* n", pdf);
     }
 
     public static void PptxSyntheticTableKeepsSlide6HeaderOnOneLine()

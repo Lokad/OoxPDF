@@ -225,6 +225,46 @@ High-priority actions:
   missing shape. The color-transform midpoint mismatch is closed; the remaining dominant branch is the
   already-open Office text-state issue (`Tc`, secondary `/Tf`, and text-operation splitting). Keep this work on
   the public typography ladder and avoid private text or coordinate shortcuts.
+- [ ] 2026-05-31: Continue the private page-36 typography branch as an Office text-emission model problem,
+  not as a font-family rule. Private run `20260531-002604` has page 36 as the worst slide (`6.045371817`
+  MAE) and the page is now narrowed to text-state decomposition: candidate and Office text positions are close
+  enough for `ComparePptxTextEmission.ps1`, but Office emits a mixture of `Tc`, secondary `/Tf`, and text
+  operation splits that the candidate still mostly leaves on the main font-size grid. The current page-36
+  comparison has `135` Office text operations versus `133` candidate glyph runs, with branch counts
+  `main-grid=111`, `secondary-0.024=18`, `secondary-2.04=1`, `secondary-2.064=1`,
+  `secondary--2.04=2`, and `2` unmatched reference operations. The dominant private three-column frame uses
+  `noAutofit`, `wrap=square`, `numCol=3`, `spcCol=108000`, default `7.2pt/3.6pt` insets, and `12pt` text.
+  Office emits mostly negative character spacing there (`-0.036`, `-0.0476`, `-0.0574`, plus smaller
+  `-0.0287`/`-0.012` buckets), while the candidate currently emits `Tc=0` for that frame.
+
+  Rejected shortcuts from the 2026-05-31 public/private sweep: do not special-case `Cambria Math`, MATH-table
+  fonts, or a column-only condition. The same `secondary-0.024` branch appears in public synthetic probes and
+  private page 36 with both `Cambria Math` and `Aptos`; it appears in three-column `noAutofit` frames and also
+  in one-column `noAutofit`/default frames. The public `pptx-ladder-04-typography-unspaced-column-tc-probe`
+  repeats the three-column structure and shows `secondary-0.024=12`, but it also shows Office using zero,
+  positive, and negative `Tc` within the same frame. The durable target is therefore a PDF-emission profile
+  that models Office's line/paragraph/frame text-state decomposition after layout, including secondary `/Tf`
+  selection and compensated `TJ`, without altering layout widths or using typeface names as conditions.
+  Rejected trial: tightening overwide first-segment chunk fit tolerance for every `noAutofit` frame improved
+  the public unspaced-column probe dramatically (`10.423376 -> 1.394638` MAE, SSIM `0.3738 -> 0.9597`) but
+  regressed private page 36 (`6.045372 -> 7.735627` MAE) and deck MAE (`2.933659 -> 2.976731`) in run
+  `20260531-004108`. Preserve this as evidence that overwide-run wrapping is part of the problem, but do not
+  land a global no-autofit tolerance change. The next attempt needs a narrower structural discriminator, likely
+  tied to the exact Office line-building state for unspaced paragraphs/columns rather than the autofit enum
+  alone.
+- [x] 2026-05-31: Moved table-cell vertical overflow clipping toward Office's cell-rectangle structure from
+  private page-21 evidence. The page has a table with explicit cell insets, middle vertical anchoring, and
+  table-style `clip` overflow. Candidate PDF inspection showed many table text clips using the inset text
+  rectangle height, while Office clips the text against the full cell vertical extent. `BuildTableTextFrameModel`
+  now keeps layout and wrap width inset-based, but uses the table cell's full vertical frame for the emitted
+  clip when table-cell text overflow is clipped. This is deliberately table-only; normal shape text clipping
+  stays on the inset text rectangle. The public table unit now locks the full-cell vertical clip height, focused
+  `pptx-tables --skip-slow` passed (`19` passed), and public `pptx-table` passed at
+  `artifacts/visual/pptx-table/20260531-005030` with MAE `0.050809823`. Private `lokad-value-based` run
+  `20260531-004748` compared all `84/84` pages with empty diagnostics and improved deck MAE
+  `2.933659 -> 2.933648`; page 21 improved `5.943067612 -> 5.942988040`, and page 11 improved
+  `4.535251736 -> 4.534377894`. This is a small visual win, but it also removes a table-local clipping
+  structural mismatch without special-casing slide content.
 - [x] 2026-05-30: Added the first emission-only `Tc` decomposition hook for highlighted `spAutoFit` continuation
   text without using a font-family discriminator. The public narrow tracking probe showed Office emits
   `Tc=-0.036` for a highlighted run and its same-paragraph continuation while OOXML layout spacing remains

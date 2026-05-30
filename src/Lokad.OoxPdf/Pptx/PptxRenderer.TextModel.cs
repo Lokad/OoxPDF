@@ -485,15 +485,15 @@ internal sealed partial class PptxRenderer
         double columnSpacing = bodyProperties.ColumnSpacing;
         bool clipsVerticalOverflow = ClipsTextVerticalOverflow(bodyProperties.VerticalOverflow);
         bool clipsTextLocally = clipsVerticalOverflow;
-        double textClipX = clipsTextLocally ? textX : 0d;
-        double textClipWidth = clipsTextLocally ? textWidth : document.SlideWidthPoints;
+        double textClipX = clipsTextLocally ? flowX : 0d;
+        double textClipWidth = clipsTextLocally ? flowWidth : document.SlideWidthPoints;
         double textClipY = 0d;
         double textClipHeight = document.SlideHeightPoints;
         if (clipsVerticalOverflow)
         {
             (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
-                document.SlideHeightPoints - flowYTop - insets.Top - textHeight,
-                textHeight,
+                document.SlideHeightPoints - flowYTop - flowHeight,
+                flowHeight,
                 document.SlideHeightPoints);
         }
 
