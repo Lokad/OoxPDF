@@ -225,6 +225,28 @@ High-priority actions:
   missing shape. The color-transform midpoint mismatch is closed; the remaining dominant branch is the
   already-open Office text-state issue (`Tc`, secondary `/Tf`, and text-operation splitting). Keep this work on
   the public typography ladder and avoid private text or coordinate shortcuts.
+- [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
+  losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
+  highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was
+  still too close to a font-specific proxy for the long-term Office alignment target. The rule now keys on the
+  resolver's observable style synthesis result: a highlighted paragraph with zero-`spc`, bold+italic text only
+  receives the same Office-observed `0.01545em` character spacing when the requested bold or italic style is
+  actually synthesized because the resolved face lacks that style. This keeps the behavior tied to font
+  resolution and PDF text-state synthesis rather than to names such as Cambria Math or to the presence of a
+  MATH table. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+  `pptx-typography --skip-slow` passed (`128` passed, `2` skipped); private run `20260530-183428` on
+  `lokad-value-based` compared all `84/84` pages with empty diagnostics and unchanged raster metrics
+  (`2.948045` MAE, changed16 `0.053572`). The candidate PDF hash was identical to run `20260530-182607`
+  (`7C97880967258CDA124BE4F2E9E31FE72BAF8D6A7D9C57E8905AD1B97158AC0E`), so this was architecture cleanup, not
+  a private-coordinate adjustment.
+- [ ] 2026-05-30: Audit the remaining typography font-profile proxies and upgrade or explicitly quarantine
+  each one. The codebase no longer has a raw Cambria Math text-state discriminator in the highlighted `Tc`
+  branch, but related font-profile logic remains in the baseline floor path through OpenType MATH-table
+  evidence and in public regression names/fixtures that use Cambria/Cambria Math as convenient Windows
+  examples. The next careful pass should separate three categories before changing behavior: genuine resolved
+  OpenType metric rules, Office style-synthesis rules, and historical proxy rules that only happened to work
+  for Cambria/Cambria Math probes. Do not remove public evidence; rename or supplement fixtures when needed,
+  and validate against `lokad-value-based` after each behavior-affecting change.
 - [x] 2026-05-30: Aligned PPTX table-cell background fills with Office's observed even-odd PDF fill operator.
   Private page-21 inspection after run `20260530-180316` showed a raster-neutral but structural mismatch:
   Office emitted all `9` page fills as `f*`, while the candidate emitted `5` table-cell rectangles as `f` and

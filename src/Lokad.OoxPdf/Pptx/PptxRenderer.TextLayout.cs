@@ -687,18 +687,18 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        if (UsesHighlightedSyntheticBoldItalicMathParagraphSpacing(runs, advanceEstimator))
+        if (UsesHighlightedSyntheticBoldItalicParagraphSpacing(runs, advanceEstimator))
         {
             for (int i = 0; i < runs.Count; i++)
             {
                 PptxTextFlowRun run = runs[i];
-                if (UsesSyntheticBoldItalicMathSpacing(run.Style, advanceEstimator))
+                if (UsesSyntheticBoldItalicSpacing(run.Style, advanceEstimator))
                 {
                     runs[i] = run with
                     {
                         Style = run.Style with
                         {
-                            CharacterSpacing = PptxTextMetricRules.OfficeSyntheticBoldItalicMathCharacterSpacing(run.Style.FontSize)
+                            CharacterSpacing = PptxTextMetricRules.OfficeSyntheticBoldItalicCharacterSpacing(run.Style.FontSize)
                         }
                     };
                 }
@@ -708,7 +708,7 @@ internal sealed partial class PptxRenderer
         return new PptxTextFlowParagraph(paragraph, paragraph.Style, runs.ToArray());
     }
 
-    private static bool UsesHighlightedSyntheticBoldItalicMathParagraphSpacing(IReadOnlyList<PptxTextFlowRun> runs, TextAdvanceEstimator advanceEstimator)
+    private static bool UsesHighlightedSyntheticBoldItalicParagraphSpacing(IReadOnlyList<PptxTextFlowRun> runs, TextAdvanceEstimator advanceEstimator)
     {
         bool hasHighlightedRun = false;
         bool hasMatchingDrawableRun = false;
@@ -721,25 +721,19 @@ internal sealed partial class PptxRenderer
             }
 
             hasHighlightedRun |= run.Style.Highlight is not null;
-            hasMatchingDrawableRun |= UsesSyntheticBoldItalicMathSpacing(run.Style, advanceEstimator);
+            hasMatchingDrawableRun |= UsesSyntheticBoldItalicSpacing(run.Style, advanceEstimator);
         }
 
         return hasHighlightedRun && hasMatchingDrawableRun;
     }
 
-    private static bool UsesSyntheticBoldItalicMathSpacing(ResolvedRunTextStyle style, TextAdvanceEstimator advanceEstimator)
+    private static bool UsesSyntheticBoldItalicSpacing(ResolvedRunTextStyle style, TextAdvanceEstimator advanceEstimator)
     {
         return Math.Abs(style.CharacterSpacing) <= PptxTextMetricRules.TextStateTolerance &&
             style.Bold &&
             style.Italic &&
-            UsesMathTableFont(style, advanceEstimator);
-    }
-
-    private static bool UsesMathTableFont(ResolvedRunTextStyle style, TextAdvanceEstimator advanceEstimator)
-    {
-        OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(style.Typeface, style.Bold, style.Italic);
-        return font?.TableTags.Contains("MATH") == true ||
-            advanceEstimator.RequestedTypefaceHasMathTable(style.Typeface, style.Bold, style.Italic);
+            (advanceEstimator.RequestedStyleRequiresSyntheticBold(style.Typeface, style.Bold, style.Italic) ||
+             advanceEstimator.RequestedStyleRequiresSyntheticItalic(style.Typeface, style.Bold, style.Italic));
     }
 
     private static bool StartsWithDrawableRegularSpace(IReadOnlyList<PptxTextFlowSegment> segments)

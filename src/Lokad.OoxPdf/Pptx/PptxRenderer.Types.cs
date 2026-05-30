@@ -957,6 +957,28 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
+        public bool RequestedStyleRequiresSyntheticBold(string? familyName, bool bold, bool italic)
+        {
+            if (!bold)
+            {
+                return false;
+            }
+
+            FontResolution? resolution = ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
+            return resolution is not null && !resolution.Bold;
+        }
+
+        public bool RequestedStyleRequiresSyntheticItalic(string? familyName, bool bold, bool italic)
+        {
+            if (!italic)
+            {
+                return false;
+            }
+
+            FontResolution? resolution = ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
+            return resolution is not null && !resolution.Italic;
+        }
+
         private OpenTypeFont? ResolveFont(string familyName, bool bold, bool italic)
         {
             return LoadFont(ResolveFontResolution(familyName, bold, italic));
@@ -1068,7 +1090,7 @@ internal sealed partial class PptxRenderer
         public const double DefaultTextOutlineWidth = 0.75d;
         public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
         public const double OfficeSyntheticBoldAdvanceTighteningEm = 0.007d;
-        public const double OfficeSyntheticBoldItalicMathCharacterSpacingEm = 0.01545d;
+        public const double OfficeSyntheticBoldItalicCharacterSpacingEm = 0.01545d;
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
@@ -1105,8 +1127,8 @@ internal sealed partial class PptxRenderer
         public static double OfficeSyntheticBoldAdvanceTightening(double fontSize) =>
             Math.Max(0d, fontSize * OfficeSyntheticBoldAdvanceTighteningEm);
 
-        public static double OfficeSyntheticBoldItalicMathCharacterSpacing(double fontSize) =>
-            Math.Max(0d, fontSize * OfficeSyntheticBoldItalicMathCharacterSpacingEm);
+        public static double OfficeSyntheticBoldItalicCharacterSpacing(double fontSize) =>
+            Math.Max(0d, fontSize * OfficeSyntheticBoldItalicCharacterSpacingEm);
 
         public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
         {
