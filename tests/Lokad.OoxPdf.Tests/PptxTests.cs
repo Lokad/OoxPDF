@@ -10758,7 +10758,7 @@ internal static class PptxTests
         TestAssert.True(CountOccurrences(pdf, "/Subtype /Image") >= 2, "The same image part with and without recolor must use distinct cached image XObjects.");
         List<byte[]> imageRgbStreams = ReadPdfDeviceRgbImageStreams(output, width: 1, height: 1);
         TestAssert.True(imageRgbStreams.Any(rgb => rgb.SequenceEqual(new byte[] { 32, 64, 96 })), "Expected the original image RGB stream to remain unchanged.");
-        TestAssert.True(imageRgbStreams.Any(rgb => rgb.SequenceEqual(new byte[] { 255, 255, 255 })), "Expected OOXML luminance brightness to add an offset after contrast.");
+        TestAssert.True(imageRgbStreams.Any(rgb => rgb.SequenceEqual(new byte[] { 188, 198, 207 })), "Expected OOXML luminance contrast to scale channels before brightness lifts them toward white.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Supported PNG luminance recolor should not emit unsupported diagnostics.");
     }
 

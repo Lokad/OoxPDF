@@ -1122,9 +1122,36 @@ internal sealed partial class PptxRenderer
     private static byte ApplyBrightnessContrast(double channel, double brightness, double contrast)
     {
         double value = channel / 255d;
-        value = (value - 0.5d) * Math.Max(0d, 1d + contrast) + 0.5d;
-        value += brightness;
+        value = ApplyContrast(value, contrast);
+        value = ApplyBrightness(value, brightness);
         return ToByte(value * 255d);
+    }
+
+    private static double ApplyContrast(double value, double contrast)
+    {
+        value = Math.Clamp(value, 0d, 1d);
+        if (contrast < 0d)
+        {
+            return value * (1d + contrast);
+        }
+
+        if (contrast > 0d)
+        {
+            double scale = 1d - contrast;
+            return value < 0.5d
+                ? value * scale
+                : 1d - (1d - value) * scale;
+        }
+
+        return value;
+    }
+
+    private static double ApplyBrightness(double value, double brightness)
+    {
+        value = Math.Clamp(value, 0d, 1d);
+        return brightness < 0d
+            ? value * (1d + brightness)
+            : value + brightness;
     }
 
     private static byte Interpolate(byte from, byte to, double ratio)

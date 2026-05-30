@@ -5646,6 +5646,17 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-30: Accepted a structural PPTX picture luminance recolor correction from private page 21.
+  The page contains a PNG picture with `a:lum bright="70000" contrast="-70000"`. OOXPDF had applied
+  negative contrast around the midpoint and then added brightness, which collapsed the dark icon pixels to
+  white and made the picture invisible. Office's observable PDF/raster behavior keeps white pixels white and
+  lifts dark pixels toward a faint gray, so the renderer now scales channels by contrast before adding the
+  brightness lift. This is a generic image recolor transfer-function fix, not a private coordinate or z-order
+  shortcut. Public regression coverage in `PptxSyntheticPngPictureAppliesLuminanceRecolor` now asserts the
+  transformed RGB stream for a non-white PNG sample. Validation: non-slow `pptx-images` passed (`23` passed,
+  `0` failed), and private run `20260530-165505` compared `84/84` pages with empty diagnostics. The deck MAE
+  moved `2.949611 -> 2.949543`; page 21 moved `5.949429 -> 5.943711`, and the only page-level metric change
+  was page 21.
 - [x] 2026-05-30: Matched Office's contiguous PPTX auto-numbering restart for visible non-numbered paragraph
   interruptions. Private page 36 exposed a generic list-state gap: a text frame contains one auto-numbered block,
   a visible plain paragraph, then another auto-numbered block with no explicit `startAt`; Office restarts the
