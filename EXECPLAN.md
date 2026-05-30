@@ -417,6 +417,19 @@ High-priority actions:
   buckets such as `-0.099`, `-0.025`, and `-0.022` for promoted table operations. Remaining page-79 debt is
   now the non-uniform residual branch and the Office-specific extra text-operation splits, not all-zero table
   `Tc`.
+  Follow-up, 2026-05-30: broadened the table-cell residual decomposition from uniform-only to average residual
+  promotion. Instead of requiring every interglyph residual to be identical, the renderer now emits the mean
+  table-cell residual as PDF `Tc` and leaves only deviations in `TJ`, preserving glyph positions by construction.
+  This stays content-agnostic and font-agnostic: no private coordinates, no row/column buckets, and no font-family
+  discriminator. Focused validation passed (`pptx-typography --skip-slow`: `132` passed, `2` skipped;
+  `pptx-tables --skip-slow`: `17` passed). Public `pptx-ladder-10-composite-table-port` passed at run
+  `20260530-205145`; public `pptx-ladder-10-basic-table` remains at the pre-existing narrow gate miss
+  (`0.0508098234953704` MAE vs `0.05`). Private `lokad-value-based` run `20260530-204915` compared all `84/84`
+  pages with empty diagnostics and improved deck metrics slightly (`MAE=2.947933`, changed16 `0.053571`).
+  Page 79 improved (`5.014172 -> 5.012818` MAE), page 21 also improved (`5.943075 -> 5.939469` MAE), and
+  PDF inspection of page 79 now shows residual-heavy table branches as nonzero `Tc` with near-zero average `TJ`
+  residuals. Remaining page-79 work is the `258` vs `249` Office text-operation split and the line-placement
+  clusters, not the existence of table-cell text-state extraction.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,

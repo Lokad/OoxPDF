@@ -1012,7 +1012,7 @@ internal sealed partial class PptxRenderer
             ?? PptxPdfTextEmissionProfile.CharacterSpacing(emissionContext, span.GlyphSpan.CharacterSpacing);
         if (span.PdfCharacterSpacingOverride is null)
         {
-            pdfCharacterSpacing = PromoteUniformTablePdfCharacterSpacing(span, pdfFontSize, pdfCharacterSpacing);
+            pdfCharacterSpacing = PromoteAverageTablePdfCharacterSpacing(span, pdfFontSize, pdfCharacterSpacing);
         }
 
         string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
@@ -1022,7 +1022,7 @@ internal sealed partial class PptxRenderer
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
     }
 
-    private static double PromoteUniformTablePdfCharacterSpacing(PptxPositionedTextSpan span, double pdfFontSize, double pdfCharacterSpacing)
+    private static double PromoteAverageTablePdfCharacterSpacing(PptxPositionedTextSpan span, double pdfFontSize, double pdfCharacterSpacing)
     {
         if (span.TableRowIndex is null ||
             span.GlyphSpan.Glyphs.Count < 2 ||
@@ -1032,8 +1032,6 @@ internal sealed partial class PptxRenderer
         }
 
         double residualSum = 0d;
-        double residualMin = 0d;
-        double residualMax = 0d;
         int residualCount = 0;
         for (int i = 1; i < span.GlyphSpan.Glyphs.Count; i++)
         {
@@ -1044,23 +1042,11 @@ internal sealed partial class PptxRenderer
                 previousGlyph.Advance,
                 span.GlyphSpan.FontSize,
                 pdfFontSize);
-            if (residualCount == 0)
-            {
-                residualMin = residual;
-                residualMax = residual;
-            }
-            else
-            {
-                residualMin = Math.Min(residualMin, residual);
-                residualMax = Math.Max(residualMax, residual);
-            }
-
             residualSum += residual;
             residualCount++;
         }
 
-        if (residualCount == 0 ||
-            residualMax - residualMin > PptxTextMetricRules.TextStateTolerance)
+        if (residualCount == 0)
         {
             return pdfCharacterSpacing;
         }
