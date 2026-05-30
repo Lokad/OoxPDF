@@ -190,6 +190,14 @@ function RoundedKey($value) {
     return ([Math]::Round([double]$value, 6)).ToString("0.######", [Globalization.CultureInfo]::InvariantCulture)
 }
 
+function StringKey($value) {
+    if ($null -eq $value -or [string]$value -eq "") {
+        return "(missing)"
+    }
+
+    return [string]$value
+}
+
 function BranchKey($row) {
     $delta = $row.RefSecondaryFontDelta
     if ($null -eq $delta -or [string]$delta -eq "") {
@@ -564,6 +572,13 @@ foreach ($pair in $pairs) {
             MainFontGrid = if ($null -eq $candidate) { $null } else { RoundAway (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) }
             RefSecondaryFontDelta = if ($null -eq $reference -or $null -eq $candidate) { $null } else { Delta -left (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) -right ([double]$reference.FontSize) }
             CandPdfGridDelta = if ($null -eq $candidate) { $null } else { Delta -left (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) -right ([double]$candidate.PdfFontSize) }
+            CandFontFamily = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "FontFamily" }
+            CandBold = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "Bold" }
+            CandItalic = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "Italic" }
+            CandUnderline = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "Underline" }
+            CandStrike = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "Strike" }
+            CandSyntheticBold = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "SyntheticBold" }
+            CandSyntheticItalic = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "SyntheticItalic" }
             CandHighlightColor = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "HighlightColor" }
             CandHighlightX = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "HighlightX" }
             CandHighlightY = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "HighlightY" }
@@ -657,6 +672,13 @@ foreach ($pair in $pairs) {
         MainFontGrid = RoundAway $mainFontGrid
         RefSecondaryFontDelta = Delta -left $mainFontGrid -right $refFontSize
         CandPdfGridDelta = Delta -left $mainFontGrid -right $candFontSize
+        CandFontFamily = OptionalValue $candidate "FontFamily"
+        CandBold = OptionalValue $candidate "Bold"
+        CandItalic = OptionalValue $candidate "Italic"
+        CandUnderline = OptionalValue $candidate "Underline"
+        CandStrike = OptionalValue $candidate "Strike"
+        CandSyntheticBold = OptionalValue $candidate "SyntheticBold"
+        CandSyntheticItalic = OptionalValue $candidate "SyntheticItalic"
         CandHighlightColor = OptionalValue $candidate "HighlightColor"
         CandHighlightX = OptionalRoundedDouble $candidate "HighlightX"
         CandHighlightY = OptionalRoundedDouble $candidate "HighlightY"
@@ -742,6 +764,8 @@ if (HasValue $OutputSummaryJson) {
         FontBranchDistinctValueSeparators = Find-BranchDistinctValueSeparators $rowsArray $numericBranchFields
         RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
         ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
+        ByCandidateFontFamilyAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandFontFamily")) + "|" + (BranchKey $row) }
+        ByCandidateStyleAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandBold")) + "," + (StringKey (OptionalValue $row "CandItalic")) + "," + (StringKey (OptionalValue $row "CandSyntheticBold")) + "," + (StringKey (OptionalValue $row "CandSyntheticItalic")) + "|" + (BranchKey $row) }
         ByCandidateTableRowAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableRowIndex")) + "|" + (BranchKey $row) }
         ByCandidateTableColumnAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }
         ByCandidateTableCellAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableRowIndex")) + "," + (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }

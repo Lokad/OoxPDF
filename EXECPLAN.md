@@ -17575,3 +17575,23 @@ skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. 
 3.489553`, changed16 `0.059399 -> 0.059316`; page 1 improved from `6.383258` to `5.879875` MAE and moved below
 pages 36, 21, and 20 in the worst-page list. Continue with page 36/page 21/page 20 text-state and table/text
 geometry residuals rather than widening this tolerance further.
+
+Follow-up, 2026-05-30: page-20/page-1 text-emission inspection adds diagnostic evidence but rejects another
+simple secondary-`/Tf` discriminator. `PptxInspect` now reports the resolved run family plus authored and
+synthetic bold/italic/underline/strike fields for every glyph-run snapshot, and
+`ComparePptxTextEmission.ps1` can group Office font-size branches by those fields. Public three-column probes
+show the Office `+0.024pt` secondary font-size branch occurring under regular Cambria Math, synthetic bold
+Cambria Math, and synthetic bold-italic Cambria Math. Private page 1 shows the same `+0.024pt` branch across
+both Arial and Cambria Math, while page 20 shows mostly regular Cambria Math with the `+0.024pt` branch and
+larger positive/negative secondary font deltas. Therefore do not implement a renderer rule keyed on family,
+bold/italic, synthetic style, first-span status, or column layout alone.
+
+The private page-20 graphics/effects audit also rules out the obvious non-text explanation for that page:
+stroke counts and widths match Office, fill counts and colors match Office, and the slide's apparent effect
+count comes from empty `effectLst`/theme-effect references rather than a visible missing effect. The residual
+is dominated by Office PDF text state: reference output has many nonzero `Tc` values and secondary font-size
+emissions while the candidate remains mostly zero-`Tc` and main-grid font sizes. Page 1, a much simpler slide,
+shows the same secondary-`/Tf` family plus small baseline/line-position drift with matching text-operation
+counts. Continue investigating Office text-state emission structurally, but only after finding a discriminator
+that survives public probes and multiple private pages; avoid another private-coordinate or style-name
+shortcut.
