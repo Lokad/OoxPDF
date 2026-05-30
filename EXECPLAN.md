@@ -191,6 +191,19 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Accepted Office-like picture-outline rendering discovered on private page 12 while comparing
+  PDF graphics operations. The private-safe structural gap was two ordinary `p:pic` images with authored
+  `p:spPr/a:ln` outlines: Office emitted black rectangle strokes around the pictures, while OOXPDF rendered
+  only the image content. `PptxScenePicture` now carries a typed `Line` style, scene inspection exposes picture
+  outline presence/width/alpha, and `PptxRenderer.Images` emits the picture frame stroke after the image. The
+  stroke path is placed half a stroke width outside the image frame, matching Office's PDF path bounds rather
+  than overpainting the picture interior. Public regression `PptxSyntheticPngPictureRendersPictureOutline`
+  locks the scene-model line and emitted PDF stroke. Validation: focused non-slow `pptx-images` passed
+  (`21` passed, `0` failed); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run
+  `20260530-124025` on `lokad-value-based` compared all `84/84` pages with the existing single unsupported
+  effect diagnostic, improved deck MAE `3.432077 -> 3.427005`, and improved page 12
+  `5.768140 -> 5.626110`. Page-12 PDF inspection now matches the Office/candidate stroke buckets for the two
+  outlined pictures.
 - [x] 2026-05-30: Accepted the Office default line width for explicit DrawingML shape lines that omit `w`,
   discovered on private page 36 while comparing PDF graphics operations. The private slide contains ordinary
   rectangle shapes with explicit `<a:ln>` but no `w`; Office emits the corresponding PDF strokes at `0.75 pt`,

@@ -38,7 +38,8 @@ internal sealed partial class PptxRenderer
             ToCropRect(picture.Picture.Crop),
             ToFillRect(picture.Picture.Fill),
             picture.Picture.Alpha,
-            picture.Picture.Recolor);
+            picture.Picture.Recolor,
+            ToLineStyle(picture.Picture.Line));
     }
 
     private static void RenderPicture(
@@ -56,7 +57,8 @@ internal sealed partial class PptxRenderer
         CropRect crop,
         FillRect fillRect,
         double alpha,
-        PptxSceneImageRecolor recolor)
+        PptxSceneImageRecolor recolor,
+        LineStyle line)
     {
         if (targetPartName is null)
         {
@@ -77,9 +79,16 @@ internal sealed partial class PptxRenderer
         }
 
         ShapeBounds transformedBounds = transform.Apply(rawBounds);
+        double x = OoxUnits.EmuToPoints(transformedBounds.X);
+        double yTop = OoxUnits.EmuToPoints(transformedBounds.Y);
+        double width = OoxUnits.EmuToPoints(transformedBounds.Width);
+        double height = OoxUnits.EmuToPoints(transformedBounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
             RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect);
+            StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
             return;
         }
 
@@ -100,17 +109,11 @@ internal sealed partial class PptxRenderer
         }
 
         string name = "Im" + index++;
-        double x = OoxUnits.EmuToPoints(transformedBounds.X);
-        double yTop = OoxUnits.EmuToPoints(transformedBounds.Y);
-        double width = OoxUnits.EmuToPoints(transformedBounds.Width);
-        double height = OoxUnits.EmuToPoints(transformedBounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
         double imageX = x + fillRect.Left * width;
         double imageY = y + fillRect.Bottom * height;
         double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
         double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
         bool transparent = alpha < 0.999d;
-        bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
         if (hasTransform)
         {
             graphics.SaveState();
@@ -164,6 +167,92 @@ internal sealed partial class PptxRenderer
         }
 
         images.Add(new PdfImageResource(name, image));
+
+        StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
+    }
+
+    private static void StrokePictureFrame(
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        ShapeBounds bounds,
+        double x,
+        double y,
+        double width,
+        double height,
+        LineStyle line,
+        bool transformed)
+    {
+        if (!line.HasLine)
+        {
+            return;
+        }
+
+        if (transformed)
+        {
+            graphics.SaveState();
+            ClipSlideBoundsEvenOdd(document, graphics);
+            ApplyShapeTransform(graphics, x, y, width, height, bounds);
+        }
+        else
+        {
+            ClipSlideBoundsEvenOdd(document, graphics);
+        }
+
+        bool transparentStroke = line.Alpha < 0.999d;
+        if (transparentStroke)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, line.Alpha);
+        }
+
+        graphics.SetStrokeRgb(line.Color.Red, line.Color.Green, line.Color.Blue);
+        graphics.SetLineWidth(line.Width);
+        if (line.DashPattern is { Count: > 0 })
+        {
+            graphics.SetLineDash(line.DashPattern);
+        }
+
+        if (line.Cap is { } cap)
+        {
+            graphics.SetLineCap(cap);
+        }
+
+        if (line.Join is { } join)
+        {
+            graphics.SetLineJoin(join);
+        }
+
+        double outlineOutset = line.Width / 2d;
+        graphics.StrokeRectangle(
+            x - outlineOutset,
+            y - outlineOutset,
+            width + line.Width,
+            height + line.Width);
+
+        if (line.DashPattern is { Count: > 0 })
+        {
+            graphics.ClearLineDash();
+        }
+
+        if (line.Cap is not null)
+        {
+            graphics.SetLineCap(0);
+        }
+
+        if (line.Join is not null)
+        {
+            graphics.SetLineJoin(0);
+        }
+
+        if (transparentStroke)
+        {
+            graphics.RestoreState();
+        }
+
+        if (transformed)
+        {
+            graphics.RestoreState();
+        }
     }
 
     private static ShapeBounds ToShapeBounds(PptxSceneBounds bounds)

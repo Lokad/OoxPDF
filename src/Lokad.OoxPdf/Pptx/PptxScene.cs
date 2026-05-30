@@ -75,6 +75,10 @@ internal sealed record PptxSceneNodeSnapshot(
     string PictureContentType,
     double PictureAlpha,
     string PictureAlphaValue,
+    bool PictureHasLine,
+    double PictureLineWidth,
+    double PictureLineAlpha,
+    bool PictureLineWidthSpecified,
     bool HasShapePictureFillResource,
     string ShapePictureFillContentType,
     double ShapePictureFillAlpha,
@@ -760,7 +764,8 @@ internal sealed record PptxScenePicture(
     PptxSceneImageRecolor Recolor,
     bool HasVideo,
     bool HasAudio,
-    PptxScenePictureTile Tile);
+    PptxScenePictureTile Tile,
+    PptxSceneLineStyle Line);
 
 internal sealed record PptxSceneImageResource(
     string PartName,
@@ -2401,6 +2406,28 @@ internal sealed class PptxSceneBuilder
     {
         string? relationshipId = ReadPictureRelationshipId(picture);
         string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
+        XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
+        PptxSceneLineStyle line = TryReadShapeLine(shapeProperties, theme, colorMap, default, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
+            ? new PptxSceneLineStyle(
+                true,
+                lineColor,
+                lineWidth,
+                lineAlpha,
+                TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+                ReadPresetDashValue(shapeProperties),
+                ReadLineCompound(shapeProperties),
+                ReadLineCompoundValue(shapeProperties),
+                ReadLineCap(shapeProperties) switch
+                {
+                    "rnd" => 1,
+                    "sq" => 2,
+                    _ => null
+                },
+                ReadLineCap(shapeProperties),
+                ReadLineJoin(shapeProperties),
+                ReadLineJoinValue(shapeProperties),
+                IsLineWidthSpecified(shapeProperties))
+            : default;
         return new PptxScenePicture(
             relationshipId,
             targetPartName,
@@ -2412,7 +2439,15 @@ internal sealed class PptxSceneBuilder
             ReadImageRecolor(picture, theme, colorMap),
             HasPictureVideo(picture),
             HasPictureAudio(picture),
-            ReadPictureTile(picture));
+            ReadPictureTile(picture),
+            line);
+    }
+
+    private static bool IsLineWidthSpecified(XElement? shapeProperties)
+    {
+        return shapeProperties
+            ?.Element(DrawingNamespace + "ln")
+            ?.Attribute("w") is not null;
     }
 
     private static bool HasPictureVideo(XElement picture)
