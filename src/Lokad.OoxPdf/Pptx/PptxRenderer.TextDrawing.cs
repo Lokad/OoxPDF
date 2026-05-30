@@ -311,7 +311,7 @@ internal sealed partial class PptxRenderer
         }
 
         var adjusted = new PptxPositionedTextSpan[textSpans.Count];
-        Dictionary<int, double> numberedAutofitFrameSpacing = ReadOfficeNumberedAutofitFrameCharacterSpacing(textSpans);
+        Dictionary<int, double> numberedFrameSpacing = ReadOfficeNumberedFrameCharacterSpacing(textSpans);
         int currentFrame = -1;
         bool useHighlightContinuationSpacing = false;
         for (int i = 0; i < textSpans.Count; i++)
@@ -330,15 +330,15 @@ internal sealed partial class PptxRenderer
                 useHighlightContinuationSpacing = true;
             }
 
-            bool eligibleAutofitSpan =
-                string.Equals(span.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) &&
+            bool eligibleNumberedProfileSpan =
+                UsesNumberedTextStateProfile(span) &&
                 hasZeroAuthoredCharacterSpacing;
             double? pdfCharacterSpacingOverride = null;
             if (hasZeroAuthoredCharacterSpacing && useHighlightContinuationSpacing)
             {
                 pdfCharacterSpacingOverride = PptxTextMetricRules.OfficeHighlightContinuationCharacterSpacing(span.Run.FontSize);
             }
-            else if (eligibleAutofitSpan && numberedAutofitFrameSpacing.TryGetValue(span.FrameIndex, out double frameSpacingEm))
+            else if (eligibleNumberedProfileSpan && numberedFrameSpacing.TryGetValue(span.FrameIndex, out double frameSpacingEm))
             {
                 pdfCharacterSpacingOverride = span.Run.FontSize * frameSpacingEm;
             }
@@ -351,13 +351,13 @@ internal sealed partial class PptxRenderer
         return adjusted;
     }
 
-    private static Dictionary<int, double> ReadOfficeNumberedAutofitFrameCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
+    private static Dictionary<int, double> ReadOfficeNumberedFrameCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
     {
         var spacingByFrame = new Dictionary<int, double>();
         foreach (IGrouping<int, PptxPositionedTextSpan> frameGroup in textSpans.GroupBy(span => span.FrameIndex))
         {
             PptxPositionedTextSpan[] frame = frameGroup.ToArray();
-            if (!frame.Any(span => string.Equals(span.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal)) ||
+            if (!frame.Any(UsesNumberedTextStateProfile) ||
                 !frame.Any(span => string.Equals(span.ParagraphBulletKind, nameof(PptxParagraphBulletKind.AutoNumber), StringComparison.Ordinal)) ||
                 frame.Any(span => Math.Abs(span.GlyphSpan.CharacterSpacing) >= PptxTextMetricRules.TextStateTolerance))
             {
@@ -374,6 +374,10 @@ internal sealed partial class PptxRenderer
 
         return spacingByFrame;
     }
+
+    private static bool UsesNumberedTextStateProfile(PptxPositionedTextSpan span) =>
+        string.Equals(span.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) ||
+        string.Equals(span.FrameAutofitMode, "noAutofit", StringComparison.Ordinal);
 
     private static void DrawHighlightSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
     {

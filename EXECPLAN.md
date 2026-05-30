@@ -18600,3 +18600,26 @@ passed because the tool is not part of the solution file; non-slow `pptx-typogra
 deriving Office's PDF text-state decomposition from line/run segmentation, secondary font-size emission, and
 frame-flow state. Do not add a raw family-name rule, and do not treat OpenType MATH table presence by itself
 as a layout or PDF text-state discriminator.
+
+Accepted follow-up, 2026-05-31: a narrow public-backed rendering change extends the existing numbered
+emission-only `Tc` profile from shape-autofit frames to explicit `noAutofit` frames, without touching default
+autofit frames. The private page-36 evidence exposed why this had to be narrow: frame 10 is an explicit
+`noAutofit` numbered frame whose Office auto-numbered spans use `Tc=-0.0574` at `14.04pt`, matching the
+existing Office `-0.004em` numbered text-state family; frame 5 has default autofit metadata and a much smaller
+Office `Tc=-0.012` branch, so it is deliberately excluded. A public probe derived from the existing numbered
+fixture by replacing `spAutoFit` with `noAutofit` confirmed Office uses the same numbered `Tc` family:
+reference buckets are `Tc=0`, `Tc=-0.024`, and `Tc=-0.048`, while the non-numbered noAutofit frame remains
+zero. The renderer now treats explicit `noAutofit` as part of `UsesNumberedTextStateProfile`, leaving
+layout character spacing at zero and promoting only PDF `Tc`. Public regression
+`PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState` locks the `7/12/16` candidate bucket split.
+
+Validation: non-slow `pptx-typography` passed (`135` passed, `0` failed, `2` skipped); public visual cases
+`pptx-ladder-04-typography-noautofit-numbered-tc-probe` and
+`pptx-ladder-04-typography-unspaced-column-tc-probe` both ran successfully in run directory timestamp
+`20260531-000153`; private `lokad-value-based` run `20260531-000206` compared `84/84` pages with empty
+diagnostics and was raster-neutral versus the accepted baseline (`MAE=2.933667`, changed16 `0.053398`).
+Page36 remains unchanged visually (`MAE=6.045371817`) but its frame-10 auto-numbered spans now emit
+`Tc=-0.056`, close to Office's `Tc=-0.0574`; the same frame's continuation spans still disagree with Office
+(`candidate -0.056` versus Office `-0.012`/small positive buckets). Do not widen this to default autofit,
+plain noAutofit paragraphs, or all continuations; the next text-state step needs a continuation/run-splitting
+discriminator.
