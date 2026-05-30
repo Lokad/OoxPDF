@@ -1468,9 +1468,9 @@ internal sealed partial class PptxRenderer
     {
         PptxTextFrameModel frame = layout.Model;
         return frame.ColumnCount >= 3 &&
-            counts[0] == balancedCeiling &&
+            counts[0] >= balancedFloor &&
             counts.Skip(1).Take(frame.ColumnCount - 2).Any(count => count < balancedFloor) &&
-            counts[^1] > balancedCeiling;
+            counts[^1] > balancedFloor;
     }
 
     private static bool ShouldResolveOverflowColumnBalanceAcrossContinuedParagraph(PptxTextFrameLayout layout, int lineCount, int[] counts, int balancedCeiling)

@@ -222,19 +222,24 @@ High-priority actions:
   `6.971960 -> 6.523260`, while the largest remaining regressions were small (`+0.09` MAE on page 68,
   `+0.08` on page 66, `+0.06` on page 64). Remaining gap on page 36 is still Office text-state/`Tc` and
   fractional font-size emission, not a broad baseline rule.
-- [x] 2026-05-30: Accepted a trailing-column overflow balance branch for private page 13. The page-13
+- [x] 2026-05-30: Accepted a trailing-column overflow balance branch for private pages 13 and 49. The page-13
   candidate had a three-column `noAutofit` + `vertOverflow="overflow"` body frame where strict structural
   layout produced `19/16/20` lines across the columns; Office's PDF text matrices showed the first column
   already aligned, while the middle/right body continuation needed more content retained in the middle column.
+  Page 49 exposed the even-total sibling pattern (`19/16/19`), where the same trailing-column correction
+  needed to start after the first column even though the balanced floor and ceiling were both `18`.
   `TryResolveOfficeOverflowColumnLineBalance` now recognizes the structural pattern where the first column is
-  already at the balanced ceiling, an interior column is underfilled, and the final column is overfilled; the
+  already at or beyond the balanced floor, an interior column is underfilled, and the final column is overfilled; the
   `LineCountBalance` pass can start at the trailing columns instead of reflowing the first column. This is not
   a private text or page-number rule. Validation: focused non-slow `pptx-typography` passed with `121` tests,
   `0` failures, and `2` skips; public `pptx-ladder-04-line-spacing-port`,
   `pptx-ladder-04-paragraph-advance`, and `pptx-ladder-04-spautofit-overflow` passed. Private run
   `20260530-032424` compared 84/84 pages with empty diagnostics and improved deck MAE
   `3.568308 -> 3.544297`, changed16 `0.060251 -> 0.059967`; page 13 improved
-  `6.737230 -> 4.721285` with no page-level MAE regressions. Gap: this branch still lacks a public
+  `6.737230 -> 4.721285` with no page-level MAE regressions. A follow-up private run `20260530-033245`
+  after the even-total generalization improved deck MAE further to `3.523017`, changed16 to `0.059707`, and
+  page 49 `6.653628 -> 4.866358`, again with empty diagnostics and no page-level MAE regressions. Gap: this
+  branch still lacks a public
   Office-authored fixture that isolates exactly the `19/16/20` trailing-balance shape; keep that as the next
   publicization task before broadening the rule further.
 - [ ] 2026-05-30: Resolve the secondary Office PPTX `/Tf` emission branch before adding another private-deck
