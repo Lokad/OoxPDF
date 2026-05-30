@@ -543,6 +543,15 @@ High-priority actions:
   while the current candidate's content-minimum path collapses the rendered rows to near-uniform `22.76pt`
   bands. This fixture is a public row-allocation oracle, not yet permission for another blanket
   declared-row-preservation rule; page 21 remains the acceptance check for any future discriminator.
+  Rejected trial, 2026-05-30: applying Office's 600 DPI PDF font-size grid during horizontal table-cell
+  layout looked structurally plausible because page 79 Office emits `11.04pt` text while OOXML stores `11pt`.
+  The trial made table wrapping/layout consume the same rounded size that PDF emission already uses, but it
+  regressed the private deck (`MAE=2.933667 -> 2.949566`, changed16 `0.053398 -> 0.053533`), worsened page 79
+  (`5.012818 -> 5.720985` MAE) and page 48 (`4.431142 -> 4.883708` MAE), and broke the public
+  `PptxSyntheticTablePromotesAveragePdfSpacingResidualToTextState` expectation by removing the residual the
+  emission layer is supposed to decompose. Conclusion: table-cell PDF font-grid alignment must stay in
+  emission/text-state decomposition unless a future Office-authored probe proves a narrower layout metric
+  rule. Do not retry a blanket table layout font-size rounding rule.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,
@@ -554,6 +563,14 @@ High-priority actions:
   fonts tested, so the next acceptable implementation path is resolved font metrics/GPOS/kerning plus
   Office-like run-boundary PDF text-state splitting. Do not key this branch on `Cambria Math` or any other
   family name.
+  Follow-up, 2026-05-30: isolated page 36's three-column no-autofit text-state branch with public-safe probes.
+  A generic three-column Aptos probe with spaces reproduced only `Tc=0`; a space-free Aptos variant still
+  reproduced only `Tc=0` while exposing Office's secondary `12.024pt` font-size branch. Replacing only the
+  resolved typeface with the Windows math-profile face reproduced the private family publicly:
+  `pptx-ladder-04-typography-unspaced-column-tc-probe` has Office `Tc` buckets `0`, `0.0195`, and `-0.036`
+  with secondary `12.024pt` font-size operations, while the candidate still emits `Tc=0`. This is evidence
+  for a resolved font-metric/profile and PDF text-state decomposition rule, not permission to special-case
+  the family name. Validation: `CheckVisualCase.ps1` passed for the new public probe in run `20260530-234639`.
 - [x] 2026-05-30: Narrowed centered table-cell wrapping from private page-12 evidence without changing table
   geometry or adding a private coordinate rule. Fresh inspection of accepted run `20260530-170544` showed page 12
   was not dominated by missing graphics: table strokes and fills were structurally aligned, while centered table
@@ -1069,6 +1086,15 @@ High-priority actions:
   Office emits one underline fill (`x=763.95..852.63`, `y=393.97..394.21`), while the candidate still emits
   adjacent fills split at the source-run/font-size boundary (`x=764.50..851.76` and `851.76..854.14`). Treat
   that as a future structural underline-decoration coalescing problem, not as a font-family special case.
+- [ ] 2026-05-30: Private page 36 remains a high-impact text-state alignment gap. The page is text-heavy
+  (`16` text frames, `133` candidate glyph runs, no tables/charts, graphics operation counts essentially
+  matched), and the reference PDF emits `135` text operations with nonzero `Tc` almost everywhere while the
+  candidate emits `0 Tc` for all glyph runs. The source slide has no authored run-level `spc`; most frames are
+  `noAutofit`, one frame has `numCol=3`, and some paragraphs have auto-number bullets or `spcAft=6 pt`, but
+  the Office `Tc` values vary by frame (`-0.012`, `-0.036`, `-0.0476`, `-0.0574`, small positives) and do not
+  reduce to a font-family, font-size, bullet, or column-count shortcut. Keep this open as a public-probe
+  requirement: compare Office `Tc`, `TJ`, glyph positions, and line/frame context together, because scalar
+  `Tc` promotion alone would mostly alter PDF structure while `TJ` can compensate the visual positions.
 - [x] 2026-05-30: Rejected the broad page 21 text-box style-fill shortcut. Page 21 has two `txBox="1"`
   rectangle text boxes with no direct `spPr` fill, direct colored lines, glow effects, and `p:style/a:fillRef
   idx="1"`. PDF inspection made the candidate's resolved fills look suspicious because Office's reference
@@ -18541,3 +18567,36 @@ TJ adjustment precision from `0.###` to `0.#####` recovered part of the loss but
 the table promotion or widen TJ precision as a standalone fix. The long-term target remains an Office-like
 PDF text-state decomposition model that can decide when residuals belong in `TJ` adjustments, `Tc`, font-grid
 branches, or operation splitting based on public probes and reusable frame/table context.
+
+Follow-up, 2026-05-30: the page-36 private-deck text-state investigation has a better public and diagnostic
+anchor, but still does not justify a renderer-side font-name or broad math-profile `Tc` rule. A public
+three-column no-autofit probe with ordinary text and spaces reproduced only the already-known numbered-frame
+`Tc` branch. A space-free three-column probe using a non-MATH resolved font reproduced only `Tc=0` plus a few
+Office secondary `12.024pt` font-size emissions. Replacing only the resolved font profile with a Windows
+font that has MATH/GPOS/kern tables reproduced the missing public shape of the problem: Office emitted
+`Tc=0`, `Tc=0.0195`, and `Tc=-0.036`, plus the same secondary `12.024pt` branch, while the candidate remained
+at `Tc=0`. This evidence is now locked as public visual case
+`pptx-ladder-04-typography-unspaced-column-tc-probe`.
+
+Tooling now exposes the structural data needed for the next pass. `PptxInspect` glyph-run records include
+private-safe resolved-font profile fields: fallback/style flags, MATH/GPOS/kern table presence, units-per-em,
+glyph count, OS/2 width and vertical metrics, and post underline metrics; it intentionally does not emit the
+local font file path. `ComparePptxTextEmission.ps1` carries the key resolved-font profile fields into its
+comparison rows, so Office `Tc` and secondary-`/Tf` buckets can be grouped by structural font evidence instead
+of by typeface name. Re-running the page-36 comparison with those fields shows two distinct branches: the
+three-column space-free frame is dominated by one resolved profile (`unitsPerEm=2048`, MATH/GPOS/kern present,
+post underline thickness `116`) with Office buckets mostly `12pt/Tc=-0.036` and secondary `12.024pt` values
+that drift more negative; other page-36 frames resolve to a non-MATH profile (`post underline thickness 50`)
+with separate numbered/no-autofit buckets such as `Tc=-0.012`, `Tc=-0.0574`, and small positive values. The
+public probe is an important counterexample to overfitting: the same resolved profile emits many Office
+`Tc=0` and positive `Tc=0.0195` rows, so a blanket MATH-table, font-family, column-count, or unspaced-text
+rule would be a heuristic and should remain rejected.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; explicit
+`dotnet build tools/Lokad.OoxPdf.PptxInspect/Lokad.OoxPdf.PptxInspect.csproj --tl:off --nologo -v minimal`
+passed because the tool is not part of the solution file; non-slow `pptx-typography` passed (`134` passed,
+`0` failed, `2` skipped); and the new public visual case ran successfully at
+`artifacts/visual/pptx-ladder-04-typography-unspaced-column-tc-probe/20260530-235627`. Continue on page36 by
+deriving Office's PDF text-state decomposition from line/run segmentation, secondary font-size emission, and
+frame-flow state. Do not add a raw family-name rule, and do not treat OpenType MATH table presence by itself
+as a layout or PDF text-state discriminator.

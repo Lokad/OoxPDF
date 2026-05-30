@@ -60,6 +60,28 @@ internal sealed partial class PptxRenderer
                     emissionSpan.GlyphSpan.NaturalWidth,
                     emissionSpan.GlyphSpan.LayoutWidth,
                     run.FontFamily,
+                    rendered.Resolution.FamilyName,
+                    rendered.Resolution.IsFallback,
+                    rendered.Resolution.Bold,
+                    rendered.Resolution.Italic,
+                    rendered.Resolution.WeightClass,
+                    rendered.Resolution.FontFaceIndex,
+                    rendered.Resolution.HasMathTable,
+                    rendered.Font.Font.TableTags.Contains("GPOS", StringComparer.Ordinal),
+                    rendered.Font.Font.TableTags.Contains("kern", StringComparer.Ordinal),
+                    rendered.Font.Font.UnitsPerEm,
+                    rendered.Font.Font.GlyphCount,
+                    rendered.Font.Font.Os2.Version,
+                    rendered.Font.Font.Os2.WidthClass,
+                    rendered.Font.Font.Os2.TypographicAscender,
+                    rendered.Font.Font.Os2.TypographicDescender,
+                    rendered.Font.Font.Os2.TypographicLineGap,
+                    rendered.Font.Font.Os2.WindowsAscender,
+                    rendered.Font.Font.Os2.WindowsDescender,
+                    rendered.Font.Font.Post.ItalicAngle,
+                    rendered.Font.Font.Post.UnderlinePosition,
+                    rendered.Font.Font.Post.UnderlineThickness,
+                    rendered.Font.Font.Post.IsFixedPitch,
                     run.Bold,
                     run.Italic,
                     run.Underline,
@@ -240,7 +262,7 @@ internal sealed partial class PptxRenderer
             OpenTypeFont font = resolved.Value.Font;
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(use => use.CodePoints));
             string resourceName = resourcePrefix + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
-            fonts[group.Key] = new RenderedFont(resourceName, embedded, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
+            fonts[group.Key] = new RenderedFont(resourceName, embedded, resolution, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));
         }
 

@@ -791,7 +791,12 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
 
-    private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font, bool SyntheticBold, bool SyntheticItalic);
+    private readonly record struct RenderedFont(
+        string ResourceName,
+        PdfEmbeddedFont Font,
+        FontResolution Resolution,
+        bool SyntheticBold,
+        bool SyntheticItalic);
 
     private readonly record struct RenderedFonts(IReadOnlyDictionary<string, RenderedFont> Fonts, IReadOnlyList<PdfFontResource> Resources);
 
