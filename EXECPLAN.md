@@ -17420,3 +17420,21 @@ passed. Private run `20260530-015539` compared all `84/84` pages with empty diag
 for the candidate PDF against `20260530-014149` (`D19C8BB955DE71C6156F07ED1CFB72FD3C03381F982D2B8D4C70684EA66BACA2`),
 so the next private-deck work should continue from the high-error pages' remaining Office text-state and
 fractional font-size residuals rather than from multi-column balancing.
+
+Accepted follow-up, 2026-05-30: the page-1 title-slide bullet wrap residual is improved by giving hanging
+bullet paragraphs their own Office line-fit tolerance instead of using the strict coordinate tolerance used by
+plain paragraphs. Private inspection showed the affected default-autofit bullet frame using the same text
+frame right edge as OOXPDF, but the next word missed the raw measured line width by only a few points while
+Office's PDF text operation kept it on the first line. A broad trial that applied the existing wrap-fit
+tolerance to all plain no-autofit text was rejected because it collapsed the public highlighted-headline wrap
+and changed overflow column balancing. The accepted rule is narrower: centered shape-autofit text keeps the
+strict path, explicit shape-autofit keeps its existing shape tolerance, and default/no-autofit bullet
+paragraphs use a named `BulletWrapFitTolerance` (`0.2em`) to account for Office's bullet-line PDF positioning
+slack. Public regression: `PptxSyntheticDefaultAutofitBulletUsesOfficeWrapTolerance`, which constructs a
+public hanging-bullet frame whose final word exceeds the strict text box by `2.4pt` but remains within the
+bullet tolerance. Validation: focused non-slow `pptx-typography` passed (`123` passed, `0` failed, `2`
+skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run
+`20260530-045935` compared all `84/84` pages with empty diagnostics and improved deck MAE `3.499458 ->
+3.489553`, changed16 `0.059399 -> 0.059316`; page 1 improved from `6.383258` to `5.879875` MAE and moved below
+pages 36, 21, and 20 in the worst-page list. Continue with page 36/page 21/page 20 text-state and table/text
+geometry residuals rather than widening this tolerance further.

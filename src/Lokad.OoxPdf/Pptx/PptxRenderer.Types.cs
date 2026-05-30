@@ -1059,6 +1059,7 @@ internal sealed partial class PptxRenderer
         public const double AdjacentTextCoalesceGapFontScale = 0.2d;
         public const double AdjacentUnderlineCoalesceGapFontScale = 0.08d;
         public const double WrapFitToleranceFontScale = 0.16d;
+        public const double BulletWrapFitToleranceFontScale = 0.2d;
         public const double FinalWordWrapToleranceWidthScale = 0.02d;
         public const double ShapeAutoFitWrapToleranceWidthScale = 0.011d;
         public const double FallbackAdvanceWidthScale = 0.42d;
@@ -1117,6 +1118,8 @@ internal sealed partial class PptxRenderer
         public static double UnderlineCoalesceGap(double fontSize) => Math.Max(MinimumDrawableDimension, fontSize * AdjacentUnderlineCoalesceGapFontScale);
 
         public static double WrapFitTolerance(double fontSize) => Math.Max(CoordinateTolerance, fontSize * WrapFitToleranceFontScale);
+
+        public static double BulletWrapFitTolerance(double fontSize) => Math.Max(WrapFitTolerance(fontSize), fontSize * BulletWrapFitToleranceFontScale);
 
         public static double FinalWordWrapTolerance(double fontSize, double availableWidth) => Math.Max(WrapFitTolerance(fontSize), availableWidth * FinalWordWrapToleranceWidthScale);
 

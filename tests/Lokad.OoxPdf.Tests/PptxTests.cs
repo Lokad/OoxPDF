@@ -5352,6 +5352,74 @@ internal static class PptxTests
         TestAssert.Contains("\u2022", string.Concat(spanTexts));
     }
 
+    public static void PptxSyntheticDefaultAutofitBulletUsesOfficeWrapTolerance()
+    {
+        const double emusPerPoint = 12700d;
+        const double overflowBeyondTextBox = 2.4d;
+        const double coordinateTolerance = 0.01d;
+        const double bulletWrapToleranceAt24Pt = 4.8d;
+
+        string WritePackage(long widthEmu) => TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{widthEmu}}" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/>
+                      <a:lstStyle/>
+                      <a:p>
+                        <a:pPr marL="571500" indent="-571500"><a:buFont typeface="Arial"/><a:buChar char="&#x2022;"/></a:pPr>
+                        <a:r><a:rPr sz="2400"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Public bullet text keeps the final marker</a:t></a:r>
+                      </a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        string wideInput = WritePackage(12000000);
+        using FileStream wideStream = File.OpenRead(wideInput);
+        OoxPackage widePackage = OoxPackage.Open(wideStream);
+        PptxDocument wideDocument = new PptxReader().Read(widePackage);
+        PptxTextFrameModelSnapshot wideFrame = PptxRenderer.InspectTextFrameModels(wideDocument, widePackage, 0).Single();
+        PptxTextLineLayoutSnapshot wideLine = PptxRenderer.InspectTextLayout(wideDocument, widePackage, 0)
+            .Frames
+            .Single()
+            .Paragraphs
+            .Single()
+            .Lines
+            .Single();
+
+        double targetTextWidth = wideLine.NaturalEndX - wideFrame.TextX - overflowBeyondTextBox;
+        long narrowWidthEmu = (long)Math.Round((targetTextWidth + wideFrame.InsetLeft + wideFrame.InsetRight) * emusPerPoint);
+        string narrowInput = WritePackage(narrowWidthEmu);
+        using FileStream narrowStream = File.OpenRead(narrowInput);
+        OoxPackage narrowPackage = OoxPackage.Open(narrowStream);
+        PptxDocument narrowDocument = new PptxReader().Read(narrowPackage);
+        PptxTextFrameModelSnapshot narrowFrame = PptxRenderer.InspectTextFrameModels(narrowDocument, narrowPackage, 0).Single();
+        PptxTextLineLayoutSnapshot[] narrowLines = PptxRenderer.InspectTextLayout(narrowDocument, narrowPackage, 0)
+            .Frames
+            .Single()
+            .Paragraphs
+            .Single()
+            .Lines
+            .ToArray();
+
+        TestAssert.Equal(1, narrowLines.Length);
+        string renderedText = string.Concat(narrowLines[0].Spans.Select(span => span.Text));
+        TestAssert.Contains("final marker", renderedText);
+        double actualOverflow = narrowLines[0].NaturalEndX - (narrowFrame.TextX + narrowFrame.TextWidth);
+        TestAssert.True(
+            actualOverflow > coordinateTolerance && actualOverflow < bulletWrapToleranceAt24Pt,
+            $"Expected bullet wrap to accept a small Office-style overrun. Overflow: {actualOverflow.ToString("0.###", CultureInfo.InvariantCulture)}.");
+    }
+
     public static void PptxSyntheticTextBoxMapsSymbolFontBulletCharacters()
     {
         string wingdings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "wingding.ttf");

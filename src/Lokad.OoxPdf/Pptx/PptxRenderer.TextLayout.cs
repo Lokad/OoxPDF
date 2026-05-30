@@ -1257,6 +1257,8 @@ internal sealed partial class PptxRenderer
                         paragraphStyle.Alignment == TextAlignment.Center;
                     double wrapTolerance = usesCenteredShapeAutoFit
                         ? PptxTextMetricRules.CoordinateTolerance
+                        : bulletText is not null
+                        ? PptxTextMetricRules.BulletWrapFitTolerance(fragmentFontSize)
                         : HasShapeAutoFit(frame.BodyProperties)
                         ? PptxTextMetricRules.ShapeAutoFitWrapTolerance(fragmentFontSize, effectiveTextWidth)
                         : !HasNoAutoFit(frame.BodyProperties) ||
