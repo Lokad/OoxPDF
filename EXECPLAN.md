@@ -550,6 +550,23 @@ High-priority actions:
   PDF inspection of page 79 now shows residual-heavy table branches as nonzero `Tc` with near-zero average `TJ`
   residuals. Remaining page-79 work is the `258` vs `249` Office text-operation split and the line-placement
   clusters, not the existence of table-cell text-state extraction.
+  Follow-up, 2026-05-31: accepted a table text-flow correction from refreshed private page-79 evidence.
+  Page 79's table cells still had large line-placement collapses after the PDF `Tc` work because the table
+  layout path grouped ordinary spaces with the preceding word unless `noAutofit` was explicitly authored.
+  The private table cells use default table autofit, not explicit `noAutofit`, and Office's observed line
+  counts are closer when word-flow treats the following word as owning the leading space. `BuildTextFlowFrame`
+  now names this as `UsesOfficeFollowingSpaceFlow`: explicit `noAutofit` frames keep the existing rule, and
+  table-cell frames use the same following-space flow even when their autofit mode is the default. This is a
+  structural text-flow rule, not a page, coordinate, row/column, typeface, or `Tc` bucket special case. A
+  rejected diagnostic branch remains: the same page still has Office-only nonzero `Tc` families and extra
+  text-operation splits, so do not interpret this as solving the whole table text-state problem. Validation:
+  `pptx-tables --skip-slow` passed (`19` passed), `pptx-typography --skip-slow` passed (`135` passed,
+  `2` skipped), public `pptx-table` passed at `20260531-010216`,
+  public `pptx-ladder-10-table-center-explicit-wrapped` passed at `20260531-010216`, public
+  `pptx-ladder-10-table-center-explicit-multiline` passed at `20260531-010229`, and private
+  `lokad-value-based` run `20260531-010104` compared all `84/84` pages with empty diagnostics. Deck MAE
+  improved `2.933648 -> 2.931758`, changed16 improved `0.053397 -> 0.053386`, and page 79 improved
+  `5.014204 -> 4.895851`.
   Follow-up, 2026-05-30: extended the table text-frame inspection path with row-height provenance so the
   private table pages can be compared without reconstructing OOXML geometry by hand. `PptxInspect` table-frame
   records now expose the declared row height, declared row-span height, declared total table height, and

@@ -429,8 +429,13 @@ internal sealed partial class PptxRenderer
             frame.TextClipHeight,
             frame.RotationCenterX,
             frame.RotationCenterY);
-        bool attachSpacesToFollowingWord = HasNoAutoFit(frame.BodyProperties);
+        bool attachSpacesToFollowingWord = UsesOfficeFollowingSpaceFlow(frame);
         return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(paragraph => BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord, advanceEstimator)).ToArray());
+    }
+
+    private static bool UsesOfficeFollowingSpaceFlow(PptxTextFrameModel frame)
+    {
+        return HasNoAutoFit(frame.BodyProperties) || frame.TableRowIndex.HasValue;
     }
 
     private static bool HasShapeAutoFit(PptxTextBodyProperties bodyProperties)
