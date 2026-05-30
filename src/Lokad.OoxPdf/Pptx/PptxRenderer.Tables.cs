@@ -466,7 +466,7 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            graphics.FillRectangle(fill.X, fill.Y, fill.Width, fill.Height);
+            graphics.FillRectangleEvenOdd(fill.X, fill.Y, fill.Width, fill.Height);
             if (transparentFill)
             {
                 graphics.RestoreState();

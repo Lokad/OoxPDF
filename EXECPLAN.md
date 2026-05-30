@@ -225,6 +225,21 @@ High-priority actions:
   missing shape. The color-transform midpoint mismatch is closed; the remaining dominant branch is the
   already-open Office text-state issue (`Tc`, secondary `/Tf`, and text-operation splitting). Keep this work on
   the public typography ladder and avoid private text or coordinate shortcuts.
+- [x] 2026-05-30: Aligned PPTX table-cell background fills with Office's observed even-odd PDF fill operator.
+  Private page-21 inspection after run `20260530-180316` showed a raster-neutral but structural mismatch:
+  Office emitted all `9` page fills as `f*`, while the candidate emitted `5` table-cell rectangles as `f` and
+  only `4` fills as `f*`. This was not a table geometry problem. `RenderTableFrameLayout` now emits table cell
+  background rectangles through the same even-odd rectangle fill primitive already used by PPTX shapes and text
+  decorations. The existing public table fill regression now locks the `re f*` operator for synthetic table
+  cell backgrounds.
+
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the first build recovered
+  from a transient test executable file-lock warning. Focused `pptx-tables --skip-slow` passed (`16` passed).
+  Private run `20260530-182607` on `lokad-value-based` compared all `84/84` pages with empty diagnostics and
+  unchanged deck raster metrics (`2.948045` MAE, changed16 `0.053572`), as expected for identical rectangular
+  fill winding. Page-21 PDF graphics inspection now reports candidate operator buckets `f*:9`, `S:6`,
+  `W*:165`; fill comparison against Office with fill-color and operator matching has `9/9` matches and
+  `0` deltas. Page 21 therefore remains a text-state/table-text problem, not a fill-operator problem.
 - [ ] 2026-05-30: Continue page-79 table/text work from structural table text evidence, not a new private
   coordinate rule. Page 79 is table-heavy (`42` table text frames, no effects/pictures/transparency), and
   inspection of run `20260530-160928` showed Office/candidate graphics are broadly the same table/grid class
