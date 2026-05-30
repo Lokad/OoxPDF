@@ -180,6 +180,7 @@ internal sealed partial class PptxRenderer
         PptxTextLineBoxLayout? LineBox,
         int FrameIndex,
         int ParagraphIndex,
+        int? SourceRunIndex,
         string ParagraphBulletKind,
         string? ParagraphAutoNumberType,
         int? ParagraphAutoNumberStartAt,
@@ -542,6 +543,7 @@ internal sealed partial class PptxRenderer
         XElement? Source);
 
     private sealed record PptxTextRunModel(
+        int RunIndex,
         PptxTextRunKind Kind,
         XElement Source,
         XElement? Properties,

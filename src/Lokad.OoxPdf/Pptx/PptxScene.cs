@@ -335,6 +335,7 @@ internal sealed record PptxTextParagraphModelSnapshot(
     IReadOnlyList<PptxTextRunModelSnapshot> Runs);
 
 internal sealed record PptxTextRunModelSnapshot(
+    int RunIndex,
     string Kind,
     string Text,
     int ResolvedCascadeSourceCount,
@@ -489,6 +490,7 @@ internal sealed record PptxTextGlyphRunSnapshot(
     double? StrikeHeight,
     int FrameIndex,
     int ParagraphIndex,
+    int? SourceRunIndex,
     string ParagraphBulletKind,
     string? ParagraphAutoNumberType,
     int? ParagraphAutoNumberStartAt,

@@ -80,8 +80,8 @@ foreach (PptxSlide slide in slides)
                 Round(paragraph.HangingIndent),
                 paragraph.Runs.Count,
                 paragraph.Runs.Sum(run => run.Text.Length),
-                paragraph.Runs.Select((run, runIndex) => new PptxTextRunRecord(
-                    runIndex,
+                paragraph.Runs.Select(run => new PptxTextRunRecord(
+                    run.RunIndex,
                     run.Kind,
                     includeText ? run.Text : null,
                     run.Text.Length,
@@ -202,6 +202,7 @@ foreach (PptxSlide slide in slides)
             RoundNullable(run.StrikeHeight),
             run.FrameIndex,
             run.ParagraphIndex,
+            run.SourceRunIndex,
             run.ParagraphBulletKind,
             run.ParagraphAutoNumberType,
             run.ParagraphAutoNumberStartAt,
@@ -484,6 +485,7 @@ internal sealed record PptxGlyphRunRecord(
     double? StrikeHeight,
     int FrameIndex,
     int ParagraphIndex,
+    int? SourceRunIndex,
     string ParagraphBulletKind,
     string? ParagraphAutoNumberType,
     int? ParagraphAutoNumberStartAt,

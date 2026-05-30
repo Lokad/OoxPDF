@@ -289,6 +289,13 @@ High-priority actions:
   `pptx-typography --skip-slow` passed (`131` passed, `2` skipped), the new visual case ran at
   `20260530-200506`, and private `lokad-value-based` run `20260530-200639` compared all `84/84` pages with
   empty diagnostics and unchanged deck metrics (`2.947966` MAE, changed16 `0.053572`).
+  2026-05-30 source-run evidence: extended glyph-run snapshots, `PptxInspect`, and
+  `ComparePptxTextEmission.ps1` with private-safe source-run indices. Page 81 frame 10 now shows that the
+  Office `+0.0173` bucket starts inside paragraph 2, line 1, before the OOXML run boundary, then continues
+  through later source runs and the following paragraph. A disposable public variant that changed the
+  run-split probe to Cambria Math still emitted only `Tc=-0.024`, so the remaining branch should not be
+  modeled as a font-family rule. The next reproduction attempt should target Office's line-internal text
+  operation segmentation around punctuation/short spans and font-size-grid branch changes.
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was

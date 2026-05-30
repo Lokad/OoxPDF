@@ -158,6 +158,7 @@ internal sealed partial class PptxRenderer
     private static PptxTextRunModelSnapshot ToSnapshot(PptxTextRunModel run)
     {
         return new PptxTextRunModelSnapshot(
+            run.RunIndex,
             run.Kind.ToString(),
             run.Text,
             run.Cascade.Sources.Count(source => source is not null),
@@ -972,6 +973,7 @@ internal sealed partial class PptxRenderer
                 XElement? breakProperties = child.Element(DrawingNamespace + "rPr");
                 PptxRunStyleCascade breakCascade = BuildRunStyleCascade("break.rPr", breakProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
                 runs.Add(new PptxTextRunModel(
+                    runs.Count,
                     PptxTextRunKind.Break,
                     child,
                     breakProperties,
@@ -989,6 +991,7 @@ internal sealed partial class PptxRenderer
             XElement? runProperties = child.Element(DrawingNamespace + "rPr");
             PptxRunStyleCascade textRunCascade = BuildRunStyleCascade("run.rPr", runProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
             runs.Add(new PptxTextRunModel(
+                runs.Count,
                 child.Name == DrawingNamespace + "fld" ? PptxTextRunKind.Field : PptxTextRunKind.Text,
                 child,
                 runProperties,

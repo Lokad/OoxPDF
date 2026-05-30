@@ -905,6 +905,7 @@ internal sealed partial class PptxRenderer
                 lineState.Line.Box,
                 lineState.FrameIndex,
                 lineState.ParagraphIndex,
+                span.SourceRun?.RunIndex,
                 lineState.Paragraph.Model.Bullet.Kind.ToString(),
                 lineState.Paragraph.Model.Bullet.AutoNumberType,
                 lineState.Paragraph.Model.Bullet.AutoNumberStartAt,

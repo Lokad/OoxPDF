@@ -81,6 +81,7 @@ internal sealed partial class PptxRenderer
                     strikeRectangle?.Height,
                     emissionSpan.FrameIndex,
                     emissionSpan.ParagraphIndex,
+                    emissionSpan.SourceRunIndex,
                     emissionSpan.ParagraphBulletKind,
                     emissionSpan.ParagraphAutoNumberType,
                     emissionSpan.ParagraphAutoNumberStartAt,

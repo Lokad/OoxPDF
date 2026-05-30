@@ -724,6 +724,7 @@ foreach ($pair in $pairs) {
         CandTableRowSpan = OptionalValue $candidate "TableRowSpan"
         CandTableColumnSpan = OptionalValue $candidate "TableColumnSpan"
         CandParagraphIndex = OptionalValue $candidate "ParagraphIndex"
+        CandSourceRunIndex = OptionalValue $candidate "SourceRunIndex"
         CandParagraphBulletKind = OptionalValue $candidate "ParagraphBulletKind"
         CandParagraphAutoNumberType = OptionalValue $candidate "ParagraphAutoNumberType"
         CandParagraphAutoNumberStartAt = OptionalValue $candidate "ParagraphAutoNumberStartAt"
@@ -808,6 +809,7 @@ if (HasValue $OutputSummaryJson) {
         ByCandidateTableColumnAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }
         ByCandidateTableCellAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTableRowIndex")) + "," + (RoundedKey (OptionalValue $row "CandTableColumnIndex")) + "|" + (BranchKey $row) }
         ByParagraphIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandParagraphIndex) + "|" + (BranchKey $row) }
+        BySourceRunIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandSourceRunIndex")) + "|" + (BranchKey $row) }
         ByParagraphBulletKindAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandParagraphBulletKind")) + "|" + (BranchKey $row) }
         ByParagraphAutoNumberTypeAndBranch = Group-Count $rowsArray { param($row) (StringKey (OptionalValue $row "CandParagraphAutoNumberType")) + "|" + (BranchKey $row) }
         ByParagraphAutoNumberStartAtAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandParagraphAutoNumberStartAt")) + "|" + (BranchKey $row) }
