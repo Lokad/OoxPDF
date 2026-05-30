@@ -641,6 +641,17 @@ High-priority actions:
   Office PDFs contradict, but keep the page-21/page-79 table text-state item open: Office's small nonzero table
   `Tc` families and extra text-operation splits still need a public structural rule rather than a resurrected
   average-residual promotion.
+  Follow-up, 2026-05-31: added `tools/SummarizePptxTextStateDeltas.ps1` to compare Office `Tc` branches
+  against candidate glyph-run structure without emitting private text. A current sweep over private page 36,
+  private page 79, public `pptx-table`, public `pptx-ladder-10-composite-table-port`, and public
+  `pptx-ladder-10-rich-text-cell` confirms the constraint that should govern the next implementation. Page 36
+  is mostly a non-table text-state branch (`131/133` matched text operations have nonzero Office `Tc`), page 79
+  is mostly table text-state (`240/252` matched operations have nonzero Office `Tc`), public simple/composite
+  tables also require nonzero table `Tc`, but the public rich-text table is a hard zero-`Tc` counterexample
+  even when a candidate span carries residual `TJ` adjustments. Therefore do not resurrect average residual
+  promotion, do not key on table-ness alone, and do not key on private font family. The next acceptable
+  renderer change must explain both the simple/composite table positives and rich-text zero-`Tc` counterexample,
+  while also covering the non-table page-36 branch.
   Follow-up, 2026-05-31: accepted the content-minimum overflow row-allocation rule for slack tables. Public
   `pptx-ladder-10-table-center-explicit-multiline` showed that Office lets row content minima exceed the
   `graphicFrame` height instead of compressing all rows back into the frame when the minimum total is too tall.
