@@ -18752,3 +18752,14 @@ inter-glyph-average rules.
 Validation: non-slow `pptx-typography` passed (`136` passed, `0` failed, `2` skipped). Private-safe
 inspection artifacts were regenerated for pages 36 and 21 under `artifacts/tmp/lvb-telemetry-page36-pptx-text`
 and `artifacts/tmp/lvb-telemetry-page21-pptx-text`.
+
+Rejected column-`Tc` trial, 2026-05-31: a reversible structural rule that assigned `Tc=-0.003em` to every
+single-span, all-letter, explicit noAutofit multi-column run did change the candidate page-36 PDF structure
+as expected: the private three-column frame moved from candidate `Tc=0` to `Tc=-0.036` for all 53 runs. It
+was still exactly raster-neutral on `lokad-value-based` run `20260531-012602` (`MAE=2.931758`, page 36
+`MAE=6.045371817`, empty diagnostics), because the renderer compensates `Tc` inside `TJ` positioning. More
+importantly, the public `pptx-ladder-04-typography-unspaced-column-tc-probe` is a structural counterexample:
+Office uses a mix of `Tc=0`, positive `Tc=0.0195`, and `Tc=-0.036` for the same broad class. The trial was
+reverted. Do not add a blanket noAutofit-column or all-letter-column rule; the viable long-term path needs a
+PDF-level decomposition rule that also explains when Office keeps zero, goes positive, emits the negative
+`-0.003em` state, or changes the secondary `/Tf` branch.
