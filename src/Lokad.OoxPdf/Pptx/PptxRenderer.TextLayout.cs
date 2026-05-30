@@ -486,6 +486,13 @@ internal sealed partial class PptxRenderer
         return bodyProperties.WrapMode != PptxTextWrapMode.None;
     }
 
+    private static bool IsCenteredTableCellText(PptxTextFrameModel frame, ResolvedParagraphTextStyle paragraphStyle)
+    {
+        return frame.TableRowIndex.HasValue &&
+            paragraphStyle.Alignment == TextAlignment.Center &&
+            TextBodyAllowsWrapping(frame.BodyProperties);
+    }
+
     private static PptxTextFrameModel FitShapeAutoFitFrame(
         PptxTextFrameModel frame,
         PptxDocument document,
@@ -1299,6 +1306,8 @@ internal sealed partial class PptxRenderer
                         paragraphStyle.Alignment == TextAlignment.Center;
                     double wrapTolerance = usesCenteredShapeAutoFit
                         ? PptxTextMetricRules.CoordinateTolerance
+                        : IsCenteredTableCellText(frame, paragraphStyle)
+                        ? PptxTextMetricRules.CenteredTableCellWrapTolerance(fragmentFontSize, effectiveTextWidth)
                         : bulletText is not null
                         ? PptxTextMetricRules.BulletWrapFitTolerance(fragmentFontSize)
                         : HasShapeAutoFit(frame.BodyProperties)

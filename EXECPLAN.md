@@ -234,6 +234,32 @@ High-priority actions:
   wrapped cells have large row-internal line-placement mismatches. The next acceptable page-79 push needs a
   public Office-authored table ladder that isolates wrapped middle-anchored cell line placement and text-state
   emission; do not add a private row/column coordinate shortcut.
+  Follow-up, 2026-05-30: the existing public
+  `pptx-ladder-10-table-center-explicit-wrapped` case does isolate part of the table-row slack family. Its
+  current baseline run `20260530-171826` has MAE `8.201281`; preserving declared row heights instead of
+  scaling large row-height slack to the full graphicFrame improved that public case to MAE `3.713218` in
+  run `20260530-172034` and kept non-slow `pptx-tables` passing (`15` passed). The same broad rule is still
+  rejected for the private deck: run `20260530-172055` worsened deck MAE `2.949517 -> 2.958489`, made page 21
+  worst (`5.943711 -> 6.697341`), and left page 79 unchanged at report precision. Conclusion: the future table
+  row-height rule needs a discriminator between the public high-slack wrapped-center table and private page 21's
+  accepted content-minimum row expansion; do not retry a blanket large-slack declared-row preservation rule.
+- [x] 2026-05-30: Narrowed centered table-cell wrapping from private page-12 evidence without changing table
+  geometry or adding a private coordinate rule. Fresh inspection of accepted run `20260530-170544` showed page 12
+  was not dominated by missing graphics: table strokes and fills were structurally aligned, while centered table
+  text in one column wrapped more aggressively than Office. The candidate split several centered cell lines into
+  shorter fragments where Office kept the first two words together; the resulting row-internal baseline and X
+  deltas drove a visible residual. `BuildTextFrameLayout` now gives centered table-cell text the same named
+  width-scaled wrap slack family as final-word Office wrapping, gated by `TableRowIndex` plus center alignment.
+  This is deliberately narrower than changing all table cells, all centered text, or row heights.
+
+  Validation: focused `pptx-tables --skip-slow` passed (`16` passed) with public regression
+  `PptxSyntheticCenteredTableCellUsesOfficeWrapSlack`; public
+  `pptx-ladder-10-table-center-explicit-wrapped` stayed at MAE `8.201281` in run `20260530-173336`, confirming
+  that the remaining public case debt is still row-height slack rather than this text-wrap rule. Private run
+  `20260530-173349` on `lokad-value-based` compared all `84/84` pages with empty diagnostics, improved deck MAE
+  `2.949517 -> 2.948045`, improved changed16 `0.053584 -> 0.053572`, and improved page 12
+  `5.258861 -> 5.135157`. Remaining page-12 residuals are table text-state/font emission (`Tc`, secondary
+  `/Tf`) and smaller placement differences, not the fixed centered wrap grouping.
 - [x] 2026-05-30: Extended no-autofit overflow column balancing for even continued-paragraph cases, moving the
   private page-59 three-column body from OOXPDF's even `22/22/22` layout to Office's observed `22/23/21`
   layout. This is the sibling of the earlier private page-55 continued-paragraph rule: when all columns

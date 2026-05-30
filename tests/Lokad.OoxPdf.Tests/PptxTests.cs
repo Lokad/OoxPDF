@@ -12325,6 +12325,56 @@ internal static class PptxTests
         TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 [0-9.]+ Tm"), $"The centered table header should measure and render at the table-cell inset. Matrices: {string.Join(" | ", matrices)}");
     }
 
+    public static void PptxSyntheticCenteredTableCellUsesOfficeWrapSlack()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="4572000" y="914400"/><a:ext cx="1585000" cy="609600"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                        <a:tblGrid><a:gridCol w="1585000"/></a:tblGrid>
+                        <a:tr h="609600">
+                          <a:tc>
+                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr algn="ctr"><a:buNone/></a:pPr><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/><a:ea typeface="Cambria Math"/></a:rPr><a:t>Forecasting, Allocation, Planning</a:t></a:r></a:p></a:txBody>
+                            <a:tcPr marL="36000" marR="36000" marT="18000" marB="18000" anchor="ctr"/>
+                          </a:tc>
+                        </a:tr>
+                      </a:tbl></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        string[] matrices = Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ [0-9.]+ Tm")
+            .Select(match => match.Value)
+            .ToArray();
+        int lineBaselines = matrices
+            .Select(matrix => Regex.Match(matrix, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm").Groups["y"].Value)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+        TestAssert.True(lineBaselines == 2, $"Expected centered table text to keep the first two words on one line; got {lineBaselines}. Matrices: {string.Join(" | ", matrices)}");
+    }
+
     public static void PptxSyntheticTableDistributesSmallPositiveSlackToShortestRows()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
