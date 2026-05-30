@@ -3301,12 +3301,20 @@ internal sealed partial class PptxRenderer
         double? styleLineWidth = TryReadStyleLineWidth(shape, theme, out double inheritedLineWidth)
             ? inheritedLineWidth
             : null;
+        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
         if (explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha, styleLineWidth))
         {
             return true;
         }
 
-        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
+        if (explicitLine?.Attribute("w") is { } explicitWidthAttribute &&
+            lineReference.Style is not null &&
+            TryReadSolidColorWithAlpha(lineReference.Style, theme, lineReference.Reference, out color, out alpha))
+        {
+            lineWidth = OoxUnits.EmuToPoints(long.Parse(explicitWidthAttribute.Value, CultureInfo.InvariantCulture));
+            return true;
+        }
+
         if (lineReference.Style is null)
         {
             color = default;

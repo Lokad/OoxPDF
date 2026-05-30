@@ -205,6 +205,22 @@ High-priority actions:
   four stroke-width deltas (`0.75 pt` reference vs `1 pt` candidate). This is a structural PDF-alignment gain,
   not a raster-tuned private heuristic. The remaining page-36 raster gap is still dominated by Office
   text-state/`Tc` families and fractional font-size emission.
+- [x] 2026-05-30: Accepted the explicit-line-width/style-line-color cascade fix discovered on private page 20.
+  The private-safe structural evidence was a connector family with authored `<a:ln w="12700">` but no direct
+  line `solidFill`; Office keeps the authored `1 pt` stroke width while resolving the stroke color from the
+  `p:style/a:lnRef` line style. OOXPDF previously treated the missing direct color as failure of the entire
+  explicit line and fell back to the full theme line style, replacing the authored width with the style's
+  `1.5 pt` width. `PptxSceneBuilder` and the XML fallback renderer now preserve explicit line width while
+  inheriting style line color. Public regression
+  `PptxSyntheticConnectorExplicitLineWidthInheritsStyleLineColor` locks a vertical connector where direct
+  `1 pt` width wins over a `1.5 pt` style line while color still resolves through `phClr`.
+  Validation: focused non-slow `pptx-shapes` passed (`26` passed, `0` failed); `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run `20260530-105637` on
+  `lokad-value-based` compared all `84/84` pages with empty diagnostics and improved deck MAE
+  `3.439664 -> 3.433930`, changed16 `0.058849 -> 0.058750`. Page 20 moved from about `6.15` to `6.13` MAE,
+  and candidate page-20 PDF inspection now reports the same stroke-width family as Office for the affected
+  vertical connectors: four `1 pt` black strokes and six `1.5 pt` red strokes. This is a generic DrawingML
+  cascade correction, not private-content logic.
 - [x] 2026-05-30: Accepted a structural table text-frame wrap-width correction discovered while focusing on
   private slide 21. The private evidence showed centered table-cell baseline residuals that still form a
   row-position curve, but the table text model had an objectively inconsistent geometry: `TextWidth` was

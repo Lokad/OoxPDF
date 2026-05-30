@@ -1675,6 +1675,82 @@ internal static class PptxTests
         TestAssert.Contains("72 396 144 72 re S", pdf);
     }
 
+    public static void PptxSyntheticConnectorExplicitLineWidthInheritsStyleLineColor()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/theme/theme1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="LineCascadeTheme">
+                  <a:themeElements>
+                    <a:clrScheme name="LineCascadeTheme">
+                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+                    </a:clrScheme>
+                    <a:fontScheme name="LineCascadeTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+                    <a:fmtScheme name="LineCascadeTheme">
+                      <a:fillStyleLst/>
+                      <a:lnStyleLst>
+                        <a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
+                        <a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
+                      </a:lnStyleLst>
+                      <a:effectStyleLst/>
+                      <a:bgFillStyleLst/>
+                    </a:fmtScheme>
+                  </a:themeElements>
+                </a:theme>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:cxnSp>
+                        <p:style>
+                          <a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>
+                          <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
+                          <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
+                          <a:fontRef idx="minor"><a:schemeClr val="dk1"/></a:fontRef>
+                        </p:style>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="0" cy="1828800"/></a:xfrm>
+                          <a:prstGeom prst="line"/>
+                          <a:ln w="12700"/>
+                        </p:spPr>
+                      </p:cxnSp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(scene.Slides[0].SlideNodes[0].Shape?.Line.HasLine == true, "Expected style line color to complete the explicit connector line.");
+        TestAssert.Equal(1d, scene.Slides[0].SlideNodes[0].Shape?.Line.Width ?? 0d);
+        TestAssert.Equal(new RgbColor(68, 114, 196), scene.Slides[0].SlideNodes[0].Shape?.Line.Color ?? default);
+        TestAssert.Contains("1 w", pdf);
+        TestAssert.Contains("0.267 0.447 0.769 RG", pdf);
+        TestAssert.Contains("72 468 m 72 324 l S", pdf);
+    }
+
     public static void PptxSyntheticArrowAndConnectorShapesRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

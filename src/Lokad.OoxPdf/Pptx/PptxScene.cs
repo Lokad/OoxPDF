@@ -5361,6 +5361,14 @@ internal sealed class PptxSceneBuilder
             return true;
         }
 
+        if (explicitLine?.Attribute("w") is { } explicitWidthAttribute &&
+            lineReference.Style is not null &&
+            TryReadSolidColorWithAlpha(lineReference.Style, theme, colorMap, lineReference.Reference, out color, out alpha))
+        {
+            lineWidth = OoxUnits.EmuToPoints(long.Parse(explicitWidthAttribute.Value, CultureInfo.InvariantCulture));
+            return true;
+        }
+
         if (lineReference.Style is null)
         {
             color = default;
