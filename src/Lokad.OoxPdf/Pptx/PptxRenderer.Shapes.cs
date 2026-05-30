@@ -225,20 +225,9 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
-        bool hasGlow = glowOverride is not null;
-        Glow glow;
-        glow = glowOverride ?? default;
-
         bool hasOuterShadow = outerShadowOverride is not null;
         OuterShadow outerShadow;
         outerShadow = outerShadowOverride ?? default;
-
-        if (hasGlow &&
-            preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
-            customGeometry is null && sceneCustomGeometry is null)
-        {
-            DrawGlow(graphics, preset, x, y, width, height, glow);
-        }
 
         if (hasOuterShadow &&
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
@@ -656,22 +645,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void DrawGlow(
-        PdfGraphicsBuilder graphics,
-        string preset,
-        double x,
-        double y,
-        double width,
-        double height,
-        Glow glow)
-    {
-        graphics.SaveState();
-        graphics.SetAlpha(glow.Alpha, 1d);
-        graphics.SetFillRgb(glow.Color.Red, glow.Color.Green, glow.Color.Blue);
-        DrawPresetFill(graphics, preset, x - glow.Radius, y - glow.Radius, width + 2d * glow.Radius, height + 2d * glow.Radius);
-        graphics.RestoreState();
-    }
-
     private static void DrawOuterShadow(
         PdfGraphicsBuilder graphics,
         string preset,
@@ -706,6 +679,22 @@ internal sealed partial class PptxRenderer
         {
             graphics.FillRectangleEvenOdd(x, y, width, height);
         }
+    }
+
+    private static void DrawGlow(
+        PdfGraphicsBuilder graphics,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        Glow glow)
+    {
+        graphics.SaveState();
+        graphics.SetAlpha(glow.Alpha, 1d);
+        graphics.SetFillRgb(glow.Color.Red, glow.Color.Green, glow.Color.Blue);
+        DrawPresetFill(graphics, preset, x - glow.Radius, y - glow.Radius, width + 2d * glow.Radius, height + 2d * glow.Radius);
+        graphics.RestoreState();
     }
 
     private static void DrawLinearGradientFill(PdfGraphicsBuilder graphics, GradientFill gradient, double x, double y, double width, double height)

@@ -388,7 +388,7 @@ internal sealed partial class PptxRenderer
     {
         foreach (PptxSceneNode node in nodes)
         {
-            if ((node.Shape is not null && HasUnsupportedEffect(node.Shape.Effects)) ||
+            if ((node.Shape is not null && (node.Shape.Glow.HasGlow || HasUnsupportedEffect(node.Shape.Effects))) ||
                 (node.Chart is not null && HasUnsupportedEffect(node.Chart)) ||
                 HasUnsupportedEffect(node.Children))
             {

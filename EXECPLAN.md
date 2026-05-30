@@ -17595,3 +17595,20 @@ shows the same secondary-`/Tf` family plus small baseline/line-position drift wi
 counts. Continue investigating Office text-state emission structurally, but only after finding a discriminator
 that survives public probes and multiple private pages; avoid another private-coordinate or style-name
 shortcut.
+
+Accepted follow-up, 2026-05-30: page-21 exposed a real effect-rendering mismatch from a renderer-side proxy,
+not from table text. Office's PDF for the slide has `9` fills and `6` strokes; the old candidate had matching
+strokes but `11` fills because shape `glow` was rendered as an expanded solid rectangle in the glow color. The
+two extra candidate rectangles were exactly the two `a:glow rad="63500"` boxes, expanded by about `5pt`,
+whereas Office did not emit corresponding vector fills in the PDF content stream. The renderer no longer draws
+shape glow as a solid preset proxy; it preserves the parsed glow in the scene model and reports
+`PPTX_UNSUPPORTED_EFFECT` until a real Office-like soft effect implementation exists. Chart glow still uses the
+existing chart helper, so this change is scoped to ordinary PPTX shapes.
+
+Validation: public `pptx-shapes --skip-slow` passed (`27` passed, `0` failed), public `pptx-tables --skip-slow`
+passed (`14` passed, `0` failed), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
+Private run `20260530-120813` compared all `84/84` pages, changed only page 21 materially, and improved deck
+MAE `3.432160 -> 3.432084`, changed16 `0.058733 -> 0.058719`; page 21 improved MAE `6.241450 -> 6.235032` and
+changed16 `0.106715 -> 0.105519`. The run now correctly reports one unsupported effect diagnostic for the
+unrendered shape glow. Continue on page 21's larger residual as table text/row geometry and Office text-state,
+not as glow/fill output.
