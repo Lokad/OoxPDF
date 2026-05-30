@@ -191,6 +191,21 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Accepted Office hyperlink text style precedence discovered on private page 12. The
+  private-safe structural evidence was two thin Office PDF underline fills for hyperlink text near the bottom
+  of the slide. OOXPDF previously exposed the hyperlink relationship and resolved the theme hyperlink color
+  for plain hyperlink runs, but it did not apply Office's default hyperlink underline, and an authored run
+  `solidFill` could still win over the hyperlink theme color. `ResolveRunTextStyle` and the scene run-style
+  resolver now apply a default single underline to hyperlink runs unless an underline override is resolved, and
+  the theme hyperlink color wins over a direct run fill for hyperlink text. Public regression
+  `PptxSyntheticTextBoxUsesThemeHyperlinkColor` now covers a hyperlink run with an explicit conflicting direct
+  fill, the default `sng` underline, and emitted underline fill structure. Validation: focused non-slow
+  `pptx-typography` passed (`124` passed, `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed. Private run `20260530-124744` on `lokad-value-based` compared all `84/84` pages with the
+  existing single unsupported effect diagnostic, improved deck MAE `3.427005 -> 3.426082` after the picture
+  outline commit, and moved page 12 below the top-five worst pages. Page-12 PDF inspection now shows the two
+  hyperlink underline fill colors matching Office; the remaining page-12 fill delta is the table header band
+  bottom edge already tracked under table row/text-frame allocation.
 - [x] 2026-05-30: Accepted Office-like picture-outline rendering discovered on private page 12 while comparing
   PDF graphics operations. The private-safe structural gap was two ordinary `p:pic` images with authored
   `p:spPr/a:ln` outlines: Office emitted black rectangle strokes around the pictures, while OOXPDF rendered

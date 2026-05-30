@@ -6031,7 +6031,13 @@ internal sealed class PptxSceneBuilder
         double fontSize = ReadFontSize(runProperties, defaultRunProperties);
         double alpha = paragraphStyle.Alpha;
         RgbColor color = paragraphStyle.Color;
-        if (TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
+        bool hasHyperlinkClick = HasRunHyperlinkClick(runProperties);
+        if (hasHyperlinkClick && theme.TryResolveColor("hlink", colorMap, out RgbColor hyperlinkColor))
+        {
+            color = hyperlinkColor;
+            alpha = 1d;
+        }
+        else if (TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
             alpha = runAlpha;
@@ -6054,8 +6060,9 @@ internal sealed class PptxSceneBuilder
         string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
         string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
         string? capsValue = ReadTextCapsValue(runProperties, defaultRunProperties);
-        bool underline = underlineValue is not null &&
-            !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+        bool underline = underlineValue is null
+            ? hasHyperlinkClick
+            : !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
         bool strike = IsStrikeEnabled(strikeValue);
         return new PptxSceneRunStyle(
             fontSize,
@@ -6066,7 +6073,7 @@ internal sealed class PptxSceneBuilder
             bold,
             italic,
             underline,
-            underlineValue,
+            underlineValue ?? (hasHyperlinkClick ? "sng" : null),
             strike,
             strikeValue,
             capsValue,
@@ -6109,6 +6116,11 @@ internal sealed class PptxSceneBuilder
     private static string? ReadUnderlineValue(XElement? runProperties, XElement? defaultRunProperties)
     {
         return (string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"));
+    }
+
+    private static bool HasRunHyperlinkClick(XElement? runProperties)
+    {
+        return runProperties?.Element(DrawingNamespace + "hlinkClick") is not null;
     }
 
     private static string? ReadStrikeValue(XElement? runProperties, XElement? defaultRunProperties)

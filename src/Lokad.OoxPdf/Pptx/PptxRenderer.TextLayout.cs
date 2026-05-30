@@ -2561,6 +2561,11 @@ internal sealed partial class PptxRenderer
             colorSource = PptxRunTextColorSource.RunNoFill;
             alpha = 0d;
         }
+        else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", colorMap, out RgbColor hyperlinkColor))
+        {
+            color = hyperlinkColor;
+            colorSource = PptxRunTextColorSource.ThemeHyperlink;
+        }
         else if (TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
@@ -2571,11 +2576,6 @@ internal sealed partial class PptxRenderer
         {
             color = tableTextColor;
             colorSource = PptxRunTextColorSource.TableTextStyle;
-        }
-        else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", colorMap, out RgbColor hyperlinkColor))
-        {
-            color = hyperlinkColor;
-            colorSource = PptxRunTextColorSource.ThemeHyperlink;
         }
         else if (shapeFontColor is { } fontRefColor)
         {
@@ -2606,10 +2606,13 @@ internal sealed partial class PptxRenderer
             (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
         bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
             (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
+        bool hasHyperlinkClick = HasHyperlinkClick(runProperties);
         string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
         string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
         string? capsValue = ReadTextCapsValue(runProperties, defaultRunProperties);
-        bool underline = underlineValue is not null && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+        bool underline = underlineValue is null
+            ? hasHyperlinkClick
+            : !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
 
         return new ResolvedRunTextStyle(
             nominalFontSize,
@@ -2621,12 +2624,12 @@ internal sealed partial class PptxRenderer
             alpha,
             TryReadTextOutline(runProperties, defaultRunProperties, theme, colorMap, out TextOutline outline) ? outline : null,
             TryReadHighlightColor(runProperties, out RgbColor highlightColor) ? highlightColor : null,
-            HasHyperlinkClick(runProperties),
+            hasHyperlinkClick,
             ReadHyperlinkClickId(runProperties),
             bold,
             italic,
             underline,
-            underlineValue,
+            underlineValue ?? (hasHyperlinkClick ? "sng" : null),
             IsStrikeEnabled(strikeValue),
             strikeValue,
             capsValue,

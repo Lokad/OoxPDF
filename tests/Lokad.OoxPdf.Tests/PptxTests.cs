@@ -3550,7 +3550,7 @@ internal static class PptxTests
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="2400"><a:hlinkClick r:id="rIdHyper"/></a:rPr><a:t>Link</a:t></a:r></a:p>
+                      <a:p><a:r><a:rPr sz="2400"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:hlinkClick r:id="rIdHyper"/></a:rPr><a:t>Link</a:t></a:r></a:p>
                     </p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
@@ -3570,9 +3570,12 @@ internal static class PptxTests
         TestAssert.True(linkRun.HasHyperlinkClick, "Expected the text model to preserve hyperlink-click source state before color resolution.");
         TestAssert.Equal("rIdHyper", linkRun.HyperlinkClickId ?? string.Empty);
         TestAssert.Equal("ThemeHyperlink", linkRun.ColorSource);
+        TestAssert.True(linkRun.Underline, "Office applies a single underline to hyperlink runs when no underline override is authored.");
+        TestAssert.Equal("sng", linkRun.UnderlineValue ?? string.Empty);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.Contains("re f*", pdf);
         TestAssert.Contains(" TJ", pdf);
     }
 
