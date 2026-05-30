@@ -209,6 +209,15 @@ High-priority actions:
   table-cell baseline residual still peaks around `3.35 pt` in middle rows and falls near the bottom, so the
   next table push should investigate actual Office row/text vertical anchoring rather than reintroducing
   raw-grid preservation or broad table-local character-spacing rules.
+- [x] 2026-05-30: Rejected a broad table-cell actual-line-box vertical-anchor migration. Removing the
+  table-cell exclusions from `ResetEstimatedVerticalAnchorOffset`/`TryResolveActualVerticalAnchorOffset` was
+  attractive architecturally, because it would route table cells through the common text layout anchor path.
+  Public validation rejected it immediately: `PptxSyntheticTableCentersTextByContentHeight` moved the centered
+  table-cell baseline from the locked Office-compatible `499.667 pt` to `500.337 pt`. The experiment was
+  reverted without private-deck validation. Conclusion: the remaining slide-21 row residual is not solved by
+  simply enabling the shape-text actual-line-box anchor branch for table cells; the next table-anchor attempt
+  needs a public Office-authored table ladder that separates explicit insets, default-inset adjustments, row
+  height expansion, and center-anchor occupied-height measurement.
 - [x] 2026-05-30: Accepted a private-deck typography rule that separates explicit percentage line advance
   from baseline ascent in multi-column `noAutofit` overflow text frames. Private page-13/page-49 PDF
   inspection showed Office keeping 12 pt body-text baselines on the same top-column rows while still using
