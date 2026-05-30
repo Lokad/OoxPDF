@@ -18623,3 +18623,16 @@ Page36 remains unchanged visually (`MAE=6.045371817`) but its frame-10 auto-numb
 (`candidate -0.056` versus Office `-0.012`/small positive buckets). Do not widen this to default autofit,
 plain noAutofit paragraphs, or all continuations; the next text-state step needs a continuation/run-splitting
 discriminator.
+
+Refinement, 2026-05-31: the numbered noAutofit rule is now paragraph-order gated instead of whole-frame
+gated. The public noAutofit numbered probe has one non-numbered frame that stays at `Tc=0`, then numbered
+frames where the auto-numbered paragraph and following body paragraphs inherit the numbered `Tc` bucket. The
+private page-36 frame 10 has a plain paragraph before the first numbered paragraph, and Office keeps that
+prelude closer to zero (`Tc=-0.012`) rather than the numbered `-0.0574` bucket. `ReadOfficeNumberedFrameCharacterSpacing`
+therefore records the first auto-numbered paragraph index and `ApplyOfficePdfCharacterSpacing` applies the
+numbered PDF text state only from that paragraph onward. Public `pptx-typography --skip-slow` still passes
+(`135` passed, `0` failed, `2` skipped), the noAutofit public probe keeps the same candidate `7/12/16`
+`Tc=0/-0.048/-0.024` split, and private run `20260531-000600` remains raster-neutral (`MAE=2.933667`,
+changed16 `0.053398`, empty diagnostics). The remaining page-36 continuation mismatch is now narrower:
+body paragraphs after the first numbered paragraph still need a real Office continuation/run-splitting
+discriminator, while pre-numbered plain paragraphs are excluded.

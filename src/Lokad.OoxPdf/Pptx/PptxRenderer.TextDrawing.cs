@@ -311,7 +311,7 @@ internal sealed partial class PptxRenderer
         }
 
         var adjusted = new PptxPositionedTextSpan[textSpans.Count];
-        Dictionary<int, double> numberedFrameSpacing = ReadOfficeNumberedFrameCharacterSpacing(textSpans);
+        Dictionary<int, (double SpacingEm, int FirstNumberedParagraphIndex)> numberedFrameSpacing = ReadOfficeNumberedFrameCharacterSpacing(textSpans);
         int currentFrame = -1;
         bool useHighlightContinuationSpacing = false;
         for (int i = 0; i < textSpans.Count; i++)
@@ -338,9 +338,11 @@ internal sealed partial class PptxRenderer
             {
                 pdfCharacterSpacingOverride = PptxTextMetricRules.OfficeHighlightContinuationCharacterSpacing(span.Run.FontSize);
             }
-            else if (eligibleNumberedProfileSpan && numberedFrameSpacing.TryGetValue(span.FrameIndex, out double frameSpacingEm))
+            else if (eligibleNumberedProfileSpan &&
+                numberedFrameSpacing.TryGetValue(span.FrameIndex, out (double SpacingEm, int FirstNumberedParagraphIndex) frameSpacing) &&
+                span.ParagraphIndex >= frameSpacing.FirstNumberedParagraphIndex)
             {
-                pdfCharacterSpacingOverride = span.Run.FontSize * frameSpacingEm;
+                pdfCharacterSpacingOverride = span.Run.FontSize * frameSpacing.SpacingEm;
             }
 
             adjusted[i] = pdfCharacterSpacingOverride is not null
@@ -351,9 +353,9 @@ internal sealed partial class PptxRenderer
         return adjusted;
     }
 
-    private static Dictionary<int, double> ReadOfficeNumberedFrameCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
+    private static Dictionary<int, (double SpacingEm, int FirstNumberedParagraphIndex)> ReadOfficeNumberedFrameCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
     {
-        var spacingByFrame = new Dictionary<int, double>();
+        var spacingByFrame = new Dictionary<int, (double SpacingEm, int FirstNumberedParagraphIndex)>();
         foreach (IGrouping<int, PptxPositionedTextSpan> frameGroup in textSpans.GroupBy(span => span.FrameIndex))
         {
             PptxPositionedTextSpan[] frame = frameGroup.ToArray();
@@ -367,9 +369,13 @@ internal sealed partial class PptxRenderer
             bool hasExplicitAutoNumberStart = frame.Any(span => span.ParagraphAutoNumberStartAt is not null);
             bool hasBodyContinuation = frame.Any(span =>
                 !string.Equals(span.ParagraphBulletKind, nameof(PptxParagraphBulletKind.AutoNumber), StringComparison.Ordinal));
-            spacingByFrame[frameGroup.Key] = hasExplicitAutoNumberStart && hasBodyContinuation
+            double spacingEm = hasExplicitAutoNumberStart && hasBodyContinuation
                 ? PptxTextMetricRules.OfficeAutofitNumberedDenseCharacterSpacingEm
                 : PptxTextMetricRules.OfficeAutofitNumberedDefaultCharacterSpacingEm;
+            int firstNumberedParagraphIndex = frame
+                .Where(span => string.Equals(span.ParagraphBulletKind, nameof(PptxParagraphBulletKind.AutoNumber), StringComparison.Ordinal))
+                .Min(span => span.ParagraphIndex);
+            spacingByFrame[frameGroup.Key] = (spacingEm, firstNumberedParagraphIndex);
         }
 
         return spacingByFrame;
