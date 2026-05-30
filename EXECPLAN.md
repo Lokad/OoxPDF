@@ -270,6 +270,14 @@ High-priority actions:
   authored nonzero `spc`, and OOXPDF run models still resolve `CharacterSpacing=0`, so future `Tc` work must
   explain Office's export text-state branch from public probes rather than OOXPDF's kerning residual average
   or private-page constants.
+- [x] 2026-05-30: Rejected the narrower page-36 `Tc=-0.003em` emission-only shortcut for explicit
+  three-column `noAutofit` Cambria Math 12 pt text. The local probe tried to match the largest Office
+  `-0.036 Tc` family without changing layout, but private run `20260530-090605` regressed the deck from the
+  current `20260530-045935` baseline: MAE `3.489553 -> 3.676422`, changed16 `0.059316 -> 0.062296`, and the
+  worst pages shifted to `54`/`59`/`53` rather than improving the deck. This confirms the long-term rule:
+  do not encode private-page font/column constants as implicit text state. Keep the open work on the
+  Office secondary `/Tf` branch and only revisit non-authored `Tc` once a public Office-authored probe
+  reproduces the trigger.
 - [x] 2026-05-30: Rejected the broad page 21 text-box style-fill shortcut. Page 21 has two `txBox="1"`
   rectangle text boxes with no direct `spPr` fill, direct colored lines, glow effects, and `p:style/a:fillRef
   idx="1"`. PDF inspection made the candidate's resolved fills look suspicious because Office's reference
@@ -298,6 +306,18 @@ High-priority actions:
   ladder, so the explicit-margin anchor and row-height behavior can be separated from private content. Do not
   extend the default-margin inset adjustment to explicit margins until that probe or an equivalent Office PDF
   inspection supports it.
+- [x] 2026-05-30: Rejected the high-slack table-grid-preservation shortcut for page 21. Two public-safe COM
+  probes under `artifacts/tmp` separated the table signals: a centered explicit-margin table with uniform rows
+  matched Office vertically while exposing Office-only small `Tc`; a non-uniform wrapped row-ladder probe
+  reproduced a large table text-placement gap. The tempting structural shortcut was to preserve scaled table
+  grid row proportions whenever declared-row slack exceeded `OfficeTableRowDeclaredHeightSlackFactor`, instead
+  of entering the existing content-minimum expansion branch. That was wrong for the private deck: run
+  `20260530-092936` regressed deck MAE `3.489553 -> 3.539226`, changed16 `0.059316 -> 0.059806`, and made page
+  21 much worse (`6.263637 -> 10.436185`, changed16 `0.107068 -> 0.148183`). Keep the current row-height
+  expansion branch. The remaining page-21 gap is narrower: Office's centered explicit-margin table behavior
+  depends on wrapped cell text and row-internal line placement, not on a blanket return to raw grid rows. The
+  public visual case `pptx-ladder-10-table-center-explicit-wrapped` now captures this as a tracked
+  Office-backed target with loose current-gap thresholds (`MAE 8.201281`, changed16 `0.067583`).
 - [x] 2026-05-30: Accepted a moderate-slack table row-height rule and rejected the broad declared-row version.
   A public-safe row-ladder probe built from the private page-21 geometry showed that when a table frame is much
   taller than its declared row sum and cell text does not require expansion, Office keeps text bands close to

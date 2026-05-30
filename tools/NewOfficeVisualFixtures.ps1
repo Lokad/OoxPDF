@@ -242,6 +242,57 @@ try {
     finally {
         $tables.Close()
     }
+
+    $centeredExplicitTable = $powerPoint.Presentations.Add($false)
+    try {
+        $slide = $centeredExplicitTable.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $tableShape = $slide.Shapes.AddTable(11, 5, 65.87, 113.10, 827.99, 250.39)
+        $table = $tableShape.Table
+        $columnWidths = @(97.764016, 112.957717, 104.792047, 297.267323, 215.218898)
+        for ($column = 1; $column -le 5; $column++) {
+            $table.Columns.Item($column).Width = $columnWidths[$column - 1]
+        }
+
+        $rowHeights = @(13.989606, 9.792756, 13.989606, 22.383465, 9.792756, 13.989606, 13.989606, 18.186535, 13.989606, 13.989606, 18.186535)
+        for ($row = 1; $row -le 11; $row++) {
+            $table.Rows.Item($row).Height = $rowHeights[$row - 1]
+        }
+
+        for ($row = 1; $row -le 11; $row++) {
+            for ($column = 1; $column -le 5; $column++) {
+                $cell = $table.Cell($row, $column)
+                $textFrame = $cell.Shape.TextFrame2
+                $textFrame.VerticalAnchor = 3
+                $textFrame.MarginLeft = 2.953701
+                $textFrame.MarginRight = 2.953701
+                $textFrame.MarginTop = 1.47685
+                $textFrame.MarginBottom = 1.47685
+
+                $tag = "R{0:00}C{1:00}" -f $row, $column
+                if ($column -eq 4) {
+                    $cell.Shape.TextFrame.TextRange.Text = "$tag neutral planning horizon wraps"
+                }
+                elseif ($column -eq 5) {
+                    $cell.Shape.TextFrame.TextRange.Text = "$tag medium neutral note"
+                }
+                else {
+                    $cell.Shape.TextFrame.TextRange.Text = "$tag compact"
+                }
+
+                $cell.Shape.TextFrame.TextRange.Font.Name = "Aptos"
+                $cell.Shape.TextFrame.TextRange.Font.Size = 10
+                $cell.Shape.TextFrame.TextRange.Font.Color.RGB = Rgb 0 0 0
+                $cell.Shape.Fill.ForeColor.RGB = Rgb 240 240 240
+            }
+        }
+
+        $centeredExplicitTable.SaveAs((Join-Path $cases "pptx-ladder-10-table-center-explicit-wrapped.pptx"), 24)
+    }
+    finally {
+        $centeredExplicitTable.Close()
+    }
 }
 finally {
     if ($powerPoint -ne $null) {

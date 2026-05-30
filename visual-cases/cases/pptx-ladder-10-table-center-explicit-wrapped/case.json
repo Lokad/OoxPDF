@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-10-table-center-explicit-wrapped",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-table-center-explicit-wrapped.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "tables", "center-anchor", "explicit-margins", "wrapped-text", "needs-review"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 8.3,
+    "maxChangedPixelRatioAtThreshold16": 0.068
+  },
+  "allowedUnsupportedFeatures": []
+}
