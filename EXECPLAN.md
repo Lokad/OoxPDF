@@ -258,6 +258,10 @@ High-priority actions:
   content. A separate public `startAt` sweep rejected the simpler numbering-start ladder: four numbered
   `spAutoFit` frames with starts 1-4 all emitted `Tc=-0.048`. The next renderer slice must therefore model
   Office's text-body/glyph-emission decomposition, not a font-name, page, or numbering-value shortcut.
+  The public reproduction is now tracked as
+  `pptx-ladder-04-typography-spautofit-numbered-tc-probe`: Office emits `Tc` buckets `0:7`, `-0.048:12`,
+  and `-0.024:16`, while the current candidate still emits `Tc=0:35` and has raster metrics MAE `5.162535`,
+  changed16 `0.058189`, SSIM `0.648233`.
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was
