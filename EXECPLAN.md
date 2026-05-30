@@ -298,6 +298,20 @@ High-priority actions:
   ladder, so the explicit-margin anchor and row-height behavior can be separated from private content. Do not
   extend the default-margin inset adjustment to explicit margins until that probe or an equivalent Office PDF
   inspection supports it.
+- [x] 2026-05-30: Accepted a moderate-slack table row-height rule and rejected the broad declared-row version.
+  A public-safe row-ladder probe built from the private page-21 geometry showed that when a table frame is much
+  taller than its declared row sum and cell text does not require expansion, Office keeps text bands close to
+  the declared row ladder instead of stretching every row through the full frame. A broad trial that started
+  all material-slack tables from declared row heights improved the deck aggregate but regressed private page 21
+  (`6.263637 -> 7.017082` MAE), because that page still needs the older content-minimum expansion branch. The
+  retained rule is narrower: for moderate slack up to `OfficeTableRowDeclaredHeightSlackFactor` (`1.10x`),
+  rows start from declared heights and still expand if text minimums require it; larger slack keeps the prior
+  content-expansion path. Public regression: `PptxSyntheticTableKeepsDeclaredRowsForModerateSlack`. Validation:
+  non-slow `pptx-tables` passed (`14` passed, `0` failed); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+  -v minimal` passed. Private run `20260530-043526` improved deck MAE `3.523017 -> 3.499723` and changed16
+  `0.059707 -> 0.059400` with empty diagnostics. Only pages 11 and 75 changed materially, improving
+  `5.57 -> 4.68` and `2.61 -> 1.55`; page 21 stayed at its baseline `6.263637`, so its remaining table gap is
+  not solved by moderate declared-row slack.
 - [x] 2026-05-30: Preserved authored PPTX run boundaries as PDF text-operation boundaries for model-first
   shape text. Private page 13 exposed a small same-line frame where Office emitted three text objects at the
   original OOXML run boundaries while OOXPDF collapsed the same resolved visual style into one object. The

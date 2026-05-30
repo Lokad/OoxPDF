@@ -10,6 +10,7 @@ internal sealed partial class PptxRenderer
 {
     private const double OfficeTableRowContentExpansionSlackFactor = 1.05d;
     private const double OfficeTableRowSmallPositiveSlackFactor = 1.05d;
+    private const double OfficeTableRowDeclaredHeightSlackFactor = 1.10d;
     private const double OfficeMiddleAnchoredTableCellDefaultTopInsetAdjustment = 0.54d;
     private const double OfficeBottomAnchoredTableCellDefaultBottomInsetAdjustment = 0.6d;
 
@@ -292,6 +293,13 @@ internal sealed partial class PptxRenderer
             }
 
             return rowHeights;
+        }
+
+        if (rowHeightSlackFactor <= OfficeTableRowDeclaredHeightSlackFactor)
+        {
+            rowHeights = rawRowHeights
+                .Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch)
+                .ToArray();
         }
 
         double[] minimumHeights = new double[rowHeights.Length];
