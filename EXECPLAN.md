@@ -191,6 +191,23 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Aligned justified PPTX wrapped-line spacing with Office's treatment of line-end wrap
+  separators. Private `lokad-value-based` page-20 inspection showed large cumulative X deltas on justified
+  `spAutoFit` lines, while page 36 remained dominated by the known text-state/font-size family. The public
+  `pptx-ladder-04-typography-justify-port` probe reproduced the same cumulative drift without private
+  content: Office excluded the non-rendered line-end separator from both the measured justified line width and
+  the stretchable-space count, while OOXPDF used `line.EndX` and counted that carried separator. The renderer
+  now derives justified extra width from the last drawable atom and counts only stretchable spaces before that
+  drawable end, keeping line-wrap separators available for wrapping logic but out of the justification
+  distribution. Public regression coverage was added to `PptxJustifiedTextLayoutDistributesWrappedLines` with
+  Office-aligned word-start assertions. Validation: focused non-slow `pptx-typography` passed (`126` passed,
+  `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed after a transient
+  parallel file-lock warning. Public justify visual MAE improved `4.187326 -> 2.267494`, changed16
+  `0.036077 -> 0.023356`, and SSIM `0.495245 -> 0.750298`. Private run `20260530-140823` on
+  `lokad-value-based` compared all `84/84` pages with empty diagnostics, improved deck MAE
+  `3.421583 -> 3.390498`, changed16 `0.058475 -> 0.058195`, and improved page 20 MAE
+  `6.140185 -> 4.415190` while page 19 also improved. Pages 36, 21, 59, 12, 22, and 40 remain active
+  higher-error targets.
 - [x] 2026-05-30: Aligned rectangular PPTX text baselines for small-descender fonts through public
   Office-PDF evidence, while continuing the private `lokad-value-based` typography pass. Private page-36 and
   page-59 inspection showed their largest residuals are still dominated by text-state/font-size and line

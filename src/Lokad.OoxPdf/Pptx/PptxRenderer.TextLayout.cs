@@ -2240,13 +2240,14 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextLineLayout? TryJustifyLine(TextLayoutLine line, PptxTextLineBoxLayout box, double textX, double textWidth, TextAdvanceEstimator advanceEstimator)
     {
-        int spaceCount = line.Spans.Sum(span => span.Run.Text.Count(static c => c == ' '));
+        double drawableEndX = ReadAlignmentEndX(line);
+        int spaceCount = CountStretchableJustificationSpaces(line, drawableEndX);
         if (spaceCount == 0)
         {
             return null;
         }
 
-        double extraWidth = textWidth - Math.Max(0d, line.EndX - textX);
+        double extraWidth = textWidth - Math.Max(0d, drawableEndX - textX);
         if (extraWidth <= PptxTextMetricRules.TextStateTolerance)
         {
             return null;
@@ -2281,6 +2282,27 @@ internal sealed partial class PptxRenderer
         }
 
         return new PptxTextLineLayout(box, textX, textX + textWidth, line.EndX, TextAlignment.Justify, spans);
+    }
+
+    private static int CountStretchableJustificationSpaces(TextLayoutLine line, double drawableEndX)
+    {
+        int count = 0;
+        foreach (PptxTextSpanLayout span in line.Spans)
+        {
+            foreach (PptxTextAtomLayout atom in span.Atoms)
+            {
+                if (!atom.Draw ||
+                    atom.Kind != PptxTextAtomKind.Space ||
+                    atom.X >= drawableEndX - PptxTextMetricRules.TextStateTolerance)
+                {
+                    continue;
+                }
+
+                count += atom.Text.Count(static c => c == ' ');
+            }
+        }
+
+        return count;
     }
 
     private static PptxTextLineLayout? TryDistributeLine(TextLayoutLine line, PptxTextLineBoxLayout box, double textX, double textWidth)

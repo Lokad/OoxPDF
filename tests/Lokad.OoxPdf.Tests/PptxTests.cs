@@ -8725,6 +8725,9 @@ internal static class PptxTests
         double[] wordStarts = justifiedLine.Spans.Select(span => span.X).Take(4).ToArray();
         TestAssert.Equal(4, wordStarts.Length);
         TestAssert.True(wordStarts.Zip(wordStarts.Skip(1), (left, right) => right - left).All(delta => delta > 0d), "Expected justified layout to expose monotonic word starts for Office text-op comparison.");
+        TestAssert.True(Math.Abs(wordStarts[1] - 151.19d) < 0.1d, "Expected justified wrapping to ignore the carried line-end separator when distributing stretchable spaces.");
+        TestAssert.True(Math.Abs(wordStarts[2] - 191.51d) < 0.1d, "Expected justified wrapping to keep Office-like word starts after excluding trailing wrap spaces.");
+        TestAssert.True(Math.Abs(wordStarts[3] - 257.15d) < 0.1d, "Expected justified wrapping to keep Office-like cumulative word spacing.");
         double[] wordGaps = justifiedLine.Spans.Zip(justifiedLine.Spans.Skip(1), (left, right) => right.X - (left.X + left.Width)).ToArray();
         TestAssert.True(wordGaps.Any(gap => gap > 1d), "Expected justified layout to expose distributed spacing through positioned word starts.");
         PptxTextSpanLayoutSnapshot paragraphSpan = justifiedLine.Spans.First(span => span.Text.StartsWith("Paragraph", StringComparison.Ordinal));
