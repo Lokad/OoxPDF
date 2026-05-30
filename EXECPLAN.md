@@ -18722,3 +18722,33 @@ numbered PDF text state only from that paragraph onward. Public `pptx-typography
 changed16 `0.053398`, empty diagnostics). The remaining page-36 continuation mismatch is now narrower:
 body paragraphs after the first numbered paragraph still need a real Office continuation/run-splitting
 discriminator, while pre-numbered plain paragraphs are excluded.
+
+Rejected continuation trial, 2026-05-31: restricting the accepted numbered PDF text-state profile to only
+`AutoNumber` paragraphs is not a valid private-deck fix. The temporary change made private
+`lokad-value-based` run `20260531-011352` exactly raster-neutral versus the accepted baseline
+(`MAE=2.931758`, same top pages), while breaking the public continuation probes:
+`PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState`,
+`PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState`, and
+`PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState`. Do not retry this as a private-only
+rule. The remaining page-36 mismatch has to be explained by a structural continuation/decomposition model,
+not by dropping continuation state after numbered paragraphs.
+
+Instrumentation follow-up, 2026-05-31: `PptxInspect` and the internal glyph-run/layout snapshots now expose
+private-safe inter-glyph adjustment aggregates next to the existing first-adjustment field: count, sum,
+minimum, maximum, and average over adjustments after the origin glyph. This is intentionally observational
+and does not change rendering. It gives the next PDF text-state pass enough evidence to distinguish residual
+`TJ` decomposition from Office `Tc` state decisions without looking at private text or typeface names.
+
+The first private reinspection with this telemetry confirms two useful constraints. On page 36, the dominant
+three-column noAutofit mismatch is not a residual-promotion problem: many Office `Tc=-0.036` and `Tc=-0.0476`
+runs correspond to candidate inter-glyph adjustment average `0`, so a rule based on average residuals would
+miss the main cluster. On page 21, table rows still show many `Tc=0` candidate runs plus row-local residual
+averages around `-0.07pt`, while Office only uses a small bottom-row negative bucket (`Tc=-0.00888`) and
+mostly zero. This keeps the long-term target on Office's structural PDF text-state decomposition: decide
+between text-state `Tc`, `TJ` residuals, secondary `/Tf` grid branches, and operation splitting from frame,
+paragraph, line, and table context. Avoid family-name, MATH-table, blanket three-column, and blanket
+inter-glyph-average rules.
+
+Validation: non-slow `pptx-typography` passed (`136` passed, `0` failed, `2` skipped). Private-safe
+inspection artifacts were regenerated for pages 36 and 21 under `artifacts/tmp/lvb-telemetry-page36-pptx-text`
+and `artifacts/tmp/lvb-telemetry-page21-pptx-text`.

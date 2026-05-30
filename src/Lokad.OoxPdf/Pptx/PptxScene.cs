@@ -448,6 +448,11 @@ internal sealed record PptxTextGlyphSpanLayoutSnapshot(
     double LayoutWidth,
     int GlyphCount,
     double FirstAdjustmentAfterOrigin,
+    int InterGlyphAdjustmentCount,
+    double InterGlyphAdjustmentSum,
+    double InterGlyphAdjustmentMin,
+    double InterGlyphAdjustmentMax,
+    double InterGlyphAdjustmentAverage,
     IReadOnlyList<PptxTextGlyphLayoutSnapshot> Glyphs);
 
 internal sealed record PptxTextGlyphLayoutSnapshot(
@@ -561,6 +566,11 @@ internal sealed record PptxTextGlyphRunSnapshot(
     double PdfCharacterSpacing,
     int GlyphCount,
     double FirstAdjustmentAfterOrigin,
+    int InterGlyphAdjustmentCount,
+    double InterGlyphAdjustmentSum,
+    double InterGlyphAdjustmentMin,
+    double InterGlyphAdjustmentMax,
+    double InterGlyphAdjustmentAverage,
     IReadOnlyList<PptxTextGlyphRunAtomSnapshot> Glyphs);
 
 internal sealed record PptxTextGlyphRunAtomSnapshot(

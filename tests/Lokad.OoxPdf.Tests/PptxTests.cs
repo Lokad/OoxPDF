@@ -9106,6 +9106,30 @@ internal static class PptxTests
             "Expected highlight continuation character spacing to be an emission-only PDF text state.");
     }
 
+    public static void PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-spautofit-tracking-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+            .First(run => run.Glyphs.Count > 2);
+        double[] adjustments = glyphRun.Glyphs.Skip(1).Select(glyph => glyph.AdjustmentBefore).ToArray();
+
+        TestAssert.Equal(adjustments.Length, glyphRun.InterGlyphAdjustmentCount);
+        TestAssert.True(Math.Abs(adjustments.Sum() - glyphRun.InterGlyphAdjustmentSum) < 0.0001d, "Expected glyph-run aggregate sum to match exposed atom adjustments.");
+        TestAssert.True(Math.Abs(adjustments.Min() - glyphRun.InterGlyphAdjustmentMin) < 0.0001d, "Expected glyph-run aggregate minimum to match exposed atom adjustments.");
+        TestAssert.True(Math.Abs(adjustments.Max() - glyphRun.InterGlyphAdjustmentMax) < 0.0001d, "Expected glyph-run aggregate maximum to match exposed atom adjustments.");
+        TestAssert.True(Math.Abs(adjustments.Average() - glyphRun.InterGlyphAdjustmentAverage) < 0.0001d, "Expected glyph-run aggregate average to match exposed atom adjustments.");
+    }
+
     public static void PptxHighlightedContinuationEmitsOfficeCharacterSpacingTextStateAcrossAutofitWrap()
     {
         string input = Path.GetFullPath(Path.Combine(

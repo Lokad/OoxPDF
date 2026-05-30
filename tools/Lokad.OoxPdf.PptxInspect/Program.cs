@@ -114,7 +114,12 @@ foreach (PptxSlide slide in slides)
                         Round(span.GlyphSpan.NaturalWidth),
                         Round(span.GlyphSpan.LayoutWidth),
                         span.GlyphSpan.GlyphCount,
-                        Round(span.GlyphSpan.FirstAdjustmentAfterOrigin))).ToArray()));
+                        Round(span.GlyphSpan.FirstAdjustmentAfterOrigin),
+                        span.GlyphSpan.InterGlyphAdjustmentCount,
+                        Round(span.GlyphSpan.InterGlyphAdjustmentSum),
+                        Round(span.GlyphSpan.InterGlyphAdjustmentMin),
+                        Round(span.GlyphSpan.InterGlyphAdjustmentMax),
+                        Round(span.GlyphSpan.InterGlyphAdjustmentAverage))).ToArray()));
             }
         }
     }
@@ -224,6 +229,11 @@ foreach (PptxSlide slide in slides)
             Round(run.PdfCharacterSpacing),
             run.GlyphCount,
             Round(run.FirstAdjustmentAfterOrigin),
+            run.InterGlyphAdjustmentCount,
+            Round(run.InterGlyphAdjustmentSum),
+            Round(run.InterGlyphAdjustmentMin),
+            Round(run.InterGlyphAdjustmentMax),
+            Round(run.InterGlyphAdjustmentAverage),
             categories.LetterCount,
             categories.DecimalDigitCount,
             categories.PunctuationCount,
@@ -596,6 +606,11 @@ internal sealed record PptxGlyphRunRecord(
     double PdfCharacterSpacing,
     int GlyphCount,
     double FirstAdjustmentAfterOrigin,
+    int InterGlyphAdjustmentCount,
+    double InterGlyphAdjustmentSum,
+    double InterGlyphAdjustmentMin,
+    double InterGlyphAdjustmentMax,
+    double InterGlyphAdjustmentAverage,
     int LetterCount,
     int DecimalDigitCount,
     int PunctuationCount,
@@ -790,4 +805,9 @@ internal sealed record PptxTextSpanRecord(
     double NaturalWidth,
     double LayoutWidth,
     int GlyphCount,
-    double FirstAdjustmentAfterOrigin);
+    double FirstAdjustmentAfterOrigin,
+    int InterGlyphAdjustmentCount,
+    double InterGlyphAdjustmentSum,
+    double InterGlyphAdjustmentMin,
+    double InterGlyphAdjustmentMax,
+    double InterGlyphAdjustmentAverage);

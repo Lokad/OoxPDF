@@ -227,6 +227,7 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextGlyphSpanLayoutSnapshot ToSnapshot(PptxTextGlyphSpanLayout span)
     {
+        PptxInterGlyphAdjustmentSummary adjustments = SummarizeInterGlyphAdjustments(span.Glyphs);
         return new PptxTextGlyphSpanLayoutSnapshot(
             span.Text,
             span.Typeface,
@@ -236,8 +237,50 @@ internal sealed partial class PptxRenderer
             span.LayoutWidth,
             span.Glyphs.Count,
             span.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d,
+            adjustments.Count,
+            adjustments.Sum,
+            adjustments.Min,
+            adjustments.Max,
+            adjustments.Average,
             span.Glyphs.Select(ToSnapshot).ToArray());
     }
+
+    private static PptxInterGlyphAdjustmentSummary SummarizeInterGlyphAdjustments(IReadOnlyList<PptxTextGlyphLayout> glyphs)
+    {
+        int count = 0;
+        double sum = 0d;
+        double min = 0d;
+        double max = 0d;
+
+        for (int index = 1; index < glyphs.Count; index++)
+        {
+            double adjustment = glyphs[index].AdjustmentBefore;
+            if (count == 0)
+            {
+                min = adjustment;
+                max = adjustment;
+            }
+            else
+            {
+                min = Math.Min(min, adjustment);
+                max = Math.Max(max, adjustment);
+            }
+
+            sum += adjustment;
+            count++;
+        }
+
+        return count == 0
+            ? default
+            : new PptxInterGlyphAdjustmentSummary(count, sum, min, max, sum / count);
+    }
+
+    private readonly record struct PptxInterGlyphAdjustmentSummary(
+        int Count,
+        double Sum,
+        double Min,
+        double Max,
+        double Average);
 
     private static PptxTextGlyphLayoutSnapshot ToSnapshot(PptxTextGlyphLayout glyph)
     {

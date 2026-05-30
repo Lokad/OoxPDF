@@ -51,6 +51,7 @@ internal sealed partial class PptxRenderer
                 TextDecorationRectangle? strikeRectangle = run.Strike && TryGetStrikeRectangle(rendered.Font, glyphRun, out TextDecorationRectangle strike)
                     ? strike
                     : null;
+                PptxInterGlyphAdjustmentSummary adjustments = SummarizeTextInterGlyphAdjustments(glyphRun.Glyphs);
 
                 glyphRuns.Add(new PptxTextGlyphRunSnapshot(
                     run.Text,
@@ -148,6 +149,11 @@ internal sealed partial class PptxRenderer
                     glyphRun.PdfCharacterSpacing,
                     glyphRun.Glyphs.Count,
                     glyphRun.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d,
+                    adjustments.Count,
+                    adjustments.Sum,
+                    adjustments.Min,
+                    adjustments.Max,
+                    adjustments.Average,
                     glyphRun.Glyphs
                         .Select(glyph => new PptxTextGlyphRunAtomSnapshot(
                             glyph.CodePoint,
@@ -162,6 +168,36 @@ internal sealed partial class PptxRenderer
         }
 
         return glyphRuns;
+    }
+
+    private static PptxInterGlyphAdjustmentSummary SummarizeTextInterGlyphAdjustments(IReadOnlyList<TextGlyphAtom> glyphs)
+    {
+        int count = 0;
+        double sum = 0d;
+        double min = 0d;
+        double max = 0d;
+
+        for (int index = 1; index < glyphs.Count; index++)
+        {
+            double adjustment = glyphs[index].AdjustmentBefore;
+            if (count == 0)
+            {
+                min = adjustment;
+                max = adjustment;
+            }
+            else
+            {
+                min = Math.Min(min, adjustment);
+                max = Math.Max(max, adjustment);
+            }
+
+            sum += adjustment;
+            count++;
+        }
+
+        return count == 0
+            ? default
+            : new PptxInterGlyphAdjustmentSummary(count, sum, min, max, sum / count);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderTextRuns(
