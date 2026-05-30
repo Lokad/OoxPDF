@@ -4054,6 +4054,55 @@ internal static class PptxTests
         TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 24d) < 0.01d, "Expected manual line break baselines to step by the absolute line spacing.");
     }
 
+    public static void PptxSyntheticNoAutoFitOverflowColumnsKeepExplicitMultipleBaselineOnAscent()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        string repeated = string.Join(" ", Enumerable.Repeat("Structural layout keeps Office column baselines aligned", 34));
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="2194560"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" numCol="3" spcCol="182880" vertOverflow="overflow"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:pPr><a:lnSpc><a:spcPct val="120000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>{{repeated}}</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .Single()
+            .Paragraphs
+            .Single()
+            .Lines
+            .ToArray();
+
+        TestAssert.True(lines.Select(line => Math.Round(line.StartX, 2)).Distinct().Count() >= 2, "Expected explicit multiple line-spacing text to overflow into multiple columns.");
+        TestAssert.True(lines.All(line => line.LineSpacingKind == "Multiple"), "Expected layout inspection to preserve explicit multiple line-spacing provenance.");
+        TestAssert.True(lines.All(line => line.Advance > line.BaselineOffset + 1d),
+            $"Expected 120% explicit line spacing to keep extra leading in the line advance; got advances {string.Join(",", lines.Select(line => line.Advance.ToString("0.###", CultureInfo.InvariantCulture)).Distinct(StringComparer.Ordinal))} and offsets {string.Join(",", lines.Select(line => line.BaselineOffset.ToString("0.###", CultureInfo.InvariantCulture)).Distinct(StringComparer.Ordinal))}.");
+        TestAssert.True(lines.All(line => Math.Abs(line.BaselineOffset - 11.688d) < 0.01d),
+            $"Expected noAutoFit overflow columns to place explicit percentage line-spacing baselines on Office's unscaled 12pt ascent while leaving leading in the line advance; got offsets {string.Join(",", lines.Select(line => line.BaselineOffset.ToString("0.###", CultureInfo.InvariantCulture)).Distinct(StringComparer.Ordinal))}.");
+    }
+
     public static void PptxSyntheticCenteredShapeAutoFitWrapsBeforeRightOverflow()
     {
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");

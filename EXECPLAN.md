@@ -191,6 +191,21 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Accepted a private-deck typography rule that separates explicit percentage line advance
+  from baseline ascent in multi-column `noAutofit` overflow text frames. Private page-13/page-49 PDF
+  inspection showed Office keeping 12 pt body-text baselines on the same top-column rows while still using
+  the explicit `120%` line advance; OOXPDF had multiplied the top-to-baseline offset as well, dropping a
+  long multi-column paragraph band by about `2.3376 pt`. `BuildTextFrameLayout` now keeps explicit multiple
+  line spacing as line advance but uses the unscaled ascent for baseline placement only when the structural
+  frame conditions match `noAutofit` + multi-column + `vertOverflow="overflow"`. Public regression:
+  `PptxSyntheticNoAutoFitOverflowColumnsKeepExplicitMultipleBaselineOnAscent`. Validation: targeted test
+  passed; focused non-slow `pptx-typography` passed with `121` tests, `0` failures, and `2` skips; private
+  run `20260530-020607` compared 84/84 pages with empty diagnostics and improved deck MAE
+  `3.706047 -> 3.693460`, changed16 `0.061646 -> 0.061540`. Page 13 improved
+  `7.261984 -> 6.740438`, page 49 improved `7.189353 -> 6.653537`, and page-13 candidate PDF text rows now
+  move the affected bottom/right band from `49.72/42.52 pt` to `52.06/44.86 pt`, matching the observed
+  Office row family more closely. Remaining gap: Office still emits nonzero `Tc` and fractional PDF font-size
+  grids on the same high-error pages, while OOXPDF still mostly emits integer sizes and `Tc=0`.
 - [x] 2026-05-29: Kept slide-wide PPTX text overflow as PDF structure instead of pre-culling it in the
   renderer. Private page-36 inspection showed a text frame whose layout model contained off-slide overflow
   lines that Office still exported as PDF text operations under a slide-wide clipping path; OOXPDF dropped the
