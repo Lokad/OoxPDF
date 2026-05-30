@@ -206,6 +206,22 @@ High-priority actions:
   move the affected bottom/right band from `49.72/42.52 pt` to `52.06/44.86 pt`, matching the observed
   Office row family more closely. Remaining gap: Office still emits nonzero `Tc` and fractional PDF font-size
   grids on the same high-error pages, while OOXPDF still mostly emits integer sizes and `Tc=0`.
+- [x] 2026-05-30: Accepted an Office font-metric branch for Aptos-sized body text baselines. Private page-36
+  inspection showed visible Aptos 18/14 pt rows about `1.5-1.8 pt` below Office while the Cambria Math
+  three-column body was already aligned within about `0.03 pt`; a public-safe Office-authored Aptos probe
+  reproduced the same gap without private content. `BaselineOffset` now uses a sane `sTypoAscender` ratio
+  instead of a Windows ascender above the em box only for near-body-size text, while display-sized text keeps
+  the Windows ascender branch. The display guard is evidence-backed: a broad branch regressed private pages
+  2/16/35 by moving two 39.96 pt text operations about `2.83 pt` away from Office, while the guarded branch
+  kept those pages stable. Public visual regression:
+  `pptx-ladder-04-aptos-body-baseline-probe`. Validation: focused non-slow `pptx-typography` passed with
+  `121` tests, `0` failures, and `2` skips; public `pptx-ladder-04-line-spacing-port`,
+  `pptx-ladder-04-paragraph-advance`, `pptx-ladder-04-font-family-port`, and the new Aptos probe passed.
+  Private run `20260530-031223` compared 84/84 pages with empty diagnostics and improved deck MAE
+  `3.636644 -> 3.568308`, changed16 `0.060923 -> 0.060251`; page 36 improved
+  `6.971960 -> 6.523260`, while the largest remaining regressions were small (`+0.09` MAE on page 68,
+  `+0.08` on page 66, `+0.06` on page 64). Remaining gap on page 36 is still Office text-state/`Tc` and
+  fractional font-size emission, not a broad baseline rule.
 - [ ] 2026-05-30: Resolve the secondary Office PPTX `/Tf` emission branch before adding another private-deck
   text-spacing rule. Two ignored public-safe probes under `artifacts/tmp/office-probes/` now isolate the
   private page-55 signal without private content. `multicol-synth-bold-math` uses a three-column

@@ -3215,7 +3215,7 @@ internal sealed partial class PptxRenderer
             return BaselineOffset(fontSize);
         }
 
-        double metricRatio = Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio);
+        double metricRatio = ResolveOfficeBaselineMetricRatio(font, ascenderRatio, fontSize, out _);
         if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, runStyle, advanceEstimator, ascenderRatio))
         {
             metricRatio = Math.Max(PptxTextMetricRules.OfficeBaselineFallback, metricRatio);
@@ -3240,16 +3240,22 @@ internal sealed partial class PptxRenderer
         }
 
         double ascenderRatio = font.Os2.WindowsAscender / (double)font.UnitsPerEm;
-        double ratio = ascenderRatio > 0d && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio
-            ? Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio)
-            : fallbackRatio;
+        string source;
+        double ratio;
+        if (ascenderRatio > 0d && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio)
+        {
+            ratio = ResolveOfficeBaselineMetricRatio(font, ascenderRatio, fontSize, out source);
+        }
+        else
+        {
+            ratio = fallbackRatio;
+            source = "Fallback";
+        }
+
         if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, runStyle, advanceEstimator, ascenderRatio))
         {
             ratio = Math.Max(fallbackRatio, ratio);
         }
-        string source = ascenderRatio > 0d && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio
-            ? "OS/2 usWinAscent"
-            : "Fallback";
         return new PptxTextBaselineMetricLayout(
             source,
             runStyle.Typeface,
@@ -3263,6 +3269,24 @@ internal sealed partial class PptxRenderer
             font.Os2.TypographicAscender,
             font.Os2.TypographicDescender,
             font.Os2.TypographicLineGap);
+    }
+
+    private static double ResolveOfficeBaselineMetricRatio(OpenTypeFont font, double windowsAscenderRatio, double fontSize, out string source)
+    {
+        double ratio = windowsAscenderRatio;
+        source = "OS/2 usWinAscent";
+        double typographicAscenderRatio = font.Os2.TypographicAscender / (double)font.UnitsPerEm;
+        if (windowsAscenderRatio > PptxTextMetricRules.MaximumOfficeBaselineWindowsAscenderRatio &&
+            fontSize <= PptxTextMetricRules.MaximumOfficeTypographicBaselineFontSize &&
+            typographicAscenderRatio > 0d &&
+            typographicAscenderRatio >= PptxTextMetricRules.MinimumOfficeTypographicBaselineAscenderRatio &&
+            typographicAscenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio)
+        {
+            ratio = typographicAscenderRatio;
+            source = "OS/2 sTypoAscender";
+        }
+
+        return Math.Max(ratio, PptxTextMetricRules.MinimumBaselineMetricRatio);
     }
 
     private static bool TextMetricUsesOfficeBaselineFloor(OpenTypeFont font, ResolvedRunTextStyle runStyle, TextAdvanceEstimator advanceEstimator, double ascenderRatio)
