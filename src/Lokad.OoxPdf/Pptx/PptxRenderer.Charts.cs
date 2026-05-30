@@ -8098,8 +8098,10 @@ internal sealed partial class PptxRenderer
 
         double leftReserve = plotBox.X - frame.X;
         double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
-        double requiredLeftReserve = leftReserve;
-        double requiredRightReserve = rightReserve;
+        double leftStripWidth = 0d;
+        double rightStripWidth = 0d;
+        int leftStripCount = 0;
+        int rightStripCount = 0;
         foreach (ChartAxisSource valueAxis in valueAxes)
         {
             ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(
@@ -8123,18 +8125,34 @@ internal sealed partial class PptxRenderer
                 ResolveSceneOrXmlValueAxisRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
             if (labelsRight)
             {
-                requiredRightReserve = Math.Max(requiredRightReserve, stripWidth * PptxChartMetricRules.BarMultiValueAxisSecondaryStripFactor);
+                rightStripWidth = Math.Max(rightStripWidth, stripWidth);
+                rightStripCount++;
             }
             else
             {
-                requiredLeftReserve = Math.Max(requiredLeftReserve, stripWidth * PptxChartMetricRules.BarMultiValueAxisPrimaryStripFactor);
+                leftStripWidth = Math.Max(leftStripWidth, stripWidth);
+                leftStripCount++;
             }
         }
 
+        double requiredLeftReserve = Math.Max(leftReserve, leftStripWidth * GetMultiValueAxisStripFactor(leftStripCount, labelsRight: false));
+        double requiredRightReserve = Math.Max(rightReserve, rightStripWidth * GetMultiValueAxisStripFactor(rightStripCount, labelsRight: true));
         double x = frame.X + requiredLeftReserve;
         double right = frame.X + frame.Width - requiredRightReserve;
         double width = Math.Max(1d, right - x);
         return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
+    }
+
+    private static double GetMultiValueAxisStripFactor(int sameSideAxisCount, bool labelsRight)
+    {
+        if (sameSideAxisCount <= 1)
+        {
+            return 1d;
+        }
+
+        return labelsRight
+            ? PptxChartMetricRules.BarMultiValueAxisSecondaryStripFactor
+            : PptxChartMetricRules.BarMultiValueAxisPrimaryStripFactor;
     }
 
     private static ChartPlotBox AdjustBarChartPlotBoxForDefaultAxisTitles(

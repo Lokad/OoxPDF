@@ -16976,6 +16976,28 @@ internal static class PptxTests
         TestAssert.Equal(0d, (double)(optionsType.GetProperty("Overlap")?.GetValue(options) ?? double.NaN));
     }
 
+    public static void PptxChartMultiValueAxisStripFactorDistinguishesOppositeSides()
+    {
+        System.Reflection.MethodInfo readStripFactor = typeof(PptxRenderer).GetMethod(
+            "GetMultiValueAxisStripFactor",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart axis strip-factor resolver.");
+
+        double singleLeft = (double)(readStripFactor.Invoke(null, [1, false]) ?? double.NaN);
+        double singleRight = (double)(readStripFactor.Invoke(null, [1, true]) ?? double.NaN);
+        double multipleLeft = (double)(readStripFactor.Invoke(null, [2, false]) ?? double.NaN);
+        double multipleRight = (double)(readStripFactor.Invoke(null, [2, true]) ?? double.NaN);
+        Type metricRules = typeof(PptxRenderer).GetNestedType(
+            "PptxChartMetricRules",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart metric rules.");
+        double primaryFactor = (double)(metricRules.GetField("BarMultiValueAxisPrimaryStripFactor")?.GetRawConstantValue() ?? double.NaN);
+        double secondaryFactor = (double)(metricRules.GetField("BarMultiValueAxisSecondaryStripFactor")?.GetRawConstantValue() ?? double.NaN);
+
+        TestAssert.Equal(1d, singleLeft);
+        TestAssert.Equal(1d, singleRight);
+        TestAssert.Equal(primaryFactor, multipleLeft);
+        TestAssert.Equal(secondaryFactor, multipleRight);
+    }
+
     public static void PptxChartLineOptionsUseSceneAuthoritativeDefaults()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

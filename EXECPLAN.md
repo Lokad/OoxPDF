@@ -191,6 +191,24 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Split multi-value-axis chart plot-box reserves between same-side and opposite-side value
+  axes, improving the active private page-40 stacked-bar geometry without weakening the public same-side
+  secondary-axis probes. The private chart has one visible value-axis label strip on the left and one on the
+  right. OOXPDF had applied the same expanded multi-column reserve used for same-side label columns to the
+  single left strip, shifting the plot area and both category columns too far right. Office evidence showed
+  left/right opposite-side axes reserve one measured strip per side, while public same-side secondary-axis
+  probes still need the expanded same-side factor. `AdjustBarChartPlotBoxForVisibleValueAxes` now counts
+  value-axis label strips per side and applies the expanded strip factor only when more than one axis label
+  column is on that side. Public regression `PptxChartMultiValueAxisStripFactorDistinguishesOppositeSides`
+  locks the resolver. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed,
+  focused test passed, `pptx-charts --skip-slow` passed (`147` passed), and the public
+  `pptx-ladder-11-compact-stacked-secondary-axis-probe` and `pptx-ladder-11-secondary-axis-overlay-probe`
+  visual cases stayed green with unchanged metrics. Private run `20260530-152925` on `lokad-value-based`
+  compared all `84/84` pages with empty diagnostics, improved deck MAE `3.043284 -> 3.009260`,
+  changed16 `0.054661 -> 0.054138`, and improved page 40 MAE `4.591801 -> 3.849802`. Private-safe PDF
+  inspection confirms the patterned stack moved from `x=769.13`, width `52.88pt` to `x=762.42`,
+  width `59.78pt`, close to Office's `x=761.76`, width `58.80pt`. Remaining page-40 gaps are now mostly
+  vertical plot/value-scale residuals and Office's image-backed pattern cell, not horizontal bar reserve.
 - [x] 2026-05-30: Moved chart diagonal pattern fills from renderer-local hatch strokes to PDF tiling-pattern
   resources, matching Office's observable PDF resource class on the active private stacked-bar target. Private
   page-40 inspection showed Office filling the patterned bars with `/Pattern cs /P... scn` and type-1 tiling
@@ -6413,6 +6431,16 @@ document-specific business content into public notes.
     pattern cell and `0.375` scale matrix; OOXPDF now matches the tiling-pattern resource class and scale, but
     still uses vector pattern content and has residual chart rectangle geometry offsets. This remains an open
     structural chart/PDF-resource gap, not a private-content note.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260530-152925` after the opposite-side
+  chart value-axis reserve slice:
+  - 84/84 pages compared with zero dimension mismatches.
+  - Mean absolute error: `3.009260`; max mean absolute error: `6.045372`; mean changed-pixel ratio at
+    threshold 16: `0.054138`.
+  - Diagnostics were empty.
+  - The targeted stacked-bar page improved from MAE `4.591801` to `3.849802` because the plot area no longer
+    applies the same-side multi-axis label reserve to a chart whose value-axis labels live on opposite sides.
+    The candidate patterned-stack X/width is now close to Office; remaining evidence points to vertical
+    plot/value-scale residuals and image-backed pattern cells.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260528-141612` after the text-height
   estimator and schema-inspection pass:
   - 84/84 pages compared with zero dimension mismatches.
@@ -7545,6 +7573,9 @@ paths, and ExecPlan references together.
     instead of using a zero-offset cell matrix.
   - [x] Place multiple value-axis label columns on the same side instead of overlaying them, and size the
     label boxes from tick text instead of a fixed fraction of the plot width.
+  - [x] Distinguish same-side multi-value-axis label columns from opposite-side value axes when reserving
+    vertical bar-chart plot space. Opposite-side axes reserve one measured strip per side; same-side axes keep
+    the expanded strip factor needed by the public secondary-axis probes.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis crossing/orientation, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
@@ -8727,6 +8758,24 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Opposite-side chart value-axis reserve alignment, 2026-05-30:
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed.
+dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --test PptxChartMultiValueAxisStripFactorDistinguishesOppositeSides --skip-slow:
+1 passed, 0 failed, 0 skipped.
+dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow:
+147 passed, 0 failed, 0 skipped.
+Public visual checks stayed green:
+visual-cases\cases\pptx-ladder-11-compact-stacked-secondary-axis-probe\case.json run 20260530-152903:
+MAE 0.452503, changed16 0.006446.
+visual-cases\cases\pptx-ladder-11-secondary-axis-overlay-probe\case.json run 20260530-152903:
+MAE 1.951047, changed16 0.025576.
+pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json:
+run 20260530-152925, 84/84 compared, diagnostics [], deck MAE 3.009260, changed16 0.054138.
+Targeted stacked-bar page MAE improved 4.591801 -> 3.849802 after separating same-side and opposite-side
+multi-value-axis plot reserves.
+```
 
 ```text
 Chart pattern-fill PDF-resource alignment, 2026-05-30:
