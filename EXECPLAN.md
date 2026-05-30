@@ -18326,3 +18326,19 @@ rather than the fixture font. This is expected to be raster-neutral for `lokad-v
 architectural, keeping future page-36 `Tc`/secondary-`/Tf` work away from typeface-name or broad font-class
 branches. Remaining uses of `HasMathTable` are font-discovery/fallback concerns, not layout or PDF text-state
 discriminators.
+
+Follow-up, 2026-05-30: the current page-21 residual is not solved by deleting table average-residual `Tc`
+promotion. Current accepted private run `20260530-212639` has deck MAE `2.947933` and page 21 MAE `5.939469`.
+Page-21 table text baselines are already structurally close when grouped by baseline: Office and candidate
+share the same row/line buckets, with only small accumulated vertical drift. The more interesting mismatch is
+PDF text-state decomposition: Office table-body text is mostly `9.96pt Tc=0` with a smaller `Tc=-0.00888`
+bucket, while the candidate emits many per-span table `Tc` values around `+0.018pt` and `-0.052pt`.
+
+Two local trials were rejected. Disabling `PromoteAverageTablePdfCharacterSpacing` entirely made the private
+deck worse (`2.947933 -> 2.947966`) and page 21 worse (`5.939469 -> 5.943068`). Disabling it while increasing
+TJ adjustment precision from `0.###` to `0.#####` recovered part of the loss but still regressed page 21 to
+`5.941375`. Keeping promotion and only increasing TJ precision slightly improved page 21 (`5.939469 ->
+5.939456`) but worsened deck MAE (`2.947933 -> 2.947964`) and page 79, so it was also rejected. Do not remove
+the table promotion or widen TJ precision as a standalone fix. The long-term target remains an Office-like
+PDF text-state decomposition model that can decide when residuals belong in `TJ` adjustments, `Tc`, font-grid
+branches, or operation splitting based on public probes and reusable frame/table context.
