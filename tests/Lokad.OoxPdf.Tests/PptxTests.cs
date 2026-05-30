@@ -2396,7 +2396,7 @@ internal static class PptxTests
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Rendered outer shadow alpha should not emit an unsupported-transparency diagnostic.");
     }
 
-    public static void PptxSyntheticGlowIsDiagnosedWithoutSolidShapeProxy()
+    public static void PptxSyntheticShapeRectGlowUsesRasterSoftMask()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -2428,8 +2428,11 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(!pdf.Contains("/GS25000F100000S gs", StringComparison.Ordinal), "Glow must not be rendered as a solid alpha proxy.");
         TestAssert.True(!pdf.Contains("64.8 388.8 86.4 86.4 re f*", StringComparison.Ordinal), "Glow must not emit an expanded solid rectangle.");
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.Contains("/SMask ", pdf);
+        TestAssert.Contains("Do", pdf);
         TestAssert.Contains("72 396 72 72 re f*", pdf);
-        TestAssert.Contains("PPTX_UNSUPPORTED_EFFECT", string.Join("|", diagnostics.Select(d => d.Id)));
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_EFFECT"), "Rendered rectangular glow should not emit an unsupported-effect diagnostic.");
     }
 
     public static void PptxSyntheticLinearGradientShapeUsesPdfShading()

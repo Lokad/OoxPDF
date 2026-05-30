@@ -22,6 +22,8 @@ internal sealed partial class PptxRenderer
     private const double OfficeStraightStealthLineEndLengthFactor = 3d;
     private const double OfficeStraightStealthLineEndWidthFactor = 3d;
     private const double OfficeStraightStealthLineEndNotchFactor = 2d / 3d;
+    private const double OfficeGlowRasterPixelsPerPoint = 1d;
+    private const int OfficeGlowRasterMaxPixelsPerSide = 2048;
 
     private static void RenderBackground(PptxRenderContext context, PptxSceneBackground background, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
     {
@@ -228,6 +230,13 @@ internal sealed partial class PptxRenderer
         bool hasOuterShadow = outerShadowOverride is not null;
         OuterShadow outerShadow;
         outerShadow = outerShadowOverride ?? default;
+
+        if (glowOverride is { } glow &&
+            CanRenderGlowPreset(preset) &&
+            images is not null)
+        {
+            DrawRasterGlow(graphics, x, y, width, height, glow, images, ref imageIndex);
+        }
 
         if (hasOuterShadow &&
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
@@ -681,6 +690,11 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static bool CanRenderGlowPreset(string preset)
+    {
+        return preset == "rect";
+    }
+
     private static void DrawGlow(
         PdfGraphicsBuilder graphics,
         string preset,
@@ -695,6 +709,74 @@ internal sealed partial class PptxRenderer
         graphics.SetFillRgb(glow.Color.Red, glow.Color.Green, glow.Color.Blue);
         DrawPresetFill(graphics, preset, x - glow.Radius, y - glow.Radius, width + 2d * glow.Radius, height + 2d * glow.Radius);
         graphics.RestoreState();
+    }
+
+    private static void DrawRasterGlow(
+        PdfGraphicsBuilder graphics,
+        double x,
+        double y,
+        double width,
+        double height,
+        Glow glow,
+        List<PdfImageResource> images,
+        ref int imageIndex)
+    {
+        if (glow.Radius <= 0d ||
+            glow.Alpha <= 0d ||
+            width <= 0d ||
+            height <= 0d)
+        {
+            return;
+        }
+
+        double glowX = x - glow.Radius;
+        double glowY = y - glow.Radius;
+        double glowWidth = width + 2d * glow.Radius;
+        double glowHeight = height + 2d * glow.Radius;
+        int pixelWidth = Math.Clamp((int)Math.Ceiling(glowWidth * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
+        int pixelHeight = Math.Clamp((int)Math.Ceiling(glowHeight * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
+        double scaleX = pixelWidth / glowWidth;
+        double scaleY = pixelHeight / glowHeight;
+
+        byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
+        byte[] alpha = new byte[pixelWidth * pixelHeight];
+        for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
+        {
+            double localY = (pixelY + 0.5d) / scaleY - glow.Radius;
+            double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
+            for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
+            {
+                double localX = (pixelX + 0.5d) / scaleX - glow.Radius;
+                double dx = localX < 0d ? -localX : localX > width ? localX - width : 0d;
+                int pixel = pixelY * pixelWidth + pixelX;
+                int rgbOffset = pixel * 3;
+                rgb[rgbOffset] = glow.Color.Red;
+                rgb[rgbOffset + 1] = glow.Color.Green;
+                rgb[rgbOffset + 2] = glow.Color.Blue;
+
+                if (dx <= 0d && dy <= 0d)
+                {
+                    continue;
+                }
+
+                double distance = Math.Sqrt(dx * dx + dy * dy);
+                if (distance >= glow.Radius)
+                {
+                    continue;
+                }
+
+                double t = distance / glow.Radius;
+                double falloff = (1d - t) * (1d - t);
+                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * glow.Alpha * falloff), 0, 255);
+            }
+        }
+
+        var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
+        string name = "Im" + imageIndex++;
+        graphics.SaveState();
+        graphics.DrawImage(name, glowX, glowY, glowWidth, glowHeight);
+        graphics.RestoreState();
+        images.Add(new PdfImageResource(name, image));
     }
 
     private static void DrawLinearGradientFill(PdfGraphicsBuilder graphics, GradientFill gradient, double x, double y, double width, double height)

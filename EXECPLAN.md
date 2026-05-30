@@ -191,6 +191,20 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Replaced ignored rectangular PPTX glow on the private deck with a first structural soft-mask
+  image path. Private page 21 had the only remaining unsupported-effect diagnostic, and local OOXML/PDF
+  inspection reduced it to two rectangular `a:glow` effects with low alpha and small radius; fills and
+  strokes already matched Office buckets, so another vector fill proxy would have been the wrong direction.
+  Normal shape rendering now emits rectangular glow as an RGB image XObject with an alpha soft mask, drawn
+  behind the shape, and only rectangular glow is marked supported. The old solid expanded-shape glow helper
+  remains available only for the existing chart-style path; normal shape glow no longer uses it. Public
+  regression `PptxSyntheticShapeRectGlowUsesRasterSoftMask` asserts `/SMask` image structure, rejects the old
+  alpha-state rectangle proxy, and requires no unsupported-effect diagnostic. Validation: focused non-slow
+  `pptx-shapes` passed (`27` passed); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
+  Private run `20260530-132811` on `lokad-value-based` compared all `84/84` pages, removed the previous
+  single `PPTX_UNSUPPORTED_EFFECT` diagnostic, improved deck MAE `3.426082 -> 3.424450`, and improved page 21
+  MAE `6.234666 -> 6.097517` with changed16 `0.105513 -> 0.100179`. Remaining page-21 residuals are now
+  dominated by broader table/text and image/color differences rather than a missing effect diagnostic.
 - [x] 2026-05-30: Closed the private page-17 text-operation count gap with a public same-style manual-break
   repro. Private PDF inspection showed graphics already matched Office structurally on this page
   (`68` clips, `18` fills, `4` strokes on both sides) while candidate text had two extra operations after a
