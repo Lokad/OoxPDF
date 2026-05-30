@@ -30,6 +30,7 @@ if (slideFilter is not null)
 
 var records = new List<PptxGlyphRunRecord>();
 var frameRecords = new List<PptxTextFrameRecord>();
+var tableFrameRecords = new List<PptxTextFrameRecord>();
 var paragraphRecords = new List<PptxTextParagraphRecord>();
 var lineRecords = new List<PptxTextLineRecord>();
 foreach (PptxSlide slide in slides)
@@ -39,71 +40,7 @@ foreach (PptxSlide slide in slides)
     for (int frameIndex = 0; frameIndex < frameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = frameModels[frameIndex];
-        frameRecords.Add(new PptxTextFrameRecord(
-            slideNumber,
-            frameIndex,
-            Round(frame.TextX),
-            Round(frame.TextWidth),
-            Round(frame.TextWrapWidth),
-            Round(frame.TextHeight),
-            frame.TableRowIndex,
-            frame.TableColumnIndex,
-            frame.TableRowSpan,
-            frame.TableColumnSpan,
-            Round(frame.VerticalOffset),
-            Round(frame.InsetLeft),
-            Round(frame.InsetRight),
-            Round(frame.InsetTop),
-            Round(frame.InsetBottom),
-            frame.InsetLeftValue,
-            frame.InsetRightValue,
-            frame.InsetTopValue,
-            frame.InsetBottomValue,
-            frame.InsetLeftSource,
-            frame.InsetRightSource,
-            frame.InsetTopSource,
-            frame.InsetBottomSource,
-            Round(frame.FontScale),
-            frame.FontScaleValue,
-            frame.FontScaleSource,
-            Round(frame.LineSpacingScale),
-            frame.LineSpacingReductionValue,
-            frame.LineSpacingScaleSource,
-            frame.CompatibleLineSpacing,
-            frame.CompatibleLineSpacingSource,
-            RoundNullable(frame.RotationDegrees),
-            frame.RotationValue,
-            frame.RotationDegreesSource,
-            frame.InheritedPlaceholderCount,
-            frame.HasInheritedTextBody,
-            frame.UsesInheritedShapeBounds,
-            frame.Orientation,
-            frame.OrientationValue,
-            frame.OrientationSource,
-            frame.VerticalAnchor,
-            frame.VerticalAnchorValue,
-            frame.VerticalAnchorSource,
-            frame.AnchorCenter,
-            frame.AnchorCenterValue,
-            frame.AnchorCenterSource,
-            frame.WrapMode,
-            frame.WrapValue,
-            frame.WrapSource,
-            frame.VerticalOverflow,
-            frame.VerticalOverflowValue,
-            frame.VerticalOverflowSource,
-            frame.ColumnCount,
-            Round(frame.ColumnSpacing),
-            frame.ColumnSource,
-            frame.ColumnCountSource,
-            frame.ColumnSpacingSource,
-            frame.ColumnCountValue,
-            frame.ColumnSpacingValue,
-            frame.AutofitModeValue,
-            frame.AutofitModeSource,
-            frame.Paragraphs.Count,
-            frame.Paragraphs.Sum(paragraph => paragraph.Runs.Count),
-            frame.Paragraphs.Sum(paragraph => paragraph.Runs.Sum(run => run.Text.Length))));
+        frameRecords.Add(ToFrameRecord(slideNumber, frameIndex, frame));
         for (int paragraphIndex = 0; paragraphIndex < frame.Paragraphs.Count; paragraphIndex++)
         {
             PptxTextParagraphModelSnapshot paragraph = frame.Paragraphs[paragraphIndex];
@@ -164,6 +101,12 @@ foreach (PptxSlide slide in slides)
                     run.CapsValue,
                     FormatColor(run.Highlight))).ToArray()));
         }
+    }
+
+    IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(document, package, slide.Index);
+    for (int frameIndex = 0; frameIndex < tableFrameModels.Count; frameIndex++)
+    {
+        tableFrameRecords.Add(ToFrameRecord(slideNumber, frameIndex, tableFrameModels[frameIndex]));
     }
 
     PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index);
@@ -306,6 +249,8 @@ string outputPath = Path.Combine(outputDirectory, "glyph-runs.json");
 File.WriteAllText(outputPath, JsonSerializer.Serialize(records, options), Encoding.UTF8);
 string frameOutputPath = Path.Combine(outputDirectory, "text-frame-models.json");
 File.WriteAllText(frameOutputPath, JsonSerializer.Serialize(frameRecords, options), Encoding.UTF8);
+string tableFrameOutputPath = Path.Combine(outputDirectory, "table-text-frame-models.json");
+File.WriteAllText(tableFrameOutputPath, JsonSerializer.Serialize(tableFrameRecords, options), Encoding.UTF8);
 string paragraphOutputPath = Path.Combine(outputDirectory, "text-paragraph-models.json");
 File.WriteAllText(paragraphOutputPath, JsonSerializer.Serialize(paragraphRecords, options), Encoding.UTF8);
 string lineOutputPath = Path.Combine(outputDirectory, "text-layout-lines.json");
@@ -316,10 +261,80 @@ Console.WriteLine(FormattableString.Invariant($"Slides: {document.Slides.Count}"
 Console.WriteLine(FormattableString.Invariant($"Glyph runs: {records.Count}"));
 Console.WriteLine(FormattableString.Invariant($"Output: {outputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Frame output: {frameOutputPath}"));
+Console.WriteLine(FormattableString.Invariant($"Table frame output: {tableFrameOutputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Paragraph output: {paragraphOutputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Layout output: {lineOutputPath}"));
 
 return 0;
+
+static PptxTextFrameRecord ToFrameRecord(int slideNumber, int frameIndex, PptxTextFrameModelSnapshot frame)
+{
+    return new PptxTextFrameRecord(
+        slideNumber,
+        frameIndex,
+        Round(frame.TextX),
+        Round(frame.TextWidth),
+        Round(frame.TextWrapWidth),
+        Round(frame.TextHeight),
+        frame.TableRowIndex,
+        frame.TableColumnIndex,
+        frame.TableRowSpan,
+        frame.TableColumnSpan,
+        Round(frame.VerticalOffset),
+        Round(frame.InsetLeft),
+        Round(frame.InsetRight),
+        Round(frame.InsetTop),
+        Round(frame.InsetBottom),
+        frame.InsetLeftValue,
+        frame.InsetRightValue,
+        frame.InsetTopValue,
+        frame.InsetBottomValue,
+        frame.InsetLeftSource,
+        frame.InsetRightSource,
+        frame.InsetTopSource,
+        frame.InsetBottomSource,
+        Round(frame.FontScale),
+        frame.FontScaleValue,
+        frame.FontScaleSource,
+        Round(frame.LineSpacingScale),
+        frame.LineSpacingReductionValue,
+        frame.LineSpacingScaleSource,
+        frame.CompatibleLineSpacing,
+        frame.CompatibleLineSpacingSource,
+        RoundNullable(frame.RotationDegrees),
+        frame.RotationValue,
+        frame.RotationDegreesSource,
+        frame.InheritedPlaceholderCount,
+        frame.HasInheritedTextBody,
+        frame.UsesInheritedShapeBounds,
+        frame.Orientation,
+        frame.OrientationValue,
+        frame.OrientationSource,
+        frame.VerticalAnchor,
+        frame.VerticalAnchorValue,
+        frame.VerticalAnchorSource,
+        frame.AnchorCenter,
+        frame.AnchorCenterValue,
+        frame.AnchorCenterSource,
+        frame.WrapMode,
+        frame.WrapValue,
+        frame.WrapSource,
+        frame.VerticalOverflow,
+        frame.VerticalOverflowValue,
+        frame.VerticalOverflowSource,
+        frame.ColumnCount,
+        Round(frame.ColumnSpacing),
+        frame.ColumnSource,
+        frame.ColumnCountSource,
+        frame.ColumnSpacingSource,
+        frame.ColumnCountValue,
+        frame.ColumnSpacingValue,
+        frame.AutofitModeValue,
+        frame.AutofitModeSource,
+        frame.Paragraphs.Count,
+        frame.Paragraphs.Sum(paragraph => paragraph.Runs.Count),
+        frame.Paragraphs.Sum(paragraph => paragraph.Runs.Sum(run => run.Text.Length)));
+}
 
 static HashSet<int>? ReadSlideFilter(string[] args)
 {
