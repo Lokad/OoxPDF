@@ -4166,6 +4166,53 @@ internal static class PptxTests
         TestAssert.Contains("1 0 0 1 79.2 425.261 Tm", pdf);
     }
 
+    public static void PptxSyntheticTextRunLineFeedForcesManualBreak()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Cambria"/></a:rPr><a:t>Alpha&#xA;Beta Gamma</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.True(frame.Paragraphs[0].HasManualLineBreak, "Expected literal line-feed text to preserve manual line-break state.");
+
+        PptxTextFlowSegmentSnapshot[] segments = PptxRenderer.InspectTextFlow(document, package, 0)
+            .Frames.Single()
+            .Paragraphs.Single()
+            .Runs.Single()
+            .Segments.ToArray();
+        TestAssert.Equal("Break", segments[1].Kind);
+
+        string[] renderedLines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames.Single()
+            .Paragraphs.Single()
+            .Lines
+            .Select(line => string.Concat(line.Spans.Select(span => span.Text)))
+            .ToArray();
+        TestAssert.Equal(2, renderedLines.Length);
+        TestAssert.Equal("Alpha", renderedLines[0]);
+        TestAssert.Equal("Beta Gamma", renderedLines[1]);
+    }
+
     public static void PptxSyntheticTextBoxLineBreaksUseExplicitLineSpacing()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

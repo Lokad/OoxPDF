@@ -749,7 +749,7 @@ internal sealed partial class PptxRenderer
                 ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", endParagraphStyle.FontSize),
                 paragraphProperties is not null || endParagraphProperties is not null,
                 runs.Count > 0,
-                runs.Any(run => run.Kind == PptxTextRunKind.Break),
+                runs.Any(run => run.Kind == PptxTextRunKind.Break || TextContainsManualLineBreak(run.Text)),
                 paragraphStyle.FontSize,
                 defaultParagraphProperties,
                 paragraphLevel,
@@ -761,6 +761,11 @@ internal sealed partial class PptxRenderer
         }
 
         return paragraphs;
+    }
+
+    private static bool TextContainsManualLineBreak(string text)
+    {
+        return text.Contains('\n', StringComparison.Ordinal) || text.Contains('\r', StringComparison.Ordinal);
     }
 
     private static double ResolveCompatibleDefaultLineSpacingFactor(PptxTextBodyProperties bodyProperties)

@@ -237,6 +237,18 @@ High-priority actions:
   target Office marker bounds exactly at `9.000 pt` width and `43.934 pt` height. Keep this as structural PDF
   alignment, not a raster-tuned private heuristic; the remaining page-36 gap is still dominated by Office
   text-state/`Tc`, fractional font sizes, and other text/PDF-emission differences.
+- [x] 2026-05-30: Accepted literal CR/LF characters inside DrawingML text runs as manual line breaks, discovered
+  from private slide 17 PDF text-operation structure. The private-safe evidence was a no-autofit Cambria italic
+  text frame where Office emitted two baselines at the same frame X, while OOXPDF treated the embedded line feed
+  as ordinary in-run whitespace and produced a third wrapped line. Public synthetic coverage
+  `PptxSyntheticTextRunLineFeedForcesManualBreak` now locks the generic behavior: a line feed inside `<a:t>`
+  becomes a `Break` flow segment, marks the paragraph as having manual line-break state, and advances the layout
+  baseline within the same run instead of waiting for the next run. Validation: non-slow `pptx-typography`
+  passed (`124` passed, `0` failed, `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+  passed; private run `20260530-114000` on `lokad-value-based` compared all `84/84` pages with empty diagnostics
+  and improved deck MAE `3.434472 -> 3.432160`, changed16 `0.058768 -> 0.058733`. Page-17 PDF inspection now
+  shows the affected candidate frame as two text baselines at the Office X (`239.99` and `228.83`), matching the
+  reference's two-baseline structure (`239.59` and `228.77`) instead of the previous three-line candidate layout.
 - [x] 2026-05-30: Accepted a structural table text-frame wrap-width correction discovered while focusing on
   private slide 21. The private evidence showed centered table-cell baseline residuals that still form a
   row-position curve, but the table text model had an objectively inconsistent geometry: `TextWidth` was

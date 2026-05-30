@@ -1157,6 +1157,44 @@ internal sealed partial class PptxRenderer
 
                 foreach (PptxTextFlowSegment flowSegment in flowRun.Segments)
                 {
+                    if (flowSegment.Kind == PptxTextFlowSegmentKind.Break)
+                    {
+                        double lineFontSize = ResolveLineFontSize(maxFontSize, runStyle.FontSize);
+                        bool leadingManualBreak = line.Spans.Count == 0;
+                        bool useManualBreakFallback = leadingManualBreak || !shapeAutoFit;
+                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator);
+                        double lineAdvance = useManualBreakFallback
+                            ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize)
+                            : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                        cursorLineTop -= lineAdvance;
+                        MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
+                        columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
+                        columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+                        paragraphTextX = bulletText is null
+                            ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                            : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
+                        cursorY = double.NaN;
+                        afterManualLineBreak = true;
+                        afterLeadingManualLineBreak = useManualBreakFallback;
+                        cursorX = paragraphTextX;
+                        line.Reset(paragraphTextX);
+                        maxFontSize = 0d;
+                        previousAdvanceCodePoint = null;
+                        pendingVisibleLeadingAdjustment = 0d;
+                        noBreakAnchorSpan = null;
+                        pendingNoBreakAdvanceText = string.Empty;
+                        continue;
+                    }
+
+                    if (double.IsNaN(cursorY))
+                    {
+                        cursorY = cursorLineTop - (afterLeadingManualLineBreak
+                            ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset)
+                            : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset));
+                        afterManualLineBreak = false;
+                        afterLeadingManualLineBreak = false;
+                    }
+
                     if (flowSegment.Kind == PptxTextFlowSegmentKind.Tab)
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
@@ -1845,8 +1883,28 @@ internal sealed partial class PptxRenderer
         var builder = new StringBuilder();
         bool nextPreventsCoalesce = false;
         bool hideLeadingSpaces = false;
-        foreach (char c in text)
+        for (int i = 0; i < text.Length; i++)
         {
+            char c = text[i];
+            if (c == '\r' || c == '\n')
+            {
+                if (builder.Length > 0)
+                {
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+                    builder.Clear();
+                }
+
+                if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+                {
+                    i++;
+                }
+
+                yield return new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true);
+                nextPreventsCoalesce = true;
+                hideLeadingSpaces = false;
+                continue;
+            }
+
             if (hideLeadingSpaces && c == ' ')
             {
                 if (builder.Length > 0)
@@ -2450,7 +2508,10 @@ internal sealed partial class PptxRenderer
 
     private static bool HasManualLineBreak(XElement paragraph)
     {
-        return paragraph.Elements(DrawingNamespace + "br").Any();
+        return paragraph.Elements(DrawingNamespace + "br").Any() ||
+            paragraph.Elements(DrawingNamespace + "r")
+                .Elements(DrawingNamespace + "t")
+                .Any(text => TextContainsManualLineBreak(text.Value));
     }
 
     private static bool HasExplicitParagraphSpacing(XElement? paragraphProperties)
