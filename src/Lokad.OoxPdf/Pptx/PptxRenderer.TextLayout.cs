@@ -1900,7 +1900,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 yield return new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true);
-                nextPreventsCoalesce = true;
+                nextPreventsCoalesce = false;
                 hideLeadingSpaces = false;
                 continue;
             }

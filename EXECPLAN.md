@@ -191,6 +191,21 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Closed the private page-17 text-operation count gap with a public same-style manual-break
+  repro. Private PDF inspection showed graphics already matched Office structurally on this page
+  (`68` clips, `18` fills, `4` strokes on both sides) while candidate text had two extra operations after a
+  source run contained an embedded line feed. The renderer was treating the manual break as a coalescing
+  barrier for the first drawable segment on the following line, although the break itself already separates
+  line/baseline structure. `SplitControlSegments` now keeps the break segment as a barrier but allows
+  same-style drawable text after the break to coalesce normally. Public regression
+  `PptxTextManualBreakSameStyleLineCoalesces` locks the behavior with synthetic OOXML and asserts the second
+  visual line emits one glyph run. Validation: focused non-slow `pptx-typography` passed (`125` passed,
+  `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run
+  `20260530-131909` on `lokad-value-based` compared all `84/84` pages with the existing single unsupported
+  effect diagnostic and unchanged raster metrics (deck MAE `3.426082`, changed16 `0.058648`), as expected
+  for a structural text-emission fix. Page-17 PDF inspection now matches Office's text operation count
+  (`44` reference, `44` candidate), while the remaining text residuals are the broader secondary `/Tf` and
+  font-size-grid behavior already tracked as unresolved typography evidence.
 - [x] 2026-05-30: Accepted Office hyperlink text style precedence discovered on private page 12. The
   private-safe structural evidence was two thin Office PDF underline fills for hyperlink text near the bottom
   of the slide. OOXPDF previously exposed the hyperlink relationship and resolved the theme hyperlink color

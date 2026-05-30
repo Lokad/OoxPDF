@@ -7556,6 +7556,50 @@ internal static class PptxTests
             "Expected the emphasized glyph operation to start at the preceding run advance while remaining a separate text operation.");
     }
 
+    public static void PptxTextManualBreakSameStyleLineCoalesces()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="2724150" y="3657600"/><a:ext cx="1498600" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr wrap="square" vertOverflow="overflow"><a:noAutofit/></a:bodyPr>
+                      <a:lstStyle/>
+                      <a:p><a:pPr><a:defRPr sz="900" i="1"><a:latin typeface="Cambria"/></a:defRPr></a:pPr><a:r><a:rPr sz="900" i="1"><a:latin typeface="Cambria"/></a:rPr><a:t>“A 10% better forecast&#xA;wouldn’t even register.”</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("“A 10% better forecast", string.Concat(lines[0].Spans.Select(span => span.Text)));
+        TestAssert.Equal("wouldn’t even register.”", string.Concat(lines[1].Spans.Select(span => span.Text)));
+
+        PptxTextGlyphRunSnapshot[] secondLineRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+            .Where(run => run.LineIndex == 1)
+            .ToArray();
+
+        TestAssert.Equal(1, secondLineRuns.Length);
+        TestAssert.Equal("wouldn’t even register.”", secondLineRuns[0].Text);
+    }
+
     public static void PptxSyntheticTextBoxHonorsNormAutofitFontScale()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
