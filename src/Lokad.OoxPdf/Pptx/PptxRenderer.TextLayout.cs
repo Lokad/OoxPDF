@@ -1136,15 +1136,16 @@ internal sealed partial class PptxRenderer
                 : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
             bool clipsLocally = frame.TextClipX != 0d ||
                 frame.TextClipWidth < document.SlideWidthPoints - PptxTextMetricRules.CoordinateTolerance;
-            double columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
-            double columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+            bool clipsColumnsIndividually = clipsLocally && !frame.TableRowIndex.HasValue;
+            double columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+            double columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
             if (hasPlacedParagraph)
             {
                 cursorLineTop -= paragraphStyle.SpacingBefore;
                 double nextLineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, paragraphStyle.FontSize);
                 MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, nextLineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: false);
-                columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
-                columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+                columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+                columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
                 bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
                 paragraphTextX = bulletText is null
                     ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
@@ -1178,8 +1179,8 @@ internal sealed partial class PptxRenderer
                         : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                     cursorLineTop -= lineAdvance;
                     MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
-                    columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
-                    columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+                    columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+                    columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
                     paragraphTextX = bulletText is null
                         ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                         : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
@@ -1230,8 +1231,8 @@ internal sealed partial class PptxRenderer
                             : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                         cursorLineTop -= lineAdvance;
                         MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
-                        columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
-                        columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+                        columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+                        columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
                         paragraphTextX = bulletText is null
                             ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                             : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
@@ -1330,8 +1331,8 @@ internal sealed partial class PptxRenderer
                                 double lineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                                 cursorLineTop -= lineAdvance;
                                 MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
-                                columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
-                                columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+                                columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+                                columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
                                 paragraphTextX = bulletText is null
                                     ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                                     : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
@@ -1419,8 +1420,8 @@ internal sealed partial class PptxRenderer
                         double lineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                         cursorLineTop -= lineAdvance;
                         MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
-                        columnClipX = clipsLocally ? columnStartX : frame.TextClipX;
-                        columnClipWidth = clipsLocally ? columnWidth : frame.TextClipWidth;
+                        columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+                        columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
                         paragraphTextX = bulletText is null
                             ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                             : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);

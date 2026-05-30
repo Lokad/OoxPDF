@@ -567,6 +567,21 @@ High-priority actions:
   `lokad-value-based` run `20260531-010104` compared all `84/84` pages with empty diagnostics. Deck MAE
   improved `2.933648 -> 2.931758`, changed16 improved `0.053397 -> 0.053386`, and page 79 improved
   `5.014204 -> 4.895851`.
+  Follow-up, 2026-05-31: accepted the horizontal half of the same table-cell clipping structure from refreshed
+  page-79 evidence. The table text-frame model already preserved full cell clip rectangles, but the shared
+  column layout code replaced any local clip with the inset text column (`columnStartX/columnWidth`) even for
+  table cells. Office's PDF clips for the page-79 table are aligned to full cell boundaries, while candidate
+  table text clips were mostly inset by the authored cell margins. `LayoutTextFrame` now keeps per-column clips
+  for ordinary local-clipped shape text, but lets table-cell text runs carry the full frame clip produced by the
+  table text-frame model; wrapping and glyph placement remain inset-based. The public table regression
+  `PptxSyntheticTableWrapsCellTextToColumnWidth` now checks both sides of that contract: multiple lines still
+  start at the text inset, and the emitted `W*` rectangle is the full cell (`72 396 72 72`) rather than the
+  inset text rectangle (`79.2 396 57.6 72`). Validation: non-slow `pptx-tables` passed (`19` passed), and
+  private `lokad-value-based` run `20260531-014545` compared all `84/84` pages with empty diagnostics. Deck MAE
+  moved `2.931758 -> 2.931757`; page 79 improved `4.895850694 -> 4.895694444`. This is intentionally a small
+  visual change, but it removes another table-local PDF clip mismatch without private coordinates, font-family
+  checks, or row/column buckets. Remaining page-79 residuals are still text-state decomposition, extra Office
+  text-operation splits, and some clip nesting/count differences, not a solved table rendering branch.
   Follow-up, 2026-05-30: extended the table text-frame inspection path with row-height provenance so the
   private table pages can be compared without reconstructing OOXML geometry by hand. `PptxInspect` table-frame
   records now expose the declared row height, declared row-span height, declared total table height, and
