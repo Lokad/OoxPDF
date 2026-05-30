@@ -221,6 +221,22 @@ High-priority actions:
   and candidate page-20 PDF inspection now reports the same stroke-width family as Office for the affected
   vertical connectors: four `1 pt` black strokes and six `1.5 pt` red strokes. This is a generic DrawingML
   cascade correction, not private-content logic.
+- [x] 2026-05-30: Accepted straight `triangle` line-end marker width alignment from private page 36 PDF
+  structure. After the stroke-width fixes, one vertical blue connector still differed structurally: Office's
+  filled marker bounds were `624.100..633.100` by `5.618..49.553` (`9.000 pt` wide), while OOXPDF emitted the
+  same marker as `12.000 pt` wide. The source shape is an ordinary straight connector with an authored
+  `3 pt` line and `headEnd type="triangle" w="med" len="med"`, so Office's observable marker half-width is
+  `1.5 * lineWidth`, not `2 * lineWidth`. `OfficeStraightTriangleLineEndHalfWidthFactor` now reflects that
+  PDF-observed geometry, and public regression
+  `PptxSyntheticVerticalTriangleConnectorUsesOfficeMarkerWidth` locks the `3 pt -> 9 pt` marker width without
+  private content. Validation: the focused regression passed; non-slow `pptx-shapes` passed (`27` passed,
+  `0` failed); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private run
+  `20260530-111235` compared all `84/84` pages with empty diagnostics. The raster metric was effectively
+  neutral but slightly worse than `20260530-105637` (deck MAE `3.433930 -> 3.434472`, changed16
+  `0.058750 -> 0.058768`; page 36 `6.455870 -> 6.457522`), while page-36 PDF inspection now matches the
+  target Office marker bounds exactly at `9.000 pt` width and `43.934 pt` height. Keep this as structural PDF
+  alignment, not a raster-tuned private heuristic; the remaining page-36 gap is still dominated by Office
+  text-state/`Tc`, fractional font sizes, and other text/PDF-emission differences.
 - [x] 2026-05-30: Accepted a structural table text-frame wrap-width correction discovered while focusing on
   private slide 21. The private evidence showed centered table-cell baseline residuals that still form a
   row-position curve, but the table text model had an objectively inconsistent geometry: `TextWidth` was

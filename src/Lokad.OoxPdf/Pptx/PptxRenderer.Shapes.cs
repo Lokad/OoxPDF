@@ -17,7 +17,7 @@ internal sealed partial class PptxRenderer
     private const double OfficeTriangleTailLengthFactor = 3.5d;
     private const double OfficeTriangleTailHalfWidthFactor = 0.45d;
     private const double OfficeStraightTriangleLineEndLengthFactor = 4d;
-    private const double OfficeStraightTriangleLineEndHalfWidthFactor = 2d;
+    private const double OfficeStraightTriangleLineEndHalfWidthFactor = 1.5d;
     private const double OfficeStraightTriangleLineEndOverlapFactor = 2d / 3d;
     private const double OfficeStraightStealthLineEndLengthFactor = 3d;
     private const double OfficeStraightStealthLineEndWidthFactor = 3d;
