@@ -219,6 +219,10 @@ internal sealed record PptxTextRunSnapshot(
     string? FontFamily);
 
 internal sealed record PptxTextFrameModelSnapshot(
+    double FrameX,
+    double FrameY,
+    double FrameWidth,
+    double FrameHeight,
     double TextX,
     double TextWidth,
     double TextWrapWidth,

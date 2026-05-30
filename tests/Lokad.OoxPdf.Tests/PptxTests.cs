@@ -12192,8 +12192,56 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("72 396 288 72 re f", pdf);
-        TestAssert.Contains("216 396.5 m 216 323.5 l S", pdf);
+        TestAssert.Contains("216 396.5 m 216 324 l S", pdf);
         TestAssert.DoesNotContain("216 468.5 m 216 396.5 l S", pdf);
+    }
+
+    public static void PptxSyntheticExplicitTableBordersClampAtOuterEdges()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                        <a:tblGrid><a:gridCol w="914400"/><a:gridCol w="914400"/></a:tblGrid>
+                        <a:tr h="914400">
+                          <a:tc>
+                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody>
+                            <a:tcPr>
+                              <a:lnL><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:lnL>
+                              <a:lnB><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:lnB>
+                            </a:tcPr>
+                          </a:tc>
+                          <a:tc>
+                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody>
+                            <a:tcPr>
+                              <a:lnB><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:lnB>
+                            </a:tcPr>
+                          </a:tc>
+                        </a:tr>
+                      </a:tbl></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 396 m 216 396 l S", pdf);
+        TestAssert.Contains("72 396 m 72 468 l S", pdf);
+        TestAssert.DoesNotContain("71.5 396 m 216.5 396 l S", pdf);
+        TestAssert.DoesNotContain("72 395.5 m 72 468.5 l S", pdf);
     }
 
     public static void PptxSyntheticBarChartsRenderNativeCharts()

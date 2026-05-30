@@ -40,6 +40,10 @@ internal sealed partial class PptxRenderer
     private static PptxTextFrameModelSnapshot ToSnapshot(PptxTextFrameModel frame)
     {
         return new PptxTextFrameModelSnapshot(
+            OoxUnits.EmuToPoints(frame.Bounds.X),
+            OoxUnits.EmuToPoints(frame.Bounds.Y),
+            OoxUnits.EmuToPoints(frame.Bounds.Width),
+            OoxUnits.EmuToPoints(frame.Bounds.Height),
             frame.TextX,
             frame.TextWidth,
             frame.TextWrapWidth,

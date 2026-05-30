@@ -279,6 +279,10 @@ static PptxTextFrameRecord ToFrameRecord(int slideNumber, int frameIndex, PptxTe
     return new PptxTextFrameRecord(
         slideNumber,
         frameIndex,
+        Round(frame.FrameX),
+        Round(frame.FrameY),
+        Round(frame.FrameWidth),
+        Round(frame.FrameHeight),
         Round(frame.TextX),
         Round(frame.TextWidth),
         Round(frame.TextWrapWidth),
@@ -464,6 +468,10 @@ internal sealed record PptxGlyphRunRecord(
 internal sealed record PptxTextFrameRecord(
     int Slide,
     int FrameIndex,
+    double FrameX,
+    double FrameY,
+    double FrameWidth,
+    double FrameHeight,
     double TextX,
     double TextWidth,
     double TextWrapWidth,

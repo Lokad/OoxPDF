@@ -435,6 +435,21 @@ High-priority actions:
   than "do not stretch high-slack rows", and private page 21 still requires the current content-minimum
   expansion branch; the next attempt must explain Office's row-internal centered text-band placement without
   discarding private row expansion.
+- [x] 2026-05-30: Accepted an Office-PDF table-border endpoint clamp found on private page 21. The page has an
+  explicit-border table where OOXPDF and Office agreed on frame, fill count, stroke count, and colors, but
+  OOXPDF extended grouped border strokes by half a line width past the table's outer right/bottom edges.
+  Office extends border endpoints through interior joins, but clamps endpoints that coincide with the outer
+  table boundary. The renderer now carries table frame bounds in `TableFrameLayout` and applies that clamp for
+  explicit borders; the same rule was also applied to segmented default-grid strokes. `PptxInspect` table
+  frame records now include physical frame `X/Y/Width/Height` so future private row-height comparisons can use
+  row boxes directly instead of inferring them from fills or glyph runs. Public regression:
+  `PptxSyntheticExplicitTableBordersClampAtOuterEdges`, plus the existing merged-cell grid test now asserts
+  the bottom outer edge is clamped. Validation: non-slow `pptx-tables` passed (`15` passed, `0` failed), and
+  private run `20260530-122326` on `lokad-value-based` compared `84/84` pages with the same single diagnosed
+  unsupported effect. The deck MAE moved `3.432084 -> 3.432077`; page 21 moved `6.235032 -> 6.234666`, with
+  the horizontal table border right endpoint now matching Office's table right edge and the vertical border
+  bottom endpoint matching Office's table bottom edge. Remaining private page-21 table drift is still the
+  first-row boundary/text-band problem (`~0.55 pt` at the first row boundary), not border over-extension.
 - [x] 2026-05-30: Accepted a moderate-slack table row-height rule and rejected the broad declared-row version.
   A public-safe row-ladder probe built from the private page-21 geometry showed that when a table frame is much
   taller than its declared row sum and cell text does not require expansion, Office keeps text bands close to

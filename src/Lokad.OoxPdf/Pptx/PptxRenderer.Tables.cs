@@ -18,6 +18,10 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxPositionedTextSpan> TextSpans,
         IReadOnlyList<PptxTableCellTextFrame> TextFrames,
         IReadOnlyList<TableCellFill> CellFills,
+        double X,
+        double YTop,
+        double Width,
+        double Height,
         TableDefaultGrid? DefaultGrid,
         IReadOnlyList<TableBorderLine> ExplicitBorders);
 
@@ -267,10 +271,10 @@ internal sealed partial class PptxRenderer
                 rows.Count,
                 skippedVerticalGridSegments,
                 skippedHorizontalGridSegments);
-            return new TableFrameLayout(textSpans, textFrames, cellFills, defaultGrid, []);
+            return new TableFrameLayout(textSpans, textFrames, cellFills, frameX, frameTop, frameWidth, frameHeight, defaultGrid, []);
         }
 
-        return new TableFrameLayout(textSpans, textFrames, cellFills, DefaultGrid: null, explicitBorders);
+        return new TableFrameLayout(textSpans, textFrames, cellFills, frameX, frameTop, frameWidth, frameHeight, DefaultGrid: null, explicitBorders);
     }
 
     private static double[] ResolveTableRowHeights(
@@ -486,7 +490,13 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            StrokeTableBorders(graphics, layout.ExplicitBorders);
+            StrokeTableBorders(
+                graphics,
+                layout.ExplicitBorders,
+                layout.X,
+                layout.YTop - layout.Height,
+                layout.X + layout.Width,
+                layout.YTop);
         }
     }
 
@@ -555,7 +565,11 @@ internal sealed partial class PptxRenderer
                 rowIndex++;
             }
 
-            graphics.StrokeLine(x, rowTops[startRow] + 0.5d, x, rowTops[rowIndex] - 0.5d);
+            double y1 = rowTops[startRow] + 0.5d;
+            double y2 = rowIndex == rowCount
+                ? rowTops[rowIndex]
+                : rowTops[rowIndex] - 0.5d;
+            graphics.StrokeLine(x, y1, x, y2);
         }
     }
 
@@ -594,7 +608,13 @@ internal sealed partial class PptxRenderer
                 columnIndex++;
             }
 
-            graphics.StrokeLine(columnLefts[startColumn] - 0.5d, y, columnLefts[columnIndex] + 0.5d, y);
+            double x1 = startColumn == 0
+                ? columnLefts[startColumn]
+                : columnLefts[startColumn] - 0.5d;
+            double x2 = columnIndex == columnCount
+                ? columnLefts[columnIndex]
+                : columnLefts[columnIndex] + 0.5d;
+            graphics.StrokeLine(x1, y, x2, y);
         }
     }
 
@@ -616,7 +636,7 @@ internal sealed partial class PptxRenderer
         borders.Add(new TableBorderLine(x1, y1, x2, y2, border.Line.Width, border.Line.Color, border.Line.Alpha));
     }
 
-    private static void StrokeTableBorders(PdfGraphicsBuilder graphics, IReadOnlyList<TableBorderLine> borders)
+    private static void StrokeTableBorders(PdfGraphicsBuilder graphics, IReadOnlyList<TableBorderLine> borders, double tableLeft, double tableBottom, double tableRight, double tableTop)
     {
         foreach (IGrouping<TableBorderKey, TableBorderLine> group in borders.GroupBy(TableBorderKey.From))
         {
@@ -630,10 +650,18 @@ internal sealed partial class PptxRenderer
                 ? ordered.Max(border => Math.Max(border.Y1, border.Y2))
                 : ordered.Max(border => Math.Max(border.X1, border.X2));
             double halfWidth = group.Key.LineWidth / 2d;
-            double x1 = group.Key.Vertical ? group.Key.FixedCoordinate : start - halfWidth;
-            double y1 = group.Key.Vertical ? start - halfWidth : group.Key.FixedCoordinate;
-            double x2 = group.Key.Vertical ? group.Key.FixedCoordinate : end + halfWidth;
-            double y2 = group.Key.Vertical ? end + halfWidth : group.Key.FixedCoordinate;
+            double x1 = group.Key.Vertical
+                ? group.Key.FixedCoordinate
+                : ExtendTableBorderEndpoint(start, -halfWidth, tableLeft);
+            double y1 = group.Key.Vertical
+                ? ExtendTableBorderEndpoint(start, -halfWidth, tableBottom)
+                : group.Key.FixedCoordinate;
+            double x2 = group.Key.Vertical
+                ? group.Key.FixedCoordinate
+                : ExtendTableBorderEndpoint(end, halfWidth, tableRight);
+            double y2 = group.Key.Vertical
+                ? ExtendTableBorderEndpoint(end, halfWidth, tableTop)
+                : group.Key.FixedCoordinate;
 
             bool transparentStroke = group.Key.Alpha < 0.999d;
             if (transparentStroke)
@@ -650,6 +678,16 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static double ExtendTableBorderEndpoint(double coordinate, double extension, double outerBoundary)
+    {
+        if (Math.Abs(coordinate - outerBoundary) <= PptxTextMetricRules.CoordinateTolerance)
+        {
+            return coordinate;
+        }
+
+        return coordinate + extension;
     }
 
     private static void AddTableCellTextSpans(
