@@ -8189,6 +8189,60 @@ internal static class PptxTests
         TestAssert.True(columnCounts.SequenceEqual([24, 24, 22]), "Expected Office-like overflow column balance. Counts: " + string.Join(", ", columnCounts));
     }
 
+    public static void PptxSyntheticNoAutoFitTextOverflowColumnsBalanceEvenContinuedParagraph()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        var paragraph = new StringBuilder();
+        for (int i = 1; i <= 66; i++)
+        {
+            paragraph.Append(CultureInfo.InvariantCulture, $"""<a:r><a:rPr sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Line {i:00}</a:t></a:r>""");
+            if (i != 66)
+            {
+                paragraph.Append("<a:br/>");
+            }
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="457200" y="914400"/><a:ext cx="6858000" cy="4267200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr numCol="3" spcCol="144000" lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"><a:noAutofit/></a:bodyPr>
+                      <a:lstStyle/>
+                      <a:p>{paragraph}</a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        int[] columnCounts = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraphLayout => paragraphLayout.Lines)
+            .GroupBy(line => Math.Round(line.StartX, 2))
+            .OrderBy(group => group.Key)
+            .Select(group => group.Count())
+            .ToArray();
+
+        TestAssert.True(columnCounts.SequenceEqual([22, 23, 21]), "Expected the continued paragraph to move one line from the final column into the penultimate column. Counts: " + string.Join(", ", columnCounts));
+    }
+
     public static void PptxSyntheticTextBoxOverflowColumnsReserveNormalLineAdvance()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

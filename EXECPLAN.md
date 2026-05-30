@@ -191,6 +191,21 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Extended no-autofit overflow column balancing for even continued-paragraph cases, moving the
+  private page-59 three-column body from OOXPDF's even `22/22/22` layout to Office's observed `22/23/21`
+  layout. This is the sibling of the earlier private page-55 continued-paragraph rule: when all columns
+  initially have the same line count but the penultimate/final column boundary continues the same paragraph,
+  Office can keep one more line in the penultimate column and leave the final column one short. The renderer
+  now detects that structural condition and starts line-count balancing at column 2 with a `balanced + 1`
+  target, instead of applying a page or text-content rule. Public regression
+  `PptxSyntheticNoAutoFitTextOverflowColumnsBalanceEvenContinuedParagraph` locks the even continued-paragraph
+  pattern. Validation: focused regression passed, `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed, and focused `pptx-typography --skip-slow` passed (`128` passed, `2` skipped). Private run
+  `20260530-160928` on `lokad-value-based` compared all `84/84` pages with empty diagnostics, improved deck
+  MAE `3.008014 -> 2.975644`, improved changed16 `0.054128 -> 0.053776`, and moved page 59 out of the top
+  five worst pages. Follow-up page-59 inspection confirms frame 10 now has candidate line counts
+  `22/23/21`, matching Office's PDF operation columns. Remaining page-59 residuals are the broader Office
+  text-state branch (`Tc` and secondary `/Tf`) plus PDF text-operation splitting, not column placement.
 - [x] 2026-05-30: Added first-class PPTX picture outer-shadow rendering from private page-12 evidence. Private
   slide inspection found two rectangular pictures with `a:outerShdw` effects (`blurRad`, `dist`, `dir`, and
   alpha) while OOXPDF rendered only the image content and picture outlines. This was a structural gap, not a
