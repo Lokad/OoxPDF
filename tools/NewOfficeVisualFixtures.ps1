@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $cases = Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases"
 New-Item -ItemType Directory -Force -Path $cases | Out-Null
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 function Rgb($r, $g, $b) {
     return $r + ($g * 256) + ($b * 65536)
@@ -12,6 +13,82 @@ function Release-ComObject($value) {
     if ($null -ne $value -and [System.Runtime.InteropServices.Marshal]::IsComObject($value)) {
         [void][System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($value)
     }
+}
+
+function New-MultilineTableFixtureFromWrapped($sourcePath, $targetPath) {
+    $sourceFullPath = (Resolve-Path -LiteralPath $sourcePath).Path
+    $targetFullPath = [System.IO.Path]::GetFullPath($targetPath)
+    $temporaryPath = [System.IO.Path]::Combine(
+        [System.IO.Path]::GetDirectoryName($targetFullPath),
+        ([System.IO.Path]::GetFileNameWithoutExtension($targetFullPath) + ".tmp.pptx"))
+
+    if (Test-Path -LiteralPath $temporaryPath) {
+        Remove-Item -LiteralPath $temporaryPath -Force
+    }
+
+    $sourceZip = [System.IO.Compression.ZipFile]::OpenRead($sourceFullPath)
+    $targetZip = [System.IO.Compression.ZipFile]::Open($temporaryPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach ($entry in $sourceZip.Entries) {
+            $targetEntry = $targetZip.CreateEntry($entry.FullName, [System.IO.Compression.CompressionLevel]::Optimal)
+            if ($entry.FullName -eq "ppt/slides/slide1.xml") {
+                $reader = [System.IO.StreamReader]::new($entry.Open())
+                try {
+                    $xml = $reader.ReadToEnd()
+                }
+                finally {
+                    $reader.Dispose()
+                }
+
+                $xml = [System.Text.RegularExpressions.Regex]::Replace(
+                    $xml,
+                    "<a:t>R(?<row>\d{2})C(?<column>\d{2})[^<]*</a:t>",
+                    [System.Text.RegularExpressions.MatchEvaluator]{
+                        param($match)
+
+                        $row = $match.Groups["row"].Value
+                        $column = [int]$match.Groups["column"].Value
+                        $tag = "R{0}C{1:00}" -f $row, $column
+                        if ($column -eq 4) {
+                            $text = "$tag replenishment policy keeps enough neutral planning words to wrap inside the cell"
+                        }
+                        elseif ($column -eq 5) {
+                            $text = "$tag service target and lead time note wraps across the cell"
+                        }
+                        else {
+                            $text = "$tag compact planning text wraps"
+                        }
+
+                        return "<a:t>$([System.Security.SecurityElement]::Escape($text))</a:t>"
+                    })
+
+                $writer = [System.IO.StreamWriter]::new($targetEntry.Open())
+                try {
+                    $writer.Write($xml)
+                }
+                finally {
+                    $writer.Dispose()
+                }
+            }
+            else {
+                $sourceStream = $entry.Open()
+                $targetStream = $targetEntry.Open()
+                try {
+                    $sourceStream.CopyTo($targetStream)
+                }
+                finally {
+                    $targetStream.Dispose()
+                    $sourceStream.Dispose()
+                }
+            }
+        }
+    }
+    finally {
+        $targetZip.Dispose()
+        $sourceZip.Dispose()
+    }
+
+    Move-Item -LiteralPath $temporaryPath -Destination $targetFullPath -Force
 }
 
 $powerPoint = $null
@@ -293,6 +370,10 @@ try {
     finally {
         $centeredExplicitTable.Close()
     }
+
+    New-MultilineTableFixtureFromWrapped `
+        (Join-Path $cases "pptx-ladder-10-table-center-explicit-wrapped.pptx") `
+        (Join-Path $cases "pptx-ladder-10-table-center-explicit-multiline.pptx")
 }
 finally {
     if ($powerPoint -ne $null) {

@@ -499,6 +499,18 @@ High-priority actions:
   single-line explicit-margin tables from high-slack wrapped/multi-line explicit-margin tables, then apply
   the rule only if it predicts both the public counterexample and private page 21. Do not encode a text-length,
   row-index, or private coordinate proxy for this split.
+  Follow-up, 2026-05-30: added public `pptx-ladder-10-table-center-explicit-multiline` as the required
+  high-slack, explicit-margin, middle-anchored multiline probe. It is generated from the existing
+  Office-authored wrapped table by changing only the cell text in `ppt/slides/slide1.xml`, preserving the same
+  authored row-height ladder (`13.99/9.79/13.99/22.38/...pt`) and `1.54x` graphic-frame/declared-height
+  slack. `PptxInspect` shows every candidate cell now has two layout lines, while the OOXML row declarations
+  remain identical to `pptx-ladder-10-table-center-explicit-wrapped`. Public run `20260530-222314` passes the
+  intentionally loose discovery gate with MAE `13.537929`, changed16 `0.129103`, and empty diagnostics.
+  Office/candidate text operation counts match (`110/110`), but PDF text-position comparison exposes the
+  structural row-allocation mismatch: Office preserves heterogeneous row placement under multiline pressure,
+  while the current candidate's content-minimum path collapses the rendered rows to near-uniform `22.76pt`
+  bands. This fixture is a public row-allocation oracle, not yet permission for another blanket
+  declared-row-preservation rule; page 21 remains the acceptance check for any future discriminator.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,
