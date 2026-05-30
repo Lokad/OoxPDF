@@ -3159,6 +3159,11 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
+        if (line?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            return default;
+        }
+
         bool widthSpecified = line?.Attribute("w") is not null;
         return shapeProperties is not null &&
             TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha)

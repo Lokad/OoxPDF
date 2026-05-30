@@ -152,6 +152,39 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Sh1 sh", pdf);
     }
 
+    public static void WritesTilingPatternResources()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        var pattern = PdfTilingPattern.DiagonalLines(4d, up: true, 1d, 47, 133, 106);
+        graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/Pattern << /P1 ", pdf);
+        TestAssert.Contains("/PatternType 1", pdf);
+        TestAssert.Contains("/PaintType 1", pdf);
+        TestAssert.Contains("/TilingType 1", pdf);
+        TestAssert.Contains("/BBox [0 0 4 4]", pdf);
+        TestAssert.Contains("/Pattern cs /P1 scn", pdf);
+        TestAssert.Contains("10 20 30 40 re f", pdf);
+    }
+
+    public static void WritesScaledTilingPatternMatrix()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        var pattern = PdfTilingPattern.OfficeScaledDiagonalLines(up: true, 1d, 47, 133, 106);
+        graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/TilingType 2", pdf);
+        TestAssert.Contains("/BBox [0 0 16 16]", pdf);
+        TestAssert.Contains("/Matrix [0.375 0 0 0.375 0 0]", pdf);
+        TestAssert.Contains("/XStep 16 /YStep 16", pdf);
+    }
+
     public static void WritesJpegImageColorSpaceFromFrameMetadata()
     {
         PdfImageXObject image = PdfImageXObject.Jpeg(1, 1, [0xFF, 0xD8, 0xFF, 0xD9], componentCount: 1, bitsPerComponent: 8);

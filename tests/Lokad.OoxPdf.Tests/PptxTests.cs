@@ -201,6 +201,50 @@ internal static class PptxTests
         TestAssert.True(resolver.ResolveCalls > 0, "PPTX chart text conversion should use the supplied font resolver.");
     }
 
+    public static void PptxChartSeriesLineNoFillSuppressesBarOutlines()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>
+                <c:plotArea>
+                  <c:barChart>
+                    <c:barDir val="col"/>
+                    <c:grouping val="stacked"/>
+                    <c:ser>
+                      <c:idx val="0"/><c:order val="0"/>
+                      <c:spPr>
+                        <a:solidFill><a:srgbClr val="00B050"/></a:solidFill>
+                        <a:ln><a:noFill/></a:ln>
+                      </c:spPr>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    <c:axId val="10"/><c:axId val="20"/>
+                  </c:barChart>
+                  <c:catAx>
+                    <c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/>
+                    <c:spPr><a:ln><a:noFill/></a:ln></c:spPr>
+                    <c:tickLblPos val="none"/>
+                  </c:catAx>
+                  <c:valAx>
+                    <c:axId val="20"/><c:axPos val="l"/>
+                    <c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>
+                    <c:majorUnit val="5"/><c:crossAx val="10"/>
+                    <c:spPr><a:ln><a:noFill/></a:ln></c:spPr>
+                    <c:tickLblPos val="none"/>
+                  </c:valAx>
+                </c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        PptxSceneChartSeries series = chart.Plots[0].Series[0];
+        TestAssert.True(series.Fill.HasFill, "Expected chart series fill to remain visible when only the line is noFill.");
+        TestAssert.True(series.Line.HasLine == false, "Expected explicit chart series line noFill to suppress bar outlines.");
+    }
+
     public static void PptxSceneBuilderBuildsResolvedNodeLists()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

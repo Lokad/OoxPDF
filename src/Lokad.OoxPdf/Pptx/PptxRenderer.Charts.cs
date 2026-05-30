@@ -8537,33 +8537,24 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        graphics.SaveState();
-        graphics.ClipRectangle(x, y, width, height);
-        graphics.SetStrokeRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
         string patternPreset = fill.PatternPreset ?? "pct50";
         if (TryReadPercentageChartPattern(patternPreset, out int densityPercent))
         {
+            graphics.SaveState();
+            graphics.ClipRectangle(x, y, width, height);
+            graphics.SetStrokeRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             FillChartDotPattern(graphics, x, y, width, height, fill.Color, densityPercent);
             graphics.RestoreState();
             return;
         }
 
-        graphics.SetLineWidth(IsDarkChartPattern(patternPreset) ? 1.0d : 0.5d);
-        double spacing = IsDarkChartPattern(patternPreset) ? 4d : 5d;
-        bool up = patternPreset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase);
-        for (double offset = -height; offset <= width + height; offset += spacing)
-        {
-            if (up)
-            {
-                graphics.StrokeLine(x + offset, y, x + offset + height, y + height);
-            }
-            else
-            {
-                graphics.StrokeLine(x + offset, y + height, x + offset + height, y);
-            }
-        }
-
-        graphics.RestoreState();
+        var pattern = PdfTilingPattern.OfficeScaledDiagonalLines(
+            patternPreset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase),
+            IsDarkChartPattern(patternPreset) ? 1.0d : 0.5d,
+            fill.Color.Red,
+            fill.Color.Green,
+            fill.Color.Blue);
+        graphics.FillRectangleWithTilingPattern(x, y, width, height, pattern);
     }
 
     private static void FillChartRectangleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double x, double y, double width, double height, ChartSeriesFill fill)

@@ -191,6 +191,24 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Moved chart diagonal pattern fills from renderer-local hatch strokes to PDF tiling-pattern
+  resources, matching Office's observable PDF resource class on the active private stacked-bar target. Private
+  page-40 inspection showed Office filling the patterned bars with `/Pattern cs /P... scn` and type-1 tiling
+  pattern resources (`/PatternType 1`, `/PaintType 1`, `/TilingType 2`, `/BBox[0 0 16 16]`,
+  `/Matrix[0.375 0 0 0.375 ...]`, `/XStep 16`, `/YStep 16`) backed by pattern-local image XObjects. The
+  candidate previously expanded the same OOXML `a:pattFill` presets into ad hoc diagonal page strokes. OOXPDF
+  now has first-class `PdfTilingPattern` resources in the PDF writer and chart diagonal fills emit
+  Office-scaled tiling patterns instead of page-level hatch loops. This is structural alignment, not the final
+  pattern implementation: the current pattern cell is still vector-drawn, lacks Office's image-backed cell and
+  phase translation, and page-40 chart geometry still differs from Office (`x/width/height` offsets remain).
+  The scene builder also now honors explicit chart series `a:ln/a:noFill`, preventing patterned bar series from
+  regaining default outlines that Office suppresses. Validation: `pdf --skip-slow` passed (`15` passed),
+  `pptx-charts --skip-slow` passed (`146` passed), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+  -v minimal` passed. Private run `20260530-151818` on `lokad-value-based` compared all `84/84` pages with
+  empty diagnostics, improved deck MAE `3.045359 -> 3.043284`, and improved page 40 MAE
+  `4.616284 -> 4.591801`; changed16 moved slightly worse (`0.054621 -> 0.054661` deck, page 40
+  `0.094529 -> 0.095077`), so the remaining work is image-backed pattern resources plus chart plot/bar
+  geometry, not threshold tuning.
 - [x] 2026-05-30: Aligned compressed explicit PPTX line-spacing baselines with Office's observable PDF
   text matrices, closing the large title/body baseline residual on the private `lokad-value-based` section
   pages without private content. Private page-1 and page-22 inspection showed top-anchored rectangular text
@@ -6384,6 +6402,17 @@ document-specific business content into public notes.
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR` warning.
   - The recolor warning remains a generic JPEG/DCT picture-recolor architecture gap. No private slide text,
     image content, or screenshots were inspected or copied.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260530-151818` after the chart
+  tiling-pattern resource slice:
+  - 84/84 pages compared with zero dimension mismatches.
+  - Mean absolute error: `3.043284`; max mean absolute error: `6.045372`; mean changed-pixel ratio at
+    threshold 16: `0.054661`.
+  - Diagnostics were empty.
+  - The targeted stacked-bar page now uses PDF `/Pattern` resources for diagonal chart fills instead of
+    page-level hatch strokes. Office's reference PDF uses image-backed type-1 tiling patterns with a `16x16`
+    pattern cell and `0.375` scale matrix; OOXPDF now matches the tiling-pattern resource class and scale, but
+    still uses vector pattern content and has residual chart rectangle geometry offsets. This remains an open
+    structural chart/PDF-resource gap, not a private-content note.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260528-141612` after the text-height
   estimator and schema-inspection pass:
   - 84/84 pages compared with zero dimension mismatches.
@@ -7507,6 +7536,13 @@ paths, and ExecPlan references together.
   - [x] Render chart percentage pattern fills (`pct*`) as tiled dot fields instead of diagonal hatches,
     following the `pptx-renderer` distinction between percentage and diagonal presets. This tightens the
     compact stacked secondary-axis probe to MAE `0.885312` and changed-pixel ratio threshold 16 `0.011982`.
+  - [x] Render chart diagonal pattern fills through PDF tiling-pattern resources instead of direct hatch
+    strokes, and preserve explicit series `a:ln/a:noFill` so patterned bars do not regain default outlines.
+    Private page-40 evidence shows this aligns the candidate with Office's `/Pattern` resource class while
+    leaving image-backed pattern cells and exact chart geometry open.
+  - [ ] Replace the vector approximation inside chart tiling-pattern cells with Office-like image-backed
+    pattern-local XObjects, and derive the pattern matrix phase/translation from chart/shape coordinates
+    instead of using a zero-offset cell matrix.
   - [x] Place multiple value-axis label columns on the same side instead of overlaying them, and size the
     label boxes from tick text instead of a fixed fraction of the plot width.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
@@ -8691,6 +8727,20 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Chart pattern-fill PDF-resource alignment, 2026-05-30:
+dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pdf --skip-slow:
+15 passed, 0 failed, 0 skipped.
+dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow:
+146 passed, 0 failed, 0 skipped.
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed.
+pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json:
+run 20260530-151818, 84/84 compared, diagnostics [], deck MAE 3.043284, changed16 0.054661.
+Targeted stacked-bar page MAE improved 4.616284 -> 4.591801 after replacing page hatch strokes with
+Office-scaled PDF tiling-pattern resources; remaining evidence points to image-backed pattern cells and chart
+geometry offsets.
+```
 
 ```text
 PPTX slide-wide overflow PDF-structure alignment, 2026-05-29:

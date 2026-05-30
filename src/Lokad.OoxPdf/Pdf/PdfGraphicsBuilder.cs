@@ -10,11 +10,14 @@ internal sealed class PdfGraphicsBuilder
     private readonly StringBuilder builder = new();
     private readonly List<PdfExtGStateResource> extGStates = [];
     private readonly List<PdfShadingResource> shadings = [];
+    private readonly List<PdfTilingPatternResource> patterns = [];
     private int stateDepth;
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
 
     public IReadOnlyList<PdfShadingResource> Shadings => shadings;
+
+    public IReadOnlyList<PdfTilingPatternResource> Patterns => patterns;
 
     public int StateDepth => stateDepth;
 
@@ -151,6 +154,23 @@ internal sealed class PdfGraphicsBuilder
     public void FillRectangleEvenOdd(double x, double y, double width, double height)
     {
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re f*");
+    }
+
+    public void FillRectangleWithTilingPattern(double x, double y, double width, double height, PdfTilingPattern pattern)
+    {
+        string resourceName = "P" + (patterns.Count + 1).ToString(CultureInfo.InvariantCulture);
+        PdfTilingPatternResource? existing = patterns.FirstOrDefault(resource => resource.Pattern.ResourceKey == pattern.ResourceKey);
+        if (existing is null)
+        {
+            patterns.Add(new PdfTilingPatternResource(resourceName, pattern));
+        }
+        else
+        {
+            resourceName = existing.ResourceName;
+        }
+
+        builder.Append("/Pattern cs /").Append(PdfEmbeddedFont.SanitizeName(resourceName)).AppendLine(" scn");
+        FillRectangle(x, y, width, height);
     }
 
     public void PaintAxialShading(double x0, double y0, double x1, double y1, byte startRed, byte startGreen, byte startBlue, byte endRed, byte endGreen, byte endBlue)

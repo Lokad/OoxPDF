@@ -29,6 +29,10 @@ internal sealed class PdfDocumentWriter
             .SelectMany(p => p.Shadings.Select(s => s.Shading))
             .DistinctBy(s => s.ResourceKey)
             .ToList();
+        List<PdfTilingPattern> patterns = pages
+            .SelectMany(p => p.Patterns.Select(s => s.Pattern))
+            .DistinctBy(s => s.ResourceKey)
+            .ToList();
 
         int fontObjectBase = 3 + pages.Count * 2;
         var fontObjects = new Dictionary<string, FontObjectNumbers>(StringComparer.Ordinal);
@@ -73,7 +77,14 @@ internal sealed class PdfDocumentWriter
             softMaskObjects[softMasks[i].ResourceKey] = softMaskObjectBase + i;
         }
 
-        int objectCount = softMaskObjectBase + softMasks.Count - 1;
+        int patternObjectBase = softMaskObjectBase + softMasks.Count;
+        var patternObjects = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < patterns.Count; i++)
+        {
+            patternObjects[patterns[i].ResourceKey] = patternObjectBase + i;
+        }
+
+        int objectCount = patternObjectBase + patterns.Count - 1;
         writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
         writer.WriteObject(2, BuildPagesObject(pages));
 
@@ -84,7 +95,7 @@ internal sealed class PdfDocumentWriter
             PdfPage page = pages[i];
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
-                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects, softMaskObjects)} >>\n"));
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects)} >>\n"));
             byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
             writer.WriteObject(contentObjectNumber, FormattableString.Invariant(
                 $"<< /Length {contentBytes.Length} >>\nstream\n{page.Content}endstream\n"));
@@ -108,6 +119,11 @@ internal sealed class PdfDocumentWriter
         foreach (PdfLuminositySoftMask softMask in softMasks)
         {
             WriteLuminositySoftMaskObject(writer, softMask, softMaskObjects[softMask.ResourceKey], imageObjects);
+        }
+
+        foreach (PdfTilingPattern pattern in patterns)
+        {
+            WriteTilingPatternObject(writer, pattern, patternObjects[pattern.ResourceKey]);
         }
 
         long xrefOffset = writer.Position;
@@ -147,9 +163,10 @@ internal sealed class PdfDocumentWriter
         IReadOnlyDictionary<string, FontObjectNumbers> fontObjects,
         IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects,
         IReadOnlyDictionary<string, int> shadingObjects,
-        IReadOnlyDictionary<string, int> softMaskObjects)
+        IReadOnlyDictionary<string, int> softMaskObjects,
+        IReadOnlyDictionary<string, int> patternObjects)
     {
-        if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0)
+        if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0 && page.Patterns.Count == 0)
         {
             return "<< >>";
         }
@@ -211,6 +228,18 @@ internal sealed class PdfDocumentWriter
             builder.Append(" >>");
         }
 
+        if (page.Patterns.Count != 0)
+        {
+            builder.Append(" /Pattern <<");
+            foreach (PdfTilingPatternResource pattern in page.Patterns)
+            {
+                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(pattern.ResourceName));
+                builder.Append(CultureInfo.InvariantCulture, $" {patternObjects[pattern.Pattern.ResourceKey]} 0 R");
+            }
+
+            builder.Append(" >>");
+        }
+
         builder.Append(" >>");
         return builder.ToString();
     }
@@ -261,6 +290,16 @@ internal sealed class PdfDocumentWriter
         byte[] contentBytes = Encoding.ASCII.GetBytes(content);
         writer.WriteObject(objectNumber, FormattableString.Invariant(
             $"<< /Type /XObject /Subtype /Form /BBox [{FormatNumber(softMask.X)} {FormatNumber(softMask.Y)} {FormatNumber(softMask.X + softMask.Width)} {FormatNumber(softMask.Y + softMask.Height)}] /Group << /S /Transparency /CS /DeviceRGB >> /Resources << /XObject << /ImMask {image.Image} 0 R >> >> /Length {contentBytes.Length} >>\nstream\n{content}endstream\n"));
+    }
+
+    private static void WriteTilingPatternObject(PdfObjectWriter writer, PdfTilingPattern pattern, int objectNumber)
+    {
+        byte[] contentBytes = Encoding.ASCII.GetBytes(pattern.Content);
+        string matrix = pattern.Matrix is { } m
+            ? FormattableString.Invariant($" /Matrix [{FormatNumber(m.A)} {FormatNumber(m.B)} {FormatNumber(m.C)} {FormatNumber(m.D)} {FormatNumber(m.E)} {FormatNumber(m.F)}]")
+            : string.Empty;
+        writer.WriteObject(objectNumber, FormattableString.Invariant(
+            $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources << >> /Length {contentBytes.Length} >>\nstream\n{pattern.Content}endstream\n"));
     }
 
     private static string BuildLuminositySoftMaskContent(PdfLuminositySoftMask softMask)
