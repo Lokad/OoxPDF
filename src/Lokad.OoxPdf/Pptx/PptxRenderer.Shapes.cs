@@ -727,13 +727,14 @@ internal sealed partial class PptxRenderer
                 double distance = Math.Sqrt(dx * dx + dy * dy);
                 double t = Math.Clamp(distance / shadow.BlurRadius, 0d, 1d);
                 double falloff = (1d - t) * (1d - t);
-                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * shadow.Alpha * falloff), 0, 255);
+                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * falloff), 0, 255);
             }
         }
 
         var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
         string name = "Im" + imageIndex++;
         graphics.SaveState();
+        graphics.SetAlpha(shadow.Alpha, 1d);
         graphics.DrawImage(name, shadowX, shadowY, shadowWidth, shadowHeight);
         graphics.RestoreState();
         images.Add(new PdfImageResource(name, image));
@@ -836,13 +837,14 @@ internal sealed partial class PptxRenderer
 
                 double t = distance / glow.Radius;
                 double falloff = (1d - t) * (1d - t);
-                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * glow.Alpha * falloff), 0, 255);
+                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * falloff), 0, 255);
             }
         }
 
         var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
         string name = "Im" + imageIndex++;
         graphics.SaveState();
+        graphics.SetAlpha(glow.Alpha, 1d);
         graphics.DrawImage(name, glowX, glowY, glowWidth, glowHeight);
         graphics.RestoreState();
         images.Add(new PdfImageResource(name, image));

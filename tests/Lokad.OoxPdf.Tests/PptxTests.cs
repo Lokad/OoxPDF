@@ -2470,7 +2470,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(!pdf.Contains("/GS25000F100000S gs", StringComparison.Ordinal), "Glow must not be rendered as a solid alpha proxy.");
+        TestAssert.Contains("/GS25000F100000S gs", pdf);
         TestAssert.True(!pdf.Contains("64.8 388.8 86.4 86.4 re f*", StringComparison.Ordinal), "Glow must not emit an expanded solid rectangle.");
         TestAssert.Contains("/Subtype /Image", pdf);
         TestAssert.Contains("/SMask ", pdf);
@@ -10333,6 +10333,7 @@ internal static class PptxTests
         int shadowDraw = pdf.IndexOf("/Im1 Do", StringComparison.Ordinal);
         int pictureDraw = pdf.IndexOf("/Im2 Do", StringComparison.Ordinal);
         TestAssert.True(shadowDraw >= 0 && pictureDraw > shadowDraw, "Picture outer shadow should draw before the picture image.");
+        TestAssert.Contains("/GS43000F100000S gs", pdf);
         TestAssert.Contains("/SMask", pdf);
         TestAssert.Contains("/Width 153 /Height 81", pdf);
         TestAssert.Contains("/Width 2 /Height 1", pdf);
