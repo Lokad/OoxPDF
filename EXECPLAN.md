@@ -302,6 +302,16 @@ High-priority actions:
   manual break emitted only a post-break `Tc=-0.024` tail. That is a real public gap but not the private
   `-0.0535` rule. Continue probing manual-break/short-frame/line-internal segmentation combinations before
   adding any non-numbered autofit emission rule.
+  2026-05-30 page-36 evidence: the current worst private page is a no-table text-state case rather than a
+  table-row case. Office emits `135` page-36 text operations with widespread nonzero `Tc` buckets
+  (`-0.036`, `-0.0476`, `-0.012`, `-0.0574`, `0.0166`, and related splits) and secondary font-size branches
+  (`12.024`, `14.064`, `18.024`), while the candidate initially emitted `133` operations with `Tc=0` for all
+  operations. A trial that generalized average glyph-residual promotion beyond tables produced some matching
+  nonzero `Tc` buckets for no-autofit text, but many Office buckets had no corresponding glyph residual in the
+  current layout and the private deck slightly regressed (`2.947933 -> 2.948011` MAE, page 36
+  `6.045372 -> 6.046293`), so the trial was reverted. Do not retry a blanket non-table residual promotion;
+  the next page-36 slice needs a first-class Office PDF text-state decomposition model that can account for
+  font-grid branches and operation splitting even when layout residuals are zero.
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was
@@ -430,6 +440,18 @@ High-priority actions:
   PDF inspection of page 79 now shows residual-heavy table branches as nonzero `Tc` with near-zero average `TJ`
   residuals. Remaining page-79 work is the `258` vs `249` Office text-operation split and the line-placement
   clusters, not the existence of table-cell text-state extraction.
+  Follow-up, 2026-05-30: extended the table text-frame inspection path with row-height provenance so the
+  private table pages can be compared without reconstructing OOXML geometry by hand. `PptxInspect` table-frame
+  records now expose the declared row height, declared row-span height, declared total table height, and
+  graphic-frame/declared-height slack factor. This exposed a useful private split after average-`Tc`:
+  page 21 and the public `pptx-ladder-10-table-center-explicit-wrapped` case both have about `1.54x`
+  frame/declared-row slack and the same authored row ladder, but page 21's rendered rows are content-minimum
+  driven while the public case remains the rejected high-slack declared-row counterexample. Page 79 is a
+  different family: declared and rendered row heights match at report precision, so its residual belongs to
+  the PDF text-state decomposition branch rather than table row allocation. Validation: full solution build
+  passed, `pptx-tables --skip-slow` passed (`17` passed), `PptxInspect` build passed, and private
+  `lokad-value-based` run `20260530-210736` stayed identical to the rendering baseline (`MAE=2.947933`,
+  changed16 `0.053571`, empty diagnostics). This is diagnostic scaffolding, not a rendering change.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,

@@ -12159,9 +12159,13 @@ internal static class PptxTests
         TestAssert.Equal("45720", explicitCell.InsetTopValue ?? string.Empty);
         TestAssert.Equal("TableCellProperties", explicitCell.VerticalAnchorSource);
         TestAssert.Equal("ctr", explicitCell.VerticalAnchorValue ?? string.Empty);
+        TestAssert.True(Math.Abs((explicitCell.TableDeclaredRowHeight ?? 0d) - 72d) < 0.001d, $"Expected table frame inspection to preserve the 72pt declared row height, got {(explicitCell.TableDeclaredRowHeight ?? 0d).ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+        TestAssert.True(Math.Abs((explicitCell.TableDeclaredHeight ?? 0d) - 72d) < 0.001d, $"Expected table frame inspection to preserve the 72pt declared table height, got {(explicitCell.TableDeclaredHeight ?? 0d).ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+        TestAssert.True(Math.Abs((explicitCell.TableHeightSlackFactor ?? 0d) - 1d) < 0.001d, $"Expected no table-height slack in the one-row fixture, got {(explicitCell.TableHeightSlackFactor ?? 0d).ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.True(Math.Abs(explicitCell.TextWrapWidth - explicitCell.TextWidth) < 0.001d, $"Expected explicit table-cell wrap width to match the inset text width, got wrap={explicitCell.TextWrapWidth.ToString("0.###", CultureInfo.InvariantCulture)} width={explicitCell.TextWidth.ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.Equal("DefaultValue", defaultCell.VerticalAnchorSource);
         TestAssert.Equal("t", defaultCell.VerticalAnchorValue ?? string.Empty);
+        TestAssert.True(Math.Abs((defaultCell.TableDeclaredRowSpanHeight ?? 0d) - 72d) < 0.001d, $"Expected table frame inspection to preserve the 72pt declared row-span height, got {(defaultCell.TableDeclaredRowSpanHeight ?? 0d).ToString("0.###", CultureInfo.InvariantCulture)}pt.");
         TestAssert.True(Math.Abs(defaultCell.TextWrapWidth - defaultCell.TextWidth) < 0.001d, $"Expected default table-cell wrap width to match the inset text width, got wrap={defaultCell.TextWrapWidth.ToString("0.###", CultureInfo.InvariantCulture)} width={defaultCell.TextWidth.ToString("0.###", CultureInfo.InvariantCulture)}.");
     }
 
