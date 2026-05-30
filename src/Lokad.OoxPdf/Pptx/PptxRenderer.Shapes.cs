@@ -24,6 +24,7 @@ internal sealed partial class PptxRenderer
     private const double OfficeStraightStealthLineEndNotchFactor = 2d / 3d;
     private const double OfficeGlowRasterPixelsPerPoint = 1d;
     private const int OfficeGlowRasterMaxPixelsPerSide = 2048;
+    private const double OfficeOuterShadowRasterExtentFactor = 1.25d;
 
     private static void RenderBackground(PptxRenderContext context, PptxSceneBackground background, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
     {
@@ -697,10 +698,11 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double shadowX = x + shadow.OffsetX - shadow.BlurRadius;
-        double shadowY = y + shadow.OffsetY - shadow.BlurRadius;
-        double shadowWidth = width + 2d * shadow.BlurRadius;
-        double shadowHeight = height + 2d * shadow.BlurRadius;
+        double shadowExtent = shadow.BlurRadius * OfficeOuterShadowRasterExtentFactor;
+        double shadowX = x + shadow.OffsetX - shadowExtent;
+        double shadowY = y + shadow.OffsetY - shadowExtent;
+        double shadowWidth = width + 2d * shadowExtent;
+        double shadowHeight = height + 2d * shadowExtent;
         int pixelWidth = Math.Clamp((int)Math.Ceiling(shadowWidth * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
         int pixelHeight = Math.Clamp((int)Math.Ceiling(shadowHeight * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
         double scaleX = pixelWidth / shadowWidth;
@@ -710,11 +712,11 @@ internal sealed partial class PptxRenderer
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
         {
-            double localY = (pixelY + 0.5d) / scaleY - shadow.BlurRadius;
+            double localY = (pixelY + 0.5d) / scaleY - shadowExtent;
             double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
             for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
             {
-                double localX = (pixelX + 0.5d) / scaleX - shadow.BlurRadius;
+                double localX = (pixelX + 0.5d) / scaleX - shadowExtent;
                 double dx = localX < 0d ? -localX : localX > width ? localX - width : 0d;
                 int pixel = pixelY * pixelWidth + pixelX;
                 int rgbOffset = pixel * 3;

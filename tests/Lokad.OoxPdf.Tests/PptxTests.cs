@@ -10327,7 +10327,7 @@ internal static class PptxTests
         int pictureDraw = pdf.IndexOf("/Im2 Do", StringComparison.Ordinal);
         TestAssert.True(shadowDraw >= 0 && pictureDraw > shadowDraw, "Picture outer shadow should draw before the picture image.");
         TestAssert.Contains("/SMask", pdf);
-        TestAssert.Contains("/Width 152 /Height 80", pdf);
+        TestAssert.Contains("/Width 153 /Height 81", pdf);
         TestAssert.Contains("/Width 2 /Height 1", pdf);
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_EFFECT"), "Supported picture outer shadow should not emit an unsupported-effect diagnostic.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Rendered picture shadow alpha should not emit an unsupported-transparency diagnostic.");

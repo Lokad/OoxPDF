@@ -265,6 +265,21 @@ High-priority actions:
   (`25 -> 27` image draws) and graphics operation count moved closer to Office (`138 -> 140` against Office
   `141`). Remaining page-12 gaps are now text-state/font-size, hyperlink/table residuals, and precise shadow
   softness/color alignment, not complete omission of picture shadows.
+- [x] 2026-05-30: Refined the raster outer-shadow PDF rectangle from the same private page-12 evidence without
+  changing the OOXML blur falloff. Office's PDF emits blurred picture shadows as separate image XObjects whose
+  placement rectangle extends by about `1.25 * blurRad` on each side, while OOXPDF had used exactly `blurRad`;
+  the first two page-12 picture shadows were therefore about `2pt` too small in both dimensions and shifted
+  inward relative to Office's image matrices. `DrawRasterOuterShadow` now keeps `blurRad` as the opacity
+  falloff radius but uses an explicit `OfficeOuterShadowRasterExtentFactor` for the surrounding transparent
+  image extent. This is a shared structural shadow-resource rule for shapes and pictures, not a page-specific
+  coordinate adjustment. Public regression `PptxSyntheticPngPictureOuterShadowUsesRasterSoftMask` now expects
+  the larger shadow soft-mask resource. Validation: focused `pptx-images --skip-slow` passed (`23` passed),
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and private run `20260530-170544`
+  on `lokad-value-based` compared all `84/84` pages with empty diagnostics. Deck MAE improved
+  `2.949543 -> 2.949517`; page 12 improved `5.259579958 -> 5.258860918`, with pages 31 and 70 showing the
+  same `-0.000719` MAE movement and no regressions elsewhere. Candidate page-12 inspection now places the
+  first shadow image at roughly `52.036 x 72.684pt`, close to Office's `52.081 x 72.722pt`; the residual is
+  now opacity/softness sampling rather than shadow rectangle extent.
 - [x] 2026-05-30: Split multi-value-axis chart plot-box reserves between same-side and opposite-side value
   axes, improving the active private page-40 stacked-bar geometry without weakening the public same-side
   secondary-axis probes. The private chart has one visible value-axis label strip on the left and one on the
