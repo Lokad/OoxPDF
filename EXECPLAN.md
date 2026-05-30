@@ -288,6 +288,30 @@ High-priority actions:
   249 delta, 9 missing`; `81: 44 delta, 39 ok`). The page-79 "missing" rows are clustered in table-cell text
   bands where Office emits extra same-line text operations with distinct `Tc` buckets; they should drive a
   structural public probe for Office's text-state splitting rather than a content-loss or coordinate patch.
+  Follow-up, 2026-05-30: fresh run `20260530-184739` keeps this diagnosis after the raster-effect opacity
+  split. Slide 79 has one `6 x 7` table, no pictures, no effects, no transparency, and ordinary left/right
+  table paragraph alignment; it is not a graphics, justification, or distributed-text problem. Office emits
+  `258` text operations and candidate emits `249`; candidate table glyph spans group into rows with `8`,
+  `39`, `39`, `77`, `36`, and `45` operations, while Office's nine extra operations remain inside the same
+  table bands. The slide XML has many multi-run cells at the same declared size/typeface, so the next public
+  probe should isolate same-style run-boundary preservation and text-state decomposition inside table cells,
+  including `Tc` extraction from residual glyph positioning. Do not fix this by keying on the observed private
+  font name or by adding row/column coordinate rules.
+  Rejected trial, 2026-05-30: broadening text-operation boundary punctuation from dash punctuation to quote
+  punctuation was supported by one public run-boundary PDF count (`5 -> 7` candidate text operations against
+  Office's `6`), but it regressed the private deck (`2.947966 -> 2.999904` MAE) and page 79 only moved
+  structurally (`249 -> 256` candidate text operations) while still emitting `Tc=0`. The split changed layout
+  behavior before PDF emission, so the next attempt must move operation decomposition into the PDF emission
+  layer or into a layout-preserving glyph-span split, not into word wrapping/line layout segmentation.
+  Rejected trial, 2026-05-30: an emission-only quote-boundary split avoided the large layout regression and
+  made the public run-boundary fixture match Office's operation count (`6/6`), but it still regressed the
+  private deck slightly (`2.947966 -> 2.948299` MAE). Page 79 moved only partway toward Office
+  (`249 -> 252` candidate text operations versus Office `258`), while page 81 moved away from the already
+  matching text-operation count (`83 -> 91` candidate operations versus Office `83`). This shows quote
+  boundary decomposition is entangled with Office's `Tc`/secondary-`Tf` text-state decomposition; standalone
+  punctuation splitting over-decomposes cases that Office represents with character spacing. Keep future
+  attempts layout-preserving, but derive operation boundaries and `Tc` together from the positioned glyph
+  residuals rather than from punctuation categories alone.
 - [ ] 2026-05-30: Pursue the `Tc`/secondary-`Tf` branch as font-metric text-state decomposition, not a
   font-family shortcut. Public probes now reproduce the private pages' family: `pptx-ladder-04-typography-
   spautofit-tracking-probe` has Office `12.024pt` plus `Tc=-0.036` where the candidate emits `12pt/Tc=0`,
