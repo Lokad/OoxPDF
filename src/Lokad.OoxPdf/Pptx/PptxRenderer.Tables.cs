@@ -10,6 +10,8 @@ internal sealed partial class PptxRenderer
 {
     private const double OfficeTableRowContentExpansionSlackFactor = 1.05d;
     private const double OfficeTableRowSmallPositiveSlackFactor = 1.05d;
+    private const double OfficeMiddleAnchoredTableCellDefaultTopInsetAdjustment = 0.54d;
+    private const double OfficeBottomAnchoredTableCellDefaultBottomInsetAdjustment = 0.6d;
 
     private sealed record TableFrameLayout(
         IReadOnlyList<PptxPositionedTextSpan> TextSpans,
@@ -672,7 +674,7 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        TextInsets insets = ToTextInsets(sceneCell.TextInsets);
+        TextInsets insets = ResolveTableCellTextInsets(sceneCell);
         return new PptxTableCellTextFrame(
             textBody,
             x,
@@ -696,6 +698,24 @@ internal sealed partial class PptxRenderer
     private static TextInsets ToTextInsets(PptxSceneTextInsets insets)
     {
         return new TextInsets(insets.Left, insets.Right, insets.Top, insets.Bottom);
+    }
+
+    private static TextInsets ResolveTableCellTextInsets(PptxSceneTableCell cell)
+    {
+        TextInsets insets = ToTextInsets(cell.TextInsets);
+        if (cell.VerticalAnchor == PptxSceneTableCellVerticalAnchor.Middle &&
+            cell.TextInsetSources.Top == PptxSceneTableCellTextInsetSource.Default)
+        {
+            return insets with { Top = insets.Top + OfficeMiddleAnchoredTableCellDefaultTopInsetAdjustment };
+        }
+
+        if (cell.VerticalAnchor == PptxSceneTableCellVerticalAnchor.Bottom &&
+            cell.TextInsetSources.Bottom == PptxSceneTableCellTextInsetSource.Default)
+        {
+            return insets with { Bottom = insets.Bottom + OfficeBottomAnchoredTableCellDefaultBottomInsetAdjustment };
+        }
+
+        return insets;
     }
 
     private static TextInsetSources ToTextInsetSources(PptxSceneTableCellTextInsetSources sources)

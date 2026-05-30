@@ -279,6 +279,25 @@ High-priority actions:
   changed16 `0.107068 -> 0.159307`). Keep OOXPDF's current style fill resolution until an Office-aligned
   model explains why the reference PDF's page-level object inspection and raster result diverge; likely
   suspects are transparency/effect compositing, clipping, or object grouping, not a blanket `txBox` fill rule.
+- [x] 2026-05-30: Accepted a public Office-PDF table anchoring correction for default-margin middle/bottom
+  table cells. The public `pptx-ladder-10-vertical-align` fixture exposed that top table-cell text already
+  matched Office, while middle and bottom anchors were off in opposite directions. A one-sided default bottom
+  inset trial improved the bottom cell but moved the middle cell away from Office, so the retained rule keeps
+  the branches separate: middle-anchored cells with default top inset use a small Office top-inset adjustment,
+  and bottom-anchored cells with default bottom inset use a small Office bottom-inset adjustment. Explicit
+  margins are intentionally untouched. Validation: non-slow `pptx-tables` passed (`13` passed, `0` failed);
+  public `pptx-ladder-10-vertical-align` now passes. Private run `20260530-042330` on `lokad-value-based`
+  compared all `84/84` pages with empty diagnostics and was metric-neutral against the current baseline
+  (`MAE 3.523017`, changed16 `0.059707`), confirming that this accepted public fix does not explain page 21's
+  explicit-margin centered table residual.
+- [ ] 2026-05-30: Continue page-21 table work from explicit-margin centered cells, not default anchoring. Slide
+  inspection shows the page-21 table cells use `anchor="ctr"` with explicit symmetric margins (`marL/marR`
+  and `marT/marB`) on most cells, and Office still emits small non-authored `Tc` families (`-0.00888` and
+  `0.0331`) while OOXPDF emits `Tc=0`. The next publicization step is a valid Office-authored synthetic table
+  probe with centered cells, explicit symmetric margins, short 10 pt text, and the same kind of non-uniform row
+  ladder, so the explicit-margin anchor and row-height behavior can be separated from private content. Do not
+  extend the default-margin inset adjustment to explicit margins until that probe or an equivalent Office PDF
+  inspection supports it.
 - [x] 2026-05-30: Preserved authored PPTX run boundaries as PDF text-operation boundaries for model-first
   shape text. Private page 13 exposed a small same-line frame where Office emitted three text objects at the
   original OOXML run boundaries while OOXPDF collapsed the same resolved visual style into one object. The
