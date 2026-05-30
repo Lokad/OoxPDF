@@ -8088,7 +8088,7 @@ internal static class PptxTests
             "Expected rectangular text whose resolved font has a small Windows descender to use Office's fallback baseline floor. Actual ratio: " + metric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
     }
 
-    public static void PptxSyntheticRectTextUsesOfficeBaselineFloorForMathFonts()
+    public static void PptxSyntheticRectTextUsesOfficeBaselineFloorForSmallMetricFonts()
     {
         string cambriaMath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambriaMath))
@@ -8130,7 +8130,7 @@ internal static class PptxTests
 
         TestAssert.True(
             Math.Abs(metric.Ratio - 0.974d) < 0.001d,
-            "Expected Cambria Math rectangular text to use the Office fallback floor. Actual ratio: " + metric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
+            "Expected rectangular text whose resolved font metrics meet the baseline-floor thresholds to use Office's fallback baseline floor. Actual ratio: " + metric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
     }
 
     public static void PptxSyntheticTextBoxFlowsAcrossColumns()

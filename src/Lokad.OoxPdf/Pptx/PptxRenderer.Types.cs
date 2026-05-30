@@ -821,7 +821,6 @@ internal sealed partial class PptxRenderer
         private readonly PresentationFontResolver resolver;
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FontResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, bool> requestedMathTables = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
 
         public TextAdvanceEstimator(PresentationFontResolver? resolver = null)
@@ -947,28 +946,6 @@ internal sealed partial class PptxRenderer
         public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold = false, bool italic = false)
         {
             return ResolveFont(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
-        }
-
-        public bool RequestedTypefaceHasMathTable(string? familyName, bool bold = false, bool italic = false)
-        {
-            string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
-            string key = requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
-            if (requestedMathTables.TryGetValue(key, out bool cached))
-            {
-                return cached;
-            }
-
-            try
-            {
-                cached = resolver.Resolve(new FontRequest(requestedFamily, bold, italic)).HasMathTable;
-            }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
-            {
-                cached = false;
-            }
-
-            requestedMathTables[key] = cached;
-            return cached;
         }
 
         public bool RequestedStyleRequiresSyntheticBold(string? familyName, bool bold, bool italic)

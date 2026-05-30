@@ -3467,9 +3467,7 @@ internal sealed partial class PptxRenderer
 
     private static bool TextMetricUsesOfficeBaselineFloor(OpenTypeFont font, ResolvedRunTextStyle runStyle, TextAdvanceEstimator advanceEstimator, double ascenderRatio)
     {
-        return font.TableTags.Contains("MATH") ||
-            advanceEstimator.RequestedTypefaceHasMathTable(runStyle.Typeface, runStyle.Bold, runStyle.Italic) ||
-            ascenderRatio <= 0d ||
+        return ascenderRatio <= 0d ||
             ascenderRatio > PptxTextMetricRules.MaximumBaselineMetricRatio ||
             ascenderRatio < PptxTextMetricRules.OfficeBaselineFloorMetricThreshold ||
             font.Os2.WindowsDescender / (double)font.UnitsPerEm <= PptxTextMetricRules.OfficeBaselineFloorMaximumWindowsDescenderRatio;

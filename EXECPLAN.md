@@ -18312,3 +18312,17 @@ deck MAE `3.421583`, and changed16 `0.058475`. Against run `20260530-133407`, on
 MAE `1.094233 -> 1.001562` and changed16 `0.026834 -> 0.025058`. Pages 36, 20, 21, and 59 remain the top
 private rendering targets, so the next long-view pass should stay on Office text-state/font-size/baseline
 structure rather than on additional graphics proxies.
+
+Follow-up, 2026-05-30: the page-36/page-17 typography audit removed a lingering font-class baseline proxy
+instead of adding another private-deck text-state rule. The renderer previously allowed the rectangular
+top-anchored baseline floor to trigger when the resolved or requested typeface had an OpenType `MATH` table.
+That was too close to a font-family/class special case and unnecessary after the public baseline-font survey:
+the same Office baseline-floor behavior is already explained by numeric OS/2 metrics, namely invalid/extreme
+ascender ratios or small Windows descender ratios. `TextMetricUsesOfficeBaselineFloor` now depends only on
+those numeric font metrics, and the unused requested-MATH-table cache was removed from `TextAdvanceEstimator`.
+The public regression formerly named around math fonts was renamed to
+`PptxSyntheticRectTextUsesOfficeBaselineFloorForSmallMetricFonts` so the test describes the structural rule
+rather than the fixture font. This is expected to be raster-neutral for `lokad-value-based`; its value is
+architectural, keeping future page-36 `Tc`/secondary-`/Tf` work away from typeface-name or broad font-class
+branches. Remaining uses of `HasMathTable` are font-discovery/fallback concerns, not layout or PDF text-state
+discriminators.
