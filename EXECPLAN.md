@@ -296,6 +296,12 @@ High-priority actions:
   run-split probe to Cambria Math still emitted only `Tc=-0.024`, so the remaining branch should not be
   modeled as a font-family rule. The next reproduction attempt should target Office's line-internal text
   operation segmentation around punctuation/short spans and font-size-grid branch changes.
+  2026-05-30 non-numbered branch probe: page 81's `-0.0535` bucket spans several non-numbered frames, including
+  one short `spAutoFit` frame with a manual line break in the second paragraph. Existing public same-geometry
+  non-numbered `spAutoFit` frames emit `Tc=0`, and a disposable public variant with the same geometry plus a
+  manual break emitted only a post-break `Tc=-0.024` tail. That is a real public gap but not the private
+  `-0.0535` rule. Continue probing manual-break/short-frame/line-internal segmentation combinations before
+  adding any non-numbered autofit emission rule.
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was
