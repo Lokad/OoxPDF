@@ -358,7 +358,7 @@ High-priority actions:
   (`2.948045` MAE, changed16 `0.053572`). The candidate PDF hash was identical to run `20260530-182607`
   (`7C97880967258CDA124BE4F2E9E31FE72BAF8D6A7D9C57E8905AD1B97158AC0E`), so this was architecture cleanup, not
   a private-coordinate adjustment.
-- [ ] 2026-05-30: Audit the remaining typography font-profile proxies and upgrade or explicitly quarantine
+- [x] 2026-05-30: Audit the remaining typography font-profile proxies and upgrade or explicitly quarantine
   each one. The codebase no longer has a raw Cambria Math text-state discriminator in the highlighted `Tc`
   branch, but related font-profile logic remains in the baseline floor path through OpenType MATH-table
   evidence and in public regression names/fixtures that use Cambria/Cambria Math as convenient Windows
@@ -366,6 +366,12 @@ High-priority actions:
   OpenType metric rules, Office style-synthesis rules, and historical proxy rules that only happened to work
   for Cambria/Cambria Math probes. Do not remove public evidence; rename or supplement fixtures when needed,
   and validate against `lokad-value-based` after each behavior-affecting change.
+  2026-05-30 audit result: production search found no remaining raw `Cambria Math` or MATH-table discriminator
+  in PPTX PDF text-state emission. The remaining `HasMathTable` production uses are font discovery/fallback
+  concerns, and the baseline-floor path uses resolved OpenType metrics (`usWinAscent`, `sTypoAscender`,
+  descender ratio) plus frame geometry rather than a font name. The still-open secondary `/Tf` and implicit
+  `Tc` branches must therefore stay on public Office-PDF geometry/text-emission probes; fixture names that
+  mention Cambria/Cambria Math are evidence labels, not renderer predicates.
 - [x] 2026-05-30: Aligned PPTX table-cell background fills with Office's observed even-odd PDF fill operator.
   Private page-21 inspection after run `20260530-180316` showed a raster-neutral but structural mismatch:
   Office emitted all `9` page fills as `f*`, while the candidate emitted `5` table-cell rectangles as `f` and
@@ -2258,6 +2264,14 @@ High-priority actions:
     has exact high-level graphics parity (`f:4,f*:14,S:4,W*:68` on both sides) and 44 text operations on both sides;
     the only font-size branch left is Office's secondary `9.024`/`12.984` versus the candidate's dominant
     `9`/`12.96` grid.
+  - [x] 2026-05-30 fresh private check after the current text-state work:
+    private run `20260530-220006` keeps page 17 low in the deck error ranking (MAE about `1.00`, changed16
+    about `0.03`, SSIM about `0.98`). Page-filtered PDF inspection again has exact graphics operator parity
+    (`W*:68`, `f*:14`, `f:4`, `S:4`) and exact text-operation count parity (`44/44`). The remaining structural
+    text gap is still the secondary Office font-size branch: reference `/Tf` buckets include `12.984:2` and
+    `9.024:1`, while the candidate stays on the first-order grid (`12.96:6`, `9:2`). `ComparePptxTextEmission`
+    classifies only `3/44` operations as `secondary-0.024`. This confirms slide 17 is no longer a schema blocker;
+    do not reopen connector/group geometry unless a future private run changes the graphics buckets.
 - [ ] Resolve the recurring high-error private page text-fit pattern through public-safe probes:
   the latest private deck baselines put page 50, 32, 36, 49, 13, 21, 83, 53, 82, and 81 above the remaining
   deck error floor. Private-safe inventory shows the top cluster is picture/group/connector heavy, but page-50
