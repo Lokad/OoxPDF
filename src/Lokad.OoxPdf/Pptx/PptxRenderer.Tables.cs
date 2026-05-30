@@ -303,6 +303,14 @@ internal sealed partial class PptxRenderer
                 return slackAdjustedRows;
             }
 
+            if (rowHeightSlackFactor > 1d + PptxTextMetricRules.TextStateTolerance &&
+                ShouldKeepDeclaredRowsForSparsePositiveFillSlack(sceneTable))
+            {
+                return rawRowHeights
+                    .Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch)
+                    .ToArray();
+            }
+
             return rowHeights;
         }
 
@@ -392,6 +400,29 @@ internal sealed partial class PptxRenderer
         }
 
         return rowHeights;
+    }
+
+    private static bool ShouldKeepDeclaredRowsForSparsePositiveFillSlack(PptxSceneTable sceneTable)
+    {
+        int filledRowCount = 0;
+        for (int rowIndex = 0; rowIndex < sceneTable.Rows.Count; rowIndex++)
+        {
+            bool rowHasFill = sceneTable.Rows[rowIndex].Cells.Any(cell =>
+                !cell.IsMergedContinuation &&
+                (cell.Fill.HasFill || cell.StyleFill.HasFill));
+            if (!rowHasFill)
+            {
+                continue;
+            }
+
+            filledRowCount++;
+            if (filledRowCount > 1)
+            {
+                return false;
+            }
+        }
+
+        return filledRowCount == 1;
     }
 
     private static bool TryDistributeSmallPositiveTableRowSlack(

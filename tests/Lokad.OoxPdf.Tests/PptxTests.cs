@@ -12102,6 +12102,56 @@ internal static class PptxTests
         TestAssert.DoesNotContain("72 420", pdf);
     }
 
+    public static void PptxSyntheticTableKeepsDeclaredRowsForSmallPositiveUniqueSlack()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="1929136"/></p:xfrm>
+                      <a:graphic>
+                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                          <a:tbl>
+                            <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
+                            <a:tr h="914400">
+                              <a:tc>
+                                <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"/><a:t>First</a:t></a:r></a:p></a:txBody>
+                                <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
+                              </a:tc>
+                            </a:tr>
+                            <a:tr h="965200"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"/><a:t>Second</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc></a:tr>
+                          </a:tbl>
+                        </a:graphicData>
+                      </a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        Match headerFill = Regex.Matches(pdf, @"72 (?<y>[0-9.]+) 144 (?<height>[0-9.]+) re f")
+            .Cast<Match>()
+            .FirstOrDefault() ?? Match.Empty;
+
+        TestAssert.True(headerFill.Success, "Expected the first table row fill rectangle to be emitted.");
+        double headerY = double.Parse(headerFill.Groups["y"].Value, CultureInfo.InvariantCulture);
+        double headerHeight = double.Parse(headerFill.Groups["height"].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(Math.Abs(headerY - 396d) < 0.01d, $"Expected small positive unique slack to keep the declared first-row lower edge at 396pt, got y={headerY.ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(Math.Abs(headerHeight - 72d) < 0.01d, $"Expected small positive unique slack to keep the declared first-row height at 72pt, got {headerHeight.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+        TestAssert.DoesNotContain("72 394.", pdf);
+    }
+
     public static void PptxSyntheticTableKeepsDeclaredRowsForModerateSlack()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

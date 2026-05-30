@@ -387,6 +387,25 @@ High-priority actions:
   fill winding. Page-21 PDF graphics inspection now reports candidate operator buckets `f*:9`, `S:6`,
   `W*:165`; fill comparison against Office with fill-color and operator matching has `9/9` matches and
   `0` deltas. Page 21 therefore remains a text-state/table-text problem, not a fill-operator problem.
+- [x] 2026-05-30: Accepted a sparse positive-slack table row-height correction from private page-12 structural
+  evidence, while preserving the rejected dense-table counterexample. Page 12 contains a DrawingML table whose
+  graphicFrame height is about `1.0264x` the declared row-height sum, with only one filled row. Office paints
+  the filled row at the declared height (`52.291 pt`), while the old candidate stretched that row to about
+  `53.673 pt` to fill the frame. `ResolveTableRowHeights` now keeps declared row heights for this narrow
+  sparse-fill shape after the existing small-slack distribution branch declines to act. The public synthetic
+  regression `PptxSyntheticTableKeepsDeclaredRowsForSmallPositiveUniqueSlack` locks a two-row table whose only
+  filled row must stay at its declared `72 pt` height instead of being scaled by the positive frame slack.
+
+  The counterexample is equally important: the first broader rule, "keep declared rows for all small positive
+  table slack", improved page 12 but regressed private page 78. Page 78 has a dense filled table with positive
+  slack around `1.0198x` and hundreds of filled cells; Office is closer to the existing stretched-frame path
+  there. The accepted branch therefore requires a single filled row and must not be generalized to dense heatmap
+  or fully styled tables without new public Office evidence. Validation: focused `pptx-tables --skip-slow`
+  passed (`18` passed); solution build passed after a transient `PdfInspect` file-copy retry; private
+  `lokad-value-based` run `20260530-223949` compared all `84/84` pages with empty diagnostics. Deck MAE improved
+  `2.947934 -> 2.934171`, changed16 improved `0.053571 -> 0.053412`, and page 12 improved
+  `5.132980 -> 3.976896` with no other page changed at report precision. Private-safe PDF inspection confirms
+  the three gray page-12 fill rectangles now match Office bounds to inspected precision.
 - [ ] 2026-05-30: Continue page-79 table/text work from structural table text evidence, not a new private
   coordinate rule. Page 79 is table-heavy (`42` table text frames, no effects/pictures/transparency), and
   inspection of run `20260530-160928` showed Office/candidate graphics are broadly the same table/grid class
@@ -943,6 +962,12 @@ High-priority actions:
   top, frame height, body insets, wrap/autofit mode, baseline grid, text length, run splitting, and text matrix
   placement, then encode the rule in `PptxPdfTextEmissionProfile` only after it predicts the y-sweep,
   fine-grid, x/y-grid, and multicol probes.
+  2026-05-30 refresh: the current public-safe evidence still does not support a renderer rule. The y-sweep
+  probe has `24` rows with `2` Office secondary-size rows; the fine y sweep has `80` rows with `1` secondary
+  row; the x/y grid has `72` rows and no secondary branch. The multicol mixed probe still has `27/150`
+  Office secondary-size rows, while the synthetic bold multicol probe has `15/150` secondary-size rows. These
+  positives and negatives cross font/style/position categories, so the next step remains probe design and
+  structural comparison, not a typeface, synthetic-style, or fixed-coordinate predicate.
 - [x] 2026-05-30: Added private-deck-safe inspection fields for PPTX glyph-run natural/layout widths and
   used them to reject the tempting page-55 `Tc` shortcut. On page 55, all candidate glyph runs had
   `LayoutWidth - NaturalWidth = 0`, while Office still emitted nonzero `Tc` families (`-0.252`, `-0.123`,
@@ -8655,6 +8680,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Evidence: After empty spacing moved into the model, layout still called a helper that checked
   `paragraph.Properties is not null || paragraph.EndParagraphProperties is not null` to decide whether an empty
   paragraph participates in height. `HasLayoutContent` now records that decision during model construction.
+- Observation: Small positive table row slack has at least two Office behaviors that look similar if inspected
+  only as frame-height surplus.
+  Evidence: Private page 12 has about `1.0264x` positive table slack and one filled row; Office paints that
+  row at its declared height, and the accepted candidate now matches the three filled rectangles. Private page
+  78 has about `1.0198x` positive slack but a dense filled table; the same declared-row rule regressed that page
+  and had to be rejected. Future table work must classify sparse decoration rows separately from dense filled
+  grids before changing row allocation.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -8914,6 +8946,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   the same wrap, vertical-overflow source, and autofit modes. Adding a renderer rule keyed to those body-property
   tokens would therefore be a hidden heuristic rather than structural Office alignment.
   Date/Author: 2026-05-29 / Codex.
+
+- Decision: Do not blanket-preserve declared DrawingML table row heights for positive frame slack.
+  Rationale: The accepted page-12 fix is limited to sparse filled-row decoration because the dense page-78
+  counterexample regressed under the broader declared-row rule. Office can preserve declared row heights for a
+  single filled decoration row while still behaving closer to frame-height allocation for dense styled tables.
+  Until a public Office ladder explains the full row-allocation rule, keep the branch narrow and evidence-bound.
+  Date/Author: 2026-05-30 / Codex.
 
 - Decision: Render default-placement chart axis titles from inside the native chart branches that own the
   resolved `ChartLayout`, rather than from the older frame-only post-render axis-title pass.
@@ -9231,6 +9270,18 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Sparse positive-slack table row-fill alignment, 2026-05-30:
+dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-tables --skip-slow:
+18 passed, 0 failed, 0 skipped.
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed after one transient PdfInspect file-copy
+retry warning.
+pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json:
+run 20260530-223949, 84/84 compared, diagnostics [], deck MAE 2.934171, changed16 0.053412.
+Only page 12 changed at report precision, improving MAE 5.132980 -> 3.976896; the broader declared-row rule
+was rejected because run 20260530-223650 regressed dense-table page 78.
+```
 
 ```text
 Opposite-side chart value-axis reserve alignment, 2026-05-30:
