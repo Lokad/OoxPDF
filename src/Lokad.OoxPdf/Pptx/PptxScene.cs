@@ -452,6 +452,8 @@ internal sealed record PptxTextGlyphRunSnapshot(
     double X,
     double BaselineY,
     double Width,
+    double NaturalWidth,
+    double LayoutWidth,
     RgbColor? HighlightColor,
     double? HighlightX,
     double? HighlightY,

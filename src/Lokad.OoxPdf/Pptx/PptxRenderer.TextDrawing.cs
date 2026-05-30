@@ -56,6 +56,8 @@ internal sealed partial class PptxRenderer
                     glyphRun.X,
                     glyphRun.BaselineY,
                     glyphRun.Width,
+                    emissionSpan.GlyphSpan.NaturalWidth,
+                    emissionSpan.GlyphSpan.LayoutWidth,
                     run.HighlightColor,
                     highlightRectangle?.X,
                     highlightRectangle?.Y,
@@ -434,21 +436,7 @@ internal sealed partial class PptxRenderer
             right.SourceRun is not null &&
             !ReferenceEquals(left.SourceRun, right.SourceRun))
         {
-            bool hasHighlightBoundary = left.Run.HighlightColor is not null || right.Run.HighlightColor is not null;
-            bool canMergeOfficeObservedHighlightBoundary =
-                compareHighlight &&
-                !PreservesHighlightTextOperationBoundaries(left, right) &&
-                hasHighlightBoundary;
-            bool preservesUnhighlightedEmphasisBoundary =
-                !hasHighlightBoundary &&
-                (left.Run.Bold || right.Run.Bold ||
-                    left.Run.Italic || right.Run.Italic ||
-                    left.Run.Underline || right.Run.Underline ||
-                    left.Run.Strike || right.Run.Strike);
-            if (!canMergeOfficeObservedHighlightBoundary && preservesUnhighlightedEmphasisBoundary)
-            {
-                return false;
-            }
+            return false;
         }
 
         return CanCoalesceTextRun(left.Run, right.Run, compareHighlight, PreservesHighlightTextOperationBoundaries(left, right));

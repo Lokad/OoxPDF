@@ -8460,6 +8460,12 @@ internal static class PptxTests
         TestAssert.True(styleBoundaryLeadingSpace.Segments.Any(segment => segment.Kind == "Text" && segment.Text == "beta"), "Expected style-boundary visible text to start after the hidden leading space.");
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        TestAssert.True(
+            glyphRuns.Any(run => run.ParagraphIndex == 0 && run.Text == "Alpha"),
+            "Expected same-style authored run boundaries to remain separate PDF text operations.");
+        TestAssert.True(
+            glyphRuns.Any(run => run.ParagraphIndex == 0 && run.Text == " beta"),
+            "Expected same-style authored run boundaries to remain separate PDF text operations.");
         PptxTextGlyphRunSnapshot boldBeta = glyphRuns.Single(run => run.ParagraphIndex == 2 && run.Text == "beta");
         PptxTextGlyphRunSnapshot precedingAlpha = glyphRuns.Single(run => run.ParagraphIndex == 2 && run.Text == "Alpha");
         TestAssert.True(boldBeta.X > precedingAlpha.X + precedingAlpha.Width, "Expected style-boundary glyph run to start after the hidden leading-space advance.");

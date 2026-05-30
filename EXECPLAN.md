@@ -206,6 +206,37 @@ High-priority actions:
   move the affected bottom/right band from `49.72/42.52 pt` to `52.06/44.86 pt`, matching the observed
   Office row family more closely. Remaining gap: Office still emits nonzero `Tc` and fractional PDF font-size
   grids on the same high-error pages, while OOXPDF still mostly emits integer sizes and `Tc=0`.
+- [ ] 2026-05-30: Resolve the secondary Office PPTX `/Tf` emission branch before adding another private-deck
+  text-spacing rule. Two ignored public-safe probes under `artifacts/tmp/office-probes/` now isolate the
+  private page-55 signal without private content. `multicol-synth-bold-math` uses a three-column
+  `noAutofit` Cambria Math frame with synthetic bold text; Office emits no nonzero `Tc`, but emits
+  `12.024 Tf` on selected wrapped rows while OOXPDF emits `12 Tf` throughout. `multicol-mixed-math` mirrors
+  the private frame's alternating bold/regular/italic run structure; Office still emits no nonzero `Tc`, but
+  increases the `12.024 Tf` population (`27/150` text operations in the probe reference) while the candidate
+  remains at `12 Tf` for all `150` operations. The simple 10 pt Arial probe still confirms the first-order
+  Office 600-DPI grid (`9.96 Tf`), so the open rule is the secondary wrapped/text-frame emission branch, not
+  a replacement for the base grid. Do not add a broad implicit `Tc` rule from page 55 until a public probe
+  reproduces the non-authored `Tc` trigger; current evidence says the safer next rendering slice is
+  context-aware `/Tf` emission for wrapped PPTX text.
+- [x] 2026-05-30: Added private-deck-safe inspection fields for PPTX glyph-run natural/layout widths and
+  used them to reject the tempting page-55 `Tc` shortcut. On page 55, all candidate glyph runs had
+  `LayoutWidth - NaturalWidth = 0`, while Office still emitted nonzero `Tc` families (`-0.252`, `-0.123`,
+  `-0.096`, and a small positive branch). This means the remaining Office character-spacing signal is not
+  explained by OOXPDF's current layout residual and must not be implemented as "spread residual width over
+  glyph gaps." The durable gap remains an Office text-state emission branch, not a private-slide coordinate
+  adjustment.
+- [x] 2026-05-30: Preserved authored PPTX run boundaries as PDF text-operation boundaries for model-first
+  shape text. Private page 13 exposed a small same-line frame where Office emitted three text objects at the
+  original OOXML run boundaries while OOXPDF collapsed the same resolved visual style into one object. The
+  renderer now treats distinct `PptxTextRunModel` instances as a hard coalescing boundary; the existing
+  leading-space/style-boundary synthetic test now also asserts that same-style authored runs remain separate
+  glyph runs. Validation: focused non-slow `pptx-typography` passed with `121` tests, `0` failures, and
+  `2` skips. Private run `20260530-023758` compared `84/84` pages with empty diagnostics and improved deck
+  MAE `3.693460 -> 3.692693`, changed16 `0.061540 -> 0.061514`; page 13 improved
+  `6.740438 -> 6.737230`. Structural note: candidate page-13 text operations moved from `127` to `137`
+  against Office's `132`; nearest-position matches improved from `107` to `112`, and the remaining
+  mismatch is concentrated in wrapped multi-column body text. Treat that residual as part of the open
+  wrapped-text `/Tf`/`Tc` emission branch, not as license for a private-page run-count special case.
 - [x] 2026-05-29: Kept slide-wide PPTX text overflow as PDF structure instead of pre-culling it in the
   renderer. Private page-36 inspection showed a text frame whose layout model contained off-slide overflow
   lines that Office still exported as PDF text operations under a slide-wide clipping path; OOXPDF dropped the
