@@ -243,6 +243,14 @@ High-priority actions:
   worst (`5.943711 -> 6.697341`), and left page 79 unchanged at report precision. Conclusion: the future table
   row-height rule needs a discriminator between the public high-slack wrapped-center table and private page 21's
   accepted content-minimum row expansion; do not retry a blanket large-slack declared-row preservation rule.
+- [ ] 2026-05-30: Treat page-79's `258` vs `249` text-operation delta as a PDF text-operation decomposition
+  gap until proven otherwise. The combined private-deck compare initially overmatched across pages because it
+  used only position; `ComparePptxTextEmission.ps1` now records reference page and candidate slide numbers and
+  constrains position/text matching to equal page/slide when those fields exist. With page-constrained
+  matching, pages 36/79/81 retain their prior per-page counts (`36: 130 delta, 2 missing, 3 ok`; `79:
+  249 delta, 9 missing`; `81: 44 delta, 39 ok`). The page-79 "missing" rows are clustered in table-cell text
+  bands where Office emits extra same-line text operations with distinct `Tc` buckets; they should drive a
+  structural public probe for Office's text-state splitting rather than a content-loss or coordinate patch.
 - [x] 2026-05-30: Narrowed centered table-cell wrapping from private page-12 evidence without changing table
   geometry or adding a private coordinate rule. Fresh inspection of accepted run `20260530-170544` showed page 12
   was not dominated by missing graphics: table strokes and fills were structurally aligned, while centered table

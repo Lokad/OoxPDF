@@ -485,6 +485,16 @@ function CandText($run) {
     return $null
 }
 
+function SameReferenceCandidatePage($reference, $candidate) {
+    $pageNumber = OptionalValue $reference "PageNumber"
+    $slideNumber = OptionalValue $candidate "Slide"
+    if (-not (HasValue $pageNumber) -or -not (HasValue $slideNumber)) {
+        return $true
+    }
+
+    return [int]$pageNumber -eq [int]$slideNumber
+}
+
 $referenceOps = Read-JsonArray $ReferenceTextOperations
 $candidateRuns = Read-JsonArray $CandidateGlyphRuns
 
@@ -502,6 +512,10 @@ if ($MatchByPosition -or $MatchByTextThenPosition) {
         $candidateText = CandText $candidate
         for ($j = 0; $j -lt $unmatched.Count; $j++) {
             $reference = $unmatched[$j]
+            if (-not (SameReferenceCandidatePage $reference $candidate)) {
+                continue
+            }
+
             if ($MatchByTextThenPosition) {
                 $referenceText = RefText $reference
                 if ((HasValue $candidateText) -and
@@ -552,6 +566,8 @@ foreach ($pair in $pairs) {
         $rows.Add([pscustomobject]@{
             Index = $pair.Index
             Status = "missing"
+            RefPageNumber = if ($null -eq $reference) { $null } else { OptionalValue $reference "PageNumber" }
+            CandSlide = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "Slide" }
             RefX = if ($null -eq $reference) { $null } else { [Math]::Round((RefX $reference), 6) }
             CandX = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.X, 6) }
             DeltaX = $null
@@ -656,6 +672,8 @@ foreach ($pair in $pairs) {
     $rows.Add([pscustomobject]@{
         Index = $pair.Index
         Status = $status
+        RefPageNumber = OptionalValue $reference "PageNumber"
+        CandSlide = OptionalValue $candidate "Slide"
         RefX = [Math]::Round($refX, 6)
         CandX = [Math]::Round($candX, 6)
         DeltaX = $deltaX
