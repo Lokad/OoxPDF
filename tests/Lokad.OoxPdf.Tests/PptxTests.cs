@@ -9021,6 +9021,34 @@ internal static class PptxTests
             "Expected the probe to expose auto-numbered paragraph metadata to the emission layer.");
     }
 
+    public static void PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-spautofit-numbered-run-split-tc-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        Dictionary<double, int> buckets = glyphRuns
+            .GroupBy(run => Math.Round(run.PdfCharacterSpacing, 3))
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        TestAssert.Equal(17, buckets[-0.024d]);
+        TestAssert.True(
+            glyphRuns.All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
+            "Expected the run-split numbered autofit probe to keep OOXML layout tracking at zero.");
+        TestAssert.True(
+            glyphRuns.Any(run => run.ParagraphAutoNumberStartAt == 2) &&
+            glyphRuns.Any(run => run.ParagraphBulletKind == "None"),
+            "Expected the dense numbered-autofit branch to be driven by explicit numbering followed by body continuations.");
+    }
+
     public static void PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

@@ -341,20 +341,10 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            PptxPositionedTextSpan first = frame[0];
-            PptxPositionedTextSpan[] firstLineSpans = frame
-                .GroupBy(span => (span.ParagraphIndex, span.LineIndex))
-                .Select(group => group.OrderBy(span => span.SpanIndex).First())
-                .ToArray();
-            if (firstLineSpans.Length == 0)
-            {
-                continue;
-            }
-
-            double lineBlockHeight = firstLineSpans.Sum(span => span.LineBox?.Advance ?? 0d);
-            double frameSlack = first.FrameTextHeight - lineBlockHeight;
             bool hasExplicitAutoNumberStart = frame.Any(span => span.ParagraphAutoNumberStartAt is not null);
-            spacingByFrame[frameGroup.Key] = hasExplicitAutoNumberStart && frameSlack >= 0d && firstLineSpans.Length >= 15
+            bool hasBodyContinuation = frame.Any(span =>
+                !string.Equals(span.ParagraphBulletKind, nameof(PptxParagraphBulletKind.AutoNumber), StringComparison.Ordinal));
+            spacingByFrame[frameGroup.Key] = hasExplicitAutoNumberStart && hasBodyContinuation
                 ? PptxTextMetricRules.OfficeAutofitNumberedDenseCharacterSpacingEm
                 : PptxTextMetricRules.OfficeAutofitNumberedDefaultCharacterSpacingEm;
         }

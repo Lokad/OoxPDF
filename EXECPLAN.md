@@ -276,6 +276,19 @@ High-priority actions:
   `0.053572`), as expected for an emission-compensated text-state change. Next work should isolate the
   remaining frame-10 line/paragraph split and the non-numbered `spAutoFit` bucket with additional public
   probes before touching page 79's table-heavy `Tc` branch.
+  2026-05-30 continuation: added
+  `pptx-ladder-04-typography-spautofit-numbered-run-split-tc-probe` after private page 81 showed that a
+  continuation paragraph can use the dense `-0.002em` bucket even when the public frame has only `14` visible
+  lines. This purged the previous visible-line-count guard, which was a magic threshold, and replaced it with
+  the structural condition actually supported by public evidence so far: explicit auto-number start followed
+  by body-continuation paragraphs. The public run-split probe's Office reference emits `Tc=-0.024` for the
+  whole frame; the candidate now emits the same bucket while keeping layout spacing at zero. This still does
+  not explain private page 81's later `+0.0173` suffix, so the next public probe must vary paragraph/run
+  segmentation, Office font-size grid branch, and line-local operation splitting rather than introducing any
+  typeface discriminator. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed,
+  `pptx-typography --skip-slow` passed (`131` passed, `2` skipped), the new visual case ran at
+  `20260530-200506`, and private `lokad-value-based` run `20260530-200639` compared all `84/84` pages with
+  empty diagnostics and unchanged deck metrics (`2.947966` MAE, changed16 `0.053572`).
 - [x] 2026-05-30: Removed the highlighted text-state path's MATH-table/font-profile discriminator without
   losing the private-deck behavior it was protecting. The old page-48-derived `Tc=0.309pt` rule applied to
   highlighted paragraphs only when zero-`spc`, bold+italic runs resolved through a math-font profile. That was
