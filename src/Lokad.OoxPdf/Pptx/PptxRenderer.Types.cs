@@ -1087,6 +1087,7 @@ internal sealed partial class PptxRenderer
         public const double OfficeAutofitNumberedDefaultCharacterSpacingEm = -0.004d;
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
+        public const double UnderlineThicknessFallback = 0.025d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
         public const double HighlightMaximumDescentFontScale = 0.23d;
         public const double HighlightMaximumHeightFontScale = 1.18d;

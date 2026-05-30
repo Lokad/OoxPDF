@@ -1287,7 +1287,11 @@ internal sealed partial class PptxRenderer
     {
         TextRun run = glyphRun.Source;
         double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
-        double underlineThickness = Math.Max(PptxTextMetricRules.MinimumStrokeWidth, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
+        double underlineThickness = Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale;
+        if (underlineThickness <= PptxTextMetricRules.TextStateTolerance)
+        {
+            underlineThickness = run.FontSize * PptxTextMetricRules.UnderlineThicknessFallback;
+        }
         double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
         rectangle = new TextDecorationRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
         return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && underlineThickness > 0d;

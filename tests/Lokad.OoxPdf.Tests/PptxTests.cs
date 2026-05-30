@@ -3656,6 +3656,9 @@ internal static class PptxTests
         TestAssert.Equal("ThemeHyperlink", linkRun.ColorSource);
         TestAssert.True(linkRun.Underline, "Office applies a single underline to hyperlink runs when no underline override is authored.");
         TestAssert.Equal("sng", linkRun.UnderlineValue ?? string.Empty);
+        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single(run => run.Text == "Link");
+        double underlineHeight = glyphRun.UnderlineHeight.GetValueOrDefault();
+        TestAssert.True(underlineHeight > 0d && underlineHeight < 0.5d, "Expected PPTX underline fill thickness to use font metrics instead of the PDF stroke minimum.");
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 1 rg", pdf);

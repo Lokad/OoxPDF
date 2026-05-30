@@ -1024,6 +1024,51 @@ High-priority actions:
   skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; private run
   `20260530-180316` remained neutral against the current baseline with deck MAE `2.948045`, changed16
   `0.053572`, `84/84` compared pages, and no diagnostics.
+- [x] 2026-05-30: Rejected a naive cleanup that moved the highlighted synthetic bold+italic
+  `OfficeSyntheticBoldItalicCharacterSpacing` branch from layout into PDF emission only. This was the right
+  architectural question but not a valid renderer change yet. The attempted branch stayed typeface-name-free
+  by checking the resolved rendered font's synthetic bold/italic state, but private run `20260530-230029`
+  regressed `lokad-value-based` from the current `20260530-225148` baseline: deck MAE `2.933702 -> 2.940925`,
+  changed16 `0.053398 -> 0.053465`, with the material change isolated to page 48 (`4.431142 -> 5.041351`).
+  PDF inspection of page 48 shows Office emits many `0.309 Tc` operations (`62`), the baseline candidate only
+  emits a small subset (`6`), and the emission-only cleanup reduced that subset further (`3`). This means the
+  branch still needs a public Office probe that explains both layout/wrap participation and final PDF text
+  state before it can be upgraded. Do not replace it with a font-family check, and do not force it to be
+  emission-only until the Office structural trigger is understood.
+- [x] 2026-05-30: Rejected disabling table residual `Tc` promotion as an explanation for private page 48.
+  The page has one table, `24` cells, no authored run-level `spc`, a blank table-style id, and Office emits
+  `0.309 Tc` across several font-size buckets, including many `10.56 pt` table-sized operations. A controlled
+  trial that bypassed `PromoteAverageTablePdfCharacterSpacing` produced run `20260530-230608`: deck MAE was
+  effectively neutral (`2.933702 -> 2.933693`), but page 48 slightly worsened (`4.431142 -> 4.436862`) and
+  page 21 also worsened slightly. Keep the missing page-48 `0.309 Tc` branch open as a table/text-state
+  decomposition problem, but do not remove the current table residual promotion without a public Office probe
+  that shows the replacement rule.
+- [x] 2026-05-30: Rejected forcing private page-48 table text to `0.309 Tc` as a standalone fix. The trial
+  produced run `20260530-230845`, which was visually indistinguishable from disabling table residual
+  promotion: deck MAE `2.933693`, page 48 `4.436862`, and the same slight page-21 regression. This confirms
+  that the remaining page-48 table branch cannot be solved by changing the scalar PDF `Tc` operand alone,
+  because the emitted `TJ` positioning compensates it. The next public probe must compare Office and
+  candidate glyph positions, text-operation grouping, and `Tc` together.
+- [x] 2026-05-30: Rejected a fixed higher sample count for private page-54 `curvedConnector2` triangle-tail
+  fills. Page 54 has two black `curvedConnector2` tail outlines; Office emits path segment counts `112` and
+  `136`, while the baseline emits `110` and `112`. Raising `OfficeTriangleTailConnectorSamplesPerSegment`
+  from `54` to `66` produced run `20260530-231240`: the taller connector's candidate count moved to `134`,
+  but the shorter connector also moved to `134`, page 54 did not improve materially, and the deck stayed
+  neutral/slightly worse (`2.933702 -> 2.933705`). The long-term replacement should be adaptive curved
+  connector flattening with an Office-like tolerance, not another fixed sample constant.
+- [x] 2026-05-30: Aligned PPTX underline fill thickness with embedded font metrics instead of clamping it to
+  the PDF minimum stroke width. Private page 83 exposed this structurally: Office draws the theme hyperlink
+  underline as a `0.24 pt`-class filled rectangle, while the candidate was forcing `0.5 pt` for each underline
+  span. The accepted change keeps true font `post` underline thickness, only using a `0.025em` fallback when
+  the metric is absent. `PptxSyntheticTextBoxUsesThemeHyperlinkColor` now guards the metric-thickness path;
+  `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography
+  --skip-slow` passed (`134` passed, `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed. Private run `20260530-232050` improved the deck slightly (`2.933702 -> 2.933667` MAE,
+  changed16 unchanged at `0.053398`) and changed the page-83 candidate hyperlink underline rectangles from
+  `0.5 pt` tall to metric heights (`0.244 pt` and `0.283 pt`). The remaining page-83 gap is not thickness:
+  Office emits one underline fill (`x=763.95..852.63`, `y=393.97..394.21`), while the candidate still emits
+  adjacent fills split at the source-run/font-size boundary (`x=764.50..851.76` and `851.76..854.14`). Treat
+  that as a future structural underline-decoration coalescing problem, not as a font-family special case.
 - [x] 2026-05-30: Rejected the broad page 21 text-box style-fill shortcut. Page 21 has two `txBox="1"`
   rectangle text boxes with no direct `spPr` fill, direct colored lines, glow effects, and `p:style/a:fillRef
   idx="1"`. PDF inspection made the candidate's resolved fills look suspicious because Office's reference
