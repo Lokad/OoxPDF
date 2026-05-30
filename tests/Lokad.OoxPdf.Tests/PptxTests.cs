@@ -4310,6 +4310,39 @@ internal static class PptxTests
             $"Expected noAutoFit overflow columns to place explicit percentage line-spacing baselines on Office's unscaled 12pt ascent while leaving leading in the line advance; got offsets {string.Join(",", lines.Select(line => line.BaselineOffset.ToString("0.###", CultureInfo.InvariantCulture)).Distinct(StringComparer.Ordinal))}.");
     }
 
+    public static void PptxSyntheticTextCompressedExplicitLineSpacingMovesBaselineByLineBoxReduction()
+    {
+        string input = Path.Combine(AppContext.BaseDirectory, "Cases", "pptx-ladder-04-typography-section-baseline-probe.pptx");
+        if (!File.Exists(input))
+        {
+            input = Path.GetFullPath(Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-typography-section-baseline-probe.pptx"));
+        }
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .Single()
+            .Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        const double officeBaselineFallback = 0.974d;
+        const double normalLineHeight = 1.2d;
+        const double lineSpacingCompression = 0.10d;
+        double Expected(double fontSize) => fontSize * (officeBaselineFallback - normalLineHeight * lineSpacingCompression);
+
+        TestAssert.True(lines.All(line => line.LineSpacingKind == "Multiple"), "Expected the section baseline probe to keep explicit percentage line-spacing provenance.");
+        TestAssert.True(Math.Abs(lines[0].BaselineOffset - Expected(66d)) < 0.01d,
+            $"Expected 90% explicit line spacing to move the 66pt baseline by the compressed normal line-box amount; got {lines[0].BaselineOffset.ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(Math.Abs(lines[2].BaselineOffset - Expected(36d)) < 0.01d,
+            $"Expected 90% explicit line spacing to move the 36pt baseline by the compressed normal line-box amount; got {lines[2].BaselineOffset.ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(Math.Abs(lines[3].BaselineOffset - Expected(24d)) < 0.01d,
+            $"Expected 90% explicit line spacing to move the 24pt baseline by the compressed normal line-box amount; got {lines[3].BaselineOffset.ToString("0.###", CultureInfo.InvariantCulture)}.");
+    }
+
     public static void PptxSyntheticCenteredShapeAutoFitWrapsBeforeRightOverflow()
     {
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");

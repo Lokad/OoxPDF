@@ -309,6 +309,20 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-cambria-math-run-boundaries-p
 '@
 
 New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-section-baseline-probe" `
+    -Transform '<a:xfrm><a:off x="893859" y="953070"/><a:ext cx="10404281" cy="4951859"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr lIns="91440" rIns="45720" tIns="91440" bIns="45720" wrap="square" anchor="t"/>' `
+    -TextBody @'
+          <a:p><a:pPr algn="ctr"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="6600" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Office PDF</a:t></a:r></a:p>
+          <a:p><a:pPr algn="ctr"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="6600" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Baseline Probe</a:t></a:r></a:p>
+          <a:p><a:endParaRPr sz="3600"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
+          <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="3600"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Large text boxes reveal first-baseline placement.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l" marL="571500" indent="-228600"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc><a:buFont typeface="Arial"/><a:buChar char="•"/></a:pPr><a:r><a:rPr sz="2400"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Public synthetic text avoids private document content.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l" marL="571500" indent="-228600"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc><a:buFont typeface="Arial"/><a:buChar char="•"/></a:pPr><a:r><a:rPr sz="2400"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Multiple font sizes expose whether baseline offsets scale linearly.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l" marL="571500" indent="-228600"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc><a:buFont typeface="Arial"/><a:buChar char="•"/></a:pPr><a:r><a:rPr sz="2400"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Top anchored rectangular frames should match Office text matrices.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe `
     -Id "pptx-ladder-04-typography-slide3-narrow-cambria-probe" `
     -Transform '<a:xfrm><a:off x="775665" y="1466572"/><a:ext cx="3371526" cy="1923604"/></a:xfrm>' `
     -BodyPr '<a:bodyPr wrap="square"><a:spAutoFit/></a:bodyPr>' `

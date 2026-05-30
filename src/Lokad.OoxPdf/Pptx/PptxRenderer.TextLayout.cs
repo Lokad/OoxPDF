@@ -3303,7 +3303,17 @@ internal sealed partial class PptxRenderer
 
     private static double ReadExplicitMultipleBaselineOffset(LineSpacing lineSpacing, double fontSize)
     {
-        return BaselineOffset(fontSize) * lineSpacing.Value;
+        double baseline = BaselineOffset(fontSize);
+        if (lineSpacing.UseNormalLineAdvance &&
+            lineSpacing.Value < 1d - PptxTextMetricRules.CoordinateTolerance)
+        {
+            double normalAdvance = fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+            double compressedAdvance = normalAdvance * lineSpacing.Value;
+            double compressedBaseline = baseline - (normalAdvance - compressedAdvance);
+            return Math.Max(fontSize * PptxTextMetricRules.MinimumBaselineMetricRatio, compressedBaseline);
+        }
+
+        return baseline * lineSpacing.Value;
     }
 
     private static double BaselineOffset(double fontSize)

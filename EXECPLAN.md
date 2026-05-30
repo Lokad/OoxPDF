@@ -191,6 +191,28 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Aligned compressed explicit PPTX line-spacing baselines with Office's observable PDF
+  text matrices, closing the large title/body baseline residual on the private `lokad-value-based` section
+  pages without private content. Private page-1 and page-22 inspection showed top-anchored rectangular text
+  frames with explicit `spcPct=90000`; candidate text baselines were low by about `1.5pt` at `66pt`,
+  `0.8pt` at `36pt`, and `0.4pt` at `24pt`, while graphics and `Tc` were already aligned. The public
+  `pptx-ladder-04-typography-section-baseline-probe` fixture reproduced the same pattern: before the fix it
+  had MAE `3.38956`, changed16 `0.03387`, and the same size-proportional negative Y deltas. Office does not
+  scale the baseline itself for compressed normal line spacing; it keeps the normal baseline metric and
+  subtracts the line-box compression. The renderer now computes explicit compressed normal spacing as
+  `baseline - normalAdvance * (1 - spacing)` with the existing minimum-baseline guard, instead of leaving the
+  baseline multiplied by the spacing factor. The new public regression
+  `PptxSyntheticTextCompressedExplicitLineSpacingMovesBaselineByLineBoxReduction` locks the rule against the
+  fixture. Validation: focused test passed; focused non-slow `pptx-typography` passed (`127` passed,
+  `2` skipped); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; public visual case
+  passed with MAE `1.45513`, changed16 `0.02028`, and decoded text deltas `0`. Private run
+  `20260530-144008` on `lokad-value-based` compared all `84/84` pages with empty diagnostics, improved deck
+  MAE `3.390498 -> 3.045359`, changed16 `0.058195 -> 0.054621`, and sharply improved page 1
+  `5.88 -> 2.74` and page 22 `5.16 -> 2.57`. Follow-up private-safe inspection of the small raster
+  regressions on pages 33 and 70 showed the same middle-anchored compressed title runs moved closer to
+  Office's PDF text layer, from about `0.3-0.4pt` low to within about `0.0-0.05pt` vertically; keep the rule
+  and treat those page-level raster movements as antialiasing/interaction noise, not evidence for a narrower
+  top-anchor-only branch. Pages 36, 21, 12, 59, 79, and 40 remain the highest-error active targets.
 - [x] 2026-05-30: Aligned justified PPTX wrapped-line spacing with Office's treatment of line-end wrap
   separators. Private `lokad-value-based` page-20 inspection showed large cumulative X deltas on justified
   `spAutoFit` lines, while page 36 remained dominated by the known text-state/font-size family. The public
