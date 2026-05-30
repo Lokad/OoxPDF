@@ -191,6 +191,24 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-30: Accepted a structural table text-frame wrap-width correction discovered while focusing on
+  private slide 21. The private evidence showed centered table-cell baseline residuals that still form a
+  row-position curve, but the table text model had an objectively inconsistent geometry: `TextWidth` was
+  `cell width - left inset - right inset`, while the explicit wrap width subtracted only the left inset.
+  Table-cell `ExplicitWrapWidth` now uses the same inset text width as the rest of the shared text-frame
+  model, and `PptxTextFrameModelSnapshot`/`PptxInspect` expose `TextWrapWidth` so this structural value can be
+  audited directly. Public regression coverage was added to
+  `PptxSyntheticTableTextFrameModelPreservesCellPropertySources`, which now asserts table-cell wrap width
+  matches inset text width for both explicit and default insets. Validation: non-slow `pptx-tables` passed
+  (`14` passed, `0` failed); `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; public
+  `pptx-ladder-10-table-center-explicit-wrapped` remained within its existing metrics (`MAE 8.201281`,
+  `changed16 0.067583`). Private run `20260530-100001` on `lokad-value-based` compared all `84/84` pages with
+  empty diagnostics and improved deck MAE `3.489553 -> 3.439664`, changed16 `0.059316 -> 0.058849`. Slide 21
+  improved `6.263637 -> 6.241450`; larger table-related gains appeared on pages 6, 31, 47, 70, and 79, with
+  the only visible small regression at report precision on page 12 (`+0.05` MAE). Remaining gap: slide 21's
+  table-cell baseline residual still peaks around `3.35 pt` in middle rows and falls near the bottom, so the
+  next table push should investigate actual Office row/text vertical anchoring rather than reintroducing
+  raw-grid preservation or broad table-local character-spacing rules.
 - [x] 2026-05-30: Accepted a private-deck typography rule that separates explicit percentage line advance
   from baseline ascent in multi-column `noAutofit` overflow text frames. Private page-13/page-49 PDF
   inspection showed Office keeping 12 pt body-text baselines on the same top-column rows while still using

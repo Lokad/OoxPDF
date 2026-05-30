@@ -11371,8 +11371,10 @@ internal static class PptxTests
         TestAssert.Equal("45720", explicitCell.InsetTopValue ?? string.Empty);
         TestAssert.Equal("TableCellProperties", explicitCell.VerticalAnchorSource);
         TestAssert.Equal("ctr", explicitCell.VerticalAnchorValue ?? string.Empty);
+        TestAssert.True(Math.Abs(explicitCell.TextWrapWidth - explicitCell.TextWidth) < 0.001d, $"Expected explicit table-cell wrap width to match the inset text width, got wrap={explicitCell.TextWrapWidth.ToString("0.###", CultureInfo.InvariantCulture)} width={explicitCell.TextWidth.ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.Equal("DefaultValue", defaultCell.VerticalAnchorSource);
         TestAssert.Equal("t", defaultCell.VerticalAnchorValue ?? string.Empty);
+        TestAssert.True(Math.Abs(defaultCell.TextWrapWidth - defaultCell.TextWidth) < 0.001d, $"Expected default table-cell wrap width to match the inset text width, got wrap={defaultCell.TextWrapWidth.ToString("0.###", CultureInfo.InvariantCulture)} width={defaultCell.TextWidth.ToString("0.###", CultureInfo.InvariantCulture)}.");
     }
 
     public static void PptxSyntheticUnsupportedTableStyleEmitsDiagnosticUntilCascadeExists()

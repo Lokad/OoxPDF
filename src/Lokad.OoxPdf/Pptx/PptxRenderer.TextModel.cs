@@ -42,6 +42,7 @@ internal sealed partial class PptxRenderer
         return new PptxTextFrameModelSnapshot(
             frame.TextX,
             frame.TextWidth,
+            frame.TextWrapWidth,
             frame.TextHeight,
             frame.VerticalOffset,
             frame.Insets.Left,
@@ -413,7 +414,7 @@ internal sealed partial class PptxRenderer
             VerticalOverflow = PptxTextVerticalOverflow.Clip,
             VerticalOverflowValue = "clip",
             VerticalOverflowSource = PptxTextBodyPropertySource.TableCellStyle,
-            ExplicitWrapWidth = Math.Max(1d, tableFrame.Width - tableFrame.Insets.Left)
+            ExplicitWrapWidth = Math.Max(1d, tableFrame.Width - tableFrame.Insets.Left - tableFrame.Insets.Right)
         };
 
         long shapeX = PointsToEmu(tableFrame.X);
