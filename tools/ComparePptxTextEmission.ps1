@@ -11,6 +11,8 @@ param(
 
     [switch] $MatchByPosition,
 
+    [switch] $MatchByTextThenPosition,
+
     [switch] $UseEffectiveMatrix,
 
     [switch] $IncludeText,
@@ -478,7 +480,7 @@ function CandText($run) {
 $referenceOps = Read-JsonArray $ReferenceTextOperations
 $candidateRuns = Read-JsonArray $CandidateGlyphRuns
 
-if ($MatchByPosition) {
+if ($MatchByPosition -or $MatchByTextThenPosition) {
     $unmatched = New-Object System.Collections.Generic.List[object]
     foreach ($op in $referenceOps) {
         $unmatched.Add($op)
@@ -489,8 +491,18 @@ if ($MatchByPosition) {
         $candidate = $candidateRuns[$i]
         $bestIndex = -1
         $bestScore = [double]::PositiveInfinity
+        $candidateText = CandText $candidate
         for ($j = 0; $j -lt $unmatched.Count; $j++) {
             $reference = $unmatched[$j]
+            if ($MatchByTextThenPosition) {
+                $referenceText = RefText $reference
+                if ((HasValue $candidateText) -and
+                    (HasValue $referenceText) -and
+                    -not [string]::Equals($candidateText, $referenceText, [System.StringComparison]::Ordinal)) {
+                    continue
+                }
+            }
+
             $score = [Math]::Abs([double]$candidate.BaselineY - (RefY $reference)) * 1000d +
                 [Math]::Abs([double]$candidate.X - (RefX $reference))
             if ($score -lt $bestScore) {
@@ -756,6 +768,12 @@ $rowsArray | Format-Table -AutoSize
 Write-Host "Text emission count: reference=$($referenceOps.Count), candidate=$($candidateRuns.Count), deltas=$failures"
 if ($MatchByPosition) {
     Write-Host "Matching: nearest text position"
+}
+elseif ($MatchByTextThenPosition) {
+    Write-Host "Matching: exact text, then nearest text position"
+}
+else {
+    Write-Host "Matching: input order"
 }
 if ($UseEffectiveMatrix) {
     Write-Host "Reference coordinates: effective text matrix"

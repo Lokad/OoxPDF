@@ -318,6 +318,10 @@ High-priority actions:
   depends on wrapped cell text and row-internal line placement, not on a blanket return to raw grid rows. The
   public visual case `pptx-ladder-10-table-center-explicit-wrapped` now captures this as a tracked
   Office-backed target with loose current-gap thresholds (`MAE 8.201281`, changed16 `0.067583`).
+- [x] 2026-05-30: Extended `tools/ComparePptxTextEmission.ps1` with `-MatchByTextThenPosition` so wrapped
+  table probes and private table pages can match Office PDF text operations by exact decoded text before
+  nearest-position scoring. This avoids false row matches when repeated table strings drift vertically and
+  keeps future table fixes grounded in structural PDF/glyph evidence rather than raster-only inspection.
 - [x] 2026-05-30: Accepted a moderate-slack table row-height rule and rejected the broad declared-row version.
   A public-safe row-ladder probe built from the private page-21 geometry showed that when a table frame is much
   taller than its declared row sum and cell text does not require expansion, Office keeps text bands close to
