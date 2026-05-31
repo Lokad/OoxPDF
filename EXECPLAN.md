@@ -1846,6 +1846,13 @@ High-priority actions:
     private-document table fixes. The private case still reports table-style diagnostics and did not improve
     from header-row repetition alone, so the next table work should target style resolution rather than row
     repetition.
+  - [x] 2026-05-31: Preserved DOCX table style IDs and applied the simplest whole-style cell shading from
+    table style definitions. `DocxTable` now carries `w:tblStyle`, `DocxStyleSet` keeps table-style records,
+    and cells without direct shading inherit style-level `w:tcPr/w:shd` fill/color tokens before the existing
+    PDF cell-fill path. This is a first style-resolution rung, not full table-style support.
+  - [ ] 2026-05-31: Extend DOCX table styles beyond whole-style cell shading: parse `w:tblPr`, `w:tblBorders`,
+    `w:tblCellMar`, `w:tblLook`, and `w:tblStylePr` conditional regions (`firstRow`, `lastRow`, banding,
+    first/last column), then merge them with direct row/cell properties in Word priority order.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2496,6 +2503,12 @@ document-specific business content into public notes.
   - This suggests the private table residual is not primarily omitted repeated header rows; the remaining
     table work should focus on table style resolution, conditional formatting, borders, shading, and width
     inheritance.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-153536` after preserving table
+  style IDs and applying whole-style cell shading:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - Aggregate metrics were unchanged from the prior table-header run: MAE `16.995226`, changed16 `0.149573`.
+  - The private table-style gap is therefore unlikely to be explained by a simple style-level cell fill alone;
+    prioritize conditional table-style regions, borders, margins, and widths.
 
 ## Backlog
 
@@ -3869,6 +3882,11 @@ Current validation baseline:
   `docx-core --skip-slow` passed `4`, `docx-tables --skip-slow` passed `20`, public `docx-tables` visual run
   `20260531-153109` passed, and private DOCX run `20260531-153115` stayed at `16/16` pages, zero dimension
   mismatches, MAE `16.995226`, changed16 `0.149573`.
+- DOCX table-style shading validation:
+  after preserving table style IDs and applying whole-style cell shading, the full DOCX group sweep passed
+  (`docx-core` `4`, `docx-page` `10`, `docx-text` `7`, `docx-numbering` `4`, `docx-images` `2`,
+  `docx-tables` `21`), public `docx-tables` visual run `20260531-153530` passed, and private DOCX run
+  `20260531-153536` stayed at `16/16` pages, zero dimension mismatches, MAE `16.995226`, changed16 `0.149573`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

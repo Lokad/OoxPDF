@@ -262,7 +262,7 @@ internal sealed class DocxReader
 
         if (document.Descendants(WordprocessingNamespace + "tblStyle").Any())
         {
-            Emit("DOCX_UNSUPPORTED_TABLE_STYLE", "table style");
+            Emit("DOCX_UNSUPPORTED_TABLE_STYLE", "table style", fallback: "Approximated");
         }
 
         XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, StylesContentType, out string? stylesPartName);
@@ -294,7 +294,7 @@ internal sealed class DocxReader
             if (styles.Descendants(WordprocessingNamespace + "style")
                 .Any(style => string.Equals((string?)style.Attribute(WordprocessingNamespace + "type"), "table", StringComparison.OrdinalIgnoreCase)))
             {
-                Emit("DOCX_STYLE_TABLE_STYLE", "table style definition", stylesPartName ?? partName, "Ignored");
+                Emit("DOCX_STYLE_TABLE_STYLE", "table style definition", stylesPartName ?? partName, "Approximated");
             }
         }
 
@@ -551,6 +551,13 @@ internal sealed class DocxReader
             .Element(WordprocessingNamespace + "tblPr")
             ?.Element(WordprocessingNamespace + "tblLayout")
             ?.Attribute(WordprocessingNamespace + "type");
+        string? tableStyleId = (string?)table
+            .Element(WordprocessingNamespace + "tblPr")
+            ?.Element(WordprocessingNamespace + "tblStyle")
+            ?.Attribute(WordprocessingNamespace + "val");
+        DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
+            ? parsedTableStyle
+            : DocxTableStyle.Empty;
         IReadOnlyList<double> columns = table
             .Element(WordprocessingNamespace + "tblGrid")
             ?.Elements(WordprocessingNamespace + "gridCol")
@@ -568,9 +575,9 @@ internal sealed class DocxReader
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
                     .Where(t => t.Length != 0));
                 XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
-                string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill");
-                string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val");
-                string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color");
+                string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? tableStyle.CellFillHex;
+                string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val") ?? tableStyle.CellShadingValue;
+                string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color") ?? tableStyle.CellShadingColor;
                 string? verticalAlignment = (string?)cellProperties
                     ?.Element(WordprocessingNamespace + "vAlign")
                     ?.Attribute(WordprocessingNamespace + "val");
@@ -603,7 +610,7 @@ internal sealed class DocxReader
             columns = Enumerable.Repeat(72d, maxCells).ToArray();
         }
 
-        return new DocxTable(layoutValue, columns, rows);
+        return new DocxTable(layoutValue, columns, rows, tableStyleId);
     }
 
     private static IReadOnlyList<DocxParagraph> ReadTableCellParagraphs(
@@ -785,6 +792,7 @@ internal sealed class DocxReader
 
         var paragraphStyles = new Dictionary<string, DocxStyle>(StringComparer.Ordinal);
         var characterStyles = new Dictionary<string, DocxStyle>(StringComparer.Ordinal);
+        var tableStyles = new Dictionary<string, DocxTableStyle>(StringComparer.Ordinal);
         foreach (XElement style in stylesXml.Root?.Elements(WordprocessingNamespace + "style") ?? [])
         {
             string? styleId = (string?)style.Attribute(WordprocessingNamespace + "styleId");
@@ -805,9 +813,13 @@ internal sealed class DocxReader
             {
                 characterStyles[styleId] = parsed;
             }
+            else if (type == "table")
+            {
+                tableStyles[styleId] = ReadTableStyle(style);
+            }
         }
 
-        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles);
+        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, tableStyles);
     }
 
     private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName)
@@ -1027,16 +1039,34 @@ internal sealed class DocxReader
         DocxResolvedRunProperties RunDefaults,
         DocxResolvedParagraphProperties ParagraphDefaults,
         IReadOnlyDictionary<string, DocxStyle> ParagraphStyles,
-        IReadOnlyDictionary<string, DocxStyle> CharacterStyles)
+        IReadOnlyDictionary<string, DocxStyle> CharacterStyles,
+        IReadOnlyDictionary<string, DocxTableStyle> TableStyles)
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty),
             new Dictionary<string, DocxStyle>(),
-            new Dictionary<string, DocxStyle>());
+            new Dictionary<string, DocxStyle>(),
+            new Dictionary<string, DocxTableStyle>());
     }
 
     private sealed record DocxStyle(DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
+
+    private sealed record DocxTableStyle(string? CellFillHex, string? CellShadingValue, string? CellShadingColor)
+    {
+        public static DocxTableStyle Empty { get; } = new(null, null, null);
+    }
+
+    private static DocxTableStyle ReadTableStyle(XElement style)
+    {
+        XElement? shading = style
+            .Element(WordprocessingNamespace + "tcPr")
+            ?.Element(WordprocessingNamespace + "shd");
+        return new DocxTableStyle(
+            (string?)shading?.Attribute(WordprocessingNamespace + "fill"),
+            (string?)shading?.Attribute(WordprocessingNamespace + "val"),
+            (string?)shading?.Attribute(WordprocessingNamespace + "color"));
+    }
 
     private sealed record DocxNumberingSet(
         IReadOnlyDictionary<string, string> NumToAbstract,
