@@ -23,6 +23,8 @@ internal sealed partial class PptxRenderer
     private const double OfficeStraightStealthLineEndLengthFactor = 3d;
     private const double OfficeStraightStealthLineEndWidthFactor = 3d;
     private const double OfficeStraightStealthLineEndNotchFactor = 2d / 3d;
+    private const double OfficePresetArcDefaultStartGuide = 16200000d;
+    private const double OfficePresetArcDefaultEndGuide = 0d;
     private const double OfficePresetArcFlatteningTolerance = 0.015d;
     private const double OfficePresetArcMaximumFlatteningDegrees = 4.5d;
     private const double OfficeGlowRasterPixelsPerPoint = 1d;
@@ -944,8 +946,8 @@ internal sealed partial class PptxRenderer
         double height,
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
-        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", 0d) / 60000d;
-        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", 90d) / 60000d;
+        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", OfficePresetArcDefaultStartGuide) / 60000d;
+        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", OfficePresetArcDefaultEndGuide) / 60000d;
         double sweepDegrees = endDegrees - startDegrees;
         while (sweepDegrees <= 0d)
         {
@@ -987,8 +989,8 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", 0d) / 60000d;
-        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", 90d) / 60000d;
+        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", OfficePresetArcDefaultStartGuide) / 60000d;
+        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", OfficePresetArcDefaultEndGuide) / 60000d;
         double sweepDegrees = endDegrees - startDegrees;
         while (sweepDegrees <= 0d)
         {

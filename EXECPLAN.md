@@ -4032,10 +4032,16 @@ paths, and ExecPlan references together.
     private page 30 now shows dashed arcs around the milestones rather than dashed bounding boxes.
 - [ ] Private slide 61 visible remaining problem: a shape-built line graph uses non-circular `prstGeom arc`
   shapes with `stealth` line ends, not chart XML. The preset-arc visual-angle conversion, OOXML Y-down arc
-  basis, and filled line-end outline emission are now public-covered and move the slide in the right
-  direction. The remaining acceptable follow-up is to derive Office's exact preset-arc flattening/segment
-  cardinality from public reference PDFs; do not replace it with a private-slide coordinate shortcut or a
-  per-font/per-shape special case.
+  basis, filled line-end outline emission, and Office default `adj1`/`adj2` values for empty public
+  `avLst` arcs are now public-covered. Private slide 61 stays at about MAE `2.72` after the default-guide
+  fix because its arc guides are explicit; the fix instead closes a public Office-authored arc collapse where
+  missing guide fallbacks were interpreted as raw degrees. The remaining acceptable follow-up is to derive
+  Office's exact preset-arc stroke-widening and flattening/segment cardinality from public reference PDFs.
+  Public COM probe evidence shows Office emits filled arc outlines with more line segments than the current
+  smooth-normal outline for default Office arcs (`185/86/86/101/101` fill segments in the reference versus
+  `103/49/49/117/121` candidate on the disposable probe), while private slide 61 explicit arcs still show
+  per-arc segment-count mismatches after their bounds and fill/stroke kinds align. Do not replace this with a
+  private-slide coordinate shortcut or a per-font/per-shape special case.
 - [ ] Private slide 9 visible remaining problem: left-side schema geometry is visibly broken. Survey the
   involved shapes/connectors/group transforms on public-safe diagnostics, then reproduce with minimal public
   geometry fixtures before changing renderer logic.
