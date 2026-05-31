@@ -2220,6 +2220,15 @@ High-priority actions:
     improved aggregate metrics from `MAE=14.806507`, changed16 `0.133867` to `MAE=13.648284`, changed16
     `0.125542`. Keep this item open for border conflict resolution, nil/none suppression, and exact width
     units; the completed part is only removing the invented default grid.
+    2026-05-31 progress: corrected the DOCX border cascade so direct table-level `w:tblBorders` override
+    table-style conditional cell borders per edge, while unaffected inherited style-table edges still survive.
+    A direct `w:val="nil"` table edge now suppresses a lower-priority conditional edge instead of being
+    overwritten by it. Public coverage locks direct table `nil`/right-edge overrides against first-row
+    conditional `w:tcBorders`. Validation passed `docx-tables --skip-slow` (`45`) and full solution build.
+    Private DOCX run `20260531-231047` stayed page-stable at `16/16`, zero dimension mismatches, and unchanged
+    aggregate metrics (`MAE=13.648284`, changed16 `0.125542`), so this is a structural correctness fix rather
+    than a current private raster win. Keep this item open for adjacent-edge conflict resolution,
+    start/end directionality, and exact border width/unit rules.
   - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as

@@ -1014,8 +1014,8 @@ internal sealed class DocxReader
     {
         var resolved = new Dictionary<string, DocxTableCellBorder>(StringComparer.OrdinalIgnoreCase);
         AddBorders(resolved, ResolveTableBordersForCell(styleTableBorders, rowIndex, cellIndex, rowCount, cellCount));
-        AddBorders(resolved, ResolveTableBordersForCell(tableBorders, rowIndex, cellIndex, rowCount, cellCount));
         AddBorders(resolved, styleBorders);
+        AddBorders(resolved, ResolveTableBordersForCell(tableBorders, rowIndex, cellIndex, rowCount, cellCount));
         AddBorders(resolved, directBorders);
         return new[] { "top", "bottom", "left", "right" }
             .Where(resolved.ContainsKey)

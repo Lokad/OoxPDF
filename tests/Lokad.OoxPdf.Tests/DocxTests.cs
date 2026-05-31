@@ -3884,6 +3884,86 @@ internal static class DocxTests
         TestAssert.Equal("444444", inner.Single(border => border.Edge == "right").Color ?? string.Empty);
     }
 
+    public static void DocxReaderDirectTableBordersOverrideTableStyleCellBordersPerEdge()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:styleId="StyledTable">
+                    <w:tblPr>
+                      <w:tblBorders>
+                        <w:left w:val="single" w:color="333333" w:sz="12"/>
+                        <w:bottom w:val="single" w:color="222222" w:sz="10"/>
+                      </w:tblBorders>
+                    </w:tblPr>
+                    <w:tblStylePr w:type="firstRow">
+                      <w:tcPr>
+                        <w:tcBorders>
+                          <w:top w:val="single" w:color="FF0000" w:sz="18"/>
+                          <w:right w:val="single" w:color="AA0000" w:sz="18"/>
+                        </w:tcBorders>
+                      </w:tcPr>
+                    </w:tblStylePr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr>
+                        <w:tblStyle w:val="StyledTable"/>
+                        <w:tblBorders>
+                          <w:top w:val="nil"/>
+                          <w:right w:val="single" w:color="0000FF" w:sz="6"/>
+                        </w:tblBorders>
+                      </w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        IReadOnlyList<DocxTableCellBorder> borders = document.Tables[0].Rows[0].Cells[0].Borders;
+        TestAssert.Equal("nil", borders.Single(border => border.Edge == "top").Value ?? string.Empty);
+        TestAssert.Equal("0000FF", borders.Single(border => border.Edge == "right").Color ?? string.Empty);
+        TestAssert.Equal("333333", borders.Single(border => border.Edge == "left").Color ?? string.Empty);
+        TestAssert.Equal("222222", borders.Single(border => border.Edge == "bottom").Color ?? string.Empty);
+    }
+
     public static void DocxReaderTableStyleAppliesConditionalCellVerticalAlignment()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
