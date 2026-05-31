@@ -5439,7 +5439,11 @@ internal static class DocxTests
                       <w:spacing w:beforeAutospacing="1"/>
                     </w:pPr>
                   </w:style>
-                  <w:style w:type="table" w:styleId="StyledTable"/>
+                  <w:style w:type="table" w:styleId="StyledTable">
+                    <w:tblStylePr w:type="firstRow">
+                      <w:rPr><w:bCs/></w:rPr>
+                    </w:tblStylePr>
+                  </w:style>
                 </w:styles>
                 """,
             ["word/numbering.xml"] = """
@@ -5464,11 +5468,78 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_NUMBERING_INDENT", ids);
         TestAssert.Contains("DOCX_NUMBERING_MARKER_FONT", ids);
         TestAssert.Contains("DOCX_STYLE_PARAGRAPH_SPACING", ids);
-        TestAssert.Contains("DOCX_STYLE_TABLE_STYLE", ids);
+        TestAssert.Contains("DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN", ids);
+        TestAssert.DoesNotContain("DOCX_STYLE_TABLE_STYLE", ids);
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_TABLE_STYLE", ids);
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", ids);
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_NUMBERING_INDENT" && d.PartName == "/word/numbering.xml"), "Numbering diagnostics should point to numbering.xml.");
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_NUMBERING_MARKER_FONT" && d.PartName == "/word/numbering.xml"), "Marker-font diagnostics should point to numbering.xml.");
+    }
+
+    public static void DocxSupportedTableStyleAtomsDoNotEmitBroadTableStyleDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="StyledTable"/></w:tblPr>
+                      <w:tr><w:tc><w:p><w:r><w:t>Styled</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:styleId="StyledTable">
+                    <w:tblPr>
+                      <w:tblW w:w="5000" w:type="pct"/>
+                      <w:tblInd w:w="120" w:type="dxa"/>
+                      <w:tblCellSpacing w:w="20" w:type="dxa"/>
+                    </w:tblPr>
+                    <w:tblStylePr w:type="firstRow">
+                      <w:tcPr><w:shd w:fill="DDDDDD"/></w:tcPr>
+                      <w:pPr><w:jc w:val="center"/></w:pPr>
+                      <w:rPr><w:b/><w:i/><w:caps/><w:color w:val="336699"/><w:sz w:val="22"/></w:rPr>
+                    </w:tblStylePr>
+                  </w:style>
+                </w:styles>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_STYLE_TABLE_STYLE", ids);
+        TestAssert.DoesNotContain("DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN", ids);
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_TABLE_STYLE", ids);
     }
 
     public static void DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic()

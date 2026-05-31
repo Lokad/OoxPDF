@@ -294,9 +294,9 @@ internal sealed class DocxReader
             }
 
             if (styles.Descendants(WordprocessingNamespace + "style")
-                .Any(style => string.Equals((string?)style.Attribute(WordprocessingNamespace + "type"), "table", StringComparison.OrdinalIgnoreCase)))
+                .Any(HasUnsupportedTableStyleComplexScriptRunProperties))
             {
-                Emit("DOCX_STYLE_TABLE_STYLE", "table style definition", stylesPartName ?? partName, "Approximated");
+                Emit("DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN", "table style complex-script run property", stylesPartName ?? partName, "Approximated");
             }
         }
 
@@ -1330,6 +1330,19 @@ internal sealed class DocxReader
         }
 
         return new DocxNumberingSet(numToAbstract, levels, startOverrides);
+    }
+
+    private static bool HasUnsupportedTableStyleComplexScriptRunProperties(XElement style)
+    {
+        if (!string.Equals((string?)style.Attribute(WordprocessingNamespace + "type"), "table", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return style.Descendants(WordprocessingNamespace + "rPr")
+            .Any(runProperties =>
+                runProperties.Element(WordprocessingNamespace + "bCs") is not null ||
+                runProperties.Element(WordprocessingNamespace + "iCs") is not null);
     }
 
     private static DocxResolvedParagraphProperties ResolveParagraphProperties(
