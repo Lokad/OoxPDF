@@ -139,7 +139,8 @@ internal sealed record DocxListLabel(
     string SuffixValue,
     string NumberId,
     int Level,
-    DocxNumberingIndent Indent);
+    DocxNumberingIndent Indent,
+    DocxTextRunStyle Style);
 
 internal sealed record DocxNumberingIndent(
     double? LeftPoints,
@@ -165,6 +166,49 @@ internal sealed record DocxTextRun(
     string? FontFamily)
 {
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
+}
+
+internal sealed record DocxTextRunStyle(
+    double? FontSize,
+    string? ColorHex,
+    bool? Bold,
+    bool? Italic,
+    bool? Underline,
+    string? UnderlineValue,
+    string? FontFamily,
+    DocxRunFonts Fonts)
+{
+    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty);
+
+    public DocxTextRun ApplyTo(DocxTextRun? baseRun, string text, double fallbackFontSize)
+    {
+        var source = baseRun ?? new DocxTextRun(string.Empty, fallbackFontSize, null, false, false, false, null, null);
+        return new DocxTextRun(
+            text,
+            FontSize ?? source.FontSize,
+            ColorHex ?? source.ColorHex,
+            Bold ?? source.Bold,
+            Italic ?? source.Italic,
+            Underline ?? source.Underline,
+            UnderlineValue ?? source.UnderlineValue,
+            FontFamily ?? source.FontFamily)
+        {
+            Fonts = MergeRunFonts(source.Fonts, Fonts)
+        };
+    }
+
+    private static DocxRunFonts MergeRunFonts(DocxRunFonts current, DocxRunFonts other)
+    {
+        return new DocxRunFonts(
+            other.Ascii ?? current.Ascii,
+            other.HighAnsi ?? current.HighAnsi,
+            other.EastAsia ?? current.EastAsia,
+            other.ComplexScript ?? current.ComplexScript,
+            other.AsciiTheme ?? current.AsciiTheme,
+            other.HighAnsiTheme ?? current.HighAnsiTheme,
+            other.EastAsiaTheme ?? current.EastAsiaTheme,
+            other.ComplexScriptTheme ?? current.ComplexScriptTheme);
+    }
 }
 
 internal sealed record DocxRunFonts(

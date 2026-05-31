@@ -31,7 +31,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
                 .SelectMany(table => table.Rows)
                 .SelectMany(row => row.Cells)
                 .SelectMany(GetCellParagraphs))
-            .SelectMany(paragraph => paragraph.Runs)
+            .SelectMany(GetParagraphFontRuns)
             .ToArray();
 
         return new DocxFontPlan(runs
@@ -88,6 +88,23 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return cell.Paragraphs.Count == 0 && cell.Text.Length != 0
             ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
             : cell.Paragraphs;
+    }
+
+    private static IEnumerable<DocxTextRun> GetParagraphFontRuns(DocxParagraph paragraph)
+    {
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            yield return run;
+        }
+
+        if (paragraph.ListLabel is not null)
+        {
+            DocxTextRun? firstRun = paragraph.Runs.FirstOrDefault();
+            yield return DocxLayoutEngine.CreateListLabelRun(
+                paragraph.ListLabel,
+                firstRun,
+                firstRun?.FontSize ?? 11d);
+        }
     }
 
     private static IReadOnlyList<string> DistinctFamilies(params string?[] families)

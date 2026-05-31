@@ -1982,6 +1982,15 @@ High-priority actions:
       based-on style inheritance with dynamically discovered installed fonts. Office/candidate PDF inspection
       on the private DOCX showed both sides using Calibri-family fonts after this change, so the remaining
       private mismatch is no longer a concrete font-name selection issue.
+    - [x] 2026-05-31: Preserved DOCX numbering-marker `w:lvl/w:rPr` as a generic run style and threaded it
+      into the font plan and list-label layout measurement. `DocxListLabel` now carries authored marker run
+      color/style/font tokens, bullet labels use authored `w:lvlText` instead of a blanket bullet glyph
+      replacement, and marker runs participate in `DocxFontPlan` without named-font branches. Public
+      `docx-numbering --skip-slow` passed `9` tests and `fonts --skip-slow` passed `20`; private DOCX run
+      `20260531-221725` stayed at `16/16` pages with zero dimension mismatches and slightly improved MAE
+      `14.818900`, changed16 `0.134293`. Keep the broader item open because production PDF emission still
+      uses one font resource per document, so fully correct symbol glyph emission requires the shared per-run
+      layout/resource map below.
     - [ ] 2026-05-31: Promote DOCX to production run-level PDF font resources only after layout measurement
       and glyph emission are switched together. A generic no-font-name trial that added per-run PDF font
       resources from `DocxFontPlan`, while keeping the legacy single-font layout measurer as fallback, stayed
@@ -2036,6 +2045,14 @@ High-priority actions:
     DOCX run `20260531-173037` stayed neutral (`15.889775` MAE, `0.141949` changed16), and
     `DOCX_NUMBERING_INDENT` remains appropriate because exact Word tab-stop ownership, bullet fonts, restarts,
     and mixed-style continuation wrapping are still open.
+    2026-05-31 progress: numbering-marker run properties from `w:lvl/w:rPr` are now preserved as typed
+    `DocxTextRunStyle` data and applied to the separate marker segment for body/table-cell layout. Bullet
+    marker text now comes from authored `w:lvlText` when present instead of a hard-coded glyph substitution,
+    while an absent `w:lvlText` still receives a generic bullet fallback. Public coverage verifies marker
+    font/color/bold token preservation and marker participation in `DocxFontPlan`; private DOCX run
+    `20260531-221725` stayed page-stable at `16/16`, zero dimension mismatches, MAE `14.818900`, changed16
+    `0.134293`. Keep `DOCX_NUMBERING_INDENT` open for exact numbering tabs and the production per-run PDF
+    font resource switch needed for full symbol-glyph parity.
   2026-05-31 progress: paragraph wrapping now carries separate first-line and continuation-line widths, so
     numbered body and table-cell paragraphs wrap continuation lines against the hanging text column rather than
     reusing the wider first-line space-suffix box. Public `docx-numbering --skip-slow` passed `8` tests with a

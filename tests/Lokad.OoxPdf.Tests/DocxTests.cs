@@ -892,6 +892,43 @@ internal static class DocxTests
         TestAssert.Equal(0, resolved.CandidateFamilies.Count);
     }
 
+    public static void DocxFontPlanIncludesNumberingMarkerTypeface()
+    {
+        var bodyRun = new DocxTextRun("Body", 11d, null, false, false, false, null, "Body Sans")
+        {
+            Fonts = new DocxRunFonts("Body Sans", null, null, null, null, null, null, null)
+        };
+        var label = new DocxListLabel(
+            "#",
+            "bullet",
+            "#",
+            "tab",
+            "3",
+            0,
+            new DocxNumberingIndent(36d, null, null, 18d, "720", null, null, "360"),
+            new DocxTextRunStyle(null, null, null, null, null, null, "Marker Sans", new DocxRunFonts("Marker Sans", null, null, null, null, null, null, null)));
+        var paragraph = new DocxParagraph(
+            [bodyRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            label);
+        DocxDocument document = CreateFontPlanDocument([paragraph], DocxFontCatalog.Empty);
+        var resolver = new MapFontResolver(["Body Sans", "Marker Sans"], "Resolver Fallback");
+
+        DocxResolvedRunTypeface marker = DocxFontPlan.Create(document, resolver).Runs.Single(run => run.Run.Text == "#");
+
+        TestAssert.Equal("Marker Sans", marker.RequestedFamily ?? string.Empty);
+        TestAssert.Equal(DocxTypefaceResolutionSource.Primary, marker.Source);
+    }
+
     public static void DocxFontPlanSnapshotReportsPrivateSafeCounts()
     {
         var primaryRun = new DocxTextRun("Primary", 11d, null, false, false, false, null, "Primary Sans")
@@ -2104,7 +2141,7 @@ internal static class DocxTests
                   <w:abstractNum w:abstractNumId="7">
                     <w:lvl w:ilvl="0"><w:start w:val="3"/><w:numFmt w:val="lowerRoman"/><w:lvlText w:val="%1)"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl>
                     <w:lvl w:ilvl="1"><w:numFmt w:val="futureFormat"/><w:lvlText w:val="Item %2"/><w:suff w:val="space"/></w:lvl>
-                    <w:lvl w:ilvl="2"><w:numFmt w:val="bullet"/><w:lvlText w:val="bullet text"/><w:suff w:val="nothing"/></w:lvl>
+                    <w:lvl w:ilvl="2"><w:numFmt w:val="bullet"/><w:lvlText w:val="bullet text"/><w:suff w:val="nothing"/><w:rPr><w:rFonts w:ascii="Marker Sans" w:hAnsi="Marker Sans"/><w:color w:val="123456"/><w:b/></w:rPr></w:lvl>
                   </w:abstractNum>
                   <w:num w:numId="3"><w:abstractNumId w:val="7"/></w:num>
                 </w:numbering>
@@ -2144,7 +2181,11 @@ internal static class DocxTests
         TestAssert.Equal("bullet", paragraphs[2].ListLabel?.FormatValue ?? string.Empty);
         TestAssert.Equal("bullet text", paragraphs[2].ListLabel?.LevelTextValue ?? string.Empty);
         TestAssert.Equal("nothing", paragraphs[2].ListLabel?.SuffixValue ?? string.Empty);
-        TestAssert.Equal("\u2022", paragraphs[2].ListLabel?.Text ?? string.Empty);
+        TestAssert.Equal("bullet text", paragraphs[2].ListLabel?.Text ?? string.Empty);
+        TestAssert.Equal("Marker Sans", paragraphs[2].ListLabel?.Style.FontFamily ?? string.Empty);
+        TestAssert.Equal("Marker Sans", paragraphs[2].ListLabel?.Style.Fonts.Ascii ?? string.Empty);
+        TestAssert.Equal("123456", paragraphs[2].ListLabel?.Style.ColorHex ?? string.Empty);
+        TestAssert.True(paragraphs[2].ListLabel?.Style.Bold == true, "Numbering marker run properties should be preserved without font-name special cases.");
     }
 
     public static void DocxReaderNumberingStartOverrideRestartsList()
@@ -2421,7 +2462,8 @@ internal static class DocxTests
             "space",
             "3",
             0,
-            new DocxNumberingIndent(72d, null, null, 36d, "1440", null, null, "720"));
+            new DocxNumberingIndent(72d, null, null, 36d, "1440", null, null, "720"),
+            DocxTextRunStyle.Empty);
         var paragraph = new DocxParagraph(
             [new DocxTextRun("Alpha Beta Alpha Beta", 10d, null, false, false, false, null, null)],
             [],
@@ -4750,6 +4792,11 @@ internal static class DocxTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
+        return CreateFontPlanDocument([paragraph], fontCatalog);
+    }
+
+    private static DocxDocument CreateFontPlanDocument(IReadOnlyList<DocxParagraph> paragraphs, DocxFontCatalog fontCatalog)
+    {
         return new DocxDocument(
             200d,
             200d,
@@ -4761,8 +4808,8 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [paragraph],
+            paragraphs.Select(paragraph => new DocxParagraphElement(paragraph)).ToArray(),
+            paragraphs,
             [])
         {
             FontCatalog = fontCatalog

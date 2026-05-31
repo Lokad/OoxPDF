@@ -298,7 +298,7 @@ internal sealed class DocxLayoutEngine
                         : CreateTextSegments(line.Spans, lineX, paragraphFontSize, textMeasurer);
                     double effectiveX = firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX;
                     double effectiveWidth = firstLine && paragraph.ListLabel is not null
-                        ? Math.Max(lineX + lineWidth, x + labelStartOffset + textMeasurer.MeasureText(firstRun, paragraph.ListLabel.Text, paragraphFontSize)) - (x + labelStartOffset)
+                        ? Math.Max(lineX + lineWidth, x + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, paragraphFontSize, textMeasurer)) - (x + labelStartOffset)
                         : lineWidth;
                     currentItems.Add(new DocxTextLineLayout(
                         firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,
@@ -533,9 +533,10 @@ internal sealed class DocxLayoutEngine
         double gap = IsNumberingSpaceSuffix(paragraph.ListLabel)
             ? textMeasurer.MeasureText(paragraph.Runs.FirstOrDefault(), " ", fontSize)
             : 0d;
+        DocxTextRun labelRun = CreateListLabelRun(paragraph.ListLabel, paragraph.Runs.FirstOrDefault(), fontSize);
         return Math.Max(
             0d,
-            GetParagraphLabelStartOffset(paragraph) + textMeasurer.MeasureText(paragraph.Runs.FirstOrDefault(), paragraph.ListLabel.Text, fontSize) + gap);
+            GetParagraphLabelStartOffset(paragraph) + textMeasurer.MeasureText(labelRun, paragraph.ListLabel.Text, labelRun.FontSize) + gap);
     }
 
     private static double GetParagraphLabelStartOffset(DocxParagraph paragraph)
@@ -571,12 +572,24 @@ internal sealed class DocxLayoutEngine
         double fontSize,
         IDocxTextMeasurer textMeasurer)
     {
-        double labelWidth = textMeasurer.MeasureText(styleRun, label.Text, fontSize);
+        DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
+        double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
         return
         [
-            new DocxTextSegmentLayout(label.Text, styleRun, labelX, labelWidth),
+            new DocxTextSegmentLayout(label.Text, labelRun, labelX, labelWidth),
             .. CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer)
         ];
+    }
+
+    private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
+    {
+        DocxTextRun labelRun = CreateListLabelRun(label, baseRun, fontSize);
+        return textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
+    }
+
+    internal static DocxTextRun CreateListLabelRun(DocxListLabel label, DocxTextRun? baseRun, double fontSize)
+    {
+        return label.Style.ApplyTo(baseRun, label.Text, fontSize);
     }
 
     private static string GetListLabelTextSeparator(DocxListLabel label)
@@ -903,7 +916,7 @@ internal sealed class DocxLayoutEngine
                     : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer);
                 double effectiveX = firstLine && paragraph.ListLabel is not null ? cellX + paddingLeft + labelStartOffset : lineX;
                 double effectiveWidth = firstLine && paragraph.ListLabel is not null
-                    ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + textMeasurer.MeasureText(firstRun, paragraph.ListLabel.Text, fontSize)) - (cellX + paddingLeft + labelStartOffset)
+                    ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - (cellX + paddingLeft + labelStartOffset)
                     : lineWidth;
                 lines.Add(new DocxTextLineLayout(
                     firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,

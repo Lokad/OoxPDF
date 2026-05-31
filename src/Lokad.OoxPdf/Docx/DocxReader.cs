@@ -1146,7 +1146,8 @@ internal sealed class DocxReader
 
         if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
         {
-            return new DocxListLabel("\u2022", numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent);
+            string bulletText = string.IsNullOrEmpty(numberingLevel.Text) ? "\u2022" : numberingLevel.Text;
+            return new DocxListLabel(bulletText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, numberingLevel.Style);
         }
 
         var key = (numId, level);
@@ -1160,7 +1161,7 @@ internal sealed class DocxReader
         }
 
         string labelText = ResolveNumberingLevelText(numberingLevel.Text, numId, counters);
-        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent);
+        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, numberingLevel.Style);
     }
 
     private static string ResolveNumberingLevelText(string text, string numId, IReadOnlyDictionary<(string NumId, int Level), int> counters)
@@ -1271,9 +1272,10 @@ internal sealed class DocxReader
                     ? int.Parse(startValue.Value, CultureInfo.InvariantCulture)
                     : 1;
                 string format = (string?)level.Element(WordprocessingNamespace + "numFmt")?.Attribute(WordprocessingNamespace + "val") ?? "decimal";
-                string text = (string?)level.Element(WordprocessingNamespace + "lvlText")?.Attribute(WordprocessingNamespace + "val") ?? "%" + (levelIndex + 1) + ".";
+                string text = (string?)level.Element(WordprocessingNamespace + "lvlText")?.Attribute(WordprocessingNamespace + "val") ??
+                    (format.Equals("bullet", StringComparison.OrdinalIgnoreCase) ? "\u2022" : "%" + (levelIndex + 1) + ".");
                 string suffix = (string?)level.Element(WordprocessingNamespace + "suff")?.Attribute(WordprocessingNamespace + "val") ?? "tab";
-                levels[(abstractId, levelIndex)] = new DocxNumberingLevel(format, text, suffix, start, ReadNumberingIndent(level));
+                levels[(abstractId, levelIndex)] = new DocxNumberingLevel(format, text, suffix, start, ReadNumberingIndent(level), ReadTextRunStyle(level.Element(WordprocessingNamespace + "rPr")));
             }
         }
 
@@ -1806,7 +1808,21 @@ internal sealed class DocxReader
             new Dictionary<(string NumId, int Level), int>());
     }
 
-    private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent);
+    private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent, DocxTextRunStyle Style);
+
+    private static DocxTextRunStyle ReadTextRunStyle(XElement? properties)
+    {
+        DocxResolvedRunProperties run = ReadRunProperties(properties);
+        return new DocxTextRunStyle(
+            run.FontSize,
+            run.ColorHex,
+            run.Bold,
+            run.Italic,
+            run.Underline,
+            run.UnderlineValue,
+            run.FontFamily,
+            run.Fonts);
+    }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
     {
