@@ -532,6 +532,15 @@ High-priority actions:
   equal to rendered row heights, so the existing default-inset magic constants are not active. Do not add
   row/column offsets or a flat middle-anchor adjustment; the next acceptable renderer slice needs a public
   table-cell fixture that separates vertical text-height/anchor computation from PDF text-state splitting.
+  Follow-up, 2026-05-31: added public Office-authored
+  `pptx-ladder-10-table-middle-small-insets` as the no-slack/small-inset/middle-anchor table counterexample
+  needed before touching private page 79. The fixture uses a `6 x 7` table with page-79-like declared row and
+  column dimensions, explicit tiny margins, middle anchoring, neutral wrapped text, and some multi-run cells.
+  It passes as a discovery visual case (run `20260531-023220`, MAE `0.966760`, changed16 `0.019591`, empty
+  diagnostics). PDF/text inspection shows Office and candidate both emit `79` text operations, all Office
+  `Tc=0`, with reliable baseline deltas only about `+0.01..+0.28pt`. This preserves valuable negative evidence:
+  page 79's nonzero `Tc` families and larger negative baseline residuals are not caused by no-slack table
+  geometry, explicit tiny margins, middle anchoring, or generic wrapped multi-run cells alone.
   Follow-up, 2026-05-30: extended `PptxInspect` so table text paragraph snapshots are emitted separately as
   `table-text-paragraph-models.json`, avoiding ad hoc private XML parsing when investigating table text.
   Re-inspection of page 79 shows the table paragraphs resolve through the normal paragraph/style cascade
@@ -8866,6 +8875,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `-0.328pt`, `-0.233pt`, `-0.200pt`, and `-0.199pt`, with stable per-cell buckets. The table uses explicit
   small insets and no declared/rendered row-height slack, so the default table-inset constants are not the
   active branch.
+- Observation: A public no-slack, small-inset, middle-anchored table with wrapped multi-run cells is a zero-`Tc`
+  counterexample.
+  Evidence: `pptx-ladder-10-table-middle-small-insets` run `20260531-023220` passes with MAE `0.966760`.
+  Its Office and candidate text-operation counts both equal `79`; all Office text operations have `Tc=0`, and
+  matched baseline deltas stay within about `+0.01..+0.28pt`.
 - Observation: Changing slide height while holding 21 pt textbox source coordinates fixed shifts Office's
   secondary `/Tf +0.024 pt` window.
   Evidence: Public-safe ignored variants of `font-size-quantization-y-scan-21pt-fine` report secondary rows at
@@ -9189,6 +9203,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: Page 36's dominant frame is already vertically aligned, while page 79's table residuals vary by
   row/cell and are entangled with missing Office text operations and `Tc` buckets. A production change needs a
   public fixture that isolates table-cell vertical anchoring or text-state splitting first.
+  Date/Author: 2026-05-31 / Codex.
+- Decision: Treat `pptx-ladder-10-table-middle-small-insets` as a counterexample fixture, not as permission for
+  a renderer change.
+  Rationale: The fixture intentionally shares the no-slack table geometry, explicit small margins, middle
+  anchoring, wrapped text, and multi-run cells that looked tempting from private page 79, but Office keeps
+  `Tc=0` and has tight baselines. The remaining private branch therefore needs another structural input before
+  code changes.
   Date/Author: 2026-05-31 / Codex.
 - Decision: Do not implement the secondary Office `/Tf +0.024 pt` branch as a fixed Y-band, top-origin baseline
   band, or local text-frame rule.
@@ -9543,6 +9564,19 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Public table middle-anchor counterexample, 2026-05-31:
+pwsh tools\CheckVisualCase.ps1 -Case visual-cases\cases\pptx-ladder-10-table-middle-small-insets\case.json:
+run 20260531-023220, MAE 0.966760, changed16 0.019591, empty diagnostics.
+dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-tables --skip-slow:
+19 passed, 0 failed, 0 skipped.
+pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw -LiteralPath 'tools\NewOfficeVisualFixtures.ps1')) | Out-Null":
+script parses.
+PDF/text inspection: reference and candidate both emit 79 text operations; Office `Tc=0` for every matched row,
+so no-slack, explicit tiny margins, middle anchoring, wrapped text, and multi-run cells are not sufficient to
+explain private page-79's nonzero table `Tc` branch.
+```
 
 ```text
 Private-safe PPTX text placement summary, 2026-05-31:

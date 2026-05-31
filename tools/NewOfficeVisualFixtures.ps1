@@ -374,6 +374,80 @@ try {
     New-MultilineTableFixtureFromWrapped `
         (Join-Path $cases "pptx-ladder-10-table-center-explicit-wrapped.pptx") `
         (Join-Path $cases "pptx-ladder-10-table-center-explicit-multiline.pptx")
+
+    $middleSmallInsetTable = $powerPoint.Presentations.Add($false)
+    try {
+        $slide = $middleSmallInsetTable.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $tableShape = $slide.Shapes.AddTable(6, 7, 65.87, 132.29, 828.00, 338.84)
+        $table = $tableShape.Table
+        $columnWidths = @(32.05, 76.18, 277.41, 161.71, 117.15, 87.68, 75.82)
+        for ($column = 1; $column -le 7; $column++) {
+            $table.Columns.Item($column).Width = $columnWidths[$column - 1]
+        }
+
+        $rowHeights = @(28.66, 65.48, 54.76, 69.70, 58.34, 61.91)
+        for ($row = 1; $row -le 6; $row++) {
+            $table.Rows.Item($row).Height = $rowHeights[$row - 1]
+        }
+
+        $values = @(
+            @("A", "Metric", "Planning signal width check with neutral words", "Current status detail", "Value note", "Target signal", "Owner"),
+            @("1", "Alpha row", "Long neutral planning phrase with enough repeated terms to wrap across several lines in the wide cell", "Short multi run note for baseline", "Stable scenario", "One line", "x"),
+            @("2", "Beta row", "Capacity planning phrase with several ordinary words for wrap testing", "Another compact multi run baseline note", "Reference bucket", "One line", "x"),
+            @("3", "Gamma row", "Longer operational planning sentence with repeated neutral words to exercise table cell vertical centering and wrapping", "Multi segment baseline note with suffix text", "Long status cell with neutral words", "Short note", "x"),
+            @("4", "Delta row", "Forecast planning phrase with enough length for controlled wrapping", "Compact note", "Stable cell", "One line", "x"),
+            @("5", "Epsilon row", "Inventory planning phrase with neutral words for wrapping", "Two line centered note with suffix", "Final value", "One line", "x")
+        )
+
+        for ($row = 1; $row -le 6; $row++) {
+            for ($column = 1; $column -le 7; $column++) {
+                $cell = $table.Cell($row, $column)
+                $textFrame = $cell.Shape.TextFrame2
+                $textFrame.VerticalAnchor = 3
+                $textFrame.MarginLeft = 1.255
+                $textFrame.MarginRight = 1.255
+                $textFrame.MarginTop = 0.627
+                $textFrame.MarginBottom = 0.627
+                $textFrame.TextRange.Text = $values[$row - 1][$column - 1]
+                $textFrame.TextRange.Font.Name = "Aptos"
+                $textFrame.TextRange.Font.Size = 11
+                $textFrame.TextRange.Font.Fill.ForeColor.RGB = Rgb 30 30 30
+                if ($row -eq 1) {
+                    $textFrame.TextRange.Font.Bold = $true
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 230 235 242
+                }
+                elseif ($column -eq 3 -or $column -eq 4) {
+                    $legacyRange = $cell.Shape.TextFrame.TextRange
+                    $length = $legacyRange.Text.Length
+                    if ($length -gt 12) {
+                        $legacyRange.Characters(1, [Math]::Min(8, $length)).Font.Bold = $true
+                    }
+
+                    if ($length -gt 24) {
+                        $start = [Math]::Min(18, $length)
+                        $legacyRange.Characters($start, [Math]::Min(6, $length - $start + 1)).Font.Italic = $true
+                    }
+                }
+
+                if ($row -eq 1) {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 230 235 242
+                }
+                elseif ($row % 2 -eq 0) {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 248 250 252
+                }
+                else {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 255 255 255
+                }
+            }
+        }
+
+        $middleSmallInsetTable.SaveAs((Join-Path $cases "pptx-ladder-10-table-middle-small-insets.pptx"), 24)
+    }
+    finally {
+        $middleSmallInsetTable.Close()
+    }
 }
 finally {
     if ($powerPoint -ne $null) {
