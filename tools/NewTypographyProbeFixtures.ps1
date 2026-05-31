@@ -384,6 +384,17 @@ New-TypographyProbe `
 '@
 
 New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-spautofit-numbered-synthetic-bold-tc-probe" `
+    -Transform '<a:xfrm><a:off x="8190269" y="2976553"/><a:ext cx="3048002" cy="3093154"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr wrap="square"><a:spAutoFit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:pPr marL="228600" indent="-228600"><a:buAutoNum type="arabicPeriod" startAt="2"/></a:pPr><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Second numbered heading for public structure.</a:t></a:r></a:p>
+          <a:p><a:pPr/><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Operations need a stable decomposition that keeps glyph placement and PDF text state aligned across wrapped paragraphs with several neutral words.</a:t></a:r></a:p>
+          <a:p><a:pPr/><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Another paragraph adds enough public text to create multiple </a:t></a:r><a:r><a:rPr lang="en-US" sz="1200" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>emphasized words for </a:t></a:r><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>the Office exporter. Operations need a stable decomposition that keeps glyph placement and PDF text state aligned across wrapped paragraphs with several neutral words.</a:t></a:r></a:p>
+          <a:p><a:pPr/><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Final public paragraph with several words for line wrapping and a stable right edge.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe `
     -Id "pptx-ladder-04-typography-bold-wrap-probe" `
     -Transform '<a:xfrm><a:off x="548640" y="685800"/><a:ext cx="4886960" cy="914400"/></a:xfrm>' `
     -BodyPr '<a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:noAutofit/></a:bodyPr>' `

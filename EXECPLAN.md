@@ -272,6 +272,13 @@ High-priority actions:
   `0.053572`), as expected for an emission-compensated text-state change. Next work should isolate the
   remaining frame-10 line/paragraph split and the non-numbered `spAutoFit` bucket with additional public
   probes before touching page 79's table-heavy `Tc` branch.
+  2026-05-31 counterexample: added
+  `pptx-ladder-04-typography-spautofit-numbered-synthetic-bold-tc-probe` to isolate a tempting page-81
+  hypothesis: a numbered `spAutoFit` frame with a mid-line synthetic-bold continuation. Office still emits
+  `Tc=-0.024:17` throughout that public frame while using secondary `12.024pt` font-size branches on `3`
+  operations, so do not promote the page-81 `+0.0173` bucket as a generic synthetic-emphasis continuation
+  rule. The remaining target still needs a broader PDF text-state decomposition model, not a font-name,
+  bold-run, or local line-position shortcut.
   2026-05-30 continuation: added
   `pptx-ladder-04-typography-spautofit-numbered-run-split-tc-probe` after private page 81 showed that a
   continuation paragraph can use the dense `-0.002em` bucket even when the public frame has only `14` visible
