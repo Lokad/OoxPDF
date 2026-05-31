@@ -2832,6 +2832,16 @@ internal static class DocxTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:tbl>
+                      <w:tblPr>
+                        <w:tblBorders>
+                          <w:top w:val="single" w:color="000000" w:sz="4"/>
+                          <w:left w:val="single" w:color="000000" w:sz="4"/>
+                          <w:bottom w:val="single" w:color="000000" w:sz="4"/>
+                          <w:right w:val="single" w:color="000000" w:sz="4"/>
+                          <w:insideH w:val="single" w:color="000000" w:sz="4"/>
+                          <w:insideV w:val="single" w:color="000000" w:sz="4"/>
+                        </w:tblBorders>
+                      </w:tblPr>
                       <w:tblGrid><w:gridCol w:w="2880"/><w:gridCol w:w="2880"/></w:tblGrid>
                       <w:tr>
                         <w:tc><w:tcPr><w:shd w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>One</w:t></w:r></w:p></w:tc>
@@ -2853,8 +2863,56 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
-        TestAssert.Contains(" re S", pdf);
+        TestAssert.Contains(" l S", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
+        TestAssert.Contains("> Tj", pdf);
+    }
+
+    public static void DocxSyntheticTableWithoutBordersDoesNotInventCellGrid()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>No border</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.DoesNotContain(" re S", pdf);
         TestAssert.Contains("> Tj", pdf);
     }
 
@@ -4120,6 +4178,14 @@ internal static class DocxTests
                   <w:body>
                     <w:p><w:r><w:t>Before</w:t></w:r></w:p>
                     <w:tbl>
+                      <w:tblPr>
+                        <w:tblBorders>
+                          <w:top w:val="single" w:color="000000" w:sz="4"/>
+                          <w:left w:val="single" w:color="000000" w:sz="4"/>
+                          <w:bottom w:val="single" w:color="000000" w:sz="4"/>
+                          <w:right w:val="single" w:color="000000" w:sz="4"/>
+                        </w:tblBorders>
+                      </w:tblPr>
                       <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
                       <w:tr><w:tc><w:p/></w:tc></w:tr>
                     </w:tbl>
@@ -4135,7 +4201,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int firstText = pdf.IndexOf("> Tj", StringComparison.Ordinal);
-        int tableGrid = pdf.IndexOf(" re S", StringComparison.Ordinal);
+        int tableGrid = pdf.IndexOf(" l S", StringComparison.Ordinal);
         int lastText = pdf.LastIndexOf("> Tj", StringComparison.Ordinal);
         TestAssert.True(firstText >= 0 && tableGrid > firstText && lastText > tableGrid, "DOCX tables should render in body order between surrounding paragraphs.");
     }
@@ -4163,6 +4229,14 @@ internal static class DocxTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:tbl>
+                      <w:tblPr>
+                        <w:tblBorders>
+                          <w:top w:val="single" w:color="000000" w:sz="4"/>
+                          <w:left w:val="single" w:color="000000" w:sz="4"/>
+                          <w:bottom w:val="single" w:color="000000" w:sz="4"/>
+                          <w:right w:val="single" w:color="000000" w:sz="4"/>
+                        </w:tblBorders>
+                      </w:tblPr>
                       <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
                       <w:tr><w:trPr><w:trHeight w:val="720"/></w:trPr><w:tc><w:p/></w:tc></w:tr>
                     </w:tbl>
@@ -4176,7 +4250,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 684 144 36 re S", pdf);
+        TestAssert.Contains("72 684 m 216 684 l S", pdf);
     }
 
     public static void DocxSyntheticTableRowsBreakAcrossPages()

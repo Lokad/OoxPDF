@@ -2211,6 +2211,15 @@ High-priority actions:
     2026-05-31 progress: style-level table borders now use the same mapping path before direct table/cell
     overrides. Public `docx-tables --skip-slow` passed `27`; private DOCX run `20260531-174458` stayed neutral
     (`15.889775` MAE, `0.141949` changed16).
+    2026-05-31 progress: removed the renderer fallback that drew a black rectangle around every table cell
+    with no resolved `tcBorders`/`tblBorders`/style border. Absence of border data now emits no stroke, while
+    explicit table borders keep using resolved edge strokes. Public coverage now separates explicit-border
+    table rendering from a no-border table that must not invent a grid. Validation passed `docx-tables
+    --skip-slow` (`44`), `docx-text --skip-slow` (`16`), `docx-page --skip-slow` (`14`), and full solution
+    build. Private DOCX run `20260531-230652` stayed page-stable at `16/16`, zero dimension mismatches, and
+    improved aggregate metrics from `MAE=14.806507`, changed16 `0.133867` to `MAE=13.648284`, changed16
+    `0.125542`. Keep this item open for border conflict resolution, nil/none suppression, and exact width
+    units; the completed part is only removing the invented default grid.
   - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as

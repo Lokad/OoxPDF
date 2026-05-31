@@ -257,9 +257,6 @@ internal sealed class DocxRenderer
         IReadOnlyList<DocxTableCellBorder> borders = cellLayout.Cell.Borders;
         if (borders.Count == 0)
         {
-            graphics.SetStrokeRgb(0, 0, 0);
-            graphics.SetLineWidth(0.75d);
-            graphics.StrokeRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
             return;
         }
 
