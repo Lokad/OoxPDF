@@ -1626,6 +1626,45 @@ internal static class DocxTests
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 20d, cellLayout.TextLines[0].BaselineY);
     }
 
+    public static void DocxTableLayoutStageAppliesCellVerticalAlignment()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("V", 11d, null, false, false, false, null, null)],
+            [],
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            null);
+        var topCell = new DocxTableCell("V", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var centerCell = new DocxTableCell("V", [paragraph], null, null, null, "center", [], DocxTableCellMargins.Empty);
+        var bottomCell = new DocxTableCell("V", [paragraph], null, null, null, "bottom", [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [40d, 40d, 40d], [new DocxTableRow([topCell, centerCell, bottomCell], 60d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "V".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        double topBaseline = row.Cells[0].TextLines[0].BaselineY;
+        double centerBaseline = row.Cells[1].TextLines[0].BaselineY;
+        double bottomBaseline = row.Cells[2].TextLines[0].BaselineY;
+        TestAssert.True(centerBaseline < topBaseline, "Center-aligned cell text should move downward from the top baseline.");
+        TestAssert.True(bottomBaseline < centerBaseline, "Bottom-aligned cell text should move below centered cell text.");
+    }
+
     public static void DocxLayoutSnapshotReportsPublicSafeCounts()
     {
         DocxTable table = CreateSingleCellTable("private text is not exposed", rowHeight: 20d);

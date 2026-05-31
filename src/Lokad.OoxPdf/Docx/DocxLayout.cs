@@ -310,9 +310,11 @@ internal sealed class DocxLayoutEngine
         double paddingLeft = cell.Margins.LeftPoints ?? 4d;
         double paddingRight = cell.Margins.RightPoints ?? 4d;
         double paddingTop = cell.Margins.TopPoints ?? 0d;
+        double paddingBottom = cell.Margins.BottomPoints ?? 0d;
         const double legacyBaselineInset = 17d;
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
-        double cursorY = cellY + cellHeight - legacyBaselineInset - paddingTop;
+        double startBaselineY = cellY + cellHeight - legacyBaselineInset - paddingTop;
+        double cursorY = startBaselineY;
         var lines = new List<DocxTextLineLayout>();
         foreach (DocxParagraph paragraph in paragraphs)
         {
@@ -344,7 +346,27 @@ internal sealed class DocxLayoutEngine
             cursorY -= paragraph.SpacingAfterPoints;
         }
 
-        return lines;
+        if (lines.Count == 0)
+        {
+            return lines;
+        }
+
+        double usedHeight = Math.Max(0d, startBaselineY - cursorY);
+        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - legacyBaselineInset);
+        double extra = Math.Max(0d, availableHeight - usedHeight);
+        double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
+            ? extra
+            : cell.VerticalAlignmentValue?.Equals("center", StringComparison.OrdinalIgnoreCase) == true
+                ? extra / 2d
+                : 0d;
+        return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset);
+    }
+
+    private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY)
+    {
+        return lines
+            .Select(line => line with { BaselineY = line.BaselineY + deltaY })
+            .ToArray();
     }
 
     private static IReadOnlyList<DocxTextSegmentLayout> CreateTextSegments(

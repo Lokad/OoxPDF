@@ -1794,9 +1794,12 @@ High-priority actions:
     define the table-cell text box. Authored left/right margins now affect text line width and x-position, and
     authored top margins move the first baseline before PDF emission; the legacy 4 pt inset remains only for
     cells without explicit margins.
+  - [x] 2026-05-31: Applied DOCX table-cell vertical alignment in layout. `w:vAlign` `center` and `bottom`
+    now shift the layout-owned cell text block inside the row after paragraph wrapping/spacing and margin
+    resolution, keeping the geometry visible to layout inspection before PDF emission.
   - [ ] 2026-05-31: Promote DOCX table-cell rendering from flattened cell text to the preserved paragraph
-    model completely, with public synthetic coverage for vertical alignment, row-height expansion from cell
-    content, and inline images/numbering before using private table pages as acceptance evidence.
+    model completely, with public synthetic coverage for row-height expansion from cell content and inline
+    images/numbering before using private table pages as acceptance evidence.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2723,9 +2726,9 @@ placement while drawing. `DocxLayoutSnapshot` exposes public-safe counts and bou
 copying text. Table cells now preserve their parsed paragraph lists in addition to the previous flattened
 text, and `DocxTableCellLayout` carries layout-owned text lines that the PDF renderer consumes. This is still
 an early boundary: the reader mixes style resolution into document parsing, text lines now carry styled
-segments but do not yet model font-run shaping, and table-cell text layout still lacks vertical alignment and
-content-driven row growth. The next architectural work should introduce style-resolved block models and richer
-table-cell layout before adding more Word pagination behavior.
+segments but do not yet model font-run shaping, and table-cell text layout still lacks content-driven row
+growth. The next architectural work should introduce style-resolved block models and richer table-cell layout
+before adding more Word pagination behavior.
 
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
@@ -3271,6 +3274,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Treating it as a draw-time x-offset would hide structural geometry from layout inspection and prevent later
   row-height and vertical-alignment rules from sharing the same content box.
   Date/Author: 2026-05-31 / Codex.
+- Decision: Apply DOCX table-cell vertical alignment after building the cell text block.
+  Rationale: `w:vAlign` positions the rendered block inside the cell; applying it before wrapping, margins, or
+  paragraph spacing would make later row-height work unstable. Shifting layout-owned text lines preserves a
+  reusable content-box model and avoids renderer-only baseline tweaks.
+  Date/Author: 2026-05-31 / Codex.
 - Decision: Keep the slide-44 chart residual on the shared PPTX Office text-emission track after adding
   structural chart text spacing support.
   Rationale: Reading authored `spc` into chart text styles is a correct model gap to close, but the private
@@ -3731,6 +3739,11 @@ Current validation baseline:
   passed `14` tests, public `docx-tables` visual case passed in run `20260531-145403`, and the full DOCX group
   sweep passed (`docx-core` `4`, `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`,
   `docx-tables` `14`).
+- DOCX table-cell vertical alignment validation:
+  after shifting layout-owned cell text blocks for `w:vAlign`, `docx-tables --skip-slow` passed `15` tests,
+  public `docx-tables` visual case passed in run `20260531-145618`, and the full DOCX group sweep passed
+  (`docx-core` `4`, `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`,
+  `docx-tables` `15`).
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
