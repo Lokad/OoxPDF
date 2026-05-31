@@ -915,6 +915,51 @@ internal static class DocxTests
         TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width, line.Segments[1].X);
     }
 
+    public static void DocxLayoutStageWrapsMixedRunTextWithRunAwareWidths()
+    {
+        var narrowRun = new DocxTextRun("A", 12d, null, false, false, false, null, "Narrow");
+        var wideRun = new DocxTextRun(" B", 12d, null, false, false, false, null, "Wide");
+        var paragraph = new DocxParagraph(
+            [narrowRun, wideRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            60d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [paragraph],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("A ", lines[0].Text);
+        TestAssert.Equal("B", lines[1].Text);
+        TestAssert.Equal("Wide", lines[1].Segments.Single().StyleRun.FontFamily ?? string.Empty);
+    }
+
     public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

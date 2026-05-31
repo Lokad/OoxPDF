@@ -1965,12 +1965,14 @@ High-priority actions:
       structural first-run flattening gap that could misplace mixed-style text and lose later run color/style
       during body paragraph emission. Public `docx-core --skip-slow` passed `12`, and `docx-tables
       --skip-slow` passed `38`.
-    - [ ] 2026-05-31: Finish DOCX mixed-run line building by making wrapping own run spans, not just the final
-      line segments. The current wrapper still tokenizes a concatenated paragraph string and tests candidate
-      line widths against the first run, so mixed fonts/styles can still choose Word-incompatible break points
-      even though final segment placement is now run-aware. The next slice should introduce a paragraph text
-      span model that preserves run boundaries through tokenization, line breaking, numbering continuation
-      lines, and table-cell paragraphs before enabling production font-plan measurement.
+    - [x] 2026-05-31: Finished the first DOCX mixed-run line-building slice by making wrapping own run spans,
+      not just final line segments. Body and table-cell paragraph wrappers now preserve run boundaries through
+      tokenization, line breaking, numbering continuation lines, and final segment placement, so mixed
+      fonts/styles can influence break points before PDF emission. Public coverage includes a wide second-run
+      case that would not break under first-run measurement. Private DOCX run `20260531-201414` stayed
+      page-stable at `16/16` with zero dimension mismatches and improved aggregate MAE from `15.856962` to
+      `14.577536` (changed16 `0.136194`). Keep the broader font item open for production run-level PDF font
+      resources, tabs, bullet fonts, and exact Word line-break edge cases.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
