@@ -144,7 +144,11 @@ internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, 
 
 internal sealed record DocxTable(string? LayoutValue, IReadOnlyList<double> ColumnWidthsPoints, IReadOnlyList<DocxTableRow> Rows);
 
-internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells, double? HeightPoints);
+internal sealed record DocxTableRow(
+    IReadOnlyList<DocxTableCell> Cells,
+    double? HeightPoints,
+    bool IsHeader = false,
+    string? HeaderValue = null);
 
 internal sealed record DocxTableCell(
     string Text,

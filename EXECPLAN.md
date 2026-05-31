@@ -1837,6 +1837,15 @@ High-priority actions:
     geometry. The current indent application moves the flattened label+text line as one unit; long-term Word
     parity needs a layout record that separates the list marker from paragraph text and uses numbering
     tab/hanging rules consistently in body text and table cells.
+  - [x] 2026-05-31: Preserved DOCX `w:tblHeader` row tokens and repeated contiguous header rows when a table
+    page break occurs. This moves repeating headers out of diagnostics-only handling and into the table layout
+    stage with public coverage. The diagnostic remains as an approximation because multi-row/header-group
+    semantics, interaction with table styles, and exact Word page-break behavior are not fully modeled.
+  - [ ] 2026-05-31: Continue the DOCX table style track: parse table style definitions, conditional style
+    regions, inherited table/cell borders, shading, margins, and header-row formatting before attempting more
+    private-document table fixes. The private case still reports table-style diagnostics and did not improve
+    from header-row repetition alone, so the next table work should target style resolution rather than row
+    repetition.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2480,6 +2489,13 @@ document-specific business content into public notes.
   - Diagnostics remain the same six public-safe categories; `DOCX_NUMBERING_INDENT` is still intentionally
     open because the current implementation shifts flattened list lines rather than modeling Office label
     tab stops and continuation-line hanging geometry.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-153115` after preserving and
+  repeating DOCX table header rows:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - Aggregate metrics were unchanged from the numbering-indent run: MAE `16.995226`, changed16 `0.149573`.
+  - This suggests the private table residual is not primarily omitted repeated header rows; the remaining
+    table work should focus on table style resolution, conditional formatting, borders, shading, and width
+    inheritance.
 
 ## Backlog
 
@@ -3848,6 +3864,11 @@ Current validation baseline:
   `docx-images` `2`, `docx-tables` `18`). Public `docx-numbering` visual run `20260531-152648` and
   `docx-tables` visual run `20260531-152654` passed. Private DOCX run `20260531-152705` kept `16/16` pages
   with zero dimension mismatches and improved MAE to `16.995226`, changed16 to `0.149573`.
+- DOCX table-header validation:
+  after preserving `w:tblHeader` and repeating contiguous table header rows across table page breaks,
+  `docx-core --skip-slow` passed `4`, `docx-tables --skip-slow` passed `20`, public `docx-tables` visual run
+  `20260531-153109` passed, and private DOCX run `20260531-153115` stayed at `16/16` pages, zero dimension
+  mismatches, MAE `16.995226`, changed16 `0.149573`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

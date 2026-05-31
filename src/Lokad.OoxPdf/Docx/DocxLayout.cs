@@ -390,41 +390,71 @@ internal sealed class DocxLayoutEngine
             finishPage();
         }
 
+        IReadOnlyList<DocxTableRow> headerRows = table.Rows.TakeWhile(row => row.IsHeader).ToArray();
         foreach (DocxTableRow row in table.Rows)
         {
-            double[] cellWidths = row.Cells
-                .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
-                .ToArray();
-            double contentHeight = embedded is null
-                ? 0d
-                : row.Cells
-                    .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], embedded))
-                    .DefaultIfEmpty(0d)
-                    .Max();
-            double rowHeight = Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
+            double rowHeight = MeasureTableRowHeight(table, row, scale, embedded);
             if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
             {
                 finishPage();
+                if (!row.IsHeader)
+                {
+                    foreach (DocxTableRow headerRow in headerRows)
+                    {
+                        AddTableRowLayout(table, headerRow, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
+                    }
+                }
             }
 
-            double cellX = x;
-            double cellY = cursorY - rowHeight;
-            var cells = new List<DocxTableCellLayout>(row.Cells.Count);
-            for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
-            {
-                double cellWidth = cellWidths[columnIndex];
-                DocxTableCell cell = row.Cells[columnIndex];
-                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, embedded);
-                IReadOnlyList<DocxInlineImageLayout> inlineImages = LayoutTableCellInlineImages(cell, cellX, cellY, cellWidth, rowHeight, embedded, getPageIndex());
-                cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines, inlineImages));
-                cellX += cellWidth;
-            }
-
-            currentItems.Add(new DocxTableRowLayout(cells.ToArray(), cellY, rowHeight));
-            cursorY -= rowHeight;
+            AddTableRowLayout(table, row, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
         }
 
         cursorY -= 6d;
+    }
+
+    private static double MeasureTableRowHeight(DocxTable table, DocxTableRow row, double scale, PdfEmbeddedFont? embedded)
+    {
+        double[] cellWidths = row.Cells
+            .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
+            .ToArray();
+        double contentHeight = embedded is null
+            ? 0d
+            : row.Cells
+                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], embedded))
+                .DefaultIfEmpty(0d)
+                .Max();
+        return Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
+    }
+
+    private static void AddTableRowLayout(
+        DocxTable table,
+        DocxTableRow row,
+        double scale,
+        PdfEmbeddedFont? embedded,
+        Func<int> getPageIndex,
+        ref List<DocxLayoutItem> currentItems,
+        ref double cursorY,
+        double x)
+    {
+        double[] cellWidths = row.Cells
+            .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
+            .ToArray();
+        double rowHeight = MeasureTableRowHeight(table, row, scale, embedded);
+        double cellX = x;
+        double cellY = cursorY - rowHeight;
+        var cells = new List<DocxTableCellLayout>(row.Cells.Count);
+        for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
+        {
+            double cellWidth = cellWidths[columnIndex];
+            DocxTableCell cell = row.Cells[columnIndex];
+            IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, embedded);
+            IReadOnlyList<DocxInlineImageLayout> inlineImages = LayoutTableCellInlineImages(cell, cellX, cellY, cellWidth, rowHeight, embedded, getPageIndex());
+            cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines, inlineImages));
+            cellX += cellWidth;
+        }
+
+        currentItems.Add(new DocxTableRowLayout(cells.ToArray(), cellY, rowHeight));
+        cursorY -= rowHeight;
     }
 
     private static double MeasureTableCellContentHeight(DocxTableCell cell, double cellWidth, PdfEmbeddedFont embedded)

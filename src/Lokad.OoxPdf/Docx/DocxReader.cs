@@ -257,7 +257,7 @@ internal sealed class DocxReader
 
         if (document.Descendants(WordprocessingNamespace + "tblHeader").Any())
         {
-            Emit("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", "repeating table header row");
+            Emit("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", "repeating table header row", fallback: "Approximated");
         }
 
         if (document.Descendants(WordprocessingNamespace + "tblStyle").Any())
@@ -581,7 +581,14 @@ internal sealed class DocxReader
 
             if (cells.Count > 0)
             {
-                rows.Add(new DocxTableRow(cells, ReadTableRowHeight(row)));
+                XElement? header = row
+                    .Element(WordprocessingNamespace + "trPr")
+                    ?.Element(WordprocessingNamespace + "tblHeader");
+                rows.Add(new DocxTableRow(
+                    cells,
+                    ReadTableRowHeight(row),
+                    ReadOnOff(header) == true,
+                    (string?)header?.Attribute(WordprocessingNamespace + "val")));
             }
         }
 
