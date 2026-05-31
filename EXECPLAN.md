@@ -1848,6 +1848,12 @@ High-priority actions:
     checks, chain consecutive `keepNext` paragraphs across multiple following blocks, and refine exact
     keep-with-table behavior against public Word/Office PDF fixtures before downgrading the keep-rule
     diagnostics.
+    - [x] 2026-05-31: Chained consecutive DOCX `keepNext` paragraphs during kept-block estimation instead of
+      stopping after the first following paragraph/table target. Public synthetic coverage now exercises a
+      three-paragraph keep chain that only fits after moving the whole chain to the next page. Private DOCX
+      run `20260531-184720` stayed dimension-stable at 16/16 pages and improved slightly versus the current
+      DOCX baseline (`15.849350` MAE, changed16 `0.141574`). `widowControl` and exact keep-with-table
+      behavior remain open.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current

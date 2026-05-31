@@ -1036,6 +1036,66 @@ internal static class DocxTests
         TestAssert.Equal(2, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
     }
 
+    public static void DocxSyntheticParagraphKeepNextChainsAcrossConsecutiveParagraphsToNextPage()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        DocxParagraph keepFirst = CreateDocxLayoutParagraph(
+            "Keep",
+            fontSize: 11d,
+            lineSpacingPoints: 11d,
+            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+        DocxParagraph keepSecond = CreateDocxLayoutParagraph(
+            "Chain",
+            fontSize: 11d,
+            lineSpacingPoints: 11d,
+            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+        DocxParagraph end = CreateDocxLayoutParagraph("End", fontSize: 11d, lineSpacingPoints: 11d);
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 9d, lineSpacingPoints: 9d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 9d, lineSpacingPoints: 9d)
+        ];
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Concat([
+                new DocxParagraphElement(keepFirst),
+                new DocxParagraphElement(keepSecond),
+                new DocxParagraphElement(end)
+            ])
+            .ToArray();
+        var document = new DocxDocument(
+            160d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillKeepChainEnd".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(4, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+        TestAssert.Equal(3, secondPageLines.Length);
+        TestAssert.Equal("Keep", secondPageLines[0].Text);
+        TestAssert.Equal("Chain", secondPageLines[1].Text);
+        TestAssert.Equal("End", secondPageLines[2].Text);
+    }
+
     public static void DocxSyntheticNumberingRendersListLabels()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -308,18 +308,26 @@ internal sealed class DocxLayoutEngine
 
         DocxParagraph paragraph = paragraphElement.Paragraph;
         double height = EstimateParagraphContentHeight(paragraph, availableWidth, embedded);
-        if (paragraph.KeepRules.KeepNext == true && TryFindNextKeepTarget(elements, elementIndex + 1, out DocxBodyElement? next))
+        int nextSearchIndex = elementIndex + 1;
+        while (paragraph.KeepRules.KeepNext == true &&
+            TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
         {
             if (next is DocxParagraphElement nextParagraph)
             {
                 height += Math.Max(paragraph.SpacingAfterPoints, nextParagraph.Paragraph.SpacingBeforePoints);
                 height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, embedded);
+                paragraph = nextParagraph.Paragraph;
+                nextSearchIndex = nextIndex + 1;
+                continue;
             }
-            else if (next is DocxTableElement nextTable)
+
+            if (next is DocxTableElement nextTable)
             {
                 height += paragraph.SpacingAfterPoints;
                 height += EstimateFirstTableRowHeight(nextTable.Table, availableWidth, embedded);
             }
+
+            break;
         }
 
         return height;
@@ -327,10 +335,18 @@ internal sealed class DocxLayoutEngine
 
     private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out DocxBodyElement? target)
     {
+        bool found = TryFindNextKeepTarget(elements, startIndex, out _, out DocxBodyElement? indexedTarget);
+        target = indexedTarget;
+        return found;
+    }
+
+    private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out int targetIndex, out DocxBodyElement? target)
+    {
         for (int i = startIndex; i < elements.Count; i++)
         {
             if (elements[i] is DocxParagraphElement or DocxTableElement)
             {
+                targetIndex = i;
                 target = elements[i];
                 return true;
             }
@@ -341,6 +357,7 @@ internal sealed class DocxLayoutEngine
             }
         }
 
+        targetIndex = -1;
         target = null;
         return false;
     }
