@@ -191,7 +191,9 @@ internal sealed record DocxTableCell(
     DocxTableCellMargins Margins,
     double? PreferredWidthPoints = null,
     string? PreferredWidthValue = null,
-    string? PreferredWidthType = null);
+    string? PreferredWidthType = null,
+    int GridSpan = 1,
+    string? GridSpanValue = null);
 
 internal sealed record DocxTableCellBorder(string Edge, string? Value, string? Color, string? SizeValue);
 

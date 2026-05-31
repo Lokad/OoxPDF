@@ -1950,6 +1950,10 @@ High-priority actions:
     and table x-position shift. Private DOCX run `20260531-173800` was neutral (`15.889775` MAE, `0.141949`
     changed16), so the high-impact remainder is still cell spacing, grid spans/merged cells, and the full
     style/direct margin priority ladder.
+    2026-05-31 progress: preserved `w:gridSpan` on table cells and applied it during row measurement and
+    layout by summing the spanned grid columns. Public coverage checks source-token retention and layout
+    width/x-position for a two-column span. Private DOCX run `20260531-180144` stayed neutral (`15.889775`
+    MAE, `0.141949` changed16).
   - [x] 2026-05-31: Preserved DOCX table preferred-width tokens and applied `w:tblW w:type="dxa"` to table
     grid scaling. The layout stage now scales column widths to the preferred table width, capped by available
     page width, instead of relying only on raw `w:tblGrid` sums. Private impact was neutral, indicating this
@@ -4129,6 +4133,9 @@ Current validation baseline:
   after resolving `%1` through `%9` from active counters and resetting deeper counters on parent increments,
   `docx-numbering --skip-slow` passed `7`. Private DOCX run `20260531-175714` stayed at `16/16` pages, zero
   dimension mismatches, MAE `15.889775`, changed16 `0.141949`.
+- DOCX table grid-span validation:
+  after preserving and applying `w:gridSpan`, `docx-tables --skip-slow` passed `30`. Private DOCX run
+  `20260531-180144` stayed at `16/16` pages, zero dimension mismatches, MAE `15.889775`, changed16 `0.141949`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

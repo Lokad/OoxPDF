@@ -2125,6 +2125,49 @@ internal static class DocxTests
         TestAssert.Equal(15d, margins.LeftPoints ?? 0d);
     }
 
+    public static void DocxReaderTableCellPreservesGridSpanToken()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="720"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:gridSpan w:val="2"/></w:tcPr><w:p><w:r><w:t>Span</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
+        TestAssert.Equal(2, cell.GridSpan);
+        TestAssert.Equal("2", cell.GridSpanValue ?? string.Empty);
+    }
+
     public static void DocxReaderTableCellPreservesBorderTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -2758,6 +2801,30 @@ internal static class DocxTests
 
         TestAssert.Equal(40d, row.Cells[0].Width);
         TestAssert.Equal(50d, row.Cells[1].X);
+        TestAssert.Equal(80d, row.Cells[1].Width);
+    }
+
+    public static void DocxTableLayoutStageAppliesGridSpanWidths()
+    {
+        var table = new DocxTable(
+            null,
+            [40d, 60d, 80d],
+            [new DocxTableRow([
+                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2"),
+                new DocxTableCell("tail", [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], 20d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(10d, row.Cells[0].X);
+        TestAssert.Equal(100d, row.Cells[0].Width);
+        TestAssert.Equal(110d, row.Cells[1].X);
         TestAssert.Equal(80d, row.Cells[1].Width);
     }
 

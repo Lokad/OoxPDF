@@ -682,7 +682,11 @@ internal sealed class DocxReader
                     margins,
                     ReadDxaWidth(cellWidth),
                     (string?)cellWidth?.Attribute(WordprocessingNamespace + "w"),
-                    (string?)cellWidth?.Attribute(WordprocessingNamespace + "type")));
+                    (string?)cellWidth?.Attribute(WordprocessingNamespace + "type"),
+                    ReadGridSpan(cellProperties),
+                    (string?)cellProperties
+                        ?.Element(WordprocessingNamespace + "gridSpan")
+                        ?.Attribute(WordprocessingNamespace + "val")));
             }
 
             if (cells.Count > 0)
@@ -732,6 +736,16 @@ internal sealed class DocxReader
         }
 
         return ReadTwipsAttribute(width, WordprocessingNamespace + "w");
+    }
+
+    private static int ReadGridSpan(XElement? cellProperties)
+    {
+        return cellProperties
+            ?.Element(WordprocessingNamespace + "gridSpan")
+            ?.Attribute(WordprocessingNamespace + "val") is { } span &&
+            int.TryParse(span.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+                ? Math.Max(1, parsed)
+                : 1;
     }
 
     private static IReadOnlyList<DocxParagraph> ReadTableCellParagraphs(
