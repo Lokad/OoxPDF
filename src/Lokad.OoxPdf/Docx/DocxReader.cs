@@ -663,6 +663,7 @@ internal sealed class DocxReader
                 IReadOnlyList<DocxTableCellBorder> borders = ResolveTableCellBorders(
                     directBorders,
                     conditionalStyle.Borders,
+                    tableStyle.TableBorders,
                     tableBorders,
                     rowIndex,
                     cellIndex,
@@ -846,6 +847,7 @@ internal sealed class DocxReader
     private static IReadOnlyList<DocxTableCellBorder> ResolveTableCellBorders(
         IReadOnlyList<DocxTableCellBorder> directBorders,
         IReadOnlyList<DocxTableCellBorder> styleBorders,
+        IReadOnlyList<DocxTableCellBorder> styleTableBorders,
         IReadOnlyList<DocxTableCellBorder> tableBorders,
         int rowIndex,
         int cellIndex,
@@ -853,6 +855,7 @@ internal sealed class DocxReader
         int cellCount)
     {
         var resolved = new Dictionary<string, DocxTableCellBorder>(StringComparer.OrdinalIgnoreCase);
+        AddBorders(resolved, ResolveTableBordersForCell(styleTableBorders, rowIndex, cellIndex, rowCount, cellCount));
         AddBorders(resolved, ResolveTableBordersForCell(tableBorders, rowIndex, cellIndex, rowCount, cellCount));
         AddBorders(resolved, styleBorders);
         AddBorders(resolved, directBorders);
@@ -1277,9 +1280,12 @@ internal sealed class DocxReader
 
     private sealed record DocxStyle(DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
 
-    private sealed record DocxTableStyle(DocxTableCellStyle Cell, IReadOnlyDictionary<string, DocxTableCellStyle> ConditionalRegions)
+    private sealed record DocxTableStyle(
+        DocxTableCellStyle Cell,
+        IReadOnlyList<DocxTableCellBorder> TableBorders,
+        IReadOnlyDictionary<string, DocxTableCellStyle> ConditionalRegions)
     {
-        public static DocxTableStyle Empty { get; } = new(DocxTableCellStyle.Empty, new Dictionary<string, DocxTableCellStyle>());
+        public static DocxTableStyle Empty { get; } = new(DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
     }
 
     private sealed record DocxTableCellStyle(
@@ -1314,11 +1320,13 @@ internal sealed class DocxReader
             }
         }
 
+        XElement? tableProperties = style.Element(WordprocessingNamespace + "tblPr");
         return new DocxTableStyle(
             ReadTableCellStyle(style.Element(WordprocessingNamespace + "tcPr")) with
             {
-                Margins = ReadTableStyleCellMargins(style.Element(WordprocessingNamespace + "tblPr"))
+                Margins = ReadTableStyleCellMargins(tableProperties)
             },
+            ReadTableBorders(tableProperties),
             conditional);
     }
 

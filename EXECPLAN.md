@@ -1887,6 +1887,11 @@ High-priority actions:
   - [ ] 2026-05-31: Extend DOCX table styles beyond whole-style cell shading: parse `w:tblPr`, `w:tblBorders`,
     `w:tblCellMar`, `w:tblLook`, and `w:tblStylePr` conditional regions (`firstRow`, `lastRow`, banding,
     first/last column), then merge them with direct row/cell properties in Word priority order.
+    - [x] 2026-05-31: Promoted table-style `w:tblPr/w:tblBorders` into the existing per-cell border ladder.
+      Style table borders now map outer and inside horizontal/vertical edges onto cells, with direct table
+      borders, conditional/cell-style borders, and direct cell borders layered above them. Public coverage
+      checks a 2x2 styled table with distinct outer and inside colors. The parent remains open for `tblLook`
+      toggles, full conditional precedence, and row/table exception properties.
   - [x] 2026-05-31: Applied DOCX conditional table-style cell shading for first/last row, first/last column,
     corner cells, and first horizontal/vertical bands. Conditional `w:tblStylePr/w:tcPr/w:shd` now flows into
     cell fill/shading tokens before PDF emission. The private DOCX metrics improved, confirming conditional
@@ -1918,6 +1923,9 @@ High-priority actions:
     expected cell edges. Private DOCX run `20260531-173508` was neutral (`15.889775` MAE, `0.141949`
     changed16), so the remaining border work is still the harder Word conflict ladder: adjacent-edge conflict
     resolution, start/end directionality, nil/none suppression across shared edges, and exact width/unit rules.
+    2026-05-31 progress: style-level table borders now use the same mapping path before direct table/cell
+    overrides. Public `docx-tables --skip-slow` passed `27`; private DOCX run `20260531-174458` stayed neutral
+    (`15.889775` MAE, `0.141949` changed16).
   - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as
@@ -4092,6 +4100,10 @@ Current validation baseline:
   `11` tests and `docx-page --skip-slow` passed `10`. Private DOCX run `20260531-174219` stayed at `16/16`
   pages, zero dimension mismatches, MAE `15.889775`, changed16 `0.141949`; diagnostics still include
   `DOCX_STYLE_PARAGRAPH_SPACING`, which remains appropriate for autospacing, cascade, and collapse semantics.
+- DOCX table-style border validation:
+  after applying table-style `w:tblPr/w:tblBorders`, `docx-tables --skip-slow` passed `27`. Private DOCX run
+  `20260531-174458` stayed at `16/16` pages, zero dimension mismatches, MAE `15.889775`, changed16 `0.141949`;
+  table-style diagnostics remain for `tblLook`, conditional precedence, and table-style paragraph/run layers.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
