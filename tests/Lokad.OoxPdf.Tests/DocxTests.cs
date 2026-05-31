@@ -830,6 +830,36 @@ internal static class DocxTests
         TestAssert.Equal(0, resolved.CandidateFamilies.Count);
     }
 
+    public static void DocxFontPlanSnapshotReportsPrivateSafeCounts()
+    {
+        var primaryRun = new DocxTextRun("Primary", 11d, null, false, false, false, null, "Primary Sans")
+        {
+            Fonts = new DocxRunFonts("Primary Sans", null, null, null, null, null, null, null)
+        };
+        var alternateRun = new DocxTextRun("Alternate", 11d, null, false, false, false, null, "Corporate Sans")
+        {
+            Fonts = new DocxRunFonts("Corporate Sans", null, null, null, null, null, null, null)
+        };
+        var missingRun = new DocxTextRun("Missing", 11d, null, false, false, false, null, null);
+        DocxDocument document = CreateFontPlanDocument(
+            [primaryRun, alternateRun, missingRun],
+            new DocxFontCatalog(
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null)],
+                DocxThemeFonts.Empty));
+        var resolver = new MapFontResolver(["Primary Sans", "Installed Sans"], "Resolver Fallback");
+
+        DocxFontPlanSnapshot snapshot = new DocxRenderer(resolver).InspectFontPlan(document);
+
+        TestAssert.Equal(3, snapshot.RunCount);
+        TestAssert.Equal(1, snapshot.PrimaryCount);
+        TestAssert.Equal(1, snapshot.FontTableAlternateCount);
+        TestAssert.Equal(0, snapshot.ThemeCount);
+        TestAssert.Equal(0, snapshot.ResolverFallbackCount);
+        TestAssert.Equal(1, snapshot.MissingCount);
+        TestAssert.Equal(3, snapshot.DistinctCandidateFamilyCount);
+        TestAssert.Equal(2, snapshot.DistinctResolvedFamilyCount);
+    }
+
     public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
@@ -4085,8 +4115,13 @@ internal static class DocxTests
 
     private static DocxDocument CreateFontPlanDocument(DocxTextRun run, DocxFontCatalog fontCatalog)
     {
+        return CreateFontPlanDocument([run], fontCatalog);
+    }
+
+    private static DocxDocument CreateFontPlanDocument(IReadOnlyList<DocxTextRun> runs, DocxFontCatalog fontCatalog)
+    {
         var paragraph = new DocxParagraph(
-            [run],
+            runs,
             [],
             null,
             DocxTextAlignment.Left,

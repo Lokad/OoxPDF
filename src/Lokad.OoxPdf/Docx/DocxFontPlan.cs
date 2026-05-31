@@ -98,3 +98,39 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             .ToArray();
     }
 }
+
+internal sealed record DocxFontPlanSnapshot(
+    int RunCount,
+    int PrimaryCount,
+    int FontTableAlternateCount,
+    int ThemeCount,
+    int ResolverFallbackCount,
+    int MissingCount,
+    int DistinctCandidateFamilyCount,
+    int DistinctResolvedFamilyCount)
+{
+    public static DocxFontPlanSnapshot FromPlan(DocxFontPlan plan)
+    {
+        return new DocxFontPlanSnapshot(
+            plan.Runs.Count,
+            Count(plan, DocxTypefaceResolutionSource.Primary),
+            Count(plan, DocxTypefaceResolutionSource.FontTableAlternate),
+            Count(plan, DocxTypefaceResolutionSource.Theme),
+            Count(plan, DocxTypefaceResolutionSource.ResolverFallback),
+            Count(plan, DocxTypefaceResolutionSource.Missing),
+            plan.Runs
+                .SelectMany(run => run.CandidateFamilies)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(),
+            plan.Runs
+                .Select(run => run.ResolvedFamily)
+                .Where(family => !string.IsNullOrWhiteSpace(family))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count());
+    }
+
+    private static int Count(DocxFontPlan plan, DocxTypefaceResolutionSource source)
+    {
+        return plan.Runs.Count(run => run.Source == source);
+    }
+}

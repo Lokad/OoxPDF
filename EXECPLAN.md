@@ -1943,6 +1943,10 @@ High-priority actions:
       as `DocxTableCell.Text` rather than paragraph runs. This mirrors the layout engine's synthetic cell-text
       paragraph path so the future per-run measurement/resource map will not silently skip table cell content.
       Public coverage pins the table-cell text path without relying on any installed font.
+    - [x] 2026-05-31: Added a private-safe DOCX font-plan inspection snapshot that reports only run counts,
+      source counts, and distinct candidate/resolved-family counts, not document text or font names. This gives
+      private DOCX investigations a way to see whether pages are dominated by primary, font-table alternate,
+      theme, resolver fallback, or missing branches before changing rendering behavior.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
