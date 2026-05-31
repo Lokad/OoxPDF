@@ -139,7 +139,14 @@ internal sealed record DocxTableCellLayout(
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages);
 
-internal readonly record struct DocxFontResources(PdfEmbeddedFont? Embedded, PdfFontResource? Resource);
+internal sealed record DocxRunFontResource(string Name, PdfEmbeddedFont Embedded, FontResolution Resolution);
+
+internal sealed record DocxFontResources(
+    DocxFontPlan Plan,
+    IDocxTextMeasurer? TextMeasurer,
+    IReadOnlyList<PdfFontResource> Resources,
+    IReadOnlyDictionary<DocxTextRun, DocxRunFontResource> RunResources,
+    DocxRunFontResource? Fallback);
 
 internal interface IDocxTextMeasurer
 {

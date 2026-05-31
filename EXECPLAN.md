@@ -1974,6 +1974,15 @@ High-priority actions:
       policy: production output remains unchanged until line layout and PDF emission share the same run-level
       resource map. Public coverage dynamically selects an installed usable face without hard-coded family
       names and verifies the measurement matches raw OpenType advances plus kerning.
+    - [x] 2026-05-31: Promoted DOCX production layout inspection and rendering to use the `DocxFontPlan`
+      measurer for run-level width and line-height measurement, while keeping PDF emission on the existing
+      single document fallback font resource. The measurer now takes the same resolved fallback resource used
+      by emission for runs with no explicit OOXML font family, avoiding zero-width "missing" runs without
+      introducing font-name exceptions. Validation passed `docx-text --skip-slow` (`16`), `docx-tables
+      --skip-slow` (`43`), `docx-numbering --skip-slow` (`9`), and full solution build. Private DOCX run
+      `20260531-230150` stayed page-stable at `16/16`, zero dimension mismatches, with changed16 slightly
+      better (`0.133893` -> `0.133867`) and MAE slightly worse (`14.791805` -> `14.806507`), so this is a
+      structural layout-alignment step rather than a completed visual win.
     - [x] 2026-05-31: Fixed DOCX non-numbered body/table line widths and segment positions to use the
       line's run-level text segments instead of measuring the whole line with the first run. This removes a
       structural first-run flattening gap that could misplace mixed-style text and lose later run color/style
@@ -2012,6 +2021,13 @@ High-priority actions:
       MAE to `16.256186` (`20260531-201939`, changed16 `0.144954`). Do not land emission-only resource
       selection; the next attempt must use the same run-level font map for wrapping, segment advances,
       ToUnicode/glyph embedding, and static header/footer text.
+      2026-05-31 update: a second no-font-name trial switched layout measurement and PDF emission together
+      through per-run `DocxFontPlan` resources and used resolver metadata to avoid synthetic bold/italic when
+      the selected face already carried the style. It still regressed the private DOCX aggregate
+      (`20260531-225826`, `MAE=14.809827`, changed16 `0.134021`) against the current single-resource baseline,
+      so production multi-resource emission remains open. The next attempt needs PDF-level text appearance
+      inspection and likely a resource map keyed by layout run identity, not record equality, before replacing
+      the single fallback emission resource.
     - [ ] 2026-05-31: Resolve the DOCX pagination gap exposed by structural font/style alignment. Private
       DOCX run `20260531-203336` improved aggregate MAE to `13.852449` and changed16 to `0.125076`, but the
       candidate now paginates as `14` pages against Office's `16` reference pages with `2` dimension mismatches.

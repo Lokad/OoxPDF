@@ -120,17 +120,19 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider
 {
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
+    private readonly FontResolution? fallbackResolution;
     private readonly Dictionary<(string Path, int FaceIndex), OpenTypeFont?> fonts = new();
 
-    public DocxFontPlanTextMeasurer(DocxFontPlan plan)
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontResolution? fallbackResolution = null)
     {
         runs = plan.Runs;
+        this.fallbackResolution = fallbackResolution;
     }
 
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if (resolved?.Resolution is not FontResolution resolution)
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontResolution resolution)
         {
             return 0d;
         }
@@ -161,7 +163,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
     {
         DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if (resolved?.Resolution is not FontResolution resolution)
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontResolution resolution)
         {
             return fontSize;
         }

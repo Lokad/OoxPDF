@@ -30,7 +30,7 @@ internal sealed class DocxRenderer
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
-        DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.Embedded);
+        DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.TextMeasurer);
         return DocxLayoutSnapshot.FromLayout(layout);
     }
 
@@ -42,10 +42,8 @@ internal sealed class DocxRenderer
     private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
-        PdfEmbeddedFont? embedded = fontResources.Embedded;
-        PdfFontResource? resource = fontResources.Resource;
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.TextMeasurer);
         var pages = new List<PdfPage>(layout.Pages.Count);
         int imageIndex = 1;
 
@@ -57,18 +55,17 @@ internal sealed class DocxRenderer
             var pageImages = new List<PdfImageResource>();
             foreach (DocxLayoutItem item in layoutPage.Items)
             {
-                RenderLayoutItem(item, graphics, pageImages, resource, embedded, diagnosticSink, ref imageIndex);
+                RenderLayoutItem(item, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
             }
 
-            if (embedded is not null)
+            if (fontResources.Fallback is not null)
             {
                 int pageNumber = pageIndex + 1;
-                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, document.MarginLeftPoints, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
-                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, document.MarginLeftPoints, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
+                RenderStaticParagraphs(document.HeaderParagraphs, graphics, fontResources, document.MarginLeftPoints, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
+                RenderStaticParagraphs(document.FooterParagraphs, graphics, fontResources, document.MarginLeftPoints, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
             }
 
-            IReadOnlyList<PdfFontResource> fonts = resource is null ? [] : [resource];
-            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fonts, pageImages.ToArray()));
+            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray()));
         }
 
         return pages;
@@ -77,22 +74,48 @@ internal sealed class DocxRenderer
     private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver)
     {
         DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver);
+        var resources = new List<PdfFontResource>();
+        var runResources = new Dictionary<DocxTextRun, DocxRunFontResource>();
+        DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources);
+        IDocxTextMeasurer? measurer = plan.Runs.Any(run => run.Resolution?.FontFilePath is not null && File.Exists(run.Resolution.FontFilePath)) || fallback is not null
+            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution)
+            : null;
+        return new DocxFontResources(plan, measurer, resources, runResources, fallback);
+    }
+
+    private static DocxRunFontResource? PrepareFallbackFontResource(
+        DocxFontPlan plan,
+        IFontResolver fontResolver,
+        List<PdfFontResource> resources,
+        Dictionary<DocxTextRun, DocxRunFontResource> runResources)
+    {
         FontResolution resolution = ResolveDocumentBaseFont(plan, fontResolver);
-        IReadOnlyList<DocxTextRun> allRuns = plan.Runs.Select(run => run.Run).ToArray();
-        PdfEmbeddedFont? embedded = null;
-        PdfFontResource? resource = null;
-        IReadOnlyList<int> glyphs = allRuns
-            .SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value))
-            .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
-            .ToArray();
-        if (glyphs.Count > 0 && resolution.FontFilePath is not null && File.Exists(resolution.FontFilePath))
+        if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
         {
-            OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
-            embedded = PdfEmbeddedFont.Create(font, glyphs);
-            resource = new PdfFontResource("F1", embedded);
+            return null;
         }
 
-        return new DocxFontResources(embedded, resource);
+        IReadOnlyList<int> glyphs = plan.Runs
+            .SelectMany(run => run.Run.Text.EnumerateRunes().Select(rune => rune.Value))
+            .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
+            .Distinct()
+            .ToArray();
+        if (glyphs.Count == 0)
+        {
+            return null;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs);
+        string name = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
+        var runResource = new DocxRunFontResource(name, embedded, resolution);
+        resources.Add(new PdfFontResource(name, embedded));
+        foreach (DocxResolvedRunTypeface run in plan.Runs)
+        {
+            runResources[run.Run] = runResource;
+        }
+
+        return runResource;
     }
 
     private static FontResolution ResolveDocumentBaseFont(DocxFontPlan plan, IFontResolver fontResolver)
@@ -112,36 +135,32 @@ internal sealed class DocxRenderer
         DocxLayoutItem item,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
-        PdfFontResource? fontResource,
-        PdfEmbeddedFont? embedded,
+        DocxFontResources fontResources,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         ref int imageIndex)
     {
         switch (item)
         {
-            case DocxTextLineLayout textLine when embedded is not null:
-                RenderTextLine(textLine, graphics, embedded);
+            case DocxTextLineLayout textLine:
+                RenderTextLine(textLine, graphics, fontResources);
                 break;
             case DocxInlineImageLayout image:
                 RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
                 break;
-            case DocxTableRowLayout row when embedded is not null && fontResource is not null:
-                RenderTableRow(row, graphics, pageImages, fontResource, embedded, diagnosticSink, ref imageIndex);
-                break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, graphics, pageImages, fontResource, embedded, diagnosticSink, ref imageIndex);
+                RenderTableRow(row, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
                 break;
         }
     }
 
-    private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded)
+    private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, DocxFontResources fontResources)
     {
         IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
             ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width)]
             : line.Segments;
         foreach (DocxTextSegmentLayout segment in segments)
         {
-            RenderTextSegment(segment, line.FontSize, line.BaselineY, graphics, embedded);
+            RenderTextSegment(segment, line.FontSize, line.BaselineY, graphics, fontResources);
         }
     }
 
@@ -150,15 +169,21 @@ internal sealed class DocxRenderer
         double fontSize,
         double baselineY,
         PdfGraphicsBuilder graphics,
-        PdfEmbeddedFont embedded)
+        DocxFontResources fontResources)
     {
+        DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
+        if (resource is null)
+        {
+            return;
+        }
+
         DocxTextRun style = segment.StyleRun;
         RgbColor color = ReadColor(style.ColorHex);
-        string glyphHex = embedded.EncodeGlyphHex(segment.Text);
-        graphics.DrawGlyphText("F1", fontSize, segment.X, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+        string glyphHex = resource.Embedded.EncodeGlyphHex(segment.Text);
+        graphics.DrawGlyphText(resource.Name, fontSize, segment.X, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
         if (style.Bold)
         {
-            graphics.DrawGlyphText("F1", fontSize, segment.X + 0.35d, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+            graphics.DrawGlyphText(resource.Name, fontSize, segment.X + 0.35d, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
         }
 
         if (style.Underline)
@@ -167,6 +192,13 @@ internal sealed class DocxRenderer
             graphics.SetLineWidth(Math.Max(0.5d, fontSize / 18d));
             graphics.StrokeLine(segment.X, baselineY - fontSize * 0.12d, segment.X + segment.Width, baselineY - fontSize * 0.12d);
         }
+    }
+
+    private static DocxRunFontResource? ResolveFontResource(DocxTextRun run, DocxFontResources fontResources)
+    {
+        return fontResources.RunResources.TryGetValue(run, out DocxRunFontResource? resource)
+            ? resource
+            : fontResources.Fallback;
     }
 
     private static void RenderInlineImage(
@@ -191,8 +223,7 @@ internal sealed class DocxRenderer
         DocxTableRowLayout row,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
-        PdfFontResource? fontResource,
-        PdfEmbeddedFont? embedded,
+        DocxFontResources fontResources,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         ref int imageIndex)
     {
@@ -206,11 +237,11 @@ internal sealed class DocxRenderer
             }
 
             RenderTableCellBorders(cellLayout, graphics);
-            if (embedded is not null && fontResource is not null)
+            if (fontResources.Fallback is not null)
             {
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
-                    RenderTextLine(line, graphics, embedded);
+                    RenderTextLine(line, graphics, fontResources);
                 }
             }
 
@@ -271,7 +302,7 @@ internal sealed class DocxRenderer
     private static void RenderStaticParagraphs(
         IReadOnlyList<DocxParagraph> paragraphs,
         PdfGraphicsBuilder graphics,
-        PdfEmbeddedFont embedded,
+        DocxFontResources fontResources,
         double x,
         double width,
         double startY,
@@ -288,15 +319,21 @@ internal sealed class DocxRenderer
             double fontSize = Math.Min(12d, paragraph.Runs.Max(r => r.FontSize));
             string text = string.Concat(paragraph.Runs.Select(r => r.Text)).Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
             DocxTextRun firstRun = paragraph.Runs[0];
+            DocxRunFontResource? resource = ResolveFontResource(firstRun, fontResources);
+            if (resource is null)
+            {
+                continue;
+            }
+
             RgbColor color = ReadColor(firstRun.ColorHex);
-            double lineWidth = embedded.MeasureTextPoints(text, fontSize);
+            double lineWidth = resource.Embedded.MeasureTextPoints(text, fontSize);
             double lineX = paragraph.Alignment switch
             {
                 DocxTextAlignment.Center => x + Math.Max(0, width - lineWidth) / 2d,
                 DocxTextAlignment.Right => x + Math.Max(0, width - lineWidth),
                 _ => x
             };
-            graphics.DrawGlyphText("F1", fontSize, lineX, cursorY, color.Red, color.Green, color.Blue, embedded.EncodeGlyphHex(text), firstRun.Italic);
+            graphics.DrawGlyphText(resource.Name, fontSize, lineX, cursorY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), firstRun.Italic);
             cursorY -= fontSize * 1.2d;
         }
     }
