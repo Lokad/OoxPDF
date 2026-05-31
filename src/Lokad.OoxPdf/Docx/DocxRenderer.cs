@@ -285,6 +285,11 @@ internal sealed class DocxRenderer
     {
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
+            if (cellLayout.IsVerticalMergeContinuation)
+            {
+                continue;
+            }
+
             DocxTableCell cell = cellLayout.Cell;
             if (RgbColor.TryParse(cell.FillHex, out RgbColor fill))
             {

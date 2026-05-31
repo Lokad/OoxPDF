@@ -4773,6 +4773,66 @@ internal static class DocxTests
         TestAssert.Equal("Second", secondPageRows[1].Cells[0].Cell.Text);
     }
 
+    public static void DocxTableLayoutStageAppliesVerticalMergeGeometry()
+    {
+        var restart = new DocxTableCell(
+            "Merged",
+            [],
+            null,
+            null,
+            null,
+            null,
+            [new DocxTableCellBorder("bottom", "single", "000000", "8")],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true,
+            VerticalMergeValue: "restart");
+        var continuation = new DocxTableCell(
+            "Continuation",
+            [],
+            null,
+            null,
+            null,
+            null,
+            [new DocxTableCellBorder("top", "single", "000000", "8")],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true);
+        var table = new DocxTable(
+            null,
+            [60d],
+            [
+                new DocxTableRow([restart], 20d),
+                new DocxTableRow([continuation], 30d)
+            ]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxTableRowLayout[] rows = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, rows.Length);
+        TestAssert.Equal(40d, rows[0].Cells[0].Y);
+        TestAssert.Equal(50d, rows[0].Cells[0].Height);
+        TestAssert.True(rows[1].Cells[0].IsVerticalMergeContinuation, "Continuation cell should be layout-visible but skipped by rendering.");
+        TestAssert.Equal(40d, rows[1].Cells[0].Y);
+        TestAssert.Equal(30d, rows[1].Cells[0].Height);
+    }
+
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()
     {
         var table = new DocxTable(

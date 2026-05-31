@@ -3508,8 +3508,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     full solution build. Private DOCX run `20260601-003853` stayed neutral at `16/16` pages, zero dimension
     mismatches, no diagnostics, `MAE=12.509698`, changed16 `0.112673`.
   - [ ] Finish table-level ownership by exposing row height rule/value tokens and the resolved column grid
-    itself, then use the trace to select the simple/dense/worst private tables below. Do not mark this item
-    complete until vertical merges affect layout/rendering instead of only being preserved and inventoried.
+    itself, then use the trace to select the simple/dense/worst private tables below. Vertical merges now
+    affect same-page layout/rendering, but cross-page merged-cell behavior and resolved-grid tracing remain
+    open.
 - [ ] Select representative private tables for repeated inspection: one simple table, one typical dense
   table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
 - [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content
@@ -3523,6 +3524,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   per-edge borders, border widths/colors, and vertical alignment.
 - [ ] Implement structural table features: horizontal merges (`gridSpan`), vertical merges (`vMerge`),
   repeating header rows across page breaks, and page-break behavior inside rows.
+  - [x] 2026-06-01: Consumed preserved `w:vMerge` tokens in DOCX table layout/rendering for same-page
+    merged cells. Restart cells now span continuation row heights, continuation cells remain trace-visible
+    but skip fill/border/text/image rendering, and a public layout fixture covers the geometry. This is
+    intentionally structural and not font- or document-specific. Validation passed `docx-tables --skip-slow`
+    (`51`) and `docx-core --skip-slow` (`16`). Private DOCX run `20260601-004244` stayed neutral at `16/16`
+    pages, zero dimension mismatches, no diagnostics, `MAE=12.509698`, changed16 `0.112673`. Full solution
+    build passed with transient copy-retry warnings while the private-case CLI process still held its DLL.
+    Keep cross-page merged cells open under this parent.
 - [ ] Add synthetic public tests for each table capability before using the private document as evidence;
   never derive fixtures from private table content.
 

@@ -160,7 +160,8 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cell.ShadingValue is not null,
             cell.ConditionalFormat?.IsDefined == true,
             cell.HasVerticalMerge,
-            cell.VerticalMergeValue);
+            cell.VerticalMergeValue,
+            cellLayout.IsVerticalMergeContinuation);
     }
 }
 
@@ -256,7 +257,8 @@ internal sealed record DocxTableCellSnapshot(
     bool HasShadingValue,
     bool HasConditionalFormat,
     bool HasVerticalMerge,
-    string? VerticalMergeValue);
+    string? VerticalMergeValue,
+    bool IsVerticalMergeContinuation);
 
 internal sealed record DocxLayoutPage(
     double Width,
@@ -326,7 +328,8 @@ internal sealed record DocxTableCellLayout(
     double Width,
     double Height,
     IReadOnlyList<DocxTextLineLayout> TextLines,
-    IReadOnlyList<DocxInlineImageLayout> InlineImages);
+    IReadOnlyList<DocxInlineImageLayout> InlineImages,
+    bool IsVerticalMergeContinuation = false);
 
 internal sealed record DocxRunFontResource(string Name, PdfEmbeddedFont Embedded, FontResolution Resolution);
 
@@ -850,6 +853,9 @@ internal sealed class DocxLayoutEngine
             table.IndentPoints,
             table.CellSpacingPoints,
             table.LayoutValue);
+        double[] rowHeights = table.Rows
+            .Select(row => MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer))
+            .ToArray();
         double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
         {
@@ -864,7 +870,7 @@ internal sealed class DocxLayoutEngine
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
             DocxTableRow row = table.Rows[rowIndex];
-            double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer);
+            double rowHeight = rowHeights[rowIndex];
             if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
             {
                 finishPage();
@@ -872,12 +878,12 @@ internal sealed class DocxLayoutEngine
                 {
                     foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)
                     {
-                        AddTableRowLayout(table, tableContext, headerRow, headerRowIndex, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
+                        AddTableRowLayout(table, tableContext, headerRow, headerRowIndex, rowHeights, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
                     }
                 }
             }
 
-            AddTableRowLayout(table, tableContext, row, rowIndex, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
+            AddTableRowLayout(table, tableContext, row, rowIndex, rowHeights, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
         }
 
         cursorY -= 6d;
@@ -972,6 +978,7 @@ internal sealed class DocxLayoutEngine
         DocxTableLayoutContext tableContext,
         DocxTableRow row,
         int rowIndex,
+        IReadOnlyList<double> rowHeights,
         IReadOnlyList<double> effectiveColumns,
         double scale,
         IDocxTextMeasurer? textMeasurer,
@@ -981,22 +988,89 @@ internal sealed class DocxLayoutEngine
         double x)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-        double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer);
+        double rowHeight = rowHeights[rowIndex];
         double cellX = x;
         double cellY = cursorY - rowHeight;
         var cells = new List<DocxTableCellLayout>(row.Cells.Count);
+        int gridColumnIndex = 0;
         for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
         {
             double cellWidth = cellWidths[columnIndex];
             DocxTableCell cell = row.Cells[columnIndex];
-            IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, textMeasurer);
-            IReadOnlyList<DocxInlineImageLayout> inlineImages = LayoutTableCellInlineImages(cell, cellX, cellY, cellWidth, rowHeight, textMeasurer, getPageIndex());
-            cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines, inlineImages));
+            bool isVerticalMergeContinuation = IsVerticalMergeContinuation(cell);
+            double visualHeight = rowHeight;
+            double visualY = cellY;
+            if (IsVerticalMergeRestart(cell))
+            {
+                visualHeight = GetVerticalMergeSpanHeight(table, rowIndex, gridColumnIndex, rowHeights);
+                visualY = cursorY - visualHeight;
+            }
+
+            IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
+                ? []
+                : LayoutTableCellTextLines(cell, cellX, visualY, cellWidth, visualHeight, textMeasurer);
+            IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
+                ? []
+                : LayoutTableCellInlineImages(cell, cellX, visualY, cellWidth, visualHeight, textMeasurer, getPageIndex());
+            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
+            gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
 
         currentItems.Add(new DocxTableRowLayout(tableContext, rowIndex, cells.ToArray(), cellY, rowHeight, row.IsHeader, row.HeaderValue));
         cursorY -= rowHeight;
+    }
+
+    private static bool IsVerticalMergeRestart(DocxTableCell cell)
+    {
+        return cell.HasVerticalMerge &&
+            string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsVerticalMergeContinuation(DocxTableCell cell)
+    {
+        return cell.HasVerticalMerge && !IsVerticalMergeRestart(cell);
+    }
+
+    private static double GetVerticalMergeSpanHeight(
+        DocxTable table,
+        int rowIndex,
+        int gridColumnIndex,
+        IReadOnlyList<double> rowHeights)
+    {
+        double height = rowHeights[rowIndex];
+        for (int nextRowIndex = rowIndex + 1; nextRowIndex < table.Rows.Count; nextRowIndex++)
+        {
+            if (!TryGetCellAtGridColumn(table.Rows[nextRowIndex], gridColumnIndex, out DocxTableCell? nextCell) ||
+                nextCell is null ||
+                !IsVerticalMergeContinuation(nextCell))
+            {
+                break;
+            }
+
+            height += rowHeights[nextRowIndex];
+        }
+
+        return height;
+    }
+
+    private static bool TryGetCellAtGridColumn(DocxTableRow row, int gridColumnIndex, out DocxTableCell? cell)
+    {
+        int currentGridColumnIndex = 0;
+        foreach (DocxTableCell candidate in row.Cells)
+        {
+            int span = Math.Max(1, candidate.GridSpan);
+            if (gridColumnIndex >= currentGridColumnIndex && gridColumnIndex < currentGridColumnIndex + span)
+            {
+                cell = candidate;
+                return true;
+            }
+
+            currentGridColumnIndex += span;
+        }
+
+        cell = null;
+        return false;
     }
 
     private static double[] GetTableRowCellWidths(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale)
