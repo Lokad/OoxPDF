@@ -280,9 +280,11 @@ internal sealed class DocxRenderer
                     graphics.StrokeLine(cellLayout.X, cellLayout.Y, cellLayout.X + cellLayout.Width, cellLayout.Y);
                     break;
                 case "left":
+                case "start":
                     graphics.StrokeLine(cellLayout.X, cellLayout.Y, cellLayout.X, cellLayout.Y + cellLayout.Height);
                     break;
                 case "right":
+                case "end":
                     graphics.StrokeLine(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height);
                     break;
             }

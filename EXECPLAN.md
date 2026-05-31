@@ -2216,6 +2216,13 @@ High-priority actions:
     expected cell edges. Private DOCX run `20260531-173508` was neutral (`15.889775` MAE, `0.141949`
     changed16), so the remaining border work is still the harder Word conflict ladder: adjacent-edge conflict
     resolution, start/end directionality, nil/none suppression across shared edges, and exact width/unit rules.
+    2026-05-31 progress: logical `w:start`/`w:end` borders now participate in the default left-to-right DOCX
+    table path. Cell-level logical borders render as physical left/right strokes, and table-level logical
+    outer borders are resolved onto first/last cell edges when physical `left`/`right` are absent. Public
+    coverage verifies both PDF stroke emission and table-border inheritance. Private-safe inventory found
+    `start` borders in the current private DOCX; private run `20260531-232213` stayed neutral at `16/16` pages,
+    zero dimension mismatches, MAE `13.648284`, changed16 `0.125542`. Keep the parent open for explicit
+    right-to-left direction metadata, adjacent-edge conflict rules, and exact Word width/style handling.
     2026-05-31 progress: style-level table borders now use the same mapping path before direct table/cell
     overrides. Public `docx-tables --skip-slow` passed `27`; private DOCX run `20260531-174458` stayed neutral
     (`15.889775` MAE, `0.141949` changed16).
@@ -4527,6 +4534,12 @@ Current validation baseline:
   `20260531-231855` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
   `0.125542`; remaining private diagnostics are `DOCX_NUMBERING_INDENT`, `DOCX_STYLE_PARAGRAPH_KEEP_RULE`,
   `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
+- DOCX logical table-border validation:
+  after rendering cell-level `w:start`/`w:end` as default left-to-right physical edges and resolving
+  table-level logical outer borders, `docx-tables --skip-slow` passed `47`, `docx-numbering --skip-slow`
+  passed `10`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
+  `20260531-232213` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
+  `0.125542`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

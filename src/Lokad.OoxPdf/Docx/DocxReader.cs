@@ -1043,13 +1043,17 @@ internal sealed class DocxReader
             yield return bottom with { Edge = "bottom" };
         }
 
-        DocxTableCellBorder? left = FindBorder(tableBorders, cellIndex == 0 ? "left" : "insideV");
+        DocxTableCellBorder? left = cellIndex == 0
+            ? FindBorder(tableBorders, "left") ?? FindBorder(tableBorders, "start")
+            : FindBorder(tableBorders, "insideV");
         if (left is not null)
         {
             yield return left with { Edge = "left" };
         }
 
-        DocxTableCellBorder? right = FindBorder(tableBorders, cellIndex == cellCount - 1 ? "right" : "insideV");
+        DocxTableCellBorder? right = cellIndex == cellCount - 1
+            ? FindBorder(tableBorders, "right") ?? FindBorder(tableBorders, "end")
+            : FindBorder(tableBorders, "insideV");
         if (right is not null)
         {
             yield return right with { Edge = "right" };
