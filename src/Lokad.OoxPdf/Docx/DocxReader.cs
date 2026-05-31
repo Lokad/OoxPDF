@@ -649,7 +649,8 @@ internal sealed class DocxReader
             {
                 XElement cell = cellElements[cellIndex];
                 XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
-                DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
+                DocxTableCellConditionalFormat? conditionalFormat = ReadTableCellConditionalFormat(cellProperties);
+                DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, conditionalFormat, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
                 IReadOnlyList<DocxParagraph> paragraphs = ReadTableCellParagraphs(cell, styles, numbering, numberingCounters, package, relationships);
                 string text = string.Join(" ", paragraphs
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
@@ -688,7 +689,8 @@ internal sealed class DocxReader
                     ReadGridSpan(cellProperties),
                     (string?)cellProperties
                         ?.Element(WordprocessingNamespace + "gridSpan")
-                        ?.Attribute(WordprocessingNamespace + "val")));
+                        ?.Attribute(WordprocessingNamespace + "val"),
+                    conditionalFormat));
             }
 
             if (cells.Count > 0)
@@ -869,6 +871,42 @@ internal sealed class DocxReader
             (string?)look.Attribute(WordprocessingNamespace + "noHBand"),
             OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "noVBand"),
             (string?)look.Attribute(WordprocessingNamespace + "noVBand"));
+    }
+
+    private static DocxTableCellConditionalFormat? ReadTableCellConditionalFormat(XElement? cellProperties)
+    {
+        XElement? conditional = cellProperties?.Element(WordprocessingNamespace + "cnfStyle");
+        if (conditional is null)
+        {
+            return null;
+        }
+
+        return new DocxTableCellConditionalFormat(
+            (string?)conditional.Attribute(WordprocessingNamespace + "val"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstRow"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "firstRow"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastRow"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "lastRow"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstColumn"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "firstColumn"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastColumn"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "lastColumn"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "oddHBand"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "oddHBand"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "evenHBand"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "evenHBand"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "oddVBand"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "oddVBand"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "evenVBand"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "evenVBand"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstRowFirstColumn"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "firstRowFirstColumn"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstRowLastColumn"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "firstRowLastColumn"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastRowFirstColumn"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "lastRowFirstColumn"),
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastRowLastColumn"),
+            (string?)conditional.Attribute(WordprocessingNamespace + "lastRowLastColumn"));
     }
 
     private static IReadOnlyList<DocxTableCellBorder> ReadBorderElements(XElement? borders)
@@ -1428,10 +1466,19 @@ internal sealed class DocxReader
             DocxTableCellMargins.Empty);
     }
 
-    private static DocxTableCellStyle ResolveTableCellStyle(DocxTableStyle tableStyle, int rowIndex, int cellIndex, int rowCount, int cellCount)
+    private static DocxTableCellStyle ResolveTableCellStyle(
+        DocxTableStyle tableStyle,
+        DocxTableCellConditionalFormat? conditionalFormat,
+        int rowIndex,
+        int cellIndex,
+        int rowCount,
+        int cellCount)
     {
         DocxTableCellStyle resolved = tableStyle.Cell;
-        foreach (string region in EnumerateTableStyleRegions(rowIndex, cellIndex, rowCount, cellCount))
+        IEnumerable<string> regions = conditionalFormat?.IsDefined == true
+            ? EnumerateTableStyleRegions(conditionalFormat)
+            : EnumerateTableStyleRegions(rowIndex, cellIndex, rowCount, cellCount);
+        foreach (string region in regions)
         {
             if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableCellStyle? style))
             {
@@ -1440,6 +1487,69 @@ internal sealed class DocxReader
         }
 
         return resolved;
+    }
+
+    private static IEnumerable<string> EnumerateTableStyleRegions(DocxTableCellConditionalFormat conditionalFormat)
+    {
+        if (conditionalFormat.FirstRow == true)
+        {
+            yield return "firstRow";
+        }
+
+        if (conditionalFormat.LastRow == true)
+        {
+            yield return "lastRow";
+        }
+
+        if (conditionalFormat.FirstColumn == true)
+        {
+            yield return "firstCol";
+        }
+
+        if (conditionalFormat.LastColumn == true)
+        {
+            yield return "lastCol";
+        }
+
+        if (conditionalFormat.FirstRowFirstColumn == true)
+        {
+            yield return "nwCell";
+        }
+
+        if (conditionalFormat.FirstRowLastColumn == true)
+        {
+            yield return "neCell";
+        }
+
+        if (conditionalFormat.LastRowFirstColumn == true)
+        {
+            yield return "swCell";
+        }
+
+        if (conditionalFormat.LastRowLastColumn == true)
+        {
+            yield return "seCell";
+        }
+
+        if (conditionalFormat.OddHorizontalBand == true)
+        {
+            yield return "band1Horz";
+        }
+
+        if (conditionalFormat.EvenHorizontalBand == true)
+        {
+            yield return "band2Horz";
+        }
+
+        if (conditionalFormat.OddVerticalBand == true)
+        {
+            yield return "band1Vert";
+        }
+
+        if (conditionalFormat.EvenVerticalBand == true)
+        {
+            yield return "band2Vert";
+        }
     }
 
     private static IEnumerable<string> EnumerateTableStyleRegions(int rowIndex, int cellIndex, int rowCount, int cellCount)

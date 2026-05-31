@@ -1925,6 +1925,13 @@ High-priority actions:
       behavior change that gated conditional regions directly from these flags regressed the private DOCX run
       (`20260531-174932`: MAE `16.580381`, changed16 `0.14746` versus baseline `15.889775`/`0.141949`), so
       `tblLook` remains a fixture-required Office semantics task rather than a guessed rendering rule.
+    - [x] 2026-05-31: Preserved DOCX cell-level `w:cnfStyle` conditional-format tokens and used them as the
+      authoritative table-style region source when present. The fallback positional region inference remains
+      only for cells without `cnfStyle`. Public coverage verifies that an explicitly banded first-row cell uses
+      the band style instead of a guessed first-row style, and that the raw `cnfStyle` token is retained in the
+      cell model. Private DOCX run `20260531-184012` stayed neutral against the current baseline
+      (`15.864724` MAE, `0.141689` changed16), which is acceptable because the slice removes a style-cascade
+      guess without changing the visible page count.
   - [ ] 2026-05-31: Resolve DOCX table-style paragraph/run property precedence with Office-backed public
     fixtures before enabling it in production. Private-safe inventory shows table-style conditional `w:pPr`
     and `w:rPr` exist, but a naive inherited text-style layer for alignment/bold/font-size worsened private

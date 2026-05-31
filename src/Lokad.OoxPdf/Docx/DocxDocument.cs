@@ -196,7 +196,50 @@ internal sealed record DocxTableCell(
     string? PreferredWidthValue = null,
     string? PreferredWidthType = null,
     int GridSpan = 1,
-    string? GridSpanValue = null);
+    string? GridSpanValue = null,
+    DocxTableCellConditionalFormat? ConditionalFormat = null);
+
+internal sealed record DocxTableCellConditionalFormat(
+    string? Value,
+    bool? FirstRow,
+    string? FirstRowValue,
+    bool? LastRow,
+    string? LastRowValue,
+    bool? FirstColumn,
+    string? FirstColumnValue,
+    bool? LastColumn,
+    string? LastColumnValue,
+    bool? OddHorizontalBand,
+    string? OddHorizontalBandValue,
+    bool? EvenHorizontalBand,
+    string? EvenHorizontalBandValue,
+    bool? OddVerticalBand,
+    string? OddVerticalBandValue,
+    bool? EvenVerticalBand,
+    string? EvenVerticalBandValue,
+    bool? FirstRowFirstColumn,
+    string? FirstRowFirstColumnValue,
+    bool? FirstRowLastColumn,
+    string? FirstRowLastColumnValue,
+    bool? LastRowFirstColumn,
+    string? LastRowFirstColumnValue,
+    bool? LastRowLastColumn,
+    string? LastRowLastColumnValue)
+{
+    public bool IsDefined =>
+        FirstRow is not null ||
+        LastRow is not null ||
+        FirstColumn is not null ||
+        LastColumn is not null ||
+        OddHorizontalBand is not null ||
+        EvenHorizontalBand is not null ||
+        OddVerticalBand is not null ||
+        EvenVerticalBand is not null ||
+        FirstRowFirstColumn is not null ||
+        FirstRowLastColumn is not null ||
+        LastRowFirstColumn is not null ||
+        LastRowLastColumn is not null;
+}
 
 internal sealed record DocxTableCellBorder(string Edge, string? Value, string? Color, string? SizeValue);
 
