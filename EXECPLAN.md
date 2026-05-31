@@ -1842,6 +1842,11 @@ High-priority actions:
   - [ ] 2026-05-31: Finish DOCX paragraph spacing variants: implement `beforeAutospacing`/`afterAutospacing`,
     `beforeLines`/`afterLines`, exact Word adjacent-spacing collapse around tables/sections, and public
     Office-backed fixtures for each variant before downgrading `DOCX_STYLE_PARAGRAPH_SPACING`.
+    - [x] 2026-05-31: Converted preserved `beforeLines`/`afterLines` tokens into resolved paragraph spacing
+      points when no explicit twip spacing or autospacing owns that paragraph side. The reader now derives
+      hundredths-of-line spacing from the resolved paragraph line height, and a public synthetic reader test
+      locks the conversion. The parent item remains open because autospacing, style/default spacing cascade
+      ownership, adjacent collapse around tables/sections, and Office-authored fixtures are still unresolved.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
@@ -4082,6 +4087,11 @@ Current validation baseline:
   (`docx-core` `4`, `docx-page` `10`, `docx-text` `10`, `docx-numbering` `4`, `docx-images` `2`,
   `docx-tables` `24`). Private DOCX run `20260531-162756` stayed at `16/16` pages, zero dimension mismatches,
   MAE `15.889775`, changed16 `0.141949`.
+- DOCX line-based paragraph-spacing validation:
+  after converting `beforeLines`/`afterLines` into resolved paragraph spacing, `docx-text --skip-slow` passed
+  `11` tests and `docx-page --skip-slow` passed `10`. Private DOCX run `20260531-174219` stayed at `16/16`
+  pages, zero dimension mismatches, MAE `15.889775`, changed16 `0.141949`; diagnostics still include
+  `DOCX_STYLE_PARAGRAPH_SPACING`, which remains appropriate for autospacing, cascade, and collapse semantics.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

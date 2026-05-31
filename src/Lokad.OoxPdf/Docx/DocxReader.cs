@@ -421,19 +421,68 @@ internal sealed class DocxReader
             return null;
         }
 
+        double paragraphFontSize = runs.Count == 0 ? 11d : runs.Max(run => run.FontSize);
+        double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * (resolvedParagraph.LineSpacingFactor ?? 1.25d);
+
         return new DocxParagraph(
             runs,
             images,
             paragraphStyleId,
             resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
             resolvedParagraph.AlignmentValue,
-            resolvedParagraph.SpacingBeforePoints ?? 0d,
-            resolvedParagraph.SpacingAfterPoints ?? 6d,
+            ResolveSpacingBeforePoints(resolvedParagraph, paragraphLineHeight),
+            ResolveSpacingAfterPoints(resolvedParagraph, paragraphLineHeight),
             resolvedParagraph.LineSpacingFactor ?? 1.25d,
             resolvedParagraph.LineSpacingPoints,
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
             CreateListLabel(paragraphProperties, numbering, numberingCounters));
+    }
+
+    private static double ResolveSpacingBeforePoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
+    {
+        if (paragraph.SpacingBeforePoints is { } points)
+        {
+            return points;
+        }
+
+        if (OoxBoolean.IsTrue(paragraph.Spacing.BeforeAutoSpacingValue))
+        {
+            return 0d;
+        }
+
+        return TryReadLineBasedSpacing(paragraph.Spacing.BeforeLinesValue, lineHeight, out double linePoints)
+            ? linePoints
+            : 0d;
+    }
+
+    private static double ResolveSpacingAfterPoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
+    {
+        if (paragraph.SpacingAfterPoints is { } points)
+        {
+            return points;
+        }
+
+        if (OoxBoolean.IsTrue(paragraph.Spacing.AfterAutoSpacingValue))
+        {
+            return 6d;
+        }
+
+        return TryReadLineBasedSpacing(paragraph.Spacing.AfterLinesValue, lineHeight, out double linePoints)
+            ? linePoints
+            : 6d;
+    }
+
+    private static bool TryReadLineBasedSpacing(string? value, double lineHeight, out double points)
+    {
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int hundredthsOfLine))
+        {
+            points = lineHeight * hundredthsOfLine / 100d;
+            return true;
+        }
+
+        points = 0d;
+        return false;
     }
 
     private static string ReadRunText(XElement run)
