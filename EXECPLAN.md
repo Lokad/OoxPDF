@@ -1844,6 +1844,13 @@ High-priority actions:
     geometry. The current indent application moves the flattened label+text line as one unit; long-term Word
     parity needs a layout record that separates the list marker from paragraph text and uses numbering
     tab/hanging rules consistently in body text and table cells.
+  - [x] 2026-05-31: Split DOCX body numbering emission into separate marker and paragraph-text segments.
+    Body numbered paragraphs now place the label in the hanging area and place text at the numbering `left`
+    start, with continuation lines using the text start. This improved the private DOCX aggregate while
+    preserving the open numbering diagnostic for exact tab-stop, bullet-font, and table-cell numbering parity.
+  - [ ] 2026-05-31: Complete DOCX numbering fidelity after marker/text separation: preserve and apply
+    numbering tab stops, symbol/bullet fonts, level suffix behavior, continuation-line wrapping across
+    mixed-style runs, restart overrides, and the same segmented model inside table cells.
   - [x] 2026-05-31: Preserved DOCX `w:tblHeader` row tokens and repeated contiguous header rows when a table
     page break occurs. This moves repeating headers out of diagnostics-only handling and into the table layout
     stage with public coverage. The diagnostic remains as an approximation because multi-row/header-group
@@ -2591,6 +2598,12 @@ document-specific business content into public notes.
   - MAE improved from `16.003190` to `15.928048`; changed16 improved from `0.142369` to `0.142037`.
   - The remaining worst pages are still table-heavy, so continue the width/layout ladder before treating table
     styling as complete.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-161037` after separating
+  DOCX body numbering markers from paragraph text:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - MAE improved from `15.928048` to `15.888467`; changed16 improved from `0.142037` to `0.141944`.
+  - The numbering diagnostic remains open because exact Word tab-stop, bullet-font, and continuation-line
+    behavior is not yet modeled.
 
 ## Backlog
 
@@ -3998,6 +4011,11 @@ Current validation baseline:
   sweep passed (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
   `docx-tables` `24`). Private DOCX run `20260531-155930` stayed at `16/16` pages, zero dimension mismatches,
   MAE `15.928048`, changed16 `0.142037`.
+- DOCX segmented numbering validation:
+  after separating body numbering markers from paragraph text starts, the full DOCX group sweep passed
+  (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
+  `docx-tables` `24`). Private DOCX run `20260531-161037` stayed at `16/16` pages, zero dimension mismatches,
+  MAE `15.888467`, changed16 `0.141944`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

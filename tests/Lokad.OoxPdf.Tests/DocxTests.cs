@@ -961,7 +961,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Equal(2, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
+        TestAssert.Equal(4, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
     }
 
     public static void DocxReaderPreservesNumberingFormatTokens()
@@ -1100,6 +1100,11 @@ internal static class DocxTests
 
         TestAssert.Equal(72d, document.MarginLeftPoints);
         TestAssert.Equal(90d, line.X);
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal("1.", line.Segments[0].Text);
+        TestAssert.Equal(90d, line.Segments[0].X);
+        TestAssert.Equal("Indented", line.Segments[1].Text);
+        TestAssert.Equal(108d, line.Segments[1].X);
     }
 
     public static void DocxSyntheticInlinePngRendersImageXObject()

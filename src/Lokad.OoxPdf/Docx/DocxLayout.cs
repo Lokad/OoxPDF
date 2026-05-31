@@ -193,12 +193,13 @@ internal sealed class DocxLayoutEngine
 
             if (embedded is not null && paragraph.Runs.Count > 0)
             {
-                string text = paragraph.ListLabel is null
-                    ? string.Concat(paragraph.Runs.Select(r => r.Text))
-                    : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(r => r.Text));
-                double paragraphX = x + GetParagraphStartOffset(paragraph);
-                double paragraphWidth = Math.Max(1d, width - GetParagraphStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+                string text = string.Concat(paragraph.Runs.Select(r => r.Text));
+                double textStartOffset = GetParagraphTextStartOffset(paragraph);
+                double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
+                double paragraphX = x + textStartOffset;
+                double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph));
                 DocxTextRun firstRun = paragraph.Runs[0];
+                bool firstLine = true;
                 foreach (string line in WrapWords(text, paragraphWidth, paragraphFontSize, embedded))
                 {
                     if (cursorY - lineHeight < document.MarginBottomPoints && HasPageContent())
@@ -216,14 +217,20 @@ internal sealed class DocxLayoutEngine
                     double baselineOffset = paragraph.LineSpacingPoints is null
                         ? paragraphFontSize * BaselineOffsetFactor
                         : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
+                    IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
+                        ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, x + labelStartOffset, lineX, paragraphFontSize, embedded)
+                        : [new DocxTextSegmentLayout(line, firstRun, lineX, lineWidth)];
                     currentItems.Add(new DocxTextLineLayout(
-                        line,
+                        firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + " " + line : line,
                         firstRun,
                         paragraphFontSize,
-                        lineX,
+                        firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX,
                         cursorY - baselineOffset,
-                        lineWidth,
-                        [new DocxTextSegmentLayout(line, firstRun, lineX, lineWidth)]));
+                        firstLine && paragraph.ListLabel is not null
+                            ? Math.Max(lineX + lineWidth, x + labelStartOffset + embedded.MeasureTextPoints(paragraph.ListLabel.Text, paragraphFontSize)) - (x + labelStartOffset)
+                            : lineWidth,
+                        segments));
+                    firstLine = false;
                     cursorY -= lineHeight;
                 }
             }
@@ -368,7 +375,20 @@ internal sealed class DocxLayoutEngine
         return Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
     }
 
-    private static double GetParagraphStartOffset(DocxParagraph paragraph)
+    private static double GetParagraphTextStartOffset(DocxParagraph paragraph)
+    {
+        if (paragraph.ListLabel is null)
+        {
+            return 0d;
+        }
+
+        DocxNumberingIndent indent = paragraph.ListLabel.Indent;
+        double left = indent.LeftPoints ?? 0d;
+        double firstLine = indent.FirstLinePoints ?? 0d;
+        return Math.Max(0d, left + firstLine);
+    }
+
+    private static double GetParagraphLabelStartOffset(DocxParagraph paragraph)
     {
         if (paragraph.ListLabel is null)
         {
@@ -382,9 +402,32 @@ internal sealed class DocxLayoutEngine
         return Math.Max(0d, left - hanging + firstLine);
     }
 
+    private static double GetParagraphStartOffset(DocxParagraph paragraph)
+    {
+        return GetParagraphLabelStartOffset(paragraph);
+    }
+
     private static double GetParagraphRightInset(DocxParagraph paragraph)
     {
         return paragraph.ListLabel?.Indent.RightPoints ?? 0d;
+    }
+
+    private static IReadOnlyList<DocxTextSegmentLayout> CreateNumberedLineSegments(
+        DocxListLabel label,
+        string line,
+        DocxTextRun styleRun,
+        double labelX,
+        double lineX,
+        double fontSize,
+        PdfEmbeddedFont embedded)
+    {
+        double labelWidth = embedded.MeasureTextPoints(label.Text, fontSize);
+        double lineWidth = embedded.MeasureTextPoints(line, fontSize);
+        return
+        [
+            new DocxTextSegmentLayout(label.Text, styleRun, labelX, labelWidth),
+            new DocxTextSegmentLayout(line, styleRun, lineX, lineWidth)
+        ];
     }
 
     private static void LayoutTable(
