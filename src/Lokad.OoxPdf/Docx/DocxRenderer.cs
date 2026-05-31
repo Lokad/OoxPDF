@@ -202,9 +202,7 @@ internal sealed class DocxRenderer
                 graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
             }
 
-            graphics.SetStrokeRgb(0, 0, 0);
-            graphics.SetLineWidth(0.75d);
-            graphics.StrokeRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
+            RenderTableCellBorders(cellLayout, graphics);
             if (embedded is not null && fontResource is not null)
             {
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
@@ -218,6 +216,53 @@ internal sealed class DocxRenderer
                 RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
             }
         }
+    }
+
+    private static void RenderTableCellBorders(DocxTableCellLayout cellLayout, PdfGraphicsBuilder graphics)
+    {
+        IReadOnlyList<DocxTableCellBorder> borders = cellLayout.Cell.Borders;
+        if (borders.Count == 0)
+        {
+            graphics.SetStrokeRgb(0, 0, 0);
+            graphics.SetLineWidth(0.75d);
+            graphics.StrokeRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
+            return;
+        }
+
+        foreach (DocxTableCellBorder border in borders)
+        {
+            if (string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            RgbColor color = ReadColor(border.Color);
+            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
+            graphics.SetLineWidth(ReadBorderWidth(border.SizeValue));
+            switch (border.Edge)
+            {
+                case "top":
+                    graphics.StrokeLine(cellLayout.X, cellLayout.Y + cellLayout.Height, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height);
+                    break;
+                case "bottom":
+                    graphics.StrokeLine(cellLayout.X, cellLayout.Y, cellLayout.X + cellLayout.Width, cellLayout.Y);
+                    break;
+                case "left":
+                    graphics.StrokeLine(cellLayout.X, cellLayout.Y, cellLayout.X, cellLayout.Y + cellLayout.Height);
+                    break;
+                case "right":
+                    graphics.StrokeLine(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height);
+                    break;
+            }
+        }
+    }
+
+    private static double ReadBorderWidth(string? sizeValue)
+    {
+        return int.TryParse(sizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int eighths)
+            ? Math.Max(0.25d, eighths / 8d)
+            : 0.75d;
     }
 
     private static void RenderStaticParagraphs(

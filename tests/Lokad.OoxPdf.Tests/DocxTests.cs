@@ -1433,7 +1433,7 @@ internal static class DocxTests
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:style w:type="table" w:styleId="ShadedTable">
                     <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9EAD3"/></w:tcPr>
-                    <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CFE2F3"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CFE2F3"/><w:tcBorders><w:top w:val="single" w:color="FF0000" w:sz="16"/></w:tcBorders></w:tcPr></w:tblStylePr>
                   </w:style>
                 </w:styles>
                 """,
@@ -1467,8 +1467,57 @@ internal static class DocxTests
         TestAssert.Equal("CFE2F3", document.Tables[0].Rows[0].Cells[0].FillHex ?? string.Empty);
         TestAssert.Equal("clear", document.Tables[0].Rows[0].Cells[0].ShadingValue ?? string.Empty);
         TestAssert.Equal("auto", document.Tables[0].Rows[0].Cells[0].ShadingColor ?? string.Empty);
+        TestAssert.Equal("top", document.Tables[0].Rows[0].Cells[0].Borders.Single().Edge);
+        TestAssert.Equal("16", document.Tables[0].Rows[0].Cells[0].Borders.Single().SizeValue ?? string.Empty);
         TestAssert.Equal("FCE5CD", document.Tables[0].Rows[0].Cells[1].FillHex ?? string.Empty);
         TestAssert.Equal("D9EAD3", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
+    }
+
+    public static void DocxSyntheticTableCellBordersUseAuthoredStroke()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr><w:tcBorders><w:top w:val="single" w:color="FF0000" w:sz="16"/><w:bottom w:val="nil"/></w:tcBorders></w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.Contains("2 w", pdf);
+        TestAssert.Contains(" l S", pdf);
+        TestAssert.DoesNotContain(" re S", pdf);
     }
 
     public static void DocxReaderTablePreservesHeaderRowToken()

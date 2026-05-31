@@ -1861,6 +1861,14 @@ High-priority actions:
     structural but incomplete: it does not yet honor `w:tblLook` toggles, second band regions, or the full Word
     priority ladder across whole-table style, conditional style, direct row/cell properties, and table
     exceptions.
+  - [x] 2026-05-31: Promoted DOCX table borders from stored tokens to PDF emission and conditional style
+    inheritance. Cells now inherit conditional `w:tcBorders` when direct borders are absent, and the renderer
+    draws authored top/bottom/left/right border colors and widths per edge instead of always stroking every
+    cell with a uniform black rectangle. This produced a large private improvement and confirms table border
+    style resolution is a high-impact branch.
+  - [ ] 2026-05-31: Continue DOCX border fidelity: implement table-level `w:tblBorders`, inside horizontal/
+    vertical borders, conflict resolution between adjacent cell borders, nil/none suppression across shared
+    edges, and Word's exact border width/unit rules with public Office PDF fixtures.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2523,6 +2531,12 @@ document-specific business content into public notes.
   - MAE improved from `16.995226` to `16.817625`; changed16 improved from `0.149573` to `0.148589`.
   - This confirms conditional table-style resolution is present in the private document and should continue
     into borders, margins, `tblLook`, and conditional priority rules.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-154335` after conditional
+  table-style borders and per-edge border emission:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - MAE improved from `16.817625` to `16.004348`; changed16 improved from `0.148589` to `0.142372`.
+  - The worst page shifted away from the previously table-dominated page bucket, confirming table border
+    structure is one of the dominant remaining private DOCX differences.
 
 ## Backlog
 
@@ -3906,6 +3920,11 @@ Current validation baseline:
   `docx-page` `10`, `docx-text` `7`, `docx-numbering` `4`, `docx-images` `2`, `docx-tables` `21`), public
   `docx-tables` visual run `20260531-153916` passed, and private DOCX run `20260531-153922` stayed at `16/16`
   pages, zero dimension mismatches, MAE `16.817625`, changed16 `0.148589`.
+- DOCX table-border validation:
+  after applying conditional `w:tcBorders` and rendering per-edge borders, the full DOCX group sweep passed
+  (`docx-core` `4`, `docx-page` `10`, `docx-text` `7`, `docx-numbering` `4`, `docx-images` `2`,
+  `docx-tables` `22`), public `docx-tables` visual run `20260531-154329` passed, and private DOCX run
+  `20260531-154335` stayed at `16/16` pages, zero dimension mismatches, MAE `16.004348`, changed16 `0.142372`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
