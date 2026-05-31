@@ -2975,6 +2975,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   collapse.
 - [ ] Implement paragraph and numbering indents: left/right/first-line/hanging indents from paragraph styles
   and numbering levels, with corresponding wrapping-width changes.
+- [ ] 2026-05-31: Resolve DOCX `w:basedOn` style inheritance with pagination-safe Office fixtures before
+  enabling it broadly. The private style graph uses chains such as body/table styles based on Normal, but a
+  naive recursive paragraph/character merge changed the private candidate from 16 pages to 14 pages in run
+  `20260531-161731`; this must be tackled with fixture coverage for inherited spacing, font size, and page
+  breaks rather than a blind cascade merge.
 - [ ] Improve numbering layout: render labels in their own hanging-indent area, support level text expansion
   beyond the current simple label prefix, and honor restart/start rules.
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from
