@@ -762,6 +762,56 @@ internal static class DocxTests
         TestAssert.True(Math.Abs((baselines[0] - baselines[1]) - 36d) < 0.01d, "Exact DOCX line height should advance the next paragraph by 36 points.");
     }
 
+    public static void DocxSyntheticContextualSpacingSuppressesSameStyleGap()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, null, true);
+        var first = new DocxParagraph(
+            [new DocxTextRun("First", 10d, null, false, false, false, null, null)],
+            [],
+            "Body",
+            DocxTextAlignment.Left,
+            null,
+            10d,
+            10d,
+            1d,
+            10d,
+            spacing,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var second = first with { Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, null)] };
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
+            [first, second],
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(10d, Math.Round(lines[0].BaselineY - lines[1].BaselineY, 3));
+    }
+
     public static void DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -134,6 +134,7 @@ internal sealed class DocxLayoutEngine
         double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
         double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
 
         void FinishPage()
         {
@@ -141,6 +142,7 @@ internal sealed class DocxLayoutEngine
             currentItems = [];
             cursorY = document.PageHeightPoints - document.MarginTopPoints;
             pendingSpacingAfter = 0d;
+            previousParagraph = null;
         }
 
         bool HasPageContent() => currentItems.Count > 0;
@@ -156,6 +158,7 @@ internal sealed class DocxLayoutEngine
                 }
 
                 pendingSpacingAfter = 0d;
+                previousParagraph = null;
                 continue;
             }
 
@@ -163,6 +166,7 @@ internal sealed class DocxLayoutEngine
             {
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
+                previousParagraph = null;
                 LayoutTable(tableElement.Table, document, embedded, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
                 continue;
             }
@@ -173,7 +177,9 @@ internal sealed class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
-            cursorY -= Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            cursorY -= ShouldSuppressContextualSpacing(previousParagraph, paragraph)
+                ? 0d
+                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
             pendingSpacingAfter = 0d;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
@@ -242,6 +248,7 @@ internal sealed class DocxLayoutEngine
             }
 
             pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            previousParagraph = paragraph;
         }
 
         if (HasPageContent() || pages.Count == 0)
@@ -255,6 +262,14 @@ internal sealed class DocxLayoutEngine
     private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)
     {
         return paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true;
+    }
+
+    private static bool ShouldSuppressContextualSpacing(DocxParagraph? previousParagraph, DocxParagraph paragraph)
+    {
+        return paragraph.Spacing.ContextualSpacing == true &&
+            previousParagraph?.StyleId is not null &&
+            paragraph.StyleId is not null &&
+            string.Equals(previousParagraph.StyleId, paragraph.StyleId, StringComparison.Ordinal);
     }
 
     private static double EstimateKeptParagraphBlockHeight(

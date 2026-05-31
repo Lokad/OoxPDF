@@ -1827,6 +1827,13 @@ High-priority actions:
     checks, chain consecutive `keepNext` paragraphs across multiple following blocks, and refine exact
     keep-with-table behavior against public Word/Office PDF fixtures before downgrading the keep-rule
     diagnostics.
+  - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
+    paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
+    of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
+    document, but this removes another style-spacing heuristic gap.
+  - [ ] 2026-05-31: Finish DOCX paragraph spacing variants: implement `beforeAutospacing`/`afterAutospacing`,
+    `beforeLines`/`afterLines`, exact Word adjacent-spacing collapse around tables/sections, and public
+    Office-backed fixtures for each variant before downgrading `DOCX_STYLE_PARAGRAPH_SPACING`.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
@@ -2537,6 +2544,12 @@ document-specific business content into public notes.
   - MAE improved from `16.817625` to `16.004348`; changed16 improved from `0.148589` to `0.142372`.
   - The worst page shifted away from the previously table-dominated page bucket, confirming table border
     structure is one of the dominant remaining private DOCX differences.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-154620` after contextual
+  paragraph spacing:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - Aggregate metrics were unchanged from the table-border run: MAE `16.004348`, changed16 `0.142372`.
+  - The contextual-spacing branch is implemented for correctness, but it is not a dominant private metric
+    driver for this document; continue prioritizing table style/border and numbering geometry.
 
 ## Backlog
 
@@ -3925,6 +3938,11 @@ Current validation baseline:
   (`docx-core` `4`, `docx-page` `10`, `docx-text` `7`, `docx-numbering` `4`, `docx-images` `2`,
   `docx-tables` `22`), public `docx-tables` visual run `20260531-154329` passed, and private DOCX run
   `20260531-154335` stayed at `16/16` pages, zero dimension mismatches, MAE `16.004348`, changed16 `0.142372`.
+- DOCX contextual-spacing validation:
+  after applying `w:contextualSpacing` for adjacent same-style body paragraphs, the full DOCX group sweep
+  passed (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
+  `docx-tables` `22`). Private DOCX run `20260531-154620` stayed at `16/16` pages, zero dimension mismatches,
+  MAE `16.004348`, changed16 `0.142372`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
