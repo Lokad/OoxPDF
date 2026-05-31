@@ -4030,6 +4030,12 @@ paths, and ExecPlan references together.
     rendering.
   - [x] Render `prstGeom arc` strokes from preset guide angles instead of falling back to rectangle stroking;
     private page 30 now shows dashed arcs around the milestones rather than dashed bounding boxes.
+- [ ] Private slide 61 visible remaining problem: a shape-built line graph uses non-circular `prstGeom arc`
+  shapes with `stealth` line ends, not chart XML. The preset-arc visual-angle conversion is now public-covered
+  and improves the slide without broad regressions, but Office still emits several of these arrowed arcs as
+  filled outline paths while OOXPDF strokes them and adds marker paths. The next acceptable fix is a general
+  Office-aligned preset-arc line-end outline/flattening model, not a private-slide coordinate shortcut or a
+  per-font/per-shape special case.
 - [ ] Private slide 9 visible remaining problem: left-side schema geometry is visibly broken. Survey the
   involved shapes/connectors/group transforms on public-safe diagnostics, then reproduce with minimal public
   geometry fixtures before changing renderer logic.
