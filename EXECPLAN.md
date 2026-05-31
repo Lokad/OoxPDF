@@ -2070,6 +2070,21 @@ High-priority actions:
       remaining font-resource architecture gap: body/table text can use the run resource map, but static
       header/footer text still collapses mixed runs, `{PAGE}` substitution, color, and font resource ownership
       into the first run. Add public fixtures before touching private documents.
+      2026-06-01 discovery: a straightforward fallback-free static/table text rendering trial is not safe yet.
+      Enabling static/table text whenever run-level resources exist, and adding all first/even/default
+      header/footer parts to the global font plan, preserved private page count and diagnostics but worsened
+      the private DOCX aggregate from `12.509698` MAE / `0.112673` changed16 to `13.773663` MAE / `0.126283`
+      changed16. The trial was reverted. The next acceptable slice is a real static header/footer layout stage
+      with selected-part ownership, Word-compatible header/footer line boxes and baselines, and public
+      Office-PDF-backed fixtures; do not re-enable static fallback-free rendering as a side effect of the
+      document-level fallback resource.
+    - [ ] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
+      Body text already renders through run-level resources, but table-cell text is still gated by the
+      document fallback resource. Removing that gate rendered additional private table text and regressed the
+      aggregate metrics above, which means the missing piece is not the gate itself but exact table-cell
+      resource/layout ownership: selected run resource, row height, vertical alignment, clipping/overflow, and
+      Word-compatible cell text baselines must be validated together with a public table fixture before the
+      fallback gate can be removed.
     - [ ] 2026-05-31: Resolve the DOCX pagination gap exposed by structural font/style alignment. Private
       DOCX run `20260531-203336` improved aggregate MAE to `13.852449` and changed16 to `0.125076`, but the
       candidate now paginates as `14` pages against Office's `16` reference pages with `2` dimension mismatches.
