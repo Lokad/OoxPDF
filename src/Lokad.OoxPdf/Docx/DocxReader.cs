@@ -1012,7 +1012,10 @@ internal sealed class DocxReader
         }
 
         var key = (numId, level);
-        counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : numberingLevel.Start;
+        int start = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
+            ? overriddenStart
+            : numberingLevel.Start;
+        counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : start;
         string numberText = counters[key].ToString(CultureInfo.InvariantCulture);
         string labelText = numberingLevel.Text.Replace("%" + (level + 1).ToString(CultureInfo.InvariantCulture), numberText, StringComparison.Ordinal);
         return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent);
@@ -1114,6 +1117,7 @@ internal sealed class DocxReader
         }
 
         var numToAbstract = new Dictionary<string, string>(StringComparer.Ordinal);
+        var startOverrides = new Dictionary<(string NumId, int Level), int>();
         foreach (XElement num in numberingXml.Root?.Elements(WordprocessingNamespace + "num") ?? [])
         {
             string? numId = (string?)num.Attribute(WordprocessingNamespace + "numId");
@@ -1122,9 +1126,25 @@ internal sealed class DocxReader
             {
                 numToAbstract[numId] = abstractId;
             }
+
+            if (numId is null)
+            {
+                continue;
+            }
+
+            foreach (XElement overrideLevel in num.Elements(WordprocessingNamespace + "lvlOverride"))
+            {
+                int levelIndex = overrideLevel.Attribute(WordprocessingNamespace + "ilvl") is { } ilvl
+                    ? int.Parse(ilvl.Value, CultureInfo.InvariantCulture)
+                    : 0;
+                if (overrideLevel.Element(WordprocessingNamespace + "startOverride")?.Attribute(WordprocessingNamespace + "val") is { } startValue)
+                {
+                    startOverrides[(numId, levelIndex)] = int.Parse(startValue.Value, CultureInfo.InvariantCulture);
+                }
+            }
         }
 
-        return new DocxNumberingSet(numToAbstract, levels);
+        return new DocxNumberingSet(numToAbstract, levels, startOverrides);
     }
 
     private static DocxResolvedParagraphProperties ResolveParagraphProperties(XElement? directProperties, string? paragraphStyleId, DocxStyleSet styles)
@@ -1436,11 +1456,13 @@ internal sealed class DocxReader
 
     private sealed record DocxNumberingSet(
         IReadOnlyDictionary<string, string> NumToAbstract,
-        IReadOnlyDictionary<(string AbstractId, int Level), DocxNumberingLevel> Levels)
+        IReadOnlyDictionary<(string AbstractId, int Level), DocxNumberingLevel> Levels,
+        IReadOnlyDictionary<(string NumId, int Level), int> StartOverrides)
     {
         public static DocxNumberingSet Empty { get; } = new(
             new Dictionary<string, string>(),
-            new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>());
+            new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>(),
+            new Dictionary<(string NumId, int Level), int>());
     }
 
     private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent);
