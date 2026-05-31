@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
@@ -293,11 +294,6 @@ internal sealed class DocxReader
                 Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated");
             }
 
-            if (styles.Descendants(WordprocessingNamespace + "style")
-                .Any(HasUnsupportedTableStyleComplexScriptRunProperties))
-            {
-                Emit("DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN", "table style complex-script run property", stylesPartName ?? partName, "Approximated");
-            }
         }
 
         XDocument? numbering = LoadRelatedXmlPart(package, partName, NumberingRelationshipType, NumberingContentType, out string? numberingPartName);
@@ -380,6 +376,14 @@ internal sealed class DocxReader
             (string?)fontScheme
                 ?.Element(DrawingNamespace + "minorFont")
                 ?.Element(DrawingNamespace + "latin")
+                ?.Attribute("typeface"),
+            (string?)fontScheme
+                ?.Element(DrawingNamespace + "majorFont")
+                ?.Element(DrawingNamespace + "cs")
+                ?.Attribute("typeface"),
+            (string?)fontScheme
+                ?.Element(DrawingNamespace + "minorFont")
+                ?.Element(DrawingNamespace + "cs")
                 ?.Attribute("typeface"));
     }
 
@@ -451,19 +455,7 @@ internal sealed class DocxReader
             if (text.Length != 0)
             {
                 string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
-                runs.Add(new DocxTextRun(
-                    displayText,
-                    resolvedRun.FontSize ?? 11d,
-                    resolvedRun.ColorHex,
-                    resolvedRun.Bold ?? false,
-                    resolvedRun.Italic ?? false,
-                    resolvedRun.Underline ?? false,
-                    resolvedRun.UnderlineValue,
-                    resolvedRun.FontFamily,
-                    resolvedRun.AllCaps ?? false)
-                {
-                    Fonts = resolvedRun.Fonts
-                });
+                AddResolvedTextRuns(runs, displayText, resolvedRun);
             }
 
             images.AddRange(ReadInlineImages(run, package, relationships));
@@ -499,6 +491,60 @@ internal sealed class DocxReader
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
             CreateListLabel(paragraphProperties, numbering, numberingCounters));
+    }
+
+    private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun)
+    {
+        var segment = new StringBuilder();
+        bool? currentComplexScript = null;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            bool complexScript = DocxScriptClassifier.IsComplexScriptRune(rune.Value);
+            if (currentComplexScript is not null && currentComplexScript.Value != complexScript)
+            {
+                AddResolvedTextRun(runs, segment.ToString(), resolvedRun, currentComplexScript.Value);
+                segment.Clear();
+            }
+
+            segment.Append(rune);
+            currentComplexScript = complexScript;
+        }
+
+        if (segment.Length != 0 && currentComplexScript is not null)
+        {
+            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, currentComplexScript.Value);
+        }
+    }
+
+    private static void AddResolvedTextRun(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, bool complexScript)
+    {
+        bool bold = complexScript
+            ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
+            : resolvedRun.Bold ?? false;
+        bool italic = complexScript
+            ? resolvedRun.ComplexScriptItalic ?? resolvedRun.Italic ?? false
+            : resolvedRun.Italic ?? false;
+        string? fontFamily = complexScript
+            ? FirstNonEmpty(resolvedRun.Fonts.ComplexScript, resolvedRun.FontFamily)
+            : resolvedRun.FontFamily;
+        runs.Add(new DocxTextRun(
+            text,
+            resolvedRun.FontSize ?? 11d,
+            resolvedRun.ColorHex,
+            bold,
+            italic,
+            resolvedRun.Underline ?? false,
+            resolvedRun.UnderlineValue,
+            fontFamily,
+            resolvedRun.AllCaps ?? false)
+        {
+            Fonts = resolvedRun.Fonts
+        });
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 
     private static double ResolveSpacingBeforePoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
@@ -1320,19 +1366,6 @@ internal sealed class DocxReader
         return new DocxNumberingSet(numToAbstract, levels, startOverrides);
     }
 
-    private static bool HasUnsupportedTableStyleComplexScriptRunProperties(XElement style)
-    {
-        if (!string.Equals((string?)style.Attribute(WordprocessingNamespace + "type"), "table", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return style.Descendants(WordprocessingNamespace + "rPr")
-            .Any(runProperties =>
-                runProperties.Element(WordprocessingNamespace + "bCs") is not null ||
-                runProperties.Element(WordprocessingNamespace + "iCs") is not null);
-    }
-
     private static DocxResolvedParagraphProperties ResolveParagraphProperties(
         XElement? directProperties,
         string? paragraphStyleId,
@@ -1479,6 +1512,8 @@ internal sealed class DocxReader
             ?.Attribute(WordprocessingNamespace + "ascii");
         bool? bold = ReadOnOff(properties?.Element(WordprocessingNamespace + "b"));
         bool? italic = ReadOnOff(properties?.Element(WordprocessingNamespace + "i"));
+        bool? complexScriptBold = ReadOnOff(properties?.Element(WordprocessingNamespace + "bCs"));
+        bool? complexScriptItalic = ReadOnOff(properties?.Element(WordprocessingNamespace + "iCs"));
         bool? allCaps = ReadOnOff(properties?.Element(WordprocessingNamespace + "caps"));
         string? underlineValue = (string?)properties?
             .Element(WordprocessingNamespace + "u")
@@ -1486,7 +1521,7 @@ internal sealed class DocxReader
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline, underlineValue, ReadRunFonts(properties), allCaps);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), allCaps);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -1586,7 +1621,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, DocxTableStyle> TableStyles)
     {
         public static DocxStyleSet Empty { get; } = new(
-            new DocxResolvedRunProperties(null, null, null, null, null, null, null, DocxRunFonts.Empty, null),
+            new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
@@ -2065,12 +2100,14 @@ internal sealed class DocxReader
         string? FontFamily,
         bool? Bold,
         bool? Italic,
+        bool? ComplexScriptBold,
+        bool? ComplexScriptItalic,
         bool? Underline,
         string? UnderlineValue,
         DocxRunFonts Fonts,
         bool? AllCaps)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -2080,6 +2117,8 @@ internal sealed class DocxReader
                 other.FontFamily ?? FontFamily,
                 other.Bold ?? Bold,
                 other.Italic ?? Italic,
+                other.ComplexScriptBold ?? ComplexScriptBold,
+                other.ComplexScriptItalic ?? ComplexScriptItalic,
                 other.Underline ?? Underline,
                 other.UnderlineValue ?? UnderlineValue,
                 MergeRunFonts(Fonts, other.Fonts),

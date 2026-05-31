@@ -9,9 +9,14 @@ internal static class DocxFontResolver
 {
     public static DocxTypefaceCandidates ResolveLatinTypeface(DocxTextRun run, DocxFontCatalog catalog)
     {
-        string? primary = FirstNonEmpty(run.Fonts.Ascii, run.Fonts.HighAnsi, run.FontFamily);
+        bool complexScript = DocxScriptClassifier.IsComplexScriptText(run.Text);
+        string? primary = complexScript
+            ? FirstNonEmpty(run.Fonts.ComplexScript, run.FontFamily, run.Fonts.Ascii, run.Fonts.HighAnsi)
+            : FirstNonEmpty(run.Fonts.Ascii, run.Fonts.HighAnsi, run.FontFamily);
         string? alternate = ResolveAlternate(primary, catalog);
-        string? theme = ResolveThemeTypeface(FirstNonEmpty(run.Fonts.AsciiTheme, run.Fonts.HighAnsiTheme), catalog.ThemeFonts);
+        string? theme = complexScript
+            ? ResolveThemeTypeface(FirstNonEmpty(run.Fonts.ComplexScriptTheme, run.Fonts.AsciiTheme, run.Fonts.HighAnsiTheme), catalog.ThemeFonts)
+            : ResolveThemeTypeface(FirstNonEmpty(run.Fonts.AsciiTheme, run.Fonts.HighAnsiTheme), catalog.ThemeFonts);
         return new DocxTypefaceCandidates(primary, alternate, theme);
     }
 
@@ -33,6 +38,8 @@ internal static class DocxFontResolver
         {
             "majorAscii" or "majorHAnsi" => themeFonts.MajorLatinTypeface,
             "minorAscii" or "minorHAnsi" => themeFonts.MinorLatinTypeface,
+            "majorBidi" => themeFonts.MajorComplexScriptTypeface,
+            "minorBidi" => themeFonts.MinorComplexScriptTypeface,
             _ => null
         };
     }

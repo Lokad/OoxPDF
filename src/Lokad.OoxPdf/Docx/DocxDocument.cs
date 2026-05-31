@@ -43,7 +43,9 @@ internal sealed record DocxFontTableEntry(
 
 internal sealed record DocxThemeFonts(
     string? MajorLatinTypeface,
-    string? MinorLatinTypeface)
+    string? MinorLatinTypeface,
+    string? MajorComplexScriptTypeface = null,
+    string? MinorComplexScriptTypeface = null)
 {
     public static DocxThemeFonts Empty { get; } = new(null, null);
 }

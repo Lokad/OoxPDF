@@ -1949,13 +1949,16 @@ High-priority actions:
       Public coverage pins this structure before renderer consumption; production drawing still uses the
       legacy single-font path until layout measurement and PDF emission can consume the same per-run font
       resource map.
-    - [ ] 2026-05-31: Promote the DOCX renderer from one document-wide font to a run-level font resource and
+    - [x] 2026-05-31: Promote the DOCX renderer from one document-wide font to a run-level font resource and
       measurement map before changing production fallback policy. A generic trial that consumed `fontTable.xml`
       `w:altName` after an exact primary miss, with no named-font exceptions, correctly avoided the arbitrary
       resolver fallback but regressed the private DOCX run `20260531-194952` from `16/16` to `18` candidate
       pages with 2 dimension mismatches (`16.094264` MAE). This confirms the long-term rule: font selection,
       glyph embedding, and line/table measurement must share the same per-run resolved typeface state before
       document-authored alternates can safely affect rendering.
+      2026-06-01 update: completed through the shared `DocxFontPlan` measurement/resource path below. The
+      broader font architecture item remains open for header/footer run resources, script-slot shaping, and
+      exact Word fallback behavior, not for a document-wide font-resource blocker.
     - [x] 2026-05-31: Added a behavior-preserving DOCX font plan that resolves every run through the ordered
       OOXML candidates (primary run typeface, `fontTable.xml` alternate, then theme major/minor typeface) and
       records whether the resolver chose a primary, alternate, theme, or fallback face. Public coverage uses a
@@ -2049,6 +2052,19 @@ High-priority actions:
       (`20260531-225826`, `MAE=14.809827`, changed16 `0.134021`) against the current single-resource baseline,
       so it was not landed; the completed implementation keeps the structural resource map while preserving
       the already-aligned font-plan measurer.
+    - [x] 2026-06-01: Modeled DOCX complex-script run style slots from table styles instead of warning on
+      `w:bCs`/`w:iCs`. Resolved run properties now carry `bCs`/`iCs`, text is split into Latin versus
+      complex-script spans before layout/emission, complex-script spans prefer `w:rFonts/@w:cs` and
+      `csTheme` (`majorBidi`/`minorBidi`), and Latin spans do not inherit complex-script bold/italic. Public
+      table coverage uses mixed Latin/Hebrew text to prove script-slot behavior without font-name
+      special-casing. Private DOCX run `20260601-000124` stayed at `16/16` pages with zero dimension
+      mismatches, MAE `12.509698`, changed16 `0.112673`, and no diagnostics.
+    - [ ] 2026-06-01: Replace the current DOCX script-slot classifier with a Word-compatible shaping and
+      bidi stage when complex-script visual gaps become visible. The present implementation is a structural
+      slot-selection step over Unicode ranges; it is enough to route `w:bCs`/`w:iCs`, `w:cs`, and Bidi theme
+      faces into the existing run model, but it is not a full OpenType shaping engine, bidi reordering model,
+      or per-script fallback ladder. Keep this as an explicit long-term gap so future fixes do not devolve
+      into font-name or document-specific exceptions.
     - [ ] 2026-05-31: Split DOCX static header/footer rendering into run-level line segments instead of
       concatenating all runs and drawing them with the first run's resource/style. This is now the clearest
       remaining font-resource architecture gap: body/table text can use the run resource map, but static
@@ -4630,6 +4646,12 @@ Current validation baseline:
   transient `VBCSCompiler` output lock, then serial reruns passed. Private DOCX run `20260531-235343`
   improved to `16/16` pages, zero dimension mismatches, `MAE=12.509698`, changed16 `0.112673`, and now reports
   only `DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN`.
+- DOCX complex-script table-style validation:
+  after modeling table-style `w:bCs`/`w:iCs` as script-slot run properties and routing complex-script spans
+  through `w:cs`/Bidi theme font candidates, public validation passed `docx-tables --skip-slow` (`49`),
+  `docx-core --skip-slow` (`16`), `docx-text --skip-slow` (`17`), `docx-numbering --skip-slow` (`11`), and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-000124` stayed at
+  `16/16` pages, zero dimension mismatches, `MAE=12.509698`, changed16 `0.112673`, and reports no diagnostics.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
