@@ -762,6 +762,98 @@ internal static class DocxTests
         TestAssert.True(Math.Abs((baselines[0] - baselines[1]) - 36d) < 0.01d, "Exact DOCX line height should advance the next paragraph by 36 points.");
     }
 
+    public static void DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        DocxParagraph kept = CreateDocxLayoutParagraph(
+            "First Second",
+            fontSize: 11d,
+            lineSpacingPoints: 11d,
+            keepRules: new DocxParagraphKeepRules(null, null, true, null, null, null));
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 15d, lineSpacingPoints: 15d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 15d, lineSpacingPoints: 15d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 15d, lineSpacingPoints: 15d)
+        ];
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Append(new DocxParagraphElement(kept))
+            .ToArray();
+        var document = new DocxDocument(
+            54d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillFirstSecond".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(3, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+        TestAssert.Equal(2, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
+    }
+
+    public static void DocxSyntheticParagraphKeepNextMovesPairToNextPage()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        DocxParagraph keepNext = CreateDocxLayoutParagraph(
+            "Keep",
+            fontSize: 11d,
+            lineSpacingPoints: 11d,
+            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+        DocxParagraph next = CreateDocxLayoutParagraph("Next", fontSize: 11d, lineSpacingPoints: 11d);
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
+        ];
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Concat([new DocxParagraphElement(keepNext), new DocxParagraphElement(next)])
+            .ToArray();
+        var document = new DocxDocument(
+            160d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillKeepNext".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(4, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+        TestAssert.Equal(2, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
+    }
+
     public static void DocxSyntheticNumberingRendersListLabels()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -2256,6 +2348,27 @@ internal static class DocxTests
             bodyElements,
             [],
             tables);
+    }
+
+    private static DocxParagraph CreateDocxLayoutParagraph(
+        string text,
+        double fontSize,
+        double lineSpacingPoints,
+        DocxParagraphKeepRules? keepRules = null)
+    {
+        return new DocxParagraph(
+            [new DocxTextRun(text, fontSize, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            lineSpacingPoints,
+            DocxParagraphSpacing.Empty,
+            keepRules ?? DocxParagraphKeepRules.Empty,
+            null);
     }
 
     private static double[] ExtractTextBaselines(string pdf)

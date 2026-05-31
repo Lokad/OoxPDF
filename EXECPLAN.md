@@ -1817,6 +1817,16 @@ High-priority actions:
     tokens including line/autospacing/line-count variants, `w:contextualSpacing`, and keep/widow on/off
     values. This intentionally does not change pagination yet; it removes the reader-local XML dependency so
     the next Word-like pagination slice can use typed structural facts instead of diagnostics-only heuristics.
+  - [x] 2026-05-31: Applied typed DOCX `keepLines` and `keepNext` facts during block pagination. The layout
+    stage now estimates kept paragraph blocks before drawing lines and moves a paragraph, or a paragraph plus
+    its next paragraph/table target, to the next page when the kept block would otherwise split at the page
+    bottom. This is a generic Word-compatible pagination step backed by public synthetic tests, not a
+    private-document page-count rule. `widowControl` remains open because it needs line-level widow/orphan
+    decisions rather than whole-block movement.
+  - [ ] 2026-05-31: Finish DOCX paragraph pagination rules: implement `widowControl` with line-level orphan
+    checks, chain consecutive `keepNext` paragraphs across multiple following blocks, and refine exact
+    keep-with-table behavior against public Word/Office PDF fixtures before downgrading the keep-rule
+    diagnostics.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2442,6 +2452,16 @@ document-specific business content into public notes.
     recovery track, not just incremental pagination tuning.
   - Next implementation should start with layout tracing or one of those diagnosed categories; avoid broad
     paragraph parser rewrites until drift location is known.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-152007` after typed
+  `keepLines`/`keepNext` pagination:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - Paired-page MAE was `17.339630`, and mean changed-pixel ratio at threshold 16 was `0.151959`.
+  - Diagnostics remain `DOCX_NUMBERING_INDENT`, `DOCX_STYLE_PARAGRAPH_KEEP_RULE`,
+    `DOCX_STYLE_PARAGRAPH_SPACING`, `DOCX_STYLE_TABLE_STYLE`, `DOCX_UNSUPPORTED_TABLE_HEADER_ROW`, and
+    `DOCX_UNSUPPORTED_TABLE_STYLE`.
+  - This closes the coarse page-count mismatch but not pixel-level fidelity; remaining DOCX work should focus
+    on table style/header behavior, numbering indents, exact paragraph spacing, and line-level widow/orphan
+    decisions.
 
 ## Backlog
 
@@ -3798,6 +3818,12 @@ Current validation baseline:
   `docx-core` `4`, `docx-page` `8`, `docx-text` `7`, `docx-numbering` `3`, `docx-images` `2`, and
   `docx-tables` `18`. The new public synthetic test preserves style/default/direct `w:spacing` source tokens,
   `w:contextualSpacing`, and keep/widow on/off values without changing rendering behavior.
+- DOCX keep-rule pagination validation:
+  after applying typed `keepLines` and `keepNext` in the layout stage, the full DOCX group sweep passed
+  (`docx-core` `4`, `docx-page` `10`, `docx-text` `7`, `docx-numbering` `3`, `docx-images` `2`,
+  `docx-tables` `18`). All public `docx-*` visual cases passed in the sweep ending with `docx-tables` run
+  `20260531-152113`. Private DOCX run `20260531-152007` matched the reference page count (`16/16`) with zero
+  dimension mismatches; MAE was `17.339630` and changed16 was `0.151959`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

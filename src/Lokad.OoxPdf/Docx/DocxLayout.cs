@@ -145,8 +145,9 @@ internal sealed class DocxLayoutEngine
 
         bool HasPageContent() => currentItems.Count > 0;
 
-        foreach (DocxBodyElement element in document.BodyElements)
+        for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
+            DocxBodyElement element = document.BodyElements[elementIndex];
             if (element is DocxPageBreakElement)
             {
                 if (HasPageContent())
@@ -176,6 +177,14 @@ internal sealed class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
+            if (embedded is not null &&
+                HasPageContent() &&
+                ShouldKeepParagraphBlockTogether(paragraph) &&
+                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, embedded) < document.MarginBottomPoints)
+            {
+                FinishPage();
+            }
+
             if (embedded is not null && paragraph.Runs.Count > 0)
             {
                 string text = paragraph.ListLabel is null
@@ -239,6 +248,104 @@ internal sealed class DocxLayoutEngine
         }
 
         return new DocxLayout(pages.ToArray());
+    }
+
+    private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)
+    {
+        return paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true;
+    }
+
+    private static double EstimateKeptParagraphBlockHeight(
+        IReadOnlyList<DocxBodyElement> elements,
+        int elementIndex,
+        double availableWidth,
+        PdfEmbeddedFont embedded)
+    {
+        if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
+        {
+            return 0d;
+        }
+
+        DocxParagraph paragraph = paragraphElement.Paragraph;
+        double height = EstimateParagraphContentHeight(paragraph, availableWidth, embedded);
+        if (paragraph.KeepRules.KeepNext == true && TryFindNextKeepTarget(elements, elementIndex + 1, out DocxBodyElement? next))
+        {
+            if (next is DocxParagraphElement nextParagraph)
+            {
+                height += Math.Max(paragraph.SpacingAfterPoints, nextParagraph.Paragraph.SpacingBeforePoints);
+                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, embedded);
+            }
+            else if (next is DocxTableElement nextTable)
+            {
+                height += paragraph.SpacingAfterPoints;
+                height += EstimateFirstTableRowHeight(nextTable.Table, availableWidth, embedded);
+            }
+        }
+
+        return height;
+    }
+
+    private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out DocxBodyElement? target)
+    {
+        for (int i = startIndex; i < elements.Count; i++)
+        {
+            if (elements[i] is DocxParagraphElement or DocxTableElement)
+            {
+                target = elements[i];
+                return true;
+            }
+
+            if (elements[i] is DocxPageBreakElement or DocxSectionBreakElement)
+            {
+                break;
+            }
+        }
+
+        target = null;
+        return false;
+    }
+
+    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, PdfEmbeddedFont embedded)
+    {
+        double height = 0d;
+        if (paragraph.Runs.Count != 0)
+        {
+            double fontSize = paragraph.Runs.Max(run => run.FontSize);
+            double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
+            string text = paragraph.ListLabel is null
+                ? string.Concat(paragraph.Runs.Select(run => run.Text))
+                : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
+            height += WrapWords(text, availableWidth, fontSize, embedded).Count() * lineHeight;
+        }
+
+        foreach (DocxInlineImage image in paragraph.Images)
+        {
+            double imageWidth = Math.Min(availableWidth, image.WidthPoints);
+            double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+            height += imageHeight + 6d;
+        }
+
+        return height;
+    }
+
+    private static double EstimateFirstTableRowHeight(DocxTable table, double availableWidth, PdfEmbeddedFont embedded)
+    {
+        DocxTableRow? row = table.Rows.FirstOrDefault();
+        if (row is null)
+        {
+            return 0d;
+        }
+
+        double rawTableWidth = table.ColumnWidthsPoints.Sum();
+        double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
+        double[] cellWidths = row.Cells
+            .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
+            .ToArray();
+        double contentHeight = row.Cells
+            .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], embedded))
+            .DefaultIfEmpty(0d)
+            .Max();
+        return Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
     }
 
     private static void LayoutTable(
