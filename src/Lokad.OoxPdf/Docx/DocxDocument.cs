@@ -106,6 +106,7 @@ internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells, double? 
 
 internal sealed record DocxTableCell(
     string Text,
+    IReadOnlyList<DocxParagraph> Paragraphs,
     string? FillHex,
     string? ShadingValue,
     string? ShadingColor,

@@ -21,7 +21,6 @@ internal sealed class DocxReader
     private const string FooterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer";
     private const string StylesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
     private const string NumberingContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
-
     public DocxDocument Read(OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         OoxPart documentPart = FindDocumentPart(package);
@@ -468,7 +467,7 @@ internal sealed class DocxReader
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(element);
+                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships);
                 if (table is not null)
                 {
                     elements.Add(new DocxTableElement(table));
@@ -537,22 +536,13 @@ internal sealed class DocxReader
         return ReadParagraphs(wrapper, styles, numbering, package, relationships);
     }
 
-    private static IReadOnlyList<DocxTable> ReadTables(XDocument document)
-    {
-        var tables = new List<DocxTable>();
-        foreach (XElement table in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "tbl"))
-        {
-            DocxTable? parsed = ReadTable(table);
-            if (parsed is not null)
-            {
-                tables.Add(parsed);
-            }
-        }
-
-        return tables;
-    }
-
-    private static DocxTable? ReadTable(XElement table)
+    private static DocxTable? ReadTable(
+        XElement table,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        Dictionary<(string NumId, int Level), int> numberingCounters,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         string? layoutValue = (string?)table
             .Element(WordprocessingNamespace + "tblPr")
@@ -570,9 +560,9 @@ internal sealed class DocxReader
             foreach (XElement cell in row.Elements(WordprocessingNamespace + "tc"))
             {
                 XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
-                string text = string.Join(" ", cell
-                    .Descendants(WordprocessingNamespace + "p")
-                    .Select(p => string.Concat(p.Descendants(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty)))
+                IReadOnlyList<DocxParagraph> paragraphs = ReadTableCellParagraphs(cell, styles, numbering, numberingCounters, package, relationships);
+                string text = string.Join(" ", paragraphs
+                    .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
                     .Where(t => t.Length != 0));
                 XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
                 string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill");
@@ -582,7 +572,7 @@ internal sealed class DocxReader
                     ?.Element(WordprocessingNamespace + "vAlign")
                     ?.Attribute(WordprocessingNamespace + "val");
                 IReadOnlyList<DocxTableCellBorder> borders = ReadTableCellBorders(cellProperties);
-                cells.Add(new DocxTableCell(text, fill, shadingValue, shadingColor, verticalAlignment, borders));
+                cells.Add(new DocxTableCell(text, paragraphs, fill, shadingValue, shadingColor, verticalAlignment, borders));
             }
 
             if (cells.Count > 0)
@@ -603,6 +593,33 @@ internal sealed class DocxReader
         }
 
         return new DocxTable(layoutValue, columns, rows);
+    }
+
+    private static IReadOnlyList<DocxParagraph> ReadTableCellParagraphs(
+        XElement cell,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        Dictionary<(string NumId, int Level), int> numberingCounters,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        var paragraphs = new List<DocxParagraph>();
+        foreach (XElement paragraph in cell.Elements(WordprocessingNamespace + "p"))
+        {
+            DocxParagraph? parsed = ReadParagraph(
+                paragraph,
+                styles,
+                numbering,
+                numberingCounters,
+                package,
+                relationships);
+            if (parsed is not null)
+            {
+                paragraphs.Add(parsed);
+            }
+        }
+
+        return paragraphs;
     }
 
     private static IReadOnlyList<DocxTableCellBorder> ReadTableCellBorders(XElement? cellProperties)

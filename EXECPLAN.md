@@ -1780,6 +1780,12 @@ High-priority actions:
     reports page dimensions, item counts, item kinds, bounds, cell counts, and text lengths, but not document
     text. This gives private DOCX pagination/table work a restartable trace target before adding Word layout
     rules.
+  - [x] 2026-05-31: Preserved parsed paragraph models inside DOCX table cells while keeping the existing
+    flattened cell text for current rendering. This closes a model gap that blocked future row-height,
+    paragraph spacing, inherited paragraph/character styling, per-run styling, and numbering layout inside cells.
+  - [ ] 2026-05-31: Promote DOCX table-cell rendering from flattened cell text to the preserved paragraph
+    model, with public synthetic coverage for multi-paragraph cells, direct run styling, cell margins, and
+    vertical alignment before using private table pages as acceptance evidence.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2703,9 +2709,10 @@ that turns `DocxDocument.BodyElements` into `DocxLayoutPage` records with positi
 images, and table rows/cells. `src/Lokad.OoxPdf/Docx/DocxRenderer.cs` still owns font subsetting, static
 header/footer emission, image decoding, and PDF drawing, but it no longer decides paragraph/table page
 placement while drawing. `DocxLayoutSnapshot` exposes public-safe counts and bounds for this layout without
-copying text. This is only the first boundary: the reader still flattens table-cell text and mixes style
-resolution into document parsing, so the next architectural work should introduce style-resolved block models
-before adding more Word pagination behavior.
+copying text. Table cells now preserve their parsed paragraph lists in addition to the previous flattened
+text. This is only the first boundary: the reader still mixes style resolution into document parsing, and the
+renderer still consumes flattened cell text, so the next architectural work should introduce style-resolved
+block models and paragraph-based table-cell layout before adding more Word pagination behavior.
 
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
@@ -3229,6 +3236,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   text must not leak into notes or fixtures. Reporting item kind, bounds, counts, and text length is enough to
   locate pagination/table drift while keeping content out of the trace.
   Date/Author: 2026-05-31 / Codex.
+- Decision: Preserve DOCX table-cell paragraphs before changing table rendering behavior.
+  Rationale: Word table fidelity depends on paragraph boundaries, inherited paragraph style, character style,
+  run properties, spacing, numbering, and inline objects inside cells. Keeping the old flattened cell text as a
+  compatibility field while adding parsed cell paragraphs gives the renderer a migration path without losing the
+  current behavior or baking another table-text shortcut into PDF emission.
+  Date/Author: 2026-05-31 / Codex.
 - Decision: Keep the slide-44 chart residual on the shared PPTX Office text-emission track after adding
   structural chart text spacing support.
   Rationale: Reading authored `spc` into chart text styles is a correct model gap to close, but the private
@@ -3669,6 +3682,11 @@ Current validation baseline:
   after adding the private-safe layout snapshot, the DOCX group sweep passed again (`docx-core` `4`,
   `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`, `docx-tables` `10`), and
   `docx-ladder-01-plain-paragraph` passed in visual run `20260531-143530`.
+- DOCX table-cell paragraph preservation validation:
+  `docx-tables --skip-slow` passed `11` tests after preserving parsed table-cell paragraphs with inherited
+  paragraph and character styles. The full DOCX group sweep passed (`docx-core` `4`, `docx-page` `8`,
+  `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`, `docx-tables` `11`), and the public `docx-tables`
+  visual case passed in run `20260531-143856`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

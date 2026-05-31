@@ -92,6 +92,7 @@ internal static class DocxTests
                   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
                   <Default Extension="xml" ContentType="application/xml"/>
                   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
                 </Types>
                 """,
             ["_rels/.rels"] = """
@@ -1244,6 +1245,74 @@ internal static class DocxTests
         TestAssert.True(cells[1].ShadingValue is null, "Expected missing cell shading to keep a null source token.");
     }
 
+    public static void DocxReaderTableCellPreservesParagraphModel()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="CellHeading">
+                    <w:pPr><w:jc w:val="center"/></w:pPr>
+                    <w:rPr><w:sz w:val="32"/></w:rPr>
+                  </w:style>
+                  <w:style w:type="character" w:styleId="CellEmphasis">
+                    <w:rPr><w:color w:val="336699"/><w:i/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc>
+                        <w:p><w:r><w:t>Alpha</w:t></w:r></w:p>
+                        <w:p><w:pPr><w:pStyle w:val="CellHeading"/></w:pPr><w:r><w:rPr><w:rStyle w:val="CellEmphasis"/><w:b/></w:rPr><w:t>Beta</w:t></w:r></w:p>
+                      </w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
+        TestAssert.Equal("Alpha Beta", cell.Text);
+        TestAssert.Equal(2, cell.Paragraphs.Count);
+        TestAssert.Equal("Alpha", cell.Paragraphs[0].Runs[0].Text);
+        TestAssert.Equal(DocxTextAlignment.Center, cell.Paragraphs[1].Alignment);
+        TestAssert.Equal(16d, cell.Paragraphs[1].Runs[0].FontSize);
+        TestAssert.Equal("336699", cell.Paragraphs[1].Runs[0].ColorHex ?? string.Empty);
+        TestAssert.True(cell.Paragraphs[1].Runs[0].Bold, "Expected table-cell paragraph runs to preserve direct run properties.");
+        TestAssert.True(cell.Paragraphs[1].Runs[0].Italic, "Expected table-cell paragraph runs to preserve character styles.");
+    }
+
     public static void DocxSyntheticTableKeepsBodyOrder()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -1393,8 +1462,8 @@ internal static class DocxTests
             null,
             [60d, 40d],
             [new DocxTableRow([
-                new DocxTableCell("left", null, null, null, null, []),
-                new DocxTableCell("right", null, null, null, null, [])
+                new DocxTableCell("left", [], null, null, null, null, []),
+                new DocxTableCell("right", [], null, null, null, null, [])
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
@@ -1713,7 +1782,7 @@ internal static class DocxTests
         return new DocxTable(
             null,
             [60d],
-            [new DocxTableRow([new DocxTableCell(text, null, null, null, null, [])], rowHeight)]);
+            [new DocxTableRow([new DocxTableCell(text, [], null, null, null, null, [])], rowHeight)]);
     }
 
     private static DocxDocument CreateLayoutTestDocument(IReadOnlyList<DocxBodyElement> bodyElements, IReadOnlyList<DocxTable> tables)
