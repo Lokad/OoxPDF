@@ -308,13 +308,12 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        const double legacyBaselineInset = 17d;
         double paddingLeft = cell.Margins.LeftPoints ?? 4d;
         double paddingRight = cell.Margins.RightPoints ?? 4d;
         double paddingTop = cell.Margins.TopPoints ?? 0d;
         double paddingBottom = cell.Margins.BottomPoints ?? 0d;
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
-        double contentHeight = legacyBaselineInset + paddingTop + paddingBottom;
+        double contentHeight = paddingTop + paddingBottom;
         foreach (DocxParagraph paragraph in paragraphs)
         {
             if (paragraph.Runs.Count == 0)

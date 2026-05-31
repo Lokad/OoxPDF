@@ -1808,6 +1808,9 @@ High-priority actions:
     model for current supported cell content. Table-cell layout/rendering now covers paragraph boundaries,
     inherited styling, mixed runs, margins, vertical alignment, content-driven row height, numbering, and inline
     images through layout-owned text/image records before PDF emission.
+  - [x] 2026-05-31: Tightened DOCX table row content-height growth to measure actual text/image content,
+    margins, and spacing rather than treating the legacy baseline placement inset as required row height. This
+    keeps ordinary one-line default rows compact while still expanding rows that wrap or contain taller content.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -3776,6 +3779,14 @@ Current validation baseline:
   `docx-tables` visual case passed in run `20260531-150408`, and the full DOCX group sweep passed
   (`docx-core` `4`, `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`,
   `docx-tables` `18`).
+- DOCX row content-height correction validation:
+  after removing the legacy baseline inset from required row content height, `docx-tables --skip-slow` passed
+  `18` tests, public `docx-tables` visual case passed in run `20260531-150846`, and the full DOCX group sweep
+  passed (`docx-core` `4`, `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`,
+  `docx-tables` `18`). Private DOCX run `20260531-150625` showed the too-tall-row regression
+  (`18` candidate pages vs `16` reference pages); after the correction, private run `20260531-150813` moved to
+  `15` candidate pages vs `16` reference pages with the same known diagnostic categories, confirming the next
+  pagination gap is not a blanket table-row growth problem.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
