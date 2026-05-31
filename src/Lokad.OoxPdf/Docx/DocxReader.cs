@@ -266,11 +266,6 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "paragraph section break");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "tblHeader").Any())
-        {
-            Emit("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", "repeating table header row", fallback: "Approximated");
-        }
-
         if (document.Descendants(WordprocessingNamespace + "tblStyle").Any())
         {
             Emit("DOCX_UNSUPPORTED_TABLE_STYLE", "table style", fallback: "Approximated");

@@ -4766,8 +4766,8 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_STYLE_PARAGRAPH_KEEP_RULE", ids);
         TestAssert.Contains("DOCX_STYLE_PARAGRAPH_SPACING", ids);
         TestAssert.Contains("DOCX_STYLE_TABLE_STYLE", ids);
-        TestAssert.Contains("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_TABLE_STYLE", ids);
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", ids);
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_NUMBERING_INDENT" && d.PartName == "/word/numbering.xml"), "Numbering diagnostics should point to numbering.xml.");
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_STYLE_PARAGRAPH_KEEP_RULE" && d.PartName == "/word/styles.xml"), "Style diagnostics should point to styles.xml.");
     }

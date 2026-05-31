@@ -3300,6 +3300,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   beyond the current simple label prefix, and honor restart/start rules.
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from
   content, cell vertical alignment, cell margins, and repeating header rows.
+  - [ ] 2026-05-31: Replace the remaining DOCX table-cell first-baseline heuristic only with Office-backed
+    evidence. A structural trial that replaced the fixed first-baseline inset with the resolved font's
+    OpenType ascender passed public table tests but regressed the private DOCX aggregate from `14.818900` to
+    `15.022987` MAE in run `20260531-222543`. Private-safe inspection found explicit table-cell top/bottom
+    margins of `0`, so the missing piece is likely Word's table-cell line-box/baseline placement rather than
+    margin parsing. Add a small Office-authored public fixture comparing first-baseline placement for
+    font-size/table-style/default-margin variants before changing production behavior.
 - [ ] Revisit keep rules only after layout tracing exists: support style-derived `keepNext`, `keepLines`, and
   widow/orphan control with synthetic tests and private page-count checks.
 - [ ] Reattempt manual page/column break support with a parser change that does not alter paragraphs when no
@@ -4390,6 +4397,13 @@ Current validation baseline:
   `20260531-190121` stayed at `16/16` pages, zero dimension mismatches, MAE `15.849350`, changed16
   `0.141574`; `DOCX_NUMBERING_INDENT` remains open for exact tab-stop ownership, bullet fonts, style
   inheritance, and mixed-run segmentation.
+- DOCX table-header diagnostic validation:
+  after removing the stale unsupported diagnostic for repeating table header rows, public diagnostics now
+  assert that `w:tblHeader` is not reported as unsupported because the reader preserves the token and the
+  layout stage repeats contiguous header rows after page breaks. Exact table pagination remains covered by
+  the broader table recovery items. Private DOCX run `20260531-222823` stayed pixel-neutral (`16/16` pages,
+  zero dimension mismatches, `14.818900` MAE, `0.134293` changed16) while dropping
+  `DOCX_UNSUPPORTED_TABLE_HEADER_ROW` from the diagnostics.
 - DOCX table-style paragraph/run cascade validation:
   after merging table-style `w:pPr`/`w:rPr` into the DOCX style cascade and gating fallback conditional
   regions through `w:tblLook`, the targeted public reader test passed, `docx-tables --skip-slow` passed `40`,
