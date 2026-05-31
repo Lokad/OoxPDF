@@ -453,15 +453,17 @@ internal sealed class DocxReader
                 tableCellStyle?.Run);
             if (text.Length != 0)
             {
+                string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
                 runs.Add(new DocxTextRun(
-                    text,
+                    displayText,
                     resolvedRun.FontSize ?? 11d,
                     resolvedRun.ColorHex,
                     resolvedRun.Bold ?? false,
                     resolvedRun.Italic ?? false,
                     resolvedRun.Underline ?? false,
                     resolvedRun.UnderlineValue,
-                    resolvedRun.FontFamily)
+                    resolvedRun.FontFamily,
+                    resolvedRun.AllCaps ?? false)
                 {
                     Fonts = resolvedRun.Fonts
                 });
@@ -1448,13 +1450,14 @@ internal sealed class DocxReader
             ?.Attribute(WordprocessingNamespace + "ascii");
         bool? bold = ReadOnOff(properties?.Element(WordprocessingNamespace + "b"));
         bool? italic = ReadOnOff(properties?.Element(WordprocessingNamespace + "i"));
+        bool? allCaps = ReadOnOff(properties?.Element(WordprocessingNamespace + "caps"));
         string? underlineValue = (string?)properties?
             .Element(WordprocessingNamespace + "u")
             ?.Attribute(WordprocessingNamespace + "val");
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline, underlineValue, ReadRunFonts(properties));
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline, underlineValue, ReadRunFonts(properties), allCaps);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -1554,7 +1557,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, DocxTableStyle> TableStyles)
     {
         public static DocxStyleSet Empty { get; } = new(
-            new DocxResolvedRunProperties(null, null, null, null, null, null, null, DocxRunFonts.Empty),
+            new DocxResolvedRunProperties(null, null, null, null, null, null, null, DocxRunFonts.Empty, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
@@ -1945,7 +1948,8 @@ internal sealed class DocxReader
             run.Underline,
             run.UnderlineValue,
             run.FontFamily,
-            run.Fonts);
+            run.Fonts,
+            run.AllCaps);
     }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
@@ -2023,9 +2027,10 @@ internal sealed class DocxReader
         bool? Italic,
         bool? Underline,
         string? UnderlineValue,
-        DocxRunFonts Fonts)
+        DocxRunFonts Fonts,
+        bool? AllCaps)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -2037,7 +2042,8 @@ internal sealed class DocxReader
                 other.Italic ?? Italic,
                 other.Underline ?? Underline,
                 other.UnderlineValue ?? UnderlineValue,
-                MergeRunFonts(Fonts, other.Fonts));
+                MergeRunFonts(Fonts, other.Fonts),
+                other.AllCaps ?? AllCaps);
         }
     }
 }

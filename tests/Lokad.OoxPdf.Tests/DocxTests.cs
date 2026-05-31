@@ -3193,7 +3193,7 @@ internal static class DocxTests
                     <w:rPr><w:sz w:val="22"/></w:rPr>
                     <w:tblStylePr w:type="firstCol">
                       <w:pPr><w:jc w:val="right"/></w:pPr>
-                      <w:rPr><w:i/><w:color w:val="4472C4"/></w:rPr>
+                      <w:rPr><w:i/><w:caps/><w:color w:val="4472C4"/></w:rPr>
                     </w:tblStylePr>
                   </w:style>
                 </w:styles>
@@ -3230,6 +3230,8 @@ internal static class DocxTests
         TestAssert.Equal(6d, firstParagraph.SpacingAfterPoints);
         TestAssert.Equal(11d, firstParagraph.Runs.Single().FontSize);
         TestAssert.True(firstParagraph.Runs.Single().Italic, "First-column table run style should apply italic.");
+        TestAssert.True(firstParagraph.Runs.Single().AllCaps, "First-column table run style should apply all-caps.");
+        TestAssert.Equal("FIRST", firstParagraph.Runs.Single().Text);
         TestAssert.Equal("4472C4", firstParagraph.Runs.Single().ColorHex ?? string.Empty);
         TestAssert.Equal(0d, secondParagraph.SpacingAfterPoints);
         TestAssert.Equal(11d, secondParagraph.Runs.Single().FontSize);

@@ -2166,6 +2166,14 @@ High-priority actions:
       DOCX run `20260531-224113` stayed metric-neutral (`16/16`, zero dimension mismatches, `14.791805` MAE,
       `0.133893` changed16), as expected because the private styles declare the Office-default band size of
       `1`.
+    - [x] 2026-05-31: Preserved and applied DOCX run all-caps from `w:rPr/w:caps` through the shared run-style
+      cascade, including table-style conditional `w:rPr`. Resolved runs now carry an `AllCaps` flag and
+      materialize uppercase display text before layout measurement and PDF emission, so the renderer does not
+      measure one string and draw another. Private-safe table-style inventory found `w:caps` in the remaining
+      style surface; public coverage verifies a first-column table-style `w:caps` run. Private DOCX run
+      `20260531-225034` stayed metric-neutral (`16/16`, zero dimension mismatches, `14.791805` MAE,
+      `0.133893` changed16). Keep the parent open for script-aware `bCs`/`iCs` and exact table-style
+      diagnostics.
   - [ ] 2026-05-31: Resolve DOCX table-cell paragraph spacing semantics with public Word fixtures before
     applying `spacing before` inside table cells. The private table-cell paragraph style carries
     `w:spacing before="36" after="0"`, but a direct cell-layout application regressed private run
@@ -4464,6 +4472,11 @@ Current validation baseline:
   after making kept-block estimation subtract table indent before resolving preferred width and first-row
   wrapping, `docx-page --skip-slow` passed `14`, `docx-tables --skip-slow` passed `43`, and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-224646`
+  stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
+- DOCX all-caps run-style validation:
+  after applying `w:rPr/w:caps` through resolved DOCX run styles, `docx-tables --skip-slow` passed `43`,
+  `docx-text --skip-slow` passed `16`, `docx-numbering --skip-slow` passed `9`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-225034`
   stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt

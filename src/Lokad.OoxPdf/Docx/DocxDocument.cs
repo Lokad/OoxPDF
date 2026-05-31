@@ -163,7 +163,8 @@ internal sealed record DocxTextRun(
     bool Italic,
     bool Underline,
     string? UnderlineValue,
-    string? FontFamily)
+    string? FontFamily,
+    bool AllCaps = false)
 {
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
 }
@@ -176,9 +177,10 @@ internal sealed record DocxTextRunStyle(
     bool? Underline,
     string? UnderlineValue,
     string? FontFamily,
-    DocxRunFonts Fonts)
+    DocxRunFonts Fonts,
+    bool? AllCaps = null)
 {
-    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty);
+    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null);
 
     public DocxTextRun ApplyTo(DocxTextRun? baseRun, string text, double fallbackFontSize)
     {
@@ -191,7 +193,8 @@ internal sealed record DocxTextRunStyle(
             Italic ?? source.Italic,
             Underline ?? source.Underline,
             UnderlineValue ?? source.UnderlineValue,
-            FontFamily ?? source.FontFamily)
+            FontFamily ?? source.FontFamily,
+            AllCaps ?? source.AllCaps)
         {
             Fonts = MergeRunFonts(source.Fonts, Fonts)
         };
