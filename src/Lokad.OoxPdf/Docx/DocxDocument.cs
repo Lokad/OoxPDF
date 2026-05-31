@@ -114,7 +114,21 @@ internal sealed record DocxListLabel(
     string FormatValue,
     string LevelTextValue,
     string NumberId,
-    int Level);
+    int Level,
+    DocxNumberingIndent Indent);
+
+internal sealed record DocxNumberingIndent(
+    double? LeftPoints,
+    double? RightPoints,
+    double? FirstLinePoints,
+    double? HangingPoints,
+    string? LeftValue,
+    string? RightValue,
+    string? FirstLineValue,
+    string? HangingValue)
+{
+    public static DocxNumberingIndent Empty { get; } = new(null, null, null, null, null, null, null, null);
+}
 
 internal sealed record DocxTextRun(
     string Text,
