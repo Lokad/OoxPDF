@@ -3526,6 +3526,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     diagnostics, `MAE=12.509698`, changed16 `0.112673`.
 - [ ] Select representative private tables for repeated inspection: one simple table, one typical dense
   table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
+  - [x] 2026-06-01: Selected public-safe representative private DOCX tables from the layout snapshot
+    inventory. Use zero-based table/page indexes in code traces: simple table `1` on page index `2`
+    (`5` rows, `2` columns, `10` cell layouts, `12` text lines); typical dense table `7` on page index `11`
+    (`13` rows, `3` columns, `39` cell layouts, `42` text lines); worst/densest table `11` on page index
+    `14` (`19` rows, `6` columns, `114` cell layouts, `137` text lines). All three have no grid-span or
+    vertical-merge cells in the current trace; the recurring high private error is therefore more likely
+    table width/text wrapping, borders, fills, or pagination than merge handling. Keep notes private-safe:
+    do not record table text or screenshots.
 - [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content
   width, percentage/auto widths, and grid scaling consistently.
 - [ ] Compute row heights from actual cell content: wrap text within cell width, include cell margins,
