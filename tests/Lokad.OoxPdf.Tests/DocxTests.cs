@@ -538,6 +538,80 @@ internal static class DocxTests
         TestAssert.Equal(1.15d, paragraph.LineSpacingFactor);
     }
 
+    public static void DocxReaderPreservesFontTableAlternatesAndThemeFonts()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
+                  <Override PartName="/word/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdFontTable" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>
+                  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Font metadata</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/fontTable.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:font w:name="Corporate Sans">
+                    <w:altName w:val="Aptos"/>
+                    <w:panose1 w:val="020B0604020202020204"/>
+                    <w:family w:val="swiss"/>
+                    <w:pitch w:val="variable"/>
+                  </w:font>
+                </w:fonts>
+                """,
+            ["word/theme/theme1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office">
+                  <a:themeElements>
+                    <a:fontScheme name="Office">
+                      <a:majorFont><a:latin typeface="Aptos Display"/></a:majorFont>
+                      <a:minorFont><a:latin typeface="Aptos"/></a:minorFont>
+                    </a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxFontTableEntry entry = document.FontCatalog.Entries.Single();
+        TestAssert.Equal("Corporate Sans", entry.Name);
+        TestAssert.Equal("Aptos", entry.AlternateName ?? string.Empty);
+        TestAssert.Equal("swiss", entry.FamilyValue ?? string.Empty);
+        TestAssert.Equal("variable", entry.PitchValue ?? string.Empty);
+        TestAssert.Equal("020B0604020202020204", entry.PanoseValue ?? string.Empty);
+        TestAssert.Equal("Aptos Display", document.FontCatalog.ThemeFonts.MajorLatinTypeface ?? string.Empty);
+        TestAssert.Equal("Aptos", document.FontCatalog.ThemeFonts.MinorLatinTypeface ?? string.Empty);
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

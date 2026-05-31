@@ -19,8 +19,12 @@ internal sealed class DocxReader
     private const string NumberingRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
     private const string HeaderRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header";
     private const string FooterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer";
+    private const string FontTableRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable";
+    private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
     private const string StylesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
     private const string NumberingContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
+    private const string FontTableContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml";
+    private const string ThemeContentType = "application/vnd.openxmlformats-officedocument.theme+xml";
     public DocxDocument Read(OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         OoxPart documentPart = FindDocumentPart(package);
@@ -39,6 +43,7 @@ internal sealed class DocxReader
 
         DocxStyleSet styles = LoadStyles(package, documentPart.Name);
         DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name);
+        DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -64,7 +69,10 @@ internal sealed class DocxReader
                 footers,
                 bodyElements,
                 paragraphs,
-                tables);
+                tables)
+            {
+                FontCatalog = fontCatalog
+            };
         }
 
         double width = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "w"));
@@ -93,7 +101,10 @@ internal sealed class DocxReader
             footers,
             bodyElements,
             paragraphs,
-            tables);
+            tables)
+        {
+            FontCatalog = fontCatalog
+        };
     }
 
     private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(XDocument document)
@@ -334,6 +345,53 @@ internal sealed class DocxReader
 
         using Stream stream = part.OpenRead();
         return SafeXml.Load(stream);
+    }
+
+    private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName)
+    {
+        XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, FontTableContentType, out _);
+        XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, ThemeContentType, out _);
+        return new DocxFontCatalog(ReadFontTableEntries(fontTable), ReadThemeFonts(theme));
+    }
+
+    private static IReadOnlyList<DocxFontTableEntry> ReadFontTableEntries(XDocument? fontTable)
+    {
+        if (fontTable is null)
+        {
+            return [];
+        }
+
+        return fontTable
+            .Descendants(WordprocessingNamespace + "font")
+            .Select(font => new DocxFontTableEntry(
+                (string?)font.Attribute(WordprocessingNamespace + "name") ?? string.Empty,
+                (string?)font.Element(WordprocessingNamespace + "altName")?.Attribute(WordprocessingNamespace + "val"),
+                (string?)font.Element(WordprocessingNamespace + "family")?.Attribute(WordprocessingNamespace + "val"),
+                (string?)font.Element(WordprocessingNamespace + "pitch")?.Attribute(WordprocessingNamespace + "val"),
+                (string?)font.Element(WordprocessingNamespace + "panose1")?.Attribute(WordprocessingNamespace + "val")))
+            .Where(entry => entry.Name.Length != 0)
+            .ToArray();
+    }
+
+    private static DocxThemeFonts ReadThemeFonts(XDocument? theme)
+    {
+        if (theme is null)
+        {
+            return DocxThemeFonts.Empty;
+        }
+
+        XElement? fontScheme = theme
+            .Descendants(DrawingNamespace + "fontScheme")
+            .FirstOrDefault();
+        return new DocxThemeFonts(
+            (string?)fontScheme
+                ?.Element(DrawingNamespace + "majorFont")
+                ?.Element(DrawingNamespace + "latin")
+                ?.Attribute("typeface"),
+            (string?)fontScheme
+                ?.Element(DrawingNamespace + "minorFont")
+                ?.Element(DrawingNamespace + "latin")
+                ?.Attribute("typeface"));
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphs(

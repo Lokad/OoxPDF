@@ -1896,6 +1896,12 @@ High-priority actions:
     as an architecture task: parse `word/fontTable.xml` `w:altName`/family/signature metadata, consume theme
     major/minor font declarations, resolve per-run font resources, and make `DocxLayoutEngine` measure with
     the same run-level fonts that PDF emission uses before changing production fallback policy.
+    - [x] 2026-05-31: Added behavior-preserving DOCX font metadata to the document model. `DocxFontCatalog`
+      now carries `word/fontTable.xml` entries with `w:altName`, family, pitch, and Panose tokens, plus theme
+      major/minor Latin typefaces from the related theme part. Public coverage verifies the reader preserves
+      these facts without changing rendering. Private DOCX run `20260531-193148` stayed page-stable at `16/16`
+      with the same metrics as the line-spacing run (`15.856962` MAE, `0.141649` changed16), confirming this
+      is a safe foundation for the next per-run font-resolution slice.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

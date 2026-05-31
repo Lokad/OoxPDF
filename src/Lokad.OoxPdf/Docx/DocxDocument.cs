@@ -15,10 +15,33 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxParagraph> Paragraphs,
     IReadOnlyList<DocxTable> Tables)
 {
+    public DocxFontCatalog FontCatalog { get; init; } = DocxFontCatalog.Empty;
+
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
         : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
     {
     }
+}
+
+internal sealed record DocxFontCatalog(
+    IReadOnlyList<DocxFontTableEntry> Entries,
+    DocxThemeFonts ThemeFonts)
+{
+    public static DocxFontCatalog Empty { get; } = new([], DocxThemeFonts.Empty);
+}
+
+internal sealed record DocxFontTableEntry(
+    string Name,
+    string? AlternateName,
+    string? FamilyValue,
+    string? PitchValue,
+    string? PanoseValue);
+
+internal sealed record DocxThemeFonts(
+    string? MajorLatinTypeface,
+    string? MinorLatinTypeface)
+{
+    public static DocxThemeFonts Empty { get; } = new(null, null);
 }
 
 internal sealed record DocxPageSettings(
