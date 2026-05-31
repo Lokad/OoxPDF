@@ -541,6 +541,17 @@ High-priority actions:
   `Tc=0`, with reliable baseline deltas only about `+0.01..+0.28pt`. This preserves valuable negative evidence:
   page 79's nonzero `Tc` families and larger negative baseline residuals are not caused by no-slack table
   geometry, explicit tiny margins, middle anchoring, or generic wrapped multi-run cells alone.
+  Follow-up, 2026-05-31: added public Office-authored
+  `pptx-ladder-10-table-font-fragmentation` as the matching positive table-text-state probe. It keeps the same
+  page-79-like no-slack geometry and explicit tiny middle-anchored insets as the zero-`Tc` counterexample, but
+  changes only public structural text inputs: resolved font profile, heavier run fragmentation, longer wrapped
+  neutral cells, and right-aligned trailing value columns. Office emits `125` text operations with `90` matched
+  nonzero `Tc` operations (`+0.0499`, `+0.102`, `-0.0115`, `-0.0389` families at `11.04/11.064pt`) while the
+  candidate still emits `Tc=0` for all matched operations. This is the first public positive close enough to
+  page 79 to be useful: it proves that the private table branch is not private-content-specific and that the
+  next renderer slice must align Office's PDF text-state decomposition from structural font/run/line context.
+  Do not implement this as a font-name branch; the fixture's font is evidence of a metric/emission profile, not
+  a predicate.
   Follow-up, 2026-05-30: extended `PptxInspect` so table text paragraph snapshots are emitted separately as
   `table-text-paragraph-models.json`, avoiding ad hoc private XML parsing when investigating table text.
   Re-inspection of page 79 shows the table paragraphs resolve through the normal paragraph/style cascade
@@ -8880,6 +8891,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Evidence: `pptx-ladder-10-table-middle-small-insets` run `20260531-023220` passes with MAE `0.966760`.
   Its Office and candidate text-operation counts both equal `79`; all Office text operations have `Tc=0`, and
   matched baseline deltas stay within about `+0.01..+0.28pt`.
+- Observation: A structurally similar public table can reproduce the private page-79 nonzero table-`Tc` branch.
+  Evidence: `pptx-ladder-10-table-font-fragmentation` run `20260531-024147` passes as a discovery fixture with
+  MAE `2.029893`, changed16 `0.032217`, and empty diagnostics. PDF/text inspection reports `125` Office text
+  operations, `119` matched operations, `6` missing operations, `116` reliable-position matches, and `90`
+  matched nonzero Office `Tc` operations. The matching zero-`Tc` counterexample has the same no-slack,
+  explicit-small-inset, middle-anchored table geometry, so the discriminator must be in structural
+  font/run/line decomposition rather than table geometry alone.
 - Observation: Changing slide height while holding 21 pt textbox source coordinates fixed shifts Office's
   secondary `/Tf +0.024 pt` window.
   Evidence: Public-safe ignored variants of `font-size-quantization-y-scan-21pt-fine` report secondary rows at
@@ -9564,6 +9582,21 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Public table text-state positive and counterexample, 2026-05-31:
+pwsh tools\CheckVisualCase.ps1 -Case visual-cases\cases\pptx-ladder-10-table-font-fragmentation\case.json:
+run 20260531-024147, MAE 2.029893, changed16 0.032217, empty diagnostics.
+pwsh tools\SummarizePptxTextStateDeltas.ps1 -CompareJson artifacts\tmp\public-table-font-fragment-probe-compare.json -OutputJson artifacts\tmp\public-table-font-fragment-probe-text-state-summary.json:
+125 total, 119 matched, 6 missing, 116 reliable-position matches, 90 matched nonzero Office `Tc`, candidate `Tc=0`.
+Office `Tc` buckets: 46 at `+0.0499`, 13 at `+0.102`, 26 at `-0.0115`, 5 at `-0.0389`, and 29 at `0`.
+pwsh tools\CheckVisualCase.ps1 -Case visual-cases\cases\pptx-ladder-10-table-middle-small-insets\case.json:
+run 20260531-023220, MAE 0.966760, changed16 0.019591, empty diagnostics; all Office `Tc=0`.
+dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-tables --skip-slow:
+19 passed, 0 failed, 0 skipped.
+pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw -LiteralPath 'tools\NewOfficeVisualFixtures.ps1')) | Out-Null":
+script parses.
+```
 
 ```text
 Public table middle-anchor counterexample, 2026-05-31:

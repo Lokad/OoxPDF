@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-10-table-font-fragmentation",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-table-font-fragmentation.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "tables", "text-state", "fragmented-runs"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.1,
+    "maxChangedPixelRatioAtThreshold16": 0.04
+  },
+  "allowedUnsupportedFeatures": []
+}

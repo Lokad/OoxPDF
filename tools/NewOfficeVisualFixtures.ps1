@@ -448,6 +448,85 @@ try {
     finally {
         $middleSmallInsetTable.Close()
     }
+
+    $fragmentedTable = $powerPoint.Presentations.Add($false)
+    try {
+        $slide = $fragmentedTable.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $tableShape = $slide.Shapes.AddTable(6, 7, 65.87, 132.29, 828.00, 338.84)
+        $table = $tableShape.Table
+        $columnWidths = @(32.05, 76.18, 277.41, 161.71, 117.15, 87.68, 75.82)
+        for ($column = 1; $column -le 7; $column++) {
+            $table.Columns.Item($column).Width = $columnWidths[$column - 1]
+        }
+
+        $rowHeights = @(28.66, 65.48, 54.76, 69.70, 58.34, 61.91)
+        for ($row = 1; $row -le 6; $row++) {
+            $table.Rows.Item($row).Height = $rowHeights[$row - 1]
+        }
+
+        $values = @(
+            @("A", "Metric planning", "Planning signal width check neutral operations model", "Current status detail neutral terms", "Value note", "Target signal", "Owner"),
+            @("1", "Alpha planning row", "Long neutral planning phrase with repeated operational terms to wrap across several lines in the wide cell", "Short multi segment note for baseline comparison", "Stable scenario with terms", "100.00", "x"),
+            @("2", "Beta planning row", "Capacity planning phrase with several ordinary words for wrap and splitting tests", "Another compact multi segment baseline note", "Reference bucket detail", "200.00", "x"),
+            @("3", "Gamma planning row", "Longer operational planning sentence with repeated neutral words to exercise table cell vertical centering wrapping and run boundaries", "Multi segment baseline note with suffix text and neutral words", "Long status cell with neutral words", "300.00", "x"),
+            @("4", "Delta planning row", "Forecast planning phrase with enough length for controlled wrapping and repeated terms", "Compact note with terms", "Stable cell value", "400.00", "x"),
+            @("5", "Epsilon planning row", "Inventory planning phrase with neutral words for wrapping and splitting", "Two line centered note with suffix and terms", "Final value note", "500.00", "x")
+        )
+
+        for ($row = 1; $row -le 6; $row++) {
+            for ($column = 1; $column -le 7; $column++) {
+                $cell = $table.Cell($row, $column)
+                $textFrame = $cell.Shape.TextFrame2
+                $textFrame.VerticalAnchor = 3
+                $textFrame.MarginLeft = 1.255
+                $textFrame.MarginRight = 1.255
+                $textFrame.MarginTop = 0.627
+                $textFrame.MarginBottom = 0.627
+                $textFrame.TextRange.Text = $values[$row - 1][$column - 1]
+                $textFrame.TextRange.Font.Name = "Cambria Math"
+                $textFrame.TextRange.Font.Size = 11
+                $textFrame.TextRange.Font.Fill.ForeColor.RGB = Rgb 30 30 30
+
+                $legacyRange = $cell.Shape.TextFrame.TextRange
+                $legacyRange.ParagraphFormat.Alignment = if ($column -ge 6) { 3 } else { 1 }
+                $length = $legacyRange.Text.Length
+                if ($row -eq 1) {
+                    $legacyRange.Font.Bold = $true
+                }
+
+                if ($length -gt 10 -and $column -ge 2 -and $column -le 5) {
+                    $legacyRange.Characters(1, [Math]::Min(8, $length)).Font.Bold = $true
+                }
+
+                if ($length -gt 24 -and $column -ge 2 -and $column -le 5) {
+                    $start = [Math]::Min(18, $length)
+                    $legacyRange.Characters($start, [Math]::Min(6, $length - $start + 1)).Font.Italic = $true
+                }
+
+                if ($length -gt 38 -and $column -ge 2 -and $column -le 5) {
+                    $start = [Math]::Min(32, $length)
+                    $legacyRange.Characters($start, [Math]::Min(5, $length - $start + 1)).Font.Bold = $false
+                }
+
+                if ($row -eq 1) {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 230 235 242
+                }
+                elseif ($row % 2 -eq 0) {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 248 250 252
+                }
+                else {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 255 255 255
+                }
+            }
+        }
+
+        $fragmentedTable.SaveAs((Join-Path $cases "pptx-ladder-10-table-font-fragmentation.pptx"), 24)
+    }
+    finally {
+        $fragmentedTable.Close()
+    }
 }
 finally {
     if ($powerPoint -ne $null) {
