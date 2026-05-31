@@ -7941,6 +7941,7 @@ internal sealed partial class PptxRenderer
 
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(theme, defaultPlotBox, frame, chartXml, sceneChart, horizontalBars, fontResolver);
         defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(theme, defaultPlotBox, frame, chartXml, sceneChart, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
+        defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, frame, chartXml, sceneChart, horizontalBars, hasTitle, hasLegend);
         if (ignoreManualPlotLayout)
         {
@@ -8275,6 +8276,33 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
     }
 
+    private static ChartPlotBox AdjustStackedColumnBottomLegendPlotBox(
+        ChartPlotBox plotBox,
+        ChartFrameBox frame,
+        bool horizontalBars,
+        PptxSceneChartGrouping grouping,
+        bool hasTitle,
+        ChartLegendLayout legend)
+    {
+        if (horizontalBars ||
+            hasTitle ||
+            !legend.Visible ||
+            legend.Overlay ||
+            legend.PositionKind != PptxSceneChartLegendPosition.Bottom ||
+            !IsStackedChartGrouping(grouping))
+        {
+            return plotBox;
+        }
+
+        double left = Math.Min(
+            frame.X + frame.Width,
+            plotBox.X + PptxChartMetricRules.StackedColumnBottomLegendPlotBoxLeftPadding);
+        double right = Math.Max(
+            left + 1d,
+            plotBox.X + plotBox.Width - PptxChartMetricRules.StackedColumnBottomLegendPlotBoxRightPadding);
+        return new ChartPlotBox(left, plotBox.Y, right - left, plotBox.Height);
+    }
+
     private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
@@ -8534,12 +8562,19 @@ internal sealed partial class PptxRenderer
             graphics.SetAlpha(fill.Alpha, 1d);
         }
 
-        RgbColor fillColor = fill.BackgroundColor ?? fill.Color;
-        graphics.SetFillRgb(fillColor.Red, fillColor.Green, fillColor.Blue);
-        graphics.FillRectangle(x, y, width, height);
-        if (fill.PatternPreset is not null)
+        if (fill.PatternPreset is not null && !ChartPatternRequiresBackgroundPaint(fill.PatternPreset))
         {
             StrokeChartPatternFill(graphics, x, y, width, height, fill);
+        }
+        else
+        {
+            RgbColor fillColor = fill.BackgroundColor ?? fill.Color;
+            graphics.SetFillRgb(fillColor.Red, fillColor.Green, fillColor.Blue);
+            graphics.FillRectangle(x, y, width, height);
+            if (fill.PatternPreset is not null)
+            {
+                StrokeChartPatternFill(graphics, x, y, width, height, fill);
+            }
         }
 
         if (fill.Alpha < 1d)
@@ -8612,13 +8647,21 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        var pattern = PdfTilingPattern.OfficeScaledDiagonalLines(
+        RgbColor backgroundColor = fill.BackgroundColor ?? new RgbColor(255, 255, 255);
+        var pattern = PdfTilingPattern.OfficeBitmapDiagonalLines(
             patternPreset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase),
-            IsDarkChartPattern(patternPreset) ? 1.0d : 0.5d,
             fill.Color.Red,
             fill.Color.Green,
-            fill.Color.Blue);
+            fill.Color.Blue,
+            backgroundColor.Red,
+            backgroundColor.Green,
+            backgroundColor.Blue);
         graphics.FillRectangleWithTilingPattern(x, y, width, height, pattern);
+    }
+
+    private static bool ChartPatternRequiresBackgroundPaint(string patternPreset)
+    {
+        return TryReadPercentageChartPattern(patternPreset, out _);
     }
 
     private static void FillChartRectangleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double x, double y, double width, double height, ChartSeriesFill fill)

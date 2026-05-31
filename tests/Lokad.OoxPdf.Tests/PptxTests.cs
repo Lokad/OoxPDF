@@ -13404,8 +13404,8 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0.667 RG", pdf);
         TestAssert.Contains("0.071 0.204 0.337 RG", pdf);
         TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
-        TestAssert.Contains("0.933 g", pdf);
-        TestAssert.Contains("0.184 0.522 0.416 RG", pdf);
+        TestAssert.Contains("/Pattern cs", pdf);
+        TestAssert.Contains("/ImPattern Do", pdf);
         TestAssert.Contains(" re W* n", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains(" re f", pdf);
@@ -17348,6 +17348,49 @@ internal static class PptxTests
         double largeX = (double)(largePlotBox.GetType().GetProperty("X")?.GetValue(largePlotBox) ?? 0d);
 
         TestAssert.True(largeX > smallX, "Expected larger value-axis text style to reserve more left-side plot space.");
+    }
+
+    public static void PptxStackedColumnBottomLegendPlotBoxUsesOfficeHorizontalPadding()
+    {
+        Type frameType = typeof(PptxRenderer).GetNestedType(
+            "ChartFrameBox",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
+        Type plotBoxType = typeof(PptxRenderer).GetNestedType(
+            "ChartPlotBox",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
+        Type legendLayoutType = typeof(PptxRenderer).GetNestedType(
+            "ChartLegendLayout",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart legend layout.");
+        Type shapeStyleType = typeof(PptxRenderer).GetNestedType(
+            "ChartShapeStyle",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart shape style.");
+
+        object frame = Activator.CreateInstance(frameType, [120d, 234d, 360d, 216d]) ?? throw new InvalidOperationException("Expected chart frame.");
+        object plotBox = Activator.CreateInstance(plotBoxType, [140.24d, 280d, 333.32d, 159d]) ?? throw new InvalidOperationException("Expected plot box.");
+        object emptyShapeStyle = shapeStyleType.GetProperty(
+            "Empty",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null) ?? throw new InvalidOperationException("Expected empty chart shape style.");
+        object legend = Activator.CreateInstance(
+            legendLayoutType,
+            [
+                PptxSceneChartLegendPosition.Bottom,
+                "b",
+                false,
+                true,
+                default(PptxSceneChartManualLayout),
+                default(PptxSceneChartTextBodyProperties),
+                emptyShapeStyle
+            ]) ?? throw new InvalidOperationException("Expected chart legend layout.");
+        System.Reflection.MethodInfo adjust = typeof(PptxRenderer).GetMethod(
+            "AdjustStackedColumnBottomLegendPlotBox",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected stacked column bottom legend plot-box adjuster.");
+
+        object adjusted = adjust.Invoke(null, [plotBox, frame, false, PptxSceneChartGrouping.Stacked, false, legend]) ?? throw new InvalidOperationException("Expected adjusted plot box.");
+        double x = (double)(adjusted.GetType().GetProperty("X")?.GetValue(adjusted) ?? 0d);
+        double width = (double)(adjusted.GetType().GetProperty("Width")?.GetValue(adjusted) ?? 0d);
+
+        TestAssert.Equal(142.04d, Math.Round(x, 2));
+        TestAssert.Equal(327.62d, Math.Round(width, 2));
     }
 
     public static void PptxChartRadarValueAxisLabelFrameMeasuresTextWidth()

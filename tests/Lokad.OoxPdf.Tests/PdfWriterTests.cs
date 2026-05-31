@@ -185,6 +185,24 @@ internal static class PdfWriterTests
         TestAssert.Contains("/XStep 16 /YStep 16", pdf);
     }
 
+    public static void WritesImageBackedTilingPatternResources()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        var pattern = PdfTilingPattern.OfficeBitmapDiagonalLines(up: true, 47, 133, 106, 191, 191, 191);
+        graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/Pattern << /P1 ", pdf);
+        TestAssert.Contains("/PatternType 1", pdf);
+        TestAssert.Contains("/TilingType 2", pdf);
+        TestAssert.Contains("/Resources << /XObject << /ImPattern ", pdf);
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.Contains("q 16 0 0 16 0 0 cm /ImPattern Do Q", pdf);
+        TestAssert.Contains("/Pattern cs /P1 scn", pdf);
+    }
+
     public static void WritesJpegImageColorSpaceFromFrameMetadata()
     {
         PdfImageXObject image = PdfImageXObject.Jpeg(1, 1, [0xFF, 0xD8, 0xFF, 0xD9], componentCount: 1, bitsPerComponent: 8);

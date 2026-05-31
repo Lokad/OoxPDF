@@ -22,7 +22,10 @@ internal sealed class PdfDocumentWriter
             .Select(PdfEmbeddedFont.Merge)
             .ToList();
         List<PdfImageXObject> images = pages
-            .SelectMany(p => p.Images.Select(i => i.Image).Concat(p.ExtGStates.Where(s => s.SoftMask is not null).Select(s => s.SoftMask!.Image)))
+            .SelectMany(p => p.Images
+                .Select(i => i.Image)
+                .Concat(p.ExtGStates.Where(s => s.SoftMask is not null).Select(s => s.SoftMask!.Image))
+                .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image))))
             .DistinctBy(i => i.ResourceKey)
             .ToList();
         List<PdfAxialShading> shadings = pages
@@ -123,7 +126,7 @@ internal sealed class PdfDocumentWriter
 
         foreach (PdfTilingPattern pattern in patterns)
         {
-            WriteTilingPatternObject(writer, pattern, patternObjects[pattern.ResourceKey]);
+            WriteTilingPatternObject(writer, pattern, patternObjects[pattern.ResourceKey], imageObjects);
         }
 
         long xrefOffset = writer.Position;
@@ -292,14 +295,35 @@ internal sealed class PdfDocumentWriter
             $"<< /Type /XObject /Subtype /Form /BBox [{FormatNumber(softMask.X)} {FormatNumber(softMask.Y)} {FormatNumber(softMask.X + softMask.Width)} {FormatNumber(softMask.Y + softMask.Height)}] /Group << /S /Transparency /CS /DeviceRGB >> /Resources << /XObject << /ImMask {image.Image} 0 R >> >> /Length {contentBytes.Length} >>\nstream\n{content}endstream\n"));
     }
 
-    private static void WriteTilingPatternObject(PdfObjectWriter writer, PdfTilingPattern pattern, int objectNumber)
+    private static void WriteTilingPatternObject(
+        PdfObjectWriter writer,
+        PdfTilingPattern pattern,
+        int objectNumber,
+        IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
     {
         byte[] contentBytes = Encoding.ASCII.GetBytes(pattern.Content);
         string matrix = pattern.Matrix is { } m
             ? FormattableString.Invariant($" /Matrix [{FormatNumber(m.A)} {FormatNumber(m.B)} {FormatNumber(m.C)} {FormatNumber(m.D)} {FormatNumber(m.E)} {FormatNumber(m.F)}]")
             : string.Empty;
+        string resources = pattern.Images.Count == 0
+            ? "<< >>"
+            : BuildPatternResources(pattern, imageObjects);
         writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources << >> /Length {contentBytes.Length} >>\nstream\n{pattern.Content}endstream\n"));
+            $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources {resources} /Length {contentBytes.Length} >>\nstream\n{pattern.Content}endstream\n"));
+    }
+
+    private static string BuildPatternResources(PdfTilingPattern pattern, IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
+    {
+        var builder = new StringBuilder("<< /XObject <<");
+        foreach (PdfImageResource image in pattern.Images)
+        {
+            ImageObjectNumbers objects = imageObjects[image.Image.ResourceKey];
+            builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
+            builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
+        }
+
+        builder.Append(" >> >>");
+        return builder.ToString();
     }
 
     private static string BuildLuminositySoftMaskContent(PdfLuminositySoftMask softMask)

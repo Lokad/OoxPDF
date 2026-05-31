@@ -10,7 +10,7 @@ internal sealed class PdfTilingPattern
     private string? resourceKey;
 
     public PdfTilingPattern(double width, double height, string content)
-        : this(width, height, width, height, null, 1, content)
+        : this(width, height, width, height, null, 1, content, [])
     {
     }
 
@@ -22,6 +22,19 @@ internal sealed class PdfTilingPattern
         PdfPatternMatrix? matrix,
         int tilingType,
         string content)
+        : this(width, height, xStep, yStep, matrix, tilingType, content, [])
+    {
+    }
+
+    public PdfTilingPattern(
+        double width,
+        double height,
+        double xStep,
+        double yStep,
+        PdfPatternMatrix? matrix,
+        int tilingType,
+        string content,
+        IReadOnlyList<PdfImageResource> images)
     {
         Width = Math.Max(0.001d, width);
         Height = Math.Max(0.001d, height);
@@ -30,6 +43,7 @@ internal sealed class PdfTilingPattern
         Matrix = matrix;
         TilingType = Math.Clamp(tilingType, 1, 3);
         Content = content;
+        Images = images;
     }
 
     public double Width { get; }
@@ -45,6 +59,8 @@ internal sealed class PdfTilingPattern
     public int TilingType { get; }
 
     public string Content { get; }
+
+    public IReadOnlyList<PdfImageResource> Images { get; }
 
     public string ResourceKey => resourceKey ??= BuildResourceKey();
 
@@ -115,9 +131,58 @@ internal sealed class PdfTilingPattern
             builder.ToString());
     }
 
+    public static PdfTilingPattern OfficeBitmapDiagonalLines(
+        bool up,
+        byte foregroundRed,
+        byte foregroundGreen,
+        byte foregroundBlue,
+        byte backgroundRed,
+        byte backgroundGreen,
+        byte backgroundBlue)
+    {
+        const int cellSize = 16;
+        const double matrixScale = 0.375d;
+        const string imageName = "ImPattern";
+
+        byte[] rgb = new byte[cellSize * cellSize * 3];
+        for (int y = 0; y < cellSize; y++)
+        {
+            for (int x = 0; x < cellSize; x++)
+            {
+                int rowOffset = 2 * (y / 2);
+                int diagonal = up
+                    ? PositiveModulo(x + rowOffset, 8)
+                    : PositiveModulo(x - rowOffset, 8);
+                bool foreground = diagonal is 6 or 7;
+                int index = (y * cellSize + x) * 3;
+                rgb[index] = foreground ? foregroundRed : backgroundRed;
+                rgb[index + 1] = foreground ? foregroundGreen : backgroundGreen;
+                rgb[index + 2] = foreground ? foregroundBlue : backgroundBlue;
+            }
+        }
+
+        var image = PdfImageXObject.RgbPng(cellSize, cellSize, rgb, alpha: null);
+        return new PdfTilingPattern(
+            cellSize,
+            cellSize,
+            cellSize,
+            cellSize,
+            new PdfPatternMatrix(matrixScale, 0d, 0d, matrixScale, 0d, 0d),
+            tilingType: 2,
+            "q 16 0 0 16 0 0 cm /" + imageName + " Do Q\n",
+            [new PdfImageResource(imageName, image)]);
+    }
+
     private string BuildResourceKey()
     {
-        return string.Create(CultureInfo.InvariantCulture, $"tiling:{Width:0.###}:{Height:0.###}:{XStep:0.###}:{YStep:0.###}:{Matrix}:{TilingType}:{Content}");
+        string imageKeys = string.Join("|", Images.Select(image => $"{image.ResourceName}:{image.Image.ResourceKey}"));
+        return string.Create(CultureInfo.InvariantCulture, $"tiling:{Width:0.###}:{Height:0.###}:{XStep:0.###}:{YStep:0.###}:{Matrix}:{TilingType}:{Content}:{imageKeys}");
+    }
+
+    private static int PositiveModulo(int value, int modulus)
+    {
+        int result = value % modulus;
+        return result < 0 ? result + modulus : result;
     }
 
     private static string C(byte value)
