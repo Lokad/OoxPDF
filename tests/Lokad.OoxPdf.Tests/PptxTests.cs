@@ -1847,10 +1847,11 @@ internal static class PptxTests
         TestAssert.Contains("212 322.5 l", pdf);
         TestAssert.Contains("1 -0 -0 -1 0 864 cm", pdf);
         TestAssert.Contains("216.5 468 m", pdf);
-        TestAssert.Contains("216.5 398 l", pdf);
+        TestAssert.Contains("216.5 400 l", pdf);
         TestAssert.Contains("215.5 468 l", pdf);
         TestAssert.Contains("216 396 m", pdf);
-        TestAssert.Contains("217.5 399 l", pdf);
+        TestAssert.Contains("219 402 l", pdf);
+        TestAssert.Contains("213 402 l", pdf);
         TestAssert.DoesNotContain("216 468 m 216 396 l S", pdf);
         TestAssert.Contains("0.184 0.522 0.416 rg", pdf);
         TestAssert.Contains("0.753 0 0 rg", pdf);

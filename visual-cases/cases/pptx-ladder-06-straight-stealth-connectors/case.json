@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-06-straight-stealth-connectors",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-straight-stealth-connectors.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "shapes", "connectors", "stealth"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.001,
+    "maxChangedPixelRatioAtThreshold16": 0.00001
+  },
+  "allowedUnsupportedFeatures": []
+}

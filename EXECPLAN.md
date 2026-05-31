@@ -2474,11 +2474,12 @@ paths, and ExecPlan references together.
   font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart
   cached-image fallbacks and labels.
 - [ ] Private slide 5 visible remaining problem: the right-side chart has an incorrectly placed secondary
-  value axis and an incorrectly placed upward green arrow; the graph arrows also remain visibly thinner in
-  the candidate than in Office.
+  value axis and an incorrectly placed upward green arrow.
   Inspect whether this is a value-axis title, rotated axis label text, tick-label formatting, or chart-style
-  inheritance, line-width/theme inheritance, or arrowhead/line-end geometry, then reproduce with a minimal
-  public chart-axis/arrow fixture before changing renderer logic.
+  inheritance, line-width/theme inheritance, or overlay transform geometry, then reproduce with a minimal
+  public chart-axis/overlay fixture before changing renderer logic. The separate thin graph-arrow branch is
+  closed by the public straight-stealth connector fixture and Office's 6 pt minimum straight-line stealth
+  marker size.
   - [ ] Replace the vector approximation inside chart tiling-pattern cells with Office-like image-backed
     pattern-local XObjects, and derive the pattern matrix phase/translation from chart/shape coordinates
     instead of using a zero-offset cell matrix.
@@ -2772,6 +2773,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   white `bg1` strokes, and ancestor group `solidFill` of `bg1` with `lumMod=85000`. Office emits `795` fills
   on page 80, including `785` `g:0.851` fills for those fragments; the previous candidate emitted only `10`
   fills and stroked the fragments.
+- Observation: Private slide 5's thin graph arrows were a straight-line `stealth` line-end sizing problem,
+  not a chart-series stroke-width problem.
+  Evidence: The slide uses 1 pt `straightConnector1` connectors with `tailEnd type="stealth"`. PDF inspection
+  showed the candidate's horizontal green arrowheads at 3 pt high while Office emitted the same bounds and
+  color at 6 pt high. The public `pptx-ladder-06-straight-stealth-connectors` fixture reproduced the same
+  Office behavior for 1 pt `line` and `straightConnector1` presets: Office applies a 6 pt minimum stealth
+  marker length/width for straight lines, while 2 pt lines already match the existing factor-derived 6 pt
+  marker.
 - Observation: The dominant private page-36 three-column text-state branch is not a baseline-placement
   problem.
   Evidence: The reliable-position summary for run `20260531-014545` has `41` matched operations in the
@@ -3118,6 +3127,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: A public synthetic custom-geometry fixture shows omitted shape fill stays unfilled in Office, but
   the same shape under a group with `a:grpFill` inherits the group fill and emits the same light-gray PDF fill
   structure seen on private slide 80. This is an OOXML inheritance rule, not a map-specific special case.
+  Date/Author: 2026-05-31 / Codex.
+- Decision: Apply the Office-observed 6 pt minimum only to straight-line `stealth` marker length/width.
+  Rationale: Public PDF inspection shows 1 pt `line` and `straightConnector1` stealth markers use 6 pt
+  marker geometry, while 2 pt straight lines already land at 6 pt through the existing factor. Preset arcs and
+  curved connector stealth outlines remain on their separate structural path because the slide-61 guardrail
+  showed that a broad marker-size change can regress explicit-guide arcs.
   Date/Author: 2026-05-31 / Codex.
 - Decision: Keep the refreshed page-36/page-79 placement evidence in diagnostic mode and do not change
   baseline fallback constants, table row/column coordinates, or table default-inset adjustments from this
@@ -3492,6 +3507,16 @@ Current validation baseline:
   changed16 `0.11`, SSIM `0.91` to MAE `0.96`, changed16 `0.02`, SSIM `0.96`; PDF inspection now shows the
   candidate page has `795` fill operations, including the `785` `g:0.851` group-fill map fragments that match
   Office's structural bucket.
+- Private deck: `pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json` run
+  `20260531-124414` compared `84/84` pages. Page 5 aggregate metrics stayed effectively unchanged
+  (`MAE=2.42`, changed16 `0.05`, SSIM `0.93`) because the remaining slide residuals are elsewhere, but PDF
+  inspection now matches the Office 6 pt bounds for the green horizontal stealth arrowheads and the vertical
+  stealth connector.
+- Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
+  `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
+  minimum marker geometry for 1 pt straight-line stealth ends.
+- Public arc guardrail: `pptx-ladder-06-explicit-arc-stealth` run `20260531-124330` passed after the straight
+  marker change, confirming the arc/curved path was not broadened.
 - Public custom-geometry group-fill fixture: `pptx-ladder-06-custom-geometry-default-fill` run
   `20260531-123236` passed after tightening the gate to MAE `0.05` and changed16 `0.001`.
 - Focused shape tests: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group

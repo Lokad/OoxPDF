@@ -22,6 +22,7 @@ internal sealed partial class PptxRenderer
     private const double OfficeStraightTriangleLineEndOverlapFactor = 2d / 3d;
     private const double OfficeStraightStealthLineEndLengthFactor = 3d;
     private const double OfficeStraightStealthLineEndWidthFactor = 3d;
+    private const double OfficeStraightStealthLineEndMinimumSize = 6d;
     private const double OfficeStraightStealthLineEndNotchFactor = 2d / 3d;
     private const double OfficePresetArcDefaultStartGuide = 16200000d;
     private const double OfficePresetArcDefaultEndGuide = 0d;
@@ -2287,10 +2288,10 @@ internal sealed partial class PptxRenderer
         double nx = -uy;
         double ny = ux;
         double markerLength = style.Kind == LineEndKind.Stealth
-            ? lineWidth * OfficeStraightStealthLineEndLengthFactor * style.LengthScale
+            ? GetStraightStealthLineEndLength(lineWidth, style)
             : Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
         double markerWidth = style.Kind == LineEndKind.Stealth
-            ? lineWidth * OfficeStraightStealthLineEndWidthFactor * style.WidthScale
+            ? GetStraightStealthLineEndWidth(lineWidth, style)
             : Math.Max(5d, lineWidth * 3.2d) * style.WidthScale;
 
         (double X, double Y) Point(double along, double normal)
@@ -2341,10 +2342,10 @@ internal sealed partial class PptxRenderer
         double ny = ux;
         double half = lineWidth / 2d;
         double headInset = headEnd.Kind == LineEndKind.Stealth
-            ? lineWidth * OfficeStraightStealthLineEndLengthFactor * headEnd.LengthScale * OfficeStraightStealthLineEndNotchFactor
+            ? GetStraightStealthLineEndLength(lineWidth, headEnd) * OfficeStraightStealthLineEndNotchFactor
             : 0d;
         double tailInset = tailEnd.Kind == LineEndKind.Stealth
-            ? lineWidth * OfficeStraightStealthLineEndLengthFactor * tailEnd.LengthScale * OfficeStraightStealthLineEndNotchFactor
+            ? GetStraightStealthLineEndLength(lineWidth, tailEnd) * OfficeStraightStealthLineEndNotchFactor
             : 0d;
         double startX = x1 + ux * headInset;
         double startY = y1 + uy * headInset;
@@ -2387,8 +2388,8 @@ internal sealed partial class PptxRenderer
         double uy = directionY / length;
         double nx = -uy;
         double ny = ux;
-        double markerLength = lineWidth * OfficeStraightStealthLineEndLengthFactor * style.LengthScale;
-        double markerWidth = lineWidth * OfficeStraightStealthLineEndWidthFactor * style.WidthScale;
+        double markerLength = GetStraightStealthLineEndLength(lineWidth, style);
+        double markerWidth = GetStraightStealthLineEndWidth(lineWidth, style);
 
         (double X, double Y) Point(double along, double normal)
         {
@@ -2402,6 +2403,16 @@ internal sealed partial class PptxRenderer
             Point(markerLength * OfficeStraightStealthLineEndNotchFactor, 0d),
             Point(markerLength, -markerWidth / 2d)
         ]);
+    }
+
+    private static double GetStraightStealthLineEndLength(double lineWidth, LineEndStyle style)
+    {
+        return Math.Max(OfficeStraightStealthLineEndMinimumSize, lineWidth * OfficeStraightStealthLineEndLengthFactor) * style.LengthScale;
+    }
+
+    private static double GetStraightStealthLineEndWidth(double lineWidth, LineEndStyle style)
+    {
+        return Math.Max(OfficeStraightStealthLineEndMinimumSize, lineWidth * OfficeStraightStealthLineEndWidthFactor) * style.WidthScale;
     }
 
     private static void AppendClosedPolygon(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)

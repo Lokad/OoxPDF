@@ -410,6 +410,61 @@ Use-OfficePptxContainerForSlide `
     -Path (Join-Path $cases "pptx-ladder-06-custom-geometry-default-fill.pptx") `
     -BasePath (Join-Path $cases "pptx-ladder-06-shape-adjust-port-a.pptx")
 
+New-ZipPackage -Path (Join-Path $cases "pptx-ladder-06-straight-stealth-connectors.pptx") -Entries @{
+    "[Content_Types].xml" = $pptxContentTypes
+    "_rels/.rels" = $pptxPackageRels
+    "ppt/_rels/presentation.xml.rels" = $pptxPresentationRels
+    "ppt/presentation.xml" = $pptxPresentation
+    "ppt/slides/slide1.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:cSld>
+    <p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></p:bgPr></p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
+      <p:cxnSp>
+        <p:nvCxnSpPr><p:cNvPr id="2" name="Straight Connector Stealth 1pt Horizontal"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="1200000" y="1500000"/><a:ext cx="2400000" cy="0"/></a:xfrm>
+          <a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom>
+          <a:ln w="12700"><a:solidFill><a:srgbClr val="2F856A"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
+        </p:spPr>
+      </p:cxnSp>
+      <p:cxnSp>
+        <p:nvCxnSpPr><p:cNvPr id="3" name="Straight Connector Stealth 1pt Vertical"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+        <p:spPr>
+          <a:xfrm flipV="1"><a:off x="4800000" y="1200000"/><a:ext cx="0" cy="1800000"/></a:xfrm>
+          <a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom>
+          <a:ln w="12700"><a:solidFill><a:srgbClr val="2F856A"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
+        </p:spPr>
+      </p:cxnSp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="Line Preset Stealth 1pt Control"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="1200000" y="3000000"/><a:ext cx="2400000" cy="0"/></a:xfrm>
+          <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+          <a:ln w="12700"><a:solidFill><a:srgbClr val="C00000"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:cxnSp>
+        <p:nvCxnSpPr><p:cNvPr id="5" name="Straight Connector Stealth 2pt Horizontal"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="1200000" y="4200000"/><a:ext cx="2400000" cy="0"/></a:xfrm>
+          <a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom>
+          <a:ln w="25400"><a:solidFill><a:srgbClr val="2F856A"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
+        </p:spPr>
+      </p:cxnSp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>
+'@
+}
+
+Use-OfficePptxContainerForSlide `
+    -Path (Join-Path $cases "pptx-ladder-06-straight-stealth-connectors.pptx") `
+    -BasePath (Join-Path $cases "pptx-ladder-06-shape-adjust-port-a.pptx")
+
 New-ZipPackage -Path (Join-Path $cases "docx-blank.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>
