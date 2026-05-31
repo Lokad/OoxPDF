@@ -354,11 +354,12 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        double rawTableWidth = table.ColumnWidthsPoints.Sum();
+        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table);
+        double rawTableWidth = effectiveColumns.Sum();
         double targetTableWidth = Math.Min(availableWidth, table.PreferredWidthPoints ?? rawTableWidth);
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double[] cellWidths = row.Cells
-            .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
+            .Select((_, columnIndex) => effectiveColumns[Math.Min(columnIndex, effectiveColumns.Count - 1)] * scale)
             .ToArray();
         double contentHeight = row.Cells
             .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], embedded))
@@ -398,7 +399,8 @@ internal sealed class DocxLayoutEngine
         Action finishPage,
         Func<bool> hasPageContent)
     {
-        double rawTableWidth = table.ColumnWidthsPoints.Sum();
+        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table);
+        double rawTableWidth = effectiveColumns.Sum();
         double targetTableWidth = Math.Min(availableWidth, table.PreferredWidthPoints ?? rawTableWidth);
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
@@ -410,7 +412,7 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxTableRow> headerRows = table.Rows.TakeWhile(row => row.IsHeader).ToArray();
         foreach (DocxTableRow row in table.Rows)
         {
-            double rowHeight = MeasureTableRowHeight(table, row, scale, embedded);
+            double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, embedded);
             if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
             {
                 finishPage();
@@ -418,21 +420,39 @@ internal sealed class DocxLayoutEngine
                 {
                     foreach (DocxTableRow headerRow in headerRows)
                     {
-                        AddTableRowLayout(table, headerRow, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
+                        AddTableRowLayout(table, headerRow, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
                     }
                 }
             }
 
-            AddTableRowLayout(table, row, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
+            AddTableRowLayout(table, row, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
         }
 
         cursorY -= 6d;
     }
 
-    private static double MeasureTableRowHeight(DocxTable table, DocxTableRow row, double scale, PdfEmbeddedFont? embedded)
+    private static IReadOnlyList<double> GetEffectiveTableColumnWidths(DocxTable table)
+    {
+        DocxTableRow? firstRow = table.Rows.FirstOrDefault();
+        if (firstRow is not null &&
+            firstRow.Cells.Count == table.ColumnWidthsPoints.Count &&
+            firstRow.Cells.All(cell => cell.PreferredWidthPoints is > 0d))
+        {
+            return firstRow.Cells.Select(cell => cell.PreferredWidthPoints!.Value).ToArray();
+        }
+
+        return table.ColumnWidthsPoints;
+    }
+
+    private static double MeasureTableRowHeight(
+        DocxTable table,
+        DocxTableRow row,
+        IReadOnlyList<double> effectiveColumns,
+        double scale,
+        PdfEmbeddedFont? embedded)
     {
         double[] cellWidths = row.Cells
-            .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
+            .Select((_, columnIndex) => effectiveColumns[Math.Min(columnIndex, effectiveColumns.Count - 1)] * scale)
             .ToArray();
         double contentHeight = embedded is null
             ? 0d
@@ -446,6 +466,7 @@ internal sealed class DocxLayoutEngine
     private static void AddTableRowLayout(
         DocxTable table,
         DocxTableRow row,
+        IReadOnlyList<double> effectiveColumns,
         double scale,
         PdfEmbeddedFont? embedded,
         Func<int> getPageIndex,
@@ -454,9 +475,9 @@ internal sealed class DocxLayoutEngine
         double x)
     {
         double[] cellWidths = row.Cells
-            .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
+            .Select((_, columnIndex) => effectiveColumns[Math.Min(columnIndex, effectiveColumns.Count - 1)] * scale)
             .ToArray();
-        double rowHeight = MeasureTableRowHeight(table, row, scale, embedded);
+        double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, embedded);
         double cellX = x;
         double cellY = cursorY - rowHeight;
         var cells = new List<DocxTableCellLayout>(row.Cells.Count);

@@ -1427,7 +1427,7 @@ internal static class DocxTests
                     <w:tbl>
                       <w:tblPr><w:tblLayout w:type="fixed"/><w:tblW w:w="2880" w:type="dxa"/></w:tblPr>
                       <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr><w:tc><w:p><w:r><w:t>Fixed</w:t></w:r></w:p></w:tc></w:tr>
+                      <w:tr><w:tc><w:tcPr><w:tcW w:w="2160" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>Fixed</w:t></w:r></w:p></w:tc></w:tr>
                     </w:tbl>
                     <w:tbl>
                       <w:tblPr><w:tblLayout w:type="autofit"/></w:tblPr>
@@ -1452,6 +1452,9 @@ internal static class DocxTests
         TestAssert.Equal("2880", document.Tables[0].PreferredWidthValue ?? string.Empty);
         TestAssert.Equal("dxa", document.Tables[0].PreferredWidthType ?? string.Empty);
         TestAssert.Equal(144d, document.Tables[0].PreferredWidthPoints ?? 0d);
+        TestAssert.Equal("2160", document.Tables[0].Rows[0].Cells[0].PreferredWidthValue ?? string.Empty);
+        TestAssert.Equal("dxa", document.Tables[0].Rows[0].Cells[0].PreferredWidthType ?? string.Empty);
+        TestAssert.Equal(108d, document.Tables[0].Rows[0].Cells[0].PreferredWidthPoints ?? 0d);
         TestAssert.Equal("autofit", document.Tables[1].LayoutValue ?? string.Empty);
         TestAssert.True(document.Tables[2].LayoutValue is null, "Expected missing table layout to keep a null source token.");
     }
@@ -2186,6 +2189,29 @@ internal static class DocxTests
         TestAssert.Equal(30d, row.Cells[0].Width);
         TestAssert.Equal(40d, row.Cells[1].X);
         TestAssert.Equal(30d, row.Cells[1].Width);
+    }
+
+    public static void DocxTableLayoutStageUsesFirstRowCellPreferredWidths()
+    {
+        var table = new DocxTable(
+            null,
+            [60d, 60d],
+            [new DocxTableRow([
+                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 40d),
+                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 80d)
+            ], 20d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(40d, row.Cells[0].Width);
+        TestAssert.Equal(50d, row.Cells[1].X);
+        TestAssert.Equal(80d, row.Cells[1].Width);
     }
 
     public static void DocxTableLayoutStageBuildsParagraphTextLinesInsideCells()

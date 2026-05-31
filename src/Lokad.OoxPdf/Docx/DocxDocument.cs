@@ -165,7 +165,10 @@ internal sealed record DocxTableCell(
     string? ShadingColor,
     string? VerticalAlignmentValue,
     IReadOnlyList<DocxTableCellBorder> Borders,
-    DocxTableCellMargins Margins);
+    DocxTableCellMargins Margins,
+    double? PreferredWidthPoints = null,
+    string? PreferredWidthValue = null,
+    string? PreferredWidthType = null);
 
 internal sealed record DocxTableCellBorder(string Edge, string? Value, string? Color, string? SizeValue);
 

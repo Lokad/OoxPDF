@@ -1887,6 +1887,14 @@ High-priority actions:
     grid scaling. The layout stage now scales column widths to the preferred table width, capped by available
     page width, instead of relying only on raw `w:tblGrid` sums. Private impact was neutral, indicating this
     document's grid and preferred widths are already effectively aligned.
+  - [x] 2026-05-31: Preserved DOCX cell preferred-width tokens and applied complete first-row
+    `w:tcW w:type="dxa"` declarations as the table column basis before page-width scaling. Private-safe
+    inventory showed every private table cell has `tcW`, and several first rows intentionally diverge from
+    `tblGrid`; the change improved private aggregate metrics without changing page count.
+  - [ ] 2026-05-31: Complete the DOCX table width ladder beyond the simple first-row `dxa` case: honor
+    `tcW` across rows, auto and percentage widths, `tblLayout` fixed/autofit differences, `gridSpan`,
+    `tblInd`, cell spacing, and Word's conflict resolution between `tblGrid`, `tblW`, and cell preferred
+    widths with public Office PDF fixtures.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2572,6 +2580,12 @@ document-specific business content into public notes.
   - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
   - Aggregate metrics were unchanged from the table-margin run: MAE `16.003190`, changed16 `0.142369`.
   - `w:tblW` is now structurally handled for `dxa`, but it is not a dominant private metric driver here.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-155930` after applying complete
+  first-row `dxa` cell preferred widths:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - MAE improved from `16.003190` to `15.928048`; changed16 improved from `0.142369` to `0.142037`.
+  - The remaining worst pages are still table-heavy, so continue the width/layout ladder before treating table
+    styling as complete.
 
 ## Backlog
 
@@ -3974,6 +3988,11 @@ Current validation baseline:
   (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
   `docx-tables` `23`). Private DOCX run `20260531-155308` stayed at `16/16` pages, zero dimension mismatches,
   MAE `16.003190`, changed16 `0.142369`.
+- DOCX cell preferred-width validation:
+  after preserving `w:tcW` and using complete first-row `dxa` widths as the column basis, the full DOCX group
+  sweep passed (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
+  `docx-tables` `24`). Private DOCX run `20260531-155930` stayed at `16/16` pages, zero dimension mismatches,
+  MAE `15.928048`, changed16 `0.142037`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

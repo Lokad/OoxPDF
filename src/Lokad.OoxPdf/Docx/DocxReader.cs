@@ -589,10 +589,22 @@ internal sealed class DocxReader
                 string? verticalAlignment = (string?)cellProperties
                     ?.Element(WordprocessingNamespace + "vAlign")
                     ?.Attribute(WordprocessingNamespace + "val");
+                XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
                 IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
                 IReadOnlyList<DocxTableCellBorder> borders = directBorders.Count == 0 ? conditionalStyle.Borders : directBorders;
                 DocxTableCellMargins margins = MergeTableCellMargins(ReadTableCellMargins(cellProperties), conditionalStyle.Margins);
-                cells.Add(new DocxTableCell(text, paragraphs, fill, shadingValue, shadingColor, verticalAlignment, borders, margins));
+                cells.Add(new DocxTableCell(
+                    text,
+                    paragraphs,
+                    fill,
+                    shadingValue,
+                    shadingColor,
+                    verticalAlignment,
+                    borders,
+                    margins,
+                    ReadDxaWidth(cellWidth),
+                    (string?)cellWidth?.Attribute(WordprocessingNamespace + "w"),
+                    (string?)cellWidth?.Attribute(WordprocessingNamespace + "type")));
             }
 
             if (cells.Count > 0)
