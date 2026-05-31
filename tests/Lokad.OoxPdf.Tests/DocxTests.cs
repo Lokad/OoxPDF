@@ -759,6 +759,64 @@ internal static class DocxTests
         TestAssert.Equal("Aptos", candidates.Theme ?? string.Empty);
     }
 
+    public static void DocxFontPlanResolvesRunTypefaceFromFontTableAlternate()
+    {
+        var run = new DocxTextRun("Text", 11d, null, false, false, false, null, "Corporate Sans")
+        {
+            Fonts = new DocxRunFonts(
+                Ascii: "Corporate Sans",
+                HighAnsi: null,
+                EastAsia: null,
+                ComplexScript: null,
+                AsciiTheme: null,
+                HighAnsiTheme: "minorHAnsi",
+                EastAsiaTheme: null,
+                ComplexScriptTheme: null)
+        };
+        DocxDocument document = CreateFontPlanDocument(
+            run,
+            new DocxFontCatalog(
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null)],
+                new DocxThemeFonts("Theme Display", "Theme Sans")));
+        var resolver = new MapFontResolver(["Installed Sans", "Theme Sans"], "Resolver Fallback");
+
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+
+        TestAssert.Equal(DocxTypefaceResolutionSource.FontTableAlternate, resolved.Source);
+        TestAssert.Equal("Installed Sans", resolved.RequestedFamily ?? string.Empty);
+        TestAssert.Equal("Installed Sans", resolved.ResolvedFamily ?? string.Empty);
+        TestAssert.Equal("Corporate Sans|Installed Sans|Theme Sans", string.Join("|", resolved.CandidateFamilies));
+    }
+
+    public static void DocxFontPlanKeepsPrimaryBeforeAlternateAndTheme()
+    {
+        var run = new DocxTextRun("Text", 11d, null, true, true, false, null, "Corporate Sans")
+        {
+            Fonts = new DocxRunFonts(
+                Ascii: "Corporate Sans",
+                HighAnsi: null,
+                EastAsia: null,
+                ComplexScript: null,
+                AsciiTheme: "majorHAnsi",
+                HighAnsiTheme: null,
+                EastAsiaTheme: null,
+                ComplexScriptTheme: null)
+        };
+        DocxDocument document = CreateFontPlanDocument(
+            run,
+            new DocxFontCatalog(
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null)],
+                new DocxThemeFonts("Theme Display", "Theme Sans")));
+        var resolver = new MapFontResolver(["Corporate Sans", "Installed Sans", "Theme Display"], "Resolver Fallback");
+
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+
+        TestAssert.Equal(DocxTypefaceResolutionSource.Primary, resolved.Source);
+        TestAssert.Equal("Corporate Sans", resolved.RequestedFamily ?? string.Empty);
+        TestAssert.Equal("Corporate Sans", resolved.ResolvedFamily ?? string.Empty);
+        TestAssert.True(resolved.Resolution?.Bold == true && resolved.Resolution?.Italic == true, "Expected run style to flow into the font request.");
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -3946,6 +4004,40 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_TABLE_STYLE", ids);
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_NUMBERING_INDENT" && d.PartName == "/word/numbering.xml"), "Numbering diagnostics should point to numbering.xml.");
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_STYLE_PARAGRAPH_KEEP_RULE" && d.PartName == "/word/styles.xml"), "Style diagnostics should point to styles.xml.");
+    }
+
+    private static DocxDocument CreateFontPlanDocument(DocxTextRun run, DocxFontCatalog fontCatalog)
+    {
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        return new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [paragraph],
+            [])
+        {
+            FontCatalog = fontCatalog
+        };
     }
 
     private static DocxTable CreateSingleCellTable(string text, double rowHeight)

@@ -1926,6 +1926,13 @@ High-priority actions:
       pages with 2 dimension mismatches (`16.094264` MAE). This confirms the long-term rule: font selection,
       glyph embedding, and line/table measurement must share the same per-run resolved typeface state before
       document-authored alternates can safely affect rendering.
+    - [x] 2026-05-31: Added a behavior-preserving DOCX font plan that resolves every run through the ordered
+      OOXML candidates (primary run typeface, `fontTable.xml` alternate, then theme major/minor typeface) and
+      records whether the resolver chose a primary, alternate, theme, or fallback face. Public coverage uses a
+      synthetic resolver instead of installed font names, proving the candidate order without hard-coded font
+      exceptions. Private DOCX run `20260531-195324` stayed page-stable at `16/16`, zero dimension mismatches,
+      and unchanged metrics (`15.856962` MAE, `0.141649` changed16), so the plan can now become the shared
+      contract for the upcoming per-run metric and PDF-resource stages.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
