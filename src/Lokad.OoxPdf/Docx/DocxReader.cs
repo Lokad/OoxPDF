@@ -572,7 +572,8 @@ internal sealed class DocxReader
                     ?.Element(WordprocessingNamespace + "vAlign")
                     ?.Attribute(WordprocessingNamespace + "val");
                 IReadOnlyList<DocxTableCellBorder> borders = ReadTableCellBorders(cellProperties);
-                cells.Add(new DocxTableCell(text, paragraphs, fill, shadingValue, shadingColor, verticalAlignment, borders));
+                DocxTableCellMargins margins = ReadTableCellMargins(cellProperties);
+                cells.Add(new DocxTableCell(text, paragraphs, fill, shadingValue, shadingColor, verticalAlignment, borders, margins));
             }
 
             if (cells.Count > 0)
@@ -620,6 +621,39 @@ internal sealed class DocxReader
         }
 
         return paragraphs;
+    }
+
+    private static DocxTableCellMargins ReadTableCellMargins(XElement? cellProperties)
+    {
+        XElement? margins = cellProperties?.Element(WordprocessingNamespace + "tcMar");
+        return new DocxTableCellMargins(
+            ReadMargin(margins, "top"),
+            ReadMargin(margins, "right"),
+            ReadMargin(margins, "bottom"),
+            ReadMargin(margins, "left"),
+            ReadMarginValue(margins, "top"),
+            ReadMarginValue(margins, "right"),
+            ReadMarginValue(margins, "bottom"),
+            ReadMarginValue(margins, "left"));
+    }
+
+    private static double? ReadMargin(XElement? margins, string edge)
+    {
+        XElement? margin = margins?.Element(WordprocessingNamespace + edge);
+        string? type = (string?)margin?.Attribute(WordprocessingNamespace + "type");
+        if (type is not null && !type.Equals("dxa", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return ReadTwipsAttribute(margin, WordprocessingNamespace + "w");
+    }
+
+    private static string? ReadMarginValue(XElement? margins, string edge)
+    {
+        return (string?)margins
+            ?.Element(WordprocessingNamespace + edge)
+            ?.Attribute(WordprocessingNamespace + "w");
     }
 
     private static IReadOnlyList<DocxTableCellBorder> ReadTableCellBorders(XElement? cellProperties)

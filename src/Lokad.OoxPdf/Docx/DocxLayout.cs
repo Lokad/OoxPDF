@@ -307,10 +307,12 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        const double paddingX = 4d;
+        double paddingLeft = cell.Margins.LeftPoints ?? 4d;
+        double paddingRight = cell.Margins.RightPoints ?? 4d;
+        double paddingTop = cell.Margins.TopPoints ?? 0d;
         const double legacyBaselineInset = 17d;
-        double textWidth = Math.Max(1d, cellWidth - paddingX * 2d);
-        double cursorY = cellY + cellHeight - legacyBaselineInset;
+        double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
+        double cursorY = cellY + cellHeight - legacyBaselineInset - paddingTop;
         var lines = new List<DocxTextLineLayout>();
         foreach (DocxParagraph paragraph in paragraphs)
         {
@@ -330,9 +332,9 @@ internal sealed class DocxLayoutEngine
                 double lineWidth = embedded.MeasureTextPoints(line, fontSize);
                 double lineX = paragraph.Alignment switch
                 {
-                    DocxTextAlignment.Center => cellX + paddingX + Math.Max(0, textWidth - lineWidth) / 2d,
-                    DocxTextAlignment.Right => cellX + paddingX + Math.Max(0, textWidth - lineWidth),
-                    _ => cellX + paddingX
+                    DocxTextAlignment.Center => cellX + paddingLeft + Math.Max(0, textWidth - lineWidth) / 2d,
+                    DocxTextAlignment.Right => cellX + paddingLeft + Math.Max(0, textWidth - lineWidth),
+                    _ => cellX + paddingLeft
                 };
                 IReadOnlyList<DocxTextSegmentLayout> segments = CreateTextSegments(line, paragraph.Runs, lineX, fontSize, embedded);
                 lines.Add(new DocxTextLineLayout(line, firstRun, fontSize, lineX, cursorY, lineWidth, segments));

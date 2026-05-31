@@ -111,9 +111,23 @@ internal sealed record DocxTableCell(
     string? ShadingValue,
     string? ShadingColor,
     string? VerticalAlignmentValue,
-    IReadOnlyList<DocxTableCellBorder> Borders);
+    IReadOnlyList<DocxTableCellBorder> Borders,
+    DocxTableCellMargins Margins);
 
 internal sealed record DocxTableCellBorder(string Edge, string? Value, string? Color, string? SizeValue);
+
+internal sealed record DocxTableCellMargins(
+    double? TopPoints,
+    double? RightPoints,
+    double? BottomPoints,
+    double? LeftPoints,
+    string? TopValue,
+    string? RightValue,
+    string? BottomValue,
+    string? LeftValue)
+{
+    public static DocxTableCellMargins Empty { get; } = new(null, null, null, null, null, null, null, null);
+}
 
 internal enum DocxTextAlignment
 {

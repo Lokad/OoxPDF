@@ -1142,6 +1142,60 @@ internal static class DocxTests
         TestAssert.True(cells[2].VerticalAlignmentValue is null, "Expected missing cell vertical alignment to keep a null source token.");
     }
 
+    public static void DocxReaderTableCellPreservesMarginTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc>
+                        <w:tcPr>
+                          <w:tcMar>
+                            <w:top w:w="120" w:type="dxa"/>
+                            <w:right w:w="180" w:type="dxa"/>
+                            <w:bottom w:w="240" w:type="dxa"/>
+                            <w:left w:w="300" w:type="dxa"/>
+                          </w:tcMar>
+                        </w:tcPr>
+                        <w:p><w:r><w:t>Margins</w:t></w:r></w:p>
+                      </w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxTableCellMargins margins = new DocxReader().Read(package).Tables[0].Rows[0].Cells[0].Margins;
+
+        TestAssert.Equal("120", margins.TopValue ?? string.Empty);
+        TestAssert.Equal("180", margins.RightValue ?? string.Empty);
+        TestAssert.Equal("240", margins.BottomValue ?? string.Empty);
+        TestAssert.Equal("300", margins.LeftValue ?? string.Empty);
+        TestAssert.Equal(6d, margins.TopPoints ?? 0d);
+        TestAssert.Equal(15d, margins.LeftPoints ?? 0d);
+    }
+
     public static void DocxReaderTableCellPreservesBorderTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -1464,8 +1518,8 @@ internal static class DocxTests
             null,
             [60d, 40d],
             [new DocxTableRow([
-                new DocxTableCell("left", [], null, null, null, null, []),
-                new DocxTableCell("right", [], null, null, null, null, [])
+                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty),
+                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty)
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
@@ -1511,7 +1565,7 @@ internal static class DocxTests
             1d,
             null,
             null);
-        var cell = new DocxTableCell("Alpha BG", [firstParagraph, secondParagraph], null, null, null, null, []);
+        var cell = new DocxTableCell("Alpha BG", [firstParagraph, secondParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 44d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Alpha BG".EnumerateRunes().Select(rune => rune.Value));
@@ -1533,6 +1587,43 @@ internal static class DocxTests
         TestAssert.True(cellLayout.TextLines[1].Segments[1].X > cellLayout.TextLines[1].Segments[0].X, "Second table-cell run segment should be positioned after the first segment.");
         TestAssert.True(cellLayout.TextLines[1].X > cellLayout.TextLines[0].X, "Centered table-cell paragraph text should be positioned from line width, not flattened at the left inset.");
         TestAssert.True(cellLayout.TextLines[1].BaselineY < cellLayout.TextLines[0].BaselineY, "Separate table-cell paragraphs should produce separate baselines.");
+    }
+
+    public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Inset", 11d, null, false, false, false, null, null)],
+            [],
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            null);
+        var margins = new DocxTableCellMargins(3d, 8d, null, 12d, "60", "160", null, "240");
+        var cell = new DocxTableCell("Inset", [paragraph], null, null, null, null, [], margins);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 30d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Inset".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.Equal(cellLayout.X + 12d, cellLayout.TextLines[0].X);
+        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 20d, cellLayout.TextLines[0].BaselineY);
     }
 
     public static void DocxLayoutSnapshotReportsPublicSafeCounts()
@@ -1839,7 +1930,7 @@ internal static class DocxTests
         return new DocxTable(
             null,
             [60d],
-            [new DocxTableRow([new DocxTableCell(text, [], null, null, null, null, [])], rowHeight)]);
+            [new DocxTableRow([new DocxTableCell(text, [], null, null, null, null, [], DocxTableCellMargins.Empty)], rowHeight)]);
     }
 
     private static DocxDocument CreateLayoutTestDocument(IReadOnlyList<DocxBodyElement> bodyElements, IReadOnlyList<DocxTable> tables)
