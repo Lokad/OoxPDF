@@ -2007,6 +2007,11 @@ High-priority actions:
       shape used by body paragraphs, instead of only consuming `spacingAfter`. Private run `20260531-204834`
       stayed at `15/16` pages but improved aggregate MAE to `13.983783` and changed16 to `0.127071`, so the
       remaining one-page deficit is not explained by the compact table-cell before-spacing alone.
+      2026-05-31 update: widow/orphan control now defaults on unless `w:widowControl` is explicitly false,
+      matching Word's default paragraph behavior. Public tests cover default-on, explicit-on, and explicit-off
+      pagination. Private run `20260531-205119` stayed at `15/16` pages and slightly worsened aggregate metrics
+      (`14.058788` MAE, changed16 `0.127630`), so default widow control is structurally correct but not the
+      missing page's primary driver.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

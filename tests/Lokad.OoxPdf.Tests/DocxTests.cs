@@ -1922,6 +1922,97 @@ internal static class DocxTests
         TestAssert.Equal("Three", secondPageLines[2].Text);
     }
 
+    public static void DocxSyntheticParagraphDefaultWidowControlMovesThreeLineParagraphToNextPage()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        DocxParagraph widowControlled = CreateDocxLayoutParagraph("One\nTwo\nThree", fontSize: 10d, lineSpacingPoints: 10d);
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
+        ];
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Append(new DocxParagraphElement(widowControlled))
+            .ToArray();
+        var document = new DocxDocument(
+            160d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout[] secondPageLines = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[1]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(3, secondPageLines.Length);
+        TestAssert.Equal("One", secondPageLines[0].Text);
+    }
+
+    public static void DocxSyntheticParagraphExplicitWidowControlOffAllowsWidowLine()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        DocxParagraph widowOff = CreateDocxLayoutParagraph(
+            "One\nTwo\nThree",
+            fontSize: 10d,
+            lineSpacingPoints: 10d,
+            keepRules: new DocxParagraphKeepRules(null, null, null, null, false, null));
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
+        ];
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Append(new DocxParagraphElement(widowOff))
+            .ToArray();
+        var document = new DocxDocument(
+            160d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+
+        TestAssert.Equal(6, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+        TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
+    }
+
     public static void DocxSyntheticNumberingRendersListLabels()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

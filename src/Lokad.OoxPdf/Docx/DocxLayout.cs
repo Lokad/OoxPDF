@@ -372,7 +372,7 @@ internal sealed class DocxLayoutEngine
         double marginBottom,
         bool hasPageContent)
     {
-        if (paragraph.KeepRules.WidowControl != true ||
+        if (paragraph.KeepRules.WidowControl == false ||
             lineCount <= 1 ||
             !hasPageContent)
         {
