@@ -1932,6 +1932,10 @@ High-priority actions:
       cell model. Private DOCX run `20260531-184012` stayed neutral against the current baseline
       (`15.864724` MAE, `0.141689` changed16), which is acceptable because the slice removes a style-cascade
       guess without changing the visible page count.
+    2026-05-31 rejected trial: applying `w:tblLook` as a direct gate over fallback positional conditional
+    regions still regressed the private DOCX case (`20260531-184208`: MAE `16.582670`, changed16 `0.147486`).
+    Keep `tblLook` as preserved metadata until public Word fixtures clarify how it interacts with `cnfStyle`,
+    default table-style toggles, and band-region priority.
   - [ ] 2026-05-31: Resolve DOCX table-style paragraph/run property precedence with Office-backed public
     fixtures before enabling it in production. Private-safe inventory shows table-style conditional `w:pPr`
     and `w:rPr` exist, but a naive inherited text-style layer for alignment/bold/font-size worsened private
