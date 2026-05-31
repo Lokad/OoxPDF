@@ -555,6 +555,9 @@ internal sealed class DocxReader
             .Element(WordprocessingNamespace + "tblPr")
             ?.Element(WordprocessingNamespace + "tblStyle")
             ?.Attribute(WordprocessingNamespace + "val");
+        XElement? tableWidth = table
+            .Element(WordprocessingNamespace + "tblPr")
+            ?.Element(WordprocessingNamespace + "tblW");
         DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
             ? parsedTableStyle
             : DocxTableStyle.Empty;
@@ -616,7 +619,25 @@ internal sealed class DocxReader
             columns = Enumerable.Repeat(72d, maxCells).ToArray();
         }
 
-        return new DocxTable(layoutValue, columns, rows, tableStyleId);
+        return new DocxTable(
+            layoutValue,
+            columns,
+            rows,
+            tableStyleId,
+            ReadDxaWidth(tableWidth),
+            (string?)tableWidth?.Attribute(WordprocessingNamespace + "w"),
+            (string?)tableWidth?.Attribute(WordprocessingNamespace + "type"));
+    }
+
+    private static double? ReadDxaWidth(XElement? width)
+    {
+        string? type = (string?)width?.Attribute(WordprocessingNamespace + "type");
+        if (type is not null && !type.Equals("dxa", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return ReadTwipsAttribute(width, WordprocessingNamespace + "w");
     }
 
     private static IReadOnlyList<DocxParagraph> ReadTableCellParagraphs(

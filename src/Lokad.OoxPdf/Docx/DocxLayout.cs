@@ -355,7 +355,8 @@ internal sealed class DocxLayoutEngine
         }
 
         double rawTableWidth = table.ColumnWidthsPoints.Sum();
-        double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
+        double targetTableWidth = Math.Min(availableWidth, table.PreferredWidthPoints ?? rawTableWidth);
+        double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double[] cellWidths = row.Cells
             .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
             .ToArray();
@@ -398,7 +399,8 @@ internal sealed class DocxLayoutEngine
         Func<bool> hasPageContent)
     {
         double rawTableWidth = table.ColumnWidthsPoints.Sum();
-        double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
+        double targetTableWidth = Math.Min(availableWidth, table.PreferredWidthPoints ?? rawTableWidth);
+        double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
         {

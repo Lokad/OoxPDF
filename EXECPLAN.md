@@ -1883,6 +1883,10 @@ High-priority actions:
   - [ ] 2026-05-31: Complete table margin/width fidelity: implement table-level width/preferred width,
     cell spacing, `tblInd`, grid spans/merged cells, and style/direct margin priority with public Office PDF
     fixtures.
+  - [x] 2026-05-31: Preserved DOCX table preferred-width tokens and applied `w:tblW w:type="dxa"` to table
+    grid scaling. The layout stage now scales column widths to the preferred table width, capped by available
+    page width, instead of relying only on raw `w:tblGrid` sums. Private impact was neutral, indicating this
+    document's grid and preferred widths are already effectively aligned.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2563,6 +2567,11 @@ document-specific business content into public notes.
   - MAE moved slightly from `16.004348` to `16.003190`; changed16 moved from `0.142372` to `0.142369`.
   - Table-style margins are structurally supported now, but the remaining private table gap is dominated by
     other style, width, and text geometry.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-155308` after applying `dxa`
+  table preferred widths:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - Aggregate metrics were unchanged from the table-margin run: MAE `16.003190`, changed16 `0.142369`.
+  - `w:tblW` is now structurally handled for `dxa`, but it is not a dominant private metric driver here.
 
 ## Backlog
 
@@ -3960,6 +3969,11 @@ Current validation baseline:
   after applying style-level `w:tblCellMar`, the full DOCX group sweep passed (`docx-core` `4`, `docx-page`
   `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`, `docx-tables` `22`). Private DOCX run
   `20260531-154933` stayed at `16/16` pages, zero dimension mismatches, MAE `16.003190`, changed16 `0.142369`.
+- DOCX table preferred-width validation:
+  after applying `w:tblW` `dxa` preferred widths to grid scaling, the full DOCX group sweep passed
+  (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
+  `docx-tables` `23`). Private DOCX run `20260531-155308` stayed at `16/16` pages, zero dimension mismatches,
+  MAE `16.003190`, changed16 `0.142369`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

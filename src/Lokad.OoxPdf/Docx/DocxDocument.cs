@@ -146,7 +146,10 @@ internal sealed record DocxTable(
     string? LayoutValue,
     IReadOnlyList<double> ColumnWidthsPoints,
     IReadOnlyList<DocxTableRow> Rows,
-    string? StyleId = null);
+    string? StyleId = null,
+    double? PreferredWidthPoints = null,
+    string? PreferredWidthValue = null,
+    string? PreferredWidthType = null);
 
 internal sealed record DocxTableRow(
     IReadOnlyList<DocxTableCell> Cells,
