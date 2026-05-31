@@ -1499,7 +1499,10 @@ internal static class DocxTests
             null,
             null);
         var secondParagraph = new DocxParagraph(
-            [new DocxTextRun("Beta", 14d, "336699", false, true, false, null, null)],
+            [
+                new DocxTextRun("B", 14d, "336699", false, true, false, null, null),
+                new DocxTextRun("G", 14d, "993333", true, false, false, null, null)
+            ],
             [],
             DocxTextAlignment.Center,
             "center",
@@ -1508,10 +1511,10 @@ internal static class DocxTests
             1d,
             null,
             null);
-        var cell = new DocxTableCell("Alpha Beta", [firstParagraph, secondParagraph], null, null, null, null, []);
+        var cell = new DocxTableCell("Alpha BG", [firstParagraph, secondParagraph], null, null, null, null, []);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 44d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Alpha Beta".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Alpha BG".EnumerateRunes().Select(rune => rune.Value));
 
         DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
 
@@ -1519,9 +1522,15 @@ internal static class DocxTests
         TestAssert.Equal(2, cellLayout.TextLines.Count);
         TestAssert.Equal("Alpha", cellLayout.TextLines[0].Text);
         TestAssert.Equal(11d, cellLayout.TextLines[0].FontSize);
-        TestAssert.Equal("Beta", cellLayout.TextLines[1].Text);
+        TestAssert.Equal("BG", cellLayout.TextLines[1].Text);
         TestAssert.Equal(14d, cellLayout.TextLines[1].FontSize);
         TestAssert.Equal("336699", cellLayout.TextLines[1].StyleRun.ColorHex ?? string.Empty);
+        TestAssert.Equal(2, cellLayout.TextLines[1].Segments.Count);
+        TestAssert.Equal("B", cellLayout.TextLines[1].Segments[0].Text);
+        TestAssert.Equal("336699", cellLayout.TextLines[1].Segments[0].StyleRun.ColorHex ?? string.Empty);
+        TestAssert.Equal("G", cellLayout.TextLines[1].Segments[1].Text);
+        TestAssert.Equal("993333", cellLayout.TextLines[1].Segments[1].StyleRun.ColorHex ?? string.Empty);
+        TestAssert.True(cellLayout.TextLines[1].Segments[1].X > cellLayout.TextLines[1].Segments[0].X, "Second table-cell run segment should be positioned after the first segment.");
         TestAssert.True(cellLayout.TextLines[1].X > cellLayout.TextLines[0].X, "Centered table-cell paragraph text should be positioned from line width, not flattened at the left inset.");
         TestAssert.True(cellLayout.TextLines[1].BaselineY < cellLayout.TextLines[0].BaselineY, "Separate table-cell paragraphs should produce separate baselines.");
     }

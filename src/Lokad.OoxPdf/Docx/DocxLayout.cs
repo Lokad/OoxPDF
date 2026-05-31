@@ -88,7 +88,14 @@ internal sealed record DocxTextLineLayout(
     double FontSize,
     double X,
     double BaselineY,
-    double Width) : DocxLayoutItem;
+    double Width,
+    IReadOnlyList<DocxTextSegmentLayout> Segments) : DocxLayoutItem;
+
+internal sealed record DocxTextSegmentLayout(
+    string Text,
+    DocxTextRun StyleRun,
+    double X,
+    double Width);
 
 internal sealed record DocxInlineImageLayout(
     DocxInlineImage Image,
@@ -191,7 +198,14 @@ internal sealed class DocxLayoutEngine
                     double baselineOffset = paragraph.LineSpacingPoints is null
                         ? paragraphFontSize * BaselineOffsetFactor
                         : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
-                    currentItems.Add(new DocxTextLineLayout(line, firstRun, paragraphFontSize, lineX, cursorY - baselineOffset, lineWidth));
+                    currentItems.Add(new DocxTextLineLayout(
+                        line,
+                        firstRun,
+                        paragraphFontSize,
+                        lineX,
+                        cursorY - baselineOffset,
+                        lineWidth,
+                        [new DocxTextSegmentLayout(line, firstRun, lineX, lineWidth)]));
                     cursorY -= lineHeight;
                 }
             }
@@ -320,7 +334,8 @@ internal sealed class DocxLayoutEngine
                     DocxTextAlignment.Right => cellX + paddingX + Math.Max(0, textWidth - lineWidth),
                     _ => cellX + paddingX
                 };
-                lines.Add(new DocxTextLineLayout(line, firstRun, fontSize, lineX, cursorY, lineWidth));
+                IReadOnlyList<DocxTextSegmentLayout> segments = CreateTextSegments(line, paragraph.Runs, lineX, fontSize, embedded);
+                lines.Add(new DocxTextLineLayout(line, firstRun, fontSize, lineX, cursorY, lineWidth, segments));
                 cursorY -= lineHeight;
             }
 
@@ -328,6 +343,57 @@ internal sealed class DocxLayoutEngine
         }
 
         return lines;
+    }
+
+    private static IReadOnlyList<DocxTextSegmentLayout> CreateTextSegments(
+        string line,
+        IReadOnlyList<DocxTextRun> runs,
+        double lineX,
+        double fontSize,
+        PdfEmbeddedFont embedded)
+    {
+        if (line.Length == 0 || runs.Count == 0)
+        {
+            return [];
+        }
+
+        var segments = new List<DocxTextSegmentLayout>();
+        int lineOffset = 0;
+        double segmentX = lineX;
+        foreach (DocxTextRun run in runs)
+        {
+            if (lineOffset >= line.Length)
+            {
+                break;
+            }
+
+            string runText = run.Text;
+            int runOffset = 0;
+            while (runOffset < runText.Length && lineOffset < line.Length)
+            {
+                if (line[lineOffset] != runText[runOffset])
+                {
+                    runOffset++;
+                    continue;
+                }
+
+                int start = runOffset;
+                while (runOffset < runText.Length && lineOffset < line.Length && line[lineOffset] == runText[runOffset])
+                {
+                    runOffset++;
+                    lineOffset++;
+                }
+
+                string segmentText = runText[start..runOffset];
+                double width = embedded.MeasureTextPoints(segmentText, fontSize);
+                segments.Add(new DocxTextSegmentLayout(segmentText, run, segmentX, width));
+                segmentX += width;
+            }
+        }
+
+        return segments.Count == 0
+            ? [new DocxTextSegmentLayout(line, runs[0], lineX, embedded.MeasureTextPoints(line, fontSize))]
+            : segments;
     }
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)

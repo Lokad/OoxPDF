@@ -133,20 +133,36 @@ internal sealed class DocxRenderer
 
     private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded)
     {
-        DocxTextRun style = line.StyleRun;
+        IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
+            ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width)]
+            : line.Segments;
+        foreach (DocxTextSegmentLayout segment in segments)
+        {
+            RenderTextSegment(segment, line.FontSize, line.BaselineY, graphics, embedded);
+        }
+    }
+
+    private static void RenderTextSegment(
+        DocxTextSegmentLayout segment,
+        double fontSize,
+        double baselineY,
+        PdfGraphicsBuilder graphics,
+        PdfEmbeddedFont embedded)
+    {
+        DocxTextRun style = segment.StyleRun;
         RgbColor color = ReadColor(style.ColorHex);
-        string glyphHex = embedded.EncodeGlyphHex(line.Text);
-        graphics.DrawGlyphText("F1", line.FontSize, line.X, line.BaselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+        string glyphHex = embedded.EncodeGlyphHex(segment.Text);
+        graphics.DrawGlyphText("F1", fontSize, segment.X, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
         if (style.Bold)
         {
-            graphics.DrawGlyphText("F1", line.FontSize, line.X + 0.35d, line.BaselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+            graphics.DrawGlyphText("F1", fontSize, segment.X + 0.35d, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
         }
 
         if (style.Underline)
         {
             graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-            graphics.SetLineWidth(Math.Max(0.5d, line.FontSize / 18d));
-            graphics.StrokeLine(line.X, line.BaselineY - line.FontSize * 0.12d, line.X + line.Width, line.BaselineY - line.FontSize * 0.12d);
+            graphics.SetLineWidth(Math.Max(0.5d, fontSize / 18d));
+            graphics.StrokeLine(segment.X, baselineY - fontSize * 0.12d, segment.X + segment.Width, baselineY - fontSize * 0.12d);
         }
     }
 
