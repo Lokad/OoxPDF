@@ -67,7 +67,7 @@ internal sealed class DocxRenderer
                     fontResources,
                     document.MarginLeftPoints,
                     width,
-                    document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d),
+                    document.PageHeightPoints - ResolveHeaderDistance(document),
                     pageNumber);
                 RenderStaticParagraphs(
                     SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, document.PageSettings, pageNumber),
@@ -75,7 +75,7 @@ internal sealed class DocxRenderer
                     fontResources,
                     document.MarginLeftPoints,
                     width,
-                    Math.Max(18d, document.MarginBottomPoints / 2d),
+                    ResolveFooterDistance(document),
                     pageNumber);
             }
 
@@ -335,6 +335,16 @@ internal sealed class DocxRenderer
         return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaultParagraphs)
             ? defaultParagraphs
             : fallbackParagraphs;
+    }
+
+    private static double ResolveHeaderDistance(DocxDocument document)
+    {
+        return document.PageSettings.HeaderDistancePoints ?? Math.Max(18d, document.MarginTopPoints / 2d);
+    }
+
+    private static double ResolveFooterDistance(DocxDocument document)
+    {
+        return document.PageSettings.FooterDistancePoints ?? Math.Max(18d, document.MarginBottomPoints / 2d);
     }
 
     private static void RenderStaticParagraphs(

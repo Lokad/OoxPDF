@@ -1816,6 +1816,11 @@ High-priority actions:
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses
     the default part. Private-safe inventory found the current private DOCX carries three header references;
     this closes the structural model gap without using header text or document-specific logic.
+  - [x] 2026-05-31: Preserved DOCX `w:pgMar/@w:header` and `w:pgMar/@w:footer` distances and used those
+    authored page-margin tokens for static header/footer baselines. This removes the prior half-margin
+    placement fallback for documents that provide Word's header/footer distances, with public coverage that
+    checks both token preservation and the emitted PDF text matrices. Private DOCX run `20260531-233331`
+    stayed neutral at `16/16` pages, zero dimension mismatches, MAE `13.648284`, changed16 `0.125542`.
   - [x] 2026-05-31: Preserved parsed paragraph models inside DOCX table cells while keeping the existing
     flattened cell text for current rendering. This closes a model gap that blocked future row-height,
     paragraph spacing, inherited paragraph/character styling, per-run styling, and numbering layout inside cells.
@@ -4550,6 +4555,12 @@ Current validation baseline:
   `docx-page --skip-slow` passed `15`, `docx-tables --skip-slow` passed `47`, and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
   `20260531-232937` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
+  `0.125542`.
+- DOCX header/footer distance validation:
+  after preserving `w:pgMar/@w:header` and `@w:footer` and using them for static header/footer baselines,
+  `docx-page --skip-slow` passed `16`, `docx-tables --skip-slow` passed `47`, `docx-numbering --skip-slow`
+  passed `10`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
+  `20260531-233331` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
   `0.125542`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt

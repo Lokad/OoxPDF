@@ -56,12 +56,16 @@ internal sealed record DocxPageSettings(
     string? MarginRightValue,
     string? MarginBottomValue,
     string? MarginLeftValue,
+    double? HeaderDistancePoints,
+    double? FooterDistancePoints,
+    string? HeaderDistanceValue,
+    string? FooterDistanceValue,
     bool? TitlePage,
     string? TitlePageValue,
     bool? EvenAndOddHeaders,
     string? EvenAndOddHeadersValue)
 {
-    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null);
+    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 }
 
 internal sealed record DocxFloatingDrawing(
