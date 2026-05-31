@@ -1970,6 +1970,9 @@ High-priority actions:
     `tcW` across rows, auto and percentage widths, `tblLayout` fixed/autofit differences, `gridSpan`,
     `tblInd`, cell spacing, and Word's conflict resolution between `tblGrid`, `tblW`, and cell preferred
     widths with public Office PDF fixtures.
+    2026-05-31 progress: layout now resolves `w:tblW w:type="pct"` from fiftieths of a percent against the
+    available table width before scaling the grid. Public coverage checks a 50% table width; private DOCX run
+    `20260531-182041` improved slightly (`15.864724` MAE, `0.141689` changed16).
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -4144,6 +4147,10 @@ Current validation baseline:
   after preserving and applying direct `w:tblCellSpacing`, `docx-tables --skip-slow` passed `31`. Private DOCX
   run `20260531-181847` stayed at `16/16` pages, zero dimension mismatches, MAE `15.889775`, changed16
   `0.141949`.
+- DOCX percentage table-width validation:
+  after applying `w:tblW w:type="pct"`, `docx-tables --skip-slow` passed `32`. Private DOCX run
+  `20260531-182041` stayed at `16/16` pages, zero dimension mismatches, and improved to MAE `15.864724`,
+  changed16 `0.141689`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

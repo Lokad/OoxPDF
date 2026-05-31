@@ -1,3 +1,4 @@
+using System.Globalization;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
@@ -499,7 +500,8 @@ internal sealed class DocxLayoutEngine
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table);
         double rawTableWidth = effectiveColumns.Sum();
-        double targetTableWidth = Math.Min(tableAvailableWidth, table.PreferredWidthPoints ?? rawTableWidth);
+        double preferredTableWidth = ResolvePreferredTableWidth(table, tableAvailableWidth) ?? rawTableWidth;
+        double targetTableWidth = Math.Min(tableAvailableWidth, preferredTableWidth);
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
@@ -540,6 +542,22 @@ internal sealed class DocxLayoutEngine
         }
 
         return table.ColumnWidthsPoints;
+    }
+
+    private static double? ResolvePreferredTableWidth(DocxTable table, double availableWidth)
+    {
+        if (table.PreferredWidthPoints is { } points)
+        {
+            return points;
+        }
+
+        if (table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+            int.TryParse(table.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
+        {
+            return Math.Max(0d, availableWidth * fiftiethsPercent / 5000d);
+        }
+
+        return null;
     }
 
     private static double MeasureTableRowHeight(
