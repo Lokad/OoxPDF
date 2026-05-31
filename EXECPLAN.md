@@ -2089,6 +2089,14 @@ High-priority actions:
       whose cell runs use authored font resources and therefore expose the current fallback-free table-text
       suppression without private content. Office reference PDF inspection has text operations while the
       candidate has none; use this case as the public gate before retrying production table text emission.
+      2026-06-01 follow-up: a reverted trial removed the fallback gate and moved table-cell baselines onto the
+      body paragraph baseline formula. The public fixture improved from MAE `0.263375` / changed16 `0.003477`
+      to MAE `0.241225` / changed16 `0.003272`, and PDF matrices showed the cell top-to-baseline offset was
+      nearly aligned (`~11.30pt` Office versus `~11.28pt` candidate). The private DOCX still regressed from
+      the current `12.509698` MAE / `0.112673` changed16 baseline to `13.993723` MAE / `0.128607` changed16.
+      On a representative private page, candidate text operations rose from `60` to `93` while Office had
+      `140`, so the trial added incomplete table text bands instead of closing the Office text coverage gap.
+      Keep the gate until table-cell text ownership is complete enough to reduce private raster mismatch.
     - [ ] 2026-05-31: Resolve the DOCX pagination gap exposed by structural font/style alignment. Private
       DOCX run `20260531-203336` improved aggregate MAE to `13.852449` and changed16 to `0.125076`, but the
       candidate now paginates as `14` pages against Office's `16` reference pages with `2` dimension mismatches.
