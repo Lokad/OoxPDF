@@ -123,10 +123,10 @@ internal sealed class DocxRenderer
                 RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
                 break;
             case DocxTableRowLayout row when embedded is not null && fontResource is not null:
-                RenderTableRow(row, graphics, fontResource, embedded);
+                RenderTableRow(row, graphics, pageImages, fontResource, embedded, diagnosticSink, ref imageIndex);
                 break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, graphics, fontResource, embedded);
+                RenderTableRow(row, graphics, pageImages, fontResource, embedded, diagnosticSink, ref imageIndex);
                 break;
         }
     }
@@ -184,7 +184,14 @@ internal sealed class DocxRenderer
         pageImages.Add(new PdfImageResource(imageName, xObject));
     }
 
-    private static void RenderTableRow(DocxTableRowLayout row, PdfGraphicsBuilder graphics, PdfFontResource? fontResource, PdfEmbeddedFont? embedded)
+    private static void RenderTableRow(
+        DocxTableRowLayout row,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        PdfFontResource? fontResource,
+        PdfEmbeddedFont? embedded,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        ref int imageIndex)
     {
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
@@ -204,6 +211,11 @@ internal sealed class DocxRenderer
                 {
                     RenderTextLine(line, graphics, embedded);
                 }
+            }
+
+            foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
+            {
+                RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
             }
         }
     }

@@ -116,7 +116,8 @@ internal sealed record DocxTableCellLayout(
     double Y,
     double Width,
     double Height,
-    IReadOnlyList<DocxTextLineLayout> TextLines);
+    IReadOnlyList<DocxTextLineLayout> TextLines,
+    IReadOnlyList<DocxInlineImageLayout> InlineImages);
 
 internal readonly record struct DocxFontResources(PdfEmbeddedFont? Embedded, PdfFontResource? Resource);
 
@@ -161,7 +162,7 @@ internal sealed class DocxLayoutEngine
             {
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
-                LayoutTable(tableElement.Table, document, embedded, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                LayoutTable(tableElement.Table, document, embedded, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
                 continue;
             }
 
@@ -244,6 +245,7 @@ internal sealed class DocxLayoutEngine
         DocxTable table,
         DocxDocument document,
         PdfEmbeddedFont? embedded,
+        Func<int> getPageIndex,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         double x,
@@ -284,7 +286,8 @@ internal sealed class DocxLayoutEngine
                 double cellWidth = cellWidths[columnIndex];
                 DocxTableCell cell = row.Cells[columnIndex];
                 IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, embedded);
-                cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines));
+                IReadOnlyList<DocxInlineImageLayout> inlineImages = LayoutTableCellInlineImages(cell, cellX, cellY, cellWidth, rowHeight, embedded, getPageIndex());
+                cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines, inlineImages));
                 cellX += cellWidth;
             }
 
@@ -326,6 +329,12 @@ internal sealed class DocxLayoutEngine
                 : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
             int lineCount = WrapWords(text, textWidth, fontSize, embedded).Count();
             contentHeight += lineCount * lineHeight + paragraph.SpacingAfterPoints;
+            foreach (DocxInlineImage image in paragraph.Images)
+            {
+                double imageWidth = Math.Min(textWidth, image.WidthPoints);
+                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                contentHeight += imageHeight + 6d;
+            }
         }
 
         return contentHeight;
@@ -405,6 +414,76 @@ internal sealed class DocxLayoutEngine
                 ? extra / 2d
                 : 0d;
         return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset);
+    }
+
+    private static IReadOnlyList<DocxInlineImageLayout> LayoutTableCellInlineImages(
+        DocxTableCell cell,
+        double cellX,
+        double cellY,
+        double cellWidth,
+        double cellHeight,
+        PdfEmbeddedFont? embedded,
+        int pageIndex)
+    {
+        IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs;
+        if (paragraphs.Count == 0 || !paragraphs.Any(paragraph => paragraph.Images.Count != 0))
+        {
+            return [];
+        }
+
+        double paddingLeft = cell.Margins.LeftPoints ?? 4d;
+        double paddingRight = cell.Margins.RightPoints ?? 4d;
+        double paddingTop = cell.Margins.TopPoints ?? 0d;
+        double paddingBottom = cell.Margins.BottomPoints ?? 0d;
+        const double legacyBaselineInset = 17d;
+        double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
+        double startBaselineY = cellY + cellHeight - legacyBaselineInset - paddingTop;
+        double cursorY = startBaselineY;
+        var images = new List<DocxInlineImageLayout>();
+        foreach (DocxParagraph paragraph in paragraphs)
+        {
+            if (embedded is not null && paragraph.Runs.Count != 0)
+            {
+                double fontSize = paragraph.Runs.Max(run => run.FontSize);
+                double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
+                string text = paragraph.ListLabel is null
+                    ? string.Concat(paragraph.Runs.Select(run => run.Text))
+                    : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
+                cursorY -= WrapWords(text, textWidth, fontSize, embedded).Count() * lineHeight;
+                cursorY -= paragraph.SpacingAfterPoints;
+            }
+
+            foreach (DocxInlineImage image in paragraph.Images)
+            {
+                double imageWidth = Math.Min(textWidth, image.WidthPoints);
+                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                double imageX = paragraph.Alignment switch
+                {
+                    DocxTextAlignment.Center => cellX + paddingLeft + Math.Max(0, textWidth - imageWidth) / 2d,
+                    DocxTextAlignment.Right => cellX + paddingLeft + Math.Max(0, textWidth - imageWidth),
+                    _ => cellX + paddingLeft
+                };
+                images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex));
+                cursorY -= imageHeight + 6d;
+            }
+        }
+
+        if (images.Count == 0)
+        {
+            return images;
+        }
+
+        double usedHeight = Math.Max(0d, startBaselineY - cursorY);
+        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - legacyBaselineInset);
+        double extra = Math.Max(0d, availableHeight - usedHeight);
+        double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
+            ? extra
+            : cell.VerticalAlignmentValue?.Equals("center", StringComparison.OrdinalIgnoreCase) == true
+                ? extra / 2d
+                : 0d;
+        return verticalOffset == 0d
+            ? images
+            : images.Select(image => image with { Y = image.Y - verticalOffset }).ToArray();
     }
 
     private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY)
