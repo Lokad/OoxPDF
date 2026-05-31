@@ -9230,6 +9230,52 @@ internal static class PptxTests
             "Expected highlight continuation character spacing to be an emission-only PDF text state.");
     }
 
+    public static void PptxSingleParagraphHighlightDoesNotStartContinuationTextState()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-highlight-single.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+
+        TestAssert.True(
+            glyphRuns.Any(run => run.HighlightColor is not null),
+            "Expected the probe to contain a highlighted glyph run.");
+        TestAssert.True(
+            glyphRuns.All(run => Math.Abs(run.PdfCharacterSpacing) < 0.001d),
+            "Expected a first-paragraph highlight to leave Office's PDF character-spacing state at zero.");
+    }
+
+    public static void PptxNoAutofitHeadlineHighlightDoesNotStartContinuationTextState()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-highlighted-headline-runs.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+
+        TestAssert.True(
+            glyphRuns.Any(run => run.FrameAutofitMode == "noAutofit" && run.HighlightColor is not null),
+            "Expected the probe to contain highlighted noAutofit headline runs.");
+        TestAssert.True(
+            glyphRuns.All(run => Math.Abs(run.PdfCharacterSpacing) < 0.001d),
+            "Expected highlighted noAutofit headline text to keep Office's PDF character-spacing state at zero.");
+    }
+
     public static void PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates()
     {
         string input = Path.GetFullPath(Path.Combine(
@@ -17401,7 +17447,7 @@ internal static class PptxTests
         Type textMeasurerType = typeof(PptxRenderer).GetNestedType(
             "ChartTextMeasurer",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart text measurer.");
-        object style = Activator.CreateInstance(textStyleType, ["Arial", 9d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
+        object style = Activator.CreateInstance(textStyleType, ["Arial", 9d, 0d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
         object textMeasurer = Activator.CreateInstance(textMeasurerType, [null]) ?? throw new InvalidOperationException("Expected chart text measurer.");
         System.Reflection.MethodInfo measure = textMeasurerType.GetMethod(
             "Measure",
@@ -17452,7 +17498,7 @@ internal static class PptxTests
         object radarStyle = Enum.Parse(radarStyleType, "Marker");
         object labelRules = Activator.CreateInstance(labelRulesType, [0.65d, 0.41d, -0.309d, -0.005d, 0.397d, 1.01d, 0.25d, 3.0d]) ?? throw new InvalidOperationException("Expected radar label rules.");
         object layout = Activator.CreateInstance(layoutType, [plotBox, geometry, radarStyle, 4, labelRules]) ?? throw new InvalidOperationException("Expected radar layout.");
-        object style = Activator.CreateInstance(textStyleType, ["Arial", 8.5d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
+        object style = Activator.CreateInstance(textStyleType, ["Arial", 8.5d, 0d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
         object textMeasurer = Activator.CreateInstance(textMeasurerType, [null]) ?? throw new InvalidOperationException("Expected chart text measurer.");
         System.Reflection.MethodInfo resolveFrame = typeof(PptxRenderer).GetMethod(
             "ResolveRadarValueAxisLabelFrame",
@@ -18802,7 +18848,7 @@ internal static class PptxTests
         const string chartXml = """
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:txPr><a:p><a:pPr><a:defRPr sz="1100"><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
+              <c:txPr><a:p><a:pPr><a:defRPr sz="1100" spc="125"><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
               <c:chart><c:plotArea>
                 <c:lineChart>
                   <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
@@ -18819,6 +18865,7 @@ internal static class PptxTests
         object style = readStyle.Invoke(null, [PptxTheme.Empty, chart, null, document, document.Root, 10d, null]) ?? throw new InvalidOperationException("Expected chart text style.");
 
         TestAssert.Equal("Arial", (string?)style.GetType().GetProperty("FontFamily")?.GetValue(style) ?? string.Empty);
+        TestAssert.Equal(1.25d, (double)(style.GetType().GetProperty("CharacterSpacing")?.GetValue(style) ?? double.NaN));
         TestAssert.Equal("Arial", (string?)style.GetType().GetProperty("RequestedTypeface")?.GetValue(style) ?? string.Empty);
         TestAssert.Equal(PptxThemeTypefaceSource.Direct, (PptxThemeTypefaceSource?)style.GetType().GetProperty("TypefaceSource")?.GetValue(style) ?? default);
     }

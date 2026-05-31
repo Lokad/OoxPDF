@@ -1672,6 +1672,12 @@ High-priority actions:
   gates should wait until candidate tick generation no longer emits extra tick labels against Office.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
+  - [x] 2026-05-31: Add chart text character spacing to the typed scene and renderer style pipeline.
+    `a:defRPr/@spc` and rich text run `a:rPr/@spc` now survive chart scene parsing, style merging, chart text
+    measuring, and PDF text-run emission. This closes an architectural omission even though the latest private
+    slide-44 run showed no movement: the slide-44 chart/style XML has no nonzero authored `spc`, while Office
+    still emits small chart-text `Tc` values in PDF. That remaining gap belongs to the shared Office PDF
+    text-emission profile, not to chart geometry or a private chart offset.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.
@@ -1753,6 +1759,10 @@ High-priority actions:
   then consolidate only completed historical detail that is already represented by checked-in fixtures,
   tests, or tool support. Do not remove open checkboxes during this cleanup unless a direct duplicate is
   found and noted.
+- [ ] 2026-05-31: Pivot the active architecture track to DOCX after the slide-44 PPTX cleanup. Build a DOCX
+  model/pipeline comparable in spirit to PPTX: typed document parts and relationships first, explicit style
+  cascade, block layout/pagination as a separate stage, then PDF emission. Use public synthetic Word/Office
+  reference cases as the primary oracle and private DOCX files only for public-safe gap discovery.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -1786,6 +1796,15 @@ document-specific business content into public notes.
   - The generic remaining slide-44 work is no longer per-segment stacked-column fill emission. The bottom
     legend probe still carries loose raster/text gates because it also exposes broader chart text and layout
     differences.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260531-141742` after chart text spacing
+  was carried through the typed scene and renderer styles:
+  - 84/84 pages compared with zero dimension mismatches and empty diagnostics.
+  - Page 44 remained unchanged from run `20260531-140556` at MAE `1.281596258`, changed16 `0.032060185`,
+    and SSIM `0.973682740`.
+  - Focused PDF text inspection still shows Office using `Tc=-0.006` for part of the chart text, while the
+    candidate mostly emits `Tc=0` for chart text. Inspecting the private source chart showed no nonzero
+    authored `spc` in `chart7.xml` and only `spc=0` in the chart style. Treat this as evidence for the shared
+    Office PDF text-emission profile, not for a slide-specific chart spacing rule.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260529-035838` before the image recolor
   renderer-boundary cleanup:
   - 84/84 pages compared with zero dimension mismatches.
@@ -2644,6 +2663,24 @@ paths, and ExecPlan references together.
 
 ### DOCX Feature Survey
 
+Long-term DOCX work should mirror the successful PPTX direction without copying PPTX implementation details.
+The durable target is a Word-like pipeline with clear ownership boundaries:
+
+- Package/document model: read `word/document.xml`, styles, numbering, settings, sections, headers/footers,
+  relationships, media, and theme data into typed records while keeping raw XML as source evidence until each
+  OOXML surface has a typed home.
+- Style cascade: resolve document defaults, table styles, paragraph styles, character styles, numbering
+  levels, direct paragraph properties, and run properties before layout. The renderer should not repeatedly
+  rediscover style inheritance while emitting PDF.
+- Block layout and pagination: convert paragraphs, tables, drawings, headers, and footers into positioned
+  page content with explicit page-size, margin, section, keep-rule, and break decisions. Pagination must be a
+  first-class model output that can be traced without exposing private text.
+- PDF emission: draw the positioned layout through text, table, image, shape, and field emitters that preserve
+  Office-like PDF structures where observable, such as text matrices, clipping, fills/strokes, image masks,
+  and reusable resources.
+- Test ladder: every implemented DOCX capability should have a small public synthetic case with an Office PDF
+  reference before private documents are used as acceptance evidence.
+
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
@@ -3155,6 +3192,20 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Keep the slide-44 chart residual on the shared PPTX Office text-emission track after adding
+  structural chart text spacing support.
+  Rationale: Reading authored `spc` into chart text styles is a correct model gap to close, but the private
+  slide and the public stacked-legend probe show Office can emit chart-text `Tc` even when the authored chart
+  style has no nonzero spacing. A fixed chart or slide adjustment would be another heuristic; the long-term
+  solution is an Office PDF emission profile that explains text-state splitting across shape text, tables, and
+  chart text.
+  Date/Author: 2026-05-31 / Codex.
+- Decision: Shift the active architecture focus to DOCX using the same Office-PDF-first ladder discipline as
+  PPTX.
+  Rationale: The PPTX renderer now has a clearer model-first direction, while DOCX still needs a comparable
+  typed document/style/layout/pagination/PDF pipeline and bottom-up public coverage. Private DOCX evidence
+  remains useful for prioritization, but production changes should be driven by public synthetic Word output.
+  Date/Author: 2026-05-31 / Codex.
 - Decision: Resolve `a:grpFill` through ancestor group solid fill instead of adding any custom-geometry
   default-fill or private-slide color fallback.
   Rationale: A public synthetic custom-geometry fixture shows omitted shape fill stays unfilled in Office, but
@@ -3559,6 +3610,14 @@ Current validation baseline:
   structural gates. Both now match Office's stacked series fill path operators and path-command counts
   (`16` segments / `4` moves for four-category stacked columns, `12` segments / `3` moves for the 100%
   stacked probe).
+- PPTX chart/text cleanup:
+  `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+  passed `148` tests; `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group
+  pptx-typography --skip-slow` passed `138` tests with `2` skipped. The public
+  `pptx-ladder-11-chart-column-stacked-bottom-legend-probe` visual case passed in run `20260531-141703`.
+  Private deck run `20260531-141742` compared `84/84` pages with empty diagnostics; page 44 stayed at MAE
+  `1.281596258`, changed16 `0.032060185`, SSIM `0.973682740`, confirming the remaining chart-text `Tc`
+  difference is not authored OOXML spacing.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

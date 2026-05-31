@@ -361,7 +361,7 @@ internal sealed partial class PptxRenderer
 
             bool hasZeroAuthoredCharacterSpacing =
                 Math.Abs(span.GlyphSpan.CharacterSpacing) < PptxTextMetricRules.TextStateTolerance;
-            if (hasZeroAuthoredCharacterSpacing && span.Run.HighlightColor is not null)
+            if (hasZeroAuthoredCharacterSpacing && StartsOfficeHighlightContinuationTextState(span))
             {
                 useHighlightContinuationSpacing = true;
             }
@@ -388,6 +388,11 @@ internal sealed partial class PptxRenderer
 
         return adjusted;
     }
+
+    private static bool StartsOfficeHighlightContinuationTextState(PptxPositionedTextSpan span) =>
+        span.Run.HighlightColor is not null &&
+        span.FrameAutofitMode != "noAutofit" &&
+        span.ParagraphIndex > 0;
 
     private static Dictionary<int, (double SpacingEm, int FirstNumberedParagraphIndex)> ReadOfficeNumberedFrameCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
     {

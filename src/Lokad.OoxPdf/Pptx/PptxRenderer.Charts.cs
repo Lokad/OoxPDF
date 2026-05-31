@@ -5198,7 +5198,7 @@ internal sealed partial class PptxRenderer
                 legendBox.Width,
                 legendBox.ClipHeight,
                 style.FontSize,
-                0d,
+                style.CharacterSpacing,
                 0d,
                 style.Color,
                 1d,
@@ -6010,6 +6010,7 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style = new(
             typeface.Typeface,
             PptxChartMetricRules.DataLabelFallbackFontSize,
+            0d,
             fallbackColor,
             Alpha: 1d,
             Bold: false,
@@ -6031,6 +6032,7 @@ internal sealed partial class PptxRenderer
         ChartTextStyleOverride textStyle = new(
             dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
             dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
+            dataLabel.TextStyle.CharacterSpacing ?? options.TextStyle.CharacterSpacing,
             dataLabel.TextStyle.Color ?? options.TextStyle.Color,
             dataLabel.TextStyle.Alpha ?? options.TextStyle.Alpha,
             dataLabel.TextStyle.Bold ?? options.TextStyle.Bold,
@@ -6081,6 +6083,7 @@ internal sealed partial class PptxRenderer
         ChartTextStyleOverride textStyle = new(
             overrideOptions.TextStyle.FontFamily ?? baseOptions.TextStyle.FontFamily,
             overrideOptions.TextStyle.FontSize ?? baseOptions.TextStyle.FontSize,
+            overrideOptions.TextStyle.CharacterSpacing ?? baseOptions.TextStyle.CharacterSpacing,
             overrideOptions.TextStyle.Color ?? baseOptions.TextStyle.Color,
             overrideOptions.TextStyle.Alpha ?? baseOptions.TextStyle.Alpha,
             overrideOptions.TextStyle.Bold ?? baseOptions.TextStyle.Bold,
@@ -6279,7 +6282,7 @@ internal sealed partial class PptxRenderer
             clipWidth,
             clipHeight,
             style.FontSize,
-            0d,
+            style.CharacterSpacing,
             0d,
             style.Color,
             style.Alpha,
@@ -6336,6 +6339,7 @@ internal sealed partial class PptxRenderer
         return new ChartTextStyle(
             typeface.Typeface,
             fallbackFontSize,
+            0d,
             fallbackColor,
             Alpha: 1d,
             Bold: false,
@@ -6351,6 +6355,7 @@ internal sealed partial class PptxRenderer
         return new ChartTextStyleOverride(
             style.FontFamily,
             style.FontSize,
+            style.CharacterSpacing,
             style.Color,
             style.Alpha,
             style.Bold,
@@ -6378,6 +6383,7 @@ internal sealed partial class PptxRenderer
         return new ChartTextStyle(
             next.FontFamily ?? style.FontFamily,
             next.FontSize ?? style.FontSize,
+            next.CharacterSpacing ?? style.CharacterSpacing,
             next.Color ?? style.Color,
             next.Alpha ?? style.Alpha,
             next.Bold ?? style.Bold,
@@ -6832,7 +6838,7 @@ internal sealed partial class PptxRenderer
                 labelWidth,
                 height * PptxChartMetricRules.AxisLabelClipHeightFactor,
                 fontSize,
-                0d,
+                style.CharacterSpacing,
                 0d,
                 color,
                 1d,
@@ -6913,7 +6919,7 @@ internal sealed partial class PptxRenderer
                 labelWidth,
                 clipHeight,
                 fontSize,
-                0d,
+                style.CharacterSpacing,
                 0d,
                 color,
                 1d,
@@ -6958,10 +6964,10 @@ internal sealed partial class PptxRenderer
 
         public double Measure(string text, ChartTextStyle style)
         {
-            return Measure(text, style.FontSize, style.FontFamily, style.Bold, style.Italic);
+            return Measure(text, style.FontSize, style.FontFamily, style.Bold, style.Italic, style.CharacterSpacing);
         }
 
-        public double Measure(string text, double fontSize, string? fontFamily = null, bool bold = false, bool italic = false)
+        public double Measure(string text, double fontSize, string? fontFamily = null, bool bold = false, bool italic = false, double characterSpacing = 0d)
         {
             return estimator.Measure(
                 text,
@@ -6969,6 +6975,7 @@ internal sealed partial class PptxRenderer
                 fontFamily,
                 bold,
                 italic,
+                characterSpacing,
                 kerningEnabled: true);
         }
     }
@@ -10677,6 +10684,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartTextStyle(
         string? FontFamily,
         double FontSize,
+        double CharacterSpacing,
         RgbColor Color,
         double Alpha,
         bool Bold,
@@ -10689,6 +10697,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartTextStyleOverride(
         string? FontFamily,
         double? FontSize,
+        double? CharacterSpacing,
         RgbColor? Color,
         double? Alpha,
         bool? Bold,
@@ -10698,7 +10707,7 @@ internal sealed partial class PptxRenderer
         string? RequestedTypeface,
         PptxThemeTypefaceSource? TypefaceSource)
     {
-        public static ChartTextStyleOverride Empty { get; } = new(null, null, null, null, null, null, null, null, null, null);
+        public static ChartTextStyleOverride Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> EmptyChartDataLabelOverrides { get; } = new Dictionary<int, ChartDataLabelOverride>();

@@ -1113,6 +1113,7 @@ internal readonly record struct PptxSceneChartTextStyleOverride(
     string? RequestedTypeface,
     PptxThemeTypefaceSource? TypefaceSource,
     double? FontSize,
+    double? CharacterSpacing,
     RgbColor? Color,
     double? Alpha,
     bool? Bold,
@@ -1129,7 +1130,7 @@ internal readonly record struct PptxSceneChartTextStyleOverride(
         bool? italic,
         bool? underline,
         bool? strike)
-        : this(fontFamily, null, null, fontSize, color, alpha, bold, italic, underline, strike)
+        : this(fontFamily, null, null, fontSize, null, color, alpha, bold, italic, underline, strike)
     {
     }
 }
@@ -3637,6 +3638,7 @@ internal sealed class PptxSceneBuilder
             next.FontFamily is null ? style.RequestedTypeface : next.RequestedTypeface,
             next.FontFamily is null ? style.TypefaceSource : next.TypefaceSource,
             next.FontSize ?? style.FontSize,
+            next.CharacterSpacing ?? style.CharacterSpacing,
             next.Color ?? style.Color,
             next.Alpha ?? style.Alpha,
             next.Bold ?? style.Bold,
@@ -3669,6 +3671,7 @@ internal sealed class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
+        double? characterSpacing = ReadOptionalChartCharacterSpacing(defaultRunProperties);
         RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
@@ -3681,6 +3684,7 @@ internal sealed class PptxSceneBuilder
             typefaceResolution.RequestedTypeface,
             typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
             fontSize,
+            characterSpacing,
             color,
             color is null ? null : alpha,
             bold,
@@ -3733,6 +3737,7 @@ internal sealed class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
+        double? characterSpacing = ReadOptionalChartCharacterSpacing(runProperties);
         RgbColor? color = TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
@@ -3745,6 +3750,7 @@ internal sealed class PptxSceneBuilder
             typefaceResolution.RequestedTypeface,
             typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
             fontSize,
+            characterSpacing,
             color,
             color is null ? null : alpha,
             bold,
@@ -4350,6 +4356,7 @@ internal sealed class PptxSceneBuilder
             textStyle.RequestedTypeface is not null ||
             textStyle.TypefaceSource is not null ||
             textStyle.FontSize is not null ||
+            textStyle.CharacterSpacing is not null ||
             textStyle.Color is not null ||
             textStyle.Alpha is not null ||
             textStyle.Bold is not null ||
@@ -4388,6 +4395,7 @@ internal sealed class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
+        double? characterSpacing = ReadOptionalChartCharacterSpacing(defaultRunProperties);
         RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties?.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha) ||
             TryReadSolidColorWithAlpha(fontReference, theme, colorMap, out parsedColor, out alpha)
                 ? parsedColor
@@ -4401,6 +4409,7 @@ internal sealed class PptxSceneBuilder
             typefaceResolution.RequestedTypeface,
             typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
             fontSize,
+            characterSpacing,
             color,
             color is null ? null : alpha,
             bold,
@@ -6186,6 +6195,14 @@ internal sealed class PptxSceneBuilder
         return (runProperties?.Attribute("spc") ?? defaultRunProperties?.Attribute("spc")) is { } spacing
             ? int.Parse(spacing.Value, CultureInfo.InvariantCulture) / 100d
             : 0d;
+    }
+
+    private static double? ReadOptionalChartCharacterSpacing(XElement? runProperties)
+    {
+        return runProperties?.Attribute("spc") is { } spacing &&
+            int.TryParse(spacing.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int spacingHundredths)
+                ? spacingHundredths / 100d
+                : null;
     }
 
     private static double ReadBaselineOffset(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
