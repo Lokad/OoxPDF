@@ -90,11 +90,40 @@ internal sealed class DocxRenderer
         DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver);
         var resources = new List<PdfFontResource>();
         var runResources = new Dictionary<DocxTextRun, DocxRunFontResource>();
+        PrepareResolvedRunFontResources(plan, resources, runResources);
         DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources);
         IDocxTextMeasurer? measurer = plan.Runs.Any(run => run.Resolution?.FontFilePath is not null && File.Exists(run.Resolution.FontFilePath)) || fallback is not null
             ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution)
             : null;
         return new DocxFontResources(plan, measurer, resources, runResources, fallback);
+    }
+
+    private static void PrepareResolvedRunFontResources(
+        DocxFontPlan plan,
+        List<PdfFontResource> resources,
+        Dictionary<DocxTextRun, DocxRunFontResource> runResources)
+    {
+        foreach (IGrouping<(string Path, int FaceIndex), DocxResolvedRunTypeface> group in plan.Runs
+            .Where(run => run.Resolution?.FontFilePath is not null && File.Exists(run.Resolution.FontFilePath))
+            .GroupBy(run => (run.Resolution!.FontFilePath!, run.Resolution.FontFaceIndex)))
+        {
+            FontResolution resolution = group.First().Resolution!;
+            IReadOnlyList<int> glyphs = CollectRunGlyphs(group);
+            if (glyphs.Count == 0)
+            {
+                continue;
+            }
+
+            OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath!, resolution.FontFaceIndex);
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs);
+            string name = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
+            var runResource = new DocxRunFontResource(name, embedded, resolution);
+            resources.Add(new PdfFontResource(name, embedded));
+            foreach (DocxResolvedRunTypeface run in group)
+            {
+                runResources[run.Run] = runResource;
+            }
+        }
     }
 
     private static DocxRunFontResource? PrepareFallbackFontResource(
@@ -109,11 +138,15 @@ internal sealed class DocxRenderer
             return null;
         }
 
-        IReadOnlyList<int> glyphs = plan.Runs
-            .SelectMany(run => run.Run.Text.EnumerateRunes().Select(rune => rune.Value))
-            .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
-            .Distinct()
+        DocxResolvedRunTypeface[] fallbackRuns = plan.Runs
+            .Where(run => !runResources.ContainsKey(run.Run))
             .ToArray();
+        if (fallbackRuns.Length == 0)
+        {
+            return null;
+        }
+
+        IReadOnlyList<int> glyphs = CollectRunGlyphs(fallbackRuns);
         if (glyphs.Count == 0)
         {
             return null;
@@ -124,12 +157,21 @@ internal sealed class DocxRenderer
         string name = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
         var runResource = new DocxRunFontResource(name, embedded, resolution);
         resources.Add(new PdfFontResource(name, embedded));
-        foreach (DocxResolvedRunTypeface run in plan.Runs)
+        foreach (DocxResolvedRunTypeface run in fallbackRuns)
         {
             runResources[run.Run] = runResource;
         }
 
         return runResource;
+    }
+
+    private static IReadOnlyList<int> CollectRunGlyphs(IEnumerable<DocxResolvedRunTypeface> runs)
+    {
+        return runs
+            .SelectMany(run => run.Run.Text.EnumerateRunes().Select(rune => rune.Value))
+            .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
+            .Distinct()
+            .ToArray();
     }
 
     private static FontResolution ResolveDocumentBaseFont(DocxFontPlan plan, IFontResolver fontResolver)

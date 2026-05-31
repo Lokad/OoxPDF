@@ -2030,20 +2030,30 @@ High-priority actions:
       `14.818900`, changed16 `0.134293`. Keep the broader item open because production PDF emission still
       uses one font resource per document, so fully correct symbol glyph emission requires the shared per-run
       layout/resource map below.
-    - [ ] 2026-05-31: Promote DOCX to production run-level PDF font resources only after layout measurement
-      and glyph emission are switched together. A generic no-font-name trial that added per-run PDF font
-      resources from `DocxFontPlan`, while keeping the legacy single-font layout measurer as fallback, stayed
-      page-stable at `16/16` but regressed the private DOCX aggregate from the span-wrapper run's `14.577536`
-      MAE to `16.256186` (`20260531-201939`, changed16 `0.144954`). Do not land emission-only resource
-      selection; the next attempt must use the same run-level font map for wrapping, segment advances,
-      ToUnicode/glyph embedding, and static header/footer text.
+    - [x] 2026-05-31: Promoted DOCX production text emission to run-level PDF font resources derived from
+      `DocxFontPlan`, after layout measurement was already using the same run-level resolved typeface plan.
+      PDF resources are now grouped by resolved font file and TrueType collection face index, with fallback
+      resources used only for unresolved runs; public coverage verifies distinct run typefaces become distinct
+      `/F*` resources without hard-coded family names. The stale `DOCX_NUMBERING_MARKER_FONT` diagnostic was
+      removed because numbering marker pseudo-runs now participate in both run-level measurement and PDF
+      glyph emission. Private DOCX run `20260531-235343` improved to `16/16` pages, zero dimension
+      mismatches, MAE `12.509698`, changed16 `0.112673`, and only reports
+      `DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN`.
+      Prior failed attempts remain useful evidence: an emission-only trial stayed page-stable but regressed
+      the private aggregate from the span-wrapper run's `14.577536` MAE to `16.256186`
+      (`20260531-201939`, changed16 `0.144954`), proving layout measurement and glyph emission had to switch
+      together.
       2026-05-31 update: a second no-font-name trial switched layout measurement and PDF emission together
       through per-run `DocxFontPlan` resources and used resolver metadata to avoid synthetic bold/italic when
       the selected face already carried the style. It still regressed the private DOCX aggregate
       (`20260531-225826`, `MAE=14.809827`, changed16 `0.134021`) against the current single-resource baseline,
-      so production multi-resource emission remains open. The next attempt needs PDF-level text appearance
-      inspection and likely a resource map keyed by layout run identity, not record equality, before replacing
-      the single fallback emission resource.
+      so it was not landed; the completed implementation keeps the structural resource map while preserving
+      the already-aligned font-plan measurer.
+    - [ ] 2026-05-31: Split DOCX static header/footer rendering into run-level line segments instead of
+      concatenating all runs and drawing them with the first run's resource/style. This is now the clearest
+      remaining font-resource architecture gap: body/table text can use the run resource map, but static
+      header/footer text still collapses mixed runs, `{PAGE}` substitution, color, and font resource ownership
+      into the first run. Add public fixtures before touching private documents.
     - [ ] 2026-05-31: Resolve the DOCX pagination gap exposed by structural font/style alignment. Private
       DOCX run `20260531-203336` improved aggregate MAE to `13.852449` and changed16 to `0.125076`, but the
       candidate now paginates as `14` pages against Office's `16` reference pages with `2` dimension mismatches.
@@ -2115,6 +2125,11 @@ High-priority actions:
     before symbol/bullet glyph parity can be considered complete. Private DOCX run `20260531-234039` stayed
     raster-neutral at `16/16` pages, zero dimension mismatches, MAE `13.648284`, changed16 `0.125542`, and
     replaced `DOCX_NUMBERING_INDENT` with `DOCX_NUMBERING_MARKER_FONT`.
+    2026-05-31 progress: after the production run-level PDF resource map landed, the marker-font warning was
+    removed as stale rather than kept as a broad heuristic. Numbering marker pseudo-runs now flow through the
+    same font-plan measurement and PDF glyph embedding as body/table runs. Keep this parent open only for
+    remaining numbering semantics: exact tab-stop ownership, restart/override edges, and Word fixture coverage
+    for suffix and continuation-line behavior.
   2026-05-31 progress: paragraph wrapping now carries separate first-line and continuation-line widths, so
     numbered body and table-cell paragraphs wrap continuation lines against the hanging text column rather than
     reusing the wider first-line space-suffix box. Public `docx-numbering --skip-slow` passed `8` tests with a
@@ -4607,6 +4622,14 @@ Current validation baseline:
   Private DOCX run `20260531-234639` stayed neutral at `16/16` pages, zero dimension mismatches,
   `MAE=13.648284`, changed16 `0.125542`, and now reports `DOCX_NUMBERING_MARKER_FONT` plus the specific
   `DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN`.
+- DOCX run-level PDF font-resource validation:
+  after grouping `DocxFontPlan` runs into PDF font resources by resolved font file and collection face index,
+  and removing the stale broad marker-font diagnostic, public validation passed `docx-core --skip-slow` (`16`),
+  `docx-numbering --skip-slow` (`11`), `docx-text --skip-slow` (`17`), `docx-tables --skip-slow` (`48`), and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. A parallel test attempt hit the known
+  transient `VBCSCompiler` output lock, then serial reruns passed. Private DOCX run `20260531-235343`
+  improved to `16/16` pages, zero dimension mismatches, `MAE=12.509698`, changed16 `0.112673`, and now reports
+  only `DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

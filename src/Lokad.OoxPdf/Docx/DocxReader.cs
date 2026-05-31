@@ -312,18 +312,6 @@ internal sealed class DocxReader
             Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated");
         }
 
-        if (numbering is not null &&
-            numbering.Descendants(WordprocessingNamespace + "lvl")
-                .Any(level =>
-                    string.Equals(
-                        (string?)level.Element(WordprocessingNamespace + "numFmt")?.Attribute(WordprocessingNamespace + "val"),
-                        "bullet",
-                        StringComparison.OrdinalIgnoreCase) &&
-                    level.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts") is not null))
-        {
-            Emit("DOCX_NUMBERING_MARKER_FONT", "numbering marker font", numberingPartName ?? partName, "Approximated");
-        }
-
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
             p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
         {
