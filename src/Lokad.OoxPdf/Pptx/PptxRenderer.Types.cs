@@ -1212,7 +1212,7 @@ internal sealed partial class PptxRenderer
         public const double DataLabelFallbackFontSize = 8.5d;
         public const double AxisSingleValueHeadroomFactor = 1.2d;
         public const double AxisValueEpsilon = 0.0001d;
-        public const double AxisNiceTickTargetCount = 8d;
+        public const double AxisNiceTickTargetCount = 9d;
         public const double AxisNiceHorizontalValueTickTargetCount = 10d;
         public const double BubbleAxisBoundsTickTargetCount = 5d;
         public const double BubbleAxisNiceTickTargetCount = 10d;
