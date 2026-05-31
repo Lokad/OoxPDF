@@ -294,10 +294,7 @@ internal sealed class DocxReader
                 .Elements(WordprocessingNamespace + "spacing")
                 .Any(spacing =>
                     spacing.Attribute(WordprocessingNamespace + "beforeAutospacing") is not null ||
-                    spacing.Attribute(WordprocessingNamespace + "afterAutospacing") is not null ||
-                    spacing.Attribute(WordprocessingNamespace + "beforeLines") is not null ||
-                    spacing.Attribute(WordprocessingNamespace + "afterLines") is not null ||
-                    spacing.Parent?.Element(WordprocessingNamespace + "contextualSpacing") is not null))
+                    spacing.Attribute(WordprocessingNamespace + "afterAutospacing") is not null))
             {
                 Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated");
             }

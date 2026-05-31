@@ -1887,6 +1887,13 @@ High-priority actions:
       `20260531-192811` stayed page-stable at `16/16` with zero dimension mismatches but moved slightly
       against the aggregate (`15.856962` MAE, `0.141649` changed16 versus `15.849350`/`0.141574`), so the
       remaining spacing item stays open for autospacing, table/section collapse, and Office-backed fixtures.
+    - [x] 2026-05-31: Tightened `DOCX_STYLE_PARAGRAPH_SPACING` diagnostics so supported style-level
+      `beforeLines`/`afterLines` and adjacent same-style `contextualSpacing` no longer look like unsupported
+      renderer gaps. The warning still fires for `beforeAutospacing`/`afterAutospacing`; exact Word
+      autospacing values, table/section adjacency collapse, and Office-authored fixtures remain open. Private
+      DOCX run `20260531-222149` stayed at `16/16` pages with zero dimension mismatches and unchanged aggregate
+      metrics (`14.818900` MAE, `0.134293` changed16), while `DOCX_STYLE_PARAGRAPH_SPACING` dropped from the
+      private diagnostic list because the remaining private style-spacing triggers were already-supported forms.
   - [ ] 2026-05-31: Build a real DOCX font-resolution/substitution stage instead of relying on the first run's
     resolved font as a document-wide layout/drawing font. Private-safe inspection shows the worst remaining
     private DOCX pages are dominated by a missing corporate font fallback that renders with a condensed face;
