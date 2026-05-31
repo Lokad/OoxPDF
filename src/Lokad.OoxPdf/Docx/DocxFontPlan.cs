@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Fonts;
+using System.Text;
 
 namespace Lokad.OoxPdf.Docx;
 
@@ -96,6 +97,88 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             .Select(family => family!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+}
+
+internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer
+{
+    private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
+    private readonly Dictionary<(string Path, int FaceIndex), OpenTypeFont?> fonts = new();
+
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan)
+    {
+        runs = plan.Runs;
+    }
+
+    public double MeasureText(DocxTextRun? run, string text, double fontSize)
+    {
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        if (resolved?.Resolution is not FontResolution resolution)
+        {
+            return 0d;
+        }
+
+        OpenTypeFont? font = LoadFont(resolution);
+        if (font is null || font.UnitsPerEm == 0)
+        {
+            return 0d;
+        }
+
+        double units = 0d;
+        ushort previousGlyph = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            ushort glyph = font.MapCodePoint(rune.Value);
+            if (previousGlyph != 0 && glyph != 0)
+            {
+                units += font.GetKerning(previousGlyph, glyph);
+            }
+
+            units += font.GetAdvanceWidth(glyph);
+            previousGlyph = glyph;
+        }
+
+        return units * fontSize / font.UnitsPerEm;
+    }
+
+    private DocxResolvedRunTypeface? ResolveRun(DocxTextRun? run)
+    {
+        if (run is null)
+        {
+            return null;
+        }
+
+        return runs.FirstOrDefault(resolved => resolved.Run.Equals(run));
+    }
+
+    private OpenTypeFont? LoadFont(FontResolution resolution)
+    {
+        if (string.IsNullOrWhiteSpace(resolution.FontFilePath))
+        {
+            return null;
+        }
+
+        var key = (resolution.FontFilePath, resolution.FontFaceIndex);
+        if (fonts.TryGetValue(key, out OpenTypeFont? cached))
+        {
+            return cached;
+        }
+
+        OpenTypeFont? loaded = TryLoadFont(resolution.FontFilePath, resolution.FontFaceIndex);
+        fonts[key] = loaded;
+        return loaded;
+    }
+
+    private static OpenTypeFont? TryLoadFont(string path, int faceIndex)
+    {
+        try
+        {
+            return OpenTypeFont.Load(path, faceIndex);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 }
 

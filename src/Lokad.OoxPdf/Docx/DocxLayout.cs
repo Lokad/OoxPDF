@@ -153,6 +153,11 @@ internal sealed class DocxLayoutEngine
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
     {
         IDocxTextMeasurer? textMeasurer = embedded is null ? null : new DocxEmbeddedTextMeasurer(embedded);
+        return Create(document, textMeasurer);
+    }
+
+    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer)
+    {
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
         double x = document.MarginLeftPoints;
@@ -240,7 +245,9 @@ internal sealed class DocxLayoutEngine
                         FinishPage();
                     }
 
-                    double lineWidth = textMeasurer.MeasureText(firstRun, line, paragraphFontSize);
+                    double lineWidth = firstLine && paragraph.ListLabel is not null
+                        ? textMeasurer.MeasureText(firstRun, line, paragraphFontSize)
+                        : MeasureTextSegments(line, paragraph.Runs, paragraphFontSize, textMeasurer);
                     double lineX = paragraph.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -252,7 +259,7 @@ internal sealed class DocxLayoutEngine
                         : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
                     IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
                         ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, x + labelStartOffset, lineX, paragraphFontSize, textMeasurer)
-                        : [new DocxTextSegmentLayout(line, firstRun, lineX, lineWidth)];
+                        : CreateTextSegments(line, paragraph.Runs, lineX, paragraphFontSize, textMeasurer);
                     double effectiveX = firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX;
                     double effectiveWidth = firstLine && paragraph.ListLabel is not null
                         ? Math.Max(lineX + lineWidth, x + labelStartOffset + textMeasurer.MeasureText(firstRun, paragraph.ListLabel.Text, paragraphFontSize)) - (x + labelStartOffset)
@@ -822,7 +829,9 @@ internal sealed class DocxLayoutEngine
             bool firstLine = true;
             foreach (string line in WrapTextLines(text, paragraphWidth, continuationParagraphWidth, fontSize, firstRun, textMeasurer))
             {
-                double lineWidth = textMeasurer.MeasureText(firstRun, line, fontSize);
+                double lineWidth = firstLine && paragraph.ListLabel is not null
+                    ? textMeasurer.MeasureText(firstRun, line, fontSize)
+                    : MeasureTextSegments(line, paragraph.Runs, fontSize, textMeasurer);
                 double lineX = paragraph.Alignment switch
                 {
                     DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -999,6 +1008,15 @@ internal sealed class DocxLayoutEngine
         return segments.Count == 0
             ? [new DocxTextSegmentLayout(line, runs[0], lineX, textMeasurer.MeasureText(runs[0], line, fontSize))]
             : segments;
+    }
+
+    private static double MeasureTextSegments(
+        string line,
+        IReadOnlyList<DocxTextRun> runs,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer)
+    {
+        return CreateTextSegments(line, runs, 0d, fontSize, textMeasurer).Sum(segment => segment.Width);
     }
 
     private static IEnumerable<string> WrapTextLines(string text, double maxWidth, double fontSize, DocxTextRun? run, IDocxTextMeasurer textMeasurer)

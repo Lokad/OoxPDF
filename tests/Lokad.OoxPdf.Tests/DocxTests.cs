@@ -860,6 +860,61 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.DistinctResolvedFamilyCount);
     }
 
+    public static void DocxFontPlanTextMeasurerUsesResolvedFontFace()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string text = "Office metrics";
+        var run = new DocxTextRun(text, 12d, null, font.Value.Resolution.Bold, font.Value.Resolution.Italic, false, null, font.Value.Resolution.FamilyName)
+        {
+            Fonts = new DocxRunFonts(font.Value.Resolution.FamilyName, null, null, null, null, null, null, null)
+        };
+        DocxDocument document = CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
+        var resolver = new SingleResolutionFontResolver(font.Value.Resolution);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver);
+
+        double measured = new DocxFontPlanTextMeasurer(plan).MeasureText(run, text, run.FontSize);
+        double expected = MeasureOpenTypeText(font.Value.Font, text, run.FontSize);
+
+        TestAssert.True(Math.Abs(measured - expected) < 0.000001d, "Font-plan measurement should use the resolved OpenType face, including TTC face index, instead of a hard-coded font.");
+    }
+
+    public static void DocxLayoutStagePositionsMixedRunSegmentsWithRunAwareMeasurer()
+    {
+        var narrowRun = new DocxTextRun("A", 12d, null, false, false, false, null, "Narrow");
+        var wideRun = new DocxTextRun("B", 12d, null, false, false, false, null, "Wide");
+        var paragraph = new DocxParagraph(
+            [narrowRun, wideRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal(5d, line.Segments[0].Width);
+        TestAssert.Equal(40d, line.Segments[1].Width);
+        TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width, line.Segments[1].X);
+    }
+
     public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
@@ -4170,6 +4225,74 @@ internal static class DocxTests
         catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
         {
             return null;
+        }
+    }
+
+    private static (FontResolution Resolution, OpenTypeFont Font)? FindUsableInstalledFont()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!Directory.Exists(fontsDirectory))
+        {
+            return null;
+        }
+
+        var resolver = new WindowsFontResolver(fontsDirectory);
+        foreach (FontResolution resolution in resolver.GetDiscoveredFonts().Where(font => font.FontFilePath is not null))
+        {
+            try
+            {
+                OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath!, resolution.FontFaceIndex);
+                if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
+                {
+                    return (resolution, font);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+            {
+            }
+        }
+
+        return null;
+    }
+
+    private static double MeasureOpenTypeText(OpenTypeFont font, string text, double fontSize)
+    {
+        double units = 0d;
+        ushort previousGlyph = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            ushort glyph = font.MapCodePoint(rune.Value);
+            if (previousGlyph != 0 && glyph != 0)
+            {
+                units += font.GetKerning(previousGlyph, glyph);
+            }
+
+            units += font.GetAdvanceWidth(glyph);
+            previousGlyph = glyph;
+        }
+
+        return units * fontSize / font.UnitsPerEm;
+    }
+
+    private sealed class SingleResolutionFontResolver(FontResolution resolution) : IFontResolver
+    {
+        public FontResolution Resolve(FontRequest request)
+        {
+            return resolution with
+            {
+                Bold = request.Bold,
+                Italic = request.Italic,
+                IsFallback = !request.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase)
+            };
+        }
+    }
+
+    private sealed class FamilyWidthTextMeasurer : IDocxTextMeasurer
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize)
+        {
+            double width = run?.FontFamily == "Wide" ? 40d : 5d;
+            return text.Length * width;
         }
     }
 

@@ -1954,6 +1954,23 @@ High-priority actions:
       private DOCX run `20260531-200355` stayed page-stable and metric-neutral (`16/16`, zero dimension
       mismatches, `15.856962` MAE), so this removes the direct layout dependency on `PdfEmbeddedFont` without
       changing output.
+    - [x] 2026-05-31: Added a DOCX font-plan text measurer that measures with the resolved `OpenTypeFont`
+      face from `DocxFontPlan`, including TrueType collection face index, instead of a document-wide or named
+      fallback font. This is still a bridge for tests and the next renderer slice, not production fallback
+      policy: production output remains unchanged until line layout and PDF emission share the same run-level
+      resource map. Public coverage dynamically selects an installed usable face without hard-coded family
+      names and verifies the measurement matches raw OpenType advances plus kerning.
+    - [x] 2026-05-31: Fixed DOCX non-numbered body/table line widths and segment positions to use the
+      line's run-level text segments instead of measuring the whole line with the first run. This removes a
+      structural first-run flattening gap that could misplace mixed-style text and lose later run color/style
+      during body paragraph emission. Public `docx-core --skip-slow` passed `12`, and `docx-tables
+      --skip-slow` passed `38`.
+    - [ ] 2026-05-31: Finish DOCX mixed-run line building by making wrapping own run spans, not just the final
+      line segments. The current wrapper still tokenizes a concatenated paragraph string and tests candidate
+      line widths against the first run, so mixed fonts/styles can still choose Word-incompatible break points
+      even though final segment placement is now run-aware. The next slice should introduce a paragraph text
+      span model that preserves run boundaries through tokenization, line breaking, numbering continuation
+      lines, and table-cell paragraphs before enabling production font-plan measurement.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
