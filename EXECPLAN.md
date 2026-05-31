@@ -1919,6 +1919,13 @@ High-priority actions:
       Public coverage pins this structure before renderer consumption; production drawing still uses the
       legacy single-font path until layout measurement and PDF emission can consume the same per-run font
       resource map.
+    - [ ] 2026-05-31: Promote the DOCX renderer from one document-wide font to a run-level font resource and
+      measurement map before changing production fallback policy. A generic trial that consumed `fontTable.xml`
+      `w:altName` after an exact primary miss, with no named-font exceptions, correctly avoided the arbitrary
+      resolver fallback but regressed the private DOCX run `20260531-194952` from `16/16` to `18` candidate
+      pages with 2 dimension mismatches (`16.094264` MAE). This confirms the long-term rule: font selection,
+      glyph embedding, and line/table measurement must share the same per-run resolved typeface state before
+      document-authored alternates can safely affect rendering.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
