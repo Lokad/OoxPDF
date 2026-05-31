@@ -1811,6 +1811,11 @@ High-priority actions:
     reports page dimensions, item counts, item kinds, bounds, cell counts, and text lengths, but not document
     text. This gives private DOCX pagination/table work a restartable trace target before adding Word layout
     rules.
+  - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
+    flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
+    the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses
+    the default part. Private-safe inventory found the current private DOCX carries three header references;
+    this closes the structural model gap without using header text or document-specific logic.
   - [x] 2026-05-31: Preserved parsed paragraph models inside DOCX table cells while keeping the existing
     flattened cell text for current rendering. This closes a model gap that blocked future row-height,
     paragraph spacing, inherited paragraph/character styling, per-run styling, and numbering layout inside cells.
@@ -4539,6 +4544,12 @@ Current validation baseline:
   table-level logical outer borders, `docx-tables --skip-slow` passed `47`, `docx-numbering --skip-slow`
   passed `10`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
   `20260531-232213` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
+  `0.125542`.
+- DOCX typed header/footer validation:
+  after preserving default/first/even header/footer reference types and selecting static parts per page,
+  `docx-page --skip-slow` passed `15`, `docx-tables --skip-slow` passed `47`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
+  `20260531-232937` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
   `0.125542`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt

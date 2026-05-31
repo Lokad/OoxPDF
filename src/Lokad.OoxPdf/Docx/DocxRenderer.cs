@@ -61,8 +61,22 @@ internal sealed class DocxRenderer
             if (fontResources.Fallback is not null)
             {
                 int pageNumber = pageIndex + 1;
-                RenderStaticParagraphs(document.HeaderParagraphs, graphics, fontResources, document.MarginLeftPoints, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
-                RenderStaticParagraphs(document.FooterParagraphs, graphics, fontResources, document.MarginLeftPoints, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
+                RenderStaticParagraphs(
+                    SelectStaticHeaderFooter(document.HeaderParagraphsByType, document.HeaderParagraphs, document.PageSettings, pageNumber),
+                    graphics,
+                    fontResources,
+                    document.MarginLeftPoints,
+                    width,
+                    document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d),
+                    pageNumber);
+                RenderStaticParagraphs(
+                    SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, document.PageSettings, pageNumber),
+                    graphics,
+                    fontResources,
+                    document.MarginLeftPoints,
+                    width,
+                    Math.Max(18d, document.MarginBottomPoints / 2d),
+                    pageNumber);
             }
 
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray()));
@@ -296,6 +310,31 @@ internal sealed class DocxRenderer
         return int.TryParse(sizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int eighths)
             ? Math.Max(0.25d, eighths / 8d)
             : 0.75d;
+    }
+
+    private static IReadOnlyList<DocxParagraph> SelectStaticHeaderFooter(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
+        IReadOnlyList<DocxParagraph> fallbackParagraphs,
+        DocxPageSettings settings,
+        int pageNumber)
+    {
+        if (settings.TitlePage == true &&
+            pageNumber == 1 &&
+            paragraphsByType.TryGetValue("first", out IReadOnlyList<DocxParagraph>? first))
+        {
+            return first;
+        }
+
+        if (settings.EvenAndOddHeaders == true &&
+            pageNumber % 2 == 0 &&
+            paragraphsByType.TryGetValue("even", out IReadOnlyList<DocxParagraph>? even))
+        {
+            return even;
+        }
+
+        return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaultParagraphs)
+            ? defaultParagraphs
+            : fallbackParagraphs;
     }
 
     private static void RenderStaticParagraphs(

@@ -5102,6 +5102,84 @@ internal static class DocxTests
         TestAssert.Equal(3, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
     }
 
+    public static void DocxSyntheticHeaderReferenceTypesSelectDefaultWhenNoFirstOrEvenSetting()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/header3.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeaderEven" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                  <Relationship Id="rIdHeaderDefault" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>
+                  <Relationship Id="rIdHeaderFirst" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header3.xml"/>
+                </Relationships>
+                """,
+            ["word/header1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Even header</w:t></w:r></w:p></w:hdr>
+                """,
+            ["word/header2.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Default header</w:t></w:r></w:p></w:hdr>
+                """,
+            ["word/header3.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>First header</w:t></w:r></w:p></w:hdr>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p><w:r><w:t>Body text</w:t></w:r></w:p>
+                    <w:sectPr>
+                      <w:headerReference w:type="even" r:id="rIdHeaderEven"/>
+                      <w:headerReference w:type="default" r:id="rIdHeaderDefault"/>
+                      <w:headerReference w:type="first" r:id="rIdHeaderFirst"/>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            DocxDocument document = new DocxReader().Read(package);
+            TestAssert.Equal(3, document.HeaderParagraphsByType.Count);
+            TestAssert.Equal(1, document.HeaderParagraphs.Count);
+        }
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Equal(2, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
+    }
+
     public static void DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -16,6 +16,10 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxTable> Tables)
 {
     public DocxFontCatalog FontCatalog { get; init; } = DocxFontCatalog.Empty;
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
 
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
         : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
@@ -51,9 +55,13 @@ internal sealed record DocxPageSettings(
     string? MarginTopValue,
     string? MarginRightValue,
     string? MarginBottomValue,
-    string? MarginLeftValue)
+    string? MarginLeftValue,
+    bool? TitlePage,
+    string? TitlePageValue,
+    bool? EvenAndOddHeaders,
+    string? EvenAndOddHeadersValue)
 {
-    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null);
+    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null);
 }
 
 internal sealed record DocxFloatingDrawing(
