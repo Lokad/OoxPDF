@@ -1260,6 +1260,8 @@ internal sealed partial class PptxRenderer
                         extraValueExtents,
                         extraHorizontalBars,
                         extraValueAxisOptions.Reversed,
+                        extraBarOptions.Grouping,
+                        extraBarOptions.GapWidth,
                         extraSeriesFills,
                         extraPointFills,
                         extraBarOptions.VaryColors.Value,
@@ -1397,6 +1399,8 @@ internal sealed partial class PptxRenderer
                     valueExtents,
                     horizontalBars,
                     valueAxisOptions.Reversed,
+                    barOptions.Grouping,
+                    barOptions.GapWidth,
                     seriesFills,
                     pointFills,
                     barOptions.VaryColors.Value,
@@ -5488,6 +5492,8 @@ internal sealed partial class PptxRenderer
         ChartValueExtents extents,
         bool horizontalBars,
         bool valueAxisReversed,
+        PptxSceneChartGrouping grouping,
+        double gapWidthPercent,
         IReadOnlyList<ChartSeriesFill?> seriesFills,
         IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills,
         bool varyColors,
@@ -5512,14 +5518,23 @@ internal sealed partial class PptxRenderer
         double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
+        bool stacked = IsStackedChartGrouping(grouping);
+        bool percentStacked = IsPercentStackedChartGrouping(grouping);
         if (horizontalBars)
         {
             double categoryHeight = plotBox.Height / categoryCount;
-            double barSlot = categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
+            double barSlot = stacked
+                ? GetStackedBarWidth(categoryHeight, gapWidthPercent)
+                : categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
             double labelWidth = Math.Max(PptxChartMetricRules.CartesianDataLabelMinimumWidth, plotBox.Width * PptxChartMetricRules.HorizontalBarDataLabelWidthRatio);
+            double[] positiveValues = new double[categoryCount];
+            double[] negativeValues = new double[categoryCount];
+            double[] positiveTotals = stacked ? GetCategoryPositiveTotals(densePointSeries, categoryCount, percentStacked) : [];
             for (int category = 0; category < categoryCount; category++)
             {
-                double categoryY = plotBox.Y + category * categoryHeight + categoryHeight * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
+                double categoryY = stacked
+                    ? plotBox.Y + category * categoryHeight + (categoryHeight - barSlot) / 2d
+                    : plotBox.Y + category * categoryHeight + categoryHeight * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
                 for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
                 {
                     IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
@@ -5528,8 +5543,14 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    double barBase = zeroX;
-                    double barEnd = ChartValueToPlotCoordinate(extents, value, plotBox.X, plotBox.Width, valueAxisReversed);
+                    double normalizedValue = stacked ? NormalizeStackedValue(value, positiveTotals[category], percentStacked) : value;
+                    (double barBase, double barEnd) = stacked
+                        ? ResolveStackedBarSegmentValues(positiveValues, negativeValues, category, normalizedValue)
+                        : (0d, value);
+                    double barBaseX = stacked
+                        ? ChartValueToPlotCoordinate(extents, barBase, plotBox.X, plotBox.Width, valueAxisReversed)
+                        : zeroX;
+                    double barEndX = ChartValueToPlotCoordinate(extents, barEnd, plotBox.X, plotBox.Width, valueAxisReversed);
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     if (!effectiveOptions.HasVisibleContent)
                     {
@@ -5539,8 +5560,9 @@ internal sealed partial class PptxRenderer
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, colorMap, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                    double x = ResolveHorizontalBarDataLabelX(effectiveOptions.PositionKind, barBase, barEnd, labelWidth);
-                    double y = categoryY + seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d;
+                    PptxSceneChartDataLabelPosition labelPosition = ResolveStackedBarDataLabelPosition(effectiveOptions.PositionKind, stacked);
+                    double x = ResolveHorizontalBarDataLabelX(labelPosition, barBaseX, barEndX, labelWidth);
+                    double y = categoryY + (stacked ? (barSlot - labelHeight) / 2d : seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d);
                     ChartIndexedNumberPoint point = points[category]!.Value;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
@@ -5568,10 +5590,17 @@ internal sealed partial class PptxRenderer
         else
         {
             double categoryWidth = plotBox.Width / categoryCount;
-            double barSlot = categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
+            double barSlot = stacked
+                ? GetStackedBarWidth(categoryWidth, gapWidthPercent)
+                : categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
+            double[] positiveValues = new double[categoryCount];
+            double[] negativeValues = new double[categoryCount];
+            double[] positiveTotals = stacked ? GetCategoryPositiveTotals(densePointSeries, categoryCount, percentStacked) : [];
             for (int category = 0; category < categoryCount; category++)
             {
-                double categoryX = plotBox.X + category * categoryWidth + categoryWidth * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
+                double categoryX = stacked
+                    ? plotBox.X + category * categoryWidth + (categoryWidth - barSlot) / 2d
+                    : plotBox.X + category * categoryWidth + categoryWidth * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
                 for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
                 {
                     IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
@@ -5580,9 +5609,15 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    double x = categoryX + seriesIndex * barSlot;
-                    double barBase = zeroY;
-                    double barEnd = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
+                    double normalizedValue = stacked ? NormalizeStackedValue(value, positiveTotals[category], percentStacked) : value;
+                    (double barBase, double barEnd) = stacked
+                        ? ResolveStackedBarSegmentValues(positiveValues, negativeValues, category, normalizedValue)
+                        : (0d, value);
+                    double x = categoryX + (stacked ? 0d : seriesIndex * barSlot);
+                    double barBaseY = stacked
+                        ? ChartValueToPlotCoordinate(extents, barBase, plotBox.Y, plotBox.Height, valueAxisReversed)
+                        : zeroY;
+                    double barEndY = ChartValueToPlotCoordinate(extents, barEnd, plotBox.Y, plotBox.Height, valueAxisReversed);
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     if (!effectiveOptions.HasVisibleContent)
                     {
@@ -5592,7 +5627,8 @@ internal sealed partial class PptxRenderer
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, colorMap, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                    double y = ResolveVerticalBarDataLabelY(effectiveOptions.PositionKind, barBase, barEnd, labelHeight);
+                    PptxSceneChartDataLabelPosition labelPosition = ResolveStackedBarDataLabelPosition(effectiveOptions.PositionKind, stacked);
+                    double y = ResolveVerticalBarDataLabelY(labelPosition, barBaseY, barEndY, labelHeight);
                     ChartIndexedNumberPoint point = points[category]!.Value;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
@@ -5814,6 +5850,27 @@ internal sealed partial class PptxRenderer
             PptxSceneChartDataLabelPosition.InsideEnd or PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.Bottom => extendsUp ? barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap : barEnd + PptxChartMetricRules.BarDataLabelVerticalGap,
             PptxSceneChartDataLabelPosition.OutsideEnd or _ => extendsUp ? barEnd + PptxChartMetricRules.BarDataLabelVerticalGap : barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap
         };
+    }
+
+    private static PptxSceneChartDataLabelPosition ResolveStackedBarDataLabelPosition(PptxSceneChartDataLabelPosition position, bool stacked)
+    {
+        return stacked && position == PptxSceneChartDataLabelPosition.Unknown
+            ? PptxSceneChartDataLabelPosition.Center
+            : position;
+    }
+
+    private static (double Start, double End) ResolveStackedBarSegmentValues(double[] positiveValues, double[] negativeValues, int category, double value)
+    {
+        if (value >= 0d)
+        {
+            double start = positiveValues[category];
+            positiveValues[category] += value;
+            return (start, positiveValues[category]);
+        }
+
+        double negativeStart = negativeValues[category];
+        negativeValues[category] += value;
+        return (negativeStart, negativeValues[category]);
     }
 
     private static (double X, double Y, TextAlignment Alignment) ResolveLineDataLabelPosition(PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth, double labelHeight)

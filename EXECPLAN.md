@@ -225,6 +225,19 @@ High-priority actions:
   `0.045451389` changed16, `0.954406876` SSIM), but the item remains open: remaining numeric chart labels
   still differ in baseline/position and likely need Office-aligned bar/stacked data-label box geometry and
   chart-label text color inheritance, not another private coordinate tweak.
+  2026-05-31 progress: the remaining right-schema numeric labels were traced to stacked-column data-label
+  geometry. The renderer was using clustered series slots for data labels even when the bars themselves used
+  cumulative stacked segment geometry. `RenderBarDataLabels` now receives the bar grouping and gap width,
+  computes positive/negative stacked segment start/end values with the same normalization as bar rendering,
+  and defaults missing stacked-bar label positions to centered segment labels instead of outside-end labels.
+  A public `pptx-charts` synthetic guard now checks that stacked-column labels share the stacked column rather
+  than spreading into clustered slots. Private run `20260531-183004` kept slide 42 in the same aggregate metric
+  band (`2.254341242` MAE, `0.045626929` changed16, `0.954226790` SSIM), but PDF text inspection shows the
+  right-schema numeric labels moved from clustered-slot positions to within about 2-3 pt of Office positions
+  and their fill color states now match Office's white/dark label sequence. Remaining residual is lower-level
+  chart text emission structure: Office emits these bold labels as fill+stroke text, while the candidate uses
+  normal filled text when a bold font is resolved. Keep that residual with the shared Office PDF text-emission
+  track instead of adding slide-specific chart offsets.
 - [ ] 2026-05-31: Continue the private page-36 typography branch as an Office text-emission model problem,
   not as a font-family rule. Private run `20260531-002604` has page 36 as the worst slide (`6.045371817`
   MAE) and the page is now narrowed to text-state decomposition: candidate and Office text positions are close
