@@ -1665,12 +1665,12 @@ High-priority actions:
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.
-  - [ ] 2026-05-31: Replace the remaining stacked-column per-rectangle fill emission with Office-like
-    compound series paths. Private slide 44 and public stacked-column cases show Office emitting each stacked
-    series as a compound filled path (`16` segments / `4` moves for four categories), while OOXPDF currently
-    emits separate four-segment rectangles. The slide 44 readability issue is now mostly addressed through
-    bottom-legend plot-box alignment, but the compound-path gap remains open and should be closed through a
-    public stacked-column fixture rather than a private-slide rule.
+  - [x] 2026-05-31: Replace the remaining stacked-column per-rectangle fill emission with Office-like
+    compound series paths. Private slide 44 and public stacked-column cases showed Office emitting each
+    stacked series as a compound filled path (`16` segments / `4` moves for four categories). OOXPDF now emits
+    stacked column/bar fills as series-major compound paths for simple fills, with patterned fills still using
+    the existing per-rectangle pattern fallback. Public stacked-column and 100% stacked-column fixtures now
+    gate `FilledRegion` operators, segment counts, and path-command counts.
   - [ ] Bubble chart layout still uses Office-observed title/right-legend plot-box and bubble headroom
     constants, now including separate bubble plot-width and right-legend swatch placement ratios. Keep these
     as explicit temporary `PptxChartMetricRules` inventory until chart structural oracle tooling can derive
@@ -1768,6 +1768,14 @@ document-specific business content into public notes.
     versus `137.70..296.70`; the overlay connector strokes were already matching Office. The remaining chart
     gap is stacked-column fill structure: Office emits compound per-series paths, while OOXPDF still emits
     separate rectangles.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260531-131300` after the stacked-column
+  compound-fill slice:
+  - 84/84 pages compared with zero dimension mismatches and no diagnostics file.
+  - The focused chart page improved again from run `20260531-130027` MAE `1.702704`, changed16 `0.039896`,
+    SSIM `0.960047` to MAE `1.657135`, changed16 `0.039641`, SSIM `0.962169`.
+  - The generic remaining slide-44 work is no longer per-segment stacked-column fill emission. The bottom
+    legend probe still carries loose raster/text gates because it also exposes broader chart text and layout
+    differences.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260529-035838` before the image recolor
   renderer-boundary cleanup:
   - 84/84 pages compared with zero dimension mismatches.
@@ -3534,7 +3542,13 @@ Current validation baseline:
   to Office (`137.71..296.69` vs `137.70..296.70`).
 - Public chart bottom-legend probe: `pptx-ladder-11-chart-column-stacked-bottom-legend-probe` run
   `20260531-130415` passed with structural plot-box/axis gates. Its intentionally loose raster/text gates
-  reflect the still-open stacked-column compound-fill and chart-text layout gaps.
+  now reflect remaining chart-text and bottom-legend layout gaps rather than stacked-column compound-fill
+  emission.
+- Public stacked-column fixtures: `pptx-ladder-11-chart-column-stacked-port` and
+  `pptx-ladder-11-chart-column-100-stacked-port` run `20260531-131506` passed after adding `FilledRegion`
+  structural gates. Both now match Office's stacked series fill path operators and path-command counts
+  (`16` segments / `4` moves for four-category stacked columns, `12` segments / `3` moves for the 100%
+  stacked probe).
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

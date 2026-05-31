@@ -16,9 +16,19 @@
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
     "compareChartGraphicsStructureKinds": [
       "AxisPairPlotBoxCandidate",
+      "FilledRegion",
       "GridlineAxisPlotBoxCandidate",
       "HorizontalGridlineGroupCandidate",
       "PlotAreaClipBoxCandidate"
+    ],
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["FilledRegion"],
+        "maxBoundsDelta": 2,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true,
+        "matchPathOperators": true
+      }
     ],
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": [

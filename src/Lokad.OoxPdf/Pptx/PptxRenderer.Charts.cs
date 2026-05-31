@@ -8548,6 +8548,52 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static void FillChartRectanglesAsCompoundPath(PdfGraphicsBuilder graphics, IReadOnlyList<ChartRectangle> rectangles, ChartSeriesFill fill)
+    {
+        if (rectangles.Count == 0)
+        {
+            return;
+        }
+
+        if (fill.PatternPreset is not null)
+        {
+            foreach (ChartRectangle rectangle in rectangles)
+            {
+                FillChartRectangle(graphics, rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height, fill);
+            }
+
+            return;
+        }
+
+        if (fill.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(fill.Alpha, 1d);
+        }
+
+        RgbColor fillColor = fill.BackgroundColor ?? fill.Color;
+        graphics.SetFillRgb(fillColor.Red, fillColor.Green, fillColor.Blue);
+        foreach (ChartRectangle rectangle in rectangles)
+        {
+            AppendChartRectanglePath(graphics, rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
+        }
+
+        graphics.FillCurrentPath();
+        if (fill.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
+    }
+
+    private static void AppendChartRectanglePath(PdfGraphicsBuilder graphics, double x, double y, double width, double height)
+    {
+        graphics.MoveTo(x, y);
+        graphics.LineTo(x + width, y);
+        graphics.LineTo(x + width, y + height);
+        graphics.LineTo(x, y + height);
+        graphics.ClosePath();
+    }
+
     private static void StrokeChartPatternFill(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartSeriesFill fill)
     {
         if (width <= 0d || height <= 0d)
@@ -8578,6 +8624,11 @@ internal sealed partial class PptxRenderer
     private static void FillChartRectangleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double x, double y, double width, double height, ChartSeriesFill fill)
     {
         RenderInChartPlotAreaClip(graphics, plotBox, () => FillChartRectangle(graphics, x, y, width, height, fill));
+    }
+
+    private static void FillChartRectanglesAsCompoundPathInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ChartRectangle> rectangles, ChartSeriesFill fill)
+    {
+        RenderInChartPlotAreaClip(graphics, plotBox, () => FillChartRectanglesAsCompoundPath(graphics, rectangles, fill));
     }
 
     private static void FillChartDotPattern(PdfGraphicsBuilder graphics, double x, double y, double width, double height, RgbColor color, int densityPercent)
@@ -8690,13 +8741,14 @@ internal sealed partial class PptxRenderer
     {
         double categoryWidth = plotWidth / categoryCount;
         double barWidth = GetStackedBarWidth(categoryWidth, gapWidthPercent);
-        for (int category = 0; category < categoryCount; category++)
+        double[] positiveValues = new double[categoryCount];
+        double[] negativeValues = new double[categoryCount];
+        double[] positiveTotals = GetCategoryPositiveTotals(series, categoryCount, percentStacked);
+        var strokeSegments = new List<ChartStackedBarSegment>();
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            double categoryX = plotX + category * categoryWidth + (categoryWidth - barWidth) / 2d;
-            double positiveValue = 0d;
-            double negativeValue = 0d;
-            double positiveTotal = GetCategoryPositiveTotal(series, category, percentStacked);
-            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+            var fillRuns = new List<ChartStackedBarFillRun>();
+            for (int category = 0; category < categoryCount; category++)
             {
                 IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
                 if (category >= values.Count || values[category]?.Value is not { } rawValue)
@@ -8704,44 +8756,82 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                double value = NormalizeStackedValue(rawValue, positiveTotal, percentStacked);
+                double categoryX = plotX + category * categoryWidth + (categoryWidth - barWidth) / 2d;
+                double value = NormalizeStackedValue(rawValue, positiveTotals[category], percentStacked);
                 ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, value);
                 double segmentStartValue;
                 double segmentEndValue;
                 if (value >= 0d)
                 {
-                    segmentStartValue = positiveValue;
-                    positiveValue += value;
-                    segmentEndValue = positiveValue;
+                    segmentStartValue = positiveValues[category];
+                    positiveValues[category] += value;
+                    segmentEndValue = positiveValues[category];
                 }
                 else
                 {
-                    segmentStartValue = negativeValue;
-                    negativeValue += value;
-                    segmentEndValue = negativeValue;
+                    segmentStartValue = negativeValues[category];
+                    negativeValues[category] += value;
+                    segmentEndValue = negativeValues[category];
                 }
 
                 double startY = ChartValueToPlotCoordinate(valueExtents, segmentStartValue, plotY, plotHeight, valueAxisReversed);
                 double endY = ChartValueToPlotCoordinate(valueExtents, segmentEndValue, plotY, plotHeight, valueAxisReversed);
                 double segmentY = Math.Min(startY, endY);
                 double segmentHeight = Math.Abs(endY - startY);
-                FillChartRectangleInPlotClip(graphics, plotBox, categoryX, segmentY, barWidth, segmentHeight, fill);
-                StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, categoryX, segmentY, barWidth, segmentHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
+                AddStackedBarFillRun(fillRuns, fill, new ChartRectangle(categoryX, segmentY, barWidth, segmentHeight));
+                strokeSegments.Add(new ChartStackedBarSegment(seriesIndex, category, categoryX, segmentY, barWidth, segmentHeight, value));
+            }
+
+            foreach (ChartStackedBarFillRun run in fillRuns)
+            {
+                FillChartRectanglesAsCompoundPathInPlotClip(graphics, plotBox, run.Rectangles, run.Fill);
             }
         }
+
+        foreach (ChartStackedBarSegment segment in strokeSegments)
+        {
+            StrokeChartPointRectangleInPlotClip(
+                graphics,
+                plotBox,
+                segment.SeriesIndex,
+                segment.CategoryIndex,
+                pointStrokes,
+                segment.X,
+                segment.Y,
+                segment.Width,
+                segment.Height,
+                ResolveNegativeBarFallbackStroke(pointStrokes, segment.SeriesIndex, segment.CategoryIndex, segment.Value));
+        }
+    }
+
+    private static void AddStackedBarFillRun(List<ChartStackedBarFillRun> fillRuns, ChartSeriesFill fill, ChartRectangle rectangle)
+    {
+        for (int i = 0; i < fillRuns.Count; i++)
+        {
+            ChartStackedBarFillRun run = fillRuns[i];
+            if (run.Fill == fill)
+            {
+                run.Rectangles.Add(rectangle);
+                return;
+            }
+        }
+
+        var rectangles = new List<ChartRectangle> { rectangle };
+        fillRuns.Add(new ChartStackedBarFillRun(fill, rectangles));
     }
 
     private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetStackedBarWidth(categoryHeight, gapWidthPercent);
-        for (int category = 0; category < categoryCount; category++)
+        double[] positiveValues = new double[categoryCount];
+        double[] negativeValues = new double[categoryCount];
+        double[] positiveTotals = GetCategoryPositiveTotals(series, categoryCount, percentStacked);
+        var strokeSegments = new List<ChartStackedBarSegment>();
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            double categoryY = plotY + category * categoryHeight + (categoryHeight - barHeight) / 2d;
-            double positiveValue = 0d;
-            double negativeValue = 0d;
-            double positiveTotal = GetCategoryPositiveTotal(series, category, percentStacked);
-            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+            var fillRuns = new List<ChartStackedBarFillRun>();
+            for (int category = 0; category < categoryCount; category++)
             {
                 IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
                 if (category >= values.Count || values[category]?.Value is not { } rawValue)
@@ -8749,30 +8839,51 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                double value = NormalizeStackedValue(rawValue, positiveTotal, percentStacked);
+                double categoryY = plotY + category * categoryHeight + (categoryHeight - barHeight) / 2d;
+                double value = NormalizeStackedValue(rawValue, positiveTotals[category], percentStacked);
                 ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, value);
                 double segmentStartValue;
                 double segmentEndValue;
                 if (value >= 0d)
                 {
-                    segmentStartValue = positiveValue;
-                    positiveValue += value;
-                    segmentEndValue = positiveValue;
+                    segmentStartValue = positiveValues[category];
+                    positiveValues[category] += value;
+                    segmentEndValue = positiveValues[category];
                 }
                 else
                 {
-                    segmentStartValue = negativeValue;
-                    negativeValue += value;
-                    segmentEndValue = negativeValue;
+                    segmentStartValue = negativeValues[category];
+                    negativeValues[category] += value;
+                    segmentEndValue = negativeValues[category];
                 }
 
                 double startX = ChartValueToPlotCoordinate(valueExtents, segmentStartValue, plotX, plotWidth, valueAxisReversed);
                 double endX = ChartValueToPlotCoordinate(valueExtents, segmentEndValue, plotX, plotWidth, valueAxisReversed);
                 double segmentX = Math.Min(startX, endX);
                 double segmentWidth = Math.Abs(endX - startX);
-                FillChartRectangleInPlotClip(graphics, plotBox, segmentX, categoryY, segmentWidth, barHeight, fill);
-                StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, segmentX, categoryY, segmentWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
+                AddStackedBarFillRun(fillRuns, fill, new ChartRectangle(segmentX, categoryY, segmentWidth, barHeight));
+                strokeSegments.Add(new ChartStackedBarSegment(seriesIndex, category, segmentX, categoryY, segmentWidth, barHeight, value));
             }
+
+            foreach (ChartStackedBarFillRun run in fillRuns)
+            {
+                FillChartRectanglesAsCompoundPathInPlotClip(graphics, plotBox, run.Rectangles, run.Fill);
+            }
+        }
+
+        foreach (ChartStackedBarSegment segment in strokeSegments)
+        {
+            StrokeChartPointRectangleInPlotClip(
+                graphics,
+                plotBox,
+                segment.SeriesIndex,
+                segment.CategoryIndex,
+                pointStrokes,
+                segment.X,
+                segment.Y,
+                segment.Width,
+                segment.Height,
+                ResolveNegativeBarFallbackStroke(pointStrokes, segment.SeriesIndex, segment.CategoryIndex, segment.Value));
         }
     }
 
@@ -8809,6 +8920,23 @@ internal sealed partial class PptxRenderer
         }
 
         return Math.Max(1d, total);
+    }
+
+    private static double[] GetCategoryPositiveTotals(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, bool percentStacked)
+    {
+        var totals = new double[categoryCount];
+        if (!percentStacked)
+        {
+            Array.Fill(totals, 1d);
+            return totals;
+        }
+
+        for (int category = 0; category < categoryCount; category++)
+        {
+            totals[category] = GetCategoryPositiveTotal(series, category, percentStacked);
+        }
+
+        return totals;
     }
 
     private static double NormalizeStackedValue(double value, double positiveTotal, bool percentStacked)
@@ -10377,6 +10505,12 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha, string? PatternPreset = null, RgbColor? BackgroundColor = null);
+
+    private readonly record struct ChartRectangle(double X, double Y, double Width, double Height);
+
+    private readonly record struct ChartStackedBarSegment(int SeriesIndex, int CategoryIndex, double X, double Y, double Width, double Height, double Value);
+
+    private readonly record struct ChartStackedBarFillRun(ChartSeriesFill Fill, List<ChartRectangle> Rectangles);
 
     private readonly record struct ChartSeriesStroke(
         RgbColor Color,

@@ -15036,17 +15036,28 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var segmentRectangles = Regex.Matches(pdf, @"(?<x>[0-9.]+) (?<y>[0-9.]+) (?<w>[0-9.]+) (?<h>[0-9.]+) re\s+f")
+        var segmentRectangles = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+(?<x3>[0-9.]+) (?<y3>[0-9.]+) l\s+(?<x4>[0-9.]+) (?<y4>[0-9.]+) l\s+h\s+f")
             .Cast<Match>()
-            .Select(match => new
+            .Select(match =>
             {
-                Y = double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture),
-                Width = double.Parse(match.Groups["w"].Value, CultureInfo.InvariantCulture),
-                Height = double.Parse(match.Groups["h"].Value, CultureInfo.InvariantCulture)
+                double x1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture);
+                double x2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture);
+                double x3 = double.Parse(match.Groups["x3"].Value, CultureInfo.InvariantCulture);
+                double x4 = double.Parse(match.Groups["x4"].Value, CultureInfo.InvariantCulture);
+                double y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture);
+                double y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture);
+                double y3 = double.Parse(match.Groups["y3"].Value, CultureInfo.InvariantCulture);
+                double y4 = double.Parse(match.Groups["y4"].Value, CultureInfo.InvariantCulture);
+                return new
+                {
+                    Y = new[] { y1, y2, y3, y4 }.Min(),
+                    Width = new[] { x1, x2, x3, x4 }.Max() - new[] { x1, x2, x3, x4 }.Min(),
+                    Height = new[] { y1, y2, y3, y4 }.Max() - new[] { y1, y2, y3, y4 }.Min()
+                };
             })
             .Where(rectangle => rectangle.Width > 10d && rectangle.Width < 220d && rectangle.Height > 20d && rectangle.Height < 220d)
             .ToArray();
-        TestAssert.True(segmentRectangles.Length >= 2, "Expected two filled stacked column segment rectangles.");
+        TestAssert.True(segmentRectangles.Length >= 2, "Expected two filled stacked column segment paths.");
         TestAssert.True(segmentRectangles[1].Y < segmentRectangles[0].Y,
             "Stacked column segments should accumulate through mapped value intervals when the value axis is maxMin.");
     }
@@ -15107,17 +15118,28 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var segmentRectangles = Regex.Matches(pdf, @"(?<x>[0-9.]+) (?<y>[0-9.]+) (?<w>[0-9.]+) (?<h>[0-9.]+) re\s+f")
+        var segmentRectangles = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+(?<x3>[0-9.]+) (?<y3>[0-9.]+) l\s+(?<x4>[0-9.]+) (?<y4>[0-9.]+) l\s+h\s+f")
             .Cast<Match>()
-            .Select(match => new
+            .Select(match =>
             {
-                X = double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture),
-                Width = double.Parse(match.Groups["w"].Value, CultureInfo.InvariantCulture),
-                Height = double.Parse(match.Groups["h"].Value, CultureInfo.InvariantCulture)
+                double x1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture);
+                double x2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture);
+                double x3 = double.Parse(match.Groups["x3"].Value, CultureInfo.InvariantCulture);
+                double x4 = double.Parse(match.Groups["x4"].Value, CultureInfo.InvariantCulture);
+                double y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture);
+                double y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture);
+                double y3 = double.Parse(match.Groups["y3"].Value, CultureInfo.InvariantCulture);
+                double y4 = double.Parse(match.Groups["y4"].Value, CultureInfo.InvariantCulture);
+                return new
+                {
+                    X = new[] { x1, x2, x3, x4 }.Min(),
+                    Width = new[] { x1, x2, x3, x4 }.Max() - new[] { x1, x2, x3, x4 }.Min(),
+                    Height = new[] { y1, y2, y3, y4 }.Max() - new[] { y1, y2, y3, y4 }.Min()
+                };
             })
             .Where(rectangle => rectangle.Width > 20d && rectangle.Width < 220d && rectangle.Height > 10d && rectangle.Height < 220d)
             .ToArray();
-        TestAssert.True(segmentRectangles.Length >= 2, "Expected two filled stacked horizontal bar segment rectangles.");
+        TestAssert.True(segmentRectangles.Length >= 2, "Expected two filled stacked horizontal bar segment paths.");
         TestAssert.True(segmentRectangles[1].X < segmentRectangles[0].X,
             "Stacked horizontal bar segments should accumulate through mapped value intervals when the value axis is maxMin.");
     }

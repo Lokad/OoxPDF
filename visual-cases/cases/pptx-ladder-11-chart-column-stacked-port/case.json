@@ -15,11 +15,21 @@
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
     "compareChartGraphicsStructureKinds": [
       "AxisPairPlotBoxCandidate",
+      "FilledRegion",
       "GridlineAxisPlotBoxCandidate",
       "HorizontalGridlineGroupCandidate",
       "HorizontalLine",
       "PlotAreaClipBoxCandidate",
       "VerticalLine"
+    ],
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["FilledRegion"],
+        "maxBoundsDelta": 4.2,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true,
+        "matchPathOperators": true
+      }
     ],
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
