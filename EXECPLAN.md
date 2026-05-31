@@ -1874,6 +1874,10 @@ High-priority actions:
     2026-05-31 progress: parsed `w:num/w:lvlOverride/w:startOverride` and applied the num-specific start value
     before incrementing list counters. Public coverage verifies labels restart from `5.`/`6.` while sharing the
     abstract level. Private DOCX run `20260531-175443` stayed neutral (`15.889775` MAE, `0.141949` changed16).
+    2026-05-31 progress: multilevel label text now resolves `%1` through `%9` from the active counter state and
+    resets deeper counters when a higher level advances. Public coverage verifies `1.`, `1.1.`, `1.2.`, `2.`,
+    `2.1.` label progression. Private DOCX run `20260531-175714` stayed neutral (`15.889775` MAE, `0.141949`
+    changed16).
   - [x] 2026-05-31: Preserved DOCX `w:tblHeader` row tokens and repeated contiguous header rows when a table
     page break occurs. This moves repeating headers out of diagnostics-only handling and into the table layout
     stage with public coverage. The diagnostic remains as an approximation because multi-row/header-group
@@ -4121,6 +4125,10 @@ Current validation baseline:
   after applying `w:lvlOverride/w:startOverride`, `docx-numbering --skip-slow` passed `6`. Private DOCX run
   `20260531-175443` stayed at `16/16` pages, zero dimension mismatches, MAE `15.889775`, changed16 `0.141949`;
   `DOCX_NUMBERING_INDENT` remains open for tab-stop ownership, bullet fonts, and multilevel/restart semantics.
+- DOCX multilevel numbering validation:
+  after resolving `%1` through `%9` from active counters and resetting deeper counters on parent increments,
+  `docx-numbering --skip-slow` passed `7`. Private DOCX run `20260531-175714` stayed at `16/16` pages, zero
+  dimension mismatches, MAE `15.889775`, changed16 `0.141949`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

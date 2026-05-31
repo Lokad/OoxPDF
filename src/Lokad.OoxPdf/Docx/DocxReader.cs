@@ -1016,9 +1016,31 @@ internal sealed class DocxReader
             ? overriddenStart
             : numberingLevel.Start;
         counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : start;
-        string numberText = counters[key].ToString(CultureInfo.InvariantCulture);
-        string labelText = numberingLevel.Text.Replace("%" + (level + 1).ToString(CultureInfo.InvariantCulture), numberText, StringComparison.Ordinal);
+        foreach (var resetKey in counters.Keys.Where(k => k.NumId == numId && k.Level > level).ToArray())
+        {
+            counters.Remove(resetKey);
+        }
+
+        string labelText = ResolveNumberingLevelText(numberingLevel.Text, numId, counters);
         return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent);
+    }
+
+    private static string ResolveNumberingLevelText(string text, string numId, IReadOnlyDictionary<(string NumId, int Level), int> counters)
+    {
+        string resolved = text;
+        for (int level = 0; level < 9; level++)
+        {
+            string token = "%" + (level + 1).ToString(CultureInfo.InvariantCulture);
+            if (resolved.Contains(token, StringComparison.Ordinal))
+            {
+                string value = counters.TryGetValue((numId, level), out int counter)
+                    ? counter.ToString(CultureInfo.InvariantCulture)
+                    : "0";
+                resolved = resolved.Replace(token, value, StringComparison.Ordinal);
+            }
+        }
+
+        return resolved;
     }
 
     private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName)
