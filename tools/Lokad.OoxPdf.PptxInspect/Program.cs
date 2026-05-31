@@ -235,6 +235,9 @@ foreach (PptxSlide slide in slides)
             Round(run.InterGlyphAdjustmentMax),
             Round(run.InterGlyphAdjustmentAverage),
             categories.LetterCount,
+            categories.UppercaseLetterCount,
+            categories.LowercaseLetterCount,
+            categories.TitlecaseLetterCount,
             categories.DecimalDigitCount,
             categories.PunctuationCount,
             categories.SymbolCount,
@@ -447,6 +450,9 @@ static double? RoundNullable(double? value)
 static GlyphCategoryCounts CountGlyphCategories(string text)
 {
     int letterCount = 0;
+    int uppercaseLetterCount = 0;
+    int lowercaseLetterCount = 0;
+    int titlecaseLetterCount = 0;
     int decimalDigitCount = 0;
     int punctuationCount = 0;
     int symbolCount = 0;
@@ -457,8 +463,17 @@ static GlyphCategoryCounts CountGlyphCategories(string text)
         switch (Rune.GetUnicodeCategory(rune))
         {
             case UnicodeCategory.UppercaseLetter:
+                letterCount++;
+                uppercaseLetterCount++;
+                break;
             case UnicodeCategory.LowercaseLetter:
+                letterCount++;
+                lowercaseLetterCount++;
+                break;
             case UnicodeCategory.TitlecaseLetter:
+                letterCount++;
+                titlecaseLetterCount++;
+                break;
             case UnicodeCategory.ModifierLetter:
             case UnicodeCategory.OtherLetter:
                 letterCount++;
@@ -492,7 +507,16 @@ static GlyphCategoryCounts CountGlyphCategories(string text)
         }
     }
 
-    return new GlyphCategoryCounts(letterCount, decimalDigitCount, punctuationCount, symbolCount, spaceCount, otherCount);
+    return new GlyphCategoryCounts(
+        letterCount,
+        uppercaseLetterCount,
+        lowercaseLetterCount,
+        titlecaseLetterCount,
+        decimalDigitCount,
+        punctuationCount,
+        symbolCount,
+        spaceCount,
+        otherCount);
 }
 
 static string? FormatColor(RgbColor? color)
@@ -612,6 +636,9 @@ internal sealed record PptxGlyphRunRecord(
     double InterGlyphAdjustmentMax,
     double InterGlyphAdjustmentAverage,
     int LetterCount,
+    int UppercaseLetterCount,
+    int LowercaseLetterCount,
+    int TitlecaseLetterCount,
     int DecimalDigitCount,
     int PunctuationCount,
     int SymbolCount,
@@ -620,6 +647,9 @@ internal sealed record PptxGlyphRunRecord(
 
 internal readonly record struct GlyphCategoryCounts(
     int LetterCount,
+    int UppercaseLetterCount,
+    int LowercaseLetterCount,
+    int TitlecaseLetterCount,
     int DecimalDigitCount,
     int PunctuationCount,
     int SymbolCount,

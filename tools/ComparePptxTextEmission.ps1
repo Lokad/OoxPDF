@@ -658,6 +658,15 @@ foreach ($pair in $pairs) {
             CandInterGlyphAdjustmentMin = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "InterGlyphAdjustmentMin" }
             CandInterGlyphAdjustmentMax = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "InterGlyphAdjustmentMax" }
             CandInterGlyphAdjustmentAverage = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "InterGlyphAdjustmentAverage" }
+            CandLetterCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "LetterCount" }
+            CandUppercaseLetterCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "UppercaseLetterCount" }
+            CandLowercaseLetterCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "LowercaseLetterCount" }
+            CandTitlecaseLetterCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "TitlecaseLetterCount" }
+            CandDecimalDigitCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "DecimalDigitCount" }
+            CandPunctuationCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "PunctuationCount" }
+            CandSymbolCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "SymbolCount" }
+            CandSpaceCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "SpaceCount" }
+            CandOtherCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "OtherCount" }
             RefText = if ($IncludeText -and $null -ne $reference) { RefText $reference } else { $null }
             CandText = if ($IncludeText -and $null -ne $candidate) { CandText $candidate } else { $null }
         })
@@ -782,6 +791,9 @@ foreach ($pair in $pairs) {
         CandInterGlyphAdjustmentMax = OptionalRoundedDouble $candidate "InterGlyphAdjustmentMax"
         CandInterGlyphAdjustmentAverage = OptionalRoundedDouble $candidate "InterGlyphAdjustmentAverage"
         CandLetterCount = OptionalValue $candidate "LetterCount"
+        CandUppercaseLetterCount = OptionalValue $candidate "UppercaseLetterCount"
+        CandLowercaseLetterCount = OptionalValue $candidate "LowercaseLetterCount"
+        CandTitlecaseLetterCount = OptionalValue $candidate "TitlecaseLetterCount"
         CandDecimalDigitCount = OptionalValue $candidate "DecimalDigitCount"
         CandPunctuationCount = OptionalValue $candidate "PunctuationCount"
         CandSymbolCount = OptionalValue $candidate "SymbolCount"
@@ -866,12 +878,16 @@ if (HasValue $OutputSummaryJson) {
         ByCandidateInterGlyphAdjustmentCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandInterGlyphAdjustmentCount")) + "|" + (BranchKey $row) }
         ByCandidateInterGlyphAdjustmentAverageAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandInterGlyphAdjustmentAverage")) + "|" + (BranchKey $row) }
         ByCandidateLetterCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandLetterCount")) + "|" + (BranchKey $row) }
+        ByCandidateUppercaseLetterCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandUppercaseLetterCount")) + "|" + (BranchKey $row) }
+        ByCandidateLowercaseLetterCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandLowercaseLetterCount")) + "|" + (BranchKey $row) }
+        ByCandidateTitlecaseLetterCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandTitlecaseLetterCount")) + "|" + (BranchKey $row) }
         ByCandidateDecimalDigitCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandDecimalDigitCount")) + "|" + (BranchKey $row) }
         ByCandidatePunctuationCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandPunctuationCount")) + "|" + (BranchKey $row) }
         ByCandidateSymbolCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandSymbolCount")) + "|" + (BranchKey $row) }
         ByCandidateSpaceCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandSpaceCount")) + "|" + (BranchKey $row) }
         ByCandidateOtherCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandOtherCount")) + "|" + (BranchKey $row) }
         ByCandidateContentShapeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandLetterCount")) + "," + (RoundedKey (OptionalValue $row "CandDecimalDigitCount")) + "," + (RoundedKey (OptionalValue $row "CandPunctuationCount")) + "," + (RoundedKey (OptionalValue $row "CandSymbolCount")) + "," + (RoundedKey (OptionalValue $row "CandSpaceCount")) + "," + (RoundedKey (OptionalValue $row "CandOtherCount")) + "|" + (BranchKey $row) }
+        ByCandidateLetterCaseShapeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandUppercaseLetterCount")) + "," + (RoundedKey (OptionalValue $row "CandLowercaseLetterCount")) + "," + (RoundedKey (OptionalValue $row "CandTitlecaseLetterCount")) + "|" + (BranchKey $row) }
     }
 
     $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputSummaryJson -Encoding UTF8

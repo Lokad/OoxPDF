@@ -139,6 +139,15 @@ $summaries = foreach ($path in $paths) {
                 "|lineSpans=" + (RoundedKey (OptionalValue $row "CandLineSpanCount") 0) +
                 "|run=" + (RoundedKey (OptionalValue $row "CandSourceRunIndex") 0)
         }
+        NonzeroReferenceByCandidateLetterCase = Group-Count $nonzeroRefRows {
+            param($row)
+            "upper=" + (RoundedKey (OptionalValue $row "CandUppercaseLetterCount") 0) +
+                "|lower=" + (RoundedKey (OptionalValue $row "CandLowercaseLetterCount") 0) +
+                "|title=" + (RoundedKey (OptionalValue $row "CandTitlecaseLetterCount") 0) +
+                "|letters=" + (RoundedKey (OptionalValue $row "CandLetterCount") 0) +
+                "|spaces=" + (RoundedKey (OptionalValue $row "CandSpaceCount") 0) +
+                "|tc=" + (RoundedKey (OptionalValue $row "RefCharacterSpacing") 6)
+        }
         NonzeroReferenceByCandidateAdjustments = Group-Count $nonzeroRefRows {
             param($row)
             "avg=" + (RoundedKey (OptionalValue $row "CandInterGlyphAdjustmentAverage") 6) +
@@ -155,6 +164,18 @@ $summaries = foreach ($path in $paths) {
                 "|italic=" + (BoolKey (OptionalValue $row "CandItalic")) +
                 "|lineSpans=" + (RoundedKey (OptionalValue $row "CandLineSpanCount") 0) +
                 "|run=" + (RoundedKey (OptionalValue $row "CandSourceRunIndex") 0) +
+                "|avg=" + (RoundedKey (OptionalValue $row "CandInterGlyphAdjustmentAverage") 6)
+        }
+        ZeroReferenceByCandidateLetterCaseWithResiduals = Group-Count (@($zeroRefRows | Where-Object {
+            $avg = OptionalDouble $_ "CandInterGlyphAdjustmentAverage"
+            $null -ne $avg -and [Math]::Abs($avg) -gt 0.001d
+        })) {
+            param($row)
+            "upper=" + (RoundedKey (OptionalValue $row "CandUppercaseLetterCount") 0) +
+                "|lower=" + (RoundedKey (OptionalValue $row "CandLowercaseLetterCount") 0) +
+                "|title=" + (RoundedKey (OptionalValue $row "CandTitlecaseLetterCount") 0) +
+                "|letters=" + (RoundedKey (OptionalValue $row "CandLetterCount") 0) +
+                "|spaces=" + (RoundedKey (OptionalValue $row "CandSpaceCount") 0) +
                 "|avg=" + (RoundedKey (OptionalValue $row "CandInterGlyphAdjustmentAverage") 6)
         }
     }

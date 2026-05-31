@@ -33,6 +33,9 @@ keep diagnostics honest when a feature is still missing.
   `RegionIndex` when the graphics/text classifiers can attach structures to plot-box-derived regions.
 - `tools/SummarizeChartDataLabelLayout.ps1`: focused public PDF structure summary for chart data-label text
   and leader-line layout gaps.
+- `tools/SummarizePptxTextStateDeltas.ps1`: private-safe aggregate summary of Office/candidate PPTX text
+  emission comparisons, including `Tc` buckets, table/style/frame structure, glyph residuals, and letter-case
+  counts. It must not emit private text content.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -652,6 +655,22 @@ High-priority actions:
   promotion, do not key on table-ness alone, and do not key on private font family. The next acceptable
   renderer change must explain both the simple/composite table positives and rich-text zero-`Tc` counterexample,
   while also covering the non-table page-36 branch.
+  Follow-up, 2026-05-31: extended `PptxInspect`, `ComparePptxTextEmission.ps1`, and
+  `SummarizePptxTextStateDeltas.ps1` with private-safe uppercase/lowercase/titlecase counters to test whether
+  the private-deck `Tc` buckets are a letter-case decomposition rule. They are not. Refreshed private summaries
+  for pages 36, 21, and 79 show incompatible positives and counterexamples: page 36 has `131/133` matched
+  operations with nonzero Office `Tc`, dominated by lowercase-only single-span frame-15 rows such as
+  `20` operations with `upper=0`, `lower=27`, `spaces=0`, and `Tc=-0.036`; page 21 has many zero-Office-`Tc`
+  rows with nonzero candidate residuals and similar mixed-case text shapes; page 79 has table-heavy nonzero
+  Office `Tc`, including large buckets with no letters after text-operation matching. Public probes confirm the
+  rejection outside the private deck: `pptx-ladder-04-typography-capital-spacing-probe`,
+  `pptx-ladder-04-typography-dense-column-probe`, and `pptx-ladder-04-typography-run-boundaries` all emit
+  Office `Tc=0` despite nonzero candidate residuals and varied uppercase/lowercase shapes, while
+  `pptx-ladder-04-typography-unspaced-column-tc-probe` emits nonzero `Tc` for uppercase-only unspaced rows.
+  Therefore do not add letter-case, all-caps, lowercase-only, or residual-magnitude rules. The viable path is
+  still an Office PDF text-state model that combines frame/paragraph/line state, secondary `/Tf` selection,
+  glyph residual decomposition, and operation splitting, validated by public probes before changing private
+  deck rendering.
   Follow-up, 2026-05-31: accepted the content-minimum overflow row-allocation rule for slack tables. Public
   `pptx-ladder-10-table-center-explicit-multiline` showed that Office lets row content minima exceed the
   `graphicFrame` height instead of compressing all rows back into the frame when the minimum total is too tall.
