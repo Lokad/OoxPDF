@@ -255,6 +255,15 @@ High-priority actions:
   land a global no-autofit tolerance change. The next attempt needs a narrower structural discriminator, likely
   tied to the exact Office line-building state for unspaced paragraphs/columns rather than the autofit enum
   alone.
+  Follow-up, 2026-05-31: extended `SummarizePptxTextStateDeltas.ps1` with reliable-position placement buckets
+  so page-36 text-state work does not accidentally turn into a baseline nudge. Rechecking run `20260531-014545`
+  shows the dominant three-column explicit `noAutofit` frame is already vertically aligned: `41` reliable
+  matches average `DeltaBaselineY=+0.016632pt` with range `-0.020441..+0.055559pt`. The larger baseline
+  residuals are in separate one-column frames (`18pt` default-autofit around `-0.326pt`, and `14.04pt`
+  noAutofit numbered/default frames around `-0.17..-0.91pt`). Therefore do not pursue a page-36 global
+  baseline constant, `0.974` fallback change, column baseline offset, or font-family baseline rule. The
+  rendering-impact branch remains Office PDF text-state decomposition: `Tc`, secondary `/Tf`, and operation
+  splitting, with public probes needed before changing production behavior.
 - [x] 2026-05-31: Moved table-cell vertical overflow clipping toward Office's cell-rectangle structure from
   private page-21 evidence. The page has a table with explicit cell insets, middle vertical anchoring, and
   table-style `clip` overflow. Candidate PDF inspection showed many table text clips using the inset text
@@ -512,6 +521,17 @@ High-priority actions:
   punctuation splitting over-decomposes cases that Office represents with character spacing. Keep future
   attempts layout-preserving, but derive operation boundaries and `Tc` together from the positioned glyph
   residuals rather than from punctuation categories alone.
+  Follow-up, 2026-05-31: refreshed page-79 with reliable-position placement buckets after the table clip and
+  following-space-flow fixes. The current exact comparison has `308` Office rows, `202` matched rows, `106`
+  missing rows, and `192` reliable position matches. Reliable table baseline deltas are stable within cells
+  and vary by row/cell rather than by a single page coordinate: row `3` averages about `-0.554pt`, row `2`
+  about `-0.319pt`, row `1` about `-0.328pt`, row `5` about `-0.233pt`, row `4` about `-0.200pt`, and row
+  `0` about `-0.199pt`. The largest missing Office text-state buckets are still `11.04pt` table text with
+  nonzero `Tc` (`0.0509`, `0.00384`, `-0.0216`, `-0.0379`, `-0.116`) plus unmatched rows where no candidate
+  cell match is reliable. The page-79 table has explicit `0.62748pt` top/bottom insets and declared row heights
+  equal to rendered row heights, so the existing default-inset magic constants are not active. Do not add
+  row/column offsets or a flat middle-anchor adjustment; the next acceptable renderer slice needs a public
+  table-cell fixture that separates vertical text-height/anchor computation from PDF text-state splitting.
   Follow-up, 2026-05-30: extended `PptxInspect` so table text paragraph snapshots are emitted separately as
   `table-text-paragraph-models.json`, avoiding ad hoc private XML parsing when investigating table text.
   Re-inspection of page 79 shows the table paragraphs resolve through the normal paragraph/style cascade
@@ -8834,6 +8854,18 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: The dominant private page-36 three-column text-state branch is not a baseline-placement
+  problem.
+  Evidence: The reliable-position summary for run `20260531-014545` has `41` matched operations in the
+  explicit `noAutofit`, three-column, `12pt` frame with average `DeltaBaselineY=+0.016632pt` and range
+  `-0.020441..+0.055559pt`. The remaining page-36 rendering-impact branch is therefore PDF text-state and
+  operation decomposition, not a global baseline constant.
+- Observation: Private page-79 table text has repeatable sub-point baseline residuals by row/cell, but not a
+  single row/column offset rule.
+  Evidence: The same reliable-position summary reports page-79 table rows around `-0.554pt`, `-0.319pt`,
+  `-0.328pt`, `-0.233pt`, `-0.200pt`, and `-0.199pt`, with stable per-cell buckets. The table uses explicit
+  small insets and no declared/rendered row-height slack, so the default table-inset constants are not the
+  active branch.
 - Observation: Changing slide height while holding 21 pt textbox source coordinates fixed shifts Office's
   secondary `/Tf +0.024 pt` window.
   Evidence: Public-safe ignored variants of `font-size-quantization-y-scan-21pt-fine` report secondary rows at
@@ -9151,6 +9183,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Keep the refreshed page-36/page-79 placement evidence in diagnostic mode and do not change
+  baseline fallback constants, table row/column coordinates, or table default-inset adjustments from this
+  private deck evidence.
+  Rationale: Page 36's dominant frame is already vertically aligned, while page 79's table residuals vary by
+  row/cell and are entangled with missing Office text operations and `Tc` buckets. A production change needs a
+  public fixture that isolates table-cell vertical anchoring or text-state splitting first.
+  Date/Author: 2026-05-31 / Codex.
 - Decision: Do not implement the secondary Office `/Tf +0.024 pt` branch as a fixed Y-band, top-origin baseline
   band, or local text-frame rule.
   Rationale: Page-height variants of the public-safe fine 21 pt Y-scan shift the secondary source-Y window even
@@ -9504,6 +9543,17 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Private-safe PPTX text placement summary, 2026-05-31:
+pwsh tools\SummarizePptxTextStateDeltas.ps1 -CompareJson artifacts\tmp\lvb-014545-page36-text-compare-localtext.json,artifacts\tmp\lvb-014545-page79-text-compare-localtext.json -OutputJson artifacts\tmp\lvb-014545-text-state-placement-summary.json:
+page 36: 147 total, 121 matched, 26 missing, 116 reliable-position matches, 119 matched nonzero Office `Tc`.
+page 79: 308 total, 202 matched, 106 missing, 192 reliable-position matches, 190 matched nonzero Office `Tc`.
+pwsh tools\SummarizePptxTextStateDeltas.ps1 -CompareJson artifacts\tmp\textstate-pptx-ladder-04-typography-unspaced-column-tc-probe-compare-case.json,artifacts\tmp\textstate-pptx-ladder-04-typography-dense-column-probe-compare-case2.json -OutputJson artifacts\tmp\public-text-state-placement-summary.json:
+public unspaced-column probe: 83 total, 81 matched, 2 missing, 54 reliable-position matches.
+public dense-column counterexample: 9 total, 9 matched, 0 missing, 7 reliable-position matches.
+This is diagnostic-only validation; no renderer behavior changed.
+```
 
 ```text
 Straight-connector triangle line-end marker alignment, 2026-05-30:
