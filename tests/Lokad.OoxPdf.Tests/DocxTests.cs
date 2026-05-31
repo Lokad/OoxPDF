@@ -2946,6 +2946,90 @@ internal static class DocxTests
         TestAssert.Equal("D9EAD3", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
     }
 
+    public static void DocxReaderTableStyleCascadesBasedOnProperties()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:styleId="BaseTable">
+                    <w:tblPr><w:tblCellMar><w:left w:w="240" w:type="dxa"/></w:tblCellMar></w:tblPr>
+                    <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9EAD3"/></w:tcPr>
+                    <w:pPr><w:jc w:val="right"/></w:pPr>
+                    <w:rPr><w:b/><w:color w:val="336699"/></w:rPr>
+                    <w:tblStylePr w:type="firstRow"><w:tcPr><w:vAlign w:val="center"/></w:tcPr></w:tblStylePr>
+                  </w:style>
+                  <w:style w:type="table" w:styleId="ChildTable">
+                    <w:basedOn w:val="BaseTable"/>
+                    <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CFE2F3"/></w:tcPr></w:tblStylePr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr>
+                        <w:tblStyle w:val="ChildTable"/>
+                        <w:tblLook w:firstRow="1" w:firstColumn="0" w:noHBand="1" w:noVBand="1"/>
+                      </w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>Head</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Head</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTableCell firstHeader = document.Tables[0].Rows[0].Cells[0];
+        DocxTableCell firstBody = document.Tables[0].Rows[1].Cells[0];
+        DocxParagraph headerParagraph = firstHeader.Paragraphs.Single();
+
+        TestAssert.Equal("ChildTable", document.Tables[0].StyleId ?? string.Empty);
+        TestAssert.Equal("CFE2F3", firstHeader.FillHex ?? string.Empty);
+        TestAssert.Equal("center", firstHeader.VerticalAlignmentValue ?? string.Empty);
+        TestAssert.Equal("D9EAD3", firstBody.FillHex ?? string.Empty);
+        TestAssert.Equal("240", firstHeader.Margins.LeftValue ?? string.Empty);
+        TestAssert.Equal(DocxTextAlignment.Right, headerParagraph.Alignment);
+        TestAssert.True(headerParagraph.Runs.Single().Bold, "Inherited base table run style should apply bold.");
+        TestAssert.Equal("336699", headerParagraph.Runs.Single().ColorHex ?? string.Empty);
+    }
+
     public static void DocxReaderTableStyleAppliesParagraphAndRunProperties()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

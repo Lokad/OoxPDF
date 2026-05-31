@@ -2139,6 +2139,13 @@ High-priority actions:
       cell `w:vAlign` overrides them. Private-safe inventory found one first-row `bottom` alignment atom in the
       private DOCX table style, so this closes a real dropped style property without adding a document-specific
       rule.
+    - [x] 2026-05-31: Resolved DOCX table-style `w:basedOn` chains before table cells consume style data.
+      Whole-style cell properties, table borders, margins, paragraph/run properties, and conditional
+      `w:tblStylePr` regions now merge base-to-child with child declarations overriding inherited values.
+      Public coverage verifies inherited fill, margin, paragraph alignment, run color/bold, and conditional
+      region merging. Private DOCX run `20260531-223326` improved aggregate metrics to `14.791805` MAE and
+      `0.133893` changed16 while staying page-stable at `16/16`; keep this parent open for the remaining Word
+      precedence ladder and table-style diagnostics.
   - [ ] 2026-05-31: Resolve DOCX table-cell paragraph spacing semantics with public Word fixtures before
     applying `spacing before` inside table cells. The private table-cell paragraph style carries
     `w:spacing before="36" after="0"`, but a direct cell-layout application regressed private run
@@ -4416,6 +4423,13 @@ Current validation baseline:
   `docx-tables --skip-slow` passed `41`. Private DOCX run `20260531-221021` stayed at `16/16` pages with zero
   dimension mismatches and unchanged aggregate metrics (`MAE=14.825006`, changed16 `0.134342`), confirming the
   slice is a structural cascade fix rather than a dominant private raster driver.
+- DOCX table-style basedOn validation:
+  after resolving table-style `w:basedOn` chains, `docx-tables --skip-slow` passed `42`,
+  `docx-text --skip-slow` passed `16`, `docx-numbering --skip-slow` passed `9`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
+  `20260531-223326` stayed at `16/16` pages with zero dimension mismatches and improved aggregate metrics
+  (`MAE=14.791805`, changed16 `0.133893`). Remaining diagnostics are `DOCX_NUMBERING_INDENT`,
+  `DOCX_STYLE_PARAGRAPH_KEEP_RULE`, `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

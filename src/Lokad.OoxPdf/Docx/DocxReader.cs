@@ -1229,7 +1229,7 @@ internal sealed class DocxReader
             }
         }
 
-        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, tableStyles);
+        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, ResolveTableStyles(tableStyles));
     }
 
     private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName)
@@ -1552,11 +1552,29 @@ internal sealed class DocxReader
     private sealed record DocxStyle(string? BasedOnStyleId, DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
 
     private sealed record DocxTableStyle(
+        string? BasedOnStyleId,
         DocxTableCellStyle Cell,
         IReadOnlyList<DocxTableCellBorder> TableBorders,
         IReadOnlyDictionary<string, DocxTableCellStyle> ConditionalRegions)
     {
-        public static DocxTableStyle Empty { get; } = new(DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
+        public static DocxTableStyle Empty { get; } = new(null, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
+
+        public DocxTableStyle Merge(DocxTableStyle other)
+        {
+            var conditional = new Dictionary<string, DocxTableCellStyle>(ConditionalRegions, StringComparer.Ordinal);
+            foreach ((string region, DocxTableCellStyle regionStyle) in other.ConditionalRegions)
+            {
+                conditional[region] = conditional.TryGetValue(region, out DocxTableCellStyle? inherited)
+                    ? inherited.Merge(regionStyle)
+                    : regionStyle;
+            }
+
+            return new DocxTableStyle(
+                other.BasedOnStyleId ?? BasedOnStyleId,
+                Cell.Merge(other.Cell),
+                other.TableBorders.Count == 0 ? TableBorders : other.TableBorders,
+                conditional);
+        }
     }
 
     private sealed record DocxTableCellStyle(
@@ -1602,6 +1620,7 @@ internal sealed class DocxReader
 
         XElement? tableProperties = style.Element(WordprocessingNamespace + "tblPr");
         return new DocxTableStyle(
+            (string?)style.Element(WordprocessingNamespace + "basedOn")?.Attribute(WordprocessingNamespace + "val"),
             ReadTableCellStyle(
                 style.Element(WordprocessingNamespace + "tcPr"),
                 style.Element(WordprocessingNamespace + "pPr"),
@@ -1611,6 +1630,37 @@ internal sealed class DocxReader
             },
             ReadTableBorders(tableProperties),
             conditional);
+    }
+
+    private static IReadOnlyDictionary<string, DocxTableStyle> ResolveTableStyles(IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
+    {
+        var resolved = new Dictionary<string, DocxTableStyle>(StringComparer.Ordinal);
+        foreach (string styleId in tableStyles.Keys)
+        {
+            resolved[styleId] = ResolveTableStyle(styleId, tableStyles);
+        }
+
+        return resolved;
+    }
+
+    private static DocxTableStyle ResolveTableStyle(string styleId, IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
+    {
+        var chain = new Stack<DocxTableStyle>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        string? currentStyleId = styleId;
+        while (currentStyleId is not null && seen.Add(currentStyleId) && tableStyles.TryGetValue(currentStyleId, out DocxTableStyle? style))
+        {
+            chain.Push(style);
+            currentStyleId = style.BasedOnStyleId;
+        }
+
+        DocxTableStyle resolved = DocxTableStyle.Empty;
+        while (chain.Count != 0)
+        {
+            resolved = resolved.Merge(chain.Pop());
+        }
+
+        return resolved with { BasedOnStyleId = null };
     }
 
     private static DocxTableCellStyle ReadTableCellStyle(
