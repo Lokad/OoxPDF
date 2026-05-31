@@ -2153,6 +2153,12 @@ High-priority actions:
       behavior. Private DOCX run `20260531-223803` was metric-neutral against the `basedOn` baseline
       (`16/16`, zero dimension mismatches, `14.791805` MAE, `0.133893` changed16), but this removes another
       structural table-style blind spot found by private-safe style inventory.
+    - [x] 2026-05-31: Preserved and applied table-style row/column band sizes from
+      `w:tblStyleRowBandSize` and `w:tblStyleColBandSize` during fallback conditional-region inference.
+      Public coverage now checks a two-row band before switching from `band1Horz` to `band2Horz`. Private
+      DOCX run `20260531-224113` stayed metric-neutral (`16/16`, zero dimension mismatches, `14.791805` MAE,
+      `0.133893` changed16), as expected because the private styles declare the Office-default band size of
+      `1`.
   - [ ] 2026-05-31: Resolve DOCX table-cell paragraph spacing semantics with public Word fixtures before
     applying `spacing before` inside table cells. The private table-cell paragraph style carries
     `w:spacing before="36" after="0"`, but a direct cell-layout application regressed private run
@@ -4442,6 +4448,11 @@ Current validation baseline:
   passed `43`, `docx-page --skip-slow` passed `13`, `docx-text --skip-slow` passed `16`, and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-223803`
   stayed metric-neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
+- DOCX table-style band-size validation:
+  after applying `tblStyleRowBandSize`/`tblStyleColBandSize` to fallback conditional-region inference,
+  `docx-tables --skip-slow` passed `43`, `docx-text --skip-slow` passed `16`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-224113`
+  stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

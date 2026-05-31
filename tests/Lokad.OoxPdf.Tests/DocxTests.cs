@@ -3216,6 +3216,7 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:style w:type="table" w:styleId="ConditionalTable">
+                    <w:tblPr><w:tblStyleRowBandSize w:val="2"/><w:tblStyleColBandSize w:val="2"/></w:tblPr>
                     <w:tcPr><w:shd w:fill="DDDDDD"/></w:tcPr>
                     <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:fill="FF0000"/></w:tcPr></w:tblStylePr>
                     <w:tblStylePr w:type="band1Horz"><w:tcPr><w:shd w:fill="00FF00"/></w:tcPr></w:tblStylePr>
@@ -3238,6 +3239,14 @@ internal static class DocxTests
                         <w:tc><w:p><w:r><w:t>Positional band</w:t></w:r></w:p></w:tc>
                         <w:tc><w:p><w:r><w:t>Positional band</w:t></w:r></w:p></w:tc>
                       </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>Wide band</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Wide band</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>Next band</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Next band</w:t></w:r></w:p></w:tc>
+                      </w:tr>
                     </w:tbl>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -3257,6 +3266,8 @@ internal static class DocxTests
         TestAssert.True(first.ConditionalFormat?.OddHorizontalBand == true, "Expected odd horizontal band conditional token to be preserved.");
         TestAssert.True(first.ConditionalFormat?.FirstRow is null, "Explicit cnfStyle should not invent first-row membership.");
         TestAssert.Equal("00FF00", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[0].Rows[2].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("0000FF", document.Tables[0].Rows[3].Cells[0].FillHex ?? string.Empty);
     }
 
     public static void DocxReaderPreservesTableLookTokens()

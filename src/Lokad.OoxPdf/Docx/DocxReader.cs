@@ -1503,6 +1503,18 @@ internal sealed class DocxReader
             : null;
     }
 
+    private static int? ReadPositiveIntAttribute(XElement? element, XName name)
+    {
+        if (element?.Attribute(name) is not { } value ||
+            !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ||
+            parsed <= 0)
+        {
+            return null;
+        }
+
+        return parsed;
+    }
+
     private static double ReadMargin(XElement? margins, XName name, double defaultValue)
     {
         return margins?.Attribute(name) is { } margin
@@ -1589,9 +1601,11 @@ internal sealed class DocxReader
         string? IndentType,
         double? CellSpacingPoints,
         string? CellSpacingValue,
-        string? CellSpacingType)
+        string? CellSpacingType,
+        int? RowBandSize,
+        int? ColumnBandSize)
     {
-        public static DocxTableStyleProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, null);
+        public static DocxTableStyleProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null);
 
         public DocxTableStyleProperties Merge(DocxTableStyleProperties other)
         {
@@ -1605,7 +1619,9 @@ internal sealed class DocxReader
                 other.IndentType ?? IndentType,
                 other.CellSpacingPoints ?? CellSpacingPoints,
                 other.CellSpacingValue ?? CellSpacingValue,
-                other.CellSpacingType ?? CellSpacingType);
+                other.CellSpacingType ?? CellSpacingType,
+                other.RowBandSize ?? RowBandSize,
+                other.ColumnBandSize ?? ColumnBandSize);
         }
     }
 
@@ -1682,7 +1698,9 @@ internal sealed class DocxReader
             (string?)tableIndent?.Attribute(WordprocessingNamespace + "type"),
             ReadDxaWidth(tableCellSpacing),
             (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "w"),
-            (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "type"));
+            (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "type"),
+            ReadPositiveIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleRowBandSize"), WordprocessingNamespace + "val"),
+            ReadPositiveIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleColBandSize"), WordprocessingNamespace + "val"));
     }
 
     private static IReadOnlyDictionary<string, DocxTableStyle> ResolveTableStyles(IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
@@ -1747,7 +1765,7 @@ internal sealed class DocxReader
         DocxTableCellStyle resolved = tableStyle.Cell;
         IEnumerable<string> regions = conditionalFormat?.IsDefined == true
             ? EnumerateTableStyleRegions(conditionalFormat)
-            : EnumerateTableStyleRegions(tableLook, rowIndex, cellIndex, rowCount, cellCount);
+            : EnumerateTableStyleRegions(tableLook, tableStyle.Table.RowBandSize, tableStyle.Table.ColumnBandSize, rowIndex, cellIndex, rowCount, cellCount);
         foreach (string region in regions)
         {
             if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableCellStyle? style))
@@ -1822,7 +1840,14 @@ internal sealed class DocxReader
         }
     }
 
-    private static IEnumerable<string> EnumerateTableStyleRegions(DocxTableLook tableLook, int rowIndex, int cellIndex, int rowCount, int cellCount)
+    private static IEnumerable<string> EnumerateTableStyleRegions(
+        DocxTableLook tableLook,
+        int? rowBandSize,
+        int? columnBandSize,
+        int rowIndex,
+        int cellIndex,
+        int rowCount,
+        int cellCount)
     {
         bool firstRow = tableLook.FirstRow != false;
         bool lastRow = tableLook.LastRow == true;
@@ -1871,25 +1896,29 @@ internal sealed class DocxReader
             yield return "seCell";
         }
 
-        if (horizontalBand && rowIndex % 2 == 1)
+        string? horizontalBandRegion = ResolveBandRegion(rowIndex, rowBandSize ?? 1, "band1Horz", "band2Horz");
+        if (horizontalBand && horizontalBandRegion is not null)
         {
-            yield return "band1Horz";
+            yield return horizontalBandRegion;
         }
 
-        if (horizontalBand && rowIndex % 2 == 0 && rowIndex != 0)
+        string? verticalBandRegion = ResolveBandRegion(cellIndex, columnBandSize ?? 1, "band1Vert", "band2Vert");
+        if (verticalBand && verticalBandRegion is not null)
         {
-            yield return "band2Horz";
+            yield return verticalBandRegion;
+        }
+    }
+
+    private static string? ResolveBandRegion(int index, int bandSize, string firstBand, string secondBand)
+    {
+        if (index == 0)
+        {
+            return null;
         }
 
-        if (verticalBand && cellIndex % 2 == 1)
-        {
-            yield return "band1Vert";
-        }
-
-        if (verticalBand && cellIndex % 2 == 0 && cellIndex != 0)
-        {
-            yield return "band2Vert";
-        }
+        int effectiveBandSize = Math.Max(1, bandSize);
+        int bandIndex = (index - 1) / effectiveBandSize;
+        return bandIndex % 2 == 0 ? firstBand : secondBand;
     }
 
     private sealed record DocxNumberingSet(
