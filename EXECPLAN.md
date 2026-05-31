@@ -552,6 +552,11 @@ High-priority actions:
   next renderer slice must align Office's PDF text-state decomposition from structural font/run/line context.
   Do not implement this as a font-name branch; the fixture's font is evidence of a metric/emission profile, not
   a predicate.
+  Rejected trial, 2026-05-31: lowering the typographic-ascender threshold for fonts with unusable Windows
+  ascenders from `0.93` to `0.75` had no visual effect on either table probe (`pptx-ladder-10-table-font-fragmentation`
+  stayed at MAE `2.029893`; `pptx-ladder-10-table-middle-small-insets` stayed at MAE `0.966760`) and
+  `pptx-typography --skip-slow` still passed. The middle-anchored table path is not using that baseline-floor
+  branch, so do not pursue this as the page-79 fix.
   Follow-up, 2026-05-30: extended `PptxInspect` so table text paragraph snapshots are emitted separately as
   `table-text-paragraph-models.json`, avoiding ad hoc private XML parsing when investigating table text.
   Re-inspection of page 79 shows the table paragraphs resolve through the normal paragraph/style cascade
@@ -9582,6 +9587,15 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 ## Validation
 
 Latest public validation:
+
+```text
+Private deck current baseline, 2026-05-31:
+pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json:
+run 20260531-024638, 84 compared pages, zero dimension mismatches, no diagnostics,
+deck MAE 2.931757, changed16 0.053386. Worst pages: 36 MAE 6.045372, 21 MAE 5.943039,
+79 MAE 4.895694, 81 MAE 4.540970, 11 MAE 4.534378. Page 17 is no longer the high-impact schema blocker
+in this run: MAE 1.00, changed16 0.03, SSIM 0.98.
+```
 
 ```text
 Public table text-state positive and counterexample, 2026-05-31:
