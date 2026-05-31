@@ -1868,6 +1868,11 @@ High-priority actions:
     structural but incomplete: it does not yet honor `w:tblLook` toggles, second band regions, or the full Word
     priority ladder across whole-table style, conditional style, direct row/cell properties, and table
     exceptions.
+  - [ ] 2026-05-31: Resolve DOCX table-style paragraph/run property precedence with Office-backed public
+    fixtures before enabling it in production. Private-safe inventory shows table-style conditional `w:pPr`
+    and `w:rPr` exist, but a naive inherited text-style layer for alignment/bold/font-size worsened private
+    aggregate metrics (`20260531-160500`/`20260531-160557` regressed from the `tcW` run). Treat this as a
+    cascade-order/model gap, not as evidence to ignore table-style text properties.
   - [x] 2026-05-31: Promoted DOCX table borders from stored tokens to PDF emission and conditional style
     inheritance. Cells now inherit conditional `w:tcBorders` when direct borders are absent, and the renderer
     draws authored top/bottom/left/right border colors and widths per edge instead of always stroking every
