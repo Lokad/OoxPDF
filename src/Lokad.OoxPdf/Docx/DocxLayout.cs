@@ -16,6 +16,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
     {
         IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(ToSnapshot).ToArray();
+        IReadOnlyList<DocxTableRowSnapshot> tableRows = page.Items
+            .OfType<DocxTableRowLayout>()
+            .Select(ToTableRowSnapshot)
+            .ToArray();
         double verticalTop = items.Count == 0 ? 0d : items.Max(item => item.Y + item.Height);
         double verticalBottom = items.Count == 0 ? 0d : items.Min(item => item.Y);
         return new DocxLayoutPageSnapshot(
@@ -29,7 +33,8 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             items.Where(item => item.Kind == "TextLine").Sum(item => item.Height),
             items.Where(item => item.Kind == "InlineImage").Sum(item => item.Height),
             items.Where(item => item.Kind == "TableRow").Sum(item => item.Height),
-            items);
+            items,
+            tableRows);
     }
 
     private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item)
@@ -63,6 +68,53 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0)
         };
     }
+
+    private static DocxTableRowSnapshot ToTableRowSnapshot(DocxTableRowLayout row, int rowIndex)
+    {
+        IReadOnlyList<DocxTableCellSnapshot> cells = row.Cells
+            .Select(ToTableCellSnapshot)
+            .ToArray();
+        return new DocxTableRowSnapshot(
+            rowIndex,
+            row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
+            row.Y,
+            row.Cells.Sum(cell => cell.Width),
+            row.Height,
+            cells.Count,
+            cells.Sum(cell => cell.TextLineCount),
+            cells.Sum(cell => cell.TextLength),
+            row.IsHeader,
+            row.HeaderValue,
+            cells);
+    }
+
+    private static DocxTableCellSnapshot ToTableCellSnapshot(DocxTableCellLayout cellLayout, int cellIndex)
+    {
+        DocxTableCell cell = cellLayout.Cell;
+        return new DocxTableCellSnapshot(
+            cellIndex,
+            cellLayout.X,
+            cellLayout.Y,
+            cellLayout.Width,
+            cellLayout.Height,
+            cellLayout.TextLines.Count,
+            cellLayout.TextLines.Sum(line => line.Text.Length),
+            cellLayout.InlineImages.Count,
+            cell.GridSpan,
+            cell.GridSpanValue,
+            cell.PreferredWidthPoints,
+            cell.PreferredWidthValue,
+            cell.PreferredWidthType,
+            cell.VerticalAlignmentValue,
+            cell.Margins.TopPoints,
+            cell.Margins.RightPoints,
+            cell.Margins.BottomPoints,
+            cell.Margins.LeftPoints,
+            cell.Borders.Count,
+            cell.FillHex is not null,
+            cell.ShadingValue is not null,
+            cell.ConditionalFormat?.IsDefined == true);
+    }
 }
 
 internal sealed record DocxLayoutPageSnapshot(
@@ -76,7 +128,8 @@ internal sealed record DocxLayoutPageSnapshot(
     double TextLineHeightSum,
     double InlineImageHeightSum,
     double TableRowHeightSum,
-    IReadOnlyList<DocxLayoutItemSnapshot> Items);
+    IReadOnlyList<DocxLayoutItemSnapshot> Items,
+    IReadOnlyList<DocxTableRowSnapshot> TableRows);
 
 internal sealed record DocxLayoutItemSnapshot(
     string Kind,
@@ -86,6 +139,43 @@ internal sealed record DocxLayoutItemSnapshot(
     double Height,
     int TextLength,
     int CellCount);
+
+internal sealed record DocxTableRowSnapshot(
+    int RowIndex,
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    int CellCount,
+    int TextLineCount,
+    int TextLength,
+    bool IsHeader,
+    string? HeaderValue,
+    IReadOnlyList<DocxTableCellSnapshot> Cells);
+
+internal sealed record DocxTableCellSnapshot(
+    int CellIndex,
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    int TextLineCount,
+    int TextLength,
+    int InlineImageCount,
+    int GridSpan,
+    string? GridSpanValue,
+    double? PreferredWidthPoints,
+    string? PreferredWidthValue,
+    string? PreferredWidthType,
+    string? VerticalAlignmentValue,
+    double? MarginTopPoints,
+    double? MarginRightPoints,
+    double? MarginBottomPoints,
+    double? MarginLeftPoints,
+    int BorderCount,
+    bool HasFill,
+    bool HasShadingValue,
+    bool HasConditionalFormat);
 
 internal sealed record DocxLayoutPage(
     double Width,
@@ -128,7 +218,9 @@ internal sealed record DocxInlineImageLayout(
 internal sealed record DocxTableRowLayout(
     IReadOnlyList<DocxTableCellLayout> Cells,
     double Y,
-    double Height) : DocxLayoutItem;
+    double Height,
+    bool IsHeader,
+    string? HeaderValue) : DocxLayoutItem;
 
 internal sealed record DocxTableCellLayout(
     DocxTableCell Cell,
@@ -784,7 +876,7 @@ internal sealed class DocxLayoutEngine
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
         }
 
-        currentItems.Add(new DocxTableRowLayout(cells.ToArray(), cellY, rowHeight));
+        currentItems.Add(new DocxTableRowLayout(cells.ToArray(), cellY, rowHeight, row.IsHeader, row.HeaderValue));
         cursorY -= rowHeight;
     }
 

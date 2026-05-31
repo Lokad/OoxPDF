@@ -5157,7 +5157,36 @@ internal static class DocxTests
 
     public static void DocxLayoutSnapshotReportsPublicSafeCounts()
     {
-        DocxTable table = CreateSingleCellTable("private text is not exposed", rowHeight: 20d);
+        var margins = new DocxTableCellMargins(2d, 3d, 4d, 5d, "40", "60", "80", "100");
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("private text is not exposed", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell(
+            "private text is not exposed",
+            [paragraph],
+            "D9EAF7",
+            "clear",
+            null,
+            "center",
+            [new DocxTableCellBorder("top", "single", "000000", "8")],
+            margins,
+            PreferredWidthPoints: 42d,
+            PreferredWidthValue: "840",
+            PreferredWidthType: "dxa",
+            GridSpan: 2,
+            GridSpanValue: "2",
+            ConditionalFormat: new DocxTableCellConditionalFormat("100000000000", true, "1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+        DocxTable table = new(null, [40d, 40d], [new DocxTableRow([cell], 20d, IsHeader: true, HeaderValue: "1")]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
@@ -5174,6 +5203,28 @@ internal static class DocxTests
         TestAssert.Equal("TableRow", row.Kind);
         TestAssert.Equal(1, row.CellCount);
         TestAssert.True(row.TextLength > 0, "Snapshot should expose text length only, not the text itself.");
+        TestAssert.Equal(1, snapshot.Pages[0].TableRows.Count);
+        DocxTableRowSnapshot tableRow = snapshot.Pages[0].TableRows[0];
+        TestAssert.Equal(0, tableRow.RowIndex);
+        TestAssert.True(tableRow.IsHeader, "Snapshot should expose header-row status without text content.");
+        TestAssert.Equal("1", tableRow.HeaderValue ?? string.Empty);
+        TestAssert.Equal(1, tableRow.CellCount);
+        TestAssert.True(tableRow.TextLength > 0, "Snapshot should report table row text length only.");
+        DocxTableCellSnapshot tableCell = tableRow.Cells.Single();
+        TestAssert.Equal(0, tableCell.CellIndex);
+        TestAssert.Equal(2, tableCell.GridSpan);
+        TestAssert.Equal("2", tableCell.GridSpanValue ?? string.Empty);
+        TestAssert.Equal(42d, tableCell.PreferredWidthPoints ?? 0d);
+        TestAssert.Equal("dxa", tableCell.PreferredWidthType ?? string.Empty);
+        TestAssert.Equal("center", tableCell.VerticalAlignmentValue ?? string.Empty);
+        TestAssert.Equal(2d, tableCell.MarginTopPoints ?? 0d);
+        TestAssert.Equal(3d, tableCell.MarginRightPoints ?? 0d);
+        TestAssert.Equal(4d, tableCell.MarginBottomPoints ?? 0d);
+        TestAssert.Equal(5d, tableCell.MarginLeftPoints ?? 0d);
+        TestAssert.Equal(1, tableCell.BorderCount);
+        TestAssert.True(tableCell.HasFill, "Snapshot should expose fill presence without the fill value.");
+        TestAssert.True(tableCell.HasShadingValue, "Snapshot should expose shading presence without the shading color.");
+        TestAssert.True(tableCell.HasConditionalFormat, "Snapshot should expose conditional-format presence without document text.");
     }
 
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()

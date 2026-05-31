@@ -3486,9 +3486,18 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ### DOCX Table Recovery Plan
 
-- [ ] Add a DOCX table inventory/trace mode that reports public-safe table metrics per table: row count,
-  column count, grid columns, preferred table width, cell width declarations, row height declarations, header
-  rows, vertical alignment, margins, borders, shading, grid spans, vertical merges, and page index.
+- [x] 2026-06-01: Add the first DOCX table trace layer with public-safe row/cell metrics on each layout page.
+  `DocxLayoutSnapshot` now includes table-row and table-cell snapshots with page geometry, header-row tokens,
+  preferred width tokens, grid spans, vertical alignment, margins, border counts, fill/shading presence,
+  conditional-format presence, inline-image counts, text-line counts, and text length only. It intentionally
+  does not expose cell text or fill/shading color values. Public validation passed `docx-core --skip-slow`
+  (`16`) and `docx-tables --skip-slow` (`49` after a serial rerun because the first parallel attempt hit the
+  known compiler output lock). Private DOCX run `20260601-003212` stayed neutral at `16/16` pages, zero
+  dimension mismatches, no diagnostics, `MAE=12.509698`, changed16 `0.112673`.
+- [ ] Promote the DOCX table trace from layout rows/cells to full table ownership: stable table ordinal,
+  page index range, row count, column count, `tblGrid`, preferred table width, resolved table width, row
+  height declarations, vertical merges, and resolved column grid. This remains open because the current trace
+  is enough to inspect private table bands but does not yet expose table-level width/grid ownership.
 - [ ] Select representative private tables for repeated inspection: one simple table, one typical dense
   table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
 - [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content
