@@ -1539,6 +1539,68 @@ internal static class DocxTests
         TestAssert.True(line.Segments[1].X < 108d, "A space suffix should not advance text to the numbering tab stop.");
     }
 
+    public static void DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var label = new DocxListLabel(
+            "1.",
+            "decimal",
+            "%1.",
+            "space",
+            "3",
+            0,
+            new DocxNumberingIndent(72d, null, null, 36d, "1440", null, null, "720"));
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Alpha Beta Alpha Beta", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            label);
+        var document = new DocxDocument(
+            180d,
+            120d,
+            36d,
+            36d,
+            36d,
+            36d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [paragraph],
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Alpha Beta".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.True(lines.Length >= 3, "The narrow hanging continuation width should wrap continuation text more tightly than the first line.");
+        TestAssert.Equal(2, lines[0].Segments.Count);
+        TestAssert.True(lines[0].Segments[1].X < 108d, "The first line uses the space suffix immediately after the label.");
+        for (int i = 1; i < lines.Length; i++)
+        {
+            TestAssert.Equal(108d, lines[i].X);
+            TestAssert.True(lines[i].Width <= 36.001d, "Continuation lines should respect the hanging-indent text width.");
+        }
+    }
+
     public static void DocxSyntheticInlinePngRendersImageXObject()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>

@@ -212,7 +212,8 @@ internal sealed class DocxLayoutEngine
                 double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph));
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
-                string[] lines = WrapTextLines(text, paragraphWidth, paragraphFontSize, embedded).ToArray();
+                double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+                string[] lines = WrapTextLines(text, paragraphWidth, continuationParagraphWidth, paragraphFontSize, embedded).ToArray();
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, document.MarginBottomPoints, HasPageContent()))
                 {
                     FinishPage();
@@ -398,8 +399,9 @@ internal sealed class DocxLayoutEngine
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
             string text = string.Concat(paragraph.Runs.Select(run => run.Text));
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
-            double paragraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
-            height += WrapTextLines(text, paragraphWidth, fontSize, embedded).Count() * lineHeight;
+            double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
+            double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            height += WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, embedded).Count() * lineHeight;
         }
 
         foreach (DocxInlineImage image in paragraph.Images)
@@ -739,8 +741,9 @@ internal sealed class DocxLayoutEngine
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
             string text = string.Concat(paragraph.Runs.Select(run => run.Text));
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
-            double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
-            int lineCount = WrapTextLines(text, paragraphWidth, fontSize, embedded).Count();
+            double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
+            double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            int lineCount = WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, embedded).Count();
             contentHeight += lineCount * lineHeight + paragraph.SpacingAfterPoints;
             foreach (DocxInlineImage image in paragraph.Images)
             {
@@ -799,8 +802,9 @@ internal sealed class DocxLayoutEngine
             double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
             double paragraphX = cellX + paddingLeft + textStartOffset;
             double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
+            double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
             bool firstLine = true;
-            foreach (string line in WrapTextLines(text, paragraphWidth, fontSize, embedded))
+            foreach (string line in WrapTextLines(text, paragraphWidth, continuationParagraphWidth, fontSize, embedded))
             {
                 double lineWidth = embedded.MeasureTextPoints(line, fontSize);
                 double lineX = paragraph.Alignment switch
@@ -881,8 +885,9 @@ internal sealed class DocxLayoutEngine
                 double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
                 string text = string.Concat(paragraph.Runs.Select(run => run.Text));
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
-                double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
-                cursorY -= WrapTextLines(text, paragraphWidth, fontSize, embedded).Count() * lineHeight;
+                double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
+                double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+                cursorY -= WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, embedded).Count() * lineHeight;
                 cursorY -= paragraph.SpacingAfterPoints;
             }
 
@@ -981,23 +986,36 @@ internal sealed class DocxLayoutEngine
 
     private static IEnumerable<string> WrapTextLines(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
     {
+        return WrapTextLines(text, maxWidth, maxWidth, fontSize, embedded);
+    }
+
+    private static IEnumerable<string> WrapTextLines(string text, double firstLineMaxWidth, double continuationLineMaxWidth, double fontSize, PdfEmbeddedFont embedded)
+    {
+        int lineIndex = 0;
         foreach (string segment in text.Split('\n'))
         {
             bool yielded = false;
-            foreach (string line in WrapWords(segment, maxWidth, fontSize, embedded))
+            foreach (string line in WrapWords(segment, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, embedded))
             {
                 yielded = true;
                 yield return line;
+                lineIndex++;
             }
 
             if (!yielded && segment.Length == 0)
             {
                 yield return string.Empty;
+                lineIndex++;
             }
         }
     }
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
+    {
+        return WrapWords(text, _ => maxWidth, fontSize, embedded);
+    }
+
+    private static IEnumerable<string> WrapWords(string text, Func<int, double> maxWidth, double fontSize, PdfEmbeddedFont embedded)
     {
         IReadOnlyList<string> tokens = TokenizeSpaces(text);
         if (tokens.Count == 0)
@@ -1006,15 +1024,17 @@ internal sealed class DocxLayoutEngine
         }
 
         var line = new System.Text.StringBuilder();
+        int lineIndex = 0;
         foreach (string token in tokens)
         {
             string candidate = line + token;
             if (line.Length > 0 &&
                 line.ToString().Any(c => !char.IsWhiteSpace(c)) &&
                 !string.IsNullOrWhiteSpace(token) &&
-                embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+                embedded.MeasureTextPoints(candidate, fontSize) > maxWidth(lineIndex))
             {
                 yield return line.ToString();
+                lineIndex++;
                 line.Clear();
                 line.Append(token);
             }

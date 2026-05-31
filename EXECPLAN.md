@@ -1876,9 +1876,9 @@ High-priority actions:
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
     numbered line starts and reduce wrapping width. This improves private DOCX aggregate fidelity while keeping
-    `DOCX_NUMBERING_INDENT` open as an approximation because Office's true label tab stop, hanging text start,
-    and continuation-line behavior are not yet structurally modeled.
-  - [ ] 2026-05-31: Split DOCX numbering layout into label run, tab stop, text start, and continuation-line
+    `DOCX_NUMBERING_INDENT` open as an approximation because Office's true label tab stop, bullet fonts,
+    mixed-run wrapping, and style-owned numbering behavior are not yet structurally modeled.
+  - [x] 2026-05-31: Split DOCX numbering layout into label run, tab stop, text start, and continuation-line
     geometry. The current indent application moves the flattened label+text line as one unit; long-term Word
     parity needs a layout record that separates the list marker from paragraph text and uses numbering
     tab/hanging rules consistently in body text and table cells.
@@ -1896,7 +1896,14 @@ High-priority actions:
     DOCX run `20260531-173037` stayed neutral (`15.889775` MAE, `0.141949` changed16), and
     `DOCX_NUMBERING_INDENT` remains appropriate because exact Word tab-stop ownership, bullet fonts, restarts,
     and mixed-style continuation wrapping are still open.
-    2026-05-31 progress: parsed `w:num/w:lvlOverride/w:startOverride` and applied the num-specific start value
+  2026-05-31 progress: paragraph wrapping now carries separate first-line and continuation-line widths, so
+    numbered body and table-cell paragraphs wrap continuation lines against the hanging text column rather than
+    reusing the wider first-line space-suffix box. Public `docx-numbering --skip-slow` passed `8` tests with a
+    direct hanging-continuation layout check, and `docx-tables --skip-slow` passed `35`; private DOCX run
+    `20260531-190121` stayed neutral at `16/16` pages, zero dimension mismatches, MAE `15.849350`, changed16
+    `0.141574`. Keep the diagnostic open for exact tab stops, bullet fonts, style inheritance, and mixed-run
+    numbering text segmentation.
+  2026-05-31 progress: parsed `w:num/w:lvlOverride/w:startOverride` and applied the num-specific start value
     before incrementing list counters. Public coverage verifies labels restart from `5.`/`6.` while sharing the
     abstract level. Private DOCX run `20260531-175443` stayed neutral (`15.889775` MAE, `0.141949` changed16).
     2026-05-31 progress: multilevel label text now resolves `%1` through `%9` from the active counter state and
@@ -4198,6 +4205,12 @@ Current validation baseline:
   after applying `w:tblW w:type="pct"`, `docx-tables --skip-slow` passed `32`. Private DOCX run
   `20260531-182041` stayed at `16/16` pages, zero dimension mismatches, and improved to MAE `15.864724`,
   changed16 `0.141689`.
+- DOCX numbering continuation-width validation:
+  after wrapping numbered paragraphs with separate first-line and continuation widths, `docx-numbering
+  --skip-slow` passed `8` and `docx-tables --skip-slow` passed `35` after a serial rerun. Private DOCX run
+  `20260531-190121` stayed at `16/16` pages, zero dimension mismatches, MAE `15.849350`, changed16
+  `0.141574`; `DOCX_NUMBERING_INDENT` remains open for exact tab-stop ownership, bullet fonts, style
+  inheritance, and mixed-run segmentation.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
