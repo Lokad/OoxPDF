@@ -3,6 +3,7 @@ param(
     [switch] $SparseOnly,
     [switch] $DataLabelsOnly,
     [switch] $AxisTitlesOnly,
+    [switch] $BottomLegendOnly,
     [string] $MetadataRoot
 )
 
@@ -340,6 +341,116 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases, [string] $Metadata
         if ($series -ne $null) { Release-ComObject $series }
         if ($worksheet -ne $null) { Release-ComObject $worksheet }
         if ($workbook -ne $null) { Close-ChartWorkbook $workbook }
+        if ($presentation -ne $null) {
+            try { [void]($presentation.Close()) }
+            catch {
+                # PowerPoint can already have torn down a failed presentation.
+            }
+        }
+        Release-ComObject $presentation
+    }
+
+    return $output
+}
+
+function New-StackedColumnBottomLegendProbe($PowerPoint, $Cases) {
+    $fileName = "pptx-ladder-11-chart-column-stacked-bottom-legend-probe.pptx"
+    $output = Join-Path $Cases $fileName
+    $presentation = $null
+    $workbook = $null
+    $worksheet = $null
+
+    try {
+        $presentation = $PowerPoint.Presentations.Add($true)
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $chartShape = $slide.Shapes.AddChart(52, 120, 90, 360, 216)
+        $chart = $chartShape.Chart
+        [void]($chart.HasTitle = $false)
+        [void]($chart.HasLegend = $true)
+        [void]($chart.Legend.Position = -4107)
+        [void]($chart.Legend.IncludeInLayout = $true)
+        [void]($chart.ChartData.Activate())
+
+        $workbook = $chart.ChartData.Workbook
+        $worksheet = $workbook.Worksheets.Item(1)
+        $worksheet.Cells.Clear()
+        $worksheet.Cells.Item(1, 1).Value = "Category"
+        $worksheet.Cells.Item(1, 2).Value = "Base"
+        $worksheet.Cells.Item(1, 3).Value = "Middle"
+        $worksheet.Cells.Item(1, 4).Value = "Top"
+        $worksheet.Cells.Item(2, 1).Value = "A"
+        $worksheet.Cells.Item(2, 2).Value = 5.0
+        $worksheet.Cells.Item(2, 3).Value = 2.0
+        $worksheet.Cells.Item(2, 4).Value = 0.2
+        $worksheet.Cells.Item(3, 1).Value = "B"
+        $worksheet.Cells.Item(3, 2).Value = 10.0
+        $worksheet.Cells.Item(3, 3).Value = 5.0
+        $worksheet.Cells.Item(3, 4).Value = 1.0
+        $worksheet.Cells.Item(4, 1).Value = "C"
+        $worksheet.Cells.Item(4, 2).Value = 2.0
+        $worksheet.Cells.Item(4, 3).Value = 1.5
+        $worksheet.Cells.Item(4, 4).Value = 0.1
+        $worksheet.Cells.Item(5, 1).Value = "D"
+        $worksheet.Cells.Item(5, 2).Value = 5.0
+        $worksheet.Cells.Item(5, 3).Value = 2.0
+        $worksheet.Cells.Item(5, 4).Value = 1.0
+
+        [void]($chart.SetSourceData("=Sheet1!`$A`$1:`$D`$5", 2))
+        [void]($chart.ChartType = 52)
+        [void]($chart.ChartGroups(1).GapWidth = 150)
+        [void]($chart.ChartGroups(1).Overlap = 100)
+
+        $series = $chart.SeriesCollection()
+        $series.Item(1).Format.Fill.ForeColor.RGB = Rgb 47 133 106
+        $series.Item(2).Format.Fill.Patterned(9)
+        $series.Item(2).Format.Fill.ForeColor.RGB = Rgb 47 133 106
+        $series.Item(2).Format.Fill.BackColor.RGB = Rgb 191 191 191
+        $series.Item(3).Format.Fill.ForeColor.RGB = Rgb 192 0 0
+        for ($i = 1; $i -le 3; $i++) {
+            $series.Item($i).Format.Line.Visible = 0
+        }
+
+        $valueAxis = $chart.Axes(2, 1)
+        $valueAxis.Format.Line.ForeColor.RGB = Rgb 127 127 127
+        $valueAxis.Format.Line.Weight = 0.75
+        $valueAxis.MajorGridlines.Format.Line.Visible = 0
+        $valueAxis.TickLabels.Font.Size = 8
+
+        $categoryAxis = $chart.Axes(1, 1)
+        $categoryAxis.Format.Line.ForeColor.RGB = Rgb 127 127 127
+        $categoryAxis.Format.Line.Weight = 0.75
+        $categoryAxis.TickLabels.Font.Size = 8
+
+        $line = $slide.Shapes.AddConnector(1, 342, 174, 390, 214)
+        $line.Line.ForeColor.RGB = Rgb 166 166 166
+        $line.Line.Weight = 0.75
+        $line = $slide.Shapes.AddConnector(1, 342, 190, 390, 232)
+        $line.Line.ForeColor.RGB = Rgb 166 166 166
+        $line.Line.Weight = 0.75
+
+        if (Test-Path -LiteralPath $output) {
+            Remove-Item -LiteralPath $output -Force
+        }
+
+        [void]($presentation.SaveAs($output, 24))
+        Release-ComObject $worksheet
+        $worksheet = $null
+        Close-ChartWorkbook $workbook
+        $workbook = $null
+
+        [void]($presentation.Close())
+        $presentation = $null
+    }
+    finally {
+        if ($worksheet -ne $null) { Release-ComObject $worksheet }
+        if ($workbook -ne $null) {
+            try { Close-ChartWorkbook $workbook }
+            catch {
+                # Office may detach the embedded workbook RCW while saving.
+            }
+        }
         if ($presentation -ne $null) {
             try { [void]($presentation.Close()) }
             catch {
@@ -1081,7 +1192,12 @@ $presentation = $null
 try {
     $powerPoint = New-Object -ComObject PowerPoint.Application
 
-    if ($AxisTitlesOnly) {
+    if ($BottomLegendOnly) {
+        $output = New-StackedColumnBottomLegendProbe `
+            -PowerPoint $powerPoint `
+            -Cases $cases
+    }
+    elseif ($AxisTitlesOnly) {
         $output = New-DefaultAxisTitleProbe `
             -PowerPoint $powerPoint `
             -Cases $cases
@@ -1291,7 +1407,7 @@ try {
     $presentation = $null
     }
 
-    if (-not $SparseOnly -and -not $DataLabelsOnly -and -not $AxisTitlesOnly) {
+    if (-not $SparseOnly -and -not $DataLabelsOnly -and -not $AxisTitlesOnly -and -not $BottomLegendOnly) {
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `

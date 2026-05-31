@@ -1665,6 +1665,12 @@ High-priority actions:
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.
+  - [ ] 2026-05-31: Replace the remaining stacked-column per-rectangle fill emission with Office-like
+    compound series paths. Private slide 44 and public stacked-column cases show Office emitting each stacked
+    series as a compound filled path (`16` segments / `4` moves for four categories), while OOXPDF currently
+    emits separate four-segment rectangles. The slide 44 readability issue is now mostly addressed through
+    bottom-legend plot-box alignment, but the compound-path gap remains open and should be closed through a
+    public stacked-column fixture rather than a private-slide rule.
   - [ ] Bubble chart layout still uses Office-observed title/right-legend plot-box and bubble headroom
     constants, now including separate bubble plot-width and right-legend swatch placement ratios. Keep these
     as explicit temporary `PptxChartMetricRules` inventory until chart structural oracle tooling can derive
@@ -1753,6 +1759,15 @@ document-specific business content into public notes.
     are understood.
   - A disposable public probe with generic text reproduced the same class of Office `Tc` decomposition, so the
     follow-up should be public-fixture-backed and structural rather than private-deck or font-name tuning.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260531-130027` after the stacked-column
+  bottom-legend plot-box slice:
+  - 84/84 pages compared with zero dimension mismatches and empty diagnostics.
+  - The targeted chart page improved from the pre-slice run `20260531-124414` MAE `2.439032`, changed16
+    `0.046995`, SSIM `0.931097` to MAE `1.702704`, changed16 `0.039896`, SSIM `0.960047`.
+  - Focused PDF inspection shows the candidate chart axes now align to Office at about `137.71..296.69`
+    versus `137.70..296.70`; the overlay connector strokes were already matching Office. The remaining chart
+    gap is stacked-column fill structure: Office emits compound per-series paths, while OOXPDF still emits
+    separate rectangles.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260529-035838` before the image recolor
   renderer-boundary cleanup:
   - 84/84 pages compared with zero dimension mismatches.
@@ -3512,6 +3527,14 @@ Current validation baseline:
   (`MAE=2.42`, changed16 `0.05`, SSIM `0.93`) because the remaining slide residuals are elsewhere, but PDF
   inspection now matches the Office 6 pt bounds for the green horizontal stealth arrowheads and the vertical
   stealth connector.
+- Private deck: `pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json` run
+  `20260531-130027` compared `84/84` pages with empty diagnostics. The focused slide 44 chart page improved
+  from run `20260531-124414` MAE `2.439032`, changed16 `0.046995`, SSIM `0.931097` to MAE `1.702704`,
+  changed16 `0.039896`, SSIM `0.960047`; focused PDF inspection shows the candidate chart plot axes now align
+  to Office (`137.71..296.69` vs `137.70..296.70`).
+- Public chart bottom-legend probe: `pptx-ladder-11-chart-column-stacked-bottom-legend-probe` run
+  `20260531-130415` passed with structural plot-box/axis gates. Its intentionally loose raster/text gates
+  reflect the still-open stacked-column compound-fill and chart-text layout gaps.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
