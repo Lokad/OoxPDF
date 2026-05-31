@@ -1933,6 +1933,12 @@ High-priority actions:
       exceptions. Private DOCX run `20260531-195324` stayed page-stable at `16/16`, zero dimension mismatches,
       and unchanged metrics (`15.856962` MAE, `0.141649` changed16), so the plan can now become the shared
       contract for the upcoming per-run metric and PDF-resource stages.
+    - [x] 2026-05-31: Fixed DOCX font embedding to honor `FontResolution.FontFaceIndex` when the resolver
+      returns a face from a TrueType collection. The old path loaded collection index 0 regardless of the
+      resolved face, which would undermine any future per-run font plan even when the resolver had selected
+      the structurally correct typeface. Public coverage dynamically finds an installed collection face with no
+      named-font dependency and verifies the emitted PDF uses that face. Private DOCX run `20260531-195628`
+      stayed page-stable and metric-neutral (`16/16`, zero dimension mismatches, `15.856962` MAE).
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

@@ -817,6 +817,70 @@ internal static class DocxTests
         TestAssert.True(resolved.Resolution?.Bold == true && resolved.Resolution?.Italic == true, "Expected run style to flow into the font request.");
     }
 
+    public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!Directory.Exists(fontsDirectory))
+        {
+            return;
+        }
+
+        var resolver = new WindowsFontResolver(fontsDirectory);
+        (FontResolution Resolution, string FirstFamily)? collectionFace = resolver.GetDiscoveredFonts()
+            .Where(f => f.FontFaceIndex > 0 && f.FontFilePath is not null && Regex.IsMatch(f.FamilyName, @"^[A-Za-z0-9 ._-]+$"))
+            .Select(f => TryLoadCollectionFace(f))
+            .Where(item => item is not null)
+            .Select(item => item!.Value)
+            .FirstOrDefault(item => !item.Resolution.FamilyName.Equals(item.FirstFamily, StringComparison.OrdinalIgnoreCase) &&
+                !PdfEmbeddedFont.SanitizeName("LOKAD+" + item.Resolution.FamilyName + "-").StartsWith(PdfEmbeddedFont.SanitizeName("LOKAD+" + item.FirstFamily + "-"), StringComparison.Ordinal) &&
+                !PdfEmbeddedFont.SanitizeName("LOKAD+" + item.FirstFamily + "-").StartsWith(PdfEmbeddedFont.SanitizeName("LOKAD+" + item.Resolution.FamilyName + "-"), StringComparison.Ordinal));
+        if (collectionFace is null)
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:rPr><w:rFonts w:ascii="{{collectionFace.Value.Resolution.FamilyName}}" w:hAnsi="{{collectionFace.Value.Resolution.FamilyName}}"/></w:rPr>
+                        <w:t>Collection face</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        string expected = PdfEmbeddedFont.SanitizeName("LOKAD+" + collectionFace.Value.Resolution.FamilyName + "-");
+        string firstFace = PdfEmbeddedFont.SanitizeName("LOKAD+" + collectionFace.Value.FirstFamily + "-");
+        TestAssert.Contains("/BaseFont /" + expected, pdf);
+        TestAssert.True(!pdf.Contains("/BaseFont /" + firstFace, StringComparison.Ordinal), "Expected DOCX embedding to honor the resolved TrueType collection face index.");
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -4038,6 +4102,27 @@ internal static class DocxTests
         {
             FontCatalog = fontCatalog
         };
+    }
+
+    private static (FontResolution Resolution, string FirstFamily)? TryLoadCollectionFace(FontResolution resolution)
+    {
+        try
+        {
+            if (resolution.FontFilePath is null)
+            {
+                return null;
+            }
+
+            OpenTypeFont first = OpenTypeFont.Load(resolution.FontFilePath, 0);
+            OpenTypeFont selected = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
+            return selected.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase)
+                ? (resolution, first.FamilyName)
+                : null;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
+        {
+            return null;
+        }
     }
 
     private static DocxTable CreateSingleCellTable(string text, double rowHeight)

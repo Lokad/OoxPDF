@@ -97,7 +97,7 @@ internal sealed class DocxRenderer
             .ToArray();
         if (glyphs.Count > 0 && resolution.FontFilePath is not null && File.Exists(resolution.FontFilePath))
         {
-            OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
+            OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
             embedded = PdfEmbeddedFont.Create(font, glyphs);
             resource = new PdfFontResource("F1", embedded);
         }
