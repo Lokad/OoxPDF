@@ -1482,6 +1482,7 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:style w:type="table" w:styleId="ShadedTable">
+                    <w:tblPr><w:tblCellMar><w:left w:w="240" w:type="dxa"/></w:tblCellMar></w:tblPr>
                     <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9EAD3"/></w:tcPr>
                     <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CFE2F3"/><w:tcBorders><w:top w:val="single" w:color="FF0000" w:sz="16"/></w:tcBorders></w:tcPr></w:tblStylePr>
                   </w:style>
@@ -1519,6 +1520,8 @@ internal static class DocxTests
         TestAssert.Equal("auto", document.Tables[0].Rows[0].Cells[0].ShadingColor ?? string.Empty);
         TestAssert.Equal("top", document.Tables[0].Rows[0].Cells[0].Borders.Single().Edge);
         TestAssert.Equal("16", document.Tables[0].Rows[0].Cells[0].Borders.Single().SizeValue ?? string.Empty);
+        TestAssert.Equal("240", document.Tables[0].Rows[0].Cells[0].Margins.LeftValue ?? string.Empty);
+        TestAssert.Equal(12d, document.Tables[0].Rows[0].Cells[0].Margins.LeftPoints ?? 0d);
         TestAssert.Equal("FCE5CD", document.Tables[0].Rows[0].Cells[1].FillHex ?? string.Empty);
         TestAssert.Equal("D9EAD3", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
     }

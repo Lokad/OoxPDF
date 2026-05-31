@@ -588,7 +588,7 @@ internal sealed class DocxReader
                     ?.Attribute(WordprocessingNamespace + "val");
                 IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
                 IReadOnlyList<DocxTableCellBorder> borders = directBorders.Count == 0 ? conditionalStyle.Borders : directBorders;
-                DocxTableCellMargins margins = ReadTableCellMargins(cellProperties);
+                DocxTableCellMargins margins = MergeTableCellMargins(ReadTableCellMargins(cellProperties), conditionalStyle.Margins);
                 cells.Add(new DocxTableCell(text, paragraphs, fill, shadingValue, shadingColor, verticalAlignment, borders, margins));
             }
 
@@ -649,6 +649,17 @@ internal sealed class DocxReader
     private static DocxTableCellMargins ReadTableCellMargins(XElement? cellProperties)
     {
         XElement? margins = cellProperties?.Element(WordprocessingNamespace + "tcMar");
+        return ReadCellMargins(margins);
+    }
+
+    private static DocxTableCellMargins ReadTableStyleCellMargins(XElement? tableProperties)
+    {
+        XElement? margins = tableProperties?.Element(WordprocessingNamespace + "tblCellMar");
+        return ReadCellMargins(margins);
+    }
+
+    private static DocxTableCellMargins ReadCellMargins(XElement? margins)
+    {
         return new DocxTableCellMargins(
             ReadMargin(margins, "top"),
             ReadMargin(margins, "right"),
@@ -658,6 +669,19 @@ internal sealed class DocxReader
             ReadMarginValue(margins, "right"),
             ReadMarginValue(margins, "bottom"),
             ReadMarginValue(margins, "left"));
+    }
+
+    private static DocxTableCellMargins MergeTableCellMargins(DocxTableCellMargins direct, DocxTableCellMargins inherited)
+    {
+        return new DocxTableCellMargins(
+            direct.TopPoints ?? inherited.TopPoints,
+            direct.RightPoints ?? inherited.RightPoints,
+            direct.BottomPoints ?? inherited.BottomPoints,
+            direct.LeftPoints ?? inherited.LeftPoints,
+            direct.TopValue ?? inherited.TopValue,
+            direct.RightValue ?? inherited.RightValue,
+            direct.BottomValue ?? inherited.BottomValue,
+            direct.LeftValue ?? inherited.LeftValue);
     }
 
     private static double? ReadMargin(XElement? margins, string edge)
@@ -1067,9 +1091,10 @@ internal sealed class DocxReader
         string? FillHex,
         string? ShadingValue,
         string? ShadingColor,
-        IReadOnlyList<DocxTableCellBorder> Borders)
+        IReadOnlyList<DocxTableCellBorder> Borders,
+        DocxTableCellMargins Margins)
     {
-        public static DocxTableCellStyle Empty { get; } = new(null, null, null, []);
+        public static DocxTableCellStyle Empty { get; } = new(null, null, null, [], DocxTableCellMargins.Empty);
 
         public DocxTableCellStyle Merge(DocxTableCellStyle other)
         {
@@ -1077,7 +1102,8 @@ internal sealed class DocxReader
                 other.FillHex ?? FillHex,
                 other.ShadingValue ?? ShadingValue,
                 other.ShadingColor ?? ShadingColor,
-                other.Borders.Count == 0 ? Borders : other.Borders);
+                other.Borders.Count == 0 ? Borders : other.Borders,
+                MergeTableCellMargins(other.Margins, Margins));
         }
     }
 
@@ -1094,7 +1120,10 @@ internal sealed class DocxReader
         }
 
         return new DocxTableStyle(
-            ReadTableCellStyle(style.Element(WordprocessingNamespace + "tcPr")),
+            ReadTableCellStyle(style.Element(WordprocessingNamespace + "tcPr")) with
+            {
+                Margins = ReadTableStyleCellMargins(style.Element(WordprocessingNamespace + "tblPr"))
+            },
             conditional);
     }
 
@@ -1105,7 +1134,8 @@ internal sealed class DocxReader
             (string?)shading?.Attribute(WordprocessingNamespace + "fill"),
             (string?)shading?.Attribute(WordprocessingNamespace + "val"),
             (string?)shading?.Attribute(WordprocessingNamespace + "color"),
-            ReadTableCellBorders(cellProperties));
+            ReadTableCellBorders(cellProperties),
+            DocxTableCellMargins.Empty);
     }
 
     private static DocxTableCellStyle ResolveTableCellStyle(DocxTableStyle tableStyle, int rowIndex, int cellIndex, int rowCount, int cellCount)

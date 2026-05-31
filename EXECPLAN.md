@@ -1876,6 +1876,13 @@ High-priority actions:
   - [ ] 2026-05-31: Continue DOCX border fidelity: implement table-level `w:tblBorders`, inside horizontal/
     vertical borders, conflict resolution between adjacent cell borders, nil/none suppression across shared
     edges, and Word's exact border width/unit rules with public Office PDF fixtures.
+  - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
+    cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
+    Private impact was small but positive, and the implementation keeps margins in the same structural path as
+    direct cell properties.
+  - [ ] 2026-05-31: Complete table margin/width fidelity: implement table-level width/preferred width,
+    cell spacing, `tblInd`, grid spans/merged cells, and style/direct margin priority with public Office PDF
+    fixtures.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2550,6 +2557,12 @@ document-specific business content into public notes.
   - Aggregate metrics were unchanged from the table-border run: MAE `16.004348`, changed16 `0.142372`.
   - The contextual-spacing branch is implemented for correctness, but it is not a dominant private metric
     driver for this document; continue prioritizing table style/border and numbering geometry.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-154933` after table-style cell
+  margins:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - MAE moved slightly from `16.004348` to `16.003190`; changed16 moved from `0.142372` to `0.142369`.
+  - Table-style margins are structurally supported now, but the remaining private table gap is dominated by
+    other style, width, and text geometry.
 
 ## Backlog
 
@@ -3943,6 +3956,10 @@ Current validation baseline:
   passed (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
   `docx-tables` `22`). Private DOCX run `20260531-154620` stayed at `16/16` pages, zero dimension mismatches,
   MAE `16.004348`, changed16 `0.142372`.
+- DOCX table-style margin validation:
+  after applying style-level `w:tblCellMar`, the full DOCX group sweep passed (`docx-core` `4`, `docx-page`
+  `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`, `docx-tables` `22`). Private DOCX run
+  `20260531-154933` stayed at `16/16` pages, zero dimension mismatches, MAE `16.003190`, changed16 `0.142369`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
