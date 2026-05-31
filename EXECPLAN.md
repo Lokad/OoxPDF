@@ -2146,6 +2146,13 @@ High-priority actions:
       region merging. Private DOCX run `20260531-223326` improved aggregate metrics to `14.791805` MAE and
       `0.133893` changed16 while staying page-stable at `16/16`; keep this parent open for the remaining Word
       precedence ladder and table-style diagnostics.
+    - [x] 2026-05-31: Added table-style `w:tblPr` table-property cascade for `tblLayout`, `tblW`, `tblInd`,
+      and `tblCellSpacing`. Styled tables now inherit these table-owned geometry properties unless direct
+      table properties override them, matching the same source-order model used for direct DOCX table
+      properties. Public coverage verifies inherited width/indent/cell-spacing/layout and direct override
+      behavior. Private DOCX run `20260531-223803` was metric-neutral against the `basedOn` baseline
+      (`16/16`, zero dimension mismatches, `14.791805` MAE, `0.133893` changed16), but this removes another
+      structural table-style blind spot found by private-safe style inventory.
   - [ ] 2026-05-31: Resolve DOCX table-cell paragraph spacing semantics with public Word fixtures before
     applying `spacing before` inside table cells. The private table-cell paragraph style carries
     `w:spacing before="36" after="0"`, but a direct cell-layout application regressed private run
@@ -4430,6 +4437,11 @@ Current validation baseline:
   `20260531-223326` stayed at `16/16` pages with zero dimension mismatches and improved aggregate metrics
   (`MAE=14.791805`, changed16 `0.133893`). Remaining diagnostics are `DOCX_NUMBERING_INDENT`,
   `DOCX_STYLE_PARAGRAPH_KEEP_RULE`, `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
+- DOCX table-style table-property validation:
+  after applying style-level `tblLayout`, `tblW`, `tblInd`, and `tblCellSpacing`, `docx-tables --skip-slow`
+  passed `43`, `docx-page --skip-slow` passed `13`, `docx-text --skip-slow` passed `16`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-223803`
+  stayed metric-neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

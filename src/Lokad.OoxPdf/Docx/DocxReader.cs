@@ -789,19 +789,19 @@ internal sealed class DocxReader
         }
 
         return new DocxTable(
-            layoutValue,
+            layoutValue ?? tableStyle.Table.LayoutValue,
             columns,
             rows,
             tableStyleId,
-            ReadDxaWidth(tableWidth),
-            (string?)tableWidth?.Attribute(WordprocessingNamespace + "w"),
-            (string?)tableWidth?.Attribute(WordprocessingNamespace + "type"),
-            ReadDxaWidth(tableIndent),
-            (string?)tableIndent?.Attribute(WordprocessingNamespace + "w"),
-            (string?)tableIndent?.Attribute(WordprocessingNamespace + "type"),
-            ReadDxaWidth(tableCellSpacing),
-            (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "w"),
-            (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "type"),
+            tableWidth is not null ? ReadDxaWidth(tableWidth) : tableStyle.Table.PreferredWidthPoints,
+            tableWidth is not null ? (string?)tableWidth.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.PreferredWidthValue,
+            tableWidth is not null ? (string?)tableWidth.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.PreferredWidthType,
+            tableIndent is not null ? ReadDxaWidth(tableIndent) : tableStyle.Table.IndentPoints,
+            tableIndent is not null ? (string?)tableIndent.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.IndentValue,
+            tableIndent is not null ? (string?)tableIndent.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.IndentType,
+            tableCellSpacing is not null ? ReadDxaWidth(tableCellSpacing) : tableStyle.Table.CellSpacingPoints,
+            tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.CellSpacingValue,
+            tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.CellSpacingType,
             tableLook);
     }
 
@@ -1553,11 +1553,12 @@ internal sealed class DocxReader
 
     private sealed record DocxTableStyle(
         string? BasedOnStyleId,
+        DocxTableStyleProperties Table,
         DocxTableCellStyle Cell,
         IReadOnlyList<DocxTableCellBorder> TableBorders,
         IReadOnlyDictionary<string, DocxTableCellStyle> ConditionalRegions)
     {
-        public static DocxTableStyle Empty { get; } = new(null, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
+        public static DocxTableStyle Empty { get; } = new(null, DocxTableStyleProperties.Empty, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
 
         public DocxTableStyle Merge(DocxTableStyle other)
         {
@@ -1571,9 +1572,40 @@ internal sealed class DocxReader
 
             return new DocxTableStyle(
                 other.BasedOnStyleId ?? BasedOnStyleId,
+                Table.Merge(other.Table),
                 Cell.Merge(other.Cell),
                 other.TableBorders.Count == 0 ? TableBorders : other.TableBorders,
                 conditional);
+        }
+    }
+
+    private sealed record DocxTableStyleProperties(
+        string? LayoutValue,
+        double? PreferredWidthPoints,
+        string? PreferredWidthValue,
+        string? PreferredWidthType,
+        double? IndentPoints,
+        string? IndentValue,
+        string? IndentType,
+        double? CellSpacingPoints,
+        string? CellSpacingValue,
+        string? CellSpacingType)
+    {
+        public static DocxTableStyleProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, null);
+
+        public DocxTableStyleProperties Merge(DocxTableStyleProperties other)
+        {
+            return new DocxTableStyleProperties(
+                other.LayoutValue ?? LayoutValue,
+                other.PreferredWidthPoints ?? PreferredWidthPoints,
+                other.PreferredWidthValue ?? PreferredWidthValue,
+                other.PreferredWidthType ?? PreferredWidthType,
+                other.IndentPoints ?? IndentPoints,
+                other.IndentValue ?? IndentValue,
+                other.IndentType ?? IndentType,
+                other.CellSpacingPoints ?? CellSpacingPoints,
+                other.CellSpacingValue ?? CellSpacingValue,
+                other.CellSpacingType ?? CellSpacingType);
         }
     }
 
@@ -1621,6 +1653,7 @@ internal sealed class DocxReader
         XElement? tableProperties = style.Element(WordprocessingNamespace + "tblPr");
         return new DocxTableStyle(
             (string?)style.Element(WordprocessingNamespace + "basedOn")?.Attribute(WordprocessingNamespace + "val"),
+            ReadTableStyleProperties(tableProperties),
             ReadTableCellStyle(
                 style.Element(WordprocessingNamespace + "tcPr"),
                 style.Element(WordprocessingNamespace + "pPr"),
@@ -1630,6 +1663,26 @@ internal sealed class DocxReader
             },
             ReadTableBorders(tableProperties),
             conditional);
+    }
+
+    private static DocxTableStyleProperties ReadTableStyleProperties(XElement? tableProperties)
+    {
+        XElement? tableWidth = tableProperties?.Element(WordprocessingNamespace + "tblW");
+        XElement? tableIndent = tableProperties?.Element(WordprocessingNamespace + "tblInd");
+        XElement? tableCellSpacing = tableProperties?.Element(WordprocessingNamespace + "tblCellSpacing");
+        return new DocxTableStyleProperties(
+            (string?)tableProperties
+                ?.Element(WordprocessingNamespace + "tblLayout")
+                ?.Attribute(WordprocessingNamespace + "type"),
+            ReadDxaWidth(tableWidth),
+            (string?)tableWidth?.Attribute(WordprocessingNamespace + "w"),
+            (string?)tableWidth?.Attribute(WordprocessingNamespace + "type"),
+            ReadDxaWidth(tableIndent),
+            (string?)tableIndent?.Attribute(WordprocessingNamespace + "w"),
+            (string?)tableIndent?.Attribute(WordprocessingNamespace + "type"),
+            ReadDxaWidth(tableCellSpacing),
+            (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "w"),
+            (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "type"));
     }
 
     private static IReadOnlyDictionary<string, DocxTableStyle> ResolveTableStyles(IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
