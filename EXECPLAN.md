@@ -2970,6 +2970,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   drift, and unsupported features lacking diagnostics.
 - [ ] Add an internal DOCX layout trace mode that records public-safe per-page counts and consumed vertical
   space by block kind, so private runs can locate where candidate pagination drifts without exposing text.
+- [x] 2026-05-31: Extended the internal DOCX layout snapshot with public-safe per-page vertical consumption
+  and block-kind height sums for text lines, inline images, and table rows. This does not expose document text
+  and gives private pagination investigations a stable place to compare block-level drift.
 - [ ] Implement style-derived paragraph spacing accurately, including before/after values,
   `contextualSpacing`, `beforeAutospacing`/`afterAutospacing`, and Word-like adjacent paragraph spacing
   collapse.

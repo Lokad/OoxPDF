@@ -14,6 +14,8 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
     {
         IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(ToSnapshot).ToArray();
+        double verticalTop = items.Count == 0 ? 0d : items.Max(item => item.Y + item.Height);
+        double verticalBottom = items.Count == 0 ? 0d : items.Min(item => item.Y);
         return new DocxLayoutPageSnapshot(
             page.Width,
             page.Height,
@@ -21,6 +23,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             items.Count(item => item.Kind == "TextLine"),
             items.Count(item => item.Kind == "InlineImage"),
             items.Count(item => item.Kind == "TableRow"),
+            Math.Max(0d, verticalTop - verticalBottom),
+            items.Where(item => item.Kind == "TextLine").Sum(item => item.Height),
+            items.Where(item => item.Kind == "InlineImage").Sum(item => item.Height),
+            items.Where(item => item.Kind == "TableRow").Sum(item => item.Height),
             items);
     }
 
@@ -64,6 +70,10 @@ internal sealed record DocxLayoutPageSnapshot(
     int TextLineCount,
     int InlineImageCount,
     int TableRowCount,
+    double VerticalUsed,
+    double TextLineHeightSum,
+    double InlineImageHeightSum,
+    double TableRowHeightSum,
     IReadOnlyList<DocxLayoutItemSnapshot> Items);
 
 internal sealed record DocxLayoutItemSnapshot(
