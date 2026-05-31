@@ -474,15 +474,14 @@ internal sealed class PdfGraphicsBuilder
         double r = Math.Clamp(radius, 0d, Math.Min(width, height) / 2d);
         double ox = r * kappa;
 
-        builder.Append(N(x + r)).Append(' ').Append(N(y)).AppendLine(" m");
-        builder.Append(N(x + width - r)).Append(' ').Append(N(y)).AppendLine(" l");
-        Curve(x + width - r + ox, y, x + width, y + r - ox, x + width, y + r);
-        builder.Append(N(x + width)).Append(' ').Append(N(y + height - r)).AppendLine(" l");
-        Curve(x + width, y + height - r + ox, x + width - r + ox, y + height, x + width - r, y + height);
-        builder.Append(N(x + r)).Append(' ').Append(N(y + height)).AppendLine(" l");
-        Curve(x + r - ox, y + height, x, y + height - r + ox, x, y + height - r);
-        builder.Append(N(x)).Append(' ').Append(N(y + r)).AppendLine(" l");
-        Curve(x, y + r - ox, x + r - ox, y, x + r, y);
+        builder.Append(N(x)).Append(' ').Append(N(y + height - r)).AppendLine(" m");
+        Curve(x, y + height - r + ox, x + r - ox, y + height, x + r, y + height);
+        builder.Append(N(x + width - r)).Append(' ').Append(N(y + height)).AppendLine(" l");
+        Curve(x + width - r + ox, y + height, x + width, y + height - r + ox, x + width, y + height - r);
+        builder.Append(N(x + width)).Append(' ').Append(N(y + r)).AppendLine(" l");
+        Curve(x + width, y + r - ox, x + width - r + ox, y, x + width - r, y);
+        builder.Append(N(x + r)).Append(' ').Append(N(y)).AppendLine(" l");
+        Curve(x + r - ox, y, x, y + r - ox, x, y + r);
         builder.AppendLine("h");
     }
 

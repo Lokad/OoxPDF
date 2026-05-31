@@ -252,7 +252,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                DrawOuterShadow(graphics, preset, x, y, width, height, outerShadow);
+                DrawOuterShadow(graphics, shapeProperties, preset, x, y, width, height, outerShadow, presetAdjustmentsOverride);
             }
         }
 
@@ -500,7 +500,7 @@ internal sealed partial class PptxRenderer
         if (gradientFill is not null)
         {
             graphics.SaveState();
-            ClipToPresetShape(graphics, preset, x, y, width, height);
+            ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
 
             DrawLinearGradientFill(graphics, gradientFill, x, y, width, height);
 
@@ -525,7 +525,7 @@ internal sealed partial class PptxRenderer
             if (clippedToShape)
             {
                 graphics.SaveState();
-                ClipToPresetShape(graphics, preset, x, y, width, height);
+                ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
             }
 
             DrawImageFill(graphics, pictureFillName, imageX, imageY, imageWidth, imageHeight, crop);
@@ -552,8 +552,8 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(patternFill.Background.Red, patternFill.Background.Green, patternFill.Background.Blue);
-            DrawPresetFill(graphics, preset, x, y, width, height);
-            StrokeShapePatternFill(graphics, preset, x, y, width, height, patternFill);
+            DrawPresetFill(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
+            StrokeShapePatternFill(graphics, shapeProperties, preset, x, y, width, height, patternFill, presetAdjustmentsOverride);
 
             if (transparentFill)
             {
@@ -570,7 +570,7 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-            DrawPresetFill(graphics, preset, x, y, width, height);
+            DrawPresetFill(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
 
             if (transparentFill)
             {
@@ -630,7 +630,7 @@ internal sealed partial class PptxRenderer
             }
             else if (preset == "roundRect")
             {
-                graphics.StrokeRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
+                graphics.StrokeRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, presetAdjustmentsOverride, width, height));
             }
             else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
             {
@@ -680,7 +680,25 @@ internal sealed partial class PptxRenderer
         graphics.SaveState();
         graphics.SetAlpha(shadow.Alpha, 1d);
         graphics.SetFillRgb(shadow.Color.Red, shadow.Color.Green, shadow.Color.Blue);
-        DrawPresetFill(graphics, preset, x + shadow.OffsetX, y + shadow.OffsetY, width, height);
+        graphics.FillRectangleEvenOdd(x + shadow.OffsetX, y + shadow.OffsetY, width, height);
+        graphics.RestoreState();
+    }
+
+    private static void DrawOuterShadow(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        OuterShadow shadow,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+    {
+        graphics.SaveState();
+        graphics.SetAlpha(shadow.Alpha, 1d);
+        graphics.SetFillRgb(shadow.Color.Red, shadow.Color.Green, shadow.Color.Blue);
+        DrawPresetFill(graphics, shapeProperties, preset, x + shadow.OffsetX, y + shadow.OffsetY, width, height, presetAdjustmentsOverride);
         graphics.RestoreState();
     }
 
@@ -744,7 +762,15 @@ internal sealed partial class PptxRenderer
         images.Add(new PdfImageResource(name, image));
     }
 
-    private static void DrawPresetFill(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height)
+    private static void DrawPresetFill(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
         if (preset == "ellipse")
         {
@@ -752,7 +778,7 @@ internal sealed partial class PptxRenderer
         }
         else if (preset == "roundRect")
         {
-            graphics.FillRoundedRectangleEvenOdd(x, y, width, height, Math.Min(width, height) * 0.16d);
+            graphics.FillRoundedRectangleEvenOdd(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, presetAdjustmentsOverride, width, height));
         }
         else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
         {
@@ -781,7 +807,7 @@ internal sealed partial class PptxRenderer
         graphics.SaveState();
         graphics.SetAlpha(glow.Alpha, 1d);
         graphics.SetFillRgb(glow.Color.Red, glow.Color.Green, glow.Color.Blue);
-        DrawPresetFill(graphics, preset, x - glow.Radius, y - glow.Radius, width + 2d * glow.Radius, height + 2d * glow.Radius);
+        graphics.FillRectangleEvenOdd(x - glow.Radius, y - glow.Radius, width + 2d * glow.Radius, height + 2d * glow.Radius);
         graphics.RestoreState();
     }
 
@@ -954,6 +980,17 @@ internal sealed partial class PptxRenderer
         return double.TryParse(formula[4..], NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
             ? value
             : fallback;
+    }
+
+    private static double ReadRoundRectangleRadius(
+        XElement shapeProperties,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
+        double width,
+        double height)
+    {
+        double adjustment = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj", 16667d);
+        double factor = Math.Clamp(adjustment / 100000d, 0d, 0.5d);
+        return Math.Min(width, height) * factor;
     }
 
     private static void AppendEllipseArcSegment(PdfGraphicsBuilder graphics, double centerX, double centerY, double radiusX, double radiusY, double startDegrees, double sweepDegrees, bool moveToStart)
@@ -2003,7 +2040,15 @@ internal sealed partial class PptxRenderer
             TryCreatePresetPolygonPoints(preset, 0d, 0d, 1d, 1d, out _);
     }
 
-    private static void ClipToPresetShape(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height)
+    private static void ClipToPresetShape(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
         if (preset == "ellipse")
         {
@@ -2011,7 +2056,7 @@ internal sealed partial class PptxRenderer
         }
         else if (preset == "roundRect")
         {
-            graphics.ClipRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
+            graphics.ClipRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, presetAdjustmentsOverride, width, height));
         }
         else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
         {
@@ -3435,7 +3480,16 @@ internal sealed partial class PptxRenderer
         graphics.Transform(a, b, c, d, e, f);
     }
 
-    private static void StrokeShapePatternFill(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height, ShapePatternFill fill)
+    private static void StrokeShapePatternFill(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        ShapePatternFill fill,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
         if (width <= 0d || height <= 0d)
         {
@@ -3443,7 +3497,7 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SaveState();
-        ClipToPresetShape(graphics, preset, x, y, width, height);
+        ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
         graphics.SetStrokeRgb(fill.Foreground.Red, fill.Foreground.Green, fill.Foreground.Blue);
         graphics.SetLineWidth(IsDarkDiagonalPatternFill(fill.Preset) ? 1.0d : 0.5d);
         double spacing = IsDarkDiagonalPatternFill(fill.Preset) ? 4d : 5d;

@@ -1546,7 +1546,7 @@ internal static class PptxTests
         TestAssert.Contains("0 1 0 rg", pdf);
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains("72 252 m 216 180 l S", pdf);
-        TestAssert.Contains("371.52 180 m", pdf);
+        TestAssert.Contains("360 240 m", pdf);
         TestAssert.Contains("0.933 g", pdf);
         TestAssert.Contains("0.184 0.522 0.416 RG", pdf);
         TestAssert.Contains(" re W n", pdf);
@@ -2372,6 +2372,37 @@ internal static class PptxTests
         TestAssert.Contains("216 432 m", pdf);
         TestAssert.Contains("176.199 464.199 c", pdf);
         TestAssert.DoesNotContain("194.912", pdf);
+    }
+
+    public static void PptxSyntheticShapeRoundRectHonorsAdjustment()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr>
+                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                      <a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 10000"/></a:avLst></a:prstGeom>
+                      <a:noFill/>
+                      <a:ln w="12700"><a:solidFill><a:srgbClr val="444444"/></a:solidFill></a:ln>
+                    </p:spPr>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 460.8 m", pdf);
+        TestAssert.DoesNotContain("72 456.48 m", pdf);
     }
 
     public static void PptxSyntheticShapeStrokeDashCapAndJoinRender()
