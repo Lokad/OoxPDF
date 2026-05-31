@@ -7008,7 +7008,7 @@ internal sealed partial class PptxRenderer
     {
         if (!horizontalBars)
         {
-            return PptxChartMetricRules.AxisNiceTickTargetCount;
+            return PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount;
         }
 
         return valueAxisLabelsVisible && manualPlotLayoutApplied

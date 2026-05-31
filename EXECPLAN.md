@@ -211,7 +211,7 @@ High-priority actions:
   44 as private acceptance evidence for the existing `Tc`/secondary-`Tf`/operation-splitting typography work;
   do not add more private chart offsets unless a new PDF graphics inspection shows a real structural geometry
   mismatch.
-- [ ] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
+- [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
   color problem, not as a private-content coordinate tweak: inspect the Office/candidate PDF text operations,
@@ -238,6 +238,15 @@ High-priority actions:
   chart text emission structure: Office emits these bold labels as fill+stroke text, while the candidate uses
   normal filled text when a bold font is resolved. Keep that residual with the shared Office PDF text-emission
   track instead of adding slide-specific chart offsets.
+  2026-05-31 progress: the latest right-schema discrepancy was traced to automatic vertical value-axis tick
+  density for a stacked column chart without an explicit `c:majorUnit`. Office emits the dense 0..50 axis in
+  five-unit steps, while the renderer's generic nine-target nice tick rule selected ten-unit steps and made
+  the numeric scaffold look misplaced. `GetValueAxisAutoTickTargetCount` now uses a named vertical-value-axis
+  Office default while preserving the existing horizontal/manual-layout policy, and `pptx-charts` has a public
+  synthetic guard for the 0,5,10,...,50 sequence. Private run `20260531-191225` improved slide 42 to
+  `2.241075907` MAE, `0.045509259` changed16, and `0.954718719` SSIM. The specific slide-42 chart-number
+  placement/color concern is now closed; any remaining glyph-structure differences should stay with the shared
+  Office PDF text-emission track, not with slide-local chart offsets.
 - [ ] 2026-05-31: Continue the private page-36 typography branch as an Office text-emission model problem,
   not as a font-family rule. Private run `20260531-002604` has page 36 as the worst slide (`6.045371817`
   MAE) and the page is now narrowed to text-state decomposition: candidate and Office text positions are close

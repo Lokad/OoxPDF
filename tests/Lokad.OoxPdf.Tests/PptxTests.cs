@@ -18021,6 +18021,33 @@ internal static class PptxTests
         TestAssert.Equal(secondaryFactor, multipleRight);
     }
 
+    public static void PptxChartVerticalValueAxisAutoTicksUseOfficeDenseDefault()
+    {
+        Type extentsType = typeof(PptxRenderer).GetNestedType(
+            "ChartValueExtents",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents.");
+        object extents = Activator.CreateInstance(
+            extentsType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+            binder: null,
+            args: [0d, 50d],
+            culture: CultureInfo.InvariantCulture) ?? throw new InvalidOperationException("Expected chart value extents instance.");
+        System.Reflection.MethodInfo readTargetCount = typeof(PptxRenderer).GetMethod(
+            "GetValueAxisAutoTickTargetCount",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart tick target resolver.");
+        System.Reflection.MethodInfo readTickValues = typeof(PptxRenderer).GetMethods(
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .Single(method => method.Name == "GetChartAxisTickValues" && method.GetParameters().Length == 4);
+
+        double targetCount = (double)(readTargetCount.Invoke(null, [false, true, false]) ?? double.NaN);
+        object values = readTickValues.Invoke(null, [extents, null, true, targetCount]) ?? throw new InvalidOperationException("Expected chart tick values.");
+        string tickList = string.Join(
+            ",",
+            ((System.Collections.IEnumerable)values).Cast<object>().Select(value => Convert.ToDouble(value, CultureInfo.InvariantCulture).ToString("0.########", CultureInfo.InvariantCulture)));
+
+        TestAssert.Equal("0,5,10,15,20,25,30,35,40,45,50", tickList);
+    }
+
     public static void PptxChartLineOptionsUseSceneAuthoritativeDefaults()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
