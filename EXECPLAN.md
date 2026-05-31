@@ -2009,6 +2009,11 @@ High-priority actions:
     by a later row with 40/80 point preferred cell widths; private DOCX run `20260531-185014` stayed neutral
     versus the current baseline (`15.849350` MAE, `0.141574` changed16), indicating the private document's
     affected rows were already covered by earlier width rules.
+    2026-05-31 progress: layout now resolves single-column `tcW w:type="pct"` from fiftieths-of-a-percent
+    values against the resolved table width instead of preserving the token without using it. Public coverage
+    checks a 25%/75% preferred-cell split after body-width capping; private DOCX run `20260531-185336` stayed
+    neutral (`15.849350` MAE, `0.141574` changed16), so the current private case does not appear to exercise
+    pct cell widths in a visually material way.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or

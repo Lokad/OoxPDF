@@ -2994,6 +2994,29 @@ internal static class DocxTests
         TestAssert.Equal(80d, rows[1].Cells[1].Width);
     }
 
+    public static void DocxTableLayoutStageUsesPercentageCellPreferredWidths()
+    {
+        var table = new DocxTable(
+            null,
+            [100d, 100d],
+            [new DocxTableRow([
+                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthValue: "1250", PreferredWidthType: "pct"),
+                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthValue: "3750", PreferredWidthType: "pct")
+            ], 20d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(45d, row.Cells[0].Width);
+        TestAssert.Equal(55d, row.Cells[1].X);
+        TestAssert.Equal(135d, row.Cells[1].Width);
+    }
+
     public static void DocxTableLayoutStageAppliesGridSpanWidths()
     {
         var table = new DocxTable(

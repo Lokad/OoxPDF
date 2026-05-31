@@ -393,9 +393,10 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table);
+        double gridTableWidth = table.ColumnWidthsPoints.Sum();
+        double targetTableWidth = Math.Min(availableWidth, ResolvePreferredTableWidth(table, availableWidth) ?? gridTableWidth);
+        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
-        double targetTableWidth = Math.Min(availableWidth, table.PreferredWidthPoints ?? rawTableWidth);
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double contentHeight = row.Cells
@@ -515,10 +516,11 @@ internal sealed class DocxLayoutEngine
     {
         double tableX = x + Math.Max(0d, table.IndentPoints ?? 0d);
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
-        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table);
-        double rawTableWidth = effectiveColumns.Sum();
-        double preferredTableWidth = ResolvePreferredTableWidth(table, tableAvailableWidth) ?? rawTableWidth;
+        double gridTableWidth = table.ColumnWidthsPoints.Sum();
+        double preferredTableWidth = ResolvePreferredTableWidth(table, tableAvailableWidth) ?? gridTableWidth;
         double targetTableWidth = Math.Min(tableAvailableWidth, preferredTableWidth);
+        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
+        double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
@@ -548,7 +550,7 @@ internal sealed class DocxLayoutEngine
         cursorY -= 6d;
     }
 
-    private static IReadOnlyList<double> GetEffectiveTableColumnWidths(DocxTable table)
+    private static IReadOnlyList<double> GetEffectiveTableColumnWidths(DocxTable table, double preferredTableWidth)
     {
         int columnCount = table.ColumnWidthsPoints.Count;
         if (columnCount == 0)
@@ -563,11 +565,12 @@ internal sealed class DocxLayoutEngine
             foreach (DocxTableCell cell in row.Cells)
             {
                 int span = Math.Max(1, cell.GridSpan);
+                double? preferredWidth = ResolvePreferredCellWidth(cell, preferredTableWidth);
                 if (span == 1 &&
                     gridColumnIndex < columnCount &&
-                    cell.PreferredWidthPoints is > 0d)
+                    preferredWidth is > 0d)
                 {
-                    preferredWidths[gridColumnIndex] = cell.PreferredWidthPoints.Value;
+                    preferredWidths[gridColumnIndex] = preferredWidth.Value;
                 }
 
                 gridColumnIndex += span;
@@ -580,6 +583,22 @@ internal sealed class DocxLayoutEngine
         }
 
         return table.ColumnWidthsPoints;
+    }
+
+    private static double? ResolvePreferredCellWidth(DocxTableCell cell, double preferredTableWidth)
+    {
+        if (cell.PreferredWidthPoints is { } points)
+        {
+            return points;
+        }
+
+        if (cell.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+            int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
+        {
+            return Math.Max(0d, preferredTableWidth * fiftiethsPercent / 5000d);
+        }
+
+        return null;
     }
 
     private static double? ResolvePreferredTableWidth(DocxTable table, double availableWidth)
