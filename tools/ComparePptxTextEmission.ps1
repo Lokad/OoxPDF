@@ -13,6 +13,8 @@ param(
 
     [switch] $MatchByTextThenPosition,
 
+    [switch] $MatchByTextShapeThenPosition,
+
     [switch] $UseEffectiveMatrix,
 
     [switch] $IncludeText,
@@ -485,6 +487,126 @@ function CandText($run) {
     return $null
 }
 
+function Get-TextCategoryCounts([string] $text) {
+    $uppercaseLetterCount = 0
+    $lowercaseLetterCount = 0
+    $titlecaseLetterCount = 0
+    $letterCount = 0
+    $decimalDigitCount = 0
+    $punctuationCount = 0
+    $symbolCount = 0
+    $spaceCount = 0
+    $otherCount = 0
+
+    for ($i = 0; $i -lt $text.Length; $i++) {
+        $category = [Globalization.CharUnicodeInfo]::GetUnicodeCategory($text, $i)
+        if ([char]::IsHighSurrogate($text[$i]) -and $i + 1 -lt $text.Length -and [char]::IsLowSurrogate($text[$i + 1])) {
+            $i++
+        }
+
+        switch ($category) {
+            ([Globalization.UnicodeCategory]::UppercaseLetter) {
+                $letterCount++
+                $uppercaseLetterCount++
+                break
+            }
+            ([Globalization.UnicodeCategory]::LowercaseLetter) {
+                $letterCount++
+                $lowercaseLetterCount++
+                break
+            }
+            ([Globalization.UnicodeCategory]::TitlecaseLetter) {
+                $letterCount++
+                $titlecaseLetterCount++
+                break
+            }
+            { $_ -eq [Globalization.UnicodeCategory]::ModifierLetter -or $_ -eq [Globalization.UnicodeCategory]::OtherLetter } {
+                $letterCount++
+                break
+            }
+            ([Globalization.UnicodeCategory]::DecimalDigitNumber) {
+                $decimalDigitCount++
+                break
+            }
+            { $_ -eq [Globalization.UnicodeCategory]::ConnectorPunctuation -or
+                $_ -eq [Globalization.UnicodeCategory]::DashPunctuation -or
+                $_ -eq [Globalization.UnicodeCategory]::OpenPunctuation -or
+                $_ -eq [Globalization.UnicodeCategory]::ClosePunctuation -or
+                $_ -eq [Globalization.UnicodeCategory]::InitialQuotePunctuation -or
+                $_ -eq [Globalization.UnicodeCategory]::FinalQuotePunctuation -or
+                $_ -eq [Globalization.UnicodeCategory]::OtherPunctuation } {
+                $punctuationCount++
+                break
+            }
+            { $_ -eq [Globalization.UnicodeCategory]::MathSymbol -or
+                $_ -eq [Globalization.UnicodeCategory]::CurrencySymbol -or
+                $_ -eq [Globalization.UnicodeCategory]::ModifierSymbol -or
+                $_ -eq [Globalization.UnicodeCategory]::OtherSymbol } {
+                $symbolCount++
+                break
+            }
+            { $_ -eq [Globalization.UnicodeCategory]::SpaceSeparator -or
+                $_ -eq [Globalization.UnicodeCategory]::LineSeparator -or
+                $_ -eq [Globalization.UnicodeCategory]::ParagraphSeparator } {
+                $spaceCount++
+                break
+            }
+            default {
+                $otherCount++
+                break
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        TextLength = $text.Length
+        LetterCount = $letterCount
+        UppercaseLetterCount = $uppercaseLetterCount
+        LowercaseLetterCount = $lowercaseLetterCount
+        TitlecaseLetterCount = $titlecaseLetterCount
+        DecimalDigitCount = $decimalDigitCount
+        PunctuationCount = $punctuationCount
+        SymbolCount = $symbolCount
+        SpaceCount = $spaceCount
+        OtherCount = $otherCount
+    }
+}
+
+function SameTextShape($reference, $candidate) {
+    $referenceText = RefText $reference
+    if (-not (HasValue $referenceText)) {
+        return $true
+    }
+
+    if ($null -eq $candidate) {
+        return $false
+    }
+
+    $counts = Get-TextCategoryCounts $referenceText
+    $candidateTextLength = OptionalValue $candidate "TextLength"
+    if ((HasValue $candidateTextLength) -and [int]$candidateTextLength -ne $counts.TextLength) {
+        return $false
+    }
+
+    foreach ($name in @(
+        "LetterCount",
+        "UppercaseLetterCount",
+        "LowercaseLetterCount",
+        "TitlecaseLetterCount",
+        "DecimalDigitCount",
+        "PunctuationCount",
+        "SymbolCount",
+        "SpaceCount",
+        "OtherCount")) {
+        $candidateValue = OptionalValue $candidate $name
+        if ((HasValue $candidateValue) -and [int]$candidateValue -ne [int]$counts.$name) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
 function SameReferenceCandidatePage($reference, $candidate) {
     $pageNumber = OptionalValue $reference "PageNumber"
     $slideNumber = OptionalValue $candidate "Slide"
@@ -498,7 +620,7 @@ function SameReferenceCandidatePage($reference, $candidate) {
 $referenceOps = Read-JsonArray $ReferenceTextOperations
 $candidateRuns = Read-JsonArray $CandidateGlyphRuns
 
-if ($MatchByPosition -or $MatchByTextThenPosition) {
+if ($MatchByPosition -or $MatchByTextThenPosition -or $MatchByTextShapeThenPosition) {
     $unmatched = New-Object System.Collections.Generic.List[object]
     foreach ($op in $referenceOps) {
         $unmatched.Add($op)
@@ -523,6 +645,10 @@ if ($MatchByPosition -or $MatchByTextThenPosition) {
                     -not [string]::Equals($candidateText, $referenceText, [System.StringComparison]::Ordinal)) {
                     continue
                 }
+            }
+
+            if ($MatchByTextShapeThenPosition -and -not (SameTextShape $reference $candidate)) {
+                continue
             }
 
             $score = [Math]::Abs([double]$candidate.BaselineY - (RefY $reference)) * 1000d +
@@ -900,6 +1026,9 @@ if ($MatchByPosition) {
 }
 elseif ($MatchByTextThenPosition) {
     Write-Host "Matching: exact text, then nearest text position"
+}
+elseif ($MatchByTextShapeThenPosition) {
+    Write-Host "Matching: text shape, then nearest text position"
 }
 else {
     Write-Host "Matching: input order"

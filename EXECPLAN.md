@@ -671,6 +671,12 @@ High-priority actions:
   still an Office PDF text-state model that combines frame/paragraph/line state, secondary `/Tf` selection,
   glyph residual decomposition, and operation splitting, validated by public probes before changing private
   deck rendering.
+  Tooling note, 2026-05-31: `ComparePptxTextEmission.ps1` also has an explicit
+  `-MatchByTextShapeThenPosition` diagnostic mode that matches by private-safe text category counts before
+  position when candidate text is omitted. This mode is useful for checking whether position-only matching is
+  overmatching repeated private runs, but it is intentionally not the default because Office can split or merge
+  text operations in ways that make strict shape matching report extra unmatched rows. Treat it as a second
+  lens, not as the sole source of page-level counts.
   Follow-up, 2026-05-31: accepted the content-minimum overflow row-allocation rule for slack tables. Public
   `pptx-ladder-10-table-center-explicit-multiline` showed that Office lets row content minima exceed the
   `graphicFrame` height instead of compressing all rows back into the frame when the minimum total is too tall.
