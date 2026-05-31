@@ -1900,6 +1900,11 @@ High-priority actions:
     structural but incomplete: it does not yet honor `w:tblLook` toggles, second band regions, or the full Word
     priority ladder across whole-table style, conditional style, direct row/cell properties, and table
     exceptions.
+    - [x] 2026-05-31: Preserved `w:tblLook` source tokens as typed table metadata (`val`, first/last row,
+      first/last column, and horizontal/vertical band suppression flags) with public reader coverage. A naive
+      behavior change that gated conditional regions directly from these flags regressed the private DOCX run
+      (`20260531-174932`: MAE `16.580381`, changed16 `0.14746` versus baseline `15.889775`/`0.141949`), so
+      `tblLook` remains a fixture-required Office semantics task rather than a guessed rendering rule.
   - [ ] 2026-05-31: Resolve DOCX table-style paragraph/run property precedence with Office-backed public
     fixtures before enabling it in production. Private-safe inventory shows table-style conditional `w:pPr`
     and `w:rPr` exist, but a naive inherited text-style layer for alignment/bold/font-size worsened private
@@ -4104,6 +4109,11 @@ Current validation baseline:
   after applying table-style `w:tblPr/w:tblBorders`, `docx-tables --skip-slow` passed `27`. Private DOCX run
   `20260531-174458` stayed at `16/16` pages, zero dimension mismatches, MAE `15.889775`, changed16 `0.141949`;
   table-style diagnostics remain for `tblLook`, conditional precedence, and table-style paragraph/run layers.
+- DOCX table-look token validation:
+  after preserving `w:tblLook` tokens without applying unverified gating semantics, `docx-tables --skip-slow`
+  passed `28`. Private DOCX run `20260531-175135` stayed at `16/16` pages, zero dimension mismatches, MAE
+  `15.889775`, changed16 `0.141949`. The rejected gating experiment is documented as an open Word-fixture
+  requirement.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

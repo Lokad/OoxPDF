@@ -626,6 +626,7 @@ internal sealed class DocxReader
             ?.Element(WordprocessingNamespace + "tblW");
         XElement? tableIndent = tableProperties
             ?.Element(WordprocessingNamespace + "tblInd");
+        DocxTableLook tableLook = ReadTableLook(tableProperties);
         IReadOnlyList<DocxTableCellBorder> tableBorders = ReadTableBorders(tableProperties);
         DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
             ? parsedTableStyle
@@ -718,7 +719,8 @@ internal sealed class DocxReader
             (string?)tableWidth?.Attribute(WordprocessingNamespace + "type"),
             ReadDxaWidth(tableIndent),
             (string?)tableIndent?.Attribute(WordprocessingNamespace + "w"),
-            (string?)tableIndent?.Attribute(WordprocessingNamespace + "type"));
+            (string?)tableIndent?.Attribute(WordprocessingNamespace + "type"),
+            tableLook);
     }
 
     private static double? ReadDxaWidth(XElement? width)
@@ -824,6 +826,30 @@ internal sealed class DocxReader
     private static IReadOnlyList<DocxTableCellBorder> ReadTableBorders(XElement? tableProperties)
     {
         return ReadBorderElements(tableProperties?.Element(WordprocessingNamespace + "tblBorders"));
+    }
+
+    private static DocxTableLook ReadTableLook(XElement? tableProperties)
+    {
+        XElement? look = tableProperties?.Element(WordprocessingNamespace + "tblLook");
+        if (look is null)
+        {
+            return DocxTableLook.Empty;
+        }
+
+        return new DocxTableLook(
+            (string?)look.Attribute(WordprocessingNamespace + "val"),
+            OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "firstRow"),
+            (string?)look.Attribute(WordprocessingNamespace + "firstRow"),
+            OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "lastRow"),
+            (string?)look.Attribute(WordprocessingNamespace + "lastRow"),
+            OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "firstColumn"),
+            (string?)look.Attribute(WordprocessingNamespace + "firstColumn"),
+            OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "lastColumn"),
+            (string?)look.Attribute(WordprocessingNamespace + "lastColumn"),
+            OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "noHBand"),
+            (string?)look.Attribute(WordprocessingNamespace + "noHBand"),
+            OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "noVBand"),
+            (string?)look.Attribute(WordprocessingNamespace + "noVBand"));
     }
 
     private static IReadOnlyList<DocxTableCellBorder> ReadBorderElements(XElement? borders)

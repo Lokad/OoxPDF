@@ -153,7 +153,26 @@ internal sealed record DocxTable(
     string? PreferredWidthType = null,
     double? IndentPoints = null,
     string? IndentValue = null,
-    string? IndentType = null);
+    string? IndentType = null,
+    DocxTableLook? Look = null);
+
+internal sealed record DocxTableLook(
+    string? Value,
+    bool? FirstRow,
+    string? FirstRowValue,
+    bool? LastRow,
+    string? LastRowValue,
+    bool? FirstColumn,
+    string? FirstColumnValue,
+    bool? LastColumn,
+    string? LastColumnValue,
+    bool? NoHorizontalBand,
+    string? NoHorizontalBandValue,
+    bool? NoVerticalBand,
+    string? NoVerticalBandValue)
+{
+    public static DocxTableLook Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null);
+}
 
 internal sealed record DocxTableRow(
     IReadOnlyList<DocxTableCell> Cells,
