@@ -2107,6 +2107,14 @@ High-priority actions:
     MAE `13.648284`, changed16 `0.125542`. Keep the parent open for production per-run PDF font resources,
     bullet/symbol glyph parity, and any remaining Word numbering restart/override semantics; do not replace
     these with font-name or document-specific branches.
+    2026-05-31 progress: narrowed numbering diagnostics so supported left/hanging indents and explicit
+    `w:tab w:val="num"` positions no longer emit `DOCX_NUMBERING_INDENT`; unsupported `right`/`firstLine`
+    indent forms keep that warning. Bullet levels with authored marker fonts now emit
+    `DOCX_NUMBERING_MARKER_FONT`, which better describes the remaining structural risk: marker runs already
+    participate in the font plan, but production PDF emission still needs the same per-run font resource map
+    before symbol/bullet glyph parity can be considered complete. Private DOCX run `20260531-234039` stayed
+    raster-neutral at `16/16` pages, zero dimension mismatches, MAE `13.648284`, changed16 `0.125542`, and
+    replaced `DOCX_NUMBERING_INDENT` with `DOCX_NUMBERING_MARKER_FONT`.
   2026-05-31 progress: paragraph wrapping now carries separate first-line and continuation-line widths, so
     numbered body and table-cell paragraphs wrap continuation lines against the hanging text column rather than
     reusing the wider first-line space-suffix box. Public `docx-numbering --skip-slow` passed `8` tests with a
@@ -4575,6 +4583,13 @@ Current validation baseline:
   passed. Private DOCX run `20260531-233722` stayed neutral at `16/16` pages, zero dimension mismatches,
   `MAE=13.648284`, changed16 `0.125542`, and now reports only `DOCX_NUMBERING_INDENT`,
   `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
+- DOCX numbering diagnostic validation:
+  after narrowing `DOCX_NUMBERING_INDENT` to unsupported `right`/`firstLine` indent forms and adding
+  `DOCX_NUMBERING_MARKER_FONT` for bullet levels with authored marker fonts, `docx-numbering --skip-slow`
+  passed `11`, `docx-text --skip-slow` passed `17`, `docx-tables --skip-slow` passed `47`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-234039`
+  stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16 `0.125542`, and now
+  reports `DOCX_NUMBERING_MARKER_FONT`, `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

@@ -311,12 +311,22 @@ internal sealed class DocxReader
                 .Elements(WordprocessingNamespace + "pPr")
                 .Elements(WordprocessingNamespace + "ind")
                 .Any(ind =>
-                    ind.Attribute(WordprocessingNamespace + "left") is not null ||
                     ind.Attribute(WordprocessingNamespace + "right") is not null ||
-                    ind.Attribute(WordprocessingNamespace + "firstLine") is not null ||
-                    ind.Attribute(WordprocessingNamespace + "hanging") is not null))
+                    ind.Attribute(WordprocessingNamespace + "firstLine") is not null))
         {
             Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated");
+        }
+
+        if (numbering is not null &&
+            numbering.Descendants(WordprocessingNamespace + "lvl")
+                .Any(level =>
+                    string.Equals(
+                        (string?)level.Element(WordprocessingNamespace + "numFmt")?.Attribute(WordprocessingNamespace + "val"),
+                        "bullet",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    level.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts") is not null))
+        {
+            Emit("DOCX_NUMBERING_MARKER_FONT", "numbering marker font", numberingPartName ?? partName, "Approximated");
         }
 
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
