@@ -1973,6 +1973,13 @@ High-priority actions:
       page-stable at `16/16` with zero dimension mismatches and improved aggregate MAE from `15.856962` to
       `14.577536` (changed16 `0.136194`). Keep the broader font item open for production run-level PDF font
       resources, tabs, bullet fonts, and exact Word line-break edge cases.
+    - [ ] 2026-05-31: Promote DOCX to production run-level PDF font resources only after layout measurement
+      and glyph emission are switched together. A generic no-font-name trial that added per-run PDF font
+      resources from `DocxFontPlan`, while keeping the legacy single-font layout measurer as fallback, stayed
+      page-stable at `16/16` but regressed the private DOCX aggregate from the span-wrapper run's `14.577536`
+      MAE to `16.256186` (`20260531-201939`, changed16 `0.144954`). Do not land emission-only resource
+      selection; the next attempt must use the same run-level font map for wrapping, segment advances,
+      ToUnicode/glyph embedding, and static header/footer text.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
