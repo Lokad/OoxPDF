@@ -492,8 +492,9 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
+        double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         double gridTableWidth = table.ColumnWidthsPoints.Sum();
-        double targetTableWidth = Math.Min(availableWidth, ResolvePreferredTableWidth(table, availableWidth) ?? gridTableWidth);
+        double targetTableWidth = Math.Min(tableAvailableWidth, ResolvePreferredTableWidth(table, tableAvailableWidth) ?? gridTableWidth);
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;

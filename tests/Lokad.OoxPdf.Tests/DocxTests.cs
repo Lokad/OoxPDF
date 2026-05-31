@@ -1849,6 +1849,54 @@ internal static class DocxTests
         TestAssert.Equal(2, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
     }
 
+    public static void DocxSyntheticPageKeepNextEstimatesIndentedBlockTarget()
+    {
+        DocxParagraph keepNext = CreateDocxLayoutParagraph(
+            "Keep",
+            fontSize: 10d,
+            lineSpacingPoints: 10d,
+            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+        DocxParagraph tableParagraph = CreateDocxLayoutParagraph("One Two Three Four Five", fontSize: 10d, lineSpacingPoints: 10d);
+        var table = new DocxTable(
+            null,
+            [100d],
+            [new DocxTableRow([new DocxTableCell("One Two Three Four Five", [tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d)],
+            PreferredWidthPoints: 100d,
+            IndentPoints: 70d);
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
+        ];
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Concat([new DocxParagraphElement(keepNext), new DocxTableElement(table)])
+            .ToArray();
+        var document = new DocxDocument(
+            160d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTextLineLayout[] firstPageLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+        DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(3, firstPageLines.Length);
+        TestAssert.Equal("Keep", secondPageLines[0].Text);
+        TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
+    }
+
     public static void DocxSyntheticParagraphKeepNextChainsAcrossConsecutiveParagraphsToNextPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

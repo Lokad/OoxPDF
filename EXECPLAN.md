@@ -1869,6 +1869,13 @@ High-priority actions:
       three-line paragraph that previously split 2/1 across pages; private DOCX run `20260531-185646` stayed
       page- and metric-neutral (`15.849350` MAE, changed16 `0.141574`). Keep-with-table behavior and
       Office-backed edge cases remain open before downgrading the keep-rule diagnostic.
+    - [x] 2026-05-31: Aligned DOCX keep-with-table estimation with the actual table layout width for indented
+      tables. Kept-block estimation now subtracts nonnegative `w:tblInd` before resolving table preferred
+      width and first-row wrapping, matching the layout stage instead of underestimating indented table targets.
+      Public pagination coverage checks that a `keepNext` paragraph moves with an indented following table
+      whose first row wraps taller after the indent is applied. Private DOCX run `20260531-224646` stayed
+      page- and metric-neutral (`16/16`, MAE `14.791805`, changed16 `0.133893`). The parent item remains open
+      for Office-backed keep-with-table edge cases and exact diagnostic narrowing.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
@@ -4452,6 +4459,11 @@ Current validation baseline:
   after applying `tblStyleRowBandSize`/`tblStyleColBandSize` to fallback conditional-region inference,
   `docx-tables --skip-slow` passed `43`, `docx-text --skip-slow` passed `16`, and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-224113`
+  stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
+- DOCX keep-with-indented-table validation:
+  after making kept-block estimation subtract table indent before resolving preferred width and first-row
+  wrapping, `docx-page --skip-slow` passed `14`, `docx-tables --skip-slow` passed `43`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-224646`
   stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
