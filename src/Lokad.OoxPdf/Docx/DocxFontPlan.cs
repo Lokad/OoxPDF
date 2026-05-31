@@ -100,7 +100,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     }
 }
 
-internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer
+internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider
 {
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
     private readonly Dictionary<(string Path, int FaceIndex), OpenTypeFont?> fonts = new();
@@ -139,6 +139,20 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer
         }
 
         return units * fontSize / font.UnitsPerEm;
+    }
+
+    public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
+    {
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        if (resolved?.Resolution is not FontResolution resolution)
+        {
+            return fontSize;
+        }
+
+        OpenTypeFont? font = LoadFont(resolution);
+        return font is null
+            ? fontSize
+            : DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize);
     }
 
     private DocxResolvedRunTypeface? ResolveRun(DocxTextRun? run)

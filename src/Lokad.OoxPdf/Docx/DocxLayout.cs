@@ -1,4 +1,5 @@
 using System.Globalization;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
@@ -145,11 +146,40 @@ internal interface IDocxTextMeasurer
     double MeasureText(DocxTextRun? run, string text, double fontSize);
 }
 
-internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocxTextMeasurer
+internal interface IDocxLineMetricsProvider
+{
+    double MeasureSingleLineHeight(DocxTextRun? run, double fontSize);
+}
+
+internal static class DocxLineMetrics
+{
+    public static double MeasureOpenTypeSingleLineHeight(OpenTypeFont font, double fontSize)
+    {
+        if (font.UnitsPerEm == 0)
+        {
+            return fontSize;
+        }
+
+        double units = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
+        if (units <= 0d)
+        {
+            units = font.Os2.WindowsAscender + font.Os2.WindowsDescender;
+        }
+
+        return Math.Max(fontSize, units * fontSize / font.UnitsPerEm);
+    }
+}
+
+internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocxTextMeasurer, IDocxLineMetricsProvider
 {
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         return embedded.MeasureTextPoints(text, fontSize);
+    }
+
+    public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
+    {
+        return DocxLineMetrics.MeasureOpenTypeSingleLineHeight(embedded.Font, fontSize);
     }
 }
 
@@ -220,7 +250,7 @@ internal sealed class DocxLayoutEngine
                 : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
             pendingSpacingAfter = 0d;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
-            double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
+            double lineHeight = ResolveLineHeight(paragraph, paragraphFontSize, textMeasurer);
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
@@ -319,6 +349,19 @@ internal sealed class DocxLayoutEngine
     private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)
     {
         return paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true;
+    }
+
+    private static double ResolveLineHeight(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer)
+    {
+        if (paragraph.LineSpacingPoints is { } exactLineHeight)
+        {
+            return exactLineHeight;
+        }
+
+        double singleLineHeight = textMeasurer is IDocxLineMetricsProvider metricsProvider
+            ? metricsProvider.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), fontSize)
+            : fontSize;
+        return singleLineHeight * paragraph.LineSpacingFactor;
     }
 
     private static bool ShouldMoveParagraphForWidowControl(
@@ -423,7 +466,7 @@ internal sealed class DocxLayoutEngine
         if (paragraph.Runs.Count != 0)
         {
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
-            double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
+            double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
@@ -764,7 +807,7 @@ internal sealed class DocxLayoutEngine
             }
 
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
-            double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
+            double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
@@ -820,7 +863,7 @@ internal sealed class DocxLayoutEngine
             }
 
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
-            double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
+            double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
             DocxTextRun firstRun = paragraph.Runs[0];
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
@@ -908,7 +951,7 @@ internal sealed class DocxLayoutEngine
             if (textMeasurer is not null && paragraph.Runs.Count != 0)
             {
                 double fontSize = paragraph.Runs.Max(run => run.FontSize);
-                double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
+                double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
                 IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
                 double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));

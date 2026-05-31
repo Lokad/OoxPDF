@@ -1996,6 +1996,13 @@ High-priority actions:
       candidate PDFs both point at Calibri-family output. The next acceptable work is Word-compatible vertical
       composition: paragraph spacing collapse/context, keep-with-next/keep-lines, table style paragraph/run
       precedence, table-cell spacing, repeated headers, and exact row pagination.
+      2026-05-31 update: Office PDF inspection showed the dominant 10 pt text baseline step is `14.04pt`, while
+      OOXPDF used `11.5pt` from `fontSize * 1.15`. Auto line height now uses the resolved OpenType line box
+      before applying the OOXML auto factor; the same inspected bucket moved to `14.04pt`, and private run
+      `20260531-204257` improved pagination from `14` candidate pages to `15` against the `16`-page reference
+      with `1` dimension mismatch (`14.118472` MAE, changed16 `0.128327`). Keep this item open for the remaining
+      one-page deficit; the next likely causes are table style paragraph/run precedence, repeated-header/table
+      pagination, and keep/spacing interactions, not font-family selection or raw auto line pitch.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

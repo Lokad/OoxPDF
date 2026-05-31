@@ -1615,6 +1615,61 @@ internal static class DocxTests
         TestAssert.True(Math.Abs((baselines[0] - baselines[1]) - 36d) < 0.01d, "Exact DOCX line height should advance the next paragraph by 36 points.");
     }
 
+    public static void DocxLayoutStageUsesFontMetricsForAutoLineHeight()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        var first = new DocxParagraph(
+            [new DocxTextRun("First", 10d, null, false, false, false, null, font.Value.Resolution.FamilyName)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.15d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var second = first with
+        {
+            Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, font.Value.Resolution.FamilyName)]
+        };
+        var body = new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second) };
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            [first, second],
+            []);
+        var resolver = new SingleResolutionFontResolver(font.Value.Resolution);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new DocxFontPlanTextMeasurer(plan))
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        double expected = DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font.Value.Font, 10d) * 1.15d;
+        double actual = lines[0].BaselineY - lines[1].BaselineY;
+        TestAssert.True(Math.Abs(actual - expected) < 0.01d, $"Auto DOCX line height should advance on the resolved font line box, not the em size. Expected {expected}, actual {actual}.");
+    }
+
     public static void DocxSyntheticContextualSpacingSuppressesSameStyleGap()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
