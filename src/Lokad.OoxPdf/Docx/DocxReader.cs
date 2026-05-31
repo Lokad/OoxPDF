@@ -564,20 +564,25 @@ internal sealed class DocxReader
             .Select(column => ReadTwipsAttribute(column, WordprocessingNamespace + "w") ?? 72d)
             .ToArray() ?? [];
         var rows = new List<DocxTableRow>();
-        foreach (XElement row in table.Elements(WordprocessingNamespace + "tr"))
+        XElement[] rowElements = table.Elements(WordprocessingNamespace + "tr").ToArray();
+        for (int rowIndex = 0; rowIndex < rowElements.Length; rowIndex++)
         {
+            XElement row = rowElements[rowIndex];
             var cells = new List<DocxTableCell>();
-            foreach (XElement cell in row.Elements(WordprocessingNamespace + "tc"))
+            XElement[] cellElements = row.Elements(WordprocessingNamespace + "tc").ToArray();
+            for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
             {
+                XElement cell = cellElements[cellIndex];
                 XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
+                DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
                 IReadOnlyList<DocxParagraph> paragraphs = ReadTableCellParagraphs(cell, styles, numbering, numberingCounters, package, relationships);
                 string text = string.Join(" ", paragraphs
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
                     .Where(t => t.Length != 0));
                 XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
-                string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? tableStyle.CellFillHex;
-                string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val") ?? tableStyle.CellShadingValue;
-                string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color") ?? tableStyle.CellShadingColor;
+                string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? conditionalStyle.FillHex;
+                string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val") ?? conditionalStyle.ShadingValue;
+                string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color") ?? conditionalStyle.ShadingColor;
                 string? verticalAlignment = (string?)cellProperties
                     ?.Element(WordprocessingNamespace + "vAlign")
                     ?.Attribute(WordprocessingNamespace + "val");
@@ -1052,20 +1057,115 @@ internal sealed class DocxReader
 
     private sealed record DocxStyle(DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
 
-    private sealed record DocxTableStyle(string? CellFillHex, string? CellShadingValue, string? CellShadingColor)
+    private sealed record DocxTableStyle(DocxTableCellStyle Cell, IReadOnlyDictionary<string, DocxTableCellStyle> ConditionalRegions)
     {
-        public static DocxTableStyle Empty { get; } = new(null, null, null);
+        public static DocxTableStyle Empty { get; } = new(DocxTableCellStyle.Empty, new Dictionary<string, DocxTableCellStyle>());
+    }
+
+    private sealed record DocxTableCellStyle(string? FillHex, string? ShadingValue, string? ShadingColor)
+    {
+        public static DocxTableCellStyle Empty { get; } = new(null, null, null);
+
+        public DocxTableCellStyle Merge(DocxTableCellStyle other)
+        {
+            return new DocxTableCellStyle(
+                other.FillHex ?? FillHex,
+                other.ShadingValue ?? ShadingValue,
+                other.ShadingColor ?? ShadingColor);
+        }
     }
 
     private static DocxTableStyle ReadTableStyle(XElement style)
     {
-        XElement? shading = style
-            .Element(WordprocessingNamespace + "tcPr")
-            ?.Element(WordprocessingNamespace + "shd");
+        var conditional = new Dictionary<string, DocxTableCellStyle>(StringComparer.Ordinal);
+        foreach (XElement region in style.Elements(WordprocessingNamespace + "tblStylePr"))
+        {
+            string? type = (string?)region.Attribute(WordprocessingNamespace + "type");
+            if (type is not null)
+            {
+                conditional[type] = ReadTableCellStyle(region.Element(WordprocessingNamespace + "tcPr"));
+            }
+        }
+
         return new DocxTableStyle(
+            ReadTableCellStyle(style.Element(WordprocessingNamespace + "tcPr")),
+            conditional);
+    }
+
+    private static DocxTableCellStyle ReadTableCellStyle(XElement? cellProperties)
+    {
+        XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
+        return new DocxTableCellStyle(
             (string?)shading?.Attribute(WordprocessingNamespace + "fill"),
             (string?)shading?.Attribute(WordprocessingNamespace + "val"),
             (string?)shading?.Attribute(WordprocessingNamespace + "color"));
+    }
+
+    private static DocxTableCellStyle ResolveTableCellStyle(DocxTableStyle tableStyle, int rowIndex, int cellIndex, int rowCount, int cellCount)
+    {
+        DocxTableCellStyle resolved = tableStyle.Cell;
+        foreach (string region in EnumerateTableStyleRegions(rowIndex, cellIndex, rowCount, cellCount))
+        {
+            if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableCellStyle? style))
+            {
+                resolved = resolved.Merge(style);
+            }
+        }
+
+        return resolved;
+    }
+
+    private static IEnumerable<string> EnumerateTableStyleRegions(int rowIndex, int cellIndex, int rowCount, int cellCount)
+    {
+        if (rowIndex == 0)
+        {
+            yield return "firstRow";
+        }
+
+        if (rowIndex == rowCount - 1)
+        {
+            yield return "lastRow";
+        }
+
+        if (cellIndex == 0)
+        {
+            yield return "firstCol";
+        }
+
+        if (cellIndex == cellCount - 1)
+        {
+            yield return "lastCol";
+        }
+
+        if (rowIndex == 0 && cellIndex == 0)
+        {
+            yield return "nwCell";
+        }
+
+        if (rowIndex == 0 && cellIndex == cellCount - 1)
+        {
+            yield return "neCell";
+        }
+
+        if (rowIndex == rowCount - 1 && cellIndex == 0)
+        {
+            yield return "swCell";
+        }
+
+        if (rowIndex == rowCount - 1 && cellIndex == cellCount - 1)
+        {
+            yield return "seCell";
+        }
+
+        if (rowIndex % 2 == 1)
+        {
+            yield return "band1Horz";
+        }
+
+        if (cellIndex % 2 == 1)
+        {
+            yield return "band1Vert";
+        }
     }
 
     private sealed record DocxNumberingSet(

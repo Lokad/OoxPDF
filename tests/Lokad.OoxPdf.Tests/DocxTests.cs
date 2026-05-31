@@ -1433,6 +1433,7 @@ internal static class DocxTests
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:style w:type="table" w:styleId="ShadedTable">
                     <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9EAD3"/></w:tcPr>
+                    <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CFE2F3"/></w:tcPr></w:tblStylePr>
                   </w:style>
                 </w:styles>
                 """,
@@ -1447,6 +1448,10 @@ internal static class DocxTests
                         <w:tc><w:p><w:r><w:t>Styled</w:t></w:r></w:p></w:tc>
                         <w:tc><w:tcPr><w:shd w:fill="FCE5CD"/></w:tcPr><w:p><w:r><w:t>Direct</w:t></w:r></w:p></w:tc>
                       </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>Base</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Base</w:t></w:r></w:p></w:tc>
+                      </w:tr>
                     </w:tbl>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1459,10 +1464,11 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(package);
 
         TestAssert.Equal("ShadedTable", document.Tables[0].StyleId ?? string.Empty);
-        TestAssert.Equal("D9EAD3", document.Tables[0].Rows[0].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("CFE2F3", document.Tables[0].Rows[0].Cells[0].FillHex ?? string.Empty);
         TestAssert.Equal("clear", document.Tables[0].Rows[0].Cells[0].ShadingValue ?? string.Empty);
         TestAssert.Equal("auto", document.Tables[0].Rows[0].Cells[0].ShadingColor ?? string.Empty);
         TestAssert.Equal("FCE5CD", document.Tables[0].Rows[0].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("D9EAD3", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
     }
 
     public static void DocxReaderTablePreservesHeaderRowToken()

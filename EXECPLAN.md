@@ -1853,6 +1853,14 @@ High-priority actions:
   - [ ] 2026-05-31: Extend DOCX table styles beyond whole-style cell shading: parse `w:tblPr`, `w:tblBorders`,
     `w:tblCellMar`, `w:tblLook`, and `w:tblStylePr` conditional regions (`firstRow`, `lastRow`, banding,
     first/last column), then merge them with direct row/cell properties in Word priority order.
+  - [x] 2026-05-31: Applied DOCX conditional table-style cell shading for first/last row, first/last column,
+    corner cells, and first horizontal/vertical bands. Conditional `w:tblStylePr/w:tcPr/w:shd` now flows into
+    cell fill/shading tokens before PDF emission. The private DOCX metrics improved, confirming conditional
+    table style resolution is an active rendering branch.
+  - [ ] 2026-05-31: Refine conditional table-style precedence against Word fixtures. The current merge order is
+    structural but incomplete: it does not yet honor `w:tblLook` toggles, second band regions, or the full Word
+    priority ladder across whole-table style, conditional style, direct row/cell properties, and table
+    exceptions.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2509,6 +2517,12 @@ document-specific business content into public notes.
   - Aggregate metrics were unchanged from the prior table-header run: MAE `16.995226`, changed16 `0.149573`.
   - The private table-style gap is therefore unlikely to be explained by a simple style-level cell fill alone;
     prioritize conditional table-style regions, borders, margins, and widths.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-153922` after conditional
+  table-style shading:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - MAE improved from `16.995226` to `16.817625`; changed16 improved from `0.149573` to `0.148589`.
+  - This confirms conditional table-style resolution is present in the private document and should continue
+    into borders, margins, `tblLook`, and conditional priority rules.
 
 ## Backlog
 
@@ -3887,6 +3901,11 @@ Current validation baseline:
   (`docx-core` `4`, `docx-page` `10`, `docx-text` `7`, `docx-numbering` `4`, `docx-images` `2`,
   `docx-tables` `21`), public `docx-tables` visual run `20260531-153530` passed, and private DOCX run
   `20260531-153536` stayed at `16/16` pages, zero dimension mismatches, MAE `16.995226`, changed16 `0.149573`.
+- DOCX conditional table-style shading validation:
+  after applying `w:tblStylePr` conditional cell shading, the full DOCX group sweep passed (`docx-core` `4`,
+  `docx-page` `10`, `docx-text` `7`, `docx-numbering` `4`, `docx-images` `2`, `docx-tables` `21`), public
+  `docx-tables` visual run `20260531-153916` passed, and private DOCX run `20260531-153922` stayed at `16/16`
+  pages, zero dimension mismatches, MAE `16.817625`, changed16 `0.148589`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
