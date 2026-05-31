@@ -162,7 +162,23 @@ internal sealed record DocxTextRun(
     bool Italic,
     bool Underline,
     string? UnderlineValue,
-    string? FontFamily);
+    string? FontFamily)
+{
+    public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
+}
+
+internal sealed record DocxRunFonts(
+    string? Ascii,
+    string? HighAnsi,
+    string? EastAsia,
+    string? ComplexScript,
+    string? AsciiTheme,
+    string? HighAnsiTheme,
+    string? EastAsiaTheme,
+    string? ComplexScriptTheme)
+{
+    public static DocxRunFonts Empty { get; } = new(null, null, null, null, null, null, null, null);
+}
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName);
 

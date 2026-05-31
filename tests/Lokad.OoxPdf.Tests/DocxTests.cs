@@ -612,6 +612,58 @@ internal static class DocxTests
         TestAssert.Equal("Aptos", document.FontCatalog.ThemeFonts.MinorLatinTypeface ?? string.Empty);
     }
 
+    public static void DocxReaderPreservesRunFontTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="Corporate Sans" w:hAnsi="Corporate Sans" w:eastAsia="Yu Gothic" w:cs="Arial"
+                            w:asciiTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi" w:eastAsiaTheme="minorEastAsia" w:csTheme="minorBidi"/>
+                        </w:rPr>
+                        <w:t>Font tokens</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxRunFonts fonts = document.Paragraphs.Single().Runs.Single().Fonts;
+        TestAssert.Equal("Corporate Sans", fonts.Ascii ?? string.Empty);
+        TestAssert.Equal("Corporate Sans", fonts.HighAnsi ?? string.Empty);
+        TestAssert.Equal("Yu Gothic", fonts.EastAsia ?? string.Empty);
+        TestAssert.Equal("Arial", fonts.ComplexScript ?? string.Empty);
+        TestAssert.Equal("minorHAnsi", fonts.AsciiTheme ?? string.Empty);
+        TestAssert.Equal("minorHAnsi", fonts.HighAnsiTheme ?? string.Empty);
+        TestAssert.Equal("minorEastAsia", fonts.EastAsiaTheme ?? string.Empty);
+        TestAssert.Equal("minorBidi", fonts.ComplexScriptTheme ?? string.Empty);
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

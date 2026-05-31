@@ -1902,6 +1902,12 @@ High-priority actions:
       these facts without changing rendering. Private DOCX run `20260531-193148` stayed page-stable at `16/16`
       with the same metrics as the line-spacing run (`15.856962` MAE, `0.141649` changed16), confirming this
       is a safe foundation for the next per-run font-resolution slice.
+    - [x] 2026-05-31: Preserved direct run-level DOCX `w:rFonts` tokens on `DocxTextRun` without changing the
+      current renderer font choice. The model now carries explicit ascii/high-ANSI/east-Asia/complex-script
+      names and their theme counterparts (`asciiTheme`, `hAnsiTheme`, `eastAsiaTheme`, `csTheme`) so the
+      future font resolver can reason from OOXML structure instead of a single flattened `FontFamily` string.
+      Public coverage verifies token preservation; private DOCX run `20260531-193423` remained page-stable at
+      `16/16` with unchanged metrics from the font-catalog slice.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

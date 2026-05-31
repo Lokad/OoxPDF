@@ -459,7 +459,10 @@ internal sealed class DocxReader
                     resolvedRun.Italic ?? false,
                     resolvedRun.Underline ?? false,
                     resolvedRun.UnderlineValue,
-                    resolvedRun.FontFamily));
+                    resolvedRun.FontFamily)
+                {
+                    Fonts = ReadRunFonts(runProperties)
+                });
             }
 
             images.AddRange(ReadInlineImages(run, package, relationships));
@@ -1396,6 +1399,22 @@ internal sealed class DocxReader
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
         return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline, underlineValue);
+    }
+
+    private static DocxRunFonts ReadRunFonts(XElement? properties)
+    {
+        XElement? fonts = properties?.Element(WordprocessingNamespace + "rFonts");
+        return fonts is null
+            ? DocxRunFonts.Empty
+            : new DocxRunFonts(
+                (string?)fonts.Attribute(WordprocessingNamespace + "ascii"),
+                (string?)fonts.Attribute(WordprocessingNamespace + "hAnsi"),
+                (string?)fonts.Attribute(WordprocessingNamespace + "eastAsia"),
+                (string?)fonts.Attribute(WordprocessingNamespace + "cs"),
+                (string?)fonts.Attribute(WordprocessingNamespace + "asciiTheme"),
+                (string?)fonts.Attribute(WordprocessingNamespace + "hAnsiTheme"),
+                (string?)fonts.Attribute(WordprocessingNamespace + "eastAsiaTheme"),
+                (string?)fonts.Attribute(WordprocessingNamespace + "csTheme"));
     }
 
     private static bool? ReadOnOff(XElement? element)
