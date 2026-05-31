@@ -1908,6 +1908,11 @@ High-priority actions:
       future font resolver can reason from OOXML structure instead of a single flattened `FontFamily` string.
       Public coverage verifies token preservation; private DOCX run `20260531-193423` remained page-stable at
       `16/16` with unchanged metrics from the font-catalog slice.
+    - [x] 2026-05-31: Promoted run-font token preservation into the DOCX style/default cascade. Resolved run
+      properties now carry merged `w:rFonts` tokens from document defaults, paragraph styles, character
+      styles, and direct run properties while leaving the legacy flattened `FontFamily` behavior unchanged.
+      Public coverage verifies the cascade order; private DOCX run `20260531-193723` stayed page-stable and
+      metric-neutral against the previous font-token slice.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

@@ -461,7 +461,7 @@ internal sealed class DocxReader
                     resolvedRun.UnderlineValue,
                     resolvedRun.FontFamily)
                 {
-                    Fonts = ReadRunFonts(runProperties)
+                    Fonts = resolvedRun.Fonts
                 });
             }
 
@@ -1398,7 +1398,7 @@ internal sealed class DocxReader
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline, underlineValue);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline, underlineValue, ReadRunFonts(properties));
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -1415,6 +1415,19 @@ internal sealed class DocxReader
                 (string?)fonts.Attribute(WordprocessingNamespace + "hAnsiTheme"),
                 (string?)fonts.Attribute(WordprocessingNamespace + "eastAsiaTheme"),
                 (string?)fonts.Attribute(WordprocessingNamespace + "csTheme"));
+    }
+
+    private static DocxRunFonts MergeRunFonts(DocxRunFonts current, DocxRunFonts other)
+    {
+        return new DocxRunFonts(
+            other.Ascii ?? current.Ascii,
+            other.HighAnsi ?? current.HighAnsi,
+            other.EastAsia ?? current.EastAsia,
+            other.ComplexScript ?? current.ComplexScript,
+            other.AsciiTheme ?? current.AsciiTheme,
+            other.HighAnsiTheme ?? current.HighAnsiTheme,
+            other.EastAsiaTheme ?? current.EastAsiaTheme,
+            other.ComplexScriptTheme ?? current.ComplexScriptTheme);
     }
 
     private static bool? ReadOnOff(XElement? element)
@@ -1473,7 +1486,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, DocxTableStyle> TableStyles)
     {
         public static DocxStyleSet Empty { get; } = new(
-            new DocxResolvedRunProperties(null, null, null, null, null, null, null),
+            new DocxResolvedRunProperties(null, null, null, null, null, null, null, DocxRunFonts.Empty),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
@@ -1767,7 +1780,8 @@ internal sealed class DocxReader
         bool? Bold,
         bool? Italic,
         bool? Underline,
-        string? UnderlineValue)
+        string? UnderlineValue,
+        DocxRunFonts Fonts)
     {
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -1778,7 +1792,8 @@ internal sealed class DocxReader
                 other.Bold ?? Bold,
                 other.Italic ?? Italic,
                 other.Underline ?? Underline,
-                other.UnderlineValue ?? UnderlineValue);
+                other.UnderlineValue ?? UnderlineValue,
+                MergeRunFonts(Fonts, other.Fonts));
         }
     }
 }

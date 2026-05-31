@@ -664,6 +664,76 @@ internal static class DocxTests
         TestAssert.Equal("minorBidi", fonts.ComplexScriptTheme ?? string.Empty);
     }
 
+    public static void DocxReaderCascadesRunFontTokensFromStyles()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:docDefaults>
+                    <w:rPrDefault><w:rPr><w:rFonts w:ascii="Default Sans" w:hAnsiTheme="minorHAnsi"/></w:rPr></w:rPrDefault>
+                  </w:docDefaults>
+                  <w:style w:type="paragraph" w:styleId="Body">
+                    <w:rPr><w:rFonts w:ascii="Paragraph Sans" w:eastAsia="Paragraph East"/></w:rPr>
+                  </w:style>
+                  <w:style w:type="character" w:styleId="Emphasis">
+                    <w:rPr><w:rFonts w:hAnsi="Character Sans" w:csTheme="majorBidi"/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:pStyle w:val="Body"/></w:pPr>
+                      <w:r>
+                        <w:rPr><w:rStyle w:val="Emphasis"/><w:rFonts w:asciiTheme="majorHAnsi"/></w:rPr>
+                        <w:t>Styled font tokens</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTextRun run = document.Paragraphs.Single().Runs.Single();
+        TestAssert.Equal("Paragraph Sans", run.FontFamily ?? string.Empty);
+        TestAssert.Equal("Paragraph Sans", run.Fonts.Ascii ?? string.Empty);
+        TestAssert.Equal("Character Sans", run.Fonts.HighAnsi ?? string.Empty);
+        TestAssert.Equal("Paragraph East", run.Fonts.EastAsia ?? string.Empty);
+        TestAssert.Equal("majorHAnsi", run.Fonts.AsciiTheme ?? string.Empty);
+        TestAssert.Equal("minorHAnsi", run.Fonts.HighAnsiTheme ?? string.Empty);
+        TestAssert.Equal("majorBidi", run.Fonts.ComplexScriptTheme ?? string.Empty);
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
