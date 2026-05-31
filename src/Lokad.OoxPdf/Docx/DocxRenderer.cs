@@ -85,7 +85,9 @@ internal sealed class DocxRenderer
         IEnumerable<int> tableRunes = document.Tables
             .SelectMany(t => t.Rows)
             .SelectMany(r => r.Cells)
-            .SelectMany(c => c.Text.EnumerateRunes().Select(rune => rune.Value));
+            .SelectMany(c => c.Paragraphs.Count == 0
+                ? c.Text.EnumerateRunes().Select(rune => rune.Value)
+                : c.Paragraphs.SelectMany(p => p.Runs).SelectMany(run => run.Text.EnumerateRunes().Select(rune => rune.Value)));
         PdfEmbeddedFont? embedded = null;
         PdfFontResource? resource = null;
         IReadOnlyList<int> glyphs = allRuns
@@ -180,10 +182,12 @@ internal sealed class DocxRenderer
             graphics.SetStrokeRgb(0, 0, 0);
             graphics.SetLineWidth(0.75d);
             graphics.StrokeRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
-            if (embedded is not null && fontResource is not null && cell.Text.Length != 0)
+            if (embedded is not null && fontResource is not null)
             {
-                string glyphHex = embedded.EncodeGlyphHex(cell.Text);
-                graphics.DrawGlyphText(fontResource.ResourceName, 11d, cellLayout.X + 4d, row.Y + row.Height - 17d, 0, 0, 0, glyphHex);
+                foreach (DocxTextLineLayout line in cellLayout.TextLines)
+                {
+                    RenderTextLine(line, graphics, embedded);
+                }
             }
         }
     }

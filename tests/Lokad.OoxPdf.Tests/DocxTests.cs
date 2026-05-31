@@ -4,7 +4,9 @@ using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -1476,6 +1478,52 @@ internal static class DocxTests
         TestAssert.Equal(60d, row.Cells[0].Width);
         TestAssert.Equal(70d, row.Cells[1].X);
         TestAssert.Equal(40d, row.Cells[1].Width);
+    }
+
+    public static void DocxTableLayoutStageBuildsParagraphTextLinesInsideCells()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var firstParagraph = new DocxParagraph(
+            [new DocxTextRun("Alpha", 11d, null, false, false, false, null, null)],
+            [],
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            null);
+        var secondParagraph = new DocxParagraph(
+            [new DocxTextRun("Beta", 14d, "336699", false, true, false, null, null)],
+            [],
+            DocxTextAlignment.Center,
+            "center",
+            0d,
+            0d,
+            1d,
+            null,
+            null);
+        var cell = new DocxTableCell("Alpha Beta", [firstParagraph, secondParagraph], null, null, null, null, []);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 44d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Alpha Beta".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+
+        DocxTableCellLayout cellLayout = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+        TestAssert.Equal(2, cellLayout.TextLines.Count);
+        TestAssert.Equal("Alpha", cellLayout.TextLines[0].Text);
+        TestAssert.Equal(11d, cellLayout.TextLines[0].FontSize);
+        TestAssert.Equal("Beta", cellLayout.TextLines[1].Text);
+        TestAssert.Equal(14d, cellLayout.TextLines[1].FontSize);
+        TestAssert.Equal("336699", cellLayout.TextLines[1].StyleRun.ColorHex ?? string.Empty);
+        TestAssert.True(cellLayout.TextLines[1].X > cellLayout.TextLines[0].X, "Centered table-cell paragraph text should be positioned from line width, not flattened at the left inset.");
+        TestAssert.True(cellLayout.TextLines[1].BaselineY < cellLayout.TextLines[0].BaselineY, "Separate table-cell paragraphs should produce separate baselines.");
     }
 
     public static void DocxLayoutSnapshotReportsPublicSafeCounts()
