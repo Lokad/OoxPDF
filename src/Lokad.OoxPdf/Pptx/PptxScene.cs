@@ -4869,6 +4869,10 @@ internal sealed class PptxSceneBuilder
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
         PptxFormatSchemeReference fillReference = PptxFormatSchemeResolver.ResolveFillReference(shape, theme);
         PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
+        PptxSceneFillStyle fill = TryReadShapeFill(shapeProperties, theme, colorMap, fillReference, out RgbColor fillColor, out double fillAlpha) ||
+            TryReadInheritedGroupFill(shape, theme, colorMap, out fillColor, out fillAlpha)
+                ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
+                : default;
         PptxSceneLineStyle line = TryReadShapeLine(shapeProperties, theme, colorMap, lineReference, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
             ? new PptxSceneLineStyle(
                 true,
@@ -4898,9 +4902,7 @@ internal sealed class PptxSceneBuilder
             lineReference,
             shapeProperties?.Element(DrawingNamespace + "noFill") is not null,
             shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null,
-            TryReadShapeFill(shapeProperties, theme, colorMap, fillReference, out RgbColor fillColor, out double fillAlpha)
-                ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
-                : default,
+            fill,
             ReadShapeGradientFill(shapeProperties, theme, colorMap),
             ReadShapePatternFill(shapeProperties, theme, colorMap),
             ReadShapePictureFill(shapeProperties, package, relationships),
@@ -5432,6 +5434,43 @@ internal sealed class PptxSceneBuilder
         }
 
         return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, colorMap, out color, out alpha);
+    }
+
+    private static bool TryReadInheritedGroupFill(
+        XElement shape,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        out RgbColor color,
+        out double alpha)
+    {
+        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
+        if (shapeProperties?.Element(DrawingNamespace + "noFill") is not null ||
+            shapeProperties?.Element(DrawingNamespace + "grpFill") is null)
+        {
+            color = default;
+            alpha = 1d;
+            return false;
+        }
+
+        foreach (XElement group in shape.Ancestors(PresentationNamespace + "grpSp"))
+        {
+            XElement? groupProperties = group.Element(PresentationNamespace + "grpSpPr");
+            if (groupProperties?.Element(DrawingNamespace + "noFill") is not null)
+            {
+                color = default;
+                alpha = 1d;
+                return false;
+            }
+
+            if (TryReadSolidColorWithAlpha(groupProperties, theme, colorMap, out color, out alpha))
+            {
+                return true;
+            }
+        }
+
+        color = default;
+        alpha = 1d;
+        return false;
     }
 
     private static bool TryReadShapeLine(

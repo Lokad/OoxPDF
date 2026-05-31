@@ -276,6 +276,140 @@ Use-OfficePptxContainerForSlide `
     -Path (Join-Path $cases "pptx-ladder-06-explicit-arc-stealth.pptx") `
     -BasePath (Join-Path $cases "pptx-ladder-06-shape-adjust-port-a.pptx")
 
+New-ZipPackage -Path (Join-Path $cases "pptx-ladder-06-custom-geometry-default-fill.pptx") -Entries @{
+    "[Content_Types].xml" = $pptxContentTypes
+    "_rels/.rels" = $pptxPackageRels
+    "ppt/_rels/presentation.xml.rels" = $pptxPresentationRels
+    "ppt/presentation.xml" = $pptxPresentation
+    "ppt/slides/slide1.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:cSld>
+    <p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></p:bgPr></p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="Implicit Fill Custom Geometry"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr bwMode="auto">
+          <a:xfrm><a:off x="900000" y="1200000"/><a:ext cx="1800000" cy="1400000"/></a:xfrm>
+          <a:custGeom>
+            <a:avLst/>
+            <a:pathLst>
+              <a:path w="100" h="100">
+                <a:moveTo><a:pt x="0" y="35"/></a:moveTo>
+                <a:lnTo><a:pt x="45" y="0"/></a:lnTo>
+                <a:lnTo><a:pt x="100" y="25"/></a:lnTo>
+                <a:lnTo><a:pt x="80" y="100"/></a:lnTo>
+                <a:lnTo><a:pt x="20" y="85"/></a:lnTo>
+                <a:close/>
+              </a:path>
+            </a:pathLst>
+          </a:custGeom>
+          <a:ln w="3175"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="Explicit No Fill Custom Geometry"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr bwMode="auto">
+          <a:xfrm><a:off x="3400000" y="1200000"/><a:ext cx="1800000" cy="1400000"/></a:xfrm>
+          <a:custGeom>
+            <a:avLst/>
+            <a:pathLst>
+              <a:path w="100" h="100">
+                <a:moveTo><a:pt x="0" y="35"/></a:moveTo>
+                <a:lnTo><a:pt x="45" y="0"/></a:lnTo>
+                <a:lnTo><a:pt x="100" y="25"/></a:lnTo>
+                <a:lnTo><a:pt x="80" y="100"/></a:lnTo>
+                <a:lnTo><a:pt x="20" y="85"/></a:lnTo>
+                <a:close/>
+              </a:path>
+            </a:pathLst>
+          </a:custGeom>
+          <a:noFill/>
+          <a:ln w="3175"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="Explicit Solid Fill Custom Geometry"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr bwMode="auto">
+          <a:xfrm><a:off x="5900000" y="1200000"/><a:ext cx="1800000" cy="1400000"/></a:xfrm>
+          <a:custGeom>
+            <a:avLst/>
+            <a:pathLst>
+              <a:path w="100" h="100">
+                <a:moveTo><a:pt x="0" y="35"/></a:moveTo>
+                <a:lnTo><a:pt x="45" y="0"/></a:lnTo>
+                <a:lnTo><a:pt x="100" y="25"/></a:lnTo>
+                <a:lnTo><a:pt x="80" y="100"/></a:lnTo>
+                <a:lnTo><a:pt x="20" y="85"/></a:lnTo>
+                <a:close/>
+              </a:path>
+            </a:pathLst>
+          </a:custGeom>
+          <a:solidFill><a:srgbClr val="808080"/></a:solidFill>
+          <a:ln w="3175"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:grpSp>
+        <p:nvGrpSpPr><p:cNvPr id="5" name="Inherited Fill Group"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+        <p:grpSpPr bwMode="auto">
+          <a:xfrm><a:off x="900000" y="3600000"/><a:ext cx="4300000" cy="1500000"/><a:chOff x="900000" y="3600000"/><a:chExt cx="4300000" cy="1500000"/></a:xfrm>
+          <a:solidFill><a:schemeClr val="bg1"><a:lumMod val="85000"/></a:schemeClr></a:solidFill>
+        </p:grpSpPr>
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="6" name="Group Inherited Fill Custom Geometry"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm><a:off x="900000" y="3600000"/><a:ext cx="1800000" cy="1200000"/></a:xfrm>
+            <a:custGeom>
+              <a:avLst/>
+              <a:pathLst>
+                <a:path w="100" h="100">
+                  <a:moveTo><a:pt x="0" y="35"/></a:moveTo>
+                  <a:lnTo><a:pt x="45" y="0"/></a:lnTo>
+                  <a:lnTo><a:pt x="100" y="25"/></a:lnTo>
+                  <a:lnTo><a:pt x="80" y="100"/></a:lnTo>
+                  <a:lnTo><a:pt x="20" y="85"/></a:lnTo>
+                  <a:close/>
+                </a:path>
+              </a:pathLst>
+            </a:custGeom>
+            <a:grpFill/>
+            <a:ln w="3175"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln>
+          </p:spPr>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="7" name="Group Inherited Fill Explicit No Fill"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm><a:off x="3400000" y="3600000"/><a:ext cx="1800000" cy="1200000"/></a:xfrm>
+            <a:custGeom>
+              <a:avLst/>
+              <a:pathLst>
+                <a:path w="100" h="100">
+                  <a:moveTo><a:pt x="0" y="35"/></a:moveTo>
+                  <a:lnTo><a:pt x="45" y="0"/></a:lnTo>
+                  <a:lnTo><a:pt x="100" y="25"/></a:lnTo>
+                  <a:lnTo><a:pt x="80" y="100"/></a:lnTo>
+                  <a:lnTo><a:pt x="20" y="85"/></a:lnTo>
+                  <a:close/>
+                </a:path>
+              </a:pathLst>
+            </a:custGeom>
+            <a:noFill/>
+            <a:ln w="3175"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln>
+          </p:spPr>
+        </p:sp>
+      </p:grpSp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>
+'@
+}
+
+Use-OfficePptxContainerForSlide `
+    -Path (Join-Path $cases "pptx-ladder-06-custom-geometry-default-fill.pptx") `
+    -BasePath (Join-Path $cases "pptx-ladder-06-shape-adjust-port-a.pptx")
+
 New-ZipPackage -Path (Join-Path $cases "docx-blank.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>

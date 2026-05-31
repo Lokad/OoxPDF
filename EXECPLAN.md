@@ -2474,9 +2474,11 @@ paths, and ExecPlan references together.
   font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart
   cached-image fallbacks and labels.
 - [ ] Private slide 5 visible remaining problem: the right-side chart has an incorrectly placed secondary
-  value axis and an incorrectly placed upward green arrow.
+  value axis and an incorrectly placed upward green arrow; the graph arrows also remain visibly thinner in
+  the candidate than in Office.
   Inspect whether this is a value-axis title, rotated axis label text, tick-label formatting, or chart-style
-  inheritance, then reproduce with a minimal public chart-axis fixture before changing renderer logic.
+  inheritance, line-width/theme inheritance, or arrowhead/line-end geometry, then reproduce with a minimal
+  public chart-axis/arrow fixture before changing renderer logic.
   - [ ] Replace the vector approximation inside chart tiling-pattern cells with Office-like image-backed
     pattern-local XObjects, and derive the pattern matrix phase/translation from chart/shape coordinates
     instead of using a zero-offset cell matrix.
@@ -2764,6 +2766,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: Private slide 80's missing grey world-map layer was not a raster fallback issue or a custom
+  geometry default-fill rule.
+  Evidence: The slide has `792` custom geometries; `785` map fragments use `a:grpFill` with one custom path,
+  white `bg1` strokes, and ancestor group `solidFill` of `bg1` with `lumMod=85000`. Office emits `795` fills
+  on page 80, including `785` `g:0.851` fills for those fragments; the previous candidate emitted only `10`
+  fills and stroked the fragments.
 - Observation: The dominant private page-36 three-column text-state branch is not a baseline-placement
   problem.
   Evidence: The reliable-position summary for run `20260531-014545` has `41` matched operations in the
@@ -3105,6 +3113,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Resolve `a:grpFill` through ancestor group solid fill instead of adding any custom-geometry
+  default-fill or private-slide color fallback.
+  Rationale: A public synthetic custom-geometry fixture shows omitted shape fill stays unfilled in Office, but
+  the same shape under a group with `a:grpFill` inherits the group fill and emits the same light-gray PDF fill
+  structure seen on private slide 80. This is an OOXML inheritance rule, not a map-specific special case.
+  Date/Author: 2026-05-31 / Codex.
 - Decision: Keep the refreshed page-36/page-79 placement evidence in diagnostic mode and do not change
   baseline fallback constants, table row/column coordinates, or table default-inset adjustments from this
   private deck evidence.
@@ -3473,6 +3487,15 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 
 Current validation baseline:
 
+- Private deck: `pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json` run
+  `20260531-123236` compared `84/84` pages. Page 80 improved from run `20260531-120513` MAE `3.62`,
+  changed16 `0.11`, SSIM `0.91` to MAE `0.96`, changed16 `0.02`, SSIM `0.96`; PDF inspection now shows the
+  candidate page has `795` fill operations, including the `785` `g:0.851` group-fill map fragments that match
+  Office's structural bucket.
+- Public custom-geometry group-fill fixture: `pptx-ladder-06-custom-geometry-default-fill` run
+  `20260531-123236` passed after tightening the gate to MAE `0.05` and changed16 `0.001`.
+- Focused shape tests: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group
+  pptx-shapes --skip-slow` passed `33` tests.
 - Private deck: `pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json` run `20260531-025144` compared `84/84` pages, had zero dimension mismatches, no diagnostics, deck MAE `2.877036`, changed16 `0.052651`. Worst pages were page 36 (`6.045372`), page 21 (`5.013651`), page 81 (`4.540970`), page 48 (`4.441990`), and page 20 (`4.406351`). Page 79 improved to about `3.38` MAE after the compressed table-anchor line-box fix. Page 17 is no longer a high-impact schema blocker in that run.
 - Public table text-state fixtures: `pptx-ladder-10-table-font-fragmentation` run `20260531-025104` passed at MAE `1.524499`, changed16 `0.026186`; `pptx-ladder-10-table-middle-small-insets` run `20260531-025127` passed unchanged at MAE `0.966760`, changed16 `0.019591`.
 - Focused table tests: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-tables --skip-slow` passed `19` tests.
