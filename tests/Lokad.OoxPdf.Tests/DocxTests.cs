@@ -1591,7 +1591,7 @@ internal static class DocxTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:tbl>
-                      <w:tblPr><w:tblLayout w:type="fixed"/><w:tblW w:w="2880" w:type="dxa"/></w:tblPr>
+                      <w:tblPr><w:tblLayout w:type="fixed"/><w:tblW w:w="2880" w:type="dxa"/><w:tblInd w:w="360" w:type="dxa"/></w:tblPr>
                       <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr><w:tc><w:tcPr><w:tcW w:w="2160" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>Fixed</w:t></w:r></w:p></w:tc></w:tr>
                     </w:tbl>
@@ -1618,6 +1618,9 @@ internal static class DocxTests
         TestAssert.Equal("2880", document.Tables[0].PreferredWidthValue ?? string.Empty);
         TestAssert.Equal("dxa", document.Tables[0].PreferredWidthType ?? string.Empty);
         TestAssert.Equal(144d, document.Tables[0].PreferredWidthPoints ?? 0d);
+        TestAssert.Equal("360", document.Tables[0].IndentValue ?? string.Empty);
+        TestAssert.Equal("dxa", document.Tables[0].IndentType ?? string.Empty);
+        TestAssert.Equal(18d, document.Tables[0].IndentPoints ?? 0d);
         TestAssert.Equal("2160", document.Tables[0].Rows[0].Cells[0].PreferredWidthValue ?? string.Empty);
         TestAssert.Equal("dxa", document.Tables[0].Rows[0].Cells[0].PreferredWidthType ?? string.Empty);
         TestAssert.Equal(108d, document.Tables[0].Rows[0].Cells[0].PreferredWidthPoints ?? 0d);
@@ -2444,6 +2447,30 @@ internal static class DocxTests
         TestAssert.Equal(40d, row.Cells[0].Width);
         TestAssert.Equal(50d, row.Cells[1].X);
         TestAssert.Equal(80d, row.Cells[1].Width);
+    }
+
+    public static void DocxTableLayoutStageAppliesTableIndent()
+    {
+        var table = new DocxTable(
+            null,
+            [40d],
+            [new DocxTableRow([
+                new DocxTableCell("indented", [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], 20d)],
+            IndentPoints: 18d,
+            IndentValue: "360",
+            IndentType: "dxa");
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(28d, row.Cells[0].X);
+        TestAssert.Equal(40d, row.Cells[0].Width);
     }
 
     public static void DocxTableLayoutStageBuildsParagraphTextLinesInsideCells()

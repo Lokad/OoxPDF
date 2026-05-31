@@ -1920,6 +1920,11 @@ High-priority actions:
   - [ ] 2026-05-31: Complete table margin/width fidelity: implement table-level width/preferred width,
     cell spacing, `tblInd`, grid spans/merged cells, and style/direct margin priority with public Office PDF
     fixtures.
+    2026-05-31 progress: direct table indentation `w:tblInd` is now preserved as table-owned dxa metadata and
+    applied in `DocxLayoutEngine` before placing row/cell layouts. Public tests cover source-token retention
+    and table x-position shift. Private DOCX run `20260531-173800` was neutral (`15.889775` MAE, `0.141949`
+    changed16), so the high-impact remainder is still cell spacing, grid spans/merged cells, and the full
+    style/direct margin priority ladder.
   - [x] 2026-05-31: Preserved DOCX table preferred-width tokens and applied `w:tblW w:type="dxa"` to table
     grid scaling. The layout stage now scales column widths to the preferred table width, capped by available
     page width, instead of relying only on raw `w:tblGrid` sums. Private impact was neutral, indicating this

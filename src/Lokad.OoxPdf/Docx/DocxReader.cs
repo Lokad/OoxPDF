@@ -575,6 +575,8 @@ internal sealed class DocxReader
             ?.Attribute(WordprocessingNamespace + "val");
         XElement? tableWidth = tableProperties
             ?.Element(WordprocessingNamespace + "tblW");
+        XElement? tableIndent = tableProperties
+            ?.Element(WordprocessingNamespace + "tblInd");
         IReadOnlyList<DocxTableCellBorder> tableBorders = ReadTableBorders(tableProperties);
         DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
             ? parsedTableStyle
@@ -663,7 +665,10 @@ internal sealed class DocxReader
             tableStyleId,
             ReadDxaWidth(tableWidth),
             (string?)tableWidth?.Attribute(WordprocessingNamespace + "w"),
-            (string?)tableWidth?.Attribute(WordprocessingNamespace + "type"));
+            (string?)tableWidth?.Attribute(WordprocessingNamespace + "type"),
+            ReadDxaWidth(tableIndent),
+            (string?)tableIndent?.Attribute(WordprocessingNamespace + "w"),
+            (string?)tableIndent?.Attribute(WordprocessingNamespace + "type"));
     }
 
     private static double? ReadDxaWidth(XElement? width)

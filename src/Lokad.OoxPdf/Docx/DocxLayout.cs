@@ -497,9 +497,11 @@ internal sealed class DocxLayoutEngine
         Action finishPage,
         Func<bool> hasPageContent)
     {
+        double tableX = x + Math.Max(0d, table.IndentPoints ?? 0d);
+        double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table);
         double rawTableWidth = effectiveColumns.Sum();
-        double targetTableWidth = Math.Min(availableWidth, table.PreferredWidthPoints ?? rawTableWidth);
+        double targetTableWidth = Math.Min(tableAvailableWidth, table.PreferredWidthPoints ?? rawTableWidth);
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
@@ -518,12 +520,12 @@ internal sealed class DocxLayoutEngine
                 {
                     foreach (DocxTableRow headerRow in headerRows)
                     {
-                        AddTableRowLayout(table, headerRow, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
+                        AddTableRowLayout(table, headerRow, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, tableX);
                     }
                 }
             }
 
-            AddTableRowLayout(table, row, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, x);
+            AddTableRowLayout(table, row, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, tableX);
         }
 
         cursorY -= 6d;
