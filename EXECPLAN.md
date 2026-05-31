@@ -2003,6 +2003,12 @@ High-priority actions:
     2026-05-31 progress: layout now resolves `w:tblW w:type="pct"` from fiftieths of a percent against the
     available table width before scaling the grid. Public coverage checks a 50% table width; private DOCX run
     `20260531-182041` improved slightly (`15.864724` MAE, `0.141689` changed16).
+    2026-05-31 progress: column-basis resolution now collects unambiguous single-column `tcW dxa`
+    constraints across rows instead of only accepting a complete first row. Grid-spanning cells remain
+    width consumers, not ambiguous column split sources. Public coverage checks a spanning first row followed
+    by a later row with 40/80 point preferred cell widths; private DOCX run `20260531-185014` stayed neutral
+    versus the current baseline (`15.849350` MAE, `0.141574` changed16), indicating the private document's
+    affected rows were already covered by earlier width rules.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or

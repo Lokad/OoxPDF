@@ -2964,6 +2964,36 @@ internal static class DocxTests
         TestAssert.Equal(80d, row.Cells[1].Width);
     }
 
+    public static void DocxTableLayoutStageUsesLaterRowCellPreferredWidths()
+    {
+        var table = new DocxTable(
+            null,
+            [60d, 60d],
+            [
+                new DocxTableRow([
+                    new DocxTableCell("span", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2")
+                ], 20d),
+                new DocxTableRow([
+                    new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 40d),
+                    new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 80d)
+                ], 20d)
+            ]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout[] rows = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, rows.Length);
+        TestAssert.Equal(120d, rows[0].Cells[0].Width);
+        TestAssert.Equal(40d, rows[1].Cells[0].Width);
+        TestAssert.Equal(50d, rows[1].Cells[1].X);
+        TestAssert.Equal(80d, rows[1].Cells[1].Width);
+    }
+
     public static void DocxTableLayoutStageAppliesGridSpanWidths()
     {
         var table = new DocxTable(

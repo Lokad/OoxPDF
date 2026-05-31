@@ -550,12 +550,33 @@ internal sealed class DocxLayoutEngine
 
     private static IReadOnlyList<double> GetEffectiveTableColumnWidths(DocxTable table)
     {
-        DocxTableRow? firstRow = table.Rows.FirstOrDefault();
-        if (firstRow is not null &&
-            firstRow.Cells.Count == table.ColumnWidthsPoints.Count &&
-            firstRow.Cells.All(cell => cell.PreferredWidthPoints is > 0d))
+        int columnCount = table.ColumnWidthsPoints.Count;
+        if (columnCount == 0)
         {
-            return firstRow.Cells.Select(cell => cell.PreferredWidthPoints!.Value).ToArray();
+            return table.ColumnWidthsPoints;
+        }
+
+        double?[] preferredWidths = new double?[columnCount];
+        foreach (DocxTableRow row in table.Rows)
+        {
+            int gridColumnIndex = 0;
+            foreach (DocxTableCell cell in row.Cells)
+            {
+                int span = Math.Max(1, cell.GridSpan);
+                if (span == 1 &&
+                    gridColumnIndex < columnCount &&
+                    cell.PreferredWidthPoints is > 0d)
+                {
+                    preferredWidths[gridColumnIndex] = cell.PreferredWidthPoints.Value;
+                }
+
+                gridColumnIndex += span;
+            }
+
+            if (preferredWidths.All(width => width is > 0d))
+            {
+                return preferredWidths.Select(width => width!.Value).ToArray();
+            }
         }
 
         return table.ColumnWidthsPoints;
