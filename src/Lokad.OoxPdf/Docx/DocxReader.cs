@@ -837,14 +837,14 @@ internal sealed class DocxReader
 
         if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
         {
-            return new DocxListLabel("\u2022", numberingLevel.Format, numberingLevel.Text, numId, level, numberingLevel.Indent);
+            return new DocxListLabel("\u2022", numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent);
         }
 
         var key = (numId, level);
         counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : numberingLevel.Start;
         string numberText = counters[key].ToString(CultureInfo.InvariantCulture);
         string labelText = numberingLevel.Text.Replace("%" + (level + 1).ToString(CultureInfo.InvariantCulture), numberText, StringComparison.Ordinal);
-        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numId, level, numberingLevel.Indent);
+        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent);
     }
 
     private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName)
@@ -937,7 +937,8 @@ internal sealed class DocxReader
                     : 1;
                 string format = (string?)level.Element(WordprocessingNamespace + "numFmt")?.Attribute(WordprocessingNamespace + "val") ?? "decimal";
                 string text = (string?)level.Element(WordprocessingNamespace + "lvlText")?.Attribute(WordprocessingNamespace + "val") ?? "%" + (levelIndex + 1) + ".";
-                levels[(abstractId, levelIndex)] = new DocxNumberingLevel(format, text, start, ReadNumberingIndent(level));
+                string suffix = (string?)level.Element(WordprocessingNamespace + "suff")?.Attribute(WordprocessingNamespace + "val") ?? "tab";
+                levels[(abstractId, levelIndex)] = new DocxNumberingLevel(format, text, suffix, start, ReadNumberingIndent(level));
             }
         }
 
@@ -1266,7 +1267,7 @@ internal sealed class DocxReader
             new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>());
     }
 
-    private sealed record DocxNumberingLevel(string Format, string Text, int Start, DocxNumberingIndent Indent);
+    private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent);
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
     {

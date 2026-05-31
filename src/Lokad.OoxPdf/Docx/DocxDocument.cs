@@ -113,6 +113,7 @@ internal sealed record DocxListLabel(
     string Text,
     string FormatValue,
     string LevelTextValue,
+    string SuffixValue,
     string NumberId,
     int Level,
     DocxNumberingIndent Indent);

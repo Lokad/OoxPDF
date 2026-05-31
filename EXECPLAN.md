@@ -1859,6 +1859,13 @@ High-priority actions:
   - [ ] 2026-05-31: Complete DOCX numbering fidelity after marker/text separation: preserve and apply
     numbering tab stops, symbol/bullet fonts, level suffix behavior, continuation-line wrapping across
     mixed-style runs, restart overrides, and the same segmented model inside table cells.
+    2026-05-31 progress: numbering levels now preserve `w:suff` and layout distinguishes tab, space, and
+    nothing suffix behavior for first-line text placement. Numbered table-cell paragraphs now use the same
+    label/text segment split as body paragraphs instead of flattening the label into the cell text run. Public
+    coverage checks suffix preservation, space-suffix geometry, and table-cell numbering segmentation. Private
+    DOCX run `20260531-173037` stayed neutral (`15.889775` MAE, `0.141949` changed16), and
+    `DOCX_NUMBERING_INDENT` remains appropriate because exact Word tab-stop ownership, bullet fonts, restarts,
+    and mixed-style continuation wrapping are still open.
   - [x] 2026-05-31: Preserved DOCX `w:tblHeader` row tokens and repeated contiguous header rows when a table
     page break occurs. This moves repeating headers out of diagnostics-only handling and into the table layout
     stage with public coverage. The diagnostic remains as an approximation because multi-row/header-group

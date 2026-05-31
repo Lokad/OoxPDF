@@ -204,7 +204,8 @@ internal sealed class DocxLayoutEngine
             if (embedded is not null && paragraph.Runs.Count > 0)
             {
                 string text = string.Concat(paragraph.Runs.Select(r => r.Text));
-                double textStartOffset = GetParagraphTextStartOffset(paragraph);
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, embedded);
+                double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
                 double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
                 double paragraphX = x + textStartOffset;
                 double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph));
@@ -230,17 +231,21 @@ internal sealed class DocxLayoutEngine
                     IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
                         ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, x + labelStartOffset, lineX, paragraphFontSize, embedded)
                         : [new DocxTextSegmentLayout(line, firstRun, lineX, lineWidth)];
+                    double effectiveX = firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX;
+                    double effectiveWidth = firstLine && paragraph.ListLabel is not null
+                        ? Math.Max(lineX + lineWidth, x + labelStartOffset + embedded.MeasureTextPoints(paragraph.ListLabel.Text, paragraphFontSize)) - (x + labelStartOffset)
+                        : lineWidth;
                     currentItems.Add(new DocxTextLineLayout(
-                        firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + " " + line : line,
+                        firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line : line,
                         firstRun,
                         paragraphFontSize,
-                        firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX,
+                        effectiveX,
                         cursorY - baselineOffset,
-                        firstLine && paragraph.ListLabel is not null
-                            ? Math.Max(lineX + lineWidth, x + labelStartOffset + embedded.MeasureTextPoints(paragraph.ListLabel.Text, paragraphFontSize)) - (x + labelStartOffset)
-                            : lineWidth,
+                        effectiveWidth,
                         segments));
                     firstLine = false;
+                    paragraphX = x + continuationTextStartOffset;
+                    paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                     cursorY -= lineHeight;
                 }
             }
@@ -346,10 +351,9 @@ internal sealed class DocxLayoutEngine
         {
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
-            string text = paragraph.ListLabel is null
-                ? string.Concat(paragraph.Runs.Select(run => run.Text))
-                : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
-            double paragraphWidth = Math.Max(1d, availableWidth - GetParagraphStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            string text = string.Concat(paragraph.Runs.Select(run => run.Text));
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+            double paragraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
             height += WrapTextLines(text, paragraphWidth, fontSize, embedded).Count() * lineHeight;
         }
 
@@ -398,6 +402,26 @@ internal sealed class DocxLayoutEngine
         return Math.Max(0d, left + firstLine);
     }
 
+    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, PdfEmbeddedFont embedded)
+    {
+        if (paragraph.ListLabel is null)
+        {
+            return 0d;
+        }
+
+        if (IsNumberingTabSuffix(paragraph.ListLabel))
+        {
+            return GetParagraphTextStartOffset(paragraph);
+        }
+
+        double gap = IsNumberingSpaceSuffix(paragraph.ListLabel)
+            ? embedded.MeasureTextPoints(" ", fontSize)
+            : 0d;
+        return Math.Max(
+            0d,
+            GetParagraphLabelStartOffset(paragraph) + embedded.MeasureTextPoints(paragraph.ListLabel.Text, fontSize) + gap);
+    }
+
     private static double GetParagraphLabelStartOffset(DocxParagraph paragraph)
     {
         if (paragraph.ListLabel is null)
@@ -438,6 +462,27 @@ internal sealed class DocxLayoutEngine
             new DocxTextSegmentLayout(label.Text, styleRun, labelX, labelWidth),
             new DocxTextSegmentLayout(line, styleRun, lineX, lineWidth)
         ];
+    }
+
+    private static string GetListLabelTextSeparator(DocxListLabel label)
+    {
+        return label.SuffixValue switch
+        {
+            "nothing" => string.Empty,
+            "space" => " ",
+            _ => "\t"
+        };
+    }
+
+    private static bool IsNumberingTabSuffix(DocxListLabel label)
+    {
+        return string.IsNullOrEmpty(label.SuffixValue) ||
+            label.SuffixValue.Equals("tab", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsNumberingSpaceSuffix(DocxListLabel label)
+    {
+        return label.SuffixValue.Equals("space", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void LayoutTable(
@@ -573,10 +618,9 @@ internal sealed class DocxLayoutEngine
 
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
-            string text = paragraph.ListLabel is null
-                ? string.Concat(paragraph.Runs.Select(run => run.Text))
-                : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
-            double paragraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            string text = string.Concat(paragraph.Runs.Select(run => run.Text));
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+            double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
             int lineCount = WrapTextLines(text, paragraphWidth, fontSize, embedded).Count();
             contentHeight += lineCount * lineHeight + paragraph.SpacingAfterPoints;
             foreach (DocxInlineImage image in paragraph.Images)
@@ -630,11 +674,13 @@ internal sealed class DocxLayoutEngine
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
             DocxTextRun firstRun = paragraph.Runs[0];
-            string text = paragraph.ListLabel is null
-                ? string.Concat(paragraph.Runs.Select(run => run.Text))
-                : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
-            double paragraphX = cellX + paddingLeft + GetParagraphStartOffset(paragraph);
-            double paragraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            string text = string.Concat(paragraph.Runs.Select(run => run.Text));
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+            double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
+            double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
+            double paragraphX = cellX + paddingLeft + textStartOffset;
+            double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
+            bool firstLine = true;
             foreach (string line in WrapTextLines(text, paragraphWidth, fontSize, embedded))
             {
                 double lineWidth = embedded.MeasureTextPoints(line, fontSize);
@@ -644,8 +690,24 @@ internal sealed class DocxLayoutEngine
                     DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
                     _ => paragraphX
                 };
-                IReadOnlyList<DocxTextSegmentLayout> segments = CreateTextSegments(line, paragraph.Runs, lineX, fontSize, embedded);
-                lines.Add(new DocxTextLineLayout(line, firstRun, fontSize, lineX, cursorY, lineWidth, segments));
+                IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
+                    ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, cellX + paddingLeft + labelStartOffset, lineX, fontSize, embedded)
+                    : CreateTextSegments(line, paragraph.Runs, lineX, fontSize, embedded);
+                double effectiveX = firstLine && paragraph.ListLabel is not null ? cellX + paddingLeft + labelStartOffset : lineX;
+                double effectiveWidth = firstLine && paragraph.ListLabel is not null
+                    ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + embedded.MeasureTextPoints(paragraph.ListLabel.Text, fontSize)) - (cellX + paddingLeft + labelStartOffset)
+                    : lineWidth;
+                lines.Add(new DocxTextLineLayout(
+                    firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line : line,
+                    firstRun,
+                    fontSize,
+                    effectiveX,
+                    cursorY,
+                    effectiveWidth,
+                    segments));
+                firstLine = false;
+                paragraphX = cellX + paddingLeft + continuationTextStartOffset;
+                paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                 cursorY -= lineHeight;
             }
 
@@ -698,10 +760,9 @@ internal sealed class DocxLayoutEngine
             {
                 double fontSize = paragraph.Runs.Max(run => run.FontSize);
                 double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
-                string text = paragraph.ListLabel is null
-                    ? string.Concat(paragraph.Runs.Select(run => run.Text))
-                    : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
-                double paragraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+                string text = string.Concat(paragraph.Runs.Select(run => run.Text));
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+                double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 cursorY -= WrapTextLines(text, paragraphWidth, fontSize, embedded).Count() * lineHeight;
                 cursorY -= paragraph.SpacingAfterPoints;
             }
