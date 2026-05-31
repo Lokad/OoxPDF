@@ -280,11 +280,6 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "paragraph section break");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "tblStyle").Any())
-        {
-            Emit("DOCX_UNSUPPORTED_TABLE_STYLE", "table style", fallback: "Approximated");
-        }
-
         XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, StylesContentType, out string? stylesPartName);
         if (styles is not null)
         {

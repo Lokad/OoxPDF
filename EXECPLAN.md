@@ -4590,6 +4590,14 @@ Current validation baseline:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-234039`
   stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16 `0.125542`, and now
   reports `DOCX_NUMBERING_MARKER_FONT`, `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
+- DOCX table-style use diagnostic validation:
+  after removing the duplicate `DOCX_UNSUPPORTED_TABLE_STYLE` warning for merely using `w:tblStyle`, public
+  diagnostics still keep `DOCX_STYLE_TABLE_STYLE` on table-style definitions until exact Word precedence and
+  unsupported complex-script atoms are narrowed further. `docx-tables --skip-slow` passed `47`,
+  `docx-numbering --skip-slow` passed `11`, `docx-text --skip-slow` passed `17`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-234350`
+  stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16 `0.125542`, and now
+  reports only `DOCX_NUMBERING_MARKER_FONT` and `DOCX_STYLE_TABLE_STYLE`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
