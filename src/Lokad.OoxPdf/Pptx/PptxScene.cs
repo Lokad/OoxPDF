@@ -1031,6 +1031,8 @@ internal sealed record PptxSceneChartDataLabels(
 internal sealed record PptxSceneChartDataLabelOverride(
     int Index,
     string IndexValue,
+    bool? IsDeleted,
+    string IsDeletedValue,
     bool? ShowValue,
     string ShowValueValue,
     bool? ShowPercent,
@@ -2759,6 +2761,7 @@ internal sealed class PptxSceneBuilder
             }
 
             PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
+            (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "delete");
             (bool? showValue, string showValueValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showVal");
             (bool? showPercent, string showPercentValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showPercent");
             (bool? showCategoryName, string showCategoryNameValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showCatName");
@@ -2769,6 +2772,8 @@ internal sealed class PptxSceneBuilder
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
                 indexValue,
+                isDeleted,
+                isDeletedValue,
                 showValue,
                 showValueValue,
                 showPercent,

@@ -6029,6 +6029,11 @@ internal sealed partial class PptxRenderer
             return options;
         }
 
+        if (dataLabel.IsDeleted == true)
+        {
+            return ChartDataLabelOptions.None;
+        }
+
         ChartTextStyleOverride textStyle = new(
             dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
             dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
@@ -6496,6 +6501,7 @@ internal sealed partial class PptxRenderer
         foreach (PptxSceneChartDataLabelOverride dataLabel in overrides)
         {
             result[dataLabel.Index] = new ChartDataLabelOverride(
+                dataLabel.IsDeleted,
                 dataLabel.ShowValue,
                 dataLabel.ShowPercent,
                 dataLabel.ShowCategoryName,
@@ -10746,7 +10752,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartTextRunLayout(string Text, ChartTextStyle Style, double Width);
 
-    private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions);
+    private readonly record struct ChartDataLabelOverride(bool? IsDeleted, bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions);
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
 

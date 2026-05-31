@@ -217,6 +217,14 @@ High-priority actions:
   color problem, not as a private-content coordinate tweak: inspect the Office/candidate PDF text operations,
   rectangle geometry, fill/stroke/text color states, and OOXML style inheritance, then reproduce the underlying
   behavior with public synthetic fixtures before changing production rendering.
+  2026-05-31 progress: PDF and OOXML inspection showed the first reproducible structural gap is in chart
+  data-label overrides, not ordinary slide text frames: point-level `c:dLbl/c:delete` was not preserved in the
+  scene model, so deleted chart labels could still be rendered. `PptxSceneChartDataLabelOverride` now carries
+  the raw delete state, the chart renderer suppresses deleted point labels, and `pptx-charts` has a public
+  synthetic guard. Private run `20260531-172242` improved slide 42 slightly (`2.245136960` MAE,
+  `0.045451389` changed16, `0.954406876` SSIM), but the item remains open: remaining numeric chart labels
+  still differ in baseline/position and likely need Office-aligned bar/stacked data-label box geometry and
+  chart-label text color inheritance, not another private coordinate tweak.
 - [ ] 2026-05-31: Continue the private page-36 typography branch as an Office text-emission model problem,
   not as a font-family rule. Private run `20260531-002604` has page 36 as the worst slide (`6.045371817`
   MAE) and the page is now narrowed to text-state decomposition: candidate and Office text positions are close

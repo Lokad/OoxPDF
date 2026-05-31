@@ -245,6 +245,39 @@ internal static class PptxTests
         TestAssert.True(series.Line.HasLine == false, "Expected explicit chart series line noFill to suppress bar outlines.");
     }
 
+    public static void PptxChartDataLabelOverridePreservesDelete()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart>
+                <c:plotArea>
+                  <c:barChart>
+                    <c:barDir val="col"/>
+                    <c:dLbls>
+                      <c:showVal val="1"/>
+                      <c:dLbl><c:idx val="1"/><c:delete val="1"/></c:dLbl>
+                    </c:dLbls>
+                    <c:ser>
+                      <c:idx val="0"/>
+                      <c:order val="0"/>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    <c:axId val="1"/>
+                    <c:axId val="2"/>
+                  </c:barChart>
+                  <c:catAx><c:axId val="1"/><c:crossAx val="2"/></c:catAx>
+                  <c:valAx><c:axId val="2"/><c:crossAx val="1"/></c:valAx>
+                </c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        PptxSceneChartDataLabelOverride labelOverride = chart.Plots[0].DataLabels.Overrides.Single();
+        TestAssert.Equal(1, labelOverride.Index);
+        TestAssert.True(labelOverride.IsDeleted == true, "Expected point-level data label delete to be preserved.");
+        TestAssert.Equal("1", labelOverride.IsDeletedValue);
+    }
+
     public static void PptxSceneBuilderBuildsResolvedNodeLists()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
