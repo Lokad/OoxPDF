@@ -1801,9 +1801,12 @@ High-priority actions:
     text block height from the resolved text box, wrapping, paragraph line heights, spacing, and margins, then
     uses the maximum of declared/default row height and content height before placing cells or checking page
     breaks.
+  - [x] 2026-05-31: Added public coverage for numbered paragraphs inside DOCX table cells. Table-cell
+    paragraph parsing now has an explicit guard that the document numbering context is applied inside cells,
+    and layout verifies that the list label is consumed into the cell text line before PDF emission.
   - [ ] 2026-05-31: Promote DOCX table-cell rendering from flattened cell text to the preserved paragraph
-    model completely, with public synthetic coverage for inline images and numbering before using private table
-    pages as acceptance evidence.
+    model completely, with public synthetic coverage for inline images before using private table pages as
+    acceptance evidence.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2730,9 +2733,9 @@ placement while drawing. `DocxLayoutSnapshot` exposes public-safe counts and bou
 copying text. Table cells now preserve their parsed paragraph lists in addition to the previous flattened
 text, and `DocxTableCellLayout` carries layout-owned text lines that the PDF renderer consumes. This is still
 an early boundary: the reader mixes style resolution into document parsing, text lines now carry styled
-segments but do not yet model font-run shaping, and table-cell layout still lacks inline images and numbering
-inside cells. The next architectural work should introduce style-resolved block models and richer table-cell
-layout before adding more Word pagination behavior.
+segments but do not yet model font-run shaping, and table-cell layout still lacks inline images inside cells.
+The next architectural work should introduce style-resolved block models and richer table-cell layout before
+adding more Word pagination behavior.
 
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
@@ -3758,6 +3761,10 @@ Current validation baseline:
   public `docx-tables` visual case passed in run `20260531-145846`, and the full DOCX group sweep passed
   (`docx-core` `4`, `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`,
   `docx-tables` `16`).
+- DOCX table-cell numbering validation:
+  after adding explicit coverage for numbered paragraphs inside table cells, `docx-tables --skip-slow` passed
+  `17` tests and the full DOCX group sweep passed (`docx-core` `4`, `docx-page` `8`, `docx-text` `6`,
+  `docx-numbering` `3`, `docx-images` `2`, `docx-tables` `17`).
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
