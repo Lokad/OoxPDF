@@ -1881,6 +1881,21 @@ High-priority actions:
       hundredths-of-line spacing from the resolved paragraph line height, and a public synthetic reader test
       locks the conversion. The parent item remains open because autospacing, style/default spacing cascade
       ownership, adjacent collapse around tables/sections, and Office-authored fixtures are still unresolved.
+    - [x] 2026-05-31: Corrected DOCX automatic line spacing to use WordprocessingML's 240ths-of-a-line value
+      directly instead of multiplying it by an extra renderer factor. A public reader test now pins
+      `w:spacing w:line="276" w:lineRule="auto"` as `1.15` line spacing. Private DOCX run
+      `20260531-192811` stayed page-stable at `16/16` with zero dimension mismatches but moved slightly
+      against the aggregate (`15.856962` MAE, `0.141649` changed16 versus `15.849350`/`0.141574`), so the
+      remaining spacing item stays open for autospacing, table/section collapse, and Office-backed fixtures.
+  - [ ] 2026-05-31: Build a real DOCX font-resolution/substitution stage instead of relying on the first run's
+    resolved font as a document-wide layout/drawing font. Private-safe inspection shows the worst remaining
+    private DOCX pages are dominated by a missing corporate font fallback that renders with a condensed face;
+    a trial stable fallback to generic Office text fonts improved glyph appearance but broke private pagination
+    to `18` candidate pages (`20260531-191957`/`20260531-192357`), proving that font selection, font-table
+    alternates, theme fonts, per-run resources, and layout measurement must be solved together. Preserve this
+    as an architecture task: parse `word/fontTable.xml` `w:altName`/family/signature metadata, consume theme
+    major/minor font declarations, resolve per-run font resources, and make `DocxLayoutEngine` measure with
+    the same run-level fonts that PDF emission uses before changing production fallback policy.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
