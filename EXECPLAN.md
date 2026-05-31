@@ -2003,6 +2003,10 @@ High-priority actions:
       with `1` dimension mismatch (`14.118472` MAE, changed16 `0.128327`). Keep this item open for the remaining
       one-page deficit; the next likely causes are table style paragraph/run precedence, repeated-header/table
       pagination, and keep/spacing interactions, not font-family selection or raw auto line pitch.
+      2026-05-31 update: table-cell layout now applies paragraph `spacingBefore` with the same max-collapse
+      shape used by body paragraphs, instead of only consuming `spacingAfter`. Private run `20260531-204834`
+      stayed at `15/16` pages but improved aggregate MAE to `13.983783` and changed16 to `0.127071`, so the
+      remaining one-page deficit is not explained by the compact table-cell before-spacing alone.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

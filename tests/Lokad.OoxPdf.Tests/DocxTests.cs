@@ -4081,6 +4081,35 @@ internal static class DocxTests
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 20d, cellLayout.TextLines[0].BaselineY);
     }
 
+    public static void DocxTableLayoutStageIncludesParagraphBeforeSpacingInCellHeight()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            12d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("A", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(22d, row.Height);
+    }
+
     public static void DocxTableLayoutStageAppliesCellVerticalAlignment()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

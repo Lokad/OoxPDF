@@ -799,6 +799,8 @@ internal sealed class DocxLayoutEngine
         double paddingBottom = cell.Margins.BottomPoints ?? 0d;
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double contentHeight = paddingTop + paddingBottom;
+        double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
         foreach (DocxParagraph paragraph in paragraphs)
         {
             if (paragraph.Runs.Count == 0)
@@ -806,6 +808,10 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
+            contentHeight += ShouldSuppressContextualSpacing(previousParagraph, paragraph)
+                ? 0d
+                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            pendingSpacingAfter = 0d;
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
             double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
@@ -813,15 +819,19 @@ internal sealed class DocxLayoutEngine
             double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
             int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer).Count();
-            contentHeight += lineCount * lineHeight + paragraph.SpacingAfterPoints;
+            contentHeight += lineCount * lineHeight;
             foreach (DocxInlineImage image in paragraph.Images)
             {
                 double imageWidth = Math.Min(textWidth, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
                 contentHeight += imageHeight + 6d;
             }
+
+            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            previousParagraph = paragraph;
         }
 
+        contentHeight += pendingSpacingAfter;
         return contentHeight;
     }
 
@@ -855,6 +865,8 @@ internal sealed class DocxLayoutEngine
         double startBaselineY = cellY + cellHeight - legacyBaselineInset - paddingTop;
         double cursorY = startBaselineY;
         var lines = new List<DocxTextLineLayout>();
+        double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
         foreach (DocxParagraph paragraph in paragraphs)
         {
             if (paragraph.Runs.Count == 0)
@@ -862,6 +874,10 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
+            cursorY -= ShouldSuppressContextualSpacing(previousParagraph, paragraph)
+                ? 0d
+                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            pendingSpacingAfter = 0d;
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
             double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
             DocxTextRun firstRun = paragraph.Runs[0];
@@ -903,9 +919,11 @@ internal sealed class DocxLayoutEngine
                 cursorY -= lineHeight;
             }
 
-            cursorY -= paragraph.SpacingAfterPoints;
+            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            previousParagraph = paragraph;
         }
 
+        cursorY -= pendingSpacingAfter;
         if (lines.Count == 0)
         {
             return lines;
@@ -946,8 +964,14 @@ internal sealed class DocxLayoutEngine
         double startBaselineY = cellY + cellHeight - legacyBaselineInset - paddingTop;
         double cursorY = startBaselineY;
         var images = new List<DocxInlineImageLayout>();
+        double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
         foreach (DocxParagraph paragraph in paragraphs)
         {
+            cursorY -= ShouldSuppressContextualSpacing(previousParagraph, paragraph)
+                ? 0d
+                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            pendingSpacingAfter = 0d;
             if (textMeasurer is not null && paragraph.Runs.Count != 0)
             {
                 double fontSize = paragraph.Runs.Max(run => run.FontSize);
@@ -957,7 +981,6 @@ internal sealed class DocxLayoutEngine
                 double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
                 cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer).Count() * lineHeight;
-                cursorY -= paragraph.SpacingAfterPoints;
             }
 
             foreach (DocxInlineImage image in paragraph.Images)
@@ -975,8 +998,12 @@ internal sealed class DocxLayoutEngine
                 images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex));
                 cursorY -= imageHeight + 6d;
             }
+
+            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            previousParagraph = paragraph;
         }
 
+        cursorY -= pendingSpacingAfter;
         if (images.Count == 0)
         {
             return images;
