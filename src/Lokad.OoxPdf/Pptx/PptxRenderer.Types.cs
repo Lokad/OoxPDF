@@ -1373,13 +1373,14 @@ internal sealed partial class PptxRenderer
         public const double LegendFullFrameSideInsetRatio = 0.02d;
         public const double LegendFullFrameBottomBaselineFactor = 0.57d;
         public const double LegendFullFrameTopBaselineFactor = 0.95d;
-        public const double LegendBottomOffsetFactor = 2.39d;
+        public const double LegendBottomOffsetFactor = 2.61d;
         public const double LegendTopOffsetFactor = 0.15d;
         public const double LegendHorizontalClipHeightFactor = 1.25d;
         public const double LegendMarkerBaselineFactor = 0.35d;
         public const double LegendSideFillMarkerBaselineFactor = 0d;
         public const double LegendHorizontalMarkerBaselineFactor = 0d;
         public const double LegendTextGap = 3d;
+        public const double LegendHorizontalEntryPadding = 8d;
     }
 
     private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);

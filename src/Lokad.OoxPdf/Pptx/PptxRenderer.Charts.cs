@@ -5353,7 +5353,7 @@ internal sealed partial class PptxRenderer
 
     private static double GetPackedHorizontalLegendEntryWidth(string name, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerSize)
     {
-        return markerSize + PptxChartMetricRules.LegendTextGap + textMeasurer.Measure(name, style);
+        return markerSize + PptxChartMetricRules.LegendTextGap + textMeasurer.Measure(name, style) + PptxChartMetricRules.LegendHorizontalEntryPadding;
     }
 
     private static bool IsOoxmlTrue(string? value)

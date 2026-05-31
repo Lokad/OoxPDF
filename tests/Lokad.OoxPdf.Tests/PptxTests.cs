@@ -17393,6 +17393,36 @@ internal static class PptxTests
         TestAssert.Equal(327.62d, Math.Round(width, 2));
     }
 
+    public static void PptxChartHorizontalLegendEntryWidthIncludesOfficePadding()
+    {
+        Type textStyleType = typeof(PptxRenderer).GetNestedType(
+            "ChartTextStyle",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart text style.");
+        Type textMeasurerType = typeof(PptxRenderer).GetNestedType(
+            "ChartTextMeasurer",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart text measurer.");
+        object style = Activator.CreateInstance(textStyleType, ["Arial", 9d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
+        object textMeasurer = Activator.CreateInstance(textMeasurerType, [null]) ?? throw new InvalidOperationException("Expected chart text measurer.");
+        System.Reflection.MethodInfo measure = textMeasurerType.GetMethod(
+            "Measure",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+            binder: null,
+            [typeof(string), textStyleType],
+            modifiers: null) ?? throw new InvalidOperationException("Expected chart text measurement method.");
+        System.Reflection.MethodInfo entryWidth = typeof(PptxRenderer).GetMethod(
+            "GetPackedHorizontalLegendEntryWidth",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected horizontal legend entry width helper.");
+
+        string label = "Series";
+        double markerSize = 4.95d;
+        double measuredText = (double)(measure.Invoke(textMeasurer, [label, style]) ?? 0d);
+        double width = (double)(entryWidth.Invoke(null, [label, style, textMeasurer, markerSize]) ?? 0d);
+
+        double markerTextGap = 3d;
+        double officePackedLegendEntryPadding = 8d;
+        TestAssert.Equal(Math.Round(markerTextGap + officePackedLegendEntryPadding, 2), Math.Round(width - markerSize - measuredText, 2));
+    }
+
     public static void PptxChartRadarValueAxisLabelFrameMeasuresTextWidth()
     {
         Type plotBoxType = typeof(PptxRenderer).GetNestedType(
