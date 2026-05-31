@@ -154,6 +154,9 @@ internal sealed record DocxTable(
     double? IndentPoints = null,
     string? IndentValue = null,
     string? IndentType = null,
+    double? CellSpacingPoints = null,
+    string? CellSpacingValue = null,
+    string? CellSpacingType = null,
     DocxTableLook? Look = null);
 
 internal sealed record DocxTableLook(

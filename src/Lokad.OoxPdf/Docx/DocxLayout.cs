@@ -582,7 +582,7 @@ internal sealed class DocxLayoutEngine
             IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, embedded);
             IReadOnlyList<DocxInlineImageLayout> inlineImages = LayoutTableCellInlineImages(cell, cellX, cellY, cellWidth, rowHeight, embedded, getPageIndex());
             cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines, inlineImages));
-            cellX += cellWidth;
+            cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
         }
 
         currentItems.Add(new DocxTableRowLayout(cells.ToArray(), cellY, rowHeight));
