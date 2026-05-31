@@ -1895,6 +1895,11 @@ High-priority actions:
     (`20260601-013756`, MAE `13.645890`, changed16 `0.124541`), despite passing public `docx-tables` and
     `docx-text`. Keep this open until a public Word-backed table-style text precedence fixture explains the
     pagination interaction; do not merge a theoretically cleaner cascade without that guard.
+    Follow-up: added public `docx-ladder-03-table-style-text-precedence` as that guard. Office renders the
+    first-column conflict text in all caps but at the higher-priority `14.04pt` paragraph/character size,
+    while the candidate keeps table-style `11pt`; page count is stable and run `20260601-014145` reports
+    `MAE=0.317789`, changed16 `0.003980`. This confirms the cascade order problem is real while preserving the
+    private-page-count rejection as the implementation constraint.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
