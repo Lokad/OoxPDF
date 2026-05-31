@@ -1880,6 +1880,10 @@ High-priority actions:
     and `w:rPr` exist, but a naive inherited text-style layer for alignment/bold/font-size worsened private
     aggregate metrics (`20260531-160500`/`20260531-160557` regressed from the `tcW` run). Treat this as a
     cascade-order/model gap, not as evidence to ignore table-style text properties.
+  - [ ] 2026-05-31: Resolve DOCX table-cell paragraph spacing semantics with public Word fixtures before
+    applying `spacing before` inside table cells. The private table-cell paragraph style carries
+    `w:spacing before="36" after="0"`, but a direct cell-layout application regressed private run
+    `20260531-161411`, indicating Word suppresses or contextualizes this spacing in table cells.
   - [x] 2026-05-31: Promoted DOCX table borders from stored tokens to PDF emission and conditional style
     inheritance. Cells now inherit conditional `w:tcBorders` when direct borders are absent, and the renderer
     draws authored top/bottom/left/right border colors and widths per edge instead of always stroking every
