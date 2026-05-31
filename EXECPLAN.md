@@ -2085,6 +2085,10 @@ High-priority actions:
       resource/layout ownership: selected run resource, row height, vertical alignment, clipping/overflow, and
       Word-compatible cell text baselines must be validated together with a public table fixture before the
       fallback gate can be removed.
+      2026-06-01 progress: added public visual fixture `docx-ladder-02-table-explicit-font`, a table-only DOCX
+      whose cell runs use authored font resources and therefore expose the current fallback-free table-text
+      suppression without private content. Office reference PDF inspection has text operations while the
+      candidate has none; use this case as the public gate before retrying production table text emission.
     - [ ] 2026-05-31: Resolve the DOCX pagination gap exposed by structural font/style alignment. Private
       DOCX run `20260531-203336` improved aggregate MAE to `13.852449` and changed16 to `0.125076`, but the
       candidate now paginates as `14` pages against Office's `16` reference pages with `2` dimension mismatches.
@@ -4667,6 +4671,12 @@ Current validation baseline:
   `docx-core --skip-slow` (`16`), `docx-text --skip-slow` (`17`), `docx-numbering --skip-slow` (`11`), and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-000124` stayed at
   `16/16` pages, zero dimension mismatches, `MAE=12.509698`, changed16 `0.112673`, and reports no diagnostics.
+- DOCX explicit-font table fixture:
+  added `docx-ladder-02-table-explicit-font` and ran `pwsh tools/CheckVisualCase.ps1 -Case
+  visual-cases/cases/docx-ladder-02-table-explicit-font/case.json` as run `20260601-001941`. The comparison is
+  dimension-stable (`MAE=0.235933`, changed16 `0.003113`) but PDF text inspection shows the structural gap:
+  the Office reference has table-cell text operations and the candidate has none because table-cell text is
+  still gated on the document fallback font resource.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
