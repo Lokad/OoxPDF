@@ -708,7 +708,8 @@ internal sealed class DocxLayoutEngine
 
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         double gridTableWidth = table.ColumnWidthsPoints.Sum();
-        double targetTableWidth = Math.Min(tableAvailableWidth, ResolvePreferredTableWidth(table, tableAvailableWidth) ?? gridTableWidth);
+        double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;
+        double targetTableWidth = Math.Min(tableAvailableWidth, ResolvePreferredTableWidth(table, tableAvailableWidth) ?? fallbackTableWidth);
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
@@ -849,7 +850,8 @@ internal sealed class DocxLayoutEngine
         double tableX = x + Math.Max(0d, table.IndentPoints ?? 0d);
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         double gridTableWidth = table.ColumnWidthsPoints.Sum();
-        double preferredTableWidth = ResolvePreferredTableWidth(table, tableAvailableWidth) ?? gridTableWidth;
+        double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;
+        double preferredTableWidth = ResolvePreferredTableWidth(table, tableAvailableWidth) ?? fallbackTableWidth;
         double targetTableWidth = Math.Min(tableAvailableWidth, preferredTableWidth);
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
@@ -936,7 +938,24 @@ internal sealed class DocxLayoutEngine
             }
         }
 
+        if (!table.HasExplicitGrid)
+        {
+            int inferredColumnCount = columnCount == 0 ? GetMaxGridColumnCount(table) : columnCount;
+            if (inferredColumnCount > 0)
+            {
+                return Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray();
+            }
+        }
+
         return table.ColumnWidthsPoints;
+    }
+
+    private static int GetMaxGridColumnCount(DocxTable table)
+    {
+        return table.Rows
+            .Select(row => row.Cells.Sum(cell => Math.Max(1, cell.GridSpan)))
+            .DefaultIfEmpty(0)
+            .Max();
     }
 
     private static double? ResolvePreferredCellWidth(DocxTableCell cell, double preferredTableWidth)

@@ -3536,6 +3536,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     do not record table text or screenshots.
 - [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content
   width, percentage/auto widths, and grid scaling consistently.
+  - [x] 2026-06-01: Distinguished authored `tblGrid` from parser fallback columns. Tables without an
+    explicit grid now distribute inferred columns across the resolved table width instead of treating 72pt
+    placeholder columns as authored geometry; explicit grids and preferred cell widths keep their existing
+    behavior. Public coverage verifies the no-`tblGrid` layout case. Validation passed `docx-tables
+    --skip-slow` (`53`), `docx-core --skip-slow` (`16`), and full solution build. Private DOCX run
+    `20260601-005313` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
+    `MAE=12.509698`, changed16 `0.112673`, indicating the selected private tables are explicit-grid cases.
 - [ ] Compute row heights from actual cell content: wrap text within cell width, include cell margins,
   respect explicit `trHeight` rules, and avoid the current fixed/default row-height behavior for
   content-heavy rows.

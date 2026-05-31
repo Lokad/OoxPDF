@@ -260,7 +260,8 @@ internal sealed record DocxTable(
     double? CellSpacingPoints = null,
     string? CellSpacingValue = null,
     string? CellSpacingType = null,
-    DocxTableLook? Look = null);
+    DocxTableLook? Look = null,
+    bool HasExplicitGrid = true);
 
 internal sealed record DocxTableLook(
     string? Value,

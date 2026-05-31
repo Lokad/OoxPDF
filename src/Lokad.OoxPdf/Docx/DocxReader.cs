@@ -761,6 +761,7 @@ internal sealed class DocxReader
             ?.Elements(WordprocessingNamespace + "gridCol")
             .Select(column => ReadTwipsAttribute(column, WordprocessingNamespace + "w") ?? 72d)
             .ToArray() ?? [];
+        bool hasExplicitGrid = columns.Count != 0;
         var rows = new List<DocxTableRow>();
         XElement[] rowElements = table.Elements(WordprocessingNamespace + "tr").ToArray();
         for (int rowIndex = 0; rowIndex < rowElements.Length; rowIndex++)
@@ -870,7 +871,8 @@ internal sealed class DocxReader
             tableCellSpacing is not null ? ReadDxaWidth(tableCellSpacing) : tableStyle.Table.CellSpacingPoints,
             tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.CellSpacingValue,
             tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.CellSpacingType,
-            tableLook);
+            tableLook,
+            hasExplicitGrid);
     }
 
     private static double? ReadDxaWidth(XElement? width)
