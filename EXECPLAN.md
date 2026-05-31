@@ -2608,6 +2608,12 @@ document-specific business content into public notes.
   - MAE improved from `15.928048` to `15.888467`; changed16 improved from `0.142037` to `0.141944`.
   - The numbering diagnostic remains open because exact Word tab-stop, bullet-font, and continuation-line
     behavior is not yet modeled.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-162451` after preserving plain
+  `w:br` soft line breaks:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - MAE moved slightly from `15.888467` to `15.889775`; changed16 moved from `0.141944` to `0.141949`.
+  - Keep the feature because dropping authored soft breaks is structurally wrong; exact break spacing remains
+    part of the text layout ladder.
 
 ## Backlog
 
@@ -2619,6 +2625,11 @@ document-specific business content into public notes.
   page/column breaks, and keep/widow page-break decisions.
 - [ ] Text layout: preserve spaces, tabs, line breaks, soft line breaks, kerning-like advances, font
   fallback, mixed run spacing, character spacing, superscript/subscript, and baseline offsets.
+- [x] 2026-05-31: Preserved DOCX plain `w:br` soft line breaks in run text and layout wrapping. The reader now
+  keeps authored soft breaks as line separators, and the layout stage wraps each segment onto separate
+  baselines instead of silently concatenating text across the break.
+- [ ] 2026-05-31: Complete DOCX break and whitespace fidelity: distinguish soft line breaks from page/column
+  breaks, tabs, preserved spaces, empty break-only lines, and Office's exact line-break baseline advance.
 - [ ] Text emission: derive Office's implicit PDF `Tc` text-state behavior for presentation text where OOXML
   has no explicit `a:rPr @spc`. Private pages 24, 36, 39, and 48 show Office exporting nonzero positive or
   negative `Tc` while OOXPDF currently encodes equivalent or residual advances only through `TJ` positioning.
@@ -4028,6 +4039,11 @@ Current validation baseline:
   (`docx-core` `4`, `docx-page` `10`, `docx-text` `8`, `docx-numbering` `4`, `docx-images` `2`,
   `docx-tables` `24`). Private DOCX run `20260531-161037` stayed at `16/16` pages, zero dimension mismatches,
   MAE `15.888467`, changed16 `0.141944`.
+- DOCX soft line-break validation:
+  after preserving plain `w:br` as soft line breaks, the full DOCX group sweep passed (`docx-core` `4`,
+  `docx-page` `10`, `docx-text` `9`, `docx-numbering` `4`, `docx-images` `2`, `docx-tables` `24`).
+  Private DOCX run `20260531-162451` stayed at `16/16` pages, zero dimension mismatches, MAE `15.889775`,
+  changed16 `0.141949`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

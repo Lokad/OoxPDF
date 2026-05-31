@@ -375,7 +375,7 @@ internal sealed class DocxReader
         bool pageInstructionSeen = false;
         foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
         {
-            string text = string.Concat(run.Elements(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty));
+            string text = ReadRunText(run);
             if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
             {
                 text = "{PAGE}";
@@ -434,6 +434,25 @@ internal sealed class DocxReader
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
             CreateListLabel(paragraphProperties, numbering, numberingCounters));
+    }
+
+    private static string ReadRunText(XElement run)
+    {
+        var text = new System.Text.StringBuilder();
+        foreach (XElement child in run.Elements())
+        {
+            if (child.Name == WordprocessingNamespace + "t")
+            {
+                text.Append((string?)child ?? string.Empty);
+            }
+            else if (child.Name == WordprocessingNamespace + "br" &&
+                string.IsNullOrEmpty((string?)child.Attribute(WordprocessingNamespace + "type")))
+            {
+                text.Append('\n');
+            }
+        }
+
+        return text.ToString();
     }
 
     private static IReadOnlyList<DocxBodyElement> ReadBodyElements(
