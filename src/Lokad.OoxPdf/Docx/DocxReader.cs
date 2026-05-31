@@ -566,17 +566,16 @@ internal sealed class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
-        string? layoutValue = (string?)table
-            .Element(WordprocessingNamespace + "tblPr")
+        XElement? tableProperties = table.Element(WordprocessingNamespace + "tblPr");
+        string? layoutValue = (string?)tableProperties
             ?.Element(WordprocessingNamespace + "tblLayout")
             ?.Attribute(WordprocessingNamespace + "type");
-        string? tableStyleId = (string?)table
-            .Element(WordprocessingNamespace + "tblPr")
+        string? tableStyleId = (string?)tableProperties
             ?.Element(WordprocessingNamespace + "tblStyle")
             ?.Attribute(WordprocessingNamespace + "val");
-        XElement? tableWidth = table
-            .Element(WordprocessingNamespace + "tblPr")
+        XElement? tableWidth = tableProperties
             ?.Element(WordprocessingNamespace + "tblW");
+        IReadOnlyList<DocxTableCellBorder> tableBorders = ReadTableBorders(tableProperties);
         DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
             ? parsedTableStyle
             : DocxTableStyle.Empty;
@@ -610,7 +609,14 @@ internal sealed class DocxReader
                     ?.Attribute(WordprocessingNamespace + "val");
                 XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
                 IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
-                IReadOnlyList<DocxTableCellBorder> borders = directBorders.Count == 0 ? conditionalStyle.Borders : directBorders;
+                IReadOnlyList<DocxTableCellBorder> borders = ResolveTableCellBorders(
+                    directBorders,
+                    conditionalStyle.Borders,
+                    tableBorders,
+                    rowIndex,
+                    cellIndex,
+                    rowElements.Length,
+                    cellElements.Length);
                 DocxTableCellMargins margins = MergeTableCellMargins(ReadTableCellMargins(cellProperties), conditionalStyle.Margins);
                 cells.Add(new DocxTableCell(
                     text,
@@ -757,7 +763,16 @@ internal sealed class DocxReader
 
     private static IReadOnlyList<DocxTableCellBorder> ReadTableCellBorders(XElement? cellProperties)
     {
-        XElement? borders = cellProperties?.Element(WordprocessingNamespace + "tcBorders");
+        return ReadBorderElements(cellProperties?.Element(WordprocessingNamespace + "tcBorders"));
+    }
+
+    private static IReadOnlyList<DocxTableCellBorder> ReadTableBorders(XElement? tableProperties)
+    {
+        return ReadBorderElements(tableProperties?.Element(WordprocessingNamespace + "tblBorders"));
+    }
+
+    private static IReadOnlyList<DocxTableCellBorder> ReadBorderElements(XElement? borders)
+    {
         if (borders is null)
         {
             return [];
@@ -772,6 +787,79 @@ internal sealed class DocxReader
                 (string?)border.Attribute(WordprocessingNamespace + "color"),
                 (string?)border.Attribute(WordprocessingNamespace + "sz")))
             .ToArray();
+    }
+
+    private static IReadOnlyList<DocxTableCellBorder> ResolveTableCellBorders(
+        IReadOnlyList<DocxTableCellBorder> directBorders,
+        IReadOnlyList<DocxTableCellBorder> styleBorders,
+        IReadOnlyList<DocxTableCellBorder> tableBorders,
+        int rowIndex,
+        int cellIndex,
+        int rowCount,
+        int cellCount)
+    {
+        var resolved = new Dictionary<string, DocxTableCellBorder>(StringComparer.OrdinalIgnoreCase);
+        AddBorders(resolved, ResolveTableBordersForCell(tableBorders, rowIndex, cellIndex, rowCount, cellCount));
+        AddBorders(resolved, styleBorders);
+        AddBorders(resolved, directBorders);
+        return new[] { "top", "bottom", "left", "right" }
+            .Where(resolved.ContainsKey)
+            .Select(edge => resolved[edge])
+            .Concat(resolved.Values.Where(border => !IsCanonicalCellBorderEdge(border.Edge)))
+            .ToArray();
+    }
+
+    private static IEnumerable<DocxTableCellBorder> ResolveTableBordersForCell(
+        IReadOnlyList<DocxTableCellBorder> tableBorders,
+        int rowIndex,
+        int cellIndex,
+        int rowCount,
+        int cellCount)
+    {
+        DocxTableCellBorder? top = FindBorder(tableBorders, rowIndex == 0 ? "top" : "insideH");
+        if (top is not null)
+        {
+            yield return top with { Edge = "top" };
+        }
+
+        DocxTableCellBorder? bottom = FindBorder(tableBorders, rowIndex == rowCount - 1 ? "bottom" : "insideH");
+        if (bottom is not null)
+        {
+            yield return bottom with { Edge = "bottom" };
+        }
+
+        DocxTableCellBorder? left = FindBorder(tableBorders, cellIndex == 0 ? "left" : "insideV");
+        if (left is not null)
+        {
+            yield return left with { Edge = "left" };
+        }
+
+        DocxTableCellBorder? right = FindBorder(tableBorders, cellIndex == cellCount - 1 ? "right" : "insideV");
+        if (right is not null)
+        {
+            yield return right with { Edge = "right" };
+        }
+    }
+
+    private static void AddBorders(Dictionary<string, DocxTableCellBorder> target, IEnumerable<DocxTableCellBorder> borders)
+    {
+        foreach (DocxTableCellBorder border in borders)
+        {
+            target[border.Edge] = border;
+        }
+    }
+
+    private static DocxTableCellBorder? FindBorder(IReadOnlyList<DocxTableCellBorder> borders, string edge)
+    {
+        return borders.FirstOrDefault(border => string.Equals(border.Edge, edge, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCanonicalCellBorderEdge(string edge)
+    {
+        return edge.Equals("top", StringComparison.OrdinalIgnoreCase) ||
+            edge.Equals("bottom", StringComparison.OrdinalIgnoreCase) ||
+            edge.Equals("left", StringComparison.OrdinalIgnoreCase) ||
+            edge.Equals("right", StringComparison.OrdinalIgnoreCase);
     }
 
     private static double? ReadTableRowHeight(XElement row)

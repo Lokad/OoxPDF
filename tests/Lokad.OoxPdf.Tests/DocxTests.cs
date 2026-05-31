@@ -1947,6 +1947,69 @@ internal static class DocxTests
         TestAssert.Equal("dashed", borders[2].Value ?? string.Empty);
     }
 
+    public static void DocxReaderTableBordersApplyOuterAndInsideEdges()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr>
+                        <w:tblBorders>
+                          <w:top w:val="single" w:color="111111" w:sz="8"/>
+                          <w:bottom w:val="single" w:color="222222" w:sz="10"/>
+                          <w:left w:val="single" w:color="333333" w:sz="12"/>
+                          <w:right w:val="single" w:color="444444" w:sz="14"/>
+                          <w:insideH w:val="single" w:color="555555" w:sz="16"/>
+                          <w:insideV w:val="single" w:color="666666" w:sz="18"/>
+                        </w:tblBorders>
+                      </w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>C</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>D</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        IReadOnlyList<DocxTableCellBorder> first = document.Tables[0].Rows[0].Cells[0].Borders;
+        IReadOnlyList<DocxTableCellBorder> inner = document.Tables[0].Rows[1].Cells[1].Borders;
+        TestAssert.Equal("111111", first.Single(border => border.Edge == "top").Color ?? string.Empty);
+        TestAssert.Equal("333333", first.Single(border => border.Edge == "left").Color ?? string.Empty);
+        TestAssert.Equal("555555", first.Single(border => border.Edge == "bottom").Color ?? string.Empty);
+        TestAssert.Equal("666666", first.Single(border => border.Edge == "right").Color ?? string.Empty);
+        TestAssert.Equal("222222", inner.Single(border => border.Edge == "bottom").Color ?? string.Empty);
+        TestAssert.Equal("444444", inner.Single(border => border.Edge == "right").Color ?? string.Empty);
+    }
+
     public static void DocxReaderTableCellPreservesShadingTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

@@ -1907,6 +1907,12 @@ High-priority actions:
   - [ ] 2026-05-31: Continue DOCX border fidelity: implement table-level `w:tblBorders`, inside horizontal/
     vertical borders, conflict resolution between adjacent cell borders, nil/none suppression across shared
     edges, and Word's exact border width/unit rules with public Office PDF fixtures.
+    2026-05-31 progress: direct table-level `w:tblBorders` now maps outer and inside horizontal/vertical
+    borders onto cell edges when stronger cell/style borders are absent, keeping the existing cell-border PDF
+    emission path. Public coverage checks a 2x2 table where outer colors and `insideH`/`insideV` land on the
+    expected cell edges. Private DOCX run `20260531-173508` was neutral (`15.889775` MAE, `0.141949`
+    changed16), so the remaining border work is still the harder Word conflict ladder: adjacent-edge conflict
+    resolution, start/end directionality, nil/none suppression across shared edges, and exact width/unit rules.
   - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as
