@@ -819,21 +819,24 @@ internal sealed class DocxLayoutEngine
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
     {
-        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length == 0)
+        IReadOnlyList<string> tokens = TokenizeSpaces(text);
+        if (tokens.Count == 0)
         {
             yield break;
         }
 
         var line = new System.Text.StringBuilder();
-        foreach (string word in words)
+        foreach (string token in tokens)
         {
-            string candidate = line.Length == 0 ? word : line + " " + word;
-            if (line.Length > 0 && embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+            string candidate = line + token;
+            if (line.Length > 0 &&
+                line.ToString().Any(c => !char.IsWhiteSpace(c)) &&
+                !string.IsNullOrWhiteSpace(token) &&
+                embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
             {
                 yield return line.ToString();
                 line.Clear();
-                line.Append(word);
+                line.Append(token);
             }
             else
             {
@@ -846,5 +849,32 @@ internal sealed class DocxLayoutEngine
         {
             yield return line.ToString();
         }
+    }
+
+    private static IReadOnlyList<string> TokenizeSpaces(string text)
+    {
+        if (text.Length == 0)
+        {
+            return [];
+        }
+
+        var tokens = new List<string>();
+        int start = 0;
+        bool inWhitespace = char.IsWhiteSpace(text[0]);
+        for (int i = 1; i < text.Length; i++)
+        {
+            bool whitespace = char.IsWhiteSpace(text[i]);
+            if (whitespace == inWhitespace)
+            {
+                continue;
+            }
+
+            tokens.Add(text[start..i]);
+            start = i;
+            inWhitespace = whitespace;
+        }
+
+        tokens.Add(text[start..]);
+        return tokens;
     }
 }

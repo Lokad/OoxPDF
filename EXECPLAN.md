@@ -2614,6 +2614,10 @@ document-specific business content into public notes.
   - MAE moved slightly from `15.888467` to `15.889775`; changed16 moved from `0.141944` to `0.141949`.
   - Keep the feature because dropping authored soft breaks is structurally wrong; exact break spacing remains
     part of the text layout ladder.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260531-162756` after preserving
+  authored whitespace during wrapping:
+  - Reference output had 16 pages; candidate output had 16 pages; all compared page dimensions matched.
+  - Aggregate metrics were unchanged from the soft-break run: MAE `15.889775`, changed16 `0.141949`.
 
 ## Backlog
 
@@ -2630,6 +2634,9 @@ document-specific business content into public notes.
   baselines instead of silently concatenating text across the break.
 - [ ] 2026-05-31: Complete DOCX break and whitespace fidelity: distinguish soft line breaks from page/column
   breaks, tabs, preserved spaces, empty break-only lines, and Office's exact line-break baseline advance.
+- [x] 2026-05-31: Made DOCX text wrapping preserve authored whitespace tokens instead of splitting with
+  `RemoveEmptyEntries`. Leading, trailing, and repeated spaces now remain in layout line text and contribute
+  to measured line width; tab stops and Word's exact whitespace trimming rules remain open.
 - [ ] Text emission: derive Office's implicit PDF `Tc` text-state behavior for presentation text where OOXML
   has no explicit `a:rPr @spc`. Private pages 24, 36, 39, and 48 show Office exporting nonzero positive or
   negative `Tc` while OOXPDF currently encodes equivalent or residual advances only through `TJ` positioning.
@@ -4044,6 +4051,11 @@ Current validation baseline:
   `docx-page` `10`, `docx-text` `9`, `docx-numbering` `4`, `docx-images` `2`, `docx-tables` `24`).
   Private DOCX run `20260531-162451` stayed at `16/16` pages, zero dimension mismatches, MAE `15.889775`,
   changed16 `0.141949`.
+- DOCX authored-whitespace validation:
+  after preserving leading/trailing/repeated spaces in wrapping, the full DOCX group sweep passed
+  (`docx-core` `4`, `docx-page` `10`, `docx-text` `10`, `docx-numbering` `4`, `docx-images` `2`,
+  `docx-tables` `24`). Private DOCX run `20260531-162756` stayed at `16/16` pages, zero dimension mismatches,
+  MAE `15.889775`, changed16 `0.141949`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
