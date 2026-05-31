@@ -421,13 +421,18 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxTableCellStyle? tableCellStyle = null)
     {
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         string? paragraphStyleId = (string?)paragraphProperties?
             .Element(WordprocessingNamespace + "pStyle")
             ?.Attribute(WordprocessingNamespace + "val");
-        DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles);
+        DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
+            paragraphProperties,
+            paragraphStyleId,
+            styles,
+            tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
         bool pageInstructionSeen = false;
@@ -448,7 +453,12 @@ internal sealed class DocxReader
             string? characterStyleId = (string?)runProperties?
                 .Element(WordprocessingNamespace + "rStyle")
                 ?.Attribute(WordprocessingNamespace + "val");
-            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(runProperties, paragraphStyleId, characterStyleId, styles);
+            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
+                runProperties,
+                paragraphStyleId,
+                characterStyleId,
+                styles,
+                tableCellStyle?.Run);
             if (text.Length != 0)
             {
                 runs.Add(new DocxTextRun(
@@ -711,8 +721,15 @@ internal sealed class DocxReader
                 XElement cell = cellElements[cellIndex];
                 XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
                 DocxTableCellConditionalFormat? conditionalFormat = ReadTableCellConditionalFormat(cellProperties);
-                DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, conditionalFormat, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
-                IReadOnlyList<DocxParagraph> paragraphs = ReadTableCellParagraphs(cell, styles, numbering, numberingCounters, package, relationships);
+                DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, tableLook, conditionalFormat, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
+                IReadOnlyList<DocxParagraph> paragraphs = ReadTableCellParagraphs(
+                    cell,
+                    styles,
+                    numbering,
+                    numberingCounters,
+                    package,
+                    relationships,
+                    conditionalStyle);
                 string text = string.Join(" ", paragraphs
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
                     .Where(t => t.Length != 0));
@@ -822,7 +839,8 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxTableCellStyle tableCellStyle)
     {
         var paragraphs = new List<DocxParagraph>();
         foreach (XElement paragraph in cell.Elements(WordprocessingNamespace + "p"))
@@ -833,7 +851,8 @@ internal sealed class DocxReader
                 numbering,
                 numberingCounters,
                 package,
-                relationships);
+                relationships,
+                tableCellStyle);
             if (parsed is not null)
             {
                 paragraphs.Add(parsed);
@@ -1288,7 +1307,11 @@ internal sealed class DocxReader
         return new DocxNumberingSet(numToAbstract, levels, startOverrides);
     }
 
-    private static DocxResolvedParagraphProperties ResolveParagraphProperties(XElement? directProperties, string? paragraphStyleId, DocxStyleSet styles)
+    private static DocxResolvedParagraphProperties ResolveParagraphProperties(
+        XElement? directProperties,
+        string? paragraphStyleId,
+        DocxStyleSet styles,
+        DocxResolvedParagraphProperties? tableStyleProperties = null)
     {
         DocxResolvedParagraphProperties result = styles.ParagraphDefaults;
         foreach (DocxStyle style in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
@@ -1296,10 +1319,20 @@ internal sealed class DocxReader
             result = result.Merge(style.Paragraph);
         }
 
+        if (tableStyleProperties is { } tableProperties)
+        {
+            result = result.Merge(tableProperties);
+        }
+
         return result.Merge(ReadParagraphProperties(directProperties));
     }
 
-    private static DocxResolvedRunProperties ResolveRunProperties(XElement? directProperties, string? paragraphStyleId, string? characterStyleId, DocxStyleSet styles)
+    private static DocxResolvedRunProperties ResolveRunProperties(
+        XElement? directProperties,
+        string? paragraphStyleId,
+        string? characterStyleId,
+        DocxStyleSet styles,
+        DocxResolvedRunProperties? tableStyleProperties = null)
     {
         DocxResolvedRunProperties result = styles.RunDefaults;
         foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
@@ -1310,6 +1343,11 @@ internal sealed class DocxReader
         foreach (DocxStyle characterStyle in EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles))
         {
             result = result.Merge(characterStyle.Run);
+        }
+
+        if (tableStyleProperties is { } tableProperties)
+        {
+            result = result.Merge(tableProperties);
         }
 
         return result.Merge(ReadRunProperties(directProperties));
@@ -1527,17 +1565,21 @@ internal sealed class DocxReader
     }
 
     private sealed record DocxTableCellStyle(
+        DocxResolvedParagraphProperties Paragraph,
+        DocxResolvedRunProperties Run,
         string? FillHex,
         string? ShadingValue,
         string? ShadingColor,
         IReadOnlyList<DocxTableCellBorder> Borders,
         DocxTableCellMargins Margins)
     {
-        public static DocxTableCellStyle Empty { get; } = new(null, null, null, [], DocxTableCellMargins.Empty);
+        public static DocxTableCellStyle Empty { get; } = new(DocxResolvedParagraphProperties.Empty, DocxResolvedRunProperties.Empty, null, null, null, [], DocxTableCellMargins.Empty);
 
         public DocxTableCellStyle Merge(DocxTableCellStyle other)
         {
             return new DocxTableCellStyle(
+                Paragraph.Merge(other.Paragraph),
+                Run.Merge(other.Run),
                 other.FillHex ?? FillHex,
                 other.ShadingValue ?? ShadingValue,
                 other.ShadingColor ?? ShadingColor,
@@ -1554,13 +1596,19 @@ internal sealed class DocxReader
             string? type = (string?)region.Attribute(WordprocessingNamespace + "type");
             if (type is not null)
             {
-                conditional[type] = ReadTableCellStyle(region.Element(WordprocessingNamespace + "tcPr"));
+                conditional[type] = ReadTableCellStyle(
+                    region.Element(WordprocessingNamespace + "tcPr"),
+                    region.Element(WordprocessingNamespace + "pPr"),
+                    region.Element(WordprocessingNamespace + "rPr"));
             }
         }
 
         XElement? tableProperties = style.Element(WordprocessingNamespace + "tblPr");
         return new DocxTableStyle(
-            ReadTableCellStyle(style.Element(WordprocessingNamespace + "tcPr")) with
+            ReadTableCellStyle(
+                style.Element(WordprocessingNamespace + "tcPr"),
+                style.Element(WordprocessingNamespace + "pPr"),
+                style.Element(WordprocessingNamespace + "rPr")) with
             {
                 Margins = ReadTableStyleCellMargins(tableProperties)
             },
@@ -1568,10 +1616,15 @@ internal sealed class DocxReader
             conditional);
     }
 
-    private static DocxTableCellStyle ReadTableCellStyle(XElement? cellProperties)
+    private static DocxTableCellStyle ReadTableCellStyle(
+        XElement? cellProperties,
+        XElement? paragraphProperties = null,
+        XElement? runProperties = null)
     {
         XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
         return new DocxTableCellStyle(
+            ReadParagraphProperties(paragraphProperties),
+            ReadRunProperties(runProperties),
             (string?)shading?.Attribute(WordprocessingNamespace + "fill"),
             (string?)shading?.Attribute(WordprocessingNamespace + "val"),
             (string?)shading?.Attribute(WordprocessingNamespace + "color"),
@@ -1581,6 +1634,7 @@ internal sealed class DocxReader
 
     private static DocxTableCellStyle ResolveTableCellStyle(
         DocxTableStyle tableStyle,
+        DocxTableLook tableLook,
         DocxTableCellConditionalFormat? conditionalFormat,
         int rowIndex,
         int cellIndex,
@@ -1590,7 +1644,7 @@ internal sealed class DocxReader
         DocxTableCellStyle resolved = tableStyle.Cell;
         IEnumerable<string> regions = conditionalFormat?.IsDefined == true
             ? EnumerateTableStyleRegions(conditionalFormat)
-            : EnumerateTableStyleRegions(rowIndex, cellIndex, rowCount, cellCount);
+            : EnumerateTableStyleRegions(tableLook, rowIndex, cellIndex, rowCount, cellCount);
         foreach (string region in regions)
         {
             if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableCellStyle? style))
@@ -1665,56 +1719,73 @@ internal sealed class DocxReader
         }
     }
 
-    private static IEnumerable<string> EnumerateTableStyleRegions(int rowIndex, int cellIndex, int rowCount, int cellCount)
+    private static IEnumerable<string> EnumerateTableStyleRegions(DocxTableLook tableLook, int rowIndex, int cellIndex, int rowCount, int cellCount)
     {
-        if (rowIndex == 0)
+        bool firstRow = tableLook.FirstRow != false;
+        bool lastRow = tableLook.LastRow == true;
+        bool firstColumn = tableLook.FirstColumn == true;
+        bool lastColumn = tableLook.LastColumn == true;
+        bool horizontalBand = tableLook.NoHorizontalBand != true;
+        bool verticalBand = tableLook.NoVerticalBand != true;
+
+        if (firstRow && rowIndex == 0)
         {
             yield return "firstRow";
         }
 
-        if (rowIndex == rowCount - 1)
+        if (lastRow && rowIndex == rowCount - 1)
         {
             yield return "lastRow";
         }
 
-        if (cellIndex == 0)
+        if (firstColumn && cellIndex == 0)
         {
             yield return "firstCol";
         }
 
-        if (cellIndex == cellCount - 1)
+        if (lastColumn && cellIndex == cellCount - 1)
         {
             yield return "lastCol";
         }
 
-        if (rowIndex == 0 && cellIndex == 0)
+        if (firstRow && firstColumn && rowIndex == 0 && cellIndex == 0)
         {
             yield return "nwCell";
         }
 
-        if (rowIndex == 0 && cellIndex == cellCount - 1)
+        if (firstRow && lastColumn && rowIndex == 0 && cellIndex == cellCount - 1)
         {
             yield return "neCell";
         }
 
-        if (rowIndex == rowCount - 1 && cellIndex == 0)
+        if (lastRow && firstColumn && rowIndex == rowCount - 1 && cellIndex == 0)
         {
             yield return "swCell";
         }
 
-        if (rowIndex == rowCount - 1 && cellIndex == cellCount - 1)
+        if (lastRow && lastColumn && rowIndex == rowCount - 1 && cellIndex == cellCount - 1)
         {
             yield return "seCell";
         }
 
-        if (rowIndex % 2 == 1)
+        if (horizontalBand && rowIndex % 2 == 1)
         {
             yield return "band1Horz";
         }
 
-        if (cellIndex % 2 == 1)
+        if (horizontalBand && rowIndex % 2 == 0 && rowIndex != 0)
+        {
+            yield return "band2Horz";
+        }
+
+        if (verticalBand && cellIndex % 2 == 1)
         {
             yield return "band1Vert";
+        }
+
+        if (verticalBand && cellIndex % 2 == 0 && cellIndex != 0)
+        {
+            yield return "band2Vert";
         }
     }
 
@@ -1757,6 +1828,8 @@ internal sealed class DocxReader
         DocxParagraphSpacing Spacing,
         DocxParagraphKeepRules KeepRules)
     {
+        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty);
+
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
             return new DocxResolvedParagraphProperties(
@@ -1806,6 +1879,8 @@ internal sealed class DocxReader
         string? UnderlineValue,
         DocxRunFonts Fonts)
     {
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty);
+
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
             return new DocxResolvedRunProperties(

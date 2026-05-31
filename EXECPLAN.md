@@ -2096,10 +2096,20 @@ High-priority actions:
     Keep `tblLook` as preserved metadata until public Word fixtures clarify how it interacts with `cnfStyle`,
     default table-style toggles, and band-region priority.
   - [ ] 2026-05-31: Resolve DOCX table-style paragraph/run property precedence with Office-backed public
-    fixtures before enabling it in production. Private-safe inventory shows table-style conditional `w:pPr`
-    and `w:rPr` exist, but a naive inherited text-style layer for alignment/bold/font-size worsened private
-    aggregate metrics (`20260531-160500`/`20260531-160557` regressed from the `tcW` run). Treat this as a
-    cascade-order/model gap, not as evidence to ignore table-style text properties.
+    fixtures before downgrading table-style diagnostics. Private-safe inventory shows table-style conditional
+    `w:pPr` and `w:rPr` exist, but naive inherited text-style layers for alignment/bold/font-size worsened
+    private aggregate metrics (`20260531-160500`/`20260531-160557` regressed from the `tcW` run). Treat this as
+    a cascade-order/model gap, not as evidence to ignore table-style text properties.
+    - [x] 2026-05-31: Enabled table-style paragraph/run properties through the actual DOCX style cascade
+      instead of post-processing parsed paragraphs. Table-style `w:pPr`/`w:rPr` now merge after paragraph and
+      character styles but before direct paragraph/run properties, and fallback conditional regions respect
+      preserved `w:tblLook` flags when no cell-level `w:cnfStyle` is present. Public coverage verifies
+      inherited paragraph alignment, run italic/color/size, `tblLook` first-column gating, whole-style spacing,
+      and direct paragraph spacing override. Private DOCX run `20260531-220413` restored `16/16` pages with
+      zero dimension mismatches after the structural font/pagination work, but aggregate MAE rose to
+      `14.825006` and changed16 to `0.134342` versus the prior committed `15/16` run. Keep the parent open for
+      Word-backed precedence fixtures, diagnostics cleanup, and visual tuning; do not replace this with
+      document- or font-specific rules.
   - [ ] 2026-05-31: Resolve DOCX table-cell paragraph spacing semantics with public Word fixtures before
     applying `spacing before` inside table cells. The private table-cell paragraph style carries
     `w:spacing before="36" after="0"`, but a direct cell-layout application regressed private run
@@ -4351,6 +4361,13 @@ Current validation baseline:
   `20260531-190121` stayed at `16/16` pages, zero dimension mismatches, MAE `15.849350`, changed16
   `0.141574`; `DOCX_NUMBERING_INDENT` remains open for exact tab-stop ownership, bullet fonts, style
   inheritance, and mixed-run segmentation.
+- DOCX table-style paragraph/run cascade validation:
+  after merging table-style `w:pPr`/`w:rPr` into the DOCX style cascade and gating fallback conditional
+  regions through `w:tblLook`, the targeted public reader test passed, `docx-tables --skip-slow` passed `40`,
+  `docx-text --skip-slow` passed `15`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+  passed. Private DOCX run `20260531-220413` matched the Office reference page count (`16/16`) with zero
+  dimension mismatches; aggregate MAE was `14.825006`, changed16 `0.134342`. This is a pagination/structure
+  improvement but not a pure raster win, so table-style precedence and diagnostics remain open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

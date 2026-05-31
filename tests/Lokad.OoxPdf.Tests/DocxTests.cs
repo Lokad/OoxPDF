@@ -2904,6 +2904,81 @@ internal static class DocxTests
         TestAssert.Equal("D9EAD3", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
     }
 
+    public static void DocxReaderTableStyleAppliesParagraphAndRunProperties()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:styleId="TextTable">
+                    <w:pPr><w:spacing w:after="0"/></w:pPr>
+                    <w:rPr><w:sz w:val="22"/></w:rPr>
+                    <w:tblStylePr w:type="firstCol">
+                      <w:pPr><w:jc w:val="right"/></w:pPr>
+                      <w:rPr><w:i/><w:color w:val="4472C4"/></w:rPr>
+                    </w:tblStylePr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr>
+                        <w:tblStyle w:val="TextTable"/>
+                        <w:tblLook w:firstColumn="1" w:firstRow="0" w:noHBand="1" w:noVBand="1"/>
+                      </w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:pPr><w:spacing w:after="120"/></w:pPr><w:r><w:t>First</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Second</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxParagraph firstParagraph = document.Tables[0].Rows[0].Cells[0].Paragraphs.Single();
+        DocxParagraph secondParagraph = document.Tables[0].Rows[0].Cells[1].Paragraphs.Single();
+        TestAssert.Equal(DocxTextAlignment.Right, firstParagraph.Alignment);
+        TestAssert.Equal("right", firstParagraph.AlignmentValue ?? string.Empty);
+        TestAssert.Equal(6d, firstParagraph.SpacingAfterPoints);
+        TestAssert.Equal(11d, firstParagraph.Runs.Single().FontSize);
+        TestAssert.True(firstParagraph.Runs.Single().Italic, "First-column table run style should apply italic.");
+        TestAssert.Equal("4472C4", firstParagraph.Runs.Single().ColorHex ?? string.Empty);
+        TestAssert.Equal(0d, secondParagraph.SpacingAfterPoints);
+        TestAssert.Equal(11d, secondParagraph.Runs.Single().FontSize);
+    }
+
     public static void DocxReaderTableStyleUsesCellConditionalFormatTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
