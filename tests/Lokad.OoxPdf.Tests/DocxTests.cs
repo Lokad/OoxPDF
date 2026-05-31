@@ -734,6 +734,31 @@ internal static class DocxTests
         TestAssert.Equal("majorBidi", run.Fonts.ComplexScriptTheme ?? string.Empty);
     }
 
+    public static void DocxFontResolverBuildsLatinTypefaceCandidatesFromCatalogAndTheme()
+    {
+        var catalog = new DocxFontCatalog(
+            [new DocxFontTableEntry("Corporate Sans", "Aptos", "swiss", "variable", null)],
+            new DocxThemeFonts("Aptos Display", "Aptos"));
+        var run = new DocxTextRun("Text", 11d, null, false, false, false, null, "Corporate Sans")
+        {
+            Fonts = new DocxRunFonts(
+                Ascii: "Corporate Sans",
+                HighAnsi: null,
+                EastAsia: null,
+                ComplexScript: null,
+                AsciiTheme: "minorHAnsi",
+                HighAnsiTheme: null,
+                EastAsiaTheme: null,
+                ComplexScriptTheme: null)
+        };
+
+        DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, catalog);
+
+        TestAssert.Equal("Corporate Sans", candidates.Primary ?? string.Empty);
+        TestAssert.Equal("Aptos", candidates.Alternate ?? string.Empty);
+        TestAssert.Equal("Aptos", candidates.Theme ?? string.Empty);
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

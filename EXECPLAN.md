@@ -1913,6 +1913,12 @@ High-priority actions:
       styles, and direct run properties while leaving the legacy flattened `FontFamily` behavior unchanged.
       Public coverage verifies the cascade order; private DOCX run `20260531-193723` stayed page-stable and
       metric-neutral against the previous font-token slice.
+    - [x] 2026-05-31: Added a behavior-preserving DOCX typeface candidate resolver over the preserved font
+      metadata. It now resolves Latin primary typefaces from cascaded run fonts, document-authored alternates
+      from `word/fontTable.xml`, and major/minor theme typefaces from the theme part into ordered candidates.
+      Public coverage pins this structure before renderer consumption; production drawing still uses the
+      legacy single-font path until layout measurement and PDF emission can consume the same per-run font
+      resource map.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift
