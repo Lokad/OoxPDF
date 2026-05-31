@@ -290,16 +290,6 @@ internal sealed class DocxReader
         {
             if (styles.Descendants(WordprocessingNamespace + "style")
                 .Elements(WordprocessingNamespace + "pPr")
-                .Any(properties =>
-                    properties.Element(WordprocessingNamespace + "keepNext") is not null ||
-                    properties.Element(WordprocessingNamespace + "keepLines") is not null ||
-                    properties.Element(WordprocessingNamespace + "widowControl") is not null))
-            {
-                Emit("DOCX_STYLE_PARAGRAPH_KEEP_RULE", "style paragraph keep/widow-orphan rule", stylesPartName ?? partName, "Approximated");
-            }
-
-            if (styles.Descendants(WordprocessingNamespace + "style")
-                .Elements(WordprocessingNamespace + "pPr")
                 .Elements(WordprocessingNamespace + "spacing")
                 .Any(spacing =>
                     spacing.Attribute(WordprocessingNamespace + "beforeAutospacing") is not null ||

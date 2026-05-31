@@ -1911,6 +1911,12 @@ High-priority actions:
       DOCX run `20260531-222149` stayed at `16/16` pages with zero dimension mismatches and unchanged aggregate
       metrics (`14.818900` MAE, `0.134293` changed16), while `DOCX_STYLE_PARAGRAPH_SPACING` dropped from the
       private diagnostic list because the remaining private style-spacing triggers were already-supported forms.
+    - [x] 2026-05-31: Removed the stale style-level keep-rule diagnostic for `w:keepNext`/`w:keepLines` after
+      those tokens became part of the resolved paragraph model and block-pagination stage. Public coverage now
+      asserts that supported style keep rules do not emit `DOCX_STYLE_PARAGRAPH_KEEP_RULE`. Private DOCX run
+      `20260531-233722` stayed raster-neutral at `16/16` pages, zero dimension mismatches, MAE `13.648284`,
+      changed16 `0.125542`, and dropped `DOCX_STYLE_PARAGRAPH_KEEP_RULE`; keep the parent open for
+      Office-backed keep-with-table and line-level edge cases rather than broad supported-token warnings.
   - [ ] 2026-05-31: Build a real DOCX font-resolution/substitution stage instead of relying on the first run's
     resolved font as a document-wide layout/drawing font. Private-safe inspection shows the worst remaining
     private DOCX pages are dominated by a missing corporate font fallback that renders with a condensed face;
@@ -4562,6 +4568,13 @@ Current validation baseline:
   passed `10`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
   `20260531-233331` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
   `0.125542`.
+- DOCX style keep-rule diagnostic validation:
+  after narrowing diagnostics so supported style-level `keepNext`/`keepLines` no longer warn, `docx-text
+  --skip-slow` passed `17`, `docx-page --skip-slow` passed `16`, `docx-numbering --skip-slow` passed `10`,
+  `docx-tables --skip-slow` passed `47`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+  passed. Private DOCX run `20260531-233722` stayed neutral at `16/16` pages, zero dimension mismatches,
+  `MAE=13.648284`, changed16 `0.125542`, and now reports only `DOCX_NUMBERING_INDENT`,
+  `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
