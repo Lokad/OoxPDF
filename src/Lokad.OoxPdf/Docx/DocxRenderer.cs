@@ -9,6 +9,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed class DocxRenderer
 {
+    internal const string DefaultDocumentTypefaceRequest = "OOXPDF_DOCUMENT_DEFAULT";
     private readonly IFontResolver fontResolver;
 
     public DocxRenderer(IFontResolver? fontResolver = null)
@@ -75,29 +76,13 @@ internal sealed class DocxRenderer
 
     private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver)
     {
-        string familyName = document.Paragraphs
-            .Concat(document.HeaderParagraphs)
-            .Concat(document.FooterParagraphs)
-            .SelectMany(p => p.Runs)
-            .Select(r => r.FontFamily)
-            .FirstOrDefault(f => !string.IsNullOrWhiteSpace(f)) ?? "Arial";
-        FontResolution resolution = fontResolver.Resolve(new FontRequest(familyName));
-        IReadOnlyList<DocxTextRun> allRuns = document.Paragraphs
-            .Concat(document.HeaderParagraphs)
-            .Concat(document.FooterParagraphs)
-            .SelectMany(p => p.Runs)
-            .ToArray();
-        IEnumerable<int> tableRunes = document.Tables
-            .SelectMany(t => t.Rows)
-            .SelectMany(r => r.Cells)
-            .SelectMany(c => c.Paragraphs.Count == 0
-                ? c.Text.EnumerateRunes().Select(rune => rune.Value)
-                : c.Paragraphs.SelectMany(p => p.Runs).SelectMany(run => run.Text.EnumerateRunes().Select(rune => rune.Value)));
+        DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver);
+        FontResolution resolution = ResolveDocumentBaseFont(plan, fontResolver);
+        IReadOnlyList<DocxTextRun> allRuns = plan.Runs.Select(run => run.Run).ToArray();
         PdfEmbeddedFont? embedded = null;
         PdfFontResource? resource = null;
         IReadOnlyList<int> glyphs = allRuns
             .SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value))
-            .Concat(tableRunes)
             .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
             .ToArray();
         if (glyphs.Count > 0 && resolution.FontFilePath is not null && File.Exists(resolution.FontFilePath))
@@ -108,6 +93,19 @@ internal sealed class DocxRenderer
         }
 
         return new DocxFontResources(embedded, resource);
+    }
+
+    private static FontResolution ResolveDocumentBaseFont(DocxFontPlan plan, IFontResolver fontResolver)
+    {
+        foreach (DocxResolvedRunTypeface run in plan.Runs)
+        {
+            if (run.Resolution is { FontFilePath: not null } resolution)
+            {
+                return resolution;
+            }
+        }
+
+        return fontResolver.Resolve(new FontRequest(DefaultDocumentTypefaceRequest));
     }
 
     private static void RenderLayoutItem(

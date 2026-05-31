@@ -1973,6 +1973,15 @@ High-priority actions:
       page-stable at `16/16` with zero dimension mismatches and improved aggregate MAE from `15.856962` to
       `14.577536` (changed16 `0.136194`). Keep the broader font item open for production run-level PDF font
       resources, tabs, bullet fonts, and exact Word line-break edge cases.
+    - [x] 2026-05-31: Replaced the DOCX renderer's document-base font selection with `DocxFontPlan`
+      resolution instead of choosing the first literal family and letting the resolver fall through. This
+      preserves Word's structural candidate order: direct/default/style run font, font-table alternate,
+      theme face, then resolver fallback. The reader now walks paragraph/character `w:basedOn` chains before
+      direct properties, so inherited corporate style fonts flow into the same font plan without hard-coded
+      family names. Public coverage pins theme-only defaults, font-table alternate-before-fallback, and
+      based-on style inheritance with dynamically discovered installed fonts. Office/candidate PDF inspection
+      on the private DOCX showed both sides using Calibri-family fonts after this change, so the remaining
+      private mismatch is no longer a concrete font-name selection issue.
     - [ ] 2026-05-31: Promote DOCX to production run-level PDF font resources only after layout measurement
       and glyph emission are switched together. A generic no-font-name trial that added per-run PDF font
       resources from `DocxFontPlan`, while keeping the legacy single-font layout measurer as fallback, stayed
@@ -1980,6 +1989,13 @@ High-priority actions:
       MAE to `16.256186` (`20260531-201939`, changed16 `0.144954`). Do not land emission-only resource
       selection; the next attempt must use the same run-level font map for wrapping, segment advances,
       ToUnicode/glyph embedding, and static header/footer text.
+    - [ ] 2026-05-31: Resolve the DOCX pagination gap exposed by structural font/style alignment. Private
+      DOCX run `20260531-203336` improved aggregate MAE to `13.852449` and changed16 to `0.125076`, but the
+      candidate now paginates as `14` pages against Office's `16` reference pages with `2` dimension mismatches.
+      Do not respond by restoring a document-wide hard-coded font fallback; the inspected reference and
+      candidate PDFs both point at Calibri-family output. The next acceptable work is Word-compatible vertical
+      composition: paragraph spacing collapse/context, keep-with-next/keep-lines, table style paragraph/run
+      precedence, table-cell spacing, repeated headers, and exact row pagination.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

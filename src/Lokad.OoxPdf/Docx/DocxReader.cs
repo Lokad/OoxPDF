@@ -1199,6 +1199,7 @@ internal sealed class DocxReader
             }
 
             var parsed = new DocxStyle(
+                (string?)style.Element(WordprocessingNamespace + "basedOn")?.Attribute(WordprocessingNamespace + "val"),
                 ReadParagraphProperties(style.Element(WordprocessingNamespace + "pPr")),
                 ReadRunProperties(style.Element(WordprocessingNamespace + "rPr")));
             if (type == "paragraph")
@@ -1290,7 +1291,7 @@ internal sealed class DocxReader
     private static DocxResolvedParagraphProperties ResolveParagraphProperties(XElement? directProperties, string? paragraphStyleId, DocxStyleSet styles)
     {
         DocxResolvedParagraphProperties result = styles.ParagraphDefaults;
-        if (paragraphStyleId is not null && styles.ParagraphStyles.TryGetValue(paragraphStyleId, out DocxStyle? style))
+        foreach (DocxStyle style in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
         {
             result = result.Merge(style.Paragraph);
         }
@@ -1301,17 +1302,39 @@ internal sealed class DocxReader
     private static DocxResolvedRunProperties ResolveRunProperties(XElement? directProperties, string? paragraphStyleId, string? characterStyleId, DocxStyleSet styles)
     {
         DocxResolvedRunProperties result = styles.RunDefaults;
-        if (paragraphStyleId is not null && styles.ParagraphStyles.TryGetValue(paragraphStyleId, out DocxStyle? paragraphStyle))
+        foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
         {
             result = result.Merge(paragraphStyle.Run);
         }
 
-        if (characterStyleId is not null && styles.CharacterStyles.TryGetValue(characterStyleId, out DocxStyle? characterStyle))
+        foreach (DocxStyle characterStyle in EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles))
         {
             result = result.Merge(characterStyle.Run);
         }
 
         return result.Merge(ReadRunProperties(directProperties));
+    }
+
+    private static IEnumerable<DocxStyle> EnumerateStyleInheritance(string? styleId, IReadOnlyDictionary<string, DocxStyle> styles)
+    {
+        if (styleId is null)
+        {
+            yield break;
+        }
+
+        var chain = new Stack<DocxStyle>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        string? currentStyleId = styleId;
+        while (currentStyleId is not null && seen.Add(currentStyleId) && styles.TryGetValue(currentStyleId, out DocxStyle? style))
+        {
+            chain.Push(style);
+            currentStyleId = style.BasedOnStyleId;
+        }
+
+        while (chain.Count != 0)
+        {
+            yield return chain.Pop();
+        }
     }
 
     private static DocxResolvedParagraphProperties ReadParagraphProperties(XElement? properties)
@@ -1493,7 +1516,7 @@ internal sealed class DocxReader
             new Dictionary<string, DocxTableStyle>());
     }
 
-    private sealed record DocxStyle(DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
+    private sealed record DocxStyle(string? BasedOnStyleId, DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
 
     private sealed record DocxTableStyle(
         DocxTableCellStyle Cell,

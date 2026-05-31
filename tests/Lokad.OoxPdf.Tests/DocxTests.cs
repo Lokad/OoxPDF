@@ -734,6 +734,68 @@ internal static class DocxTests
         TestAssert.Equal("majorBidi", run.Fonts.ComplexScriptTheme ?? string.Empty);
     }
 
+    public static void DocxReaderCascadesRunFontTokensThroughBasedOnStyles()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="Base">
+                    <w:rPr><w:rFonts w:ascii="Base Sans" w:hAnsi="Base Sans"/></w:rPr>
+                  </w:style>
+                  <w:style w:type="paragraph" w:styleId="Child">
+                    <w:basedOn w:val="Base"/>
+                    <w:rPr><w:rFonts w:eastAsia="Child East"/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:pStyle w:val="Child"/></w:pPr>
+                      <w:r><w:t>Inherited style font</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTextRun run = document.Paragraphs.Single().Runs.Single();
+        TestAssert.Equal("Base Sans", run.FontFamily ?? string.Empty);
+        TestAssert.Equal("Base Sans", run.Fonts.Ascii ?? string.Empty);
+        TestAssert.Equal("Base Sans", run.Fonts.HighAnsi ?? string.Empty);
+        TestAssert.Equal("Child East", run.Fonts.EastAsia ?? string.Empty);
+    }
+
     public static void DocxFontResolverBuildsLatinTypefaceCandidatesFromCatalogAndTheme()
     {
         var catalog = new DocxFontCatalog(
@@ -958,6 +1020,139 @@ internal static class DocxTests
         TestAssert.Equal("A ", lines[0].Text);
         TestAssert.Equal("B", lines[1].Text);
         TestAssert.Equal("Wide", lines[1].Segments.Single().StyleRun.FontFamily ?? string.Empty);
+    }
+
+    public static void DocxRendererUsesThemeTypefaceForThemeOnlyDefaultRun()
+    {
+        var resolver = new WindowsFontResolver(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts"));
+        string defaultFamily = resolver.Resolve(new FontRequest(DocxRenderer.DefaultDocumentTypefaceRequest)).FamilyName;
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFontExcept(defaultFamily);
+        if (font is null)
+        {
+            return;
+        }
+
+        string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                  <Override PartName="/word/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:docDefaults>
+                    <w:rPrDefault><w:rPr><w:rFonts w:asciiTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi"/></w:rPr></w:rPrDefault>
+                  </w:docDefaults>
+                </w:styles>
+                """,
+            ["word/theme/theme1.xml"] = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Theme">
+                  <a:themeElements>
+                    <a:fontScheme name="Theme Fonts">
+                      <a:majorFont><a:latin typeface="{{family}}"/></a:majorFont>
+                      <a:minorFont><a:latin typeface="{{family}}"/></a:minorFont>
+                    </a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Theme default</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + font.Value.Resolution.FamilyName + "-"), pdf);
+    }
+
+    public static void DocxRendererUsesFontCatalogAlternateBeforeResolverFallback()
+    {
+        var resolver = new WindowsFontResolver(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts"));
+        string defaultFamily = resolver.Resolve(new FontRequest(DocxRenderer.DefaultDocumentTypefaceRequest)).FamilyName;
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFontExcept(defaultFamily);
+        if (font is null)
+        {
+            return;
+        }
+
+        string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdFontTable" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>
+                </Relationships>
+                """,
+            ["word/fontTable.xml"] = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:font w:name="Unavailable Corporate Face">
+                    <w:altName w:val="{{family}}"/>
+                  </w:font>
+                </w:fonts>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="Unavailable Corporate Face" w:hAnsi="Unavailable Corporate Face"/></w:rPr><w:t>Alternate font</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + font.Value.Resolution.FamilyName + "-"), pdf);
     }
 
     public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()
@@ -4283,6 +4478,33 @@ internal static class DocxTests
 
         var resolver = new WindowsFontResolver(fontsDirectory);
         foreach (FontResolution resolution in resolver.GetDiscoveredFonts().Where(font => font.FontFilePath is not null))
+        {
+            try
+            {
+                OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath!, resolution.FontFaceIndex);
+                if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
+                {
+                    return (resolution, font);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+            {
+            }
+        }
+
+        return null;
+    }
+
+    private static (FontResolution Resolution, OpenTypeFont Font)? FindUsableInstalledFontExcept(string familyName)
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!Directory.Exists(fontsDirectory))
+        {
+            return null;
+        }
+
+        var resolver = new WindowsFontResolver(fontsDirectory);
+        foreach (FontResolution resolution in resolver.GetDiscoveredFonts().Where(font => font.FontFilePath is not null && !font.FamilyName.Equals(familyName, StringComparison.OrdinalIgnoreCase)))
         {
             try
             {
