@@ -375,6 +375,86 @@ internal static class DocxTests
         TestAssert.True(document.Paragraphs[3].AlignmentValue is null, "Expected default alignment to keep a null source token.");
     }
 
+    public static void DocxReaderPreservesParagraphSpacingAndKeepTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:docDefaults>
+                    <w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="300"/></w:pPr></w:pPrDefault>
+                  </w:docDefaults>
+                  <w:style w:type="paragraph" w:styleId="Risky">
+                    <w:pPr>
+                      <w:keepNext/>
+                      <w:keepLines w:val="0"/>
+                      <w:widowControl w:val="1"/>
+                      <w:contextualSpacing/>
+                      <w:spacing w:beforeAutospacing="1" w:afterLines="240" w:lineRule="exact"/>
+                    </w:pPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="Risky"/>
+                        <w:spacing w:before="360" w:afterAutospacing="1" w:line="480"/>
+                      </w:pPr>
+                      <w:r><w:t>Styled spacing</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        TestAssert.Equal("Risky", paragraph.StyleId ?? string.Empty);
+        TestAssert.Equal(18d, paragraph.SpacingBeforePoints);
+        TestAssert.Equal(6d, paragraph.SpacingAfterPoints);
+        TestAssert.Equal("360", paragraph.Spacing.BeforeValue ?? string.Empty);
+        TestAssert.Equal("120", paragraph.Spacing.AfterValue ?? string.Empty);
+        TestAssert.Equal("240", paragraph.Spacing.AfterLinesValue ?? string.Empty);
+        TestAssert.Equal("1", paragraph.Spacing.BeforeAutoSpacingValue ?? string.Empty);
+        TestAssert.Equal("1", paragraph.Spacing.AfterAutoSpacingValue ?? string.Empty);
+        TestAssert.Equal("480", paragraph.Spacing.LineValue ?? string.Empty);
+        TestAssert.Equal("exact", paragraph.Spacing.LineRuleValue ?? string.Empty);
+        TestAssert.True(paragraph.Spacing.ContextualSpacing == true, "Style contextual spacing should survive the paragraph cascade.");
+        TestAssert.True(paragraph.KeepRules.KeepNext == true, "Style keepNext should survive the paragraph cascade.");
+        TestAssert.True(paragraph.KeepRules.KeepLines == false, "Explicit off keepLines should survive the paragraph cascade.");
+        TestAssert.True(paragraph.KeepRules.WidowControl == true, "Style widowControl should survive the paragraph cascade.");
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -1684,12 +1764,15 @@ internal static class DocxTests
         var firstParagraph = new DocxParagraph(
             [new DocxTextRun("Alpha", 11d, null, false, false, false, null, null)],
             [],
+            null,
             DocxTextAlignment.Left,
             null,
             0d,
             0d,
             1d,
             null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
             null);
         var secondParagraph = new DocxParagraph(
             [
@@ -1697,12 +1780,15 @@ internal static class DocxTests
                 new DocxTextRun("G", 14d, "993333", true, false, false, null, null)
             ],
             [],
+            null,
             DocxTextAlignment.Center,
             "center",
             0d,
             0d,
             1d,
             null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
             null);
         var cell = new DocxTableCell("Alpha BG", [firstParagraph, secondParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 44d)]);
@@ -1739,12 +1825,15 @@ internal static class DocxTests
         var paragraph = new DocxParagraph(
             [new DocxTextRun("Inset", 11d, null, false, false, false, null, null)],
             [],
+            null,
             DocxTextAlignment.Left,
             null,
             0d,
             0d,
             1d,
             null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
             null);
         var margins = new DocxTableCellMargins(3d, 8d, null, 12d, "60", "160", null, "240");
         var cell = new DocxTableCell("Inset", [paragraph], null, null, null, null, [], margins);
@@ -1776,12 +1865,15 @@ internal static class DocxTests
         var paragraph = new DocxParagraph(
             [new DocxTextRun("V", 11d, null, false, false, false, null, null)],
             [],
+            null,
             DocxTextAlignment.Left,
             null,
             0d,
             0d,
             1d,
             null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
             null);
         var topCell = new DocxTableCell("V", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var centerCell = new DocxTableCell("V", [paragraph], null, null, null, "center", [], DocxTableCellMargins.Empty);
@@ -1815,12 +1907,15 @@ internal static class DocxTests
         var paragraph = new DocxParagraph(
             [new DocxTextRun("First Second", 11d, null, false, false, false, null, null)],
             [],
+            null,
             DocxTextAlignment.Left,
             null,
             0d,
             0d,
             1d,
             null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
             null);
         var cell = new DocxTableCell("First Second", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d)]);

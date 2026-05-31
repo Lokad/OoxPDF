@@ -424,12 +424,15 @@ internal sealed class DocxReader
         return new DocxParagraph(
             runs,
             images,
+            paragraphStyleId,
             resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
             resolvedParagraph.AlignmentValue,
             resolvedParagraph.SpacingBeforePoints ?? 0d,
             resolvedParagraph.SpacingAfterPoints ?? 6d,
             resolvedParagraph.LineSpacingFactor ?? 1.25d,
             resolvedParagraph.LineSpacingPoints,
+            resolvedParagraph.Spacing,
+            resolvedParagraph.KeepRules,
             CreateListLabel(paragraphProperties, numbering, numberingCounters));
     }
 
@@ -901,7 +904,25 @@ internal sealed class DocxReader
             }
         }
 
-        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints);
+        DocxParagraphSpacing paragraphSpacing = new(
+            (string?)spacing?.Attribute(WordprocessingNamespace + "before"),
+            (string?)spacing?.Attribute(WordprocessingNamespace + "after"),
+            (string?)spacing?.Attribute(WordprocessingNamespace + "beforeLines"),
+            (string?)spacing?.Attribute(WordprocessingNamespace + "afterLines"),
+            (string?)spacing?.Attribute(WordprocessingNamespace + "beforeAutospacing"),
+            (string?)spacing?.Attribute(WordprocessingNamespace + "afterAutospacing"),
+            (string?)spacing?.Attribute(WordprocessingNamespace + "line"),
+            (string?)spacing?.Attribute(WordprocessingNamespace + "lineRule"),
+            ReadOnOff(properties?.Element(WordprocessingNamespace + "contextualSpacing")));
+        DocxParagraphKeepRules keepRules = new(
+            ReadOnOff(properties?.Element(WordprocessingNamespace + "keepNext")),
+            (string?)properties?.Element(WordprocessingNamespace + "keepNext")?.Attribute(WordprocessingNamespace + "val"),
+            ReadOnOff(properties?.Element(WordprocessingNamespace + "keepLines")),
+            (string?)properties?.Element(WordprocessingNamespace + "keepLines")?.Attribute(WordprocessingNamespace + "val"),
+            ReadOnOff(properties?.Element(WordprocessingNamespace + "widowControl")),
+            (string?)properties?.Element(WordprocessingNamespace + "widowControl")?.Attribute(WordprocessingNamespace + "val"));
+
+        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints, paragraphSpacing, keepRules);
     }
 
     private static string? ReadAlignmentValue(XElement? properties)
@@ -1003,7 +1024,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>());
     }
@@ -1027,7 +1048,9 @@ internal sealed class DocxReader
         double? SpacingBeforePoints,
         double? SpacingAfterPoints,
         double? LineSpacingFactor,
-        double? LineSpacingPoints)
+        double? LineSpacingPoints,
+        DocxParagraphSpacing Spacing,
+        DocxParagraphKeepRules KeepRules)
     {
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -1037,8 +1060,35 @@ internal sealed class DocxReader
                 other.SpacingBeforePoints ?? SpacingBeforePoints,
                 other.SpacingAfterPoints ?? SpacingAfterPoints,
                 other.LineSpacingFactor ?? LineSpacingFactor,
-                other.LineSpacingPoints ?? LineSpacingPoints);
+                other.LineSpacingPoints ?? LineSpacingPoints,
+                MergeSpacing(Spacing, other.Spacing),
+                MergeKeepRules(KeepRules, other.KeepRules));
         }
+    }
+
+    private static DocxParagraphSpacing MergeSpacing(DocxParagraphSpacing current, DocxParagraphSpacing other)
+    {
+        return new DocxParagraphSpacing(
+            other.BeforeValue ?? current.BeforeValue,
+            other.AfterValue ?? current.AfterValue,
+            other.BeforeLinesValue ?? current.BeforeLinesValue,
+            other.AfterLinesValue ?? current.AfterLinesValue,
+            other.BeforeAutoSpacingValue ?? current.BeforeAutoSpacingValue,
+            other.AfterAutoSpacingValue ?? current.AfterAutoSpacingValue,
+            other.LineValue ?? current.LineValue,
+            other.LineRuleValue ?? current.LineRuleValue,
+            other.ContextualSpacing ?? current.ContextualSpacing);
+    }
+
+    private static DocxParagraphKeepRules MergeKeepRules(DocxParagraphKeepRules current, DocxParagraphKeepRules other)
+    {
+        return new DocxParagraphKeepRules(
+            other.KeepNext ?? current.KeepNext,
+            other.KeepNextValue ?? current.KeepNextValue,
+            other.KeepLines ?? current.KeepLines,
+            other.KeepLinesValue ?? current.KeepLinesValue,
+            other.WidowControl ?? current.WidowControl,
+            other.WidowControlValue ?? current.WidowControlValue);
     }
 
     private readonly record struct DocxResolvedRunProperties(

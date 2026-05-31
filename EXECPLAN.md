@@ -1773,9 +1773,10 @@ High-priority actions:
     table rows/cells, then changed `DocxRenderer` to emit PDF from that positioned layout instead of mixing
     pagination and drawing in the same loop. This is intentionally behavior-preserving and is the first DOCX
     pipeline boundary needed before improving Word-compatible pagination and table layout.
-  - [ ] 2026-05-31: Continue moving DOCX toward typed intermediate stages: next split style-resolved
-    paragraph/table content from raw document reading, then add private-safe layout traces over the new
-    layout model so pagination drift can be diagnosed without inspecting private text.
+  - [ ] 2026-05-31: Continue moving DOCX toward typed intermediate stages: split style-resolved paragraph/table
+    content from raw document reading, promote paragraph spacing/keep decisions into the block-pagination
+    stage, then enrich private-safe layout traces so pagination drift can be diagnosed without inspecting
+    private text.
   - [x] 2026-05-31: Added a private-safe `DocxLayoutSnapshot` inspection surface over the layout model. It
     reports page dimensions, item counts, item kinds, bounds, cell counts, and text lengths, but not document
     text. This gives private DOCX pagination/table work a restartable trace target before adding Word layout
@@ -1811,6 +1812,11 @@ High-priority actions:
   - [x] 2026-05-31: Tightened DOCX table row content-height growth to measure actual text/image content,
     margins, and spacing rather than treating the legacy baseline placement inset as required row height. This
     keeps ordinary one-line default rows compact while still expanding rows that wrap or contain taller content.
+  - [x] 2026-05-31: Preserved DOCX paragraph spacing and keep-rule source tokens in the paragraph model after
+    style/default/direct-property resolution. `DocxParagraph` now carries its `w:pStyle`, raw `w:spacing`
+    tokens including line/autospacing/line-count variants, `w:contextualSpacing`, and keep/widow on/off
+    values. This intentionally does not change pagination yet; it removes the reader-local XML dependency so
+    the next Word-like pagination slice can use typed structural facts instead of diagnostics-only heuristics.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -3787,6 +3793,11 @@ Current validation baseline:
   (`18` candidate pages vs `16` reference pages); after the correction, private run `20260531-150813` moved to
   `15` candidate pages vs `16` reference pages with the same known diagnostic categories, confirming the next
   pagination gap is not a blanket table-row growth problem.
+- DOCX paragraph spacing/keep-token preservation validation:
+  after adding typed paragraph spacing and keep-rule records, the full DOCX group sweep passed again:
+  `docx-core` `4`, `docx-page` `8`, `docx-text` `7`, `docx-numbering` `3`, `docx-images` `2`, and
+  `docx-tables` `18`. The new public synthetic test preserves style/default/direct `w:spacing` source tokens,
+  `w:contextualSpacing`, and keep/widow on/off values without changing rendering behavior.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

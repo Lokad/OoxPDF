@@ -301,7 +301,7 @@ internal sealed class DocxLayoutEngine
     private static double MeasureTableCellContentHeight(DocxTableCell cell, double cellWidth, PdfEmbeddedFont embedded)
     {
         IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs.Count == 0 && cell.Text.Length != 0
-            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], DocxTextAlignment.Left, null, 0d, 0d, 1d, null, null)]
+            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
             : cell.Paragraphs;
         if (paragraphs.Count == 0)
         {
@@ -353,7 +353,7 @@ internal sealed class DocxLayoutEngine
         }
 
         IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs.Count == 0 && cell.Text.Length != 0
-            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], DocxTextAlignment.Left, null, 0d, 0d, 1d, null, null)]
+            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
             : cell.Paragraphs;
         if (paragraphs.Count == 0)
         {

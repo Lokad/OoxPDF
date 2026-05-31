@@ -73,13 +73,41 @@ internal sealed record DocxSectionBreakElement(
 internal sealed record DocxParagraph(
     IReadOnlyList<DocxTextRun> Runs,
     IReadOnlyList<DocxInlineImage> Images,
+    string? StyleId,
     DocxTextAlignment Alignment,
     string? AlignmentValue,
     double SpacingBeforePoints,
     double SpacingAfterPoints,
     double LineSpacingFactor,
     double? LineSpacingPoints,
+    DocxParagraphSpacing Spacing,
+    DocxParagraphKeepRules KeepRules,
     DocxListLabel? ListLabel);
+
+internal sealed record DocxParagraphSpacing(
+    string? BeforeValue,
+    string? AfterValue,
+    string? BeforeLinesValue,
+    string? AfterLinesValue,
+    string? BeforeAutoSpacingValue,
+    string? AfterAutoSpacingValue,
+    string? LineValue,
+    string? LineRuleValue,
+    bool? ContextualSpacing)
+{
+    public static DocxParagraphSpacing Empty { get; } = new(null, null, null, null, null, null, null, null, null);
+}
+
+internal sealed record DocxParagraphKeepRules(
+    bool? KeepNext,
+    string? KeepNextValue,
+    bool? KeepLines,
+    string? KeepLinesValue,
+    bool? WidowControl,
+    string? WidowControlValue)
+{
+    public static DocxParagraphKeepRules Empty { get; } = new(null, null, null, null, null, null);
+}
 
 internal sealed record DocxListLabel(
     string Text,
