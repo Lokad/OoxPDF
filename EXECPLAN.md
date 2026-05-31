@@ -3511,6 +3511,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     itself, then use the trace to select the simple/dense/worst private tables below. Vertical merges now
     affect same-page layout/rendering, but cross-page merged-cell behavior and resolved-grid tracing remain
     open.
+  - [x] 2026-06-01: Preserved DOCX table-row height value/rule tokens and exposed them through the
+    private-safe layout snapshot. `DocxTableRow` now carries `w:trHeight/@w:val` and `@w:hRule`, and layout
+    distinguishes `exact` from at-least/default row heights instead of always expanding exact rows to
+    content. Public coverage verifies parser token preservation, exact-height layout behavior, and snapshot
+    fields. Validation passed `docx-tables --skip-slow` (`52`), `docx-core --skip-slow` (`16`), and full
+    solution build. Private DOCX run `20260601-004602` stayed neutral at `16/16` pages, zero dimension
+    mismatches, no diagnostics, `MAE=12.509698`, changed16 `0.112673`.
 - [ ] Select representative private tables for repeated inspection: one simple table, one typical dense
   table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
 - [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content
@@ -3518,6 +3525,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - [ ] Compute row heights from actual cell content: wrap text within cell width, include cell margins,
   respect explicit `trHeight` rules, and avoid the current fixed/default row-height behavior for
   content-heavy rows.
+  - [x] 2026-06-01: Added explicit `w:hRule="exact"` handling so exact row heights no longer behave like
+    `atLeast`; at-least/default rows still expand to measured content. Keep this parent open for cross-page
+    row splitting and deeper Office parity around `auto` and pagination.
 - [ ] Render cell text as paragraphs instead of flattened cell text: preserve paragraph breaks, basic run
   styling, numbering/bullets inside cells, alignment, and line spacing.
 - [ ] Implement table and cell styling: table styles, conditional first/header row formatting, cell shading,

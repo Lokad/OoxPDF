@@ -284,7 +284,9 @@ internal sealed record DocxTableRow(
     IReadOnlyList<DocxTableCell> Cells,
     double? HeightPoints,
     bool IsHeader = false,
-    string? HeaderValue = null);
+    string? HeaderValue = null,
+    string? HeightValue = null,
+    string? HeightRuleValue = null);
 
 internal sealed record DocxTableCell(
     string Text,

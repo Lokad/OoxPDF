@@ -4685,6 +4685,12 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("72 684 m 216 684 l S", pdf);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxTableRow row = new DocxReader().Read(package).Tables[0].Rows[0];
+        TestAssert.Equal("720", row.HeightValue ?? string.Empty);
+        TestAssert.True(row.HeightRuleValue is null, "Missing hRule should stay distinct from exact/auto.");
     }
 
     public static void DocxSyntheticTableRowsBreakAcrossPages()
@@ -5264,6 +5270,45 @@ internal static class DocxTests
         TestAssert.True(row.Cells[0].TextLines.Count >= 2, "Expected the narrow cell to wrap content into multiple layout-owned text lines.");
     }
 
+    public static void DocxTableLayoutStageHonorsExactRowHeightRule()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("First Second", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("First Second", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d, HeightValue: "200", HeightRuleValue: "exact")]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "First Second".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(10d, row.Height);
+        TestAssert.Equal("200", row.HeightValue ?? string.Empty);
+        TestAssert.Equal("exact", row.HeightRuleValue ?? string.Empty);
+        TestAssert.Equal(10d, row.DeclaredHeightPoints ?? 0d);
+    }
+
     public static void DocxLayoutSnapshotReportsPublicSafeCounts()
     {
         var margins = new DocxTableCellMargins(2d, 3d, 4d, 5d, "40", "60", "80", "100");
@@ -5300,7 +5345,7 @@ internal static class DocxTests
         DocxTable table = new(
             null,
             [40d, 40d],
-            [new DocxTableRow([cell], 20d, IsHeader: true, HeaderValue: "1")],
+            [new DocxTableRow([cell], 20d, IsHeader: true, HeaderValue: "1", HeightValue: "400", HeightRuleValue: "atLeast")],
             PreferredWidthPoints: 84d,
             PreferredWidthValue: "1680",
             PreferredWidthType: "dxa",
@@ -5349,6 +5394,9 @@ internal static class DocxTests
         TestAssert.Equal(80d, tableRow.GridColumnsWidthSum);
         TestAssert.Equal(84d, tableRow.ResolvedTableWidth);
         TestAssert.Equal(84d, tableRow.PreferredTableWidthPoints ?? 0d);
+        TestAssert.Equal(20d, tableRow.DeclaredHeightPoints ?? 0d);
+        TestAssert.Equal("400", tableRow.HeightValue ?? string.Empty);
+        TestAssert.Equal("atLeast", tableRow.HeightRuleValue ?? string.Empty);
         TestAssert.True(tableRow.IsHeader, "Snapshot should expose header-row status without text content.");
         TestAssert.Equal("1", tableRow.HeaderValue ?? string.Empty);
         TestAssert.Equal(1, tableRow.CellCount);

@@ -121,6 +121,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             row.Table.IndentPoints,
             row.Table.CellSpacingPoints,
             row.Table.LayoutValue,
+            row.HeightValue,
+            row.HeightRuleValue,
+            row.DeclaredHeightPoints,
             row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
             row.Y,
             row.Cells.Sum(cell => cell.Width),
@@ -203,6 +206,9 @@ internal sealed record DocxTableRowSnapshot(
     double? IndentPoints,
     double? CellSpacingPoints,
     string? LayoutValue,
+    string? HeightValue,
+    string? HeightRuleValue,
+    double? DeclaredHeightPoints,
     double X,
     double Y,
     double Width,
@@ -304,6 +310,9 @@ internal sealed record DocxTableRowLayout(
     IReadOnlyList<DocxTableCellLayout> Cells,
     double Y,
     double Height,
+    double? DeclaredHeightPoints,
+    string? HeightValue,
+    string? HeightRuleValue,
     bool IsHeader,
     string? HeaderValue) : DocxLayoutItem;
 
@@ -703,7 +712,7 @@ internal sealed class DocxLayoutEngine
             .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer))
             .DefaultIfEmpty(0d)
             .Max();
-        return Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
+        return ResolveTableRowHeight(row, contentHeight);
     }
 
     private static double GetParagraphTextStartOffset(DocxParagraph paragraph)
@@ -970,7 +979,21 @@ internal sealed class DocxLayoutEngine
                 .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer))
                 .DefaultIfEmpty(0d)
                 .Max();
-        return Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
+        return ResolveTableRowHeight(row, contentHeight);
+    }
+
+    private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight)
+    {
+        if (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
+            row.HeightPoints is { } exactHeight)
+        {
+            return Math.Max(1d, exactHeight);
+        }
+
+        double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
+            ? DefaultTableRowHeight
+            : row.HeightPoints ?? DefaultTableRowHeight;
+        return Math.Max(declaredHeight, contentHeight);
     }
 
     private static void AddTableRowLayout(
@@ -1017,7 +1040,17 @@ internal sealed class DocxLayoutEngine
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
 
-        currentItems.Add(new DocxTableRowLayout(tableContext, rowIndex, cells.ToArray(), cellY, rowHeight, row.IsHeader, row.HeaderValue));
+        currentItems.Add(new DocxTableRowLayout(
+            tableContext,
+            rowIndex,
+            cells.ToArray(),
+            cellY,
+            rowHeight,
+            row.HeightPoints,
+            row.HeightValue,
+            row.HeightRuleValue,
+            row.IsHeader,
+            row.HeaderValue));
         cursorY -= rowHeight;
     }
 

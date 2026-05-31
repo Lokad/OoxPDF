@@ -832,11 +832,16 @@ internal sealed class DocxReader
                 XElement? header = row
                     .Element(WordprocessingNamespace + "trPr")
                     ?.Element(WordprocessingNamespace + "tblHeader");
+                XElement? rowHeight = row
+                    .Element(WordprocessingNamespace + "trPr")
+                    ?.Element(WordprocessingNamespace + "trHeight");
                 rows.Add(new DocxTableRow(
                     cells,
-                    ReadTableRowHeight(row),
+                    ReadTableRowHeight(rowHeight),
                     ReadOnOff(header) == true,
-                    (string?)header?.Attribute(WordprocessingNamespace + "val")));
+                    (string?)header?.Attribute(WordprocessingNamespace + "val"),
+                    (string?)rowHeight?.Attribute(WordprocessingNamespace + "val"),
+                    (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule")));
             }
         }
 
@@ -1142,11 +1147,8 @@ internal sealed class DocxReader
             edge.Equals("right", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static double? ReadTableRowHeight(XElement row)
+    private static double? ReadTableRowHeight(XElement? height)
     {
-        XElement? height = row
-            .Element(WordprocessingNamespace + "trPr")
-            ?.Element(WordprocessingNamespace + "trHeight");
         if (height?.Attribute(WordprocessingNamespace + "val") is not { } value)
         {
             return null;
