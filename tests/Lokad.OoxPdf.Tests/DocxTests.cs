@@ -5365,6 +5365,9 @@ internal static class DocxTests
         TestAssert.Equal(1, tableSnapshot.HeaderRowLayoutCount);
         TestAssert.Equal(2, tableSnapshot.GridColumnCount);
         TestAssert.Equal(80d, tableSnapshot.GridColumnsWidthSum);
+        TestAssert.Equal(2, tableSnapshot.ResolvedColumnWidths.Count);
+        TestAssert.Equal(42d, tableSnapshot.ResolvedColumnWidths[0]);
+        TestAssert.Equal(42d, tableSnapshot.ResolvedColumnWidths[1]);
         TestAssert.Equal(84d, tableSnapshot.ResolvedTableWidth);
         TestAssert.Equal(84d, tableSnapshot.PreferredWidthPoints ?? 0d);
         TestAssert.Equal("1680", tableSnapshot.PreferredWidthValue ?? string.Empty);
@@ -5392,6 +5395,9 @@ internal static class DocxTests
         TestAssert.Equal(1, tableRow.TableRowCount);
         TestAssert.Equal(2, tableRow.GridColumnCount);
         TestAssert.Equal(80d, tableRow.GridColumnsWidthSum);
+        TestAssert.Equal(2, tableRow.ResolvedColumnWidths.Count);
+        TestAssert.Equal(42d, tableRow.ResolvedColumnWidths[0]);
+        TestAssert.Equal(42d, tableRow.ResolvedColumnWidths[1]);
         TestAssert.Equal(84d, tableRow.ResolvedTableWidth);
         TestAssert.Equal(84d, tableRow.PreferredTableWidthPoints ?? 0d);
         TestAssert.Equal(20d, tableRow.DeclaredHeightPoints ?? 0d);

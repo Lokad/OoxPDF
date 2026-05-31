@@ -3518,6 +3518,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     fields. Validation passed `docx-tables --skip-slow` (`52`), `docx-core --skip-slow` (`16`), and full
     solution build. Private DOCX run `20260601-004602` stayed neutral at `16/16` pages, zero dimension
     mismatches, no diagnostics, `MAE=12.509698`, changed16 `0.112673`.
+  - [x] 2026-06-01: Exposed the resolved DOCX table column grid in private-safe table snapshots. The trace
+    now carries per-column resolved widths alongside authored grid count/sum and resolved table width, so
+    private tables can be compared structurally without inferring columns from cell rectangles. Validation
+    passed `docx-core --skip-slow` (`16`), `docx-tables --skip-slow` (`52`), and full solution build.
+    Private DOCX run `20260601-004815` stayed neutral at `16/16` pages, zero dimension mismatches, no
+    diagnostics, `MAE=12.509698`, changed16 `0.112673`.
 - [ ] Select representative private tables for repeated inspection: one simple table, one typical dense
   table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
 - [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content
