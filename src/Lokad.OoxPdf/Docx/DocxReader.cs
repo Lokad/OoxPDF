@@ -739,7 +739,8 @@ internal sealed class DocxReader
                 string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color") ?? conditionalStyle.ShadingColor;
                 string? verticalAlignment = (string?)cellProperties
                     ?.Element(WordprocessingNamespace + "vAlign")
-                    ?.Attribute(WordprocessingNamespace + "val");
+                    ?.Attribute(WordprocessingNamespace + "val")
+                    ?? conditionalStyle.VerticalAlignmentValue;
                 XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
                 IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
                 IReadOnlyList<DocxTableCellBorder> borders = ResolveTableCellBorders(
@@ -1570,10 +1571,11 @@ internal sealed class DocxReader
         string? FillHex,
         string? ShadingValue,
         string? ShadingColor,
+        string? VerticalAlignmentValue,
         IReadOnlyList<DocxTableCellBorder> Borders,
         DocxTableCellMargins Margins)
     {
-        public static DocxTableCellStyle Empty { get; } = new(DocxResolvedParagraphProperties.Empty, DocxResolvedRunProperties.Empty, null, null, null, [], DocxTableCellMargins.Empty);
+        public static DocxTableCellStyle Empty { get; } = new(DocxResolvedParagraphProperties.Empty, DocxResolvedRunProperties.Empty, null, null, null, null, [], DocxTableCellMargins.Empty);
 
         public DocxTableCellStyle Merge(DocxTableCellStyle other)
         {
@@ -1583,6 +1585,7 @@ internal sealed class DocxReader
                 other.FillHex ?? FillHex,
                 other.ShadingValue ?? ShadingValue,
                 other.ShadingColor ?? ShadingColor,
+                other.VerticalAlignmentValue ?? VerticalAlignmentValue,
                 other.Borders.Count == 0 ? Borders : other.Borders,
                 MergeTableCellMargins(other.Margins, Margins));
         }
@@ -1628,6 +1631,9 @@ internal sealed class DocxReader
             (string?)shading?.Attribute(WordprocessingNamespace + "fill"),
             (string?)shading?.Attribute(WordprocessingNamespace + "val"),
             (string?)shading?.Attribute(WordprocessingNamespace + "color"),
+            (string?)cellProperties
+                ?.Element(WordprocessingNamespace + "vAlign")
+                ?.Attribute(WordprocessingNamespace + "val"),
             ReadTableCellBorders(cellProperties),
             DocxTableCellMargins.Empty);
     }

@@ -2110,6 +2110,11 @@ High-priority actions:
       `14.825006` and changed16 to `0.134342` versus the prior committed `15/16` run. Keep the parent open for
       Word-backed precedence fixtures, diagnostics cleanup, and visual tuning; do not replace this with
       document- or font-specific rules.
+    - [x] 2026-05-31: Added table-style cell `w:vAlign` to the same resolved conditional-cell style cascade.
+      Whole-style and `w:tblStylePr` conditional `w:tcPr/w:vAlign` now flow into `DocxTableCell` unless a direct
+      cell `w:vAlign` overrides them. Private-safe inventory found one first-row `bottom` alignment atom in the
+      private DOCX table style, so this closes a real dropped style property without adding a document-specific
+      rule.
   - [ ] 2026-05-31: Resolve DOCX table-cell paragraph spacing semantics with public Word fixtures before
     applying `spacing before` inside table cells. The private table-cell paragraph style carries
     `w:spacing before="36" after="0"`, but a direct cell-layout application regressed private run
@@ -4368,6 +4373,11 @@ Current validation baseline:
   passed. Private DOCX run `20260531-220413` matched the Office reference page count (`16/16`) with zero
   dimension mismatches; aggregate MAE was `14.825006`, changed16 `0.134342`. This is a pagination/structure
   improvement but not a pure raster win, so table-style precedence and diagnostics remain open.
+- DOCX table-style cell vertical-alignment validation:
+  after merging whole-style and conditional table-style `w:tcPr/w:vAlign` into resolved cells,
+  `docx-tables --skip-slow` passed `41`. Private DOCX run `20260531-221021` stayed at `16/16` pages with zero
+  dimension mismatches and unchanged aggregate metrics (`MAE=14.825006`, changed16 `0.134342`), confirming the
+  slice is a structural cascade fix rather than a dominant private raster driver.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
