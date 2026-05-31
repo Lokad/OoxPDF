@@ -201,6 +201,16 @@ High-priority actions:
   missing shape. The color-transform midpoint mismatch is closed; the remaining dominant branch is the
   already-open Office text-state issue (`Tc`, secondary `/Tf`, and text-operation splitting). Keep this work on
   the public typography ladder and avoid private text or coordinate shortcuts.
+- [ ] 2026-05-31: Fold the remaining page-44 residual into the shared Office text-emission track, not the
+  chart-geometry track. The page-44 chart pass closed the major structural mismatches through Office-like
+  stacked-column plot padding, image-backed diagonal pattern tiles, denser value-axis ticks, and packed
+  horizontal legend spacing. Private run `20260531-134932` improved page 44 to `1.281596258` MAE,
+  `0.032060185` changed16, and `0.973682740` SSIM. Fresh PDF inspection shows the chart value-axis labels,
+  plot box, bars, slanted connector strokes, hatch fills, and bottom legend baseline are now close enough that
+  the dominant changed-pixel bins are title/body/chart text glyph areas rather than chart geometry. Keep page
+  44 as private acceptance evidence for the existing `Tc`/secondary-`Tf`/operation-splitting typography work;
+  do not add more private chart offsets unless a new PDF graphics inspection shows a real structural geometry
+  mismatch.
 - [ ] 2026-05-31: Continue the private page-36 typography branch as an Office text-emission model problem,
   not as a font-family rule. Private run `20260531-002604` has page 36 as the worst slide (`6.045371817`
   MAE) and the page is now narrowed to text-state decomposition: candidate and Office text positions are close
