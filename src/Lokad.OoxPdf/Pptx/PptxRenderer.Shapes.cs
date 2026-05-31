@@ -23,6 +23,8 @@ internal sealed partial class PptxRenderer
     private const double OfficeStraightStealthLineEndLengthFactor = 3d;
     private const double OfficeStraightStealthLineEndWidthFactor = 3d;
     private const double OfficeStraightStealthLineEndNotchFactor = 2d / 3d;
+    private const double OfficePresetArcFlatteningTolerance = 0.015d;
+    private const double OfficePresetArcMaximumFlatteningDegrees = 4.5d;
     private const double OfficeGlowRasterPixelsPerPoint = 1d;
     private const int OfficeGlowRasterMaxPixelsPerSide = 2048;
     private const double OfficeOuterShadowRasterExtentFactor = 1.25d;
@@ -622,7 +624,21 @@ internal sealed partial class PptxRenderer
 
             if (preset == "arc")
             {
-                DrawPresetArcStroke(graphics, shapeProperties, x, y, width, height, presetAdjustmentsOverride);
+                bool useFilledLineEndOutline =
+                    !hasDash &&
+                    lineCap is null &&
+                    headEnd.IsNone &&
+                    tailEnd.Kind is LineEndKind.Triangle or LineEndKind.Arrow or LineEndKind.Stealth;
+                if (useFilledLineEndOutline)
+                {
+                    graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+                }
+
+                if (!useFilledLineEndOutline ||
+                    !TryFillPresetArcLineEndOutline(graphics, shapeProperties, x, y, width, height, lineWidth, tailEnd, presetAdjustmentsOverride))
+                {
+                    DrawPresetArcStroke(graphics, shapeProperties, x, y, width, height, presetAdjustmentsOverride);
+                }
             }
             else if (preset == "ellipse")
             {
@@ -955,6 +971,148 @@ internal sealed partial class PptxRenderer
         graphics.StrokeCurrentPath();
     }
 
+    private static bool TryFillPresetArcLineEndOutline(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        double x,
+        double y,
+        double width,
+        double height,
+        double lineWidth,
+        LineEndStyle tailEnd,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+    {
+        if (width <= 0d || height <= 0d || lineWidth <= 0d)
+        {
+            return false;
+        }
+
+        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", 0d) / 60000d;
+        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", 90d) / 60000d;
+        double sweepDegrees = endDegrees - startDegrees;
+        while (sweepDegrees <= 0d)
+        {
+            sweepDegrees += 360d;
+        }
+
+        double centerX = x + width / 2d;
+        double centerY = y + height / 2d;
+        double radiusX = width / 2d;
+        double radiusY = height / 2d;
+        List<CurveSample> samples = SamplePresetArc(centerX, centerY, radiusX, radiusY, startDegrees, sweepDegrees);
+        if (samples.Count < 2)
+        {
+            return false;
+        }
+
+        double[] cumulativeLengths = BuildCumulativeSampleLengths(samples, out double totalLength);
+        double markerLength = tailEnd.Kind switch
+        {
+            LineEndKind.Arrow => lineWidth * OfficeArrowheadLengthFactor * tailEnd.LengthScale,
+            LineEndKind.Stealth => lineWidth * OfficeStraightStealthLineEndLengthFactor * tailEnd.LengthScale,
+            _ => Math.Max(OfficeTriangleTailMinimumLength, lineWidth * OfficeTriangleTailLengthFactor) * tailEnd.LengthScale
+        };
+        double baseDistance = Math.Max(0d, totalLength - markerLength);
+        CurveSample baseSample = SampleAtDistance(samples, cumulativeLengths, baseDistance);
+        List<CurveSample> bodySamples = SelectBodySamples(samples, cumulativeLengths, baseDistance, baseSample);
+        if (bodySamples.Count < 2)
+        {
+            return false;
+        }
+
+        (double X, double Y) direction = Normalize(baseSample.TangentX, baseSample.TangentY);
+        if (Math.Abs(direction.X) <= 0.000001d && Math.Abs(direction.Y) <= 0.000001d)
+        {
+            return false;
+        }
+
+        double halfWidth = Math.Max(0.1d, lineWidth / 2d);
+        var points = new List<(double X, double Y)>(bodySamples.Count * 2);
+        foreach (CurveSample sample in bodySamples)
+        {
+            (double X, double Y) normal = NormalForSample(sample);
+            points.Add((sample.X + normal.X * halfWidth, sample.Y + normal.Y * halfWidth));
+        }
+
+        for (int i = bodySamples.Count - 1; i >= 0; i--)
+        {
+            CurveSample sample = bodySamples[i];
+            (double X, double Y) normal = NormalForSample(sample);
+            points.Add((sample.X - normal.X * halfWidth, sample.Y - normal.Y * halfWidth));
+        }
+
+        AppendClosedLinePath(graphics, points, explicitClosingLine: true);
+        (double X, double Y) tip = (samples[^1].X, samples[^1].Y);
+        (double X, double Y) normalAtBase = (-direction.Y, direction.X);
+        if (tailEnd.Kind == LineEndKind.Arrow)
+        {
+            AppendOfficeArrowHeadPath(
+                graphics,
+                tip.X,
+                tip.Y,
+                -direction.X,
+                -direction.Y,
+                -normalAtBase.X,
+                -normalAtBase.Y,
+                lineWidth,
+                splitTrailingCurve: true);
+        }
+        else if (tailEnd.Kind == LineEndKind.Stealth)
+        {
+            double markerWidth = lineWidth * OfficeStraightStealthLineEndWidthFactor * tailEnd.WidthScale;
+            AppendClosedLinePath(graphics,
+            [
+                tip,
+                (baseSample.X + normalAtBase.X * markerWidth / 2d, baseSample.Y + normalAtBase.Y * markerWidth / 2d),
+                (tip.X - direction.X * markerLength * OfficeStraightStealthLineEndNotchFactor, tip.Y - direction.Y * markerLength * OfficeStraightStealthLineEndNotchFactor),
+                (baseSample.X - normalAtBase.X * markerWidth / 2d, baseSample.Y - normalAtBase.Y * markerWidth / 2d)
+            ]);
+        }
+        else
+        {
+            double arrowHalfWidth = markerLength * OfficeTriangleTailHalfWidthFactor * tailEnd.WidthScale;
+            AppendClosedLinePath(graphics,
+            [
+                tip,
+                (baseSample.X + normalAtBase.X * arrowHalfWidth, baseSample.Y + normalAtBase.Y * arrowHalfWidth),
+                (baseSample.X - normalAtBase.X * arrowHalfWidth, baseSample.Y - normalAtBase.Y * arrowHalfWidth)
+            ]);
+        }
+
+        graphics.FillCurrentPath();
+        return true;
+    }
+
+    private static List<CurveSample> SamplePresetArc(
+        double centerX,
+        double centerY,
+        double radiusX,
+        double radiusY,
+        double startDegrees,
+        double sweepDegrees)
+    {
+        double maxRadius = Math.Max(radiusX, radiusY);
+        double sweepRadians = Math.Abs(DegreesToRadians(sweepDegrees));
+        int flatnessSegments = maxRadius > OfficePresetArcFlatteningTolerance
+            ? (int)Math.Ceiling(sweepRadians / (2d * Math.Acos(Math.Max(-1d, 1d - OfficePresetArcFlatteningTolerance / maxRadius))))
+            : 1;
+        int angularSegments = (int)Math.Ceiling(Math.Abs(sweepDegrees) / OfficePresetArcMaximumFlatteningDegrees);
+        int segmentCount = Math.Clamp(Math.Max(flatnessSegments, angularSegments), 2, 128);
+        var samples = new List<CurveSample>(segmentCount + 1);
+        for (int i = 0; i <= segmentCount; i++)
+        {
+            double degrees = startDegrees + sweepDegrees * i / segmentCount;
+            double parameter = ConvertVisualAngleToEllipseParameter(degrees, radiusX, radiusY);
+            double sampleX = centerX + radiusX * Math.Cos(parameter);
+            double sampleY = centerY - radiusY * Math.Sin(parameter);
+            double tangentX = -radiusX * Math.Sin(parameter);
+            double tangentY = -radiusY * Math.Cos(parameter);
+            samples.Add(new CurveSample(sampleX, sampleY, tangentX, tangentY));
+        }
+
+        return samples;
+    }
+
     private static double ReadPresetGeometryGuide(
         XElement shapeProperties,
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
@@ -1028,13 +1186,13 @@ internal sealed partial class PptxRenderer
         double k = 4d / 3d * Math.Tan(sweep / 4d);
 
         double x0 = centerX + radiusX * Math.Cos(start);
-        double y0 = centerY + radiusY * Math.Sin(start);
+        double y0 = centerY - radiusY * Math.Sin(start);
         double x3 = centerX + radiusX * Math.Cos(endParameter);
-        double y3 = centerY + radiusY * Math.Sin(endParameter);
+        double y3 = centerY - radiusY * Math.Sin(endParameter);
         double x1 = x0 - radiusX * k * Math.Sin(start);
-        double y1 = y0 + radiusY * k * Math.Cos(start);
+        double y1 = y0 - radiusY * k * Math.Cos(start);
         double x2 = x3 + radiusX * k * Math.Sin(endParameter);
-        double y2 = y3 - radiusY * k * Math.Cos(endParameter);
+        double y2 = y3 + radiusY * k * Math.Cos(endParameter);
 
         return new BezierSegment(x0, y0, x1, y1, x2, y2, x3, y3);
     }
