@@ -3870,7 +3870,17 @@ internal sealed partial class PptxRenderer
             return ReadLineAdvance(lineSpacing, fontSize);
         }
 
-        return fontSize * metricRatio;
+        double metricAdvance = fontSize * metricRatio;
+        double windowsAscenderRatio = font.Os2.WindowsAscender / (double)font.UnitsPerEm;
+        if (!useWindowsFontBoxForDefaultLineSpacing &&
+            windowsAscenderRatio > PptxTextMetricRules.MaximumOfficeBaselineWindowsAscenderRatio &&
+            metricRatio <= PptxTextMetricRules.MaximumTableAnchorCompressedFontBoxRatio)
+        {
+            // Office does not let pathological compressed typographic boxes over-center table-cell text.
+            return Math.Max(metricAdvance, ReadLineAdvance(lineSpacing, fontSize));
+        }
+
+        return metricAdvance;
     }
 
     private static double ReadEstimatedAnchorEmptyLineAdvance(

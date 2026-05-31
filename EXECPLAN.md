@@ -557,6 +557,22 @@ High-priority actions:
   stayed at MAE `2.029893`; `pptx-ladder-10-table-middle-small-insets` stayed at MAE `0.966760`) and
   `pptx-typography --skip-slow` still passed. The middle-anchored table path is not using that baseline-floor
   branch, so do not pursue this as the page-79 fix.
+  Completed slice, 2026-05-31: fixed the active middle-table anchor estimate instead. For table-cell vertical
+  anchors, `EstimateTextHeight` used typographic font-box line advance for default line spacing while the actual
+  laid-out lines still advanced on the normal Office line grid. This under-estimated content height for fonts
+  whose Windows ascender is unusably oversized and whose typographic line box is compressed, then over-centered
+  wrapped middle-anchored table cells. `ReadEstimatedAnchorLineAdvance` now clamps that table-cell estimate to
+  the normal line advance only when the resolved font's Windows ascender exceeds the Office baseline limit and
+  the typographic line-box ratio is at most `1.18`. This is metric-driven, not a font-name/page/row rule.
+  Public positive `pptx-ladder-10-table-font-fragmentation` improved MAE `2.029893 -> 1.524499` and changed16
+  `0.032217 -> 0.026186`; the zero-`Tc`/normal-font counterexample
+  `pptx-ladder-10-table-middle-small-insets` stayed unchanged at MAE `0.966760`. Private
+  `lokad-value-based` run `20260531-025144` improved deck MAE `2.931757 -> 2.877036`, changed16
+  `0.053386 -> 0.052651`, page 79 MAE `4.895694 -> 3.38`, page 21 MAE `5.943039 -> 5.013651`, page 47 MAE
+  `3.56 -> 2.77`, and page 6 MAE `3.13 -> 2.34`, with no measured page regressions and no diagnostics.
+  Remaining page-79 work is still PDF text-state/operation decomposition: refreshed page-79 text comparison has
+  `258` Office operations, `252` matched operations, `6` missing operations, `138` reliable-position matches,
+  and `240` matched nonzero Office `Tc` operations while candidate `Tc` remains zero.
   Follow-up, 2026-05-30: extended `PptxInspect` so table text paragraph snapshots are emitted separately as
   `table-text-paragraph-models.json`, avoiding ad hoc private XML parsing when investigating table text.
   Re-inspection of page 79 shows the table paragraphs resolve through the normal paragraph/style cascade
@@ -9591,21 +9607,21 @@ Latest public validation:
 ```text
 Private deck current baseline, 2026-05-31:
 pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json:
-run 20260531-024638, 84 compared pages, zero dimension mismatches, no diagnostics,
-deck MAE 2.931757, changed16 0.053386. Worst pages: 36 MAE 6.045372, 21 MAE 5.943039,
-79 MAE 4.895694, 81 MAE 4.540970, 11 MAE 4.534378. Page 17 is no longer the high-impact schema blocker
-in this run: MAE 1.00, changed16 0.03, SSIM 0.98.
+run 20260531-025144, 84 compared pages, zero dimension mismatches, no diagnostics,
+deck MAE 2.877036, changed16 0.052651. Worst pages: 36 MAE 6.045372, 21 MAE 5.013651,
+81 MAE 4.540970, 48 MAE 4.441990, 20 MAE 4.406351. Page 79 improved from MAE 4.895694 to about 3.38.
+Page 17 is no longer the high-impact schema blocker in this run: MAE 1.00, changed16 0.03, SSIM 0.98.
 ```
 
 ```text
 Public table text-state positive and counterexample, 2026-05-31:
 pwsh tools\CheckVisualCase.ps1 -Case visual-cases\cases\pptx-ladder-10-table-font-fragmentation\case.json:
-run 20260531-024147, MAE 2.029893, changed16 0.032217, empty diagnostics.
+run 20260531-025104, MAE 1.524499, changed16 0.026186, empty diagnostics.
 pwsh tools\SummarizePptxTextStateDeltas.ps1 -CompareJson artifacts\tmp\public-table-font-fragment-probe-compare.json -OutputJson artifacts\tmp\public-table-font-fragment-probe-text-state-summary.json:
 125 total, 119 matched, 6 missing, 116 reliable-position matches, 90 matched nonzero Office `Tc`, candidate `Tc=0`.
 Office `Tc` buckets: 46 at `+0.0499`, 13 at `+0.102`, 26 at `-0.0115`, 5 at `-0.0389`, and 29 at `0`.
 pwsh tools\CheckVisualCase.ps1 -Case visual-cases\cases\pptx-ladder-10-table-middle-small-insets\case.json:
-run 20260531-023220, MAE 0.966760, changed16 0.019591, empty diagnostics; all Office `Tc=0`.
+run 20260531-025127, MAE 0.966760, changed16 0.019591, empty diagnostics; all Office `Tc=0`.
 dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-tables --skip-slow:
 19 passed, 0 failed, 0 skipped.
 pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw -LiteralPath 'tools\NewOfficeVisualFixtures.ps1')) | Out-Null":
