@@ -58,26 +58,23 @@ internal sealed class DocxRenderer
                 RenderLayoutItem(item, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
             }
 
-            if (fontResources.Fallback is not null)
-            {
-                int pageNumber = pageIndex + 1;
-                RenderStaticParagraphs(
-                    SelectStaticHeaderFooter(document.HeaderParagraphsByType, document.HeaderParagraphs, document.PageSettings, pageNumber),
-                    graphics,
-                    fontResources,
-                    document.MarginLeftPoints,
-                    width,
-                    document.PageHeightPoints - ResolveHeaderDistance(document),
-                    pageNumber);
-                RenderStaticParagraphs(
-                    SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, document.PageSettings, pageNumber),
-                    graphics,
-                    fontResources,
-                    document.MarginLeftPoints,
-                    width,
-                    ResolveFooterDistance(document),
-                    pageNumber);
-            }
+            int pageNumber = pageIndex + 1;
+            RenderStaticParagraphs(
+                SelectStaticHeaderFooter(document.HeaderParagraphsByType, document.HeaderParagraphs, document.PageSettings, pageNumber),
+                graphics,
+                fontResources,
+                document.MarginLeftPoints,
+                width,
+                document.PageHeightPoints - ResolveHeaderDistance(document),
+                pageNumber);
+            RenderStaticParagraphs(
+                SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, document.PageSettings, pageNumber),
+                graphics,
+                fontResources,
+                document.MarginLeftPoints,
+                width,
+                ResolveFooterDistance(document),
+                pageNumber);
 
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray()));
         }
@@ -298,17 +295,21 @@ internal sealed class DocxRenderer
             }
 
             RenderTableCellBorders(cellLayout, graphics);
-            if (fontResources.Fallback is not null)
+            if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0)
             {
+                graphics.SaveState();
+                graphics.ClipRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
                     RenderTextLine(line, graphics, fontResources);
                 }
-            }
 
-            foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
-            {
-                RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
+                foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
+                {
+                    RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
+                }
+
+                graphics.RestoreState();
             }
         }
     }

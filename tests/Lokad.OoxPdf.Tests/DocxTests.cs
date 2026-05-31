@@ -3064,6 +3064,66 @@ internal static class DocxTests
         TestAssert.Contains("> Tj", pdf);
     }
 
+    public static void DocxSyntheticTableTextRendersWithRunFontResourceWithoutFallback()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr><w:tblW w:w="2880" w:type="dxa"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:p>
+                            <w:r>
+                              <w:rPr><w:rFonts w:ascii="Arial"/><w:sz w:val="22"/></w:rPr>
+                              <w:t>Table explicit font</w:t>
+                            </w:r>
+                          </w:p>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Subtype /Type0", pdf);
+        TestAssert.Contains("/F1 11 Tf", pdf);
+        TestAssert.Contains("> Tj", pdf);
+    }
+
     public static void DocxReaderTablePreservesLayoutToken()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -5184,6 +5244,70 @@ internal static class DocxTests
 
         TestAssert.Equal(cellLayout.X + 12d, cellLayout.TextLines[0].X);
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 20d, cellLayout.TextLines[0].BaselineY);
+    }
+
+    public static void DocxTableLayoutStageDoesNotInventMarginsForAbsentCellMargins()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Flush", 12d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("Flush", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 30d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Flush".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.Equal(cellLayout.X, cellLayout.TextLines[0].X);
+        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d, cellLayout.TextLines[0].BaselineY);
+    }
+
+    public static void DocxTableLayoutStageExpandsAtLeastRowsByAuthoredTopCellMargin()
+    {
+        var defaultCell = new DocxTableCell("A", [], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var topMarginCell = new DocxTableCell(
+            "B",
+            [],
+            null,
+            null,
+            null,
+            null,
+            [],
+            new DocxTableCellMargins(12d, null, null, null, "240", null, null, null));
+        var table = new DocxTable(null, [40d, 40d], [new DocxTableRow([defaultCell, topMarginCell], 30d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(42d, row.Height);
     }
 
     public static void DocxTableLayoutStageIncludesParagraphBeforeSpacingInCellHeight()

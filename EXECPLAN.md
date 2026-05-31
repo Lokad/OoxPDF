@@ -1886,6 +1886,15 @@ High-priority actions:
       whose first row wraps taller after the indent is applied. Private DOCX run `20260531-224646` stayed
       page- and metric-neutral (`16/16`, MAE `14.791805`, changed16 `0.133893`). The parent item remains open
       for Office-backed keep-with-table edge cases and exact diagnostic narrowing.
+  - [ ] 2026-06-01: Separate DOCX table-style paragraph-property precedence from table-cell text rendering.
+    Public Office inspection confirms table-style `w:rPr` must sit below paragraph-style and character-style
+    run properties; that run-property precedence belongs in the active table-text slice. A broader table-style
+    `w:pPr` precedence trial changed private pagination/page count, so paragraph-property precedence needs its
+    own public Word/Office PDF pagination fixture before changing the production cascade.
+    Follow-up: a narrower run-only precedence trial also changed the private candidate from 16 pages to 15
+    (`20260601-013756`, MAE `13.645890`, changed16 `0.124541`), despite passing public `docx-tables` and
+    `docx-text`. Keep this open until a public Word-backed table-style text precedence fixture explains the
+    pagination interaction; do not merge a theoretically cleaner cascade without that guard.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
@@ -3551,6 +3560,32 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     row splitting and deeper Office parity around `auto` and pagination.
 - [ ] Render cell text as paragraphs instead of flattened cell text: preserve paragraph breaks, basic run
   styling, numbering/bullets inside cells, alignment, and line spacing.
+  - [x] 2026-06-01: Removed the stale fallback-resource gate for table-cell text and clipped table-cell
+    text/images to the full cell rectangle. Public coverage now includes a fallback-free explicit run font
+    table fixture.
+  - [ ] 2026-06-01: Replace the remaining authored-margin first-baseline compatibility branch with an
+    Office-backed rule. The no-margin public fixture shows first baseline placement follows the first run
+    font size rather than the old fixed inset, but applying that rule to authored-margin cells regressed
+    private table pages. Add a public Word-authored ladder for explicit `tcMar`/`tblCellMar` top margins,
+    absent margins, mixed font sizes, and vertical alignment before changing the production baseline again.
+    Follow-up: added public `docx-ladder-02-table-cell-margins`. Office PDF inspection confirms absent-margin
+    cells align near the cell edge (`X=72.504/252.53`, `Y=707.74`) while explicit-margin cells honor authored
+    left margins (`X=84.024/270.05`) but share a row baseline (`Y=658.66`) despite different top margins. The
+    candidate matches the horizontal margins (`X=84/270`) but places the explicit-margin baselines at
+    `Y=661/655`, proving the remaining vertical gap is row height/paragraph spacing/vertical baseline
+    coupling, not a single replacement constant.
+    Follow-up: explicit `atLeast` row heights now expand by the row's maximum authored top cell margin before
+    row layout, matching the Office evidence that `w:trHeight` is not the whole row box once top `tcMar` is
+    present. This improved the public margin ladder without changing the private DOCX aggregate metrics.
+    A tempting cleanup to use the measured row-height sum for the table pre-pagination check changed the private
+    candidate to 17 pages, so keep table pre-pagination as an open pagination model task rather than folding it
+    into this row-height fix.
+    Follow-up: added public `docx-ladder-03-table-pagination-margins` to isolate that pagination edge. Office
+    and the candidate both split the two-row table across two pages instead of moving the whole table before
+    the first row, confirming the rejected measured-table-height precheck was directionally wrong. Public run
+    `20260601-013533` is page- and dimension-stable with no diagnostics; page 1 MAE is `0.927605` and page 2
+    MAE is `0.253998`. Text inspection shows the first table row stays on page 1 and the second row starts at
+    the top of page 2 in both PDFs.
 - [ ] Implement table and cell styling: table styles, conditional first/header row formatting, cell shading,
   per-edge borders, border widths/colors, and vertical alignment.
 - [ ] Implement structural table features: horizontal merges (`gridSpan`), vertical merges (`vMerge`),
@@ -4746,6 +4781,33 @@ Current validation baseline:
   dimension-stable (`MAE=0.235933`, changed16 `0.003113`) but PDF text inspection shows the structural gap:
   the Office reference has table-cell text operations and the candidate has none because table-cell text is
   still gated on the document fallback font resource.
+- DOCX fallback-free table-text and no-margin placement validation:
+  removing the stale fallback-resource gate makes table-cell text render when runs resolve to their own font
+  resources, and table-cell text/images are clipped to the cell rectangle. The table-cell placement path no
+  longer invents `4pt` horizontal padding when `tcMar`/`tblCellMar` are absent; public Office inspection of
+  `docx-ladder-02-table-explicit-font` shows reference text at the cell edge and first baseline. The accepted
+  branch keeps the existing authored-margin first-baseline inset behind a named compatibility constant because
+  applying the no-margin font-size baseline to all cells worsened private table pages; add an Office-backed
+  explicit-margin ladder before replacing that remaining constant. Validation passed `docx-tables --skip-slow`
+  (`55`) and `docx-core --skip-slow` (`16`). Public visual `docx-ladder-02-table-explicit-font` run
+  `20260601-012032` improved to `MAE=0.229378`, changed16 `0.003197`, with candidate text at `X=72/252`,
+  `Y=708` versus Office `X=72.504/252.53`, `Y=707.74`. Public visual
+  `docx-ladder-02-table-cell-margins` run `20260601-012305` is dimension-stable at `MAE=0.701522`,
+  changed16 `0.016586`, and records the authored-margin baseline gap for the next row-height/text-spacing
+  slice. The accepted row-height follow-up expanded non-`exact` authored row heights by the row's maximum
+  authored top cell margin; public visual `docx-ladder-02-table-cell-margins` run `20260601-013230` improved to
+  `MAE=0.545123`, changed16 `0.007648`, while `docx-tables --skip-slow` passed `56`. Private DOCX run
+  `20260601-013928` matched the previous clipped-run metric (`16/16` pages, zero dimension mismatches, no
+  diagnostics, `MAE=13.589200`, changed16 `0.124354`). Rejected trial: using measured row heights for the
+  table pre-pagination check changed the private candidate to `17` pages (`20260601-013155`), so page-breaking
+  still needs a separate Word-backed table pagination fixture. Public `docx-ladder-03-table-pagination-margins`
+  run `20260601-013533` now covers that edge: Office and candidate both keep the first row on page 1 and move
+  only the following row to page 2, with no diagnostics (page 1 `MAE=0.927605`, page 2 `MAE=0.253998`). The
+  table-style `w:rPr` precedence probe remains open: Office shows table-style run properties should sit below
+  paragraph/character styles, but the broader cascade change was not kept because it changed private
+  pagination/page count. A narrower run-only cascade trial was also rejected after private run
+  `20260601-013756` changed the candidate to `15` pages (`MAE=13.645890`, changed16 `0.124541`), despite
+  passing public `docx-tables` and `docx-text`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

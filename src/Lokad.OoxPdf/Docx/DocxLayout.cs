@@ -400,6 +400,7 @@ internal sealed class DocxLayoutEngine
 {
     private const double BaselineOffsetFactor = 0.94d;
     private const double DefaultTableRowHeight = 16d;
+    private const double AuthoredMarginTableCellFirstBaselineInset = 17d;
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
     {
@@ -1018,6 +1019,12 @@ internal sealed class DocxLayoutEngine
         double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
             ? DefaultTableRowHeight
             : row.HeightPoints ?? DefaultTableRowHeight;
+        if (row.HeightPoints is not null &&
+            !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
+        {
+            declaredHeight += ResolveTableRowTopPadding(row);
+        }
+
         return Math.Max(declaredHeight, contentHeight);
     }
 
@@ -1162,10 +1169,10 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        double paddingLeft = cell.Margins.LeftPoints ?? 4d;
-        double paddingRight = cell.Margins.RightPoints ?? 4d;
-        double paddingTop = cell.Margins.TopPoints ?? 0d;
-        double paddingBottom = cell.Margins.BottomPoints ?? 0d;
+        double paddingLeft = ResolveTableCellPadding(cell.Margins.LeftPoints);
+        double paddingRight = ResolveTableCellPadding(cell.Margins.RightPoints);
+        double paddingTop = ResolveTableCellPadding(cell.Margins.TopPoints);
+        double paddingBottom = ResolveTableCellPadding(cell.Margins.BottomPoints);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double contentHeight = paddingTop + paddingBottom;
         double pendingSpacingAfter = 0d;
@@ -1225,13 +1232,13 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        double paddingLeft = cell.Margins.LeftPoints ?? 4d;
-        double paddingRight = cell.Margins.RightPoints ?? 4d;
-        double paddingTop = cell.Margins.TopPoints ?? 0d;
-        double paddingBottom = cell.Margins.BottomPoints ?? 0d;
-        const double legacyBaselineInset = 17d;
+        double paddingLeft = ResolveTableCellPadding(cell.Margins.LeftPoints);
+        double paddingRight = ResolveTableCellPadding(cell.Margins.RightPoints);
+        double paddingTop = ResolveTableCellPadding(cell.Margins.TopPoints);
+        double paddingBottom = ResolveTableCellPadding(cell.Margins.BottomPoints);
+        double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
-        double startBaselineY = cellY + cellHeight - legacyBaselineInset - paddingTop;
+        double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;
         var lines = new List<DocxTextLineLayout>();
         double pendingSpacingAfter = 0d;
@@ -1299,7 +1306,7 @@ internal sealed class DocxLayoutEngine
         }
 
         double usedHeight = Math.Max(0d, startBaselineY - cursorY);
-        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - legacyBaselineInset);
+        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
         double extra = Math.Max(0d, availableHeight - usedHeight);
         double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
             ? extra
@@ -1324,13 +1331,13 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        double paddingLeft = cell.Margins.LeftPoints ?? 4d;
-        double paddingRight = cell.Margins.RightPoints ?? 4d;
-        double paddingTop = cell.Margins.TopPoints ?? 0d;
-        double paddingBottom = cell.Margins.BottomPoints ?? 0d;
-        const double legacyBaselineInset = 17d;
+        double paddingLeft = ResolveTableCellPadding(cell.Margins.LeftPoints);
+        double paddingRight = ResolveTableCellPadding(cell.Margins.RightPoints);
+        double paddingTop = ResolveTableCellPadding(cell.Margins.TopPoints);
+        double paddingBottom = ResolveTableCellPadding(cell.Margins.BottomPoints);
+        double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
-        double startBaselineY = cellY + cellHeight - legacyBaselineInset - paddingTop;
+        double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;
         var images = new List<DocxInlineImageLayout>();
         double pendingSpacingAfter = 0d;
@@ -1379,7 +1386,7 @@ internal sealed class DocxLayoutEngine
         }
 
         double usedHeight = Math.Max(0d, startBaselineY - cursorY);
-        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - legacyBaselineInset);
+        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
         double extra = Math.Max(0d, availableHeight - usedHeight);
         double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
             ? extra
@@ -1396,6 +1403,43 @@ internal sealed class DocxLayoutEngine
         return lines
             .Select(line => line with { BaselineY = line.BaselineY + deltaY })
             .ToArray();
+    }
+
+    private static double ResolveTableCellPadding(double? points)
+    {
+        return Math.Max(0d, points ?? 0d);
+    }
+
+    private static double ResolveTableRowTopPadding(DocxTableRow row)
+    {
+        return row.Cells
+            .Select(cell => ResolveTableCellPadding(cell.Margins.TopPoints))
+            .DefaultIfEmpty(0d)
+            .Max();
+    }
+
+    private static double ResolveTableCellFirstBaselineInset(DocxTableCell cell, IReadOnlyList<DocxParagraph> paragraphs)
+    {
+        DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
+        if (firstTextParagraph is null)
+        {
+            return 0d;
+        }
+
+        if (HasAuthoredTableCellMargin(cell.Margins))
+        {
+            return AuthoredMarginTableCellFirstBaselineInset;
+        }
+
+        return firstTextParagraph.Runs.Max(run => run.FontSize);
+    }
+
+    private static bool HasAuthoredTableCellMargin(DocxTableCellMargins margins)
+    {
+        return margins.TopPoints is not null ||
+            margins.RightPoints is not null ||
+            margins.BottomPoints is not null ||
+            margins.LeftPoints is not null;
     }
 
     private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs)

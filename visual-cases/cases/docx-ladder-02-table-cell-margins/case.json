@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-02-table-cell-margins",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-table-cell-margins.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "table", "margins"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}
