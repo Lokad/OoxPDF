@@ -1409,6 +1409,23 @@ internal static class DocxTests
         TestAssert.Equal(40d, row.Cells[1].Width);
     }
 
+    public static void DocxLayoutSnapshotReportsPublicSafeCounts()
+    {
+        DocxTable table = CreateSingleCellTable("private text is not exposed", rowHeight: 20d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+
+        TestAssert.Equal(1, snapshot.Pages.Count);
+        TestAssert.Equal(1, snapshot.Pages[0].ItemCount);
+        TestAssert.Equal(1, snapshot.Pages[0].TableRowCount);
+        TestAssert.Equal(0, snapshot.Pages[0].TextLineCount);
+        DocxLayoutItemSnapshot row = snapshot.Pages[0].Items.Single();
+        TestAssert.Equal("TableRow", row.Kind);
+        TestAssert.Equal(1, row.CellCount);
+        TestAssert.True(row.TextLength > 0, "Snapshot should expose text length only, not the text itself.");
+    }
+
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

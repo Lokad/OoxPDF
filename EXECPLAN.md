@@ -1776,6 +1776,10 @@ High-priority actions:
   - [ ] 2026-05-31: Continue moving DOCX toward typed intermediate stages: next split style-resolved
     paragraph/table content from raw document reading, then add private-safe layout traces over the new
     layout model so pagination drift can be diagnosed without inspecting private text.
+  - [x] 2026-05-31: Added a private-safe `DocxLayoutSnapshot` inspection surface over the layout model. It
+    reports page dimensions, item counts, item kinds, bounds, cell counts, and text lengths, but not document
+    text. This gives private DOCX pagination/table work a restartable trace target before adding Word layout
+    rules.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2698,9 +2702,10 @@ Current architecture status, 2026-05-31: `src/Lokad.OoxPdf/Docx/DocxLayout.cs` n
 that turns `DocxDocument.BodyElements` into `DocxLayoutPage` records with positioned text lines, inline
 images, and table rows/cells. `src/Lokad.OoxPdf/Docx/DocxRenderer.cs` still owns font subsetting, static
 header/footer emission, image decoding, and PDF drawing, but it no longer decides paragraph/table page
-placement while drawing. This is only the first boundary: the reader still flattens table-cell text and mixes
-style resolution into document parsing, so the next architectural work should introduce style-resolved block
-models and layout tracing before adding more Word pagination behavior.
+placement while drawing. `DocxLayoutSnapshot` exposes public-safe counts and bounds for this layout without
+copying text. This is only the first boundary: the reader still flattens table-cell text and mixes style
+resolution into document parsing, so the next architectural work should introduce style-resolved block models
+before adding more Word pagination behavior.
 
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
@@ -3219,6 +3224,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   layout stage gives those failures a structural home: future fixes can adjust page/block geometry and inspect
   public-safe layout traces without coupling every change to PDF drawing side effects.
   Date/Author: 2026-05-31 / Codex.
+- Decision: Make DOCX layout inspection public-safe by construction.
+  Rationale: Private DOCX pagination debugging needs per-page and per-block evidence, but private document
+  text must not leak into notes or fixtures. Reporting item kind, bounds, counts, and text length is enough to
+  locate pagination/table drift while keeping content out of the trace.
+  Date/Author: 2026-05-31 / Codex.
 - Decision: Keep the slide-44 chart residual on the shared PPTX Office text-emission track after adding
   structural chart text spacing support.
   Rationale: Reading authored `spc` into chart text styles is a correct model gap to close, but the private
@@ -3655,6 +3665,10 @@ Current validation baseline:
   `DOCX_STYLE_PARAGRAPH_KEEP_RULE`, `DOCX_STYLE_PARAGRAPH_SPACING`, `DOCX_STYLE_TABLE_STYLE`,
   `DOCX_UNSUPPORTED_TABLE_HEADER_ROW`, `DOCX_UNSUPPORTED_TABLE_STYLE`), confirming pagination/table fidelity
   remains the next high-impact DOCX target after the behavior-preserving layout boundary.
+- DOCX layout snapshot validation:
+  after adding the private-safe layout snapshot, the DOCX group sweep passed again (`docx-core` `4`,
+  `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`, `docx-tables` `10`), and
+  `docx-ladder-01-plain-paragraph` passed in visual run `20260531-143530`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

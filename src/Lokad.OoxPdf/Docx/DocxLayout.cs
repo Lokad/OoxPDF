@@ -4,6 +4,77 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxLayout(IReadOnlyList<DocxLayoutPage> Pages);
 
+internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> Pages)
+{
+    public static DocxLayoutSnapshot FromLayout(DocxLayout layout)
+    {
+        return new DocxLayoutSnapshot(layout.Pages.Select(ToSnapshot).ToArray());
+    }
+
+    private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
+    {
+        IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(ToSnapshot).ToArray();
+        return new DocxLayoutPageSnapshot(
+            page.Width,
+            page.Height,
+            items.Count,
+            items.Count(item => item.Kind == "TextLine"),
+            items.Count(item => item.Kind == "InlineImage"),
+            items.Count(item => item.Kind == "TableRow"),
+            items);
+    }
+
+    private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item)
+    {
+        return item switch
+        {
+            DocxTextLineLayout text => new DocxLayoutItemSnapshot(
+                "TextLine",
+                text.X,
+                text.BaselineY,
+                text.Width,
+                text.FontSize,
+                TextLength: text.Text.Length,
+                CellCount: 0),
+            DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
+                "InlineImage",
+                image.X,
+                image.Y,
+                image.Width,
+                image.Height,
+                TextLength: 0,
+                CellCount: 0),
+            DocxTableRowLayout row => new DocxLayoutItemSnapshot(
+                "TableRow",
+                row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
+                row.Y,
+                row.Cells.Sum(cell => cell.Width),
+                row.Height,
+                TextLength: row.Cells.Sum(cell => cell.Cell.Text.Length),
+                CellCount: row.Cells.Count),
+            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0)
+        };
+    }
+}
+
+internal sealed record DocxLayoutPageSnapshot(
+    double Width,
+    double Height,
+    int ItemCount,
+    int TextLineCount,
+    int InlineImageCount,
+    int TableRowCount,
+    IReadOnlyList<DocxLayoutItemSnapshot> Items);
+
+internal sealed record DocxLayoutItemSnapshot(
+    string Kind,
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    int TextLength,
+    int CellCount);
+
 internal sealed record DocxLayoutPage(
     double Width,
     double Height,
@@ -38,6 +109,8 @@ internal sealed record DocxTableCellLayout(
     double Y,
     double Width,
     double Height);
+
+internal readonly record struct DocxFontResources(PdfEmbeddedFont? Embedded, PdfFontResource? Resource);
 
 internal sealed class DocxLayoutEngine
 {

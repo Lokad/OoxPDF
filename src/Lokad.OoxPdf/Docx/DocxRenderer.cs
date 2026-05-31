@@ -26,7 +26,49 @@ internal sealed class DocxRenderer
         return RenderParagraphs(document, fontResolver, diagnosticSink);
     }
 
+    internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
+    {
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
+        DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.Embedded);
+        return DocxLayoutSnapshot.FromLayout(layout);
+    }
+
     private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
+    {
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
+        PdfEmbeddedFont? embedded = fontResources.Embedded;
+        PdfFontResource? resource = fontResources.Resource;
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        var pages = new List<PdfPage>(layout.Pages.Count);
+        int imageIndex = 1;
+
+        double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
+        for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
+        {
+            DocxLayoutPage layoutPage = layout.Pages[pageIndex];
+            var graphics = new PdfGraphicsBuilder();
+            var pageImages = new List<PdfImageResource>();
+            foreach (DocxLayoutItem item in layoutPage.Items)
+            {
+                RenderLayoutItem(item, graphics, pageImages, resource, embedded, diagnosticSink, ref imageIndex);
+            }
+
+            if (embedded is not null)
+            {
+                int pageNumber = pageIndex + 1;
+                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, document.MarginLeftPoints, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
+                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, document.MarginLeftPoints, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
+            }
+
+            IReadOnlyList<PdfFontResource> fonts = resource is null ? [] : [resource];
+            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fonts, pageImages.ToArray()));
+        }
+
+        return pages;
+    }
+
+    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver)
     {
         string familyName = document.Paragraphs
             .Concat(document.HeaderParagraphs)
@@ -58,33 +100,7 @@ internal sealed class DocxRenderer
             resource = new PdfFontResource("F1", embedded);
         }
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
-        var pages = new List<PdfPage>(layout.Pages.Count);
-        int imageIndex = 1;
-
-        double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
-        for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
-        {
-            DocxLayoutPage layoutPage = layout.Pages[pageIndex];
-            var graphics = new PdfGraphicsBuilder();
-            var pageImages = new List<PdfImageResource>();
-            foreach (DocxLayoutItem item in layoutPage.Items)
-            {
-                RenderLayoutItem(item, graphics, pageImages, resource, embedded, diagnosticSink, ref imageIndex);
-            }
-
-            if (embedded is not null)
-            {
-                int pageNumber = pageIndex + 1;
-                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, document.MarginLeftPoints, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
-                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, document.MarginLeftPoints, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
-            }
-
-            IReadOnlyList<PdfFontResource> fonts = resource is null ? [] : [resource];
-            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fonts, pageImages.ToArray()));
-        }
-
-        return pages;
+        return new DocxFontResources(embedded, resource);
     }
 
     private static void RenderLayoutItem(
