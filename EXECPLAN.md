@@ -1939,6 +1939,10 @@ High-priority actions:
       the structurally correct typeface. Public coverage dynamically finds an installed collection face with no
       named-font dependency and verifies the emitted PDF uses that face. Private DOCX run `20260531-195628`
       stayed page-stable and metric-neutral (`16/16`, zero dimension mismatches, `15.856962` MAE).
+    - [x] 2026-05-31: Extended the DOCX font plan to cover legacy plain table-cell text that is represented
+      as `DocxTableCell.Text` rather than paragraph runs. This mirrors the layout engine's synthetic cell-text
+      paragraph path so the future per-run measurement/resource map will not silently skip table cell content.
+      Public coverage pins the table-cell text path without relying on any installed font.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

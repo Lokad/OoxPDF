@@ -817,6 +817,19 @@ internal static class DocxTests
         TestAssert.True(resolved.Resolution?.Bold == true && resolved.Resolution?.Italic == true, "Expected run style to flow into the font request.");
     }
 
+    public static void DocxFontPlanIncludesPlainTableCellText()
+    {
+        DocxTable table = CreateSingleCellTable("Cell text", 12d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var resolver = new MapFontResolver(["Body Sans"], "Resolver Fallback");
+
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+
+        TestAssert.Equal("Cell text", resolved.Run.Text);
+        TestAssert.Equal(DocxTypefaceResolutionSource.Missing, resolved.Source);
+        TestAssert.Equal(0, resolved.CandidateFamilies.Count);
+    }
+
     public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
