@@ -133,6 +133,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cells.Count,
             cells.Sum(cell => cell.TextLineCount),
             cells.Sum(cell => cell.TextLength),
+            cells.Select(cell => cell.MaxFontSize).DefaultIfEmpty(0d).Max(),
             row.IsHeader,
             row.HeaderValue,
             cells);
@@ -149,6 +150,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cellLayout.Height,
             cellLayout.TextLines.Count,
             cellLayout.TextLines.Sum(line => line.Text.Length),
+            cellLayout.TextLines.Count == 0 ? 0d : cellLayout.TextLines.Max(line => line.FontSize),
             cellLayout.InlineImages.Count,
             cell.GridSpan,
             cell.GridSpanValue,
@@ -219,6 +221,7 @@ internal sealed record DocxTableRowSnapshot(
     int CellCount,
     int TextLineCount,
     int TextLength,
+    double MaxFontSize,
     bool IsHeader,
     string? HeaderValue,
     IReadOnlyList<DocxTableCellSnapshot> Cells);
@@ -251,6 +254,7 @@ internal sealed record DocxTableCellSnapshot(
     double Height,
     int TextLineCount,
     int TextLength,
+    double MaxFontSize,
     int InlineImageCount,
     int GridSpan,
     string? GridSpanValue,

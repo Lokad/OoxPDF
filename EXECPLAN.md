@@ -1900,6 +1900,24 @@ High-priority actions:
     while the candidate keeps table-style `11pt`; page count is stable and run `20260601-014145` reports
     `MAE=0.317789`, changed16 `0.003980`. This confirms the cascade order problem is real while preserving the
     private-page-count rejection as the implementation constraint.
+    2026-06-01 follow-up: added public `docx-ladder-03-table-style-conditional-run-precedence` to split base
+    table-style `w:rPr` from conditional `w:tblStylePr/w:rPr` behavior. Office renders first-row and
+    first-column conflict text at the paragraph/character `15pt` size even when conditional table-style regions
+    declare smaller sizes; non-conflicting caps/bold/italic still apply. The current candidate keeps the
+    table-style `9/10/11pt` sizes and run `20260601-015815` reports `MAE=0.387931`, changed16 `0.004464`.
+    A trial that moved table-style run properties below paragraph/character styles improved the earlier
+    precedence case (`MAE=0.262365`) but again collapsed the private candidate from 16 pages to 15
+    (`20260601-014605`, `MAE=13.645890`, changed16 `0.124541`). Private-safe DOCX layout inspection now shows
+    the loss is concentrated in eight first table rows whose max font size drops from `13pt` to `10pt`; most
+    shrink from `20.05pt` to the current default `16pt`, with one wrapped first row shrinking by `22.30pt`.
+    Do not land the correct run cascade until the table-row vertical composition gap below is fixed.
+  - [ ] 2026-06-01: Fix DOCX table-row vertical composition so correct table-style run precedence does not
+    rely on oversized table-style fonts to preserve page count. The accepted private baseline currently keeps
+    16 pages partly because table-style font-size precedence is wrong; after the Office-confirmed cascade fix,
+    first rows become smaller and expose missing Word row-height/baseline semantics. Investigate public
+    Office-backed probes for default table row minimums, line-height plus paragraph spacing inside cells, and
+    first-row/header-row spacing before retrying the run cascade. The new private-safe `tools/InspectDocx.ps1`
+    layout snapshot includes per-row and per-cell max font sizes to diagnose this without private text.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
