@@ -211,6 +211,12 @@ High-priority actions:
   44 as private acceptance evidence for the existing `Tc`/secondary-`Tf`/operation-splitting typography work;
   do not add more private chart offsets unless a new PDF graphics inspection shows a real structural geometry
   mismatch.
+- [ ] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
+  schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
+  incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
+  color problem, not as a private-content coordinate tweak: inspect the Office/candidate PDF text operations,
+  rectangle geometry, fill/stroke/text color states, and OOXML style inheritance, then reproduce the underlying
+  behavior with public synthetic fixtures before changing production rendering.
 - [ ] 2026-05-31: Continue the private page-36 typography branch as an Office text-emission model problem,
   not as a font-family rule. Private run `20260531-002604` has page 36 as the worst slide (`6.045371817`
   MAE) and the page is now narrowed to text-state decomposition: candidate and Office text positions are close
@@ -1763,6 +1769,13 @@ High-priority actions:
   model/pipeline comparable in spirit to PPTX: typed document parts and relationships first, explicit style
   cascade, block layout/pagination as a separate stage, then PDF emission. Use public synthetic Word/Office
   reference cases as the primary oracle and private DOCX files only for public-safe gap discovery.
+  - [x] 2026-05-31: Added `DocxLayoutEngine` and layout records for pages, text lines, inline images, and
+    table rows/cells, then changed `DocxRenderer` to emit PDF from that positioned layout instead of mixing
+    pagination and drawing in the same loop. This is intentionally behavior-preserving and is the first DOCX
+    pipeline boundary needed before improving Word-compatible pagination and table layout.
+  - [ ] 2026-05-31: Continue moving DOCX toward typed intermediate stages: next split style-resolved
+    paragraph/table content from raw document reading, then add private-safe layout traces over the new
+    layout model so pagination drift can be diagnosed without inspecting private text.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -2681,6 +2694,14 @@ The durable target is a Word-like pipeline with clear ownership boundaries:
 - Test ladder: every implemented DOCX capability should have a small public synthetic case with an Office PDF
   reference before private documents are used as acceptance evidence.
 
+Current architecture status, 2026-05-31: `src/Lokad.OoxPdf/Docx/DocxLayout.cs` now owns a first layout stage
+that turns `DocxDocument.BodyElements` into `DocxLayoutPage` records with positioned text lines, inline
+images, and table rows/cells. `src/Lokad.OoxPdf/Docx/DocxRenderer.cs` still owns font subsetting, static
+header/footer emission, image decoding, and PDF drawing, but it no longer decides paragraph/table page
+placement while drawing. This is only the first boundary: the reader still flattens table-cell text and mixes
+style resolution into document parsing, so the next architectural work should introduce style-resolved block
+models and layout tracing before adding more Word pagination behavior.
+
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
@@ -3192,6 +3213,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Introduce a behavior-preserving DOCX layout model before attempting more pagination or table
+  fidelity fixes.
+  Rationale: The private DOCX case still has document-wide page-count drift and table defects. A separate
+  layout stage gives those failures a structural home: future fixes can adjust page/block geometry and inspect
+  public-safe layout traces without coupling every change to PDF drawing side effects.
+  Date/Author: 2026-05-31 / Codex.
 - Decision: Keep the slide-44 chart residual on the shared PPTX Office text-emission track after adding
   structural chart text spacing support.
   Rationale: Reading authored `spc` into chart text styles is a correct model gap to close, but the private
@@ -3618,6 +3645,16 @@ Current validation baseline:
   Private deck run `20260531-141742` compared `84/84` pages with empty diagnostics; page 44 stayed at MAE
   `1.281596258`, changed16 `0.032060185`, SSIM `0.973682740`, confirming the remaining chart-text `Tc`
   difference is not authored OOXML spacing.
+- DOCX layout split validation:
+  `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group docx-core --skip-slow`
+  passed `3`; `docx-page` passed `8`; `docx-text` passed `6`; `docx-numbering` passed `3`;
+  `docx-images` passed `2`; and `docx-tables` passed `10`. All public `docx-*` visual cases passed in the
+  sweep ending with `docx-tables` run `20260531-143206`. Private DOCX run
+  `artifacts/private-visual/user-requirements-spec/20260531-142940` compared against 16 reference pages with
+  14 candidate pages and the known DOCX diagnostics (`DOCX_NUMBERING_INDENT`,
+  `DOCX_STYLE_PARAGRAPH_KEEP_RULE`, `DOCX_STYLE_PARAGRAPH_SPACING`, `DOCX_STYLE_TABLE_STYLE`,
+  `DOCX_UNSUPPORTED_TABLE_HEADER_ROW`, `DOCX_UNSUPPORTED_TABLE_STYLE`), confirming pagination/table fidelity
+  remains the next high-impact DOCX target after the behavior-preserving layout boundary.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
@@ -59,143 +58,118 @@ internal sealed class DocxRenderer
             resource = new PdfFontResource("F1", embedded);
         }
 
-        var pages = new List<PdfPage>();
-        var graphics = new PdfGraphicsBuilder();
-        var pageImages = new List<PdfImageResource>();
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        var pages = new List<PdfPage>(layout.Pages.Count);
         int imageIndex = 1;
 
-        double x = document.MarginLeftPoints;
         double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
-        double cursorY = document.PageHeightPoints - document.MarginTopPoints;
-        double pendingSpacingAfter = 0d;
-        const double baselineOffsetFactor = 0.94d;
-        void FinishPage()
+        for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
-            int pageNumber = pages.Count + 1;
+            DocxLayoutPage layoutPage = layout.Pages[pageIndex];
+            var graphics = new PdfGraphicsBuilder();
+            var pageImages = new List<PdfImageResource>();
+            foreach (DocxLayoutItem item in layoutPage.Items)
+            {
+                RenderLayoutItem(item, graphics, pageImages, resource, embedded, diagnosticSink, ref imageIndex);
+            }
+
             if (embedded is not null)
             {
-                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, x, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
-                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, x, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
+                int pageNumber = pageIndex + 1;
+                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, document.MarginLeftPoints, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
+                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, document.MarginLeftPoints, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
             }
 
             IReadOnlyList<PdfFontResource> fonts = resource is null ? [] : [resource];
-            pages.Add(new PdfPage(document.PageWidthPoints, document.PageHeightPoints, graphics.ToString(), fonts, pageImages.ToArray()));
-            graphics = new PdfGraphicsBuilder();
-            pageImages.Clear();
-            cursorY = document.PageHeightPoints - document.MarginTopPoints;
-            pendingSpacingAfter = 0d;
-        }
-
-        foreach (DocxBodyElement element in document.BodyElements)
-        {
-            if (element is DocxPageBreakElement)
-            {
-                if (HasPageContent(graphics, pageImages))
-                {
-                    FinishPage();
-                }
-                pendingSpacingAfter = 0d;
-
-                continue;
-            }
-
-            if (element is DocxTableElement tableElement)
-            {
-                cursorY -= pendingSpacingAfter;
-                pendingSpacingAfter = 0d;
-                RenderTable(tableElement.Table, document, ref graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
-                continue;
-            }
-
-            if (element is not DocxParagraphElement paragraphElement)
-            {
-                continue;
-            }
-
-            DocxParagraph paragraph = paragraphElement.Paragraph;
-            cursorY -= Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
-            pendingSpacingAfter = 0d;
-            double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
-            double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
-            if (embedded is not null && paragraph.Runs.Count > 0)
-            {
-                string text = paragraph.ListLabel is null
-                    ? string.Concat(paragraph.Runs.Select(r => r.Text))
-                    : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(r => r.Text));
-                DocxTextRun firstRun = paragraph.Runs[0];
-                RgbColor color = ReadColor(firstRun.ColorHex);
-                foreach (string line in WrapWords(text, width, paragraphFontSize, embedded))
-                {
-                    if (cursorY - lineHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
-                    {
-                        FinishPage();
-                    }
-
-                    double lineWidth = embedded.MeasureTextPoints(line, paragraphFontSize);
-                    double lineX = paragraph.Alignment switch
-                    {
-                        DocxTextAlignment.Center => x + Math.Max(0, width - lineWidth) / 2d,
-                        DocxTextAlignment.Right => x + Math.Max(0, width - lineWidth),
-                        _ => x
-                    };
-                    string glyphHex = embedded.EncodeGlyphHex(line);
-                    double baselineOffset = paragraph.LineSpacingPoints is null
-                        ? paragraphFontSize * baselineOffsetFactor
-                        : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
-                    double baselineY = cursorY - baselineOffset;
-                    graphics.DrawGlyphText("F1", paragraphFontSize, lineX, baselineY, color.Red, color.Green, color.Blue, glyphHex, firstRun.Italic);
-                    if (firstRun.Bold)
-                    {
-                        graphics.DrawGlyphText("F1", paragraphFontSize, lineX + 0.35d, baselineY, color.Red, color.Green, color.Blue, glyphHex, firstRun.Italic);
-                    }
-
-                    if (firstRun.Underline)
-                    {
-                        graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-                        graphics.SetLineWidth(Math.Max(0.5d, paragraphFontSize / 18d));
-                        graphics.StrokeLine(lineX, baselineY - paragraphFontSize * 0.12d, lineX + lineWidth, baselineY - paragraphFontSize * 0.12d);
-                    }
-
-                    cursorY -= lineHeight;
-                }
-            }
-
-            foreach (DocxInlineImage image in paragraph.Images)
-            {
-                PdfImageXObject? xObject = CreateImage(image, diagnosticSink, pages.Count + 1);
-                if (xObject is null)
-                {
-                    continue;
-                }
-
-                double imageWidth = Math.Min(width, image.WidthPoints);
-                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-                if (cursorY - imageHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
-                {
-                    FinishPage();
-                }
-
-                string imageName = "Im" + imageIndex++;
-                double imageX = paragraph.Alignment switch
-                {
-                    DocxTextAlignment.Center => x + Math.Max(0, width - imageWidth) / 2d,
-                    DocxTextAlignment.Right => x + Math.Max(0, width - imageWidth),
-                    _ => x
-                };
-                graphics.DrawImage(imageName, imageX, cursorY - imageHeight, imageWidth, imageHeight);
-                pageImages.Add(new PdfImageResource(imageName, xObject));
-                cursorY -= imageHeight + 6d;
-            }
-
-            pendingSpacingAfter = paragraph.SpacingAfterPoints;
-        }
-
-        if (HasPageContent(graphics, pageImages) || pages.Count == 0)
-        {
-            FinishPage();
+            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fonts, pageImages.ToArray()));
         }
 
         return pages;
+    }
+
+    private static void RenderLayoutItem(
+        DocxLayoutItem item,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        PdfFontResource? fontResource,
+        PdfEmbeddedFont? embedded,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        ref int imageIndex)
+    {
+        switch (item)
+        {
+            case DocxTextLineLayout textLine when embedded is not null:
+                RenderTextLine(textLine, graphics, embedded);
+                break;
+            case DocxInlineImageLayout image:
+                RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
+                break;
+            case DocxTableRowLayout row when embedded is not null && fontResource is not null:
+                RenderTableRow(row, graphics, fontResource, embedded);
+                break;
+            case DocxTableRowLayout row:
+                RenderTableRow(row, graphics, fontResource, embedded);
+                break;
+        }
+    }
+
+    private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded)
+    {
+        DocxTextRun style = line.StyleRun;
+        RgbColor color = ReadColor(style.ColorHex);
+        string glyphHex = embedded.EncodeGlyphHex(line.Text);
+        graphics.DrawGlyphText("F1", line.FontSize, line.X, line.BaselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+        if (style.Bold)
+        {
+            graphics.DrawGlyphText("F1", line.FontSize, line.X + 0.35d, line.BaselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+        }
+
+        if (style.Underline)
+        {
+            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
+            graphics.SetLineWidth(Math.Max(0.5d, line.FontSize / 18d));
+            graphics.StrokeLine(line.X, line.BaselineY - line.FontSize * 0.12d, line.X + line.Width, line.BaselineY - line.FontSize * 0.12d);
+        }
+    }
+
+    private static void RenderInlineImage(
+        DocxInlineImageLayout image,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        ref int imageIndex)
+    {
+        PdfImageXObject? xObject = CreateImage(image.Image, diagnosticSink, image.PageIndex);
+        if (xObject is null)
+        {
+            return;
+        }
+
+        string imageName = "Im" + imageIndex++;
+        graphics.DrawImage(imageName, image.X, image.Y, image.Width, image.Height);
+        pageImages.Add(new PdfImageResource(imageName, xObject));
+    }
+
+    private static void RenderTableRow(DocxTableRowLayout row, PdfGraphicsBuilder graphics, PdfFontResource? fontResource, PdfEmbeddedFont? embedded)
+    {
+        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        {
+            DocxTableCell cell = cellLayout.Cell;
+            if (RgbColor.TryParse(cell.FillHex, out RgbColor fill))
+            {
+                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
+            }
+
+            graphics.SetStrokeRgb(0, 0, 0);
+            graphics.SetLineWidth(0.75d);
+            graphics.StrokeRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
+            if (embedded is not null && fontResource is not null && cell.Text.Length != 0)
+            {
+                string glyphHex = embedded.EncodeGlyphHex(cell.Text);
+                graphics.DrawGlyphText(fontResource.ResourceName, 11d, cellLayout.X + 4d, row.Y + row.Height - 17d, 0, 0, 0, glyphHex);
+            }
+        }
     }
 
     private static void RenderStaticParagraphs(
@@ -231,73 +205,9 @@ internal sealed class DocxRenderer
         }
     }
 
-    private static void RenderTable(
-        DocxTable table,
-        DocxDocument document,
-        ref PdfGraphicsBuilder graphics,
-        List<PdfImageResource> pageImages,
-        PdfFontResource? fontResource,
-        PdfEmbeddedFont? embedded,
-        ref double cursorY,
-        double x,
-        double availableWidth,
-        Action finishPage)
-    {
-        const double defaultRowHeight = 16d;
-        double rawTableWidth = table.ColumnWidthsPoints.Sum();
-        double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
-        double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? defaultRowHeight);
-        if (cursorY - tableHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
-        {
-            finishPage();
-        }
-
-        foreach (DocxTableRow row in table.Rows)
-        {
-            double rowHeight = row.HeightPoints ?? defaultRowHeight;
-            if (cursorY - rowHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
-            {
-                finishPage();
-            }
-
-            double cellX = x;
-            double cellY = cursorY - rowHeight;
-            for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
-            {
-                double cellWidth = table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale;
-                DocxTableCell cell = row.Cells[columnIndex];
-                if (RgbColor.TryParse(cell.FillHex, out RgbColor fill))
-                {
-                    graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                    graphics.FillRectangle(cellX, cellY, cellWidth, rowHeight);
-                }
-
-                graphics.SetStrokeRgb(0, 0, 0);
-                graphics.SetLineWidth(0.75d);
-                graphics.StrokeRectangle(cellX, cellY, cellWidth, rowHeight);
-                if (embedded is not null && fontResource is not null && cell.Text.Length != 0)
-                {
-                    string glyphHex = embedded.EncodeGlyphHex(cell.Text);
-                    graphics.DrawGlyphText(fontResource.ResourceName, 11d, cellX + 4d, cursorY - 17d, 0, 0, 0, glyphHex);
-                }
-
-                cellX += cellWidth;
-            }
-
-            cursorY -= rowHeight;
-        }
-
-        cursorY -= 6d;
-    }
-
     private static RgbColor ReadColor(string? hex)
     {
         return RgbColor.TryParse(hex, out RgbColor color) ? color : new RgbColor(0, 0, 0);
-    }
-
-    private static bool HasPageContent(PdfGraphicsBuilder graphics, IReadOnlyCollection<PdfImageResource> images)
-    {
-        return graphics.ToString().Length > 0 || images.Count > 0;
     }
 
     private static PdfImageXObject? CreateImage(DocxInlineImage image, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex)
@@ -346,34 +256,4 @@ internal sealed class DocxRenderer
             Fallback: "Ignored"));
     }
 
-    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
-    {
-        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length == 0)
-        {
-            yield break;
-        }
-
-        var line = new StringBuilder();
-        foreach (string word in words)
-        {
-            string candidate = line.Length == 0 ? word : line + " " + word;
-            if (line.Length > 0 && embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
-            {
-                yield return line.ToString();
-                line.Clear();
-                line.Append(word);
-            }
-            else
-            {
-                line.Clear();
-                line.Append(candidate);
-            }
-        }
-
-        if (line.Length > 0)
-        {
-            yield return line.ToString();
-        }
-    }
 }

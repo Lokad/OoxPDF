@@ -1370,6 +1370,45 @@ internal static class DocxTests
         TestAssert.Contains("/Type /Pages /Count 2", pdf);
     }
 
+    public static void DocxTableLayoutStageKeepsManualPageBreakBoundary()
+    {
+        DocxTable first = CreateSingleCellTable("first", rowHeight: 20d);
+        DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
+        DocxDocument document = CreateLayoutTestDocument([
+            new DocxTableElement(first),
+            new DocxPageBreakElement("pageBreakBefore", null),
+            new DocxTableElement(second)
+        ], [first, second]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+        TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
+    }
+
+    public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()
+    {
+        var table = new DocxTable(
+            null,
+            [60d, 40d],
+            [new DocxTableRow([
+                new DocxTableCell("left", null, null, null, null, []),
+                new DocxTableCell("right", null, null, null, null, [])
+            ], 20d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+
+        DocxTableRowLayout row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        TestAssert.Equal(170d, row.Y);
+        TestAssert.Equal(20d, row.Height);
+        TestAssert.Equal(10d, row.Cells[0].X);
+        TestAssert.Equal(60d, row.Cells[0].Width);
+        TestAssert.Equal(70d, row.Cells[1].X);
+        TestAssert.Equal(40d, row.Cells[1].Width);
+    }
+
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -1650,6 +1689,32 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_TABLE_STYLE", ids);
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_NUMBERING_INDENT" && d.PartName == "/word/numbering.xml"), "Numbering diagnostics should point to numbering.xml.");
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_STYLE_PARAGRAPH_KEEP_RULE" && d.PartName == "/word/styles.xml"), "Style diagnostics should point to styles.xml.");
+    }
+
+    private static DocxTable CreateSingleCellTable(string text, double rowHeight)
+    {
+        return new DocxTable(
+            null,
+            [60d],
+            [new DocxTableRow([new DocxTableCell(text, null, null, null, null, [])], rowHeight)]);
+    }
+
+    private static DocxDocument CreateLayoutTestDocument(IReadOnlyList<DocxBodyElement> bodyElements, IReadOnlyList<DocxTable> tables)
+    {
+        return new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            bodyElements,
+            [],
+            tables);
     }
 
     private static double[] ExtractTextBaselines(string pdf)

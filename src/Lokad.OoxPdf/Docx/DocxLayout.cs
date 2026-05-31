@@ -1,0 +1,228 @@
+using Lokad.OoxPdf.Pdf;
+
+namespace Lokad.OoxPdf.Docx;
+
+internal sealed record DocxLayout(IReadOnlyList<DocxLayoutPage> Pages);
+
+internal sealed record DocxLayoutPage(
+    double Width,
+    double Height,
+    IReadOnlyList<DocxLayoutItem> Items);
+
+internal abstract record DocxLayoutItem;
+
+internal sealed record DocxTextLineLayout(
+    string Text,
+    DocxTextRun StyleRun,
+    double FontSize,
+    double X,
+    double BaselineY,
+    double Width) : DocxLayoutItem;
+
+internal sealed record DocxInlineImageLayout(
+    DocxInlineImage Image,
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    int PageIndex) : DocxLayoutItem;
+
+internal sealed record DocxTableRowLayout(
+    IReadOnlyList<DocxTableCellLayout> Cells,
+    double Y,
+    double Height) : DocxLayoutItem;
+
+internal sealed record DocxTableCellLayout(
+    DocxTableCell Cell,
+    double X,
+    double Y,
+    double Width,
+    double Height);
+
+internal sealed class DocxLayoutEngine
+{
+    private const double BaselineOffsetFactor = 0.94d;
+    private const double DefaultTableRowHeight = 16d;
+
+    public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
+    {
+        var pages = new List<DocxLayoutPage>();
+        var currentItems = new List<DocxLayoutItem>();
+        double x = document.MarginLeftPoints;
+        double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
+        double cursorY = document.PageHeightPoints - document.MarginTopPoints;
+        double pendingSpacingAfter = 0d;
+
+        void FinishPage()
+        {
+            pages.Add(new DocxLayoutPage(document.PageWidthPoints, document.PageHeightPoints, currentItems.ToArray()));
+            currentItems = [];
+            cursorY = document.PageHeightPoints - document.MarginTopPoints;
+            pendingSpacingAfter = 0d;
+        }
+
+        bool HasPageContent() => currentItems.Count > 0;
+
+        foreach (DocxBodyElement element in document.BodyElements)
+        {
+            if (element is DocxPageBreakElement)
+            {
+                if (HasPageContent())
+                {
+                    FinishPage();
+                }
+
+                pendingSpacingAfter = 0d;
+                continue;
+            }
+
+            if (element is DocxTableElement tableElement)
+            {
+                cursorY -= pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                LayoutTable(tableElement.Table, document, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                continue;
+            }
+
+            if (element is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+            cursorY -= Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            pendingSpacingAfter = 0d;
+            double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
+            double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
+            if (embedded is not null && paragraph.Runs.Count > 0)
+            {
+                string text = paragraph.ListLabel is null
+                    ? string.Concat(paragraph.Runs.Select(r => r.Text))
+                    : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(r => r.Text));
+                DocxTextRun firstRun = paragraph.Runs[0];
+                foreach (string line in WrapWords(text, width, paragraphFontSize, embedded))
+                {
+                    if (cursorY - lineHeight < document.MarginBottomPoints && HasPageContent())
+                    {
+                        FinishPage();
+                    }
+
+                    double lineWidth = embedded.MeasureTextPoints(line, paragraphFontSize);
+                    double lineX = paragraph.Alignment switch
+                    {
+                        DocxTextAlignment.Center => x + Math.Max(0, width - lineWidth) / 2d,
+                        DocxTextAlignment.Right => x + Math.Max(0, width - lineWidth),
+                        _ => x
+                    };
+                    double baselineOffset = paragraph.LineSpacingPoints is null
+                        ? paragraphFontSize * BaselineOffsetFactor
+                        : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
+                    currentItems.Add(new DocxTextLineLayout(line, firstRun, paragraphFontSize, lineX, cursorY - baselineOffset, lineWidth));
+                    cursorY -= lineHeight;
+                }
+            }
+
+            foreach (DocxInlineImage image in paragraph.Images)
+            {
+                double imageWidth = Math.Min(width, image.WidthPoints);
+                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                if (cursorY - imageHeight < document.MarginBottomPoints && HasPageContent())
+                {
+                    FinishPage();
+                }
+
+                double imageX = paragraph.Alignment switch
+                {
+                    DocxTextAlignment.Center => x + Math.Max(0, width - imageWidth) / 2d,
+                    DocxTextAlignment.Right => x + Math.Max(0, width - imageWidth),
+                    _ => x
+                };
+                currentItems.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pages.Count + 1));
+                cursorY -= imageHeight + 6d;
+            }
+
+            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+        }
+
+        if (HasPageContent() || pages.Count == 0)
+        {
+            FinishPage();
+        }
+
+        return new DocxLayout(pages.ToArray());
+    }
+
+    private static void LayoutTable(
+        DocxTable table,
+        DocxDocument document,
+        ref List<DocxLayoutItem> currentItems,
+        ref double cursorY,
+        double x,
+        double availableWidth,
+        Action finishPage,
+        Func<bool> hasPageContent)
+    {
+        double rawTableWidth = table.ColumnWidthsPoints.Sum();
+        double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
+        double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
+        if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
+        {
+            finishPage();
+        }
+
+        foreach (DocxTableRow row in table.Rows)
+        {
+            double rowHeight = row.HeightPoints ?? DefaultTableRowHeight;
+            if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
+            {
+                finishPage();
+            }
+
+            double cellX = x;
+            double cellY = cursorY - rowHeight;
+            var cells = new List<DocxTableCellLayout>(row.Cells.Count);
+            for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
+            {
+                double cellWidth = table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale;
+                cells.Add(new DocxTableCellLayout(row.Cells[columnIndex], cellX, cellY, cellWidth, rowHeight));
+                cellX += cellWidth;
+            }
+
+            currentItems.Add(new DocxTableRowLayout(cells.ToArray(), cellY, rowHeight));
+            cursorY -= rowHeight;
+        }
+
+        cursorY -= 6d;
+    }
+
+    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
+    {
+        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0)
+        {
+            yield break;
+        }
+
+        var line = new System.Text.StringBuilder();
+        foreach (string word in words)
+        {
+            string candidate = line.Length == 0 ? word : line + " " + word;
+            if (line.Length > 0 && embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+            {
+                yield return line.ToString();
+                line.Clear();
+                line.Append(word);
+            }
+            else
+            {
+                line.Clear();
+                line.Append(candidate);
+            }
+        }
+
+        if (line.Length > 0)
+        {
+            yield return line.ToString();
+        }
+    }
+}
