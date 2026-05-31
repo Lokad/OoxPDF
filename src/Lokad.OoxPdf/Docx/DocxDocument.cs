@@ -300,7 +300,9 @@ internal sealed record DocxTableCell(
     string? PreferredWidthType = null,
     int GridSpan = 1,
     string? GridSpanValue = null,
-    DocxTableCellConditionalFormat? ConditionalFormat = null);
+    DocxTableCellConditionalFormat? ConditionalFormat = null,
+    bool HasVerticalMerge = false,
+    string? VerticalMergeValue = null);
 
 internal sealed record DocxTableCellConditionalFormat(
     string? Value,

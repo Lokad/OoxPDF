@@ -3942,6 +3942,55 @@ internal static class DocxTests
         TestAssert.Equal("2", cell.GridSpanValue ?? string.Empty);
     }
 
+    public static void DocxReaderTableCellPreservesVerticalMergeToken()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="720"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Top</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Bottom</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTableCell restart = document.Tables[0].Rows[0].Cells[0];
+        DocxTableCell continuation = document.Tables[0].Rows[1].Cells[0];
+        TestAssert.True(restart.HasVerticalMerge, "Reader should preserve vMerge restart presence.");
+        TestAssert.Equal("restart", restart.VerticalMergeValue ?? string.Empty);
+        TestAssert.True(continuation.HasVerticalMerge, "Reader should preserve val-less vMerge continuation presence.");
+        TestAssert.True(continuation.VerticalMergeValue is null, "Val-less vMerge continuation should keep its missing value distinct from restart.");
+    }
+
     public static void DocxReaderTableCellPreservesBorderTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -5185,12 +5234,39 @@ internal static class DocxTests
             PreferredWidthType: "dxa",
             GridSpan: 2,
             GridSpanValue: "2",
-            ConditionalFormat: new DocxTableCellConditionalFormat("100000000000", true, "1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
-        DocxTable table = new(null, [40d, 40d], [new DocxTableRow([cell], 20d, IsHeader: true, HeaderValue: "1")]);
+            ConditionalFormat: new DocxTableCellConditionalFormat("100000000000", true, "1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+            HasVerticalMerge: true,
+            VerticalMergeValue: "restart");
+        DocxTable table = new(
+            null,
+            [40d, 40d],
+            [new DocxTableRow([cell], 20d, IsHeader: true, HeaderValue: "1")],
+            PreferredWidthPoints: 84d,
+            PreferredWidthValue: "1680",
+            PreferredWidthType: "dxa",
+            IndentPoints: 6d,
+            CellSpacingPoints: 1d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
 
+        TestAssert.Equal(1, snapshot.Tables.Count);
+        DocxTableSnapshot tableSnapshot = snapshot.Tables.Single();
+        TestAssert.Equal(0, tableSnapshot.TableIndex);
+        TestAssert.Equal(0, tableSnapshot.PageStartIndex);
+        TestAssert.Equal(0, tableSnapshot.PageEndIndex);
+        TestAssert.Equal(1, tableSnapshot.RowCount);
+        TestAssert.Equal(1, tableSnapshot.LaidOutRowCount);
+        TestAssert.Equal(1, tableSnapshot.HeaderRowLayoutCount);
+        TestAssert.Equal(2, tableSnapshot.GridColumnCount);
+        TestAssert.Equal(80d, tableSnapshot.GridColumnsWidthSum);
+        TestAssert.Equal(84d, tableSnapshot.ResolvedTableWidth);
+        TestAssert.Equal(84d, tableSnapshot.PreferredWidthPoints ?? 0d);
+        TestAssert.Equal("1680", tableSnapshot.PreferredWidthValue ?? string.Empty);
+        TestAssert.Equal("dxa", tableSnapshot.PreferredWidthType ?? string.Empty);
+        TestAssert.Equal(6d, tableSnapshot.IndentPoints ?? 0d);
+        TestAssert.Equal(1d, tableSnapshot.CellSpacingPoints ?? 0d);
+        TestAssert.True(tableSnapshot.HasVerticalMerge, "Snapshot should expose vertical-merge presence without cell text.");
         TestAssert.Equal(1, snapshot.Pages.Count);
         TestAssert.Equal(1, snapshot.Pages[0].ItemCount);
         TestAssert.Equal(1, snapshot.Pages[0].TableRowCount);
@@ -5205,7 +5281,14 @@ internal static class DocxTests
         TestAssert.True(row.TextLength > 0, "Snapshot should expose text length only, not the text itself.");
         TestAssert.Equal(1, snapshot.Pages[0].TableRows.Count);
         DocxTableRowSnapshot tableRow = snapshot.Pages[0].TableRows[0];
+        TestAssert.Equal(0, tableRow.TableIndex);
+        TestAssert.Equal(0, tableRow.PageRowIndex);
         TestAssert.Equal(0, tableRow.RowIndex);
+        TestAssert.Equal(1, tableRow.TableRowCount);
+        TestAssert.Equal(2, tableRow.GridColumnCount);
+        TestAssert.Equal(80d, tableRow.GridColumnsWidthSum);
+        TestAssert.Equal(84d, tableRow.ResolvedTableWidth);
+        TestAssert.Equal(84d, tableRow.PreferredTableWidthPoints ?? 0d);
         TestAssert.True(tableRow.IsHeader, "Snapshot should expose header-row status without text content.");
         TestAssert.Equal("1", tableRow.HeaderValue ?? string.Empty);
         TestAssert.Equal(1, tableRow.CellCount);
@@ -5225,6 +5308,8 @@ internal static class DocxTests
         TestAssert.True(tableCell.HasFill, "Snapshot should expose fill presence without the fill value.");
         TestAssert.True(tableCell.HasShadingValue, "Snapshot should expose shading presence without the shading color.");
         TestAssert.True(tableCell.HasConditionalFormat, "Snapshot should expose conditional-format presence without document text.");
+        TestAssert.True(tableCell.HasVerticalMerge, "Snapshot should expose vertical-merge presence without document text.");
+        TestAssert.Equal("restart", tableCell.VerticalMergeValue ?? string.Empty);
     }
 
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()

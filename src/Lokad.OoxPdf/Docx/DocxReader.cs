@@ -794,6 +794,7 @@ internal sealed class DocxReader
                     ?.Attribute(WordprocessingNamespace + "val")
                     ?? conditionalStyle.VerticalAlignmentValue;
                 XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
+                XElement? verticalMerge = cellProperties?.Element(WordprocessingNamespace + "vMerge");
                 IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
                 IReadOnlyList<DocxTableCellBorder> borders = ResolveTableCellBorders(
                     directBorders,
@@ -821,7 +822,9 @@ internal sealed class DocxReader
                     (string?)cellProperties
                         ?.Element(WordprocessingNamespace + "gridSpan")
                         ?.Attribute(WordprocessingNamespace + "val"),
-                    conditionalFormat));
+                    conditionalFormat,
+                    verticalMerge is not null,
+                    (string?)verticalMerge?.Attribute(WordprocessingNamespace + "val")));
             }
 
             if (cells.Count > 0)

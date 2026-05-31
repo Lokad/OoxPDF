@@ -6,11 +6,43 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxLayout(IReadOnlyList<DocxLayoutPage> Pages);
 
-internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> Pages)
+internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> Pages, IReadOnlyList<DocxTableSnapshot> Tables)
 {
     public static DocxLayoutSnapshot FromLayout(DocxLayout layout)
     {
-        return new DocxLayoutSnapshot(layout.Pages.Select(ToSnapshot).ToArray());
+        DocxLayoutPageSnapshot[] pages = layout.Pages.Select(ToSnapshot).ToArray();
+        return new DocxLayoutSnapshot(pages, ToTableSnapshots(pages));
+    }
+
+    private static IReadOnlyList<DocxTableSnapshot> ToTableSnapshots(IReadOnlyList<DocxLayoutPageSnapshot> pages)
+    {
+        return pages
+            .SelectMany((page, pageIndex) => page.TableRows.Select(row => (pageIndex, row)))
+            .GroupBy(entry => entry.row.TableIndex)
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                DocxTableRowSnapshot first = group.First().row;
+                return new DocxTableSnapshot(
+                    group.Key,
+                    group.Min(entry => entry.pageIndex),
+                    group.Max(entry => entry.pageIndex),
+                    first.TableRowCount,
+                    group.Count(),
+                    group.Count(entry => entry.row.IsHeader),
+                    first.GridColumnCount,
+                    first.GridColumnsWidthSum,
+                    first.ResolvedTableWidth,
+                    first.TableX,
+                    first.PreferredTableWidthPoints,
+                    first.PreferredTableWidthValue,
+                    first.PreferredTableWidthType,
+                    first.IndentPoints,
+                    first.CellSpacingPoints,
+                    first.LayoutValue,
+                    group.Any(entry => entry.row.Cells.Any(cell => cell.HasVerticalMerge)));
+            })
+            .ToArray();
     }
 
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
@@ -75,7 +107,20 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             .Select(ToTableCellSnapshot)
             .ToArray();
         return new DocxTableRowSnapshot(
+            row.Table.TableIndex,
             rowIndex,
+            row.RowIndex,
+            row.Table.RowCount,
+            row.Table.GridColumnCount,
+            row.Table.GridColumnsWidthSum,
+            row.Table.ResolvedTableWidth,
+            row.Table.TableX,
+            row.Table.PreferredWidthPoints,
+            row.Table.PreferredWidthValue,
+            row.Table.PreferredWidthType,
+            row.Table.IndentPoints,
+            row.Table.CellSpacingPoints,
+            row.Table.LayoutValue,
             row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
             row.Y,
             row.Cells.Sum(cell => cell.Width),
@@ -113,7 +158,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cell.Borders.Count,
             cell.FillHex is not null,
             cell.ShadingValue is not null,
-            cell.ConditionalFormat?.IsDefined == true);
+            cell.ConditionalFormat?.IsDefined == true,
+            cell.HasVerticalMerge,
+            cell.VerticalMergeValue);
     }
 }
 
@@ -141,7 +188,20 @@ internal sealed record DocxLayoutItemSnapshot(
     int CellCount);
 
 internal sealed record DocxTableRowSnapshot(
+    int TableIndex,
+    int PageRowIndex,
     int RowIndex,
+    int TableRowCount,
+    int GridColumnCount,
+    double GridColumnsWidthSum,
+    double ResolvedTableWidth,
+    double TableX,
+    double? PreferredTableWidthPoints,
+    string? PreferredTableWidthValue,
+    string? PreferredTableWidthType,
+    double? IndentPoints,
+    double? CellSpacingPoints,
+    string? LayoutValue,
     double X,
     double Y,
     double Width,
@@ -152,6 +212,25 @@ internal sealed record DocxTableRowSnapshot(
     bool IsHeader,
     string? HeaderValue,
     IReadOnlyList<DocxTableCellSnapshot> Cells);
+
+internal sealed record DocxTableSnapshot(
+    int TableIndex,
+    int PageStartIndex,
+    int PageEndIndex,
+    int RowCount,
+    int LaidOutRowCount,
+    int HeaderRowLayoutCount,
+    int GridColumnCount,
+    double GridColumnsWidthSum,
+    double ResolvedTableWidth,
+    double X,
+    double? PreferredWidthPoints,
+    string? PreferredWidthValue,
+    string? PreferredWidthType,
+    double? IndentPoints,
+    double? CellSpacingPoints,
+    string? LayoutValue,
+    bool HasVerticalMerge);
 
 internal sealed record DocxTableCellSnapshot(
     int CellIndex,
@@ -175,7 +254,9 @@ internal sealed record DocxTableCellSnapshot(
     int BorderCount,
     bool HasFill,
     bool HasShadingValue,
-    bool HasConditionalFormat);
+    bool HasConditionalFormat,
+    bool HasVerticalMerge,
+    string? VerticalMergeValue);
 
 internal sealed record DocxLayoutPage(
     double Width,
@@ -216,11 +297,27 @@ internal sealed record DocxInlineImageLayout(
     int PageIndex) : DocxLayoutItem;
 
 internal sealed record DocxTableRowLayout(
+    DocxTableLayoutContext Table,
+    int RowIndex,
     IReadOnlyList<DocxTableCellLayout> Cells,
     double Y,
     double Height,
     bool IsHeader,
     string? HeaderValue) : DocxLayoutItem;
+
+internal sealed record DocxTableLayoutContext(
+    int TableIndex,
+    int RowCount,
+    int GridColumnCount,
+    double GridColumnsWidthSum,
+    double ResolvedTableWidth,
+    double TableX,
+    double? PreferredWidthPoints,
+    string? PreferredWidthValue,
+    string? PreferredWidthType,
+    double? IndentPoints,
+    double? CellSpacingPoints,
+    string? LayoutValue);
 
 internal sealed record DocxTableCellLayout(
     DocxTableCell Cell,
@@ -302,6 +399,7 @@ internal sealed class DocxLayoutEngine
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        int tableIndex = 0;
 
         void FinishPage()
         {
@@ -334,7 +432,7 @@ internal sealed class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                LayoutTable(tableElement.Table, document, textMeasurer, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                LayoutTable(tableElement.Table, tableIndex++, document, textMeasurer, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
                 continue;
             }
 
@@ -720,6 +818,7 @@ internal sealed class DocxLayoutEngine
 
     private static void LayoutTable(
         DocxTable table,
+        int tableIndex,
         DocxDocument document,
         IDocxTextMeasurer? textMeasurer,
         Func<int> getPageIndex,
@@ -738,29 +837,47 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
+        var tableContext = new DocxTableLayoutContext(
+            tableIndex,
+            table.Rows.Count,
+            table.ColumnWidthsPoints.Count,
+            table.ColumnWidthsPoints.Sum(),
+            targetTableWidth,
+            tableX,
+            table.PreferredWidthPoints,
+            table.PreferredWidthValue,
+            table.PreferredWidthType,
+            table.IndentPoints,
+            table.CellSpacingPoints,
+            table.LayoutValue);
         double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
         {
             finishPage();
         }
 
-        IReadOnlyList<DocxTableRow> headerRows = table.Rows.TakeWhile(row => row.IsHeader).ToArray();
-        foreach (DocxTableRow row in table.Rows)
+        IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
+            .Select((row, rowIndex) => (row, rowIndex))
+            .TakeWhile(entry => entry.row.IsHeader)
+            .Select(entry => (entry.row, entry.rowIndex))
+            .ToArray();
+        for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
+            DocxTableRow row = table.Rows[rowIndex];
             double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer);
             if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
             {
                 finishPage();
                 if (!row.IsHeader)
                 {
-                    foreach (DocxTableRow headerRow in headerRows)
+                    foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)
                     {
-                        AddTableRowLayout(table, headerRow, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
+                        AddTableRowLayout(table, tableContext, headerRow, headerRowIndex, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
                     }
                 }
             }
 
-            AddTableRowLayout(table, row, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
+            AddTableRowLayout(table, tableContext, row, rowIndex, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
         }
 
         cursorY -= 6d;
@@ -852,7 +969,9 @@ internal sealed class DocxLayoutEngine
 
     private static void AddTableRowLayout(
         DocxTable table,
+        DocxTableLayoutContext tableContext,
         DocxTableRow row,
+        int rowIndex,
         IReadOnlyList<double> effectiveColumns,
         double scale,
         IDocxTextMeasurer? textMeasurer,
@@ -876,7 +995,7 @@ internal sealed class DocxLayoutEngine
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
         }
 
-        currentItems.Add(new DocxTableRowLayout(cells.ToArray(), cellY, rowHeight, row.IsHeader, row.HeaderValue));
+        currentItems.Add(new DocxTableRowLayout(tableContext, rowIndex, cells.ToArray(), cellY, rowHeight, row.IsHeader, row.HeaderValue));
         cursorY -= rowHeight;
     }
 

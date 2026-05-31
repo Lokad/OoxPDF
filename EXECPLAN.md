@@ -3498,6 +3498,18 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   page index range, row count, column count, `tblGrid`, preferred table width, resolved table width, row
   height declarations, vertical merges, and resolved column grid. This remains open because the current trace
   is enough to inspect private table bands but does not yet expose table-level width/grid ownership.
+  - [x] 2026-06-01: Added stable table ordinals and document-level table snapshots derived from layout rows.
+    The trace now reports page index range, source row count, laid-out row count, repeated header-row layout
+    count, grid column count, grid-column width sum, resolved table width, table X, preferred table width
+    tokens, indent, cell spacing, layout token, and vertical-merge presence. While doing this, found and
+    fixed a structural parser gap: `w:vMerge` was not preserved at all. `DocxTableCell` now carries generic
+    vertical-merge presence/value tokens, with public coverage for both `w:val="restart"` and val-less
+    continuation. Validation passed `docx-core --skip-slow` (`16`), `docx-tables --skip-slow` (`50`), and
+    full solution build. Private DOCX run `20260601-003853` stayed neutral at `16/16` pages, zero dimension
+    mismatches, no diagnostics, `MAE=12.509698`, changed16 `0.112673`.
+  - [ ] Finish table-level ownership by exposing row height rule/value tokens and the resolved column grid
+    itself, then use the trace to select the simple/dense/worst private tables below. Do not mark this item
+    complete until vertical merges affect layout/rendering instead of only being preserved and inventoried.
 - [ ] Select representative private tables for repeated inspection: one simple table, one typical dense
   table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
 - [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content
