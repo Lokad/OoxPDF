@@ -1947,6 +1947,13 @@ High-priority actions:
       source counts, and distinct candidate/resolved-family counts, not document text or font names. This gives
       private DOCX investigations a way to see whether pages are dominated by primary, font-table alternate,
       theme, resolver fallback, or missing branches before changing rendering behavior.
+    - [x] 2026-05-31: Split DOCX layout measurement behind an `IDocxTextMeasurer` interface while preserving
+      the current single embedded-font adapter. Body paragraphs, keep-block estimation, table row sizing,
+      table-cell text, numbered-label measurement, and wrapping now call the same measurement abstraction that
+      a future per-run font-plan measurer can implement. Public `docx-core` and `docx-tables` groups pass, and
+      private DOCX run `20260531-200355` stayed page-stable and metric-neutral (`16/16`, zero dimension
+      mismatches, `15.856962` MAE), so this removes the direct layout dependency on `PdfEmbeddedFont` without
+      changing output.
   - [x] 2026-05-31: Preserved DOCX numbering-level indent tokens and applied a first layout-stage indent
     approximation for numbered paragraphs. `DocxListLabel` now carries typed left/right/first-line/hanging
     indent values from `w:lvl/w:pPr/w:ind`, and body/table-cell paragraph layout uses those values to shift

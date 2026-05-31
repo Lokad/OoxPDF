@@ -132,6 +132,19 @@ internal sealed record DocxTableCellLayout(
 
 internal readonly record struct DocxFontResources(PdfEmbeddedFont? Embedded, PdfFontResource? Resource);
 
+internal interface IDocxTextMeasurer
+{
+    double MeasureText(DocxTextRun? run, string text, double fontSize);
+}
+
+internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocxTextMeasurer
+{
+    public double MeasureText(DocxTextRun? run, string text, double fontSize)
+    {
+        return embedded.MeasureTextPoints(text, fontSize);
+    }
+}
+
 internal sealed class DocxLayoutEngine
 {
     private const double BaselineOffsetFactor = 0.94d;
@@ -139,6 +152,7 @@ internal sealed class DocxLayoutEngine
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
     {
+        IDocxTextMeasurer? textMeasurer = embedded is null ? null : new DocxEmbeddedTextMeasurer(embedded);
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
         double x = document.MarginLeftPoints;
@@ -178,7 +192,7 @@ internal sealed class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                LayoutTable(tableElement.Table, document, embedded, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                LayoutTable(tableElement.Table, document, textMeasurer, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
                 continue;
             }
 
@@ -194,18 +208,18 @@ internal sealed class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
-            if (embedded is not null &&
+            if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
-                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, embedded) < document.MarginBottomPoints)
+                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, textMeasurer) < document.MarginBottomPoints)
             {
                 FinishPage();
             }
 
-            if (embedded is not null && paragraph.Runs.Count > 0)
+            if (textMeasurer is not null && paragraph.Runs.Count > 0)
             {
                 string text = string.Concat(paragraph.Runs.Select(r => r.Text));
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, embedded);
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer);
                 double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
                 double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
                 double paragraphX = x + textStartOffset;
@@ -213,7 +227,7 @@ internal sealed class DocxLayoutEngine
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
-                string[] lines = WrapTextLines(text, paragraphWidth, continuationParagraphWidth, paragraphFontSize, embedded).ToArray();
+                string[] lines = WrapTextLines(text, paragraphWidth, continuationParagraphWidth, paragraphFontSize, firstRun, textMeasurer).ToArray();
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, document.MarginBottomPoints, HasPageContent()))
                 {
                     FinishPage();
@@ -226,7 +240,7 @@ internal sealed class DocxLayoutEngine
                         FinishPage();
                     }
 
-                    double lineWidth = embedded.MeasureTextPoints(line, paragraphFontSize);
+                    double lineWidth = textMeasurer.MeasureText(firstRun, line, paragraphFontSize);
                     double lineX = paragraph.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -237,11 +251,11 @@ internal sealed class DocxLayoutEngine
                         ? paragraphFontSize * BaselineOffsetFactor
                         : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
                     IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-                        ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, x + labelStartOffset, lineX, paragraphFontSize, embedded)
+                        ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, x + labelStartOffset, lineX, paragraphFontSize, textMeasurer)
                         : [new DocxTextSegmentLayout(line, firstRun, lineX, lineWidth)];
                     double effectiveX = firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX;
                     double effectiveWidth = firstLine && paragraph.ListLabel is not null
-                        ? Math.Max(lineX + lineWidth, x + labelStartOffset + embedded.MeasureTextPoints(paragraph.ListLabel.Text, paragraphFontSize)) - (x + labelStartOffset)
+                        ? Math.Max(lineX + lineWidth, x + labelStartOffset + textMeasurer.MeasureText(firstRun, paragraph.ListLabel.Text, paragraphFontSize)) - (x + labelStartOffset)
                         : lineWidth;
                     currentItems.Add(new DocxTextLineLayout(
                         firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line : line,
@@ -327,7 +341,7 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxBodyElement> elements,
         int elementIndex,
         double availableWidth,
-        PdfEmbeddedFont embedded)
+        IDocxTextMeasurer textMeasurer)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -335,7 +349,7 @@ internal sealed class DocxLayoutEngine
         }
 
         DocxParagraph paragraph = paragraphElement.Paragraph;
-        double height = EstimateParagraphContentHeight(paragraph, availableWidth, embedded);
+        double height = EstimateParagraphContentHeight(paragraph, availableWidth, textMeasurer);
         int nextSearchIndex = elementIndex + 1;
         while (paragraph.KeepRules.KeepNext == true &&
             TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
@@ -343,7 +357,7 @@ internal sealed class DocxLayoutEngine
             if (next is DocxParagraphElement nextParagraph)
             {
                 height += Math.Max(paragraph.SpacingAfterPoints, nextParagraph.Paragraph.SpacingBeforePoints);
-                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, embedded);
+                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer);
                 paragraph = nextParagraph.Paragraph;
                 nextSearchIndex = nextIndex + 1;
                 continue;
@@ -352,7 +366,7 @@ internal sealed class DocxLayoutEngine
             if (next is DocxTableElement nextTable)
             {
                 height += paragraph.SpacingAfterPoints;
-                height += EstimateFirstTableRowHeight(nextTable.Table, availableWidth, embedded);
+                height += EstimateFirstTableRowHeight(nextTable.Table, availableWidth, textMeasurer);
             }
 
             break;
@@ -390,7 +404,7 @@ internal sealed class DocxLayoutEngine
         return false;
     }
 
-    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, PdfEmbeddedFont embedded)
+    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer)
     {
         double height = 0d;
         if (paragraph.Runs.Count != 0)
@@ -398,10 +412,11 @@ internal sealed class DocxLayoutEngine
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
             string text = string.Concat(paragraph.Runs.Select(run => run.Text));
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+            DocxTextRun firstRun = paragraph.Runs[0];
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-            height += WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, embedded).Count() * lineHeight;
+            height += WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, firstRun, textMeasurer).Count() * lineHeight;
         }
 
         foreach (DocxInlineImage image in paragraph.Images)
@@ -414,7 +429,7 @@ internal sealed class DocxLayoutEngine
         return height;
     }
 
-    private static double EstimateFirstTableRowHeight(DocxTable table, double availableWidth, PdfEmbeddedFont embedded)
+    private static double EstimateFirstTableRowHeight(DocxTable table, double availableWidth, IDocxTextMeasurer textMeasurer)
     {
         DocxTableRow? row = table.Rows.FirstOrDefault();
         if (row is null)
@@ -429,7 +444,7 @@ internal sealed class DocxLayoutEngine
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double contentHeight = row.Cells
-            .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], embedded))
+            .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer))
             .DefaultIfEmpty(0d)
             .Max();
         return Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
@@ -448,7 +463,7 @@ internal sealed class DocxLayoutEngine
         return Math.Max(0d, left + firstLine);
     }
 
-    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, PdfEmbeddedFont embedded)
+    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer)
     {
         if (paragraph.ListLabel is null)
         {
@@ -461,11 +476,11 @@ internal sealed class DocxLayoutEngine
         }
 
         double gap = IsNumberingSpaceSuffix(paragraph.ListLabel)
-            ? embedded.MeasureTextPoints(" ", fontSize)
+            ? textMeasurer.MeasureText(paragraph.Runs.FirstOrDefault(), " ", fontSize)
             : 0d;
         return Math.Max(
             0d,
-            GetParagraphLabelStartOffset(paragraph) + embedded.MeasureTextPoints(paragraph.ListLabel.Text, fontSize) + gap);
+            GetParagraphLabelStartOffset(paragraph) + textMeasurer.MeasureText(paragraph.Runs.FirstOrDefault(), paragraph.ListLabel.Text, fontSize) + gap);
     }
 
     private static double GetParagraphLabelStartOffset(DocxParagraph paragraph)
@@ -499,10 +514,10 @@ internal sealed class DocxLayoutEngine
         double labelX,
         double lineX,
         double fontSize,
-        PdfEmbeddedFont embedded)
+        IDocxTextMeasurer textMeasurer)
     {
-        double labelWidth = embedded.MeasureTextPoints(label.Text, fontSize);
-        double lineWidth = embedded.MeasureTextPoints(line, fontSize);
+        double labelWidth = textMeasurer.MeasureText(styleRun, label.Text, fontSize);
+        double lineWidth = textMeasurer.MeasureText(styleRun, line, fontSize);
         return
         [
             new DocxTextSegmentLayout(label.Text, styleRun, labelX, labelWidth),
@@ -534,7 +549,7 @@ internal sealed class DocxLayoutEngine
     private static void LayoutTable(
         DocxTable table,
         DocxDocument document,
-        PdfEmbeddedFont? embedded,
+        IDocxTextMeasurer? textMeasurer,
         Func<int> getPageIndex,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
@@ -560,7 +575,7 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxTableRow> headerRows = table.Rows.TakeWhile(row => row.IsHeader).ToArray();
         foreach (DocxTableRow row in table.Rows)
         {
-            double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, embedded);
+            double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer);
             if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
             {
                 finishPage();
@@ -568,12 +583,12 @@ internal sealed class DocxLayoutEngine
                 {
                     foreach (DocxTableRow headerRow in headerRows)
                     {
-                        AddTableRowLayout(table, headerRow, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, tableX);
+                        AddTableRowLayout(table, headerRow, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
                     }
                 }
             }
 
-            AddTableRowLayout(table, row, effectiveColumns, scale, embedded, getPageIndex, ref currentItems, ref cursorY, tableX);
+            AddTableRowLayout(table, row, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
         }
 
         cursorY -= 6d;
@@ -651,13 +666,13 @@ internal sealed class DocxLayoutEngine
         DocxTableRow row,
         IReadOnlyList<double> effectiveColumns,
         double scale,
-        PdfEmbeddedFont? embedded)
+        IDocxTextMeasurer? textMeasurer)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-        double contentHeight = embedded is null
+        double contentHeight = textMeasurer is null
             ? 0d
             : row.Cells
-                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], embedded))
+                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer))
                 .DefaultIfEmpty(0d)
                 .Max();
         return Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
@@ -668,14 +683,14 @@ internal sealed class DocxLayoutEngine
         DocxTableRow row,
         IReadOnlyList<double> effectiveColumns,
         double scale,
-        PdfEmbeddedFont? embedded,
+        IDocxTextMeasurer? textMeasurer,
         Func<int> getPageIndex,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         double x)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-        double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, embedded);
+        double rowHeight = MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer);
         double cellX = x;
         double cellY = cursorY - rowHeight;
         var cells = new List<DocxTableCellLayout>(row.Cells.Count);
@@ -683,8 +698,8 @@ internal sealed class DocxLayoutEngine
         {
             double cellWidth = cellWidths[columnIndex];
             DocxTableCell cell = row.Cells[columnIndex];
-            IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, embedded);
-            IReadOnlyList<DocxInlineImageLayout> inlineImages = LayoutTableCellInlineImages(cell, cellX, cellY, cellWidth, rowHeight, embedded, getPageIndex());
+            IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, textMeasurer);
+            IReadOnlyList<DocxInlineImageLayout> inlineImages = LayoutTableCellInlineImages(cell, cellX, cellY, cellWidth, rowHeight, textMeasurer, getPageIndex());
             cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines, inlineImages));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
         }
@@ -714,7 +729,7 @@ internal sealed class DocxLayoutEngine
         return widths;
     }
 
-    private static double MeasureTableCellContentHeight(DocxTableCell cell, double cellWidth, PdfEmbeddedFont embedded)
+    private static double MeasureTableCellContentHeight(DocxTableCell cell, double cellWidth, IDocxTextMeasurer textMeasurer)
     {
         IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs.Count == 0 && cell.Text.Length != 0
             ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
@@ -740,10 +755,11 @@ internal sealed class DocxLayoutEngine
             double fontSize = paragraph.Runs.Max(run => run.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
             string text = string.Concat(paragraph.Runs.Select(run => run.Text));
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+            DocxTextRun firstRun = paragraph.Runs[0];
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-            int lineCount = WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, embedded).Count();
+            int lineCount = WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, firstRun, textMeasurer).Count();
             contentHeight += lineCount * lineHeight + paragraph.SpacingAfterPoints;
             foreach (DocxInlineImage image in paragraph.Images)
             {
@@ -762,9 +778,9 @@ internal sealed class DocxLayoutEngine
         double cellY,
         double cellWidth,
         double cellHeight,
-        PdfEmbeddedFont? embedded)
+        IDocxTextMeasurer? textMeasurer)
     {
-        if (embedded is null)
+        if (textMeasurer is null)
         {
             return [];
         }
@@ -797,16 +813,16 @@ internal sealed class DocxLayoutEngine
             double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
             DocxTextRun firstRun = paragraph.Runs[0];
             string text = string.Concat(paragraph.Runs.Select(run => run.Text));
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
             double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
             double paragraphX = cellX + paddingLeft + textStartOffset;
             double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
             bool firstLine = true;
-            foreach (string line in WrapTextLines(text, paragraphWidth, continuationParagraphWidth, fontSize, embedded))
+            foreach (string line in WrapTextLines(text, paragraphWidth, continuationParagraphWidth, fontSize, firstRun, textMeasurer))
             {
-                double lineWidth = embedded.MeasureTextPoints(line, fontSize);
+                double lineWidth = textMeasurer.MeasureText(firstRun, line, fontSize);
                 double lineX = paragraph.Alignment switch
                 {
                     DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -814,11 +830,11 @@ internal sealed class DocxLayoutEngine
                     _ => paragraphX
                 };
                 IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-                    ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, cellX + paddingLeft + labelStartOffset, lineX, fontSize, embedded)
-                    : CreateTextSegments(line, paragraph.Runs, lineX, fontSize, embedded);
+                    ? CreateNumberedLineSegments(paragraph.ListLabel, line, firstRun, cellX + paddingLeft + labelStartOffset, lineX, fontSize, textMeasurer)
+                    : CreateTextSegments(line, paragraph.Runs, lineX, fontSize, textMeasurer);
                 double effectiveX = firstLine && paragraph.ListLabel is not null ? cellX + paddingLeft + labelStartOffset : lineX;
                 double effectiveWidth = firstLine && paragraph.ListLabel is not null
-                    ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + embedded.MeasureTextPoints(paragraph.ListLabel.Text, fontSize)) - (cellX + paddingLeft + labelStartOffset)
+                    ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + textMeasurer.MeasureText(firstRun, paragraph.ListLabel.Text, fontSize)) - (cellX + paddingLeft + labelStartOffset)
                     : lineWidth;
                 lines.Add(new DocxTextLineLayout(
                     firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line : line,
@@ -859,7 +875,7 @@ internal sealed class DocxLayoutEngine
         double cellY,
         double cellWidth,
         double cellHeight,
-        PdfEmbeddedFont? embedded,
+        IDocxTextMeasurer? textMeasurer,
         int pageIndex)
     {
         IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs;
@@ -879,15 +895,16 @@ internal sealed class DocxLayoutEngine
         var images = new List<DocxInlineImageLayout>();
         foreach (DocxParagraph paragraph in paragraphs)
         {
-            if (embedded is not null && paragraph.Runs.Count != 0)
+            if (textMeasurer is not null && paragraph.Runs.Count != 0)
             {
                 double fontSize = paragraph.Runs.Max(run => run.FontSize);
                 double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
                 string text = string.Concat(paragraph.Runs.Select(run => run.Text));
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, embedded);
+                DocxTextRun firstRun = paragraph.Runs[0];
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
                 double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-                cursorY -= WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, embedded).Count() * lineHeight;
+                cursorY -= WrapTextLines(text, firstParagraphWidth, continuationParagraphWidth, fontSize, firstRun, textMeasurer).Count() * lineHeight;
                 cursorY -= paragraph.SpacingAfterPoints;
             }
 
@@ -938,7 +955,7 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxTextRun> runs,
         double lineX,
         double fontSize,
-        PdfEmbeddedFont embedded)
+        IDocxTextMeasurer textMeasurer)
     {
         if (line.Length == 0 || runs.Count == 0)
         {
@@ -973,29 +990,29 @@ internal sealed class DocxLayoutEngine
                 }
 
                 string segmentText = runText[start..runOffset];
-                double width = embedded.MeasureTextPoints(segmentText, fontSize);
+                double width = textMeasurer.MeasureText(run, segmentText, fontSize);
                 segments.Add(new DocxTextSegmentLayout(segmentText, run, segmentX, width));
                 segmentX += width;
             }
         }
 
         return segments.Count == 0
-            ? [new DocxTextSegmentLayout(line, runs[0], lineX, embedded.MeasureTextPoints(line, fontSize))]
+            ? [new DocxTextSegmentLayout(line, runs[0], lineX, textMeasurer.MeasureText(runs[0], line, fontSize))]
             : segments;
     }
 
-    private static IEnumerable<string> WrapTextLines(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
+    private static IEnumerable<string> WrapTextLines(string text, double maxWidth, double fontSize, DocxTextRun? run, IDocxTextMeasurer textMeasurer)
     {
-        return WrapTextLines(text, maxWidth, maxWidth, fontSize, embedded);
+        return WrapTextLines(text, maxWidth, maxWidth, fontSize, run, textMeasurer);
     }
 
-    private static IEnumerable<string> WrapTextLines(string text, double firstLineMaxWidth, double continuationLineMaxWidth, double fontSize, PdfEmbeddedFont embedded)
+    private static IEnumerable<string> WrapTextLines(string text, double firstLineMaxWidth, double continuationLineMaxWidth, double fontSize, DocxTextRun? run, IDocxTextMeasurer textMeasurer)
     {
         int lineIndex = 0;
         foreach (string segment in text.Split('\n'))
         {
             bool yielded = false;
-            foreach (string line in WrapWords(segment, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, embedded))
+            foreach (string line in WrapWords(segment, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, run, textMeasurer))
             {
                 yielded = true;
                 yield return line;
@@ -1010,12 +1027,12 @@ internal sealed class DocxLayoutEngine
         }
     }
 
-    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
+    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, DocxTextRun? run, IDocxTextMeasurer textMeasurer)
     {
-        return WrapWords(text, _ => maxWidth, fontSize, embedded);
+        return WrapWords(text, _ => maxWidth, fontSize, run, textMeasurer);
     }
 
-    private static IEnumerable<string> WrapWords(string text, Func<int, double> maxWidth, double fontSize, PdfEmbeddedFont embedded)
+    private static IEnumerable<string> WrapWords(string text, Func<int, double> maxWidth, double fontSize, DocxTextRun? run, IDocxTextMeasurer textMeasurer)
     {
         IReadOnlyList<string> tokens = TokenizeSpaces(text);
         if (tokens.Count == 0)
@@ -1031,7 +1048,7 @@ internal sealed class DocxLayoutEngine
             if (line.Length > 0 &&
                 line.ToString().Any(c => !char.IsWhiteSpace(c)) &&
                 !string.IsNullOrWhiteSpace(token) &&
-                embedded.MeasureTextPoints(candidate, fontSize) > maxWidth(lineIndex))
+                textMeasurer.MeasureText(run, candidate, fontSize) > maxWidth(lineIndex))
             {
                 yield return line.ToString();
                 lineIndex++;
