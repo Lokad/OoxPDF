@@ -1665,6 +1665,40 @@ internal static class DocxTests
         TestAssert.True(bottomBaseline < centerBaseline, "Bottom-aligned cell text should move below centered cell text.");
     }
 
+    public static void DocxTableLayoutStageExpandsRowsToCellContent()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("First Second", 11d, null, false, false, false, null, null)],
+            [],
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            null);
+        var cell = new DocxTableCell("First Second", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "First Second".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.True(row.Height > 10d, "DOCX table rows should expand beyond a too-small declared height when cell text wraps.");
+        TestAssert.True(row.Cells[0].TextLines.Count >= 2, "Expected the narrow cell to wrap content into multiple layout-owned text lines.");
+    }
+
     public static void DocxLayoutSnapshotReportsPublicSafeCounts()
     {
         DocxTable table = CreateSingleCellTable("private text is not exposed", rowHeight: 20d);

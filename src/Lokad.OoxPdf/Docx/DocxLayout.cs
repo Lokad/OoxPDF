@@ -261,7 +261,16 @@ internal sealed class DocxLayoutEngine
 
         foreach (DocxTableRow row in table.Rows)
         {
-            double rowHeight = row.HeightPoints ?? DefaultTableRowHeight;
+            double[] cellWidths = row.Cells
+                .Select((_, columnIndex) => table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale)
+                .ToArray();
+            double contentHeight = embedded is null
+                ? 0d
+                : row.Cells
+                    .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], embedded))
+                    .DefaultIfEmpty(0d)
+                    .Max();
+            double rowHeight = Math.Max(row.HeightPoints ?? DefaultTableRowHeight, contentHeight);
             if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
             {
                 finishPage();
@@ -272,7 +281,7 @@ internal sealed class DocxLayoutEngine
             var cells = new List<DocxTableCellLayout>(row.Cells.Count);
             for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
             {
-                double cellWidth = table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale;
+                double cellWidth = cellWidths[columnIndex];
                 DocxTableCell cell = row.Cells[columnIndex];
                 IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, cellX, cellY, cellWidth, rowHeight, embedded);
                 cells.Add(new DocxTableCellLayout(cell, cellX, cellY, cellWidth, rowHeight, textLines));
@@ -284,6 +293,42 @@ internal sealed class DocxLayoutEngine
         }
 
         cursorY -= 6d;
+    }
+
+    private static double MeasureTableCellContentHeight(DocxTableCell cell, double cellWidth, PdfEmbeddedFont embedded)
+    {
+        IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs.Count == 0 && cell.Text.Length != 0
+            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], DocxTextAlignment.Left, null, 0d, 0d, 1d, null, null)]
+            : cell.Paragraphs;
+        if (paragraphs.Count == 0)
+        {
+            return 0d;
+        }
+
+        const double legacyBaselineInset = 17d;
+        double paddingLeft = cell.Margins.LeftPoints ?? 4d;
+        double paddingRight = cell.Margins.RightPoints ?? 4d;
+        double paddingTop = cell.Margins.TopPoints ?? 0d;
+        double paddingBottom = cell.Margins.BottomPoints ?? 0d;
+        double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
+        double contentHeight = legacyBaselineInset + paddingTop + paddingBottom;
+        foreach (DocxParagraph paragraph in paragraphs)
+        {
+            if (paragraph.Runs.Count == 0)
+            {
+                continue;
+            }
+
+            double fontSize = paragraph.Runs.Max(run => run.FontSize);
+            double lineHeight = paragraph.LineSpacingPoints ?? fontSize * paragraph.LineSpacingFactor;
+            string text = paragraph.ListLabel is null
+                ? string.Concat(paragraph.Runs.Select(run => run.Text))
+                : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(run => run.Text));
+            int lineCount = WrapWords(text, textWidth, fontSize, embedded).Count();
+            contentHeight += lineCount * lineHeight + paragraph.SpacingAfterPoints;
+        }
+
+        return contentHeight;
     }
 
     private static IReadOnlyList<DocxTextLineLayout> LayoutTableCellTextLines(
