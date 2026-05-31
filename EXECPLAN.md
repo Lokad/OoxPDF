@@ -310,6 +310,10 @@ High-priority actions:
   manual break emitted only a post-break `Tc=-0.024` tail. That is a real public gap but not the private
   `-0.0535` rule. Continue probing manual-break/short-frame/line-internal segmentation combinations before
   adding any non-numbered autofit emission rule.
+  2026-05-31 fractional-size probe: a disposable public no-autofit textbox sweep at `20pt`, `20.04pt`,
+  `20.06pt`, `14.04pt`, `15.96pt`, and `12pt` emitted Office `Tc=0` for all operations. This rules out the
+  simple fractional-authored-font-size explanation for page 81's non-numbered `-0.0535` bucket; keep looking
+  for inherited placeholder/style, bodyPr, or operation-segmentation structure before changing production.
   2026-05-30 page-36 evidence: the current worst private page is a no-table text-state case rather than a
   table-row case. Office emits `135` page-36 text operations with widespread nonzero `Tc` buckets
   (`-0.036`, `-0.0476`, `-0.012`, `-0.0574`, `0.0166`, and related splits) and secondary font-size branches
@@ -2517,6 +2521,18 @@ paths, and ExecPlan references together.
   `103/49/49/117/121` candidate on the disposable probe), while private slide 61 explicit arcs still show
   per-arc segment-count mismatches after their bounds and fill/stroke kinds align. Do not replace this with a
   private-slide coordinate shortcut or a per-font/per-shape special case.
+  2026-05-31 follow-up: a scoped trial using a larger `stealth` marker geometry for all preset-arc filled
+  outlines improved the public default-arc probe (MAE `0.0148676 -> 0.0089822`, SSIM `0.987148 -> 0.996857`)
+  and matched Office's wider marker base on that probe, but it slightly worsened private slide 61
+  (`2.7182668 -> 2.7209587` MAE) because the private explicit-guide arc bounds were already closer with the
+  existing marker size. Reverted the trial. The remaining work is to find the OOXML/PDF structural
+  discriminator for default-arc versus explicit-guide arc line-end sizing and flattening before changing
+  production marker geometry.
+  2026-05-31 public guardrail: added `pptx-ladder-06-explicit-arc-stealth`, a synthetic Office-referenceable
+  fixture for the slide-61 shape family. It passes visually at low MAE, but PDF inspection still shows Office
+  and candidate path decomposition drift (`34/66/66/20/34/62/62` filled-path line counts versus
+  `51/73/65/39/51/77/75`). Use this case to validate any structural arc-flattening or marker-size change
+  before rechecking the private slide.
 - [ ] Private slide 9 visible remaining problem: left-side schema geometry is visibly broken. Survey the
   involved shapes/connectors/group transforms on public-safe diagnostics, then reproduce with minimal public
   geometry fixtures before changing renderer logic.

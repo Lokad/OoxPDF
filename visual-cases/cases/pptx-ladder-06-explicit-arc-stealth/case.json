@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-06-explicit-arc-stealth",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-explicit-arc-stealth.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "shape", "arc", "line-end"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.0,
+    "maxChangedPixelRatioAtThreshold16": 0.02
+  },
+  "allowedUnsupportedFeatures": []
+}
