@@ -1957,15 +1957,26 @@ internal sealed class DocxReader
         XElement? indent = level
             .Element(WordprocessingNamespace + "pPr")
             ?.Element(WordprocessingNamespace + "ind");
+        XElement? numberingTab = level
+            .Element(WordprocessingNamespace + "pPr")
+            ?.Element(WordprocessingNamespace + "tabs")
+            ?.Elements(WordprocessingNamespace + "tab")
+            .FirstOrDefault(tab => string.Equals(
+                (string?)tab.Attribute(WordprocessingNamespace + "val"),
+                "num",
+                StringComparison.OrdinalIgnoreCase));
         return new DocxNumberingIndent(
             ReadTwipsAttribute(indent, WordprocessingNamespace + "left"),
             ReadTwipsAttribute(indent, WordprocessingNamespace + "right"),
             ReadTwipsAttribute(indent, WordprocessingNamespace + "firstLine"),
             ReadTwipsAttribute(indent, WordprocessingNamespace + "hanging"),
+            ReadTwipsAttribute(numberingTab, WordprocessingNamespace + "pos"),
             (string?)indent?.Attribute(WordprocessingNamespace + "left"),
             (string?)indent?.Attribute(WordprocessingNamespace + "right"),
             (string?)indent?.Attribute(WordprocessingNamespace + "firstLine"),
-            (string?)indent?.Attribute(WordprocessingNamespace + "hanging"));
+            (string?)indent?.Attribute(WordprocessingNamespace + "hanging"),
+            (string?)numberingTab?.Attribute(WordprocessingNamespace + "val"),
+            (string?)numberingTab?.Attribute(WordprocessingNamespace + "pos"));
     }
 
     private readonly record struct DocxResolvedParagraphProperties(

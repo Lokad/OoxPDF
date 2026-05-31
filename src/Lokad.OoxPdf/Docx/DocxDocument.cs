@@ -147,12 +147,15 @@ internal sealed record DocxNumberingIndent(
     double? RightPoints,
     double? FirstLinePoints,
     double? HangingPoints,
+    double? NumberingTabPositionPoints,
     string? LeftValue,
     string? RightValue,
     string? FirstLineValue,
-    string? HangingValue)
+    string? HangingValue,
+    string? NumberingTabValue,
+    string? NumberingTabPositionValue)
 {
-    public static DocxNumberingIndent Empty { get; } = new(null, null, null, null, null, null, null, null);
+    public static DocxNumberingIndent Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null);
 }
 
 internal sealed record DocxTextRun(

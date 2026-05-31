@@ -905,7 +905,7 @@ internal static class DocxTests
             "tab",
             "3",
             0,
-            new DocxNumberingIndent(36d, null, null, 18d, "720", null, null, "360"),
+            new DocxNumberingIndent(36d, null, null, 18d, null, "720", null, null, "360", null, null),
             new DocxTextRunStyle(null, null, null, null, null, null, "Marker Sans", new DocxRunFonts("Marker Sans", null, null, null, null, null, null, null)));
         var paragraph = new DocxParagraph(
             [bodyRun],
@@ -2187,7 +2187,7 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:abstractNum w:abstractNumId="7">
-                    <w:lvl w:ilvl="0"><w:start w:val="3"/><w:numFmt w:val="lowerRoman"/><w:lvlText w:val="%1)"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl>
+                    <w:lvl w:ilvl="0"><w:start w:val="3"/><w:numFmt w:val="lowerRoman"/><w:lvlText w:val="%1)"/><w:pPr><w:ind w:left="720" w:hanging="360"/><w:tabs><w:tab w:val="num" w:pos="360"/></w:tabs></w:pPr></w:lvl>
                     <w:lvl w:ilvl="1"><w:numFmt w:val="futureFormat"/><w:lvlText w:val="Item %2"/><w:suff w:val="space"/></w:lvl>
                     <w:lvl w:ilvl="2"><w:numFmt w:val="bullet"/><w:lvlText w:val="bullet text"/><w:suff w:val="nothing"/><w:rPr><w:rFonts w:ascii="Marker Sans" w:hAnsi="Marker Sans"/><w:color w:val="123456"/><w:b/></w:rPr></w:lvl>
                   </w:abstractNum>
@@ -2222,6 +2222,9 @@ internal static class DocxTests
         TestAssert.Equal("360", paragraphs[0].ListLabel?.Indent.HangingValue ?? string.Empty);
         TestAssert.Equal(36d, paragraphs[0].ListLabel?.Indent.LeftPoints ?? 0d);
         TestAssert.Equal(18d, paragraphs[0].ListLabel?.Indent.HangingPoints ?? 0d);
+        TestAssert.Equal("num", paragraphs[0].ListLabel?.Indent.NumberingTabValue ?? string.Empty);
+        TestAssert.Equal("360", paragraphs[0].ListLabel?.Indent.NumberingTabPositionValue ?? string.Empty);
+        TestAssert.Equal(18d, paragraphs[0].ListLabel?.Indent.NumberingTabPositionPoints ?? 0d);
         TestAssert.Equal("futureFormat", paragraphs[1].ListLabel?.FormatValue ?? string.Empty);
         TestAssert.Equal("Item %2", paragraphs[1].ListLabel?.LevelTextValue ?? string.Empty);
         TestAssert.Equal("space", paragraphs[1].ListLabel?.SuffixValue ?? string.Empty);
@@ -2426,6 +2429,77 @@ internal static class DocxTests
         TestAssert.Equal(108d, line.Segments[1].X);
     }
 
+    public static void DocxSyntheticNumberingTabPositionMovesMarkerOnly()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                </Relationships>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="7">
+                    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:pPr><w:ind w:left="720" w:hanging="360"/><w:tabs><w:tab w:val="num" w:pos="240"/></w:tabs></w:pPr></w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="3"><w:abstractNumId w:val="7"/></w:num>
+                </w:numbering>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr><w:r><w:t>Indented</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="10000" w:h="4000"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(84d, line.X);
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal("1.", line.Segments[0].Text);
+        TestAssert.Equal(84d, line.Segments[0].X);
+        TestAssert.Equal("Indented", line.Segments[1].Text);
+        TestAssert.Equal(108d, line.Segments[1].X);
+    }
+
     public static void DocxSyntheticNumberingSpaceSuffixPlacesTextAfterLabel()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -2510,7 +2584,7 @@ internal static class DocxTests
             "space",
             "3",
             0,
-            new DocxNumberingIndent(72d, null, null, 36d, "1440", null, null, "720"),
+            new DocxNumberingIndent(72d, null, null, 36d, null, "1440", null, null, "720", null, null),
             DocxTextRunStyle.Empty);
         var paragraph = new DocxParagraph(
             [new DocxTextRun("Alpha Beta Alpha Beta", 10d, null, false, false, false, null, null)],

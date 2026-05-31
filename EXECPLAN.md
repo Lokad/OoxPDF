@@ -2083,6 +2083,14 @@ High-priority actions:
     `20260531-221725` stayed page-stable at `16/16`, zero dimension mismatches, MAE `14.818900`, changed16
     `0.134293`. Keep `DOCX_NUMBERING_INDENT` open for exact numbering tabs and the production per-run PDF
     font resource switch needed for full symbol-glyph parity.
+    2026-05-31 progress: DOCX numbering levels now preserve explicit `w:pPr/w:tabs/w:tab w:val="num"`
+    positions and layout uses that authored marker position instead of always deriving label x from
+    `left - hanging`. Public reader/layout coverage forces the numbering tab to disagree with the derived
+    indent formula and verifies only the marker moves while the paragraph text still starts at the numbering
+    left indent. Private DOCX run `20260531-231855` stayed neutral at `16/16` pages, zero dimension mismatches,
+    MAE `13.648284`, changed16 `0.125542`. Keep the parent open for production per-run PDF font resources,
+    bullet/symbol glyph parity, and any remaining Word numbering restart/override semantics; do not replace
+    these with font-name or document-specific branches.
   2026-05-31 progress: paragraph wrapping now carries separate first-line and continuation-line widths, so
     numbered body and table-cell paragraphs wrap continuation lines against the hanging text column rather than
     reusing the wider first-line space-suffix box. Public `docx-numbering --skip-slow` passed `8` tests with a
@@ -4512,6 +4520,13 @@ Current validation baseline:
   `docx-text --skip-slow` passed `16`, `docx-numbering --skip-slow` passed `9`, and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260531-225034`
   stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=14.791805`, changed16 `0.133893`.
+- DOCX numbering-tab validation:
+  after preserving authored numbering-level `w:tab w:val="num"` positions and using them for marker layout,
+  `docx-numbering --skip-slow` passed `10`, `docx-tables --skip-slow` passed `45`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run
+  `20260531-231855` stayed neutral at `16/16` pages, zero dimension mismatches, `MAE=13.648284`, changed16
+  `0.125542`; remaining private diagnostics are `DOCX_NUMBERING_INDENT`, `DOCX_STYLE_PARAGRAPH_KEEP_RULE`,
+  `DOCX_STYLE_TABLE_STYLE`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
