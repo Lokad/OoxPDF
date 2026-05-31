@@ -1854,6 +1854,12 @@ High-priority actions:
       run `20260531-184720` stayed dimension-stable at 16/16 pages and improved slightly versus the current
       DOCX baseline (`15.849350` MAE, changed16 `0.141574`). `widowControl` and exact keep-with-table
       behavior remain open.
+    - [x] 2026-05-31: Added first-pass DOCX `widowControl` pagination for multi-line body paragraphs. Before
+      drawing a paragraph, layout now starts it on the next page when the current page would fit only one
+      paragraph line or would leave only one paragraph line for the next page. Public coverage checks a
+      three-line paragraph that previously split 2/1 across pages; private DOCX run `20260531-185646` stayed
+      page- and metric-neutral (`15.849350` MAE, changed16 `0.141574`). Keep-with-table behavior and
+      Office-backed edge cases remain open before downgrading the keep-rule diagnostic.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current

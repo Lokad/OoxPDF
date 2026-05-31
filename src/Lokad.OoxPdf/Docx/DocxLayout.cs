@@ -212,7 +212,13 @@ internal sealed class DocxLayoutEngine
                 double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph));
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
-                foreach (string line in WrapTextLines(text, paragraphWidth, paragraphFontSize, embedded))
+                string[] lines = WrapTextLines(text, paragraphWidth, paragraphFontSize, embedded).ToArray();
+                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, document.MarginBottomPoints, HasPageContent()))
+                {
+                    FinishPage();
+                }
+
+                foreach (string line in lines)
                 {
                     if (cursorY - lineHeight < document.MarginBottomPoints && HasPageContent())
                     {
@@ -285,6 +291,27 @@ internal sealed class DocxLayoutEngine
     private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)
     {
         return paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true;
+    }
+
+    private static bool ShouldMoveParagraphForWidowControl(
+        DocxParagraph paragraph,
+        int lineCount,
+        double cursorY,
+        double lineHeight,
+        double marginBottom,
+        bool hasPageContent)
+    {
+        if (paragraph.KeepRules.WidowControl != true ||
+            lineCount <= 1 ||
+            !hasPageContent)
+        {
+            return false;
+        }
+
+        int fittingLineCount = (int)Math.Floor(Math.Max(0d, cursorY - marginBottom) / lineHeight);
+        return fittingLineCount > 0 &&
+            fittingLineCount < lineCount &&
+            (fittingLineCount == 1 || lineCount - fittingLineCount == 1);
     }
 
     private static bool ShouldSuppressContextualSpacing(DocxParagraph? previousParagraph, DocxParagraph paragraph)

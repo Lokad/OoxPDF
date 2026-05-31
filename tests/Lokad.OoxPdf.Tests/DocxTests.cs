@@ -1096,6 +1096,56 @@ internal static class DocxTests
         TestAssert.Equal("End", secondPageLines[2].Text);
     }
 
+    public static void DocxSyntheticParagraphWidowControlMovesThreeLineParagraphToNextPage()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        DocxParagraph widowControlled = CreateDocxLayoutParagraph(
+            "One\nTwo\nThree",
+            fontSize: 10d,
+            lineSpacingPoints: 10d,
+            keepRules: new DocxParagraphKeepRules(null, null, null, null, true, null));
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
+        ];
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Append(new DocxParagraphElement(widowControlled))
+            .ToArray();
+        var document = new DocxDocument(
+            160d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(4, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+        TestAssert.Equal(3, secondPageLines.Length);
+        TestAssert.Equal("One", secondPageLines[0].Text);
+        TestAssert.Equal("Two", secondPageLines[1].Text);
+        TestAssert.Equal("Three", secondPageLines[2].Text);
+    }
+
     public static void DocxSyntheticNumberingRendersListLabels()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
