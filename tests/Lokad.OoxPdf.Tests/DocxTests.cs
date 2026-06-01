@@ -3567,6 +3567,68 @@ internal static class DocxTests
         TestAssert.True(!runs[2].Bold && !runs[2].Italic, "Latin text after the complex-script segment should return to Latin run properties.");
     }
 
+    public static void DocxReaderTableStyleRunPropertiesStayBelowParagraphAndCharacterStyles()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="BodyAccent"><w:rPr><w:b/><w:color w:val="00AA00"/><w:sz w:val="26"/></w:rPr></w:style>
+                  <w:style w:type="character" w:styleId="StrongRed"><w:rPr><w:color w:val="CC0000"/><w:sz w:val="28"/></w:rPr></w:style>
+                  <w:style w:type="table" w:styleId="TextTable">
+                    <w:rPr><w:sz w:val="22"/></w:rPr>
+                    <w:tblStylePr w:type="firstCol"><w:rPr><w:i/><w:caps/><w:color w:val="4472C4"/></w:rPr></w:tblStylePr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="TextTable"/><w:tblLook w:firstColumn="1" w:firstRow="0" w:noHBand="1" w:noVBand="1"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc><w:p><w:pPr><w:pStyle w:val="BodyAccent"/></w:pPr><w:r><w:rPr><w:rStyle w:val="StrongRed"/></w:rPr><w:t>Conflict</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(input));
+        DocxTextRun run = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single().Runs.Single();
+
+        TestAssert.Equal(14d, run.FontSize);
+        TestAssert.Equal("CC0000", run.ColorHex ?? string.Empty);
+        TestAssert.True(run.Bold, "Paragraph-style run properties should remain above table-style run properties.");
+        TestAssert.True(run.Italic, "Non-conflicting table-style italic should still apply.");
+        TestAssert.True(run.AllCaps, "Non-conflicting table-style caps should still apply.");
+        TestAssert.Equal("CONFLICT", run.Text);
+    }
+
     public static void DocxReaderTableStyleUsesCellConditionalFormatTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -5283,6 +5345,35 @@ internal static class DocxTests
 
         TestAssert.Equal(cellLayout.X, cellLayout.TextLines[0].X);
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d, cellLayout.TextLines[0].BaselineY);
+    }
+
+    public static void DocxTableLayoutStageUsesWordDefaultRowMinimumForAutoRows()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("A", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(20.05d, row.Height);
     }
 
     public static void DocxTableLayoutStageExpandsAtLeastRowsByAuthoredTopCellMargin()

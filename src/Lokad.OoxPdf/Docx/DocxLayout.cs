@@ -403,7 +403,8 @@ internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocx
 internal sealed class DocxLayoutEngine
 {
     private const double BaselineOffsetFactor = 0.94d;
-    private const double DefaultTableRowHeight = 16d;
+    private const double WordDefaultTableRowMinimumTwips = 401d;
+    private const double WordDefaultTableRowMinimumHeight = WordDefaultTableRowMinimumTwips / 20d;
     private const double AuthoredMarginTableCellFirstBaselineInset = 17d;
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
@@ -878,7 +879,7 @@ internal sealed class DocxLayoutEngine
         double[] rowHeights = table.Rows
             .Select(row => MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer))
             .ToArray();
-        double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? DefaultTableRowHeight);
+        double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? WordDefaultTableRowMinimumHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
         {
             finishPage();
@@ -1021,8 +1022,8 @@ internal sealed class DocxLayoutEngine
         }
 
         double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
-            ? DefaultTableRowHeight
-            : row.HeightPoints ?? DefaultTableRowHeight;
+            ? WordDefaultTableRowMinimumHeight
+            : row.HeightPoints ?? WordDefaultTableRowMinimumHeight;
         if (row.HeightPoints is not null &&
             !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
         {

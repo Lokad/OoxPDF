@@ -1911,6 +1911,10 @@ High-priority actions:
     the loss is concentrated in eight first table rows whose max font size drops from `13pt` to `10pt`; most
     shrink from `20.05pt` to the current default `16pt`, with one wrapped first row shrinking by `22.30pt`.
     Do not land the correct run cascade until the table-row vertical composition gap below is fixed.
+    2026-06-01 progress: moved table-style run properties below paragraph/character styles after adding the
+    row-minimum fix below. Public `docx-ladder-03-table-style-text-precedence` improved to `MAE=0.262365`,
+    changed16 `0.003536`, and the private DOCX stayed accepted at `16/16` pages with zero dimension
+    mismatches while improving to `MAE=12.716572`, changed16 `0.118448`.
   - [ ] 2026-06-01: Fix DOCX table-row vertical composition so correct table-style run precedence does not
     rely on oversized table-style fonts to preserve page count. The accepted private baseline currently keeps
     16 pages partly because table-style font-size precedence is wrong; after the Office-confirmed cascade fix,
@@ -1918,6 +1922,11 @@ High-priority actions:
     Office-backed probes for default table row minimums, line-height plus paragraph spacing inside cells, and
     first-row/header-row spacing before retrying the run cascade. The new private-safe `tools/InspectDocx.ps1`
     layout snapshot includes per-row and per-cell max font sizes to diagnose this without private text.
+    2026-06-01 progress: introduced `WordDefaultTableRowMinimumTwips = 401` as the generic auto-row floor used
+    when no explicit `w:trHeight` owns the row. This restores the private DOCX to 16 candidate pages after the
+    correct run cascade and improves aggregate metrics, but keep the item open for a broader Office-authored
+    ladder around empty rows, multi-line rows, explicit `auto/atLeast/exact` heights, and first-row/header-row
+    baseline placement before treating the 401-twip default as fully explained.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current

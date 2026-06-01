@@ -1401,6 +1401,11 @@ internal sealed class DocxReader
         DocxResolvedRunProperties? tableStyleProperties = null)
     {
         DocxResolvedRunProperties result = styles.RunDefaults;
+        if (tableStyleProperties is { } tableProperties)
+        {
+            result = result.Merge(tableProperties);
+        }
+
         foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
         {
             result = result.Merge(paragraphStyle.Run);
@@ -1409,11 +1414,6 @@ internal sealed class DocxReader
         foreach (DocxStyle characterStyle in EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles))
         {
             result = result.Merge(characterStyle.Run);
-        }
-
-        if (tableStyleProperties is { } tableProperties)
-        {
-            result = result.Merge(tableProperties);
         }
 
         return result.Merge(ReadRunProperties(directProperties));
