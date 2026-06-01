@@ -851,6 +851,72 @@ try {
         $tableTextState.Close($false)
     }
 
+    $textStateContext = $word.Documents.Add()
+    try {
+        $textStateContext.PageSetup.PageWidth = 612
+        $textStateContext.PageSetup.PageHeight = 792
+        $textStateContext.PageSetup.TopMargin = 72
+        $textStateContext.PageSetup.BottomMargin = 72
+        $textStateContext.PageSetup.LeftMargin = 72
+        $textStateContext.PageSetup.RightMargin = 72
+        $textStateContext.Content.Text = "DOCX text-state context`r`n42`r`nQ1`r`nNorth`r`n"
+
+        $heading = $textStateContext.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        for ($paragraph = 2; $paragraph -le 4; $paragraph++) {
+            $body = $textStateContext.Paragraphs.Item($paragraph).Range
+            $body.Font.Name = "Arial"
+            $body.Font.Size = 11
+            $body.Font.Color = Rgb 30 30 30
+            $body.ParagraphFormat.SpaceBefore = 0
+            $body.ParagraphFormat.SpaceAfter = 0
+        }
+
+        $range = $textStateContext.Paragraphs.Item(5).Range
+        $tbl = $textStateContext.Tables.Add($range, 3, 4)
+        $tbl.Borders.Enable = $true
+        $tbl.AllowAutoFit = $false
+        $tbl.Rows.Alignment = 0
+        $tbl.Columns.Item(1).Width = 95
+        $tbl.Columns.Item(2).Width = 95
+        $tbl.Columns.Item(3).Width = 95
+        $tbl.Columns.Item(4).Width = 185
+
+        $values = @(
+            @("42", "Q1", "AB", "North"),
+            @("42", "Q1", "AB", "North"),
+            @("128", "R2", "X9", "East")
+        )
+        for ($row = 1; $row -le 3; $row++) {
+            for ($column = 1; $column -le 4; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Text = $values[$row - 1][$column - 1]
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = 11
+                $cell.Range.ParagraphFormat.SpaceBefore = 0
+                $cell.Range.ParagraphFormat.SpaceAfter = 0
+                if ($row -eq 1) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 47 128 237
+                    $cell.Range.Font.Color = Rgb 255 255 255
+                    $cell.Range.Font.Bold = $true
+                }
+                elseif (($row + $column) % 2 -eq 0) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 232 244 253
+                }
+            }
+        }
+
+        $textStateContext.SaveAs2((Join-Path $cases "docx-ladder-03-text-state-context.docx"), 16)
+    }
+    finally {
+        $textStateContext.Close($false)
+    }
+
     $rowHeights = $word.Documents.Add()
     try {
         $rowHeights.PageSetup.PageWidth = 612

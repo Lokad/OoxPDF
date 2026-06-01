@@ -5531,6 +5531,16 @@ Current validation baseline:
   distinguish digits/letters/alphanumeric/empty operations without exposing decoded text. Keep rendering
   unchanged until another probe separates text class from table role and header/body state; do not collapse
   this into a digit-only or column-number shortcut.
+  2026-06-01 context probe: added `docx-ladder-03-text-state-context` to put the same short digit,
+  alphanumeric, and letter tokens in normal paragraphs, table header cells, and table body cells. Run
+  `20260601-133921` shows Word's short-token `Tc` behavior crosses paragraph/table boundaries and is not a
+  pure digit rule: paragraph `42` uses `Tc=-0.0182`, paragraph `Q1` uses `Tc=0.0509`, table `42`/`128` use
+  `Tc=-0.0182`, table `Q1` uses `Tc=0.0509`, while short alphabetic/alphanumeric pairs can use
+  `Tc=-0.0509` or `-0.0437` depending on the glyph pair and row context. Longer text generally stays at
+  `Tc=0` with residuals in positioning arrays. This suggests the long-term target is a generic Office text
+  emission decomposition that can promote uniform short-run advance residuals into `Tc` where Word does, not a
+  table-specific or text-class-specific special case. Candidate still has a decomposition gap here (`35`
+  reference operations vs `33` candidate operations, all candidate `Tc=0`).
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

@@ -1,0 +1,13 @@
+{
+  "id": "docx-ladder-03-text-state-context",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-text-state-context.docx",
+  "dpi": 144,
+  "tags": ["docx", "text", "tables", "text-state", "ladder-03"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}
