@@ -23,11 +23,17 @@ internal sealed class DocxReader
     private const string SettingsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings";
     private const string FontTableRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable";
     private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
+    private const string CommentsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments";
+    private const string FootnotesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes";
+    private const string EndnotesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes";
     private const string StylesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
     private const string NumberingContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
     private const string SettingsContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml";
     private const string FontTableContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml";
     private const string ThemeContentType = "application/vnd.openxmlformats-officedocument.theme+xml";
+    private const string CommentsContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml";
+    private const string FootnotesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml";
+    private const string EndnotesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml";
     private const double WordAutomaticParagraphSpacingPoints = 14d;
     public DocxDocument Read(OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
@@ -283,7 +289,10 @@ internal sealed class DocxReader
         if (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
             document.Descendants(WordprocessingNamespace + "commentReference").Any())
         {
-            Emit("DOCX_UNSUPPORTED_COMMENTS", "comments");
+            Emit(
+                "DOCX_UNSUPPORTED_COMMENTS",
+                "comments",
+                ResolveRelatedPartNameOrDefault(package, partName, CommentsRelationshipType, CommentsContentType));
         }
 
         if (HasUnsupportedTrackedChanges(document))
@@ -314,12 +323,18 @@ internal sealed class DocxReader
 
         if (document.Descendants(WordprocessingNamespace + "footnoteReference").Any())
         {
-            Emit("DOCX_UNSUPPORTED_FOOTNOTE", "footnote");
+            Emit(
+                "DOCX_UNSUPPORTED_FOOTNOTE",
+                "footnote",
+                ResolveRelatedPartNameOrDefault(package, partName, FootnotesRelationshipType, FootnotesContentType));
         }
 
         if (document.Descendants(WordprocessingNamespace + "endnoteReference").Any())
         {
-            Emit("DOCX_UNSUPPORTED_ENDNOTE", "endnote");
+            Emit(
+                "DOCX_UNSUPPORTED_ENDNOTE",
+                "endnote",
+                ResolveRelatedPartNameOrDefault(package, partName, EndnotesRelationshipType, EndnotesContentType));
         }
 
         if (document.Descendants(WordprocessingNamespace + "cols").Any(cols =>
@@ -554,11 +569,7 @@ internal sealed class DocxReader
 
     private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName)
     {
-        OoxRelationship? relationship = package.GetRelationships(documentPartName)
-            .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
-        OoxPart? part = relationship?.ResolvedTarget is null
-            ? package.Parts.FirstOrDefault(p => p.ContentType == contentType)
-            : package.GetPart(relationship.ResolvedTarget);
+        OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType);
         relatedPartName = part?.Name;
         if (part is null)
         {
@@ -567,6 +578,20 @@ internal sealed class DocxReader
 
         using Stream stream = part.OpenRead();
         return SafeXml.Load(stream);
+    }
+
+    private static string ResolveRelatedPartNameOrDefault(OoxPackage package, string documentPartName, string relationshipType, string contentType)
+    {
+        return FindRelatedPart(package, documentPartName, relationshipType, contentType)?.Name ?? documentPartName;
+    }
+
+    private static OoxPart? FindRelatedPart(OoxPackage package, string documentPartName, string relationshipType, string contentType)
+    {
+        OoxRelationship? relationship = package.GetRelationships(documentPartName)
+            .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
+        return relationship?.ResolvedTarget is null
+            ? package.Parts.FirstOrDefault(p => p.ContentType == contentType)
+            : package.GetPart(relationship.ResolvedTarget);
     }
 
     private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName)

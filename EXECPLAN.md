@@ -4423,6 +4423,16 @@ block models and richer section/pagination layout before adding more Word pagina
 - [ ] Fields: `PAGE`, `NUMPAGES`, `DATE`, `REF`, `HYPERLINK`, `TOC`, `SEQ`, form fields, and cached-field
   fallback semantics.
 - [ ] Footnotes/endnotes/comments: render bodies or emit precise diagnostics with usable fallback behavior.
+  - [x] 2026-06-02: precise unsupported diagnostics now preserve related story-part ownership when the
+    referenced body part exists. `DocxReader` resolves `/word/comments.xml`, `/word/footnotes.xml`, and
+    `/word/endnotes.xml` through the main document relationships or content types before emitting
+    `DOCX_UNSUPPORTED_COMMENTS`, `DOCX_UNSUPPORTED_FOOTNOTE`, and `DOCX_UNSUPPORTED_ENDNOTE`; if a document
+    has only main-story references and no related body part, diagnostics remain scoped to `/word/document.xml`.
+    This keeps the fallback private-safe and structurally aligned with the OOXML package instead of flattening
+    ignored side stories into the body story. Bottom-up coverage `DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames`
+    builds a minimal synthetic package with all three story parts and checks their diagnostic part names.
+    Validation passed `docx-core --skip-slow` (`26`). Keep this item open for actual footnote/endnote/comment
+    body rendering and placement.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent

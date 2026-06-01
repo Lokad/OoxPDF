@@ -10144,6 +10144,82 @@ internal static class DocxTests
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.PartName == "/word/document.xml"), "Unsupported DOCX diagnostics should be document-scoped warnings.");
     }
 
+    public static void DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                  <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
+                  <Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                  <Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
+                  <Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:commentRangeStart w:id="1"/>
+                      <w:r><w:t>Referenced story bodies</w:t></w:r>
+                      <w:r><w:commentReference w:id="1"/></w:r>
+                      <w:r><w:footnoteReference w:id="2"/></w:r>
+                      <w:r><w:endnoteReference w:id="3"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1"><w:p><w:r><w:t>Comment body</w:t></w:r></w:p></w:comment>
+                </w:comments>
+                """,
+            ["word/footnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:footnote w:id="2"><w:p><w:r><w:t>Footnote body</w:t></w:r></w:p></w:footnote>
+                </w:footnotes>
+                """,
+            ["word/endnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:endnote w:id="3"><w:p><w:r><w:t>Endnote body</w:t></w:r></w:p></w:endnote>
+                </w:endnotes>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_COMMENTS" && d.PartName == "/word/comments.xml"), "Comments diagnostics should point to comments.xml when the story body exists.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_FOOTNOTE" && d.PartName == "/word/footnotes.xml"), "Footnote diagnostics should point to footnotes.xml when the story body exists.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_ENDNOTE" && d.PartName == "/word/endnotes.xml"), "Endnote diagnostics should point to endnotes.xml when the story body exists.");
+        TestAssert.True(!diagnostics.Any(d =>
+            (d.Id == "DOCX_UNSUPPORTED_COMMENTS" || d.Id == "DOCX_UNSUPPORTED_FOOTNOTE" || d.Id == "DOCX_UNSUPPORTED_ENDNOTE") &&
+            d.PartName == "/word/document.xml"), "Story-body diagnostics should not be flattened to document.xml when the related body part exists.");
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
