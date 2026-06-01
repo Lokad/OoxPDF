@@ -6017,6 +6017,9 @@ internal static class DocxTests
         TestAssert.Equal(3d, tableCell.MarginRightPoints ?? 0d);
         TestAssert.Equal(4d, tableCell.MarginBottomPoints ?? 0d);
         TestAssert.Equal(5d, tableCell.MarginLeftPoints ?? 0d);
+        TestAssert.True(tableCell.FirstTextLineX is not null, "Snapshot should expose private-safe cell text x-position.");
+        TestAssert.True(tableCell.FirstBaselineY is not null, "Snapshot should expose private-safe first baseline.");
+        TestAssert.True(tableCell.LastBaselineY is not null, "Snapshot should expose private-safe last baseline.");
         TestAssert.Equal(1, tableCell.BorderCount);
         TestAssert.True(tableCell.HasFill, "Snapshot should expose fill presence without the fill value.");
         TestAssert.True(tableCell.HasShadingValue, "Snapshot should expose shading presence without the shading color.");

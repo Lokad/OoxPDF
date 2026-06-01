@@ -143,6 +143,8 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
     private static DocxTableCellSnapshot ToTableCellSnapshot(DocxTableCellLayout cellLayout, int cellIndex)
     {
         DocxTableCell cell = cellLayout.Cell;
+        DocxTextLineLayout? firstLine = cellLayout.TextLines.FirstOrDefault();
+        DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
         return new DocxTableCellSnapshot(
             cellIndex,
             cellLayout.X,
@@ -152,6 +154,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cellLayout.TextLines.Count,
             cellLayout.TextLines.Sum(line => line.Text.Length),
             cellLayout.TextLines.Count == 0 ? 0d : cellLayout.TextLines.Max(line => line.FontSize),
+            firstLine?.X,
+            firstLine?.BaselineY,
+            lastLine?.BaselineY,
             cellLayout.InlineImages.Count,
             cell.GridSpan,
             cell.GridSpanValue,
@@ -256,6 +261,9 @@ internal sealed record DocxTableCellSnapshot(
     int TextLineCount,
     int TextLength,
     double MaxFontSize,
+    double? FirstTextLineX,
+    double? FirstBaselineY,
+    double? LastBaselineY,
     int InlineImageCount,
     int GridSpan,
     string? GridSpanValue,

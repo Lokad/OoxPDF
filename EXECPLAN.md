@@ -3676,6 +3676,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     continuation. Validation passed `docx-core --skip-slow` (`16`), `docx-tables --skip-slow` (`50`), and
     full solution build. Private DOCX run `20260601-003853` stayed neutral at `16/16` pages, zero dimension
     mismatches, no diagnostics, `MAE=12.509698`, changed16 `0.112673`.
+  - [x] 2026-06-01: Extended the private-safe table-cell trace with first text-line x, first baseline y, and
+    last baseline y. The row-height ladder showed that table/cell y drift cannot be diagnosed from row bounds
+    alone: candidate cell text now has near-Office x after default horizontal padding, but baseline y remains
+    a row/table placement problem. The new fields expose only geometry and text-line counts, not cell text.
+    Validation passed `docx-core --skip-slow` (`19`) and `docx-tables --skip-slow` (`62`).
   - [ ] Finish table-level ownership by exposing row height rule/value tokens and the resolved column grid
     itself, then use the trace to select the simple/dense/worst private tables below. Vertical merges now
     affect same-page layout/rendering, but cross-page merged-cell behavior and resolved-grid tracing remain
