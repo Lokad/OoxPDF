@@ -2416,6 +2416,15 @@ High-priority actions:
       pages, zero dimension mismatches, no diagnostics, `MAE=13.855991`, changed16 `0.127419`. Keep this
       parent open for exact footer stacking direction, paragraph spacing inside headers/footers, true Word
       field evaluation, and richer private-safe snapshots of selected static parts beyond counts.
+      2026-06-01 follow-up: static header/footer layout now applies the same max-collapse paragraph
+      before/after spacing shape used by body/table text and creates invisible paragraph-mark lines for empty
+      static paragraphs instead of silently dropping their line boxes. Public `docx-page --skip-slow` passed
+      (`29`), `docx-text --skip-slow` passed (`38`), `docx-tables --skip-slow` passed (`77`), and
+      `docx-headers-footers` stayed unchanged at `MAE=0.073352`, changed16 `0.002110` (`20260601-154643`).
+      Private DOCX run `20260601-154658` stayed neutral at `16/16` pages, zero dimension mismatches, no
+      diagnostics, `MAE=13.855991`, changed16 `0.127419`. Keep the parent open for exact footer stacking
+      direction, contextual-spacing edge cases in static parts, true field evaluation, and richer private-safe
+      static-part snapshots.
     - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the

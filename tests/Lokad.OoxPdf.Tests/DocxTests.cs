@@ -8384,6 +8384,85 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.Pages[0].StaticTextLineCount);
     }
 
+    public static void DocxLayoutStageAppliesStaticHeaderParagraphSpacing()
+    {
+        DocxParagraph first = new(
+            [new DocxTextRun("A", 10d, null, false, false, false, null, "Narrow")],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            6d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph second = new(
+            [new DocxTextRun("B", 10d, null, false, false, false, null, "Narrow")],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            4d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = new(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            12d,
+            12d,
+            "240",
+            "240",
+            null,
+            null,
+            null,
+            null)
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [first, second]
+            }
+        };
+        DocxDocument document = new(
+            100d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        DocxTextLineLayout[] staticLines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .StaticTextLines
+            .ToArray();
+
+        TestAssert.Equal(2, staticLines.Length);
+        TestAssert.Equal("A", staticLines[0].Text);
+        TestAssert.Equal(178d, staticLines[0].BaselineY);
+        TestAssert.Equal("B", staticLines[1].Text);
+        TestAssert.Equal(160d, staticLines[1].BaselineY);
+    }
+
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

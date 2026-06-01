@@ -804,15 +804,18 @@ internal sealed class DocxLayoutEngine
     {
         var lines = new List<DocxTextLineLayout>();
         double cursorY = startY;
+        double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
         foreach (DocxParagraph paragraph in paragraphs)
         {
-            DocxTextSpan[] spans = paragraph.Runs
-                .Where(run => !run.Hidden)
-                .Select(run => new DocxTextSpan(ResolveStaticFieldPlaceholders(run.Text, pageNumber, pageCount), run))
-                .Where(span => span.Text.Length != 0)
-                .ToArray();
+            cursorY -= ShouldSuppressContextualSpacing(previousParagraph, paragraph)
+                ? 0d
+                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            pendingSpacingAfter = 0d;
+            DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs, pageNumber, pageCount);
             if (spans.Length == 0)
             {
+                previousParagraph = paragraph;
                 continue;
             }
 
@@ -844,9 +847,27 @@ internal sealed class DocxLayoutEngine
                     segments));
                 cursorY -= ascender + descender;
             }
+
+            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            previousParagraph = paragraph;
         }
 
         return lines;
+    }
+
+    private static DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs, int pageNumber, int pageCount)
+    {
+        if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.Hidden))
+        {
+            DocxTextRun? paragraphMark = runs.FirstOrDefault(run => !run.Hidden);
+            return paragraphMark is null ? [] : [new DocxTextSpan(" ", paragraphMark)];
+        }
+
+        return runs
+            .Where(run => !run.Hidden)
+            .Select(run => new DocxTextSpan(ResolveStaticFieldPlaceholders(run.Text, pageNumber, pageCount), run))
+            .Where(span => span.Text.Length != 0)
+            .ToArray();
     }
 
     private static IEnumerable<DocxWrappedTextLine> WrapStaticTextLines(
