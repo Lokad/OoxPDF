@@ -852,6 +852,113 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-bottom-slack.docx")
     "word/document.xml" = $tableBottomSlackDocument
 }
 
+function New-DocxRowFragmentProbeRow {
+    param(
+        [int]$Index,
+        [string]$Text,
+        [bool]$Shaded = $false,
+        [bool]$CantSplit = $false
+    )
+
+    $shade = if ($Shaded) { '<w:shd w:val="clear" w:fill="E7E6E6"/>' } else { '' }
+    $cantSplitXml = if ($CantSplit) { '<w:trPr><w:cantSplit/></w:trPr>' } else { '' }
+    return @"
+      <w:tr>
+        $cantSplitXml
+        <w:tc><w:tcPr><w:tcW w:w="567" w:type="dxa"/>$shade</w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$("{0:00}" -f $Index)</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="5670" w:type="dxa"/>$shade</w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$Text</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="2783" w:type="dxa"/>$shade</w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>Boundary probe</w:t></w:r></w:p></w:tc>
+      </w:tr>
+"@
+}
+
+function New-DocxRowFragmentProbePage {
+    param(
+        [string]$Label,
+        [int]$RowsBefore,
+        [bool]$TargetCantSplit = $false
+    )
+
+    $rows = @(
+        for ($i = 1; $i -le $RowsBefore; $i++) {
+            $text = if (($i % 3) -eq 0) {
+                "Compact public row with ordinary words and no private content."
+            } elseif (($i % 3) -eq 1) {
+                "Short status row for stable row-band rhythm."
+            } else {
+                "Two line candidate with enough words to wrap inside the wide middle cell."
+            }
+            New-DocxRowFragmentProbeRow -Index $i -Text $text -Shaded:(($i % 2) -eq 0)
+        }
+        New-DocxRowFragmentProbeRow `
+            -Index ($RowsBefore + 1) `
+            -Text "Target row $Label carries wrapped public text that should expose whether Word keeps a visible bottom fragment, moves the whole row, or creates a continuation on the next page." `
+            -Shaded:$true `
+            -CantSplit:$TargetCantSplit
+    ) -join "`n"
+
+    return @"
+    <w:p>
+      <w:pPr><w:spacing w:after="60" w:line="276" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="20"/></w:rPr><w:t>Fragment probe $Label</w:t></w:r>
+    </w:p>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="5000" w:type="pct"/>
+        <w:tblLayout w:type="fixed"/>
+        <w:tblCellMar>
+          <w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/>
+          <w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/>
+        </w:tblCellMar>
+      </w:tblPr>
+      <w:tblGrid><w:gridCol w:w="567"/><w:gridCol w:w="5670"/><w:gridCol w:w="2783"/></w:tblGrid>
+$rows
+    </w:tbl>
+    <w:p><w:pPr><w:spacing w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>After-table marker $Label</w:t></w:r></w:p>
+"@
+}
+
+$rowFragmentProbePages = @(
+    New-DocxRowFragmentProbePage -Label "A-low-overflow" -RowsBefore 14
+    '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'
+    New-DocxRowFragmentProbePage -Label "B-mid-overflow" -RowsBefore 15
+    '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'
+    New-DocxRowFragmentProbePage -Label "C-tight-overflow" -RowsBefore 16
+    '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'
+    New-DocxRowFragmentProbePage -Label "D-cant-split" -RowsBefore 16 -TargetCantSplit $true
+) -join "`n"
+
+$rowFragmentProbeDocument = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+$rowFragmentProbePages
+    <w:sectPr>
+      <w:pgSz w:w="11900" w:h="8640"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+"@
+
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-row-fragment-threshold.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/document.xml" = $rowFragmentProbeDocument
+}
+
 $interTableRows = @(
     for ($i = 1; $i -le 32; $i++) {
         $c2 = if (($i % 4) -eq 0) { "Compact planning marker" } elseif (($i % 4) -eq 1) { "Review marker" } elseif (($i % 4) -eq 2) { "Measured status" } else { "Public row" }

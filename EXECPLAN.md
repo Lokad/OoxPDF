@@ -492,6 +492,18 @@ High-priority actions:
   text-bearing top fragments with empty continuations. Reverted behavior. The next attempt needs a structural
   discriminator for when Word keeps such bottom text fragments versus moving the row, not just a line-box fit
   rule.
+  2026-06-01 follow-up: added public `docx-ladder-03-table-row-fragment-threshold` as an open diagnostic probe
+  with repeated compact fixed tables, a wrapped shaded target row, and a `w:cantSplit` contrast. After removing
+  a confounding page-top heading before-spacing signal, Office-backed run `20260601-222516` renders seven
+  reference pages against six candidate pages, so the probe intentionally disables page/dimension gates until
+  the feature is implemented. It demonstrates that the missing model is not just visible row placement on a
+  crowded page: Office creates short continuation pages for the overflowing table sequences, while the current
+  candidate keeps rows atomic and collapses one continuation page away. A trial that suppressed body paragraph
+  before-spacing at page top made this probe worse and badly regressed `docx-ladder-03-table-bottom-slack`
+  (`MAE 6.65/3.55 -> 12.64/3.15`), so it was reverted. Keep the case as the public row-fragment/page-count
+  oracle. The next implementation must create first/continuation row fragments from row line boxes and
+  `w:cantSplit`, emit continuation pages even when the visible carry-over is small, and avoid the previously
+  rejected private regression where text-bearing top fragments were paired with empty continuations.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
