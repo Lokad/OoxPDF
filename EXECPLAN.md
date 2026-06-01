@@ -425,6 +425,13 @@ High-priority actions:
   rows as atomic page items. The next implementation slice should preserve `w:cantSplit`, then introduce
   explicit row-fragment layout records so split rows carry per-fragment cell rectangles, clipped text lines,
   and suppressed continuation borders instead of using a hard-coded page slack heuristic.
+  2026-06-01 rejection: a first production row-fragment trial split auto-height shaded rows without vertical
+  cell padding and improved `docx-ladder-03-table-bottom-slack` page 2 (`MAE 3.551346 -> 2.889362`), but it
+  regressed the private DOCX acceptance run (`8.927676 -> 9.641534` average MAE, worst page `15.784794`) and
+  initially disturbed `docx-ladder-03-table-pagination-margins` until declared-height rows were excluded.
+  Keep the public probe and `w:cantSplit` preservation, but do not reintroduce row fragmentation until the
+  layout model can represent line-box-derived fragment heights, declared-height row behavior, and continuation
+  border suppression from public Office evidence rather than clipping full-row layouts after the fact.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
