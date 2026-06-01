@@ -263,10 +263,10 @@ internal sealed class DocxRenderer
         DocxTextRun style = segment.StyleRun;
         string text = ResolveStaticFieldPlaceholders(segment.Text, pageNumber, pageCount);
         RgbColor color = ReadColor(style.ColorHex);
-        DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color, segment.PdfCharacterSpacing);
+        DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
         if (ShouldApplySyntheticBold(style, resource))
         {
-            DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color, segment.PdfCharacterSpacing);
+            DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
         }
 
         if (style.Underline)
@@ -379,7 +379,7 @@ internal sealed class DocxRenderer
             }
 
             RgbColor color = ReadColor(segment.StyleRun.ColorHex);
-            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color, segment.PdfCharacterSpacing);
+            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
             return;
         }
     }
@@ -393,11 +393,14 @@ internal sealed class DocxRenderer
         double x,
         double baselineY,
         RgbColor color,
-        double pdfCharacterSpacing = 0d)
+        double pdfCharacterSpacing = 0d,
+        bool compensatePdfCharacterSpacing = true)
     {
         bool syntheticItalic = style.Italic && !resource.Resolution.Italic;
         double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(fontSize);
-        double positioningCharacterSpacing = style.CharacterSpacingPoints - pdfCharacterSpacing;
+        double positioningCharacterSpacing = compensatePdfCharacterSpacing
+            ? style.CharacterSpacingPoints - pdfCharacterSpacing
+            : style.CharacterSpacingPoints;
         string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, positioningCharacterSpacing, pdfFontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {

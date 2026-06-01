@@ -3851,7 +3851,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Contains("0.044 Tc", pdf);
+        TestAssert.Equal(2, Regex.Matches(pdf, "0\\.044 Tc").Count);
         TestAssert.Equal(8, CountPdfTextShows(pdf));
     }
 

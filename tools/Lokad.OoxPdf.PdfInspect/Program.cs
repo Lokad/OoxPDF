@@ -492,13 +492,13 @@ internal sealed record PdfTextOperation(
         double x = 0d;
         double y = 0d;
         PdfMatrix currentMatrix = PdfMatrix.Identity;
-        var graphicsStack = new Stack<PdfMatrix>();
+        var graphicsStack = new Stack<TextExtractionState>();
 
         foreach (string line in stream.Split('\n'))
         {
             foreach (Match _ in SaveGraphicsStateRegex.Matches(line))
             {
-                graphicsStack.Push(currentMatrix);
+                graphicsStack.Push(new TextExtractionState(font, fontSize, characterSpacing, currentMatrix));
             }
 
             foreach (Match match in CurrentMatrixRegex.Matches(line))
@@ -578,12 +578,32 @@ internal sealed record PdfTextOperation(
 
             foreach (Match _ in RestoreGraphicsStateRegex.Matches(line))
             {
-                currentMatrix = graphicsStack.Count == 0 ? PdfMatrix.Identity : graphicsStack.Pop();
+                if (graphicsStack.Count == 0)
+                {
+                    font = string.Empty;
+                    fontSize = 0d;
+                    characterSpacing = 0d;
+                    currentMatrix = PdfMatrix.Identity;
+                }
+                else
+                {
+                    TextExtractionState restored = graphicsStack.Pop();
+                    font = restored.Font;
+                    fontSize = restored.FontSize;
+                    characterSpacing = restored.CharacterSpacing;
+                    currentMatrix = restored.CurrentMatrix;
+                }
             }
         }
 
         return operations;
     }
+
+    private sealed record TextExtractionState(
+        string Font,
+        double FontSize,
+        double CharacterSpacing,
+        PdfMatrix CurrentMatrix);
 
     private static double ReadDouble(string value) => double.Parse(value, CultureInfo.InvariantCulture);
 
