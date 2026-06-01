@@ -8034,7 +8034,7 @@ internal static class DocxTests
         TestAssert.Equal(cellLayout.X + 0.24d, cellLayout.TextLines[0].X);
     }
 
-    public static void DocxTableLayoutStageUsesWordDefaultRowMinimumForAutoRows()
+    public static void DocxTableLayoutStageDoesNotInventDefaultRowMinimumForAutoRows()
     {
         var paragraph = new DocxParagraph(
             [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
@@ -8060,10 +8060,10 @@ internal static class DocxTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
-        TestAssert.Equal(20.05d, row.Height);
+        TestAssert.Equal(10d, row.Height);
     }
 
-    public static void DocxTableLayoutStageIncludesCollapsedHorizontalBorderAdvanceForAutoRows()
+    public static void DocxTableLayoutStageIncludesCollapsedHorizontalBorderAdvanceForContentRows()
     {
         var paragraph = new DocxParagraph(
             [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
@@ -8093,7 +8093,7 @@ internal static class DocxTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
-        TestAssert.Equal(20.53d, row.Height);
+        TestAssert.Equal(10.48d, row.Height);
     }
 
     public static void DocxTableLayoutStageLetsTablePropertyExceptionRowsUseContentHeight()

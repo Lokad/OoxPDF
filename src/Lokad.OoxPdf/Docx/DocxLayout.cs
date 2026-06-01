@@ -60,6 +60,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
         return new DocxLayoutPageSnapshot(
             page.Width,
             page.Height,
+            page.MarginLeft,
+            page.MarginRight,
+            page.MarginTop,
+            page.MarginBottom,
             items.Count,
             page.StaticTextLines.Count,
             items.Count(item => item.Kind == "TextLine"),
@@ -324,6 +328,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
 internal sealed record DocxLayoutPageSnapshot(
     double Width,
     double Height,
+    double MarginLeft,
+    double MarginRight,
+    double MarginTop,
+    double MarginBottom,
     int ItemCount,
     int StaticTextLineCount,
     int TextLineCount,

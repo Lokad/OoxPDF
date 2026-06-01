@@ -39,6 +39,9 @@ keep diagnostics honest when a feature is still missing.
 - `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
   from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, and positioned-glyph
   residual buckets. It must not emit decoded document text.
+- `tools/SummarizeDocxRowBoundary.ps1`: private-safe DOCX table-row boundary summary for visual run directories.
+  It combines layout-snapshot row bands and PDF text rows near the page bottom, emitting row indices, geometry,
+  baseline diagnostics, lengths, and hashes without decoded document text.
 - `tools/SummarizePdfTextPageDeltas.ps1`: private-safe per-page Office/candidate PDF text-operation summary
   for visual run directories. It reports operation counts, `Tc` buckets, text-class buckets, and coordinate
   span deltas without decoded document text.
@@ -468,6 +471,13 @@ High-priority actions:
   public/private row-fragment comparisons explicit: a row can now be classified by whether its band crosses
   the body bottom, whether only the first line box fits, and whether lower line boxes require clipping or
   continuation.
+  2026-06-01 tooling follow-up: layout page snapshots now also expose page-local margins, and
+  `tools/SummarizeDocxRowBoundary.ps1` compares bottom-window layout rows against Office/candidate PDF text rows
+  using hashes and lengths only. On public `docx-ladder-03-table-heading-table-keepnext` run `20260601-211327`,
+  the reference has two bottom text rows on page 2 that are absent from the candidate page-2 hash set, while
+  candidate layout has already pushed the next table row to page 3. On private accepted run `20260601-205142`,
+  pages 14..16 show the same boundary class around the worst page without exposing text. This confirms the next
+  implementation needs a row-fragment/page-boundary model with text-row carry-over, not another fit predicate.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
