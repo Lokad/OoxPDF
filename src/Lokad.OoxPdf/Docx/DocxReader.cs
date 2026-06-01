@@ -475,44 +475,15 @@ internal sealed class DocxReader
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
         bool pageInstructionSeen = false;
-        foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
+        foreach (XElement child in paragraph.Elements())
         {
-            string text = ReadRunText(run);
-            if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
+            if (child.Name == WordprocessingNamespace + "r")
             {
-                text = "{PAGE}";
-                pageInstructionSeen = true;
+                AddParagraphRun(child, ref pageInstructionSeen);
             }
-            else if (pageInstructionSeen && text.Trim().All(char.IsDigit))
+            else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
-                text = string.Empty;
-            }
-
-            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
-            string? characterStyleId = (string?)runProperties?
-                .Element(WordprocessingNamespace + "rStyle")
-                ?.Attribute(WordprocessingNamespace + "val");
-            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
-                runProperties,
-                paragraphStyleId,
-                characterStyleId,
-                styles,
-                tableCellStyle?.Run);
-            if (text.Length != 0)
-            {
-                string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
-                AddResolvedTextRuns(runs, displayText, resolvedRun);
-            }
-
-            images.AddRange(ReadInlineImages(run, package, relationships));
-        }
-
-        foreach (XElement field in paragraph.Elements(WordprocessingNamespace + "fldSimple"))
-        {
-            string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
-            if (instruction?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null, null));
+                AddSimpleField(child);
             }
         }
 
@@ -540,6 +511,78 @@ internal sealed class DocxReader
         {
             Indent = resolvedParagraph.Indent
         };
+
+        void AddSimpleField(XElement field)
+        {
+            string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
+            if (instruction?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
+                if (firstRun is null)
+                {
+                    runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null, null));
+                    return;
+                }
+
+                AddFieldPlaceholderRun(firstRun, "{PAGE}");
+                images.AddRange(ReadInlineImages(firstRun, package, relationships));
+                return;
+            }
+
+            foreach (XElement fieldRun in field.Elements(WordprocessingNamespace + "r"))
+            {
+                bool fieldPageInstructionSeen = false;
+                AddParagraphRun(fieldRun, ref fieldPageInstructionSeen);
+            }
+        }
+
+        void AddFieldPlaceholderRun(XElement run, string text)
+        {
+            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
+                run.Element(WordprocessingNamespace + "rPr"),
+                paragraphStyleId,
+                ReadCharacterStyleId(run),
+                styles,
+                tableCellStyle?.Run);
+            AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, resolvedRun);
+        }
+
+        void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
+        {
+            string text = ReadRunText(run);
+            if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
+            {
+                text = "{PAGE}";
+                currentPageInstructionSeen = true;
+            }
+            else if (currentPageInstructionSeen && text.Trim().All(char.IsDigit))
+            {
+                text = string.Empty;
+            }
+
+            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
+            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
+                runProperties,
+                paragraphStyleId,
+                ReadCharacterStyleId(run),
+                styles,
+                tableCellStyle?.Run);
+            if (text.Length != 0)
+            {
+                string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
+                AddResolvedTextRuns(runs, displayText, resolvedRun);
+            }
+
+            images.AddRange(ReadInlineImages(run, package, relationships));
+        }
+    }
+
+    private static string? ReadCharacterStyleId(XElement run)
+    {
+        return (string?)run
+            .Element(WordprocessingNamespace + "rPr")
+            ?.Element(WordprocessingNamespace + "rStyle")
+            ?.Attribute(WordprocessingNamespace + "val");
     }
 
     private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun)

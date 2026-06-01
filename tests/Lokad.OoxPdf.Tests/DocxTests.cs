@@ -1701,6 +1701,67 @@ internal static class DocxTests
         TestAssert.True(runs[3].ShadingColor is null, "Expected missing run shading color to keep a null source token.");
     }
 
+    public static void DocxReaderPreservesParagraphSimpleFieldCachedResultRunsInOrder()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="character" w:styleId="ResultStyle">
+                    <w:rPr><w:color w:val="336699"/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:fldSimple w:instr=" DATE \@ &quot;yyyy&quot; ">
+                        <w:r><w:rPr><w:rStyle w:val="ResultStyle"/></w:rPr><w:t>2026</w:t></w:r>
+                      </w:fldSimple>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
+
+        TestAssert.Equal("Before ", runs[0].Text);
+        TestAssert.Equal("2026", runs[1].Text);
+        TestAssert.Equal("336699", runs[1].ColorHex ?? string.Empty);
+        TestAssert.Equal(" After", runs[2].Text);
+    }
+
     public static void DocxParagraphLayoutPreservesSoftLineBreaks()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

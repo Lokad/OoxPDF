@@ -3292,6 +3292,15 @@ document-specific business content into public notes.
   worst page 9 `17.162084`. Keep highlight/shading drawing open for a public Office PDF ladder that derives
   the actual background rectangle geometry, named highlight color mapping, pattern semantics, and behavior
   across wrapped/mixed runs before emitting visual rectangles.
+- [x] 2026-06-01: Preserved cached DOCX `w:fldSimple` result runs in paragraph order for non-PAGE fields
+  instead of dropping them. The reader now walks paragraph child elements in document order, keeps cached
+  simple-field result text and run styles, and still maps simple PAGE fields to the existing page placeholder.
+  Validation passed `docx-text --skip-slow` (`23`) and full solution build. Private DOCX run
+  `20260601-090014` stayed page-stable at `16/16`, zero dimension mismatches, no diagnostics,
+  `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`. Keep complex-field instruction/result
+  range handling open: `w:fldChar` begin/separate/end runs still need a first-class field model so cached
+  results, dynamic fields, and unsupported field diagnostics are separated without relying on instruction-text
+  shortcuts.
 - [x] 2026-05-31: Preserved DOCX plain `w:br` soft line breaks in run text and layout wrapping. The reader now
   keeps authored soft breaks as line separators, and the layout stage wraps each segment onto separate
   baselines instead of silently concatenating text across the break.
