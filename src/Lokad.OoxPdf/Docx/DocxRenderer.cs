@@ -633,7 +633,7 @@ internal sealed class DocxRenderer
             RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
         }
 
-        if (nextRow is not null)
+        if (nextRow is not null && nextRow.RowIndex != row.RowIndex)
         {
             RenderSharedHorizontalTableBorders(row, nextRow, graphics);
         }

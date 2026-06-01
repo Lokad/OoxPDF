@@ -7661,6 +7661,79 @@ internal static class DocxTests
         TestAssert.Equal("Second", secondPageRows[1].Cells[0].Cell.Text);
     }
 
+    public static void DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault()
+    {
+        DocxParagraph firstParagraph = CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph[] secondParagraphs = Enumerable.Range(1, 8)
+            .Select(index => CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell("Second", secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var table = new DocxTable(null, [60d], [first, second]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(2, firstPageRows.Length);
+        TestAssert.Equal(1, secondPageRows.Length);
+        TestAssert.Equal(1, firstPageRows[1].RowIndex);
+        TestAssert.Equal(0, firstPageRows[1].FragmentIndex);
+        TestAssert.Equal(2, firstPageRows[1].FragmentCount);
+        TestAssert.Equal(20d, firstPageRows[1].Height);
+        TestAssert.Equal(1, secondPageRows[0].RowIndex);
+        TestAssert.Equal(1, secondPageRows[0].FragmentIndex);
+        TestAssert.Equal(2, secondPageRows[0].FragmentCount);
+        TestAssert.Equal(60d, secondPageRows[0].Height);
+    }
+
+    public static void DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary()
+    {
+        var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell("Second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 80d, CantSplit: true, CantSplitValue: "1");
+        var table = new DocxTable(null, [60d], [first, second]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxTableRowLayout firstPageRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        DocxTableRowLayout secondPageRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(0, firstPageRow.RowIndex);
+        TestAssert.Equal(1, secondPageRow.RowIndex);
+        TestAssert.Equal(0, secondPageRow.FragmentIndex);
+        TestAssert.Equal(1, secondPageRow.FragmentCount);
+        TestAssert.True(secondPageRow.CantSplit, "w:cantSplit rows should move whole instead of creating fragments.");
+    }
+
     public static void DocxTableLayoutStageKeepsFollowingParagraphAdjacent()
     {
         var paragraph = new DocxParagraph(

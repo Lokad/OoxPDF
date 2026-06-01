@@ -844,7 +844,7 @@ internal sealed class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                LayoutTable(tableElement.Table, tableIndex++, elementIndex, page.MarginBottom, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                LayoutTable(tableElement.Table, tableIndex++, elementIndex, page.MarginBottom, page.Height - page.MarginTop - page.MarginBottom, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
                 continue;
             }
 
@@ -1753,6 +1753,7 @@ internal sealed class DocxLayoutEngine
         int tableIndex,
         int sourceBlockIndex,
         double marginBottom,
+        double pageContentHeight,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         Func<int> getPageIndex,
@@ -1799,6 +1800,16 @@ internal sealed class DocxLayoutEngine
         {
             DocxTableRow row = table.Rows[rowIndex];
             double rowHeight = rowHeights[rowIndex];
+            double remainingPageHeight = Math.Max(0d, cursorY - marginBottom);
+            if (!row.CantSplit &&
+                rowHeight > remainingPageHeight &&
+                remainingPageHeight > 0.001d &&
+                CanSplitTableRowAtPageBoundary(row, effectiveColumns, scale, rowHeight, remainingPageHeight, textMeasurer, defaultTabStopPoints))
+            {
+                AddSplitTableRowLayout(table, tableContext, row, rowIndex, rowHeights, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, tableX, remainingPageHeight, pageContentHeight, finishPage);
+                continue;
+            }
+
             if (cursorY - rowHeight < marginBottom && hasPageContent())
             {
                 finishPage();
@@ -2019,9 +2030,123 @@ internal sealed class DocxLayoutEngine
             getPageIndex,
             cursorY,
             rowHeight,
+            logicalRowTopY: cursorY,
             FragmentIndex: 0,
             FragmentCount: 1));
         cursorY -= rowHeight;
+    }
+
+    private static void AddSplitTableRowLayout(
+        DocxTable table,
+        DocxTableLayoutContext tableContext,
+        DocxTableRow row,
+        int rowIndex,
+        IReadOnlyList<double> rowHeights,
+        IReadOnlyList<double> effectiveColumns,
+        double scale,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        Func<int> getPageIndex,
+        ref List<DocxLayoutItem> currentItems,
+        ref double cursorY,
+        double x,
+        double firstFragmentHeight,
+        double pageContentHeight,
+        Action finishPage)
+    {
+        double rowHeight = rowHeights[rowIndex];
+        IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, firstFragmentHeight, pageContentHeight);
+        double consumedHeight = 0d;
+        for (int fragmentIndex = 0; fragmentIndex < fragmentHeights.Count; fragmentIndex++)
+        {
+            double fragmentHeight = fragmentHeights[fragmentIndex];
+            currentItems.Add(CreateTableRowLayout(
+                table,
+                tableContext,
+                row,
+                rowIndex,
+                rowHeights,
+                effectiveColumns,
+                scale,
+                textMeasurer,
+                defaultTabStopPoints,
+                getPageIndex,
+                cursorY,
+                fragmentHeight,
+                logicalRowTopY: cursorY + consumedHeight,
+                FragmentIndex: fragmentIndex,
+                FragmentCount: fragmentHeights.Count));
+            cursorY -= fragmentHeight;
+            consumedHeight += fragmentHeight;
+
+            if (fragmentIndex + 1 < fragmentHeights.Count)
+            {
+                finishPage();
+            }
+        }
+    }
+
+    private static bool CanSplitTableRowAtPageBoundary(
+        DocxTableRow row,
+        IReadOnlyList<double> effectiveColumns,
+        double scale,
+        double rowHeight,
+        double firstFragmentHeight,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints)
+    {
+        if (textMeasurer is null)
+        {
+            return false;
+        }
+
+        double fragmentBottomY = rowHeight - firstFragmentHeight;
+        double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+        double rowTopPadding = ResolveTableRowTopPadding(row);
+        for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+        {
+            DocxTableCell cell = row.Cells[cellIndex];
+            if (IsVerticalMergeContinuation(cell))
+            {
+                continue;
+            }
+
+            IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints);
+            bool hasLineInFirstFragment = textLines.Any(line => firstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY);
+            bool hasLineInContinuation = textLines.Any(line => line.BaselineY < fragmentBottomY);
+            if (hasLineInFirstFragment && hasLineInContinuation)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<double> ComputeTableRowFragmentHeights(double rowHeight, double firstFragmentHeight, double pageContentHeight)
+    {
+        var fragments = new List<double>();
+        double remainingHeight = rowHeight;
+        double firstHeight = Math.Min(remainingHeight, Math.Max(0d, firstFragmentHeight));
+        if (firstHeight > 0.001d)
+        {
+            fragments.Add(firstHeight);
+            remainingHeight -= firstHeight;
+        }
+
+        double fullPageHeight = Math.Max(1d, pageContentHeight);
+        while (remainingHeight > fullPageHeight + 0.001d)
+        {
+            fragments.Add(fullPageHeight);
+            remainingHeight -= fullPageHeight;
+        }
+
+        if (remainingHeight > 0.001d)
+        {
+            fragments.Add(remainingHeight);
+        }
+
+        return fragments.Count == 0 ? [Math.Max(1d, rowHeight)] : fragments;
     }
 
     private static DocxTableRowLayout CreateTableRowLayout(
@@ -2037,6 +2162,7 @@ internal sealed class DocxLayoutEngine
         Func<int> getPageIndex,
         double cursorY,
         double rowHeight,
+        double logicalRowTopY,
         int FragmentIndex,
         int FragmentCount)
     {
@@ -2045,7 +2171,7 @@ internal sealed class DocxLayoutEngine
         double fullRowHeight = rowHeights[rowIndex];
         double cellX = tableContext.TableX;
         double cellY = cursorY - rowHeight;
-        double fullCellY = cursorY - fullRowHeight;
+        double fullCellY = logicalRowTopY - fullRowHeight;
         var cells = new List<DocxTableCellLayout>(row.Cells.Count);
         int gridColumnIndex = 0;
         for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)

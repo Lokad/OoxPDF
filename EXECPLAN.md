@@ -445,6 +445,16 @@ High-priority actions:
   Keep the public probe and `w:cantSplit` preservation, but do not reintroduce row fragmentation until the
   layout model can represent line-box-derived fragment heights, declared-height row behavior, and continuation
   border suppression from public Office evidence rather than clipping full-row layouts after the fact.
+  2026-06-02 progress: reintroduced row fragments through that narrower model instead of through a bottom
+  slack shortcut. `DocxLayout` now only splits non-`w:cantSplit` rows when the cell line boxes prove that text
+  exists on both sides of the page boundary, records one `DocxTableRowLayout` per fragment, keeps full-row text
+  coordinates for clipping, and suppresses same-logical-row continuation borders in the renderer. Bottom-up
+  tests cover default multi-page row splitting and `w:cantSplit` preservation. Public
+  `docx-ladder-03-table-row-fragment-threshold` run `20260602-004240` stayed unchanged, and `DocxInspect`
+  found `65` table-row layouts with `0` fragments for that fixture, so the fixture remains an open
+  row-allocation/page-break problem rather than evidence against the new fragment path. Keep follow-up work on
+  Office's row boundary allocation, header-row repetition on split continuations, vertical-merge fragments, and
+  inline-image clipping inside split rows.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
