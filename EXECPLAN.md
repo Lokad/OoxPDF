@@ -5243,6 +5243,15 @@ Current validation baseline:
   `docx-tables --skip-slow` passed `65`, `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
   passed, and private DOCX run `20260601-093551` stayed neutral at `16/16` pages, zero dimension mismatches,
   no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+- DOCX inline page-break validation:
+  direct body-paragraph `w:br w:type="page"` tokens inside non-empty runs now split the body stream into
+  paragraph fragments separated by a `DocxPageBreakElement`, so text before and after the authored break lands
+  on distinct layout pages instead of silently merging. Page breaks are no longer reported as unsupported;
+  `DOCX_UNSUPPORTED_MANUAL_BREAK` remains for column breaks. Keep the broader item open for column breaks and
+  page breaks inside richer inline containers such as hyperlinks or fields. Validation passed
+  `docx-page --skip-slow` (`19`), `docx-core --skip-slow` (`19`), and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-093956` stayed
+  neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

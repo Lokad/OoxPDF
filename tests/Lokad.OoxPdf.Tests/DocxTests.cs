@@ -2568,6 +2568,51 @@ internal static class DocxTests
         TestAssert.Equal("page", pageBreak.Value ?? string.Empty);
     }
 
+    public static void DocxReaderPromotesInlineRunPageBreakInsideParagraph()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Alpha</w:t><w:br w:type="page"/><w:t>Beta</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxBodyElement[] elements = document.BodyElements.ToArray();
+        TestAssert.Equal(3, elements.Length);
+        TestAssert.Equal("Alpha", ((DocxParagraphElement)elements[0]).Paragraph.Runs.Single().Text);
+        TestAssert.True(elements[1] is DocxPageBreakElement, "The inline page break should become a body page break.");
+        TestAssert.Equal("Beta", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal("Alpha", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal("Beta", layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().Text);
+    }
+
     public static void DocxReaderPreservesParagraphSectionBreakTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -7390,7 +7435,7 @@ internal static class DocxTests
                       <w:r><w:drawing><wp:anchor/></w:drawing></w:r>
                       <w:r><w:footnoteReference w:id="2"/></w:r>
                       <w:r><w:endnoteReference w:id="3"/></w:r>
-                      <w:r><w:br w:type="page"/></w:r>
+                      <w:r><w:br w:type="column"/></w:r>
                     </w:p>
                     <m:oMath/>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:cols w:num="2"/></w:sectPr>

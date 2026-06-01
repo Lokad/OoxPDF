@@ -263,10 +263,9 @@ internal sealed class DocxReader
         }
 
         if (document.Descendants(WordprocessingNamespace + "br").Any(br =>
-            string.Equals((string?)br.Attribute(WordprocessingNamespace + "type"), "page", StringComparison.OrdinalIgnoreCase) ||
             string.Equals((string?)br.Attribute(WordprocessingNamespace + "type"), "column", StringComparison.OrdinalIgnoreCase)))
         {
-            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual page or column break");
+            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual column break");
         }
 
         if (document.Descendants(WordprocessingNamespace + "keepNext").Any() ||
@@ -803,6 +802,37 @@ internal sealed class DocxReader
                     continue;
                 }
 
+                if (HasRunPageBreak(element))
+                {
+                    foreach (ParagraphPageBreakPart part in SplitParagraphAtRunPageBreaks(element))
+                    {
+                        if (part.BreakValue is not null)
+                        {
+                            elements.Add(new DocxPageBreakElement("runBreak", part.BreakValue));
+                            continue;
+                        }
+
+                        if (part.Paragraph is null)
+                        {
+                            continue;
+                        }
+
+                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships);
+                        if (splitParagraph is not null)
+                        {
+                            elements.Add(new DocxParagraphElement(AdjustPageBreakParagraphFragment(splitParagraph, part)));
+                        }
+                    }
+
+                    XElement? splitSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
+                    if (splitSectionProperties is not null)
+                    {
+                        elements.Add(ReadSectionBreak(splitSectionProperties));
+                    }
+
+                    continue;
+                }
+
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);
                 if (paragraph is not null)
                 {
@@ -826,6 +856,118 @@ internal sealed class DocxReader
         }
 
         return elements;
+    }
+
+    private static bool HasRunPageBreak(XElement paragraph)
+    {
+        return paragraph
+            .Elements(WordprocessingNamespace + "r")
+            .SelectMany(run => run.Elements(WordprocessingNamespace + "br"))
+            .Any(IsPageBreak);
+    }
+
+    private static DocxParagraph AdjustPageBreakParagraphFragment(DocxParagraph paragraph, ParagraphPageBreakPart part)
+    {
+        return paragraph with
+        {
+            SpacingBeforePoints = part.StartsAfterBreak ? 0d : paragraph.SpacingBeforePoints,
+            SpacingAfterPoints = part.EndsBeforeBreak ? 0d : paragraph.SpacingAfterPoints,
+            ListLabel = part.StartsAfterBreak ? null : paragraph.ListLabel
+        };
+    }
+
+    private static IReadOnlyList<ParagraphPageBreakPart> SplitParagraphAtRunPageBreaks(XElement paragraph)
+    {
+        var parts = new List<ParagraphPageBreakPart>();
+        var currentChildren = new List<XElement>();
+        XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
+        bool startsAfterBreak = false;
+
+        void AddParagraphPart(bool endsBeforeBreak)
+        {
+            if (currentChildren.Count == 0)
+            {
+                return;
+            }
+
+            var splitParagraph = new XElement(WordprocessingNamespace + "p");
+            if (paragraphProperties is not null)
+            {
+                splitParagraph.Add(new XElement(paragraphProperties));
+            }
+
+            splitParagraph.Add(currentChildren.Select(child => new XElement(child)));
+            parts.Add(new ParagraphPageBreakPart(splitParagraph, null, startsAfterBreak, endsBeforeBreak));
+            currentChildren.Clear();
+            startsAfterBreak = false;
+        }
+
+        foreach (XElement child in paragraph.Elements())
+        {
+            if (child.Name == WordprocessingNamespace + "pPr")
+            {
+                continue;
+            }
+
+            if (child.Name != WordprocessingNamespace + "r")
+            {
+                currentChildren.Add(new XElement(child));
+                continue;
+            }
+
+            XElement? runProperties = child.Element(WordprocessingNamespace + "rPr");
+            var runChildren = new List<XElement>();
+            if (runProperties is not null)
+            {
+                runChildren.Add(new XElement(runProperties));
+            }
+
+            foreach (XElement runChild in child.Elements())
+            {
+                if (runChild.Name == WordprocessingNamespace + "rPr")
+                {
+                    continue;
+                }
+
+                if (runChild.Name == WordprocessingNamespace + "br" && IsPageBreak(runChild))
+                {
+                    AddRunPart(currentChildren, runProperties, runChildren);
+                    AddParagraphPart(endsBeforeBreak: true);
+                    parts.Add(new ParagraphPageBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
+                    startsAfterBreak = true;
+                    runChildren.Clear();
+                    if (runProperties is not null)
+                    {
+                        runChildren.Add(new XElement(runProperties));
+                    }
+
+                    continue;
+                }
+
+                runChildren.Add(new XElement(runChild));
+            }
+
+            AddRunPart(currentChildren, runProperties, runChildren);
+        }
+
+        AddParagraphPart(endsBeforeBreak: false);
+        return parts;
+    }
+
+    private static void AddRunPart(List<XElement> paragraphChildren, XElement? runProperties, List<XElement> runChildren)
+    {
+        int contentOffset = runProperties is null ? 0 : 1;
+        if (runChildren.Count <= contentOffset)
+        {
+            return;
+        }
+
+        paragraphChildren.Add(new XElement(WordprocessingNamespace + "r", runChildren.Select(child => new XElement(child))));
+        runChildren.Clear();
+        if (runProperties is not null)
+        {
+            runChildren.Add(new XElement(runProperties));
+        }
     }
 
     private static bool IsRunPageBreakOnlyParagraph(XElement paragraph)
@@ -1957,6 +2099,12 @@ internal sealed class DocxReader
     }
 
     private sealed record DocxStyle(string? BasedOnStyleId, DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
+
+    private sealed record ParagraphPageBreakPart(
+        XElement? Paragraph,
+        string? BreakValue,
+        bool StartsAfterBreak,
+        bool EndsBeforeBreak);
 
     private sealed record DocxTableStyle(
         string? BasedOnStyleId,
