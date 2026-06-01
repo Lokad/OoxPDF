@@ -2081,6 +2081,17 @@ High-priority actions:
       `20260601-111329` stayed accepted at `16/16` pages, zero dimension mismatches, no diagnostics,
       `MAE=13.615949`, changed16 `0.125050`. Keep this nested item open for paragraph-mark style/default
       inheritance and spacing-collapse evidence; do not special-case private style names or fonts.
+      2026-06-01 follow-up: aligned empty DOCX paragraph PDF structure with Office by turning preserved
+      paragraph-mark runs into positioned blank text lines instead of consuming vertical space invisibly.
+      A temporary public-safe styled-empty probe showed Word emits a space text operation at each empty
+      paragraph baseline, including `BodyText`/`Compact`-style paragraphs analogous to the private-safe empty
+      paragraph inventory (`13` empty body paragraphs: `7` BodyText, `5` Compact, `1` unstyled; all with
+      paragraph run properties and no direct spacing). Public `docx-ladder-02-character-spacing` raster metrics
+      stayed unchanged at `MAE=0.833100`, changed16 `0.008161` (run `20260601-112943`), and private DOCX run
+      `20260601-113037` stayed unchanged at `16/16` pages, zero dimension mismatches, no diagnostics,
+      `MAE=13.615949`, changed16 `0.125050`. Keep this open: the structural blank-line baselines are now
+      visible to PDF inspection, but the remaining private regression still needs real paragraph-mark
+      spacing/style evidence rather than style-name exceptions.
     - [x] 2026-05-31: Converted preserved `beforeLines`/`afterLines` tokens into resolved paragraph spacing
       points when no explicit twip spacing or autospacing owns that paragraph side. The reader now derives
       hundredths-of-line spacing from the resolved paragraph line height, and a public synthetic reader test

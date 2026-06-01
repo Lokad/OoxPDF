@@ -1674,6 +1674,12 @@ internal sealed class DocxLayoutEngine
 
     private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs)
     {
+        if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.Hidden))
+        {
+            DocxTextRun? paragraphMark = runs.FirstOrDefault(run => !run.Hidden);
+            return paragraphMark is null ? [] : [new DocxTextSpan(" ", paragraphMark)];
+        }
+
         return runs
             .Where(run => run.Text.Length != 0 && !run.Hidden)
             .Select(run => new DocxTextSpan(run.Text, run))
