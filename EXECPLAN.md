@@ -455,6 +455,14 @@ High-priority actions:
   attempt should model Office's row page-boundary decision from row line boxes and continuation fragments,
   including rows whose visible text line boxes can remain inside the body while the row band crosses the
   nominal margin; do not add another scalar slack test.
+  2026-06-01 rejection: a second trial that allowed a bottom-boundary auto row when every text-bearing cell's
+  first line baseline fit above the margin matched the observation that Office can show only a row's top
+  fragment at the page bottom, but it still was not acceptable. It improved the public probe's page 3
+  (`MAE 3.494976 -> 1.374215`) while worsening page 2 (`9.349741 -> 10.047117`), worsened
+  `docx-ladder-03-table-bottom-slack` page 1 (`6.651415 -> 6.849153`), and regressed private acceptance
+  from the `8.927676` baseline to `9.160214` average MAE with page 15 worse (`12.133736`). Reverted. Treat
+  visible top-fragment placement, continuation clipping, and next-page carry-over as one model problem rather
+  than a permissive one-line boundary rule.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
