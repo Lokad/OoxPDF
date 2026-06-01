@@ -9,12 +9,15 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxLayout(IReadOnlyList<DocxLayoutPage> Pages);
 
-internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> Pages, IReadOnlyList<DocxTableSnapshot> Tables)
+internal sealed record DocxLayoutSnapshot(
+    IReadOnlyList<DocxLayoutPageSnapshot> Pages,
+    IReadOnlyList<DocxTableSnapshot> Tables,
+    IReadOnlyList<DocxLayoutSourceBlockSnapshot> SourceBlocks)
 {
     public static DocxLayoutSnapshot FromLayout(DocxLayout layout)
     {
         DocxLayoutPageSnapshot[] pages = layout.Pages.Select(ToSnapshot).ToArray();
-        return new DocxLayoutSnapshot(pages, ToTableSnapshots(pages));
+        return new DocxLayoutSnapshot(pages, ToTableSnapshots(pages), ToSourceBlockSnapshots(pages));
     }
 
     private static IReadOnlyList<DocxTableSnapshot> ToTableSnapshots(IReadOnlyList<DocxLayoutPageSnapshot> pages)
@@ -61,6 +64,28 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                     group.Max(entry => entry.row.FragmentCount),
                     group.Any(entry => entry.row.Cells.Any(cell => cell.HasVerticalMerge)));
             })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<DocxLayoutSourceBlockSnapshot> ToSourceBlockSnapshots(IReadOnlyList<DocxLayoutPageSnapshot> pages)
+    {
+        return pages
+            .SelectMany((page, pageIndex) => page.Items
+                .Where(item => item.SourceBlockIndex is not null)
+                .Select(item => (pageIndex, item)))
+            .GroupBy(entry => entry.item.SourceBlockIndex!.Value)
+            .OrderBy(group => group.Key)
+            .Select(group => new DocxLayoutSourceBlockSnapshot(
+                group.Key,
+                group.Min(entry => entry.pageIndex),
+                group.Max(entry => entry.pageIndex),
+                group.Count(),
+                group.Count(entry => entry.item.Kind == "TextLine"),
+                group.Count(entry => entry.item.Kind == "TableRow"),
+                group.Count(entry => entry.item.Kind == "InlineImage"),
+                group.Sum(entry => entry.item.TextLength),
+                group.Sum(entry => entry.item.LineHeightPoints ?? entry.item.Height),
+                group.Sum(entry => entry.item.AppliedBeforeSpacingPoints ?? 0d)))
             .ToArray();
     }
 
@@ -373,6 +398,18 @@ internal sealed record DocxLayoutPageSnapshot(
     double TableRowHeightSum,
     IReadOnlyList<DocxLayoutItemSnapshot> Items,
     IReadOnlyList<DocxTableRowSnapshot> TableRows);
+
+internal sealed record DocxLayoutSourceBlockSnapshot(
+    int SourceBlockIndex,
+    int FirstPageIndex,
+    int LastPageIndex,
+    int ItemCount,
+    int TextLineCount,
+    int TableRowCount,
+    int InlineImageCount,
+    int TextLength,
+    double ConsumedHeightSum,
+    double AppliedBeforeSpacingSum);
 
 internal sealed record DocxLayoutItemSnapshot(
     string Kind,

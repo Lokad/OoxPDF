@@ -2228,6 +2228,12 @@ High-priority actions:
     inspection at page scope without exposing text or requiring consumers to scan every item. Public coverage
     checks a paragraph/table/paragraph/table stream on one page; validation passed `docx-core --skip-slow`
     (`29`).
+    2026-06-02 follow-up: `DocxLayoutSnapshot` now also includes source-block summaries grouped across pages:
+    first/last page index, item counts, text-line/table-row/inline-image counts, text length, consumed height,
+    and applied before-spacing sums. This is the layout-side counterpart to `DocxStructureSnapshot` block
+    ownership and gives future private-safe pagination comparisons a per-block join key without exposing
+    content. Public coverage checks paragraph and table source-block summaries; validation passed
+    `docx-core --skip-slow` (`29`).
     2026-06-01 follow-up: extended paragraph and table row/cell structure profiles with private-safe
     whitespace-delimited token counts and longest-token lengths. This fills a bottom-up diagnostic gap for
     compact paragraph and narrow table-cell wrapping without exposing text. Public structure tests cover body
