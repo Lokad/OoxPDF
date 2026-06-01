@@ -823,7 +823,7 @@ internal sealed class DocxLayoutEngine
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
-                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints).ToArray();
+                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: false).ToArray();
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, page.MarginBottom, HasPageContent()))
                 {
                     FinishPage();
@@ -1501,7 +1501,7 @@ internal sealed class DocxLayoutEngine
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints).Count() * lineHeight;
+            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: false).Count() * lineHeight;
         }
         else if (paragraph.Images.Count == 0)
         {
@@ -1837,16 +1837,38 @@ internal sealed class DocxLayoutEngine
         if (table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
             int.TryParse(table.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
         {
-            return Math.Max(0d, availableWidth * fiftiethsPercent / 5000d);
+            double normalPercentageWidth = availableWidth * fiftiethsPercent / 5000d;
+            double explicitGridWidth = table.HasExplicitGrid ? table.ColumnWidthsPoints.Sum() : 0d;
+            double percentageBasis = explicitGridWidth > 0d && explicitGridWidth < normalPercentageWidth - 0.001d
+                ? availableWidth + ResolveOuterTableCellContentInset(table)
+                : availableWidth;
+            return Math.Max(0d, percentageBasis * fiftiethsPercent / 5000d);
         }
 
         return null;
     }
 
+    private static double ResolveOuterTableCellContentInset(DocxTable table)
+    {
+        DocxTableRow? firstRow = table.Rows.FirstOrDefault();
+        if (firstRow is null || firstRow.Cells.Count == 0)
+        {
+            return 0d;
+        }
+
+        DocxTableCell firstCell = firstRow.Cells[0];
+        DocxTableCell lastCell = firstRow.Cells[^1];
+        return ResolveTableCellHorizontalPadding(firstCell.Margins.LeftPoints) +
+            ResolveTableCellBorderContentInset(firstCell, "left") +
+            ResolveTableCellHorizontalPadding(lastCell.Margins.RightPoints) +
+            ResolveTableCellBorderContentInset(lastCell, "right");
+    }
+
     private static double ResolveTargetTableWidth(DocxTable table, double availableWidth, double fallbackWidth)
     {
         double preferredWidth = ResolvePreferredTableWidth(table, availableWidth) ?? fallbackWidth;
-        return table.PreferredWidthType?.Equals("dxa", StringComparison.OrdinalIgnoreCase) == true
+        return table.PreferredWidthType?.Equals("dxa", StringComparison.OrdinalIgnoreCase) == true ||
+            table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true
             ? Math.Max(1d, preferredWidth)
             : Math.Min(availableWidth, preferredWidth);
     }
@@ -2080,7 +2102,7 @@ internal sealed class DocxLayoutEngine
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
                 double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-                int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints).Count();
+                int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true).Count();
                 contentHeight += lineCount * lineHeight;
             }
             else if (paragraph.Images.Count == 0)
@@ -2164,7 +2186,7 @@ internal sealed class DocxLayoutEngine
                 double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                 bool firstLine = true;
-                DocxWrappedTextLine[] wrappedLines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints).ToArray();
+                DocxWrappedTextLine[] wrappedLines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true).ToArray();
                 for (int lineIndex = 0; lineIndex < wrappedLines.Length; lineIndex++)
                 {
                     DocxWrappedTextLine line = wrappedLines[lineIndex];
@@ -2274,7 +2296,7 @@ internal sealed class DocxLayoutEngine
                     double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
                     double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                     double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-                    cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints).Count() * lineHeight;
+                    cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true).Count() * lineHeight;
                 }
                 else if (paragraph.Images.Count == 0)
                 {
@@ -2728,7 +2750,8 @@ internal sealed class DocxLayoutEngine
         double fontSize,
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
-        double defaultTabStopPoints)
+        double defaultTabStopPoints,
+        bool allowOverwideTokenBreaks)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int lineIndex = 0;
@@ -2738,7 +2761,7 @@ internal sealed class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints))
+            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks))
             {
                 yielded = true;
                 yield return line;
@@ -2769,7 +2792,8 @@ internal sealed class DocxLayoutEngine
         double fontSize,
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
-        double defaultTabStopPoints)
+        double defaultTabStopPoints,
+        bool allowOverwideTokenBreaks)
     {
         IReadOnlyList<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
         if (tokens.Count == 0)
@@ -2780,8 +2804,9 @@ internal sealed class DocxLayoutEngine
         int lineStart = tokens[0].Start;
         int lineLength = 0;
         int lineIndex = 0;
-        foreach (TextToken token in tokens)
+        for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
         {
+            TextToken token = tokens[tokenIndex];
             int candidateLength = token.Start + token.Length - lineStart;
             bool lineHasNonWhitespace = HasNonWhitespace(text, lineStart, lineLength);
             if (lineLength > 0 &&
@@ -2792,7 +2817,22 @@ internal sealed class DocxLayoutEngine
                 yield return CreateWrappedTextLine(text, spans, lineStart, lineLength);
                 lineIndex++;
                 lineStart = token.Start;
-                lineLength = token.Length;
+                lineLength = 0;
+                tokenIndex--;
+                continue;
+            }
+
+            if (lineLength == 0 &&
+                allowOverwideTokenBreaks &&
+                !token.IsBreakableWhitespace &&
+                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, out int breakLength))
+            {
+                yield return CreateWrappedTextLine(text, spans, token.Start, breakLength);
+                lineIndex++;
+                lineStart = token.Start + breakLength;
+                lineLength = 0;
+                tokens = ReplaceToken(tokens, tokenIndex, new TextToken(text.Substring(lineStart, token.Length - breakLength), lineStart, token.Length - breakLength));
+                tokenIndex--;
             }
             else
             {
@@ -2804,6 +2844,54 @@ internal sealed class DocxLayoutEngine
         {
             yield return CreateWrappedTextLine(text, spans, lineStart, lineLength);
         }
+    }
+
+    private static bool TryFindOverwideTokenBreak(
+        string text,
+        IReadOnlyList<DocxTextSpan> spans,
+        TextToken token,
+        double maxWidth,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops,
+        double defaultTabStopPoints,
+        out int breakLength)
+    {
+        breakLength = 0;
+        double tokenWidth = MeasureTextSpans(SliceTextSpans(spans, token.Start, token.Length), fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+        if (tokenWidth <= maxWidth)
+        {
+            return false;
+        }
+
+        for (int length = token.Length - 1; length > 0; length--)
+        {
+            int absoluteIndex = token.Start + length - 1;
+            if (!DocxLineBreakOpportunities.IsOpportunityAfter(text[absoluteIndex]))
+            {
+                continue;
+            }
+
+            double prefixWidth = MeasureTextSpans(SliceTextSpans(spans, token.Start, length), fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+            if (prefixWidth <= maxWidth)
+            {
+                breakLength = length;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<TextToken> ReplaceToken(IReadOnlyList<TextToken> tokens, int index, TextToken replacement)
+    {
+        var result = new List<TextToken>(tokens.Count);
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            result.Add(i == index ? replacement : tokens[i]);
+        }
+
+        return result;
     }
 
     private static DocxWrappedTextLine CreateWrappedTextLine(
@@ -2908,6 +2996,14 @@ internal sealed class DocxLayoutEngine
             value != '\u00A0' &&
             value != '\u202F' &&
             value != '\u2007';
+    }
+
+    private static class DocxLineBreakOpportunities
+    {
+        public static bool IsOpportunityAfter(char value)
+        {
+            return value is '-' or '/' or '\\' or '\u2010' or '\u2011' or '\u2012' or '\u2013' or '\u2014';
+        }
     }
 
     private readonly record struct TextToken(string Text, int Start, int Length)

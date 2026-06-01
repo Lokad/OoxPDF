@@ -392,6 +392,21 @@ High-priority actions:
   punctuation shortcut or a row-height constant. With the rejected break rule reverted, the new public probe is
   an accepted open mismatch at `MAE=2.575378`, and private acceptance returns to the current baseline
   `MAE=8.915684`.
+  2026-06-01 follow-up: PDF inspection of the public probe showed the first real structural miss was table
+  width resolution, not punctuation itself: Office expands an underfilled explicit percent grid to the content
+  width plus the first/last outer cell insets, while the candidate had clamped all percent tables to the text
+  width. `DocxLayout` now applies that inset basis only when an explicit grid is below the normal percentage
+  target, preserving private tables whose grid already meets/exceeds the percent target. With that corrected
+  width basis, overwide-token breaks are enabled only inside table-cell wrapping and only after proving the
+  whole non-space token is too wide; fitting tokens such as `North-West/2026` stay on one row, while an
+  overwide `dash-separated-value`-style token can break at the rightmost fitting punctuation opportunity.
+  Public `docx-ladder-03-table-punctuation-wrapping` improved from `MAE=2.575378` to `MAE=0.662548`, SSIM
+  `0.935016`, and table guards stayed neutral (`docx-ladder-03-table-row-heights` `MAE=0.700136`,
+  `docx-ladder-03-table-pagination-margins` pages `0.770109/0.171589`). Private run `20260601-201837`
+  stayed valid at `16/16` pages, zero dimension mismatches, no diagnostics, and moved page 15 from
+  `MAE=12.157179` to `11.744805`; aggregate MAE moved slightly from `8.915684` to `8.927676` because page 16
+  worsened while pages 14/15 improved. Keep the branch open on the post-table/page-16 flow residual and PDF
+  text-state decomposition; do not broaden punctuation breaks outside table-cell overwide fitting.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
