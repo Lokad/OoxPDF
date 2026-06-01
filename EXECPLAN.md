@@ -2223,6 +2223,11 @@ High-priority actions:
     `SourceBlockIndex` for `TableRow` items, so page-level drift summaries can line up paragraph text lines and
     table rows through the same private-safe ownership field. The same public test covers the item stream.
     Validation passed `docx-tables --skip-slow` (`81`) and full solution build.
+    2026-06-02 follow-up: `DocxLayoutPageSnapshot` now summarizes source-block ownership per page with
+    distinct source block count plus first/last source block indexes. This keeps private pagination drift
+    inspection at page scope without exposing text or requiring consumers to scan every item. Public coverage
+    checks a paragraph/table/paragraph/table stream on one page; validation passed `docx-core --skip-slow`
+    (`29`).
     2026-06-01 follow-up: extended paragraph and table row/cell structure profiles with private-safe
     whitespace-delimited token counts and longest-token lengths. This fills a bottom-up diagnostic gap for
     compact paragraph and narrow table-cell wrapping without exposing text. Public structure tests cover body

@@ -9461,6 +9461,10 @@ internal static class DocxTests
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
 
+        TestAssert.Equal(1, snapshot.Pages.Count);
+        TestAssert.Equal(4, snapshot.Pages[0].SourceBlockCount);
+        TestAssert.Equal(0, snapshot.Pages[0].FirstSourceBlockIndex ?? -1);
+        TestAssert.Equal(3, snapshot.Pages[0].LastSourceBlockIndex ?? -1);
         TestAssert.Equal(2, snapshot.Tables.Count);
         TestAssert.Equal(0, snapshot.Tables[0].TableIndex);
         TestAssert.Equal(1, snapshot.Tables[0].SourceBlockIndex);

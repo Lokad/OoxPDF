@@ -67,6 +67,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
     {
         IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(ToSnapshot).ToArray();
+        int?[] sourceBlockIndexes = items
+            .Select(item => item.SourceBlockIndex)
+            .Where(index => index is not null)
+            .ToArray();
         IReadOnlyList<DocxTableRowSnapshot> tableRows = page.Items
             .OfType<DocxTableRowLayout>()
             .Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex, page.MarginBottom))
@@ -85,6 +89,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             items.Count(item => item.Kind == "TextLine"),
             items.Count(item => item.Kind == "InlineImage"),
             items.Count(item => item.Kind == "TableRow"),
+            sourceBlockIndexes.Distinct().Count(),
+            sourceBlockIndexes.FirstOrDefault(),
+            sourceBlockIndexes.LastOrDefault(),
             Math.Max(0d, verticalTop - verticalBottom),
             items.Where(item => item.Kind == "TextLine").Sum(item => item.Height),
             items.Where(item => item.Kind == "InlineImage").Sum(item => item.Height),
@@ -357,6 +364,9 @@ internal sealed record DocxLayoutPageSnapshot(
     int TextLineCount,
     int InlineImageCount,
     int TableRowCount,
+    int SourceBlockCount,
+    int? FirstSourceBlockIndex,
+    int? LastSourceBlockIndex,
     double VerticalUsed,
     double TextLineHeightSum,
     double InlineImageHeightSum,
