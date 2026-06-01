@@ -529,17 +529,17 @@ internal sealed class DocxReader
 
         void AddSimpleField(XElement field)
         {
-            string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
-            if (instruction?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)
+            string? placeholder = ResolveFieldPlaceholder((string?)field.Attribute(WordprocessingNamespace + "instr"));
+            if (placeholder is not null)
             {
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
                 if (firstRun is null)
                 {
-                    runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null, null));
+                    runs.Add(new DocxTextRun(placeholder, 11d, null, false, false, false, null, null));
                     return;
                 }
 
-                AddFieldPlaceholderRun(firstRun, "{PAGE}");
+                AddFieldPlaceholderRun(firstRun, placeholder);
                 images.AddRange(ReadInlineImages(firstRun, package, relationships));
                 return;
             }
@@ -565,9 +565,13 @@ internal sealed class DocxReader
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
         {
             string text = ReadRunText(run);
-            if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
+            string? placeholder = run
+                .Elements(WordprocessingNamespace + "instrText")
+                .Select(instruction => ResolveFieldPlaceholder((string?)instruction))
+                .FirstOrDefault(value => value is not null);
+            if (placeholder is not null)
             {
-                text = "{PAGE}";
+                text = placeholder;
                 currentPageInstructionSeen = true;
             }
             else if (currentPageInstructionSeen && text.Trim().All(char.IsDigit))
@@ -590,6 +594,24 @@ internal sealed class DocxReader
 
             images.AddRange(ReadInlineImages(run, package, relationships));
         }
+    }
+
+    private static string? ResolveFieldPlaceholder(string? instruction)
+    {
+        if (instruction is null)
+        {
+            return null;
+        }
+
+        string normalized = instruction.ToUpperInvariant();
+        if (normalized.Contains("NUMPAGES", StringComparison.Ordinal))
+        {
+            return "{NUMPAGES}";
+        }
+
+        return normalized.Contains("PAGE", StringComparison.Ordinal)
+            ? "{PAGE}"
+            : null;
     }
 
     private static string? ReadCharacterStyleId(XElement run)

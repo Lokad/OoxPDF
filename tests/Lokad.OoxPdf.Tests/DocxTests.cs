@@ -7108,7 +7108,7 @@ internal static class DocxTests
         TestAssert.Equal(3, CountPdfTextShows(pdf));
     }
 
-    public static void DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers()
+    public static void DocxSyntheticFooterPageFieldsUseGeneratedPageNumbers()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -7148,7 +7148,7 @@ internal static class DocxTests
             ["word/footer1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:p><w:r><w:t>Page </w:t></w:r><w:fldSimple w:instr=" PAGE "/></w:p>
+                  <w:p><w:r><w:t>Page </w:t></w:r><w:fldSimple w:instr=" PAGE "/><w:r><w:t> of </w:t></w:r><w:fldSimple w:instr=" NUMPAGES "/></w:p>
                 </w:ftr>
                 """,
             ["word/document.xml"] = $$"""
@@ -7171,7 +7171,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("<< /Type /Pages /Count 2 /Kids [3 0 R 5 0 R] >>", pdf);
-        TestAssert.True(CountPdfTextShows(pdf) >= 47, "Footer page field should render on each generated page.");
+        TestAssert.True(CountPdfTextShows(pdf) >= 51, "Footer PAGE and NUMPAGES fields should render on each generated page.");
     }
 
     public static void DocxUnsupportedFeaturesEmitDiagnostics()

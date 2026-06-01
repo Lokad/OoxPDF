@@ -76,7 +76,8 @@ internal sealed class DocxRenderer
                 width,
                 document.PageHeightPoints - ResolveHeaderDistance(document),
                 StaticTextAnchor.Header,
-                pageNumber);
+                pageNumber,
+                layout.Pages.Count);
             RenderStaticParagraphs(
                 SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, document.PageSettings, pageNumber),
                 graphics,
@@ -85,7 +86,8 @@ internal sealed class DocxRenderer
                 width,
                 ResolveFooterDistance(document),
                 StaticTextAnchor.Footer,
-                pageNumber);
+                pageNumber,
+                layout.Pages.Count);
 
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray()));
         }
@@ -620,7 +622,8 @@ internal sealed class DocxRenderer
         double width,
         double startY,
         StaticTextAnchor anchor,
-        int pageNumber)
+        int pageNumber,
+        int pageCount)
     {
         double cursorY = startY;
         foreach (DocxParagraph paragraph in paragraphs)
@@ -633,7 +636,7 @@ internal sealed class DocxRenderer
             (DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments = paragraph.Runs
                 .Select(run => (
                     Run: run,
-                    Text: run.Text.Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal),
+                    Text: ResolveStaticFieldPlaceholders(run.Text, pageNumber, pageCount),
                     FontSize: run.FontSize,
                     Resource: ResolveFontResource(run, fontResources)))
                 .Where(segment => segment.Resource is not null && segment.Text.Length != 0)
@@ -671,6 +674,13 @@ internal sealed class DocxRenderer
 
             cursorY -= lineAscender + lineDescender;
         }
+    }
+
+    private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)
+    {
+        return text
+            .Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
     }
 
     private static double MeasureStaticLineAscender((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)
