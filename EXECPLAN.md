@@ -4568,6 +4568,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     margins of `0`, so the missing piece is likely Word's table-cell line-box/baseline placement rather than
     margin parsing. Add a small Office-authored public fixture comparing first-baseline placement for
     font-size/table-style/default-margin variants before changing production behavior.
+    2026-06-02 follow-up: the current body/table baseline constants now live behind `DocxLineMetrics`
+    (`ResolveBodyBaselineOffset`, `ResolveTableCellFirstBaselineInset`) instead of being repeated at layout
+    and test call sites. This is a no-behavior-change architectural step so future Office-derived calibration
+    has one structural home. Validation passed `docx-tables --skip-slow` (`87`) and `docx-core --skip-slow`
+    (`25`). Keep this item open for the actual Word-backed first-baseline fixture and metric replacement.
 - [ ] Revisit keep rules only after layout tracing exists: support style-derived `keepNext`, `keepLines`, and
   widow/orphan control with synthetic tests and private page-count checks.
 - [ ] Reattempt manual page/column break support with a parser change that does not alter paragraphs when no

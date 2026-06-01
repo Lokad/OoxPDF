@@ -7916,7 +7916,7 @@ internal static class DocxTests
 
         DocxTableRowLayout row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
         DocxTextLineLayout following = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single();
-        double expectedBaselineY = row.Y - 10d + 10d * 0.299d;
+        double expectedBaselineY = row.Y - DocxLineMetrics.ResolveBodyBaselineOffset(10d, 10d, hasExplicitLineSpacing: true);
         TestAssert.Equal(Math.Round(expectedBaselineY, 3), Math.Round(following.BaselineY, 3));
     }
 

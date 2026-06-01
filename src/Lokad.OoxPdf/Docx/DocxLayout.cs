@@ -633,6 +633,8 @@ internal static class DocxTextSpacing
 internal static class DocxLineMetrics
 {
     private const double WordSingleLineMinimumEm = 1.15d;
+    private const double WordAutoLineBaselineOffsetEm = 0.94d;
+    private const double WordExactLineTextBottomInsetEm = 0.299d;
 
     public static double MeasureOpenTypeSingleLineHeight(OpenTypeFont font, double fontSize)
     {
@@ -658,6 +660,19 @@ internal static class DocxLineMetrics
         return font.UnitsPerEm == 0
             ? 0d
             : font.Os2.WindowsDescender * fontSize / font.UnitsPerEm;
+    }
+
+    public static double ResolveBodyBaselineOffset(double fontSize, double lineHeight, bool hasExplicitLineSpacing)
+    {
+        return hasExplicitLineSpacing
+            ? Math.Max(0d, lineHeight - fontSize * WordExactLineTextBottomInsetEm)
+            : fontSize * WordAutoLineBaselineOffsetEm;
+    }
+
+    public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)
+    {
+        DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
+        return firstTextParagraph is null ? 0d : firstTextParagraph.Runs.Max(run => run.FontSize);
     }
 }
 
@@ -723,7 +738,6 @@ internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocx
 
 internal sealed class DocxLayoutEngine
 {
-    private const double BaselineOffsetFactor = 0.94d;
     private const double WordDefaultTabStopPoints = 36d;
     private const double WordListMinimumAutoLineSpacingFactor = 1.19d;
 
@@ -902,9 +916,7 @@ internal sealed class DocxLayoutEngine
                         DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
                         _ => paragraphX
                     };
-                    double baselineOffset = paragraph.LineSpacingPoints is null
-                        ? paragraphFontSize * BaselineOffsetFactor
-                        : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
+                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, paragraph.LineSpacingPoints is not null);
                     bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
                         ShouldJustifyTextLine(paragraph.Alignment, lineIndex == lines.Length - 1, drawableLineWidth, paragraphWidth, line.Spans);
                     IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
@@ -2422,7 +2434,7 @@ internal sealed class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
         double paddingTop = rowTopPadding;
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
-        double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;
@@ -2543,7 +2555,7 @@ internal sealed class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
         double paddingTop = rowTopPadding;
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
-        double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;
@@ -2643,15 +2655,9 @@ internal sealed class DocxLayoutEngine
             .Max();
     }
 
-    private static double ResolveTableCellFirstBaselineInset(DocxTableCell cell, IReadOnlyList<DocxParagraph> paragraphs)
+    private static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)
     {
-        DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
-        if (firstTextParagraph is null)
-        {
-            return 0d;
-        }
-
-        return firstTextParagraph.Runs.Max(run => run.FontSize);
+        return DocxLineMetrics.ResolveTableCellFirstBaselineInset(paragraphs);
     }
 
     private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs)
