@@ -3339,6 +3339,12 @@ document-specific business content into public notes.
     `0.124264`, worst page 9 `17.162084`. Keep the parent item open for Office-backed soft-hyphen layout
     semantics: conditional glyph emission only at selected line breaks, no-break behavior in wrapping, and PDF
     text operation evidence for visible versus hidden discretionary hyphens.
+  - [x] 2026-06-01: Made DOCX text wrapping distinguish breakable whitespace from nonbreaking space code
+    points. U+00A0, U+202F, and U+2007 no longer create wrap tokens, so nonbreaking spans stay together while
+    ordinary spaces remain break opportunities. Validation passed `docx-text --skip-slow` (`26`) and full
+    solution build. Private DOCX run `20260601-091229` stayed page-stable at `16/16`, zero dimension
+    mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`. Keep exact
+    Word trimming/carryover of spaces at wrap boundaries open for Office PDF probes.
 - [x] 2026-05-31: Made DOCX text wrapping preserve authored whitespace tokens instead of splitting with
   `RemoveEmptyEntries`. Leading, trailing, and repeated spaces now remain in layout line text and contribute
   to measured line width; tab stops and Word's exact whitespace trimming rules remain open.

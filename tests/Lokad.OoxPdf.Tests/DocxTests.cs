@@ -1124,7 +1124,20 @@ internal static class DocxTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        var document = new DocxDocument(
+            75d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
 
         DocxTextLineLayout line = new DocxLayoutEngine()
             .Create(document, new FamilyWidthTextMeasurer())
@@ -1951,6 +1964,48 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(package);
 
         TestAssert.Equal("non\u2011break\u00ADsoft", document.Paragraphs[0].Runs[0].Text);
+    }
+
+    public static void DocxParagraphLayoutKeepsNonbreakingSpacesInsideWrapTokens()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Alpha\u00A0Beta Gamma", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            75d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("Alpha\u00A0Beta ", lines[0].Text);
+        TestAssert.Equal("Gamma", lines[1].Text);
     }
 
     public static void DocxParagraphLayoutPreservesAuthoredSpaces()

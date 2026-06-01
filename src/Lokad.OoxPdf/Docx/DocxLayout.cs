@@ -1736,7 +1736,7 @@ internal sealed class DocxLayoutEngine
             bool lineHasNonWhitespace = HasNonWhitespace(text, lineStart, lineLength);
             if (lineLength > 0 &&
                 lineHasNonWhitespace &&
-                !string.IsNullOrWhiteSpace(token.Text) &&
+                !token.IsBreakableWhitespace &&
                 MeasureTextSpans(SliceTextSpans(spans, lineStart, candidateLength), fontSize, textMeasurer, tabStops) > maxWidth(lineIndex))
             {
                 yield return CreateWrappedTextLine(text, spans, lineStart, lineLength);
@@ -1834,23 +1834,34 @@ internal sealed class DocxLayoutEngine
 
         var tokens = new List<TextToken>();
         int start = 0;
-        bool inWhitespace = char.IsWhiteSpace(text[0]);
+        bool inBreakableWhitespace = IsBreakableWhitespaceChar(text[0]);
         for (int i = 1; i < text.Length; i++)
         {
-            bool whitespace = char.IsWhiteSpace(text[i]);
-            if (whitespace == inWhitespace)
+            bool breakableWhitespace = IsBreakableWhitespaceChar(text[i]);
+            if (breakableWhitespace == inBreakableWhitespace)
             {
                 continue;
             }
 
             tokens.Add(new TextToken(text[start..i], start, i - start));
             start = i;
-            inWhitespace = whitespace;
+            inBreakableWhitespace = breakableWhitespace;
         }
 
         tokens.Add(new TextToken(text[start..], start, text.Length - start));
         return tokens;
     }
 
-    private readonly record struct TextToken(string Text, int Start, int Length);
+    private static bool IsBreakableWhitespaceChar(char value)
+    {
+        return char.IsWhiteSpace(value) &&
+            value != '\u00A0' &&
+            value != '\u202F' &&
+            value != '\u2007';
+    }
+
+    private readonly record struct TextToken(string Text, int Start, int Length)
+    {
+        public bool IsBreakableWhitespace => Text.All(IsBreakableWhitespaceChar);
+    }
 }
