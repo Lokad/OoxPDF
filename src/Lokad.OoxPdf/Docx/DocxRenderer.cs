@@ -53,9 +53,12 @@ internal sealed class DocxRenderer
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
-            foreach (DocxLayoutItem item in layoutPage.Items)
+            for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
             {
-                RenderLayoutItem(item, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
+                DocxLayoutItem item = layoutPage.Items[itemIndex];
+                DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
+                DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
+                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
             }
 
             int pageNumber = pageIndex + 1;
@@ -186,6 +189,8 @@ internal sealed class DocxRenderer
 
     private static void RenderLayoutItem(
         DocxLayoutItem item,
+        DocxTableRowLayout? previousRow,
+        DocxTableRowLayout? nextRow,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
@@ -201,9 +206,17 @@ internal sealed class DocxRenderer
                 RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
                 break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
+                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
                 break;
         }
+    }
+
+    private static bool IsAdjacentTableRow(DocxTableRowLayout? first, DocxTableRowLayout? second)
+    {
+        return first is not null &&
+            second is not null &&
+            first.Table.TableIndex == second.Table.TableIndex &&
+            first.RowIndex + 1 == second.RowIndex;
     }
 
     private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, DocxFontResources fontResources)
@@ -274,6 +287,8 @@ internal sealed class DocxRenderer
 
     private static void RenderTableRow(
         DocxTableRowLayout row,
+        DocxTableRowLayout? previousRow,
+        DocxTableRowLayout? nextRow,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
@@ -295,7 +310,7 @@ internal sealed class DocxRenderer
             }
         }
 
-        RenderTableRowBorders(row, graphics);
+        RenderTableRowBorders(row, previousRow, nextRow, graphics);
 
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
@@ -323,7 +338,11 @@ internal sealed class DocxRenderer
         }
     }
 
-    private static void RenderTableRowBorders(DocxTableRowLayout row, PdfGraphicsBuilder graphics)
+    private static void RenderTableRowBorders(
+        DocxTableRowLayout row,
+        DocxTableRowLayout? previousRow,
+        DocxTableRowLayout? nextRow,
+        PdfGraphicsBuilder graphics)
     {
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
@@ -333,8 +352,20 @@ internal sealed class DocxRenderer
                 continue;
             }
 
-            RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
-            RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
+            if (previousRow is null)
+            {
+                RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
+            }
+
+            if (nextRow is null)
+            {
+                RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
+            }
+            else
+            {
+                DocxTableCellLayout? nextRowCell = cellIndex < nextRow.Cells.Count ? nextRow.Cells[cellIndex] : null;
+                RenderSharedHorizontalTableBorder(cellLayout, nextRowCell, graphics);
+            }
 
             DocxTableCellBorder? left = FindBorder(cellLayout.Cell.Borders, "left") ?? FindBorder(cellLayout.Cell.Borders, "start");
             if (cellIndex == 0)
@@ -353,6 +384,40 @@ internal sealed class DocxRenderer
             DocxTableCellBorder? nextLeft = FindBorder(nextCell.Cell.Borders, "left") ?? FindBorder(nextCell.Cell.Borders, "start");
             RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
         }
+    }
+
+    private static void RenderSharedHorizontalTableBorder(
+        DocxTableCellLayout cellLayout,
+        DocxTableCellLayout? nextRowCell,
+        PdfGraphicsBuilder graphics)
+    {
+        DocxTableCellBorder? bottom = FindBorder(cellLayout.Cell.Borders, "bottom");
+        DocxTableCellBorder? nextTop = nextRowCell is null ? null : FindBorder(nextRowCell.Cell.Borders, "top");
+        if (IsSuppressedBorder(bottom) || IsSuppressedBorder(nextTop))
+        {
+            return;
+        }
+
+        DocxTableCellBorder? border = SelectStrongerBorder(bottom, nextTop);
+        if (border is null)
+        {
+            return;
+        }
+
+        RgbColor color = ReadColor(border.Color);
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        double width = ReadBorderWidth(border.SizeValue);
+        double x = nextRowCell is null ? cellLayout.X : Math.Max(cellLayout.X, nextRowCell.X);
+        double right = nextRowCell is null
+            ? cellLayout.X + cellLayout.Width
+            : Math.Min(cellLayout.X + cellLayout.Width, nextRowCell.X + nextRowCell.Width);
+        if (right <= x)
+        {
+            x = cellLayout.X;
+            right = cellLayout.X + cellLayout.Width;
+        }
+
+        graphics.FillRectangle(x, cellLayout.Y - width / 2d, right - x, width);
     }
 
     private static void RenderHorizontalTableCellBorder(DocxTableCellLayout cellLayout, string edge, PdfGraphicsBuilder graphics)

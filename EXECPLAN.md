@@ -2412,6 +2412,13 @@ High-priority actions:
     not marked as full border conflict resolution: horizontal shared edges across rows, page-break/header-row
     repeated borders, full Word style precedence across adjacent cells, and RTL logical edge ownership remain
     open for Office-backed fixtures.
+    2026-06-01 follow-up: horizontal shared edges between consecutive same-page table rows now use the same
+    one-strip boundary model. The renderer resolves the current row's bottom edge against the next row's top
+    edge, emits only one centered fill strip, and lets explicit `nil`/`none` on either side suppress the shared
+    border. Public unit coverage now locks both shared `insideH` de-duplication and top-edge nil suppression.
+    Private DOCX run `20260601-024417` improved slightly to `MAE=12.494853`, changed16 `0.116738`, while page
+    count and diagnostics stayed stable. Keep the parent open for non-contiguous/page-break row boundaries,
+    row/column spans, RTL ownership, and the full Word border conflict ranking beyond width-first selection.
   - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as
@@ -4945,6 +4952,13 @@ Current validation baseline:
   `docx-ladder-03-table-pagination-margins` run `20260601-024057` stayed unchanged from the filled-border
   baseline (page 1 `MAE=0.888769`, page 2 `MAE=0.210261`). Private DOCX run `20260601-024114` stayed at
   `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.503007`, changed16 `0.116841`.
+- DOCX shared horizontal table-border validation:
+  after resolving consecutive same-page row boundaries as one horizontal strip, `docx-tables --skip-slow`
+  passed `60`, `docx-page --skip-slow` passed `17`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed. Public `docx-ladder-03-table-pagination-margins` run `20260601-024402` stayed unchanged
+  from the filled-border baseline (page 1 `MAE=0.888769`, page 2 `MAE=0.210261`). Private DOCX run
+  `20260601-024417` stayed at `16/16` pages, zero dimension mismatches, no diagnostics, and improved to
+  `MAE=12.494853`, changed16 `0.116738`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
