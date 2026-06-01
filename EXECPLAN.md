@@ -3332,6 +3332,13 @@ document-specific business content into public notes.
     `0.124264`, worst page 9 `17.162084`. Keep the parent item open for tab-stop clearing,
     right/center/decimal alignment, leader glyph emission, style/list tab merging, and exact indent-relative
     coordinate rules from Office PDF probes.
+  - [x] 2026-06-01: Preserved explicit DOCX hyphen run tokens: `w:noBreakHyphen` now survives as U+2011 and
+    `w:softHyphen` survives as U+00AD instead of being dropped by the run-text reader. Validation passed
+    `docx-text --skip-slow` (`25`) and full solution build. Private DOCX run `20260601-090842` stayed
+    page-stable at `16/16`, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16
+    `0.124264`, worst page 9 `17.162084`. Keep the parent item open for Office-backed soft-hyphen layout
+    semantics: conditional glyph emission only at selected line breaks, no-break behavior in wrapping, and PDF
+    text operation evidence for visible versus hidden discretionary hyphens.
 - [x] 2026-05-31: Made DOCX text wrapping preserve authored whitespace tokens instead of splitting with
   `RemoveEmptyEntries`. Leading, trailing, and repeated spaces now remain in layout line text and contribute
   to measured line width; tab stops and Word's exact whitespace trimming rules remain open.

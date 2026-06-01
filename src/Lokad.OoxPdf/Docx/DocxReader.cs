@@ -709,6 +709,14 @@ internal sealed class DocxReader
             {
                 text.Append('\t');
             }
+            else if (child.Name == WordprocessingNamespace + "noBreakHyphen")
+            {
+                text.Append('\u2011');
+            }
+            else if (child.Name == WordprocessingNamespace + "softHyphen")
+            {
+                text.Append('\u00AD');
+            }
             else if (child.Name == WordprocessingNamespace + "br" &&
                 string.IsNullOrEmpty((string?)child.Attribute(WordprocessingNamespace + "type")))
             {
