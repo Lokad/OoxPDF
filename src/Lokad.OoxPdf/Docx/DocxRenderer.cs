@@ -326,7 +326,7 @@ internal sealed class DocxRenderer
             }
 
             DocxTableCell cell = cellLayout.Cell;
-            if (RgbColor.TryParse(cell.FillHex, out RgbColor fill))
+            if (TryResolveShadingColor(cell.FillHex, cell.ShadingValue, cell.ShadingColor, out RgbColor fill))
             {
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
                 graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
@@ -447,13 +447,17 @@ internal sealed class DocxRenderer
             return true;
         }
 
-        string? shadingValue = style.ShadingValue;
-        if (shadingValue is null || shadingValue.Equals("clear", StringComparison.OrdinalIgnoreCase))
+        return TryResolveShadingColor(style.ShadingFillHex, style.ShadingValue, style.ShadingColor, out color);
+    }
+
+    private static bool TryResolveShadingColor(string? fillHex, string? value, string? foregroundHex, out RgbColor color)
+    {
+        if (value is null || value.Equals("clear", StringComparison.OrdinalIgnoreCase))
         {
-            return RgbColor.TryParse(style.ShadingFillHex, out color);
+            return RgbColor.TryParse(fillHex, out color);
         }
 
-        if (TryResolvePercentageShadingColor(style, out color))
+        if (TryResolvePercentageShadingColor(fillHex, value, foregroundHex, out color))
         {
             return true;
         }
@@ -462,15 +466,14 @@ internal sealed class DocxRenderer
         return false;
     }
 
-    private static bool TryResolvePercentageShadingColor(DocxTextRun style, out RgbColor color)
+    private static bool TryResolvePercentageShadingColor(string? fillHex, string? value, string? foregroundHex, out RgbColor color)
     {
         color = default;
-        string? value = style.ShadingValue;
         if (value is null ||
             !value.StartsWith("pct", StringComparison.OrdinalIgnoreCase) ||
             !int.TryParse(value.AsSpan(3), NumberStyles.Integer, CultureInfo.InvariantCulture, out int percent) ||
-            !RgbColor.TryParse(style.ShadingFillHex, out RgbColor background) ||
-            !RgbColor.TryParse(style.ShadingColor, out RgbColor foreground))
+            !RgbColor.TryParse(fillHex, out RgbColor background) ||
+            !RgbColor.TryParse(foregroundHex, out RgbColor foreground))
         {
             return false;
         }

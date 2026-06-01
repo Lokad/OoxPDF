@@ -616,6 +616,79 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-missing-grid-spans.
 '@
 }
 
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-cell-percentage-shading.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/document.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>Table cell shading tokens</w:t></w:r></w:p>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="6480" w:type="dxa"/>
+        <w:tblLayout w:type="fixed"/>
+        <w:tblBorders>
+          <w:top w:val="single" w:sz="4" w:color="666666"/>
+          <w:left w:val="single" w:sz="4" w:color="666666"/>
+          <w:bottom w:val="single" w:sz="4" w:color="666666"/>
+          <w:right w:val="single" w:sz="4" w:color="666666"/>
+          <w:insideH w:val="single" w:sz="4" w:color="666666"/>
+          <w:insideV w:val="single" w:sz="4" w:color="666666"/>
+        </w:tblBorders>
+      </w:tblPr>
+      <w:tblGrid>
+        <w:gridCol w:w="2160"/>
+        <w:gridCol w:w="2160"/>
+        <w:gridCol w:w="2160"/>
+      </w:tblGrid>
+      <w:tr>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="2160" w:type="dxa"/><w:shd w:val="clear" w:fill="D9EAD3"/></w:tcPr>
+          <w:p><w:r><w:t>Clear fill</w:t></w:r></w:p>
+        </w:tc>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="2160" w:type="dxa"/><w:shd w:val="pct20" w:color="112233" w:fill="D9EAD3"/></w:tcPr>
+          <w:p><w:r><w:t>pct20 blend</w:t></w:r></w:p>
+        </w:tc>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="2160" w:type="dxa"/><w:shd w:val="clear" w:fill="FCE5CD"/></w:tcPr>
+          <w:p><w:r><w:t>Second fill</w:t></w:r></w:p>
+        </w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="2160" w:type="dxa"/><w:shd w:val="pct40" w:color="4C1130" w:fill="CFE2F3"/></w:tcPr>
+          <w:p><w:r><w:t>pct40 blend</w:t></w:r></w:p>
+        </w:tc>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="2160" w:type="dxa"/><w:shd w:fill="FFF2CC"/></w:tcPr>
+          <w:p><w:r><w:t>Implicit clear</w:t></w:r></w:p>
+        </w:tc>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="2160" w:type="dxa"/></w:tcPr>
+          <w:p><w:r><w:t>No fill</w:t></w:r></w:p>
+        </w:tc>
+      </w:tr>
+    </w:tbl>
+    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+  </w:body>
+</w:document>
+'@
+}
+
 New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-text-decorations.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>

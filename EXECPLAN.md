@@ -4185,6 +4185,18 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     the top of page 2 in both PDFs.
 - [ ] Implement table and cell styling: table styles, conditional first/header row formatting, cell shading,
   per-edge borders, border widths/colors, and vertical alignment.
+  - [x] 2026-06-01: Reused the DOCX shading resolver for table-cell backgrounds instead of treating
+    `w:tcPr/w:shd @fill` as a literal-only fill. Table cells now honor `clear`/missing values as solid
+    fills and resolve percentage shading such as `pct20` by blending foreground `w:color` over background
+    `w:fill`, matching the Office evidence already observed for run shading. Added unit coverage and public
+    `docx-ladder-03-table-cell-percentage-shading` to lock literal fills, implicit clear, no-fill cells,
+    and multiple percentage blends. Public run `20260601-152522` passed (`MAE=1.081647`, changed16
+    `0.017205`, foreground histogram `0.999367`); full `docx-layout` passed `28/28`, `docx-tables
+    --skip-slow` passed `77`, and full solution build passed. Private DOCX run `20260601-152430` stayed
+    unchanged at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.855991`, changed16
+    `0.127419`, confirming this was a structural table-styling gap rather than the current private-driver
+    mismatch. Keep non-percent pattern families, `auto` foreground/background resolution, and table-style
+    conditional shading precedence open under this parent.
 - [ ] Implement structural table features: horizontal merges (`gridSpan`), vertical merges (`vMerge`),
   repeating header rows across page breaks, and page-break behavior inside rows.
   - [x] 2026-06-01: Consumed preserved `w:vMerge` tokens in DOCX table layout/rendering for same-page
