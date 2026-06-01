@@ -585,6 +585,7 @@ internal sealed class DocxReader
             resolvedRun.Underline ?? false,
             resolvedRun.UnderlineValue,
             fontFamily,
+            resolvedRun.CharacterSpacingPoints ?? 0d,
             resolvedRun.AllCaps ?? false)
         {
             Fonts = resolvedRun.Fonts
@@ -1586,13 +1587,14 @@ internal sealed class DocxReader
         bool? complexScriptBold = ReadOnOff(properties?.Element(WordprocessingNamespace + "bCs"));
         bool? complexScriptItalic = ReadOnOff(properties?.Element(WordprocessingNamespace + "iCs"));
         bool? allCaps = ReadOnOff(properties?.Element(WordprocessingNamespace + "caps"));
+        double? characterSpacingPoints = ReadSignedTwipsElement(properties?.Element(WordprocessingNamespace + "spacing"));
         string? underlineValue = (string?)properties?
             .Element(WordprocessingNamespace + "u")
             ?.Attribute(WordprocessingNamespace + "val");
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), allCaps);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -1638,6 +1640,13 @@ internal sealed class DocxReader
     {
         return element?.Attribute(name) is { } value
             ? OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture))
+            : null;
+    }
+
+    private static double? ReadSignedTwipsElement(XElement? element)
+    {
+        return int.TryParse((string?)element?.Attribute(WordprocessingNamespace + "val"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int twips)
+            ? OoxUnits.TwipsToPoints(twips)
             : null;
     }
 
@@ -1726,7 +1735,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, DocxTableStyle> TableStyles)
     {
         public static DocxStyleSet Empty { get; } = new(
-            new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null),
+            new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
@@ -2118,6 +2127,7 @@ internal sealed class DocxReader
             run.UnderlineValue,
             run.FontFamily,
             run.Fonts,
+            run.CharacterSpacingPoints,
             run.AllCaps);
     }
 
@@ -2244,9 +2254,10 @@ internal sealed class DocxReader
         bool? Underline,
         string? UnderlineValue,
         DocxRunFonts Fonts,
+        double? CharacterSpacingPoints,
         bool? AllCaps)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -2261,6 +2272,7 @@ internal sealed class DocxReader
                 other.Underline ?? Underline,
                 other.UnderlineValue ?? UnderlineValue,
                 MergeRunFonts(Fonts, other.Fonts),
+                other.CharacterSpacingPoints ?? CharacterSpacingPoints,
                 other.AllCaps ?? AllCaps);
         }
     }

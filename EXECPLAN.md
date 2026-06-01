@@ -3590,6 +3590,15 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   naive recursive paragraph/character merge changed the private candidate from 16 pages to 14 pages in run
   `20260531-161731`; this must be tackled with fixture coverage for inherited spacing, font size, and page
   breaks rather than a blind cascade merge.
+- [x] 2026-06-01: Promote DOCX run character spacing (`w:rPr/w:spacing`) through the typed run model,
+  resolved style cascade, text measurement, wrapping/segment placement, static header/footer placement, and
+  PDF glyph emission. The parser treats the token as signed twentieths of a point, not as a font-family
+  special case; measured widths and emitted `TJ` positioning now agree for authored positive/negative
+  tracking. Public coverage checks reader parsing, layout segment advances, and PDF positioning emission.
+- [ ] Add an Office-authored public DOCX character-spacing ladder before making broader PDF-emission claims:
+  include positive and negative `w:spacing` in body paragraphs, table cells, headers/footers, mixed-run
+  boundaries, and styled runs. Use Office PDF inspection to decide whether Word prefers `Tc`, `TJ`, or mixed
+  decomposition for each surface; do not infer a font-specific rule from private documents.
 - [ ] Improve numbering layout: render labels in their own hanging-indent area, support level text expansion
   beyond the current simple label prefix, and honor restart/start rules.
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from
@@ -4987,6 +4996,20 @@ Current validation baseline:
   from the filled-border baseline (page 1 `MAE=0.888769`, page 2 `MAE=0.210261`). Private DOCX run
   `20260601-024621` stayed at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.494853`,
   changed16 `0.116738`.
+- DOCX unsupported table-border-style diagnostic validation:
+  after emitting `DOCX_TABLE_BORDER_STYLE` only for visible non-`single`/`nil`/`none` table and cell border
+  styles in document/style parts, `docx-tables --skip-slow` passed `62`, `docx-core --skip-slow` passed `16`
+  after a serial rerun of a transient output lock, `docx-page --skip-slow` passed `17`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Private DOCX run `20260601-025057`
+  stayed at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.494853`, changed16 `0.116738`.
+- DOCX run character-spacing validation:
+  after promoting `w:rPr/w:spacing` as signed twip run geometry through parsing, style application, text
+  measurement, segment placement, header/footer placement, and spacing-only `TJ` PDF emission, public
+  validation passed `docx-core --skip-slow` (`19`), `docx-text --skip-slow` (`18`), `docx-tables --skip-slow`
+  (`62`), `docx-page --skip-slow` (`17`), `docx-numbering --skip-slow` (`11`), and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Two early parallel validation attempts hit
+  transient compiler/Defender output locks and passed on serial rerun. Private DOCX run `20260601-025951`
+  stayed at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.494853`, changed16 `0.116738`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

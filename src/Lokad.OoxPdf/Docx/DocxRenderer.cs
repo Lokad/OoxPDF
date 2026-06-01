@@ -245,11 +245,10 @@ internal sealed class DocxRenderer
 
         DocxTextRun style = segment.StyleRun;
         RgbColor color = ReadColor(style.ColorHex);
-        string glyphHex = resource.Embedded.EncodeGlyphHex(segment.Text);
-        graphics.DrawGlyphText(resource.Name, fontSize, segment.X, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+        DrawRunGlyphText(graphics, resource, style, segment.Text, fontSize, segment.X, baselineY, color);
         if (style.Bold)
         {
-            graphics.DrawGlyphText(resource.Name, fontSize, segment.X + 0.35d, baselineY, color.Red, color.Green, color.Blue, glyphHex, style.Italic);
+            DrawRunGlyphText(graphics, resource, style, segment.Text, fontSize, segment.X + 0.35d, baselineY, color);
         }
 
         if (style.Underline)
@@ -336,6 +335,28 @@ internal sealed class DocxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static void DrawRunGlyphText(
+        PdfGraphicsBuilder graphics,
+        DocxRunFontResource resource,
+        DocxTextRun style,
+        string text,
+        double fontSize,
+        double x,
+        double baselineY,
+        RgbColor color)
+    {
+        string? positioningArray = Math.Abs(style.CharacterSpacingPoints) > 0.001d
+            ? resource.Embedded.EncodeGlyphPositioningArray(text, style.CharacterSpacingPoints, fontSize)
+            : null;
+        if (positioningArray is not null)
+        {
+            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, style.Italic);
+            return;
+        }
+
+        graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), style.Italic);
     }
 
     private static void RenderTableRowBorders(
@@ -616,7 +637,7 @@ internal sealed class DocxRenderer
                 continue;
             }
 
-            double lineWidth = segments.Sum(segment => segment.Resource.Embedded.MeasureTextPoints(segment.Text, segment.FontSize));
+            double lineWidth = MeasureStaticSegmentsWidth(segments);
             double lineX = paragraph.Alignment switch
             {
                 DocxTextAlignment.Center => x + Math.Max(0, width - lineWidth) / 2d,
@@ -624,15 +645,41 @@ internal sealed class DocxRenderer
                 _ => x
             };
             double segmentX = lineX;
-            foreach ((DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) in segments)
+            for (int i = 0; i < segments.Length; i++)
             {
+                (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
                 RgbColor color = ReadColor(run.ColorHex);
-                graphics.DrawGlyphText(resource.Name, fontSize, segmentX, cursorY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), run.Italic);
-                segmentX += resource.Embedded.MeasureTextPoints(text, fontSize);
+                DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, cursorY, color);
+                segmentX += MeasureStaticSegmentWidth(run, text, fontSize, resource);
+                if (i + 1 < segments.Length)
+                {
+                    segmentX += DocxTextSpacing.BoundarySpacing(run, text, segments[i + 1].Text);
+                }
             }
 
             cursorY -= segments.Max(segment => segment.FontSize) * 1.2d;
         }
+    }
+
+    private static double MeasureStaticSegmentsWidth((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)
+    {
+        double width = 0d;
+        for (int i = 0; i < segments.Length; i++)
+        {
+            (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
+            width += MeasureStaticSegmentWidth(run, text, fontSize, resource);
+            if (i + 1 < segments.Length)
+            {
+                width += DocxTextSpacing.BoundarySpacing(run, text, segments[i + 1].Text);
+            }
+        }
+
+        return width;
+    }
+
+    private static double MeasureStaticSegmentWidth(DocxTextRun run, string text, double fontSize, DocxRunFontResource resource)
+    {
+        return DocxTextSpacing.AddCharacterSpacing(resource.Embedded.MeasureTextPoints(text, fontSize), run, text);
     }
 
     private static RgbColor ReadColor(string? hex)

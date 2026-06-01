@@ -157,7 +157,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             previousGlyph = glyph;
         }
 
-        return units * fontSize / font.UnitsPerEm;
+        return DocxTextSpacing.AddCharacterSpacing(units * fontSize / font.UnitsPerEm, run, text);
     }
 
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)

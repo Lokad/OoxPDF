@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 
@@ -368,6 +369,30 @@ internal interface IDocxLineMetricsProvider
     double MeasureSingleLineHeight(DocxTextRun? run, double fontSize);
 }
 
+internal static class DocxTextSpacing
+{
+    public static double AddCharacterSpacing(double measuredWidth, DocxTextRun? run, string text)
+    {
+        return measuredWidth + CountCharacterSpacingGaps(text) * (run?.CharacterSpacingPoints ?? 0d);
+    }
+
+    public static double BoundarySpacing(DocxTextRun? left, string leftText, string rightText)
+    {
+        return leftText.Length == 0 || rightText.Length == 0 ? 0d : left?.CharacterSpacingPoints ?? 0d;
+    }
+
+    private static int CountCharacterSpacingGaps(string text)
+    {
+        int count = 0;
+        foreach (Rune _ in text.EnumerateRunes())
+        {
+            count++;
+        }
+
+        return Math.Max(0, count - 1);
+    }
+}
+
 internal static class DocxLineMetrics
 {
     public static double MeasureOpenTypeSingleLineHeight(OpenTypeFont font, double fontSize)
@@ -391,7 +416,7 @@ internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocx
 {
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
-        return embedded.MeasureTextPoints(text, fontSize);
+        return DocxTextSpacing.AddCharacterSpacing(embedded.MeasureTextPoints(text, fontSize), run, text);
     }
 
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
@@ -1473,11 +1498,16 @@ internal sealed class DocxLayoutEngine
     {
         var segments = new List<DocxTextSegmentLayout>(spans.Count);
         double segmentX = lineX;
-        foreach (DocxTextSpan span in spans)
+        for (int i = 0; i < spans.Count; i++)
         {
+            DocxTextSpan span = spans[i];
             double width = textMeasurer.MeasureText(span.StyleRun, span.Text, fontSize);
             segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width));
             segmentX += width;
+            if (i + 1 < spans.Count)
+            {
+                segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
+            }
         }
 
         return segments;
@@ -1488,7 +1518,18 @@ internal sealed class DocxLayoutEngine
         double fontSize,
         IDocxTextMeasurer textMeasurer)
     {
-        return spans.Sum(span => textMeasurer.MeasureText(span.StyleRun, span.Text, fontSize));
+        double width = 0d;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            DocxTextSpan span = spans[i];
+            width += textMeasurer.MeasureText(span.StyleRun, span.Text, fontSize);
+            if (i + 1 < spans.Count)
+            {
+                width += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
+            }
+        }
+
+        return width;
     }
 
     private static IEnumerable<DocxWrappedTextLine> WrapTextLines(

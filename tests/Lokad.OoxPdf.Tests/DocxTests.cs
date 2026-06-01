@@ -310,6 +310,86 @@ internal static class DocxTests
         TestAssert.True(paragraph.Runs[1].Italic, "Expected w:i w:val=\"on\" to enable italic.");
     }
 
+    public static void DocxReaderParsesRunCharacterSpacing()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:spacing w:val="40"/></w:rPr><w:t>Wide</w:t></w:r>
+                      <w:r><w:rPr><w:spacing w:val="-20"/></w:rPr><w:t>Tight</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxParagraph paragraph = document.Paragraphs[0];
+        TestAssert.Equal(2d, paragraph.Runs[0].CharacterSpacingPoints);
+        TestAssert.Equal(-1d, paragraph.Runs[1].CharacterSpacingPoints);
+    }
+
+    public static void DocxRendererEmitsRunCharacterSpacingAsPositionedGlyphs()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:sz w:val="24"/><w:spacing w:val="40"/></w:rPr><w:t>AB</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("TJ", pdf);
+        TestAssert.Contains("-166.667", pdf);
+    }
+
     public static void DocxReaderPreservesParagraphAlignmentTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -1025,6 +1105,36 @@ internal static class DocxTests
         TestAssert.Equal(5d, line.Segments[0].Width);
         TestAssert.Equal(40d, line.Segments[1].Width);
         TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width, line.Segments[1].X);
+    }
+
+    public static void DocxLayoutStageIncludesRunCharacterSpacingBetweenSegments()
+    {
+        var firstRun = new DocxTextRun("A", 12d, null, false, false, false, null, "Narrow", 3d);
+        var secondRun = new DocxTextRun("B", 12d, null, false, false, false, null, "Narrow");
+        var paragraph = new DocxParagraph(
+            [firstRun, secondRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width + 3d, line.Segments[1].X);
     }
 
     public static void DocxLayoutStageWrapsMixedRunTextWithRunAwareWidths()
