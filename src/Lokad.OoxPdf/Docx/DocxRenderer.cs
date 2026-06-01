@@ -369,9 +369,7 @@ internal sealed class DocxRenderer
             }
 
             RgbColor color = ReadColor(segment.StyleRun.ColorHex);
-            double segmentFontSize = GetSegmentFontSize(segment, fontSize);
-            double segmentBaselineY = GetSegmentBaselineY(segment, baselineY);
-            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", segmentFontSize, segment.X + segment.Width, segmentBaselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
+            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
             return;
         }
     }

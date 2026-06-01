@@ -3530,6 +3530,20 @@ document-specific business content into public notes.
   flattening step. This is intentionally only the structural landing zone for `w:vertAlign`:
   superscript/subscript scaling and shifts remain open until a public Office-backed ladder derives the Word
   behavior from PDF evidence rather than guessed constants.
+  Follow-up, 2026-06-01: added public `docx-ladder-02-vertical-align` and implemented the first DOCX
+  `w:vertAlign` layout rule from Office PDF evidence rather than font-name logic. Superscript/subscript
+  segments now resolve through the same run-segment contract as mixed font sizes: Word-style reduced
+  half-point-grid font sizes, per-segment baseline offsets, matching body/table/static-header measurement,
+  and terminal line spaces emitted at the line baseline rather than inheriting the final shifted segment.
+  The new ladder improved from `MAE=0.363558`, changed16 `0.004239`, SSIM `0.766175` before the layout
+  rule to `MAE=0.121473`, changed16 `0.002011`, SSIM `0.922178` at run `20260601-161408`. PDF inspection
+  shows sampled vertical-align glyph sizes and matrices now line up structurally, for example `2` at
+  `10.56pt`, `Y=710.50` reference vs `10.56pt`, `Y=710.46` candidate; `sup` at `10.56pt`, `Y=646.54`
+  reference vs `10.56pt`, `Y=646.71` candidate. Keep exact DOCX text-state spacing and residual
+  decoration/background rectangle interaction open; the vertical-align font-size/baseline layer is no
+  longer blocked on a missing public ladder. Validation passed `docx-text --skip-slow` (`41`),
+  `docx-page --skip-slow` (`29`), `docx-tables --skip-slow` (`77`), full solution build, and the public
+  `docx-ladder-02-vertical-align` visual case.
   Validation passed `docx-page --skip-slow` (`29`), `docx-text --skip-slow` (`40`), `docx-core --skip-slow`
   (`23`), `docx-tables --skip-slow`
   (`77`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Public `docx-headers-footers`

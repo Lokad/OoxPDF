@@ -1296,6 +1296,45 @@ internal static class DocxTests
         TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width, line.Segments[1].X);
     }
 
+    public static void DocxParagraphLayoutStageAppliesVerticalAlignFontSizeAndBaseline()
+    {
+        var normalRun = new DocxTextRun("A", 16d, null, false, false, false, null, "Body");
+        var superscriptRun = new DocxTextRun("2", 16d, null, false, false, false, null, "Body", VerticalAlignmentValue: "superscript");
+        var subscriptRun = new DocxTextRun("n", 16d, null, false, false, false, null, "Body", VerticalAlignmentValue: "subscript");
+        var paragraph = new DocxParagraph(
+            [normalRun, superscriptRun, subscriptRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            16d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FontSizeWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(3, line.Segments.Count);
+        TestAssert.Equal(16d, line.FontSize);
+        TestAssert.Equal(16d, line.Segments[0].FontSize ?? 0d);
+        TestAssert.Equal(10.5d, line.Segments[1].FontSize ?? 0d);
+        TestAssert.Equal(10.5d, line.Segments[2].FontSize ?? 0d);
+        TestAssert.Equal(0d, line.Segments[0].BaselineOffsetY);
+        TestAssert.Equal(5.5d, line.Segments[1].BaselineOffsetY);
+        TestAssert.Equal(-0.96d, line.Segments[2].BaselineOffsetY);
+        TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width, line.Segments[1].X);
+        TestAssert.Equal(line.Segments[1].X + line.Segments[1].Width, line.Segments[2].X);
+    }
+
     public static void DocxLayoutStageIncludesRunCharacterSpacingBetweenSegments()
     {
         var firstRun = new DocxTextRun("A", 12d, null, false, false, false, null, "Narrow", 3d);

@@ -495,6 +495,43 @@ internal static class DocxLineMetrics
     }
 }
 
+internal static class DocxVerticalAlignMetrics
+{
+    private const double SuperscriptSubscriptScale = 2d / 3d;
+    private const double HalfPointGrid = 2d;
+    private const double SubscriptBaselineShiftEm = -0.06d;
+
+    public static double ResolveFontSize(double nominalFontSize, DocxTextRun run)
+    {
+        if (!IsSuperscript(run) && !IsSubscript(run))
+        {
+            return nominalFontSize;
+        }
+
+        return Math.Max(0.5d, Math.Floor(nominalFontSize * SuperscriptSubscriptScale * HalfPointGrid) / HalfPointGrid);
+    }
+
+    public static double ResolveBaselineOffset(double nominalFontSize, double layoutFontSize, DocxTextRun run)
+    {
+        if (IsSuperscript(run))
+        {
+            return Math.Max(0d, nominalFontSize - layoutFontSize);
+        }
+
+        return IsSubscript(run) ? nominalFontSize * SubscriptBaselineShiftEm : 0d;
+    }
+
+    private static bool IsSuperscript(DocxTextRun run)
+    {
+        return run.VerticalAlignmentValue?.Equals("superscript", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private static bool IsSubscript(DocxTextRun run)
+    {
+        return run.VerticalAlignmentValue?.Equals("subscript", StringComparison.OrdinalIgnoreCase) == true;
+    }
+}
+
 internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
 {
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
@@ -955,8 +992,11 @@ internal sealed class DocxLayoutEngine
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            double width = textMeasurer.MeasureText(span.StyleRun, span.Text, span.StyleRun.FontSize);
-            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width, span.StyleRun.FontSize));
+            double nominalFontSize = span.StyleRun.FontSize;
+            double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
+            double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
+            double width = textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
+            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width, layoutFontSize, baselineOffset));
             segmentX += width;
             if (i + 1 < spans.Count)
             {
@@ -973,7 +1013,8 @@ internal sealed class DocxLayoutEngine
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            width += textMeasurer.MeasureText(span.StyleRun, span.Text, span.StyleRun.FontSize);
+            double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(span.StyleRun.FontSize, span.StyleRun);
+            width += textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
             if (i + 1 < spans.Count)
             {
                 width += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
@@ -2285,6 +2326,7 @@ internal sealed class DocxLayoutEngine
         double extraPerSpace)
     {
         double spanFontSize = GetTextSpanFontSize(span, fontSize);
+        double baselineOffset = GetTextSpanBaselineOffset(span, fontSize);
         int start = 0;
         while (start < span.Text.Length)
         {
@@ -2303,7 +2345,7 @@ internal sealed class DocxLayoutEngine
             }
             else
             {
-                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width, spanFontSize));
+                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width, spanFontSize, baselineOffset));
                 segmentX += width;
             }
 
@@ -2372,6 +2414,7 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops)
     {
         double spanFontSize = GetTextSpanFontSize(span, fontSize);
+        double baselineOffset = GetTextSpanBaselineOffset(span, fontSize);
         int start = 0;
         for (int i = 0; i <= span.Text.Length; i++)
         {
@@ -2383,7 +2426,7 @@ internal sealed class DocxLayoutEngine
             if (i > start)
             {
                 string text = span.Text[start..i];
-                segmentX = AddTextSegment(segments, span.StyleRun, text, segmentX, spanFontSize, textMeasurer);
+                segmentX = AddTextSegment(segments, span.StyleRun, text, segmentX, spanFontSize, baselineOffset, textMeasurer);
             }
 
             if (i < span.Text.Length)
@@ -2402,24 +2445,25 @@ internal sealed class DocxLayoutEngine
         string text,
         double segmentX,
         double fontSize,
+        double baselineOffset,
         IDocxTextMeasurer textMeasurer)
     {
         int leadingSpaces = CountLeadingOfficeSeparatedSpaces(text);
         if (leadingSpaces == 0 || leadingSpaces == text.Length)
         {
             double width = textMeasurer.MeasureText(styleRun, text, fontSize);
-            segments.Add(new DocxTextSegmentLayout(text, styleRun, segmentX, width, fontSize));
+            segments.Add(new DocxTextSegmentLayout(text, styleRun, segmentX, width, fontSize, baselineOffset));
             return segmentX + width;
         }
 
         string spaceText = text[..leadingSpaces];
         double spaceWidth = textMeasurer.MeasureText(styleRun, spaceText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(spaceText, styleRun, segmentX, spaceWidth, fontSize));
+        segments.Add(new DocxTextSegmentLayout(spaceText, styleRun, segmentX, spaceWidth, fontSize, baselineOffset));
         segmentX += spaceWidth + DocxTextSpacing.BoundarySpacing(styleRun, spaceText, text[leadingSpaces..]);
 
         string bodyText = text[leadingSpaces..];
         double bodyWidth = textMeasurer.MeasureText(styleRun, bodyText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(bodyText, styleRun, segmentX, bodyWidth, fontSize));
+        segments.Add(new DocxTextSegmentLayout(bodyText, styleRun, segmentX, bodyWidth, fontSize, baselineOffset));
         return segmentX + bodyWidth;
     }
 
@@ -2467,7 +2511,15 @@ internal sealed class DocxLayoutEngine
 
     private static double GetTextSpanFontSize(DocxTextSpan span, double fallbackFontSize)
     {
-        return span.StyleRun.FontSize > 0d ? span.StyleRun.FontSize : fallbackFontSize;
+        double nominalFontSize = span.StyleRun.FontSize > 0d ? span.StyleRun.FontSize : fallbackFontSize;
+        return DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
+    }
+
+    private static double GetTextSpanBaselineOffset(DocxTextSpan span, double fallbackFontSize)
+    {
+        double nominalFontSize = span.StyleRun.FontSize > 0d ? span.StyleRun.FontSize : fallbackFontSize;
+        double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
+        return DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
     }
 
     private static double AdvanceToNextDefaultTabStop(double width)
