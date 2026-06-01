@@ -868,6 +868,7 @@ internal sealed class DocxReader
         for (int rowIndex = 0; rowIndex < rowElements.Length; rowIndex++)
         {
             XElement row = rowElements[rowIndex];
+            DocxTableCellMargins rowExceptionMargins = ReadTablePropertyExceptionCellMargins(row);
             var cells = new List<DocxTableCell>();
             XElement[] cellElements = row.Elements(WordprocessingNamespace + "tc").ToArray();
             for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
@@ -943,7 +944,8 @@ internal sealed class DocxReader
                     ReadOnOff(header) == true,
                     (string?)header?.Attribute(WordprocessingNamespace + "val"),
                     (string?)rowHeight?.Attribute(WordprocessingNamespace + "val"),
-                    (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule")));
+                    (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule"),
+                    HasAnyTableCellMargin(rowExceptionMargins) ? rowExceptionMargins : null));
             }
         }
 
@@ -1038,6 +1040,14 @@ internal sealed class DocxReader
         return ReadCellMargins(margins);
     }
 
+    private static DocxTableCellMargins ReadTablePropertyExceptionCellMargins(XElement row)
+    {
+        XElement? margins = row
+            .Element(WordprocessingNamespace + "tblPrEx")
+            ?.Element(WordprocessingNamespace + "tblCellMar");
+        return ReadCellMargins(margins);
+    }
+
     private static DocxTableCellMargins ReadCellMargins(XElement? margins)
     {
         return new DocxTableCellMargins(
@@ -1062,6 +1072,14 @@ internal sealed class DocxReader
             direct.RightValue ?? inherited.RightValue,
             direct.BottomValue ?? inherited.BottomValue,
             direct.LeftValue ?? inherited.LeftValue);
+    }
+
+    private static bool HasAnyTableCellMargin(DocxTableCellMargins margins)
+    {
+        return margins.TopValue is not null ||
+            margins.RightValue is not null ||
+            margins.BottomValue is not null ||
+            margins.LeftValue is not null;
     }
 
     private static double? ReadMargin(XElement? margins, string edge)

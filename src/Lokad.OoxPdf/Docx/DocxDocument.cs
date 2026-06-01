@@ -306,7 +306,8 @@ internal sealed record DocxTableRow(
     bool IsHeader = false,
     string? HeaderValue = null,
     string? HeightValue = null,
-    string? HeightRuleValue = null);
+    string? HeightRuleValue = null,
+    DocxTableCellMargins? TablePropertyExceptionCellMargins = null);
 
 internal sealed record DocxTableCell(
     string Text,

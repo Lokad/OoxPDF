@@ -5218,6 +5218,55 @@ internal static class DocxTests
         TestAssert.True(row.HeightRuleValue is null, "Missing hRule should stay distinct from exact/auto.");
     }
 
+    public static void DocxReaderTableRowPreservesPropertyExceptionCellMargins()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+                      <w:tr>
+                        <w:tblPrEx>
+                          <w:tblCellMar>
+                            <w:top w:w="0" w:type="dxa"/>
+                            <w:bottom w:w="0" w:type="dxa"/>
+                          </w:tblCellMar>
+                        </w:tblPrEx>
+                        <w:tc><w:p/></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxTableRow row = new DocxReader().Read(package).Tables[0].Rows[0];
+
+        TestAssert.True(row.TablePropertyExceptionCellMargins is not null, "Expected row-level tblPrEx cell margins to stay distinct from cell margins.");
+        TestAssert.Equal("0", row.TablePropertyExceptionCellMargins!.TopValue ?? string.Empty);
+        TestAssert.Equal("0", row.TablePropertyExceptionCellMargins.BottomValue ?? string.Empty);
+    }
+
     public static void DocxSyntheticTableRowsBreakAcrossPages()
     {
         string rows = string.Concat(Enumerable.Range(0, 8).Select(i => "<w:tr><w:tc><w:p/></w:tc></w:tr>"));
@@ -5779,6 +5828,36 @@ internal static class DocxTests
         TestAssert.Equal(20.05d, row.Height);
     }
 
+    public static void DocxTableLayoutStageLetsTablePropertyExceptionRowsUseContentHeight()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("A", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var rowExceptionMargins = new DocxTableCellMargins(0d, null, 0d, null, "0", null, "0", null);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null, TablePropertyExceptionCellMargins: rowExceptionMargins)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(10d, row.Height);
+    }
+
     public static void DocxTableLayoutStageExpandsAtLeastRowsByAuthoredTopCellMargin()
     {
         var defaultCell = new DocxTableCell("A", [], null, null, null, null, [], DocxTableCellMargins.Empty);
@@ -6117,6 +6196,7 @@ internal static class DocxTests
         TestAssert.Equal("atLeast", tableRow.HeightRuleValue ?? string.Empty);
         TestAssert.True(tableRow.IsHeader, "Snapshot should expose header-row status without text content.");
         TestAssert.Equal("1", tableRow.HeaderValue ?? string.Empty);
+        TestAssert.True(tableRow.HasTablePropertyExceptionCellMargins == false, "Snapshot should expose row property-exception presence without document text.");
         TestAssert.Equal(1, tableRow.CellCount);
         TestAssert.True(tableRow.TextLength > 0, "Snapshot should report table row text length only.");
         DocxTableCellSnapshot tableCell = tableRow.Cells.Single();

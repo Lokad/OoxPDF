@@ -1976,6 +1976,22 @@ High-priority actions:
     snapshot can also explain the remaining Office-vs-candidate distinction, likely through paragraph
     line metrics, cell margin exception handling, table style/default paragraph inheritance, or row
     grid/border accounting rather than through `after=0` alone.
+    2026-06-01 follow-up: preserved row-level `w:tblPrEx/w:tblCellMar` as a distinct `DocxTableRow`
+    property and exposed its presence in the private-safe layout snapshot. This is the structural
+    discriminator missing from the rejected content-owned row trial: the public
+    `docx-ladder-03-table-paragraph-adjacency` fixture has row property-exception cell margins, while
+    private-safe XML inspection of the current DOCX case found `129` rows and `0` rows with `tblPrEx`.
+    Auto/default rows with such row property-exception margins now use measured content height instead of
+    the generic `401twip` floor; the public adjacency probe improved from run `20260601-081230`
+    (`MAE=1.108290`, changed16 `0.009178`) to run `20260601-083833` (`MAE=0.815674`, changed16
+    `0.007123`), while the private DOCX run `20260601-083926` stayed at `16/16` pages with zero
+    dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`. Neighboring public
+    probes remain bounded: `docx-ladder-03-table-row-heights` stayed at `MAE=2.435244`, changed16
+    `0.018702` (`20260601-083900`), and `docx-ladder-02-table-cell-margins` is `MAE=0.565499`,
+    changed16 `0.007963` (`20260601-083914`). Keep this parent open: a naive horizontal-border
+    row-height trial improved the row-height ladder to `MAE=2.350264` but worsened adjacency to
+    `MAE=0.927411` and duplicated renderer border-width logic inside layout, so border participation
+    needs a proper Word row line-box/border model rather than another local height adjustment.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current

@@ -137,6 +137,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cells.Select(cell => cell.MaxFontSize).DefaultIfEmpty(0d).Max(),
             row.IsHeader,
             row.HeaderValue,
+            row.HasTablePropertyExceptionCellMargins,
             cells);
     }
 
@@ -256,6 +257,7 @@ internal sealed record DocxTableRowSnapshot(
     double MaxFontSize,
     bool IsHeader,
     string? HeaderValue,
+    bool HasTablePropertyExceptionCellMargins,
     IReadOnlyList<DocxTableCellSnapshot> Cells);
 
 internal sealed record DocxTableSnapshot(
@@ -366,7 +368,8 @@ internal sealed record DocxTableRowLayout(
     string? HeightValue,
     string? HeightRuleValue,
     bool IsHeader,
-    string? HeaderValue) : DocxLayoutItem;
+    string? HeaderValue,
+    bool HasTablePropertyExceptionCellMargins) : DocxLayoutItem;
 
 internal sealed record DocxTableLayoutContext(
     int TableIndex,
@@ -1095,16 +1098,17 @@ internal sealed class DocxLayoutEngine
             return Math.Max(1d, exactHeight);
         }
 
+        bool hasRowPropertyExceptionMargins = row.TablePropertyExceptionCellMargins is not null;
         double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
-            ? WordDefaultTableRowMinimumHeight
-            : row.HeightPoints ?? WordDefaultTableRowMinimumHeight;
+            ? (hasRowPropertyExceptionMargins ? 0d : WordDefaultTableRowMinimumHeight)
+            : row.HeightPoints ?? (hasRowPropertyExceptionMargins ? 0d : WordDefaultTableRowMinimumHeight);
         if (row.HeightPoints is not null &&
             !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
         {
             declaredHeight += ResolveTableRowTopPadding(row);
         }
 
-        return Math.Max(declaredHeight, contentHeight);
+        return Math.Max(1d, Math.Max(declaredHeight, contentHeight));
     }
 
     private static void AddTableRowLayout(
@@ -1161,7 +1165,8 @@ internal sealed class DocxLayoutEngine
             row.HeightValue,
             row.HeightRuleValue,
             row.IsHeader,
-            row.HeaderValue));
+            row.HeaderValue,
+            row.TablePropertyExceptionCellMargins is not null));
         cursorY -= rowHeight;
     }
 
