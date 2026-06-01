@@ -4391,6 +4391,13 @@ an early boundary: the reader mixes style resolution into document parsing, and 
 segments but do not yet model font-run shaping. The next architectural work should introduce style-resolved
 block models and richer section/pagination layout before adding more Word pagination behavior.
 
+- [ ] Canonical DOCX block inventory: reduce the long-term duplication between `DocxDocument.BodyElements`
+  and the separate `Paragraphs`/`Tables` inventories. A 2026-06-02 text-emission test exposed that layout can
+  see manually constructed body paragraphs while font planning sees only `document.Paragraphs`; reader-built
+  documents keep these lists in sync, but downstream stages should derive paragraphs/tables from the block
+  stream or a single normalized inventory. This should be fixed structurally, with tests covering body,
+  table-cell, header/footer, section-header/footer, and related-story paragraphs, rather than by adding another
+  ad hoc traversal.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
@@ -6306,6 +6313,13 @@ Current validation baseline:
   closes a diagnostic blind spot where legacy plain `DocxTableCell.Text` could render but disappear from
   pre-layout/snapshot counters. Added bottom-up structure and layout snapshot coverage for plain table cells.
   Validation passed `docx-tables --skip-slow` (`91`), `docx-core --skip-slow` (`25`), and full solution build.
+  2026-06-02 follow-up: DOCX rendering now has an inspectable private-safe text-emission snapshot on the same
+  path as PDF rendering. `DocxRenderer.InspectTextEmission` exposes line/segment counts, terminal line-space
+  emissions, source block/line indexes, resolved PDF font resources, Office-grid `/Tf` sizes, authored layout
+  character spacing, emitted PDF `Tc`, glyph-positioning spacing, compensation flags, and synthetic face flags
+  without exposing document text. Bottom-up coverage asserts both authored run spacing kept in positioned
+  glyph advances and numbered-label spacing emitted through PDF text state. Validation passed
+  `docx-core --skip-slow` (`27`). Keep the actual generic Word `Tc` selection rule open.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

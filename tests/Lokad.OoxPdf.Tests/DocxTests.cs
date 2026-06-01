@@ -9272,6 +9272,100 @@ internal static class DocxTests
         TestAssert.True(textLines.All(line => line.TextLength > 0), "Snapshot source indexes must not expose line text.");
     }
 
+    public static void DocxTextEmissionSnapshotReportsPrivateSafePdfTextState()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        var spacedRun = new DocxTextRun("Body", 10d, null, false, false, false, null, familyName, CharacterSpacingPoints: 1.25d)
+        {
+            Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null)
+        };
+        var spacedParagraph = new DocxParagraph(
+            [spacedRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var label = new DocxListLabel(
+            "1",
+            "decimal",
+            "%1.",
+            "tab",
+            "1",
+            0,
+            DocxNumberingIndent.Empty,
+            new DocxTextRunStyle(10d, null, false, false, false, null, familyName, new DocxRunFonts(familyName, null, null, null, null, null, null, null)));
+        var numberedRun = new DocxTextRun("Item", 10d, null, false, false, false, null, familyName)
+        {
+            Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null)
+        };
+        var numberedParagraph = new DocxParagraph(
+            [numberedRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            label);
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(spacedParagraph), new DocxParagraphElement(numberedParagraph)],
+            [spacedParagraph, numberedParagraph],
+            []);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
+
+        TestAssert.True(snapshot.LineCount >= 2, $"Text-emission snapshot should expose rendered body lines; got {snapshot.LineCount}.");
+        TestAssert.True(snapshot.SegmentCount >= snapshot.LineCount, "Text-emission snapshot should expose line segments.");
+        TestAssert.True(snapshot.TerminalSpaceSegmentCount >= 1, "Text-emission snapshot should expose Office-like terminal line-space emission.");
+        TestAssert.True(snapshot.NonzeroPdfCharacterSpacingSegmentCount >= 1, "Text-emission snapshot should expose PDF text-state character spacing.");
+        TestAssert.True(snapshot.CompensatedCharacterSpacingSegmentCount >= 1, "Text-emission snapshot should expose glyph-positioning compensation.");
+
+        DocxTextEmissionLineSnapshot spacedLine = snapshot.Lines.Single(line => line.SourceBlockIndex == 0 && line.SourceLineIndex == 0);
+        DocxTextEmissionSegmentSnapshot spacedSegment = spacedLine.Segments.First(segment => !segment.IsTerminalLineSpace);
+        TestAssert.Equal(4, spacedSegment.TextLength);
+        TestAssert.True(Math.Abs(spacedSegment.LayoutCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should preserve authored run character spacing.");
+        TestAssert.True(Math.Abs(spacedSegment.PdfCharacterSpacing) < 0.0001d, "Normal DOCX run spacing should stay in positioned glyph advances.");
+        TestAssert.True(Math.Abs(spacedSegment.PositioningCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should expose the resulting glyph-positioning spacing.");
+        TestAssert.True(spacedSegment.CompensatePdfCharacterSpacing, "Run spacing should be marked as compensated when positioned glyph advances carry the spacing.");
+        TestAssert.Equal(1, spacedLine.TerminalSpaceSegmentCount);
+
+        DocxTextEmissionLineSnapshot numberedLine = snapshot.Lines.First(line => line.SourceBlockIndex == 1);
+        DocxTextEmissionSegmentSnapshot labelSegment = numberedLine.Segments.First(segment => Math.Abs(segment.PdfCharacterSpacing) > 0.0001d);
+        TestAssert.Equal(1, labelSegment.TextLength);
+        TestAssert.True(Math.Abs(labelSegment.PdfCharacterSpacing - 0.04d) < 0.0001d, "Numbering labels should expose their PDF text-state character spacing.");
+        TestAssert.True(Math.Abs(labelSegment.PositioningCharacterSpacing) < 0.0001d, "Numbering PDF text-state spacing should not be double-counted in glyph positioning.");
+        TestAssert.True(!labelSegment.CompensatePdfCharacterSpacing, "Numbering label spacing is intentionally emitted through PDF text state.");
+        TestAssert.True(labelSegment.FontResourceName is not null, "Snapshot should identify the resolved PDF font resource without exposing text.");
+    }
+
     public static void DocxLayoutSnapshotReportsTableSourceBlockIndexes()
     {
         DocxParagraph before = CreateDocxLayoutParagraph("Before", 10d, 12d);

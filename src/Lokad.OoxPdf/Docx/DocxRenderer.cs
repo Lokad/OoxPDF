@@ -39,6 +39,35 @@ internal sealed class DocxRenderer
         return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver));
     }
 
+    internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
+    {
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
+        DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.TextMeasurer);
+        var lines = new List<DocxTextEmissionLineSnapshot>();
+        for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
+        {
+            DocxLayoutPage page = layout.Pages[pageIndex];
+            int pageNumber = pageIndex + 1;
+            foreach (DocxTextLineLayout line in page.StaticTextLines)
+            {
+                lines.Add(ToTextEmissionLineSnapshot(pageIndex, isStaticStory: true, line, fontResources, pageNumber, layout.Pages.Count));
+            }
+
+            foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
+            {
+                lines.Add(ToTextEmissionLineSnapshot(pageIndex, isStaticStory: false, line, fontResources, pageNumber, layout.Pages.Count));
+            }
+        }
+
+        return new DocxTextEmissionSnapshot(
+            lines.Count,
+            lines.Sum(line => line.SegmentCount),
+            lines.Sum(line => line.TerminalSpaceSegmentCount),
+            lines.Sum(line => line.NonzeroPdfCharacterSpacingSegmentCount),
+            lines.Sum(line => line.Segments.Count(segment => segment.CompensatePdfCharacterSpacing)),
+            lines);
+    }
+
     internal DocxStructureSnapshot InspectStructure(DocxDocument document)
     {
         return DocxStructureSnapshot.FromDocument(document);
@@ -217,22 +246,10 @@ internal sealed class DocxRenderer
 
     private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, DocxFontResources fontResources, int pageNumber, int pageCount)
     {
-        IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
-            ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width)]
-            : line.Segments;
-        foreach (DocxTextSegmentLayout segment in segments)
+        foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount))
         {
-            RenderTextSegment(
-                segment,
-                GetSegmentFontSize(segment, line.FontSize),
-                GetSegmentBaselineY(segment, line.BaselineY),
-                graphics,
-                fontResources,
-                pageNumber,
-                pageCount);
+            RenderTextEmissionSegment(segment, graphics);
         }
-
-        RenderTerminalLineSpace(segments, line.FontSize, line.BaselineY, graphics, fontResources);
     }
 
     private static double GetSegmentFontSize(DocxTextSegmentLayout segment, double lineFontSize)
@@ -245,32 +262,25 @@ internal sealed class DocxRenderer
         return lineBaselineY + segment.BaselineOffsetY;
     }
 
-    private static void RenderTextSegment(
-        DocxTextSegmentLayout segment,
-        double fontSize,
-        double baselineY,
-        PdfGraphicsBuilder graphics,
-        DocxFontResources fontResources,
-        int pageNumber,
-        int pageCount)
+    private static void RenderTextEmissionSegment(DocxTextEmissionSegment segment, PdfGraphicsBuilder graphics)
     {
-        DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
-        if (resource is null)
-        {
-            return;
-        }
-
         DocxTextRun style = segment.StyleRun;
-        string text = ResolveStaticFieldPlaceholders(segment.Text, pageNumber, pageCount);
-        RgbColor color = ReadColor(style.ColorHex);
-        RenderRunBackground(style, resource.Embedded.Font, segment.X, segment.Width, fontSize, baselineY, graphics);
-        DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
-        if (ShouldApplySyntheticBold(style, resource))
+        RgbColor color = segment.Color;
+        if (!segment.IsTerminalLineSpace)
         {
-            DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
+            RenderRunBackground(style, segment.Resource.Embedded.Font, segment.X, segment.Width, segment.FontSize, segment.BaselineY, graphics);
         }
 
-        RenderTextDecorations(style, resource.Embedded.Font, segment.X, segment.Width, fontSize, baselineY, color, graphics);
+        DrawRunGlyphText(graphics, segment.Resource, style, segment.Text, segment.FontSize, segment.X, segment.BaselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
+        if (!segment.IsTerminalLineSpace && segment.SyntheticBold)
+        {
+            DrawRunGlyphText(graphics, segment.Resource, style, segment.Text, segment.FontSize, segment.X + 0.35d, segment.BaselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
+        }
+
+        if (!segment.IsTerminalLineSpace)
+        {
+            RenderTextDecorations(style, segment.Resource.Embedded.Font, segment.X, segment.Width, segment.FontSize, segment.BaselineY, color, graphics);
+        }
     }
 
     private static DocxRunFontResource? ResolveFontResource(DocxTextRun run, DocxFontResources fontResources)
@@ -353,13 +363,42 @@ internal sealed class DocxRenderer
         }
     }
 
-    private static void RenderTerminalLineSpace(
-        IReadOnlyList<DocxTextSegmentLayout> segments,
-        double fontSize,
-        double baselineY,
-        PdfGraphicsBuilder graphics,
-        DocxFontResources fontResources)
+    private static IReadOnlyList<DocxTextEmissionSegment> CreateTextEmissionSegments(
+        DocxTextLineLayout line,
+        DocxFontResources fontResources,
+        int pageNumber,
+        int pageCount)
     {
+        IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
+            ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width)]
+            : line.Segments;
+        var emissionSegments = new List<DocxTextEmissionSegment>(segments.Count + 1);
+        foreach (DocxTextSegmentLayout segment in segments)
+        {
+            DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
+            if (resource is null)
+            {
+                continue;
+            }
+
+            double fontSize = GetSegmentFontSize(segment, line.FontSize);
+            double baselineY = GetSegmentBaselineY(segment, line.BaselineY);
+            emissionSegments.Add(new DocxTextEmissionSegment(
+                ResolveStaticFieldPlaceholders(segment.Text, pageNumber, pageCount),
+                segment.StyleRun,
+                resource,
+                ReadColor(segment.StyleRun.ColorHex),
+                segment.X,
+                baselineY,
+                segment.Width,
+                fontSize,
+                segment.PdfCharacterSpacing,
+                segment.CompensatePdfCharacterSpacing,
+                ShouldApplySyntheticBold(segment.StyleRun, resource),
+                segment.StyleRun.Italic && !resource.Resolution.Italic,
+                IsTerminalLineSpace: false));
+        }
+
         for (int i = segments.Count - 1; i >= 0; i--)
         {
             DocxTextSegmentLayout segment = segments[i];
@@ -370,19 +409,98 @@ internal sealed class DocxRenderer
 
             if (char.IsWhiteSpace(segment.Text[^1]))
             {
-                return;
+                return emissionSegments;
             }
 
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
             if (resource is null)
             {
-                return;
+                return emissionSegments;
             }
 
+            double fontSize = GetSegmentFontSize(segment, line.FontSize);
+            double baselineY = GetSegmentBaselineY(segment, line.BaselineY);
             RgbColor color = ReadColor(segment.StyleRun.ColorHex);
-            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
-            return;
+            emissionSegments.Add(new DocxTextEmissionSegment(
+                " ",
+                segment.StyleRun,
+                resource,
+                color,
+                segment.X + segment.Width,
+                baselineY,
+                0d,
+                fontSize,
+                segment.PdfCharacterSpacing,
+                segment.CompensatePdfCharacterSpacing,
+                SyntheticBold: false,
+                SyntheticItalic: segment.StyleRun.Italic && !resource.Resolution.Italic,
+                IsTerminalLineSpace: true));
+            break;
         }
+
+        return emissionSegments;
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateBodyTextLines(DocxLayoutPage page)
+    {
+        foreach (DocxLayoutItem item in page.Items)
+        {
+            switch (item)
+            {
+                case DocxTextLineLayout line:
+                    yield return line;
+                    break;
+                case DocxTableRowLayout row:
+                    foreach (DocxTextLineLayout cellLine in row.Cells.SelectMany(cell => cell.TextLines))
+                    {
+                        yield return cellLine;
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    private static DocxTextEmissionLineSnapshot ToTextEmissionLineSnapshot(
+        int pageIndex,
+        bool isStaticStory,
+        DocxTextLineLayout line,
+        DocxFontResources fontResources,
+        int pageNumber,
+        int pageCount)
+    {
+        DocxTextEmissionSegmentSnapshot[] segments = CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount)
+            .Select(ToTextEmissionSegmentSnapshot)
+            .ToArray();
+        return new DocxTextEmissionLineSnapshot(
+            pageIndex,
+            isStaticStory,
+            line.SourceBlockIndex,
+            line.SourceLineIndex,
+            segments.Length,
+            segments.Sum(segment => segment.TextLength),
+            segments.Count(segment => segment.IsTerminalLineSpace),
+            segments.Count(segment => Math.Abs(segment.PdfCharacterSpacing) > 0.0001d),
+            segments);
+    }
+
+    private static DocxTextEmissionSegmentSnapshot ToTextEmissionSegmentSnapshot(DocxTextEmissionSegment segment)
+    {
+        return new DocxTextEmissionSegmentSnapshot(
+            segment.Text.Length,
+            segment.X,
+            segment.BaselineY,
+            segment.Width,
+            segment.FontSize,
+            OfficePdfTextEmissionProfile.FontSize(segment.FontSize),
+            segment.StyleRun.CharacterSpacingPoints,
+            segment.PdfCharacterSpacing,
+            ResolvePositioningCharacterSpacing(segment.StyleRun, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing),
+            segment.CompensatePdfCharacterSpacing,
+            segment.IsTerminalLineSpace,
+            segment.Resource.Name,
+            segment.SyntheticBold,
+            segment.SyntheticItalic);
     }
 
     private static void DrawRunGlyphText(
@@ -399,9 +517,7 @@ internal sealed class DocxRenderer
     {
         bool syntheticItalic = style.Italic && !resource.Resolution.Italic;
         double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(fontSize);
-        double positioningCharacterSpacing = compensatePdfCharacterSpacing
-            ? style.CharacterSpacingPoints - pdfCharacterSpacing
-            : style.CharacterSpacingPoints;
+        double positioningCharacterSpacing = ResolvePositioningCharacterSpacing(style, pdfCharacterSpacing, compensatePdfCharacterSpacing);
         string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, positioningCharacterSpacing, pdfFontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {
@@ -410,6 +526,13 @@ internal sealed class DocxRenderer
         }
 
         graphics.DrawGlyphText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic, pdfCharacterSpacing);
+    }
+
+    private static double ResolvePositioningCharacterSpacing(DocxTextRun style, double pdfCharacterSpacing, bool compensatePdfCharacterSpacing)
+    {
+        return compensatePdfCharacterSpacing
+            ? style.CharacterSpacingPoints - pdfCharacterSpacing
+            : style.CharacterSpacingPoints;
     }
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)

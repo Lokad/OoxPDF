@@ -3,6 +3,7 @@ using System.Text;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Docx;
 
@@ -489,6 +490,41 @@ internal sealed record DocxTableCellSnapshot(
     int LowercaseCharacterCount,
     int LongestBreakableTokenLength);
 
+internal sealed record DocxTextEmissionSnapshot(
+    int LineCount,
+    int SegmentCount,
+    int TerminalSpaceSegmentCount,
+    int NonzeroPdfCharacterSpacingSegmentCount,
+    int CompensatedCharacterSpacingSegmentCount,
+    IReadOnlyList<DocxTextEmissionLineSnapshot> Lines);
+
+internal sealed record DocxTextEmissionLineSnapshot(
+    int PageIndex,
+    bool IsStaticStory,
+    int? SourceBlockIndex,
+    int? SourceLineIndex,
+    int SegmentCount,
+    int TextLength,
+    int TerminalSpaceSegmentCount,
+    int NonzeroPdfCharacterSpacingSegmentCount,
+    IReadOnlyList<DocxTextEmissionSegmentSnapshot> Segments);
+
+internal sealed record DocxTextEmissionSegmentSnapshot(
+    int TextLength,
+    double X,
+    double BaselineY,
+    double Width,
+    double FontSize,
+    double PdfFontSize,
+    double LayoutCharacterSpacing,
+    double PdfCharacterSpacing,
+    double PositioningCharacterSpacing,
+    bool CompensatePdfCharacterSpacing,
+    bool IsTerminalLineSpace,
+    string? FontResourceName,
+    bool SyntheticBold,
+    bool SyntheticItalic);
+
 internal sealed record TextProfile(
     int SpaceCharacterCount,
     int NonAsciiCharacterCount,
@@ -603,6 +639,21 @@ internal sealed record DocxFontResources(
     IReadOnlyList<PdfFontResource> Resources,
     IReadOnlyDictionary<DocxTextRun, DocxRunFontResource> RunResources,
     DocxRunFontResource? Fallback);
+
+internal sealed record DocxTextEmissionSegment(
+    string Text,
+    DocxTextRun StyleRun,
+    DocxRunFontResource Resource,
+    RgbColor Color,
+    double X,
+    double BaselineY,
+    double Width,
+    double FontSize,
+    double PdfCharacterSpacing,
+    bool CompensatePdfCharacterSpacing,
+    bool SyntheticBold,
+    bool SyntheticItalic,
+    bool IsTerminalLineSpace);
 
 internal readonly record struct DocxKeepBlockEstimate(
     double Height,
