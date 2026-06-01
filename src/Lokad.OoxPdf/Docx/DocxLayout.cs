@@ -53,7 +53,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
         IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(ToSnapshot).ToArray();
         IReadOnlyList<DocxTableRowSnapshot> tableRows = page.Items
             .OfType<DocxTableRowLayout>()
-            .Select(ToTableRowSnapshot)
+            .Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex, page.MarginBottom))
             .ToArray();
         double verticalTop = items.Count == 0 ? 0d : items.Max(item => item.Y + item.Height);
         double verticalBottom = items.Count == 0 ? 0d : items.Min(item => item.Y);
@@ -120,11 +120,21 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
         };
     }
 
-    private static DocxTableRowSnapshot ToTableRowSnapshot(DocxTableRowLayout row, int rowIndex)
+    private static DocxTableRowSnapshot ToTableRowSnapshot(DocxTableRowLayout row, int rowIndex, double pageMarginBottom)
     {
         IReadOnlyList<DocxTableCellSnapshot> cells = row.Cells
             .Select(ToTableCellSnapshot)
             .ToArray();
+        double? firstBaselineY = cells
+            .Select(cell => cell.FirstBaselineY)
+            .Where(baseline => baseline is not null)
+            .DefaultIfEmpty(null)
+            .Min();
+        double? lastBaselineY = cells
+            .Select(cell => cell.LastBaselineY)
+            .Where(baseline => baseline is not null)
+            .DefaultIfEmpty(null)
+            .Min();
         return new DocxTableRowSnapshot(
             row.Table.TableIndex,
             rowIndex,
@@ -148,6 +158,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             row.Y,
             row.Cells.Sum(cell => cell.Width),
             row.Height,
+            Math.Max(0d, pageMarginBottom - row.Y),
+            firstBaselineY,
+            lastBaselineY,
             cells.Count,
             cells.Sum(cell => cell.TextLineCount),
             cells.Sum(cell => cell.TextLength),
@@ -360,6 +373,9 @@ internal sealed record DocxTableRowSnapshot(
     double Y,
     double Width,
     double Height,
+    double BottomOverflowPoints,
+    double? FirstBaselineY,
+    double? LastBaselineY,
     int CellCount,
     int TextLineCount,
     int TextLength,

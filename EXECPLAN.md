@@ -463,6 +463,11 @@ High-priority actions:
   from the `8.927676` baseline to `9.160214` average MAE with page 15 worse (`12.133736`). Reverted. Treat
   visible top-fragment placement, continuation clipping, and next-page carry-over as one model problem rather
   than a permissive one-line boundary rule.
+  2026-06-01 tooling follow-up: DOCX layout snapshots now expose per-row `BottomOverflowPoints`,
+  `FirstBaselineY`, and `LastBaselineY`, aggregated from private-safe table-cell layout. This makes future
+  public/private row-fragment comparisons explicit: a row can now be classified by whether its band crosses
+  the body bottom, whether only the first line box fits, and whether lower line boxes require clipping or
+  continuation.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
