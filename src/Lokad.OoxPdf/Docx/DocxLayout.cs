@@ -788,9 +788,25 @@ internal sealed class DocxLayoutEngine
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
             DocxBodyElement element = document.BodyElements[elementIndex];
-            if (element is DocxPageBreakElement)
+            if (element is DocxPageBreakElement pageBreak)
             {
-                if (HasPageContent())
+                if (pageBreak.BreakParagraph is { } breakParagraph)
+                {
+                    double breakBeforeSpacing = ShouldSuppressContextualSpacing(previousParagraph, breakParagraph)
+                        ? 0d
+                        : Math.Max(pendingSpacingAfter, breakParagraph.SpacingBeforePoints);
+                    double breakFontSize = GetParagraphFontSize(breakParagraph);
+                    double breakLineHeight = ResolveLineHeight(breakParagraph, breakFontSize, textMeasurer);
+                    double paragraphAdvance = breakBeforeSpacing + breakLineHeight;
+                    if (cursorY - paragraphAdvance < page.MarginBottom && HasPageContent())
+                    {
+                        FinishPage();
+                    }
+
+                    cursorY -= paragraphAdvance;
+                }
+
+                if (HasPageContent() || pageBreak.BreakParagraph is not null)
                 {
                     FinishPage();
                 }

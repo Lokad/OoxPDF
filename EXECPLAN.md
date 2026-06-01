@@ -504,6 +504,19 @@ High-priority actions:
   oracle. The next implementation must create first/continuation row fragments from row line boxes and
   `w:cantSplit`, emit continuation pages even when the visible carry-over is small, and avoid the previously
   rejected private regression where text-bearing top fragments were paired with empty continuations.
+  2026-06-01 progress: the first accepted fix from that probe is the page-break paragraph line-box model, not
+  row fragmentation itself. Public PDF inspection of the revised probe showed the missing page came from a
+  standalone run page-break paragraph after a low after-table marker: Office consumes the invisible paragraph
+  line, creates a blank page when that line does not fit, then applies the break. `DocxPageBreakElement` now
+  carries the resolved break paragraph for run-break-only paragraphs, and layout consumes that line box before
+  finishing the page. The tightened `docx-ladder-03-table-row-fragment-threshold` manifest now requires page
+  and dimension parity; run `20260601-223127` passes with seven pages, including near-zero blank-page matches
+  on pages 3, 5, and 7. `DocxInspect` block traces now expose whether a page break consumed a paragraph line
+  and the break paragraph's line-spacing tokens. Existing row-boundary probes stayed neutral
+  (`docx-ladder-03-table-bottom-slack` `6.651415/3.551346`,
+  `docx-ladder-03-table-heading-table-keepnext` `4.160735/9.349741/3.494976`), `docx-tables --skip-slow`
+  passed `79`, `docx-page --skip-slow` passed `29`, and private DOCX acceptance run `20260601-223133` stayed
+  at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=8.927676`.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

@@ -125,7 +125,7 @@ internal sealed record DocxParagraphElement(DocxParagraph Paragraph) : DocxBodyE
 
 internal sealed record DocxTableElement(DocxTable Table) : DocxBodyElement;
 
-internal sealed record DocxPageBreakElement(string SourceKind, string? Value) : DocxBodyElement;
+internal sealed record DocxPageBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph = null) : DocxBodyElement;
 
 internal sealed record DocxSectionBreakElement(
     DocxPageSettings PageSettings,

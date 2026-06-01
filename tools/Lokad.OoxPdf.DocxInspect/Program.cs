@@ -101,7 +101,10 @@ static IReadOnlyList<DocxBlockSequenceEntry> ToBlockSequence(DocxDocument docume
                 pageBreak.Value,
                 null,
                 null,
-                null),
+                null,
+                PageBreakConsumesParagraphLine: pageBreak.BreakParagraph is not null,
+                PageBreakLineSpacingPoints: pageBreak.BreakParagraph?.LineSpacingPoints,
+                PageBreakLineSpacingFactor: pageBreak.BreakParagraph?.LineSpacingFactor),
             DocxSectionBreakElement sectionBreak => new DocxBlockSequenceEntry(
                 index,
                 "SectionBreak",
@@ -398,7 +401,10 @@ internal sealed record DocxBlockSequenceEntry(
     int? PunctuationCharacterCount = null,
     int? DigitCharacterCount = null,
     int? UppercaseCharacterCount = null,
-    int? LowercaseCharacterCount = null);
+    int? LowercaseCharacterCount = null,
+    bool? PageBreakConsumesParagraphLine = null,
+    double? PageBreakLineSpacingPoints = null,
+    double? PageBreakLineSpacingFactor = null);
 
 internal sealed record DocxTableAdjacencyEntry(
     int TableIndex,

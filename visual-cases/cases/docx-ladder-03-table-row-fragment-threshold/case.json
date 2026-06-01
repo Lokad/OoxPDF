@@ -6,8 +6,8 @@
   "tags": ["docx", "ladder", "table", "row-fragment", "pagination"],
   "expected": {
     "minAgentRating": 2,
-    "pageCountMustMatch": false,
-    "dimensionsMustMatch": false,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true
   },
   "allowedUnsupportedFeatures": []

@@ -994,7 +994,10 @@ internal sealed class DocxReader
 
                 if (IsRunPageBreakOnlyParagraph(element))
                 {
-                    elements.Add(new DocxPageBreakElement("runBreak", "page"));
+                    elements.Add(new DocxPageBreakElement(
+                        "runBreak",
+                        "page",
+                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships)));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {

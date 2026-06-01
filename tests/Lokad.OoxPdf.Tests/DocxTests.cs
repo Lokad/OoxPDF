@@ -7409,6 +7409,27 @@ internal static class DocxTests
         TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
     }
 
+    public static void DocxTableLayoutStageRunPageBreakParagraphConsumesLineBox()
+    {
+        DocxTable first = CreateSingleCellTable("first", rowHeight: 150d);
+        DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
+        DocxParagraph marker = CreateDocxLayoutParagraph("marker", 10d, 20d);
+        DocxParagraph breakParagraph = CreateDocxLayoutParagraph("", 10d, 20d);
+        DocxDocument document = CreateLayoutTestDocument([
+            new DocxTableElement(first),
+            new DocxParagraphElement(marker),
+            new DocxPageBreakElement("runBreak", "page", breakParagraph),
+            new DocxTableElement(second)
+        ], [first, second]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+
+        TestAssert.Equal(3, layout.Pages.Count);
+        TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+        TestAssert.Equal(0, layout.Pages[1].Items.Count);
+        TestAssert.Equal(1, layout.Pages[2].Items.OfType<DocxTableRowLayout>().Count());
+    }
+
     public static void DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak()
     {
         var header = new DocxTableRow([new DocxTableCell("Header", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d, IsHeader: true);
