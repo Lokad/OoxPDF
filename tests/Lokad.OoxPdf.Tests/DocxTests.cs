@@ -1285,6 +1285,41 @@ internal static class DocxTests
         TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width + 3d, line.Segments[1].X);
     }
 
+    public static void DocxLayoutStageSplitsPreservedLeadingSpaceFromFollowingWord()
+    {
+        var firstRun = new DocxTextRun("A", 12d, null, false, false, false, null, "Narrow");
+        var secondRun = new DocxTextRun(" B", 12d, null, false, false, false, null, "Wide");
+        var paragraph = new DocxParagraph(
+            [firstRun, secondRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(3, line.Segments.Count);
+        TestAssert.Equal("A", line.Segments[0].Text);
+        TestAssert.Equal(" ", line.Segments[1].Text);
+        TestAssert.Equal("B", line.Segments[2].Text);
+        TestAssert.Equal(line.Segments[1].X + line.Segments[1].Width, line.Segments[2].X);
+        TestAssert.Equal("Wide", line.Segments[1].StyleRun.FontFamily ?? string.Empty);
+        TestAssert.Equal("Wide", line.Segments[2].StyleRun.FontFamily ?? string.Empty);
+    }
+
     public static void DocxLayoutStageWrapsMixedRunTextWithRunAwareWidths()
     {
         var narrowRun = new DocxTextRun("A", 12d, null, false, false, false, null, "Narrow");

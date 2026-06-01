@@ -3915,6 +3915,18 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   positioned adjustments on some nominally zero-spacing runs. Investigate run splitting, script/field/static
   part boundaries, kerning decomposition, and line-segment ownership with Office-backed public fixtures before
   changing spacing math. Do not introduce font-name rules or private-document exceptions.
+  2026-06-01 progress: Office inspection of `docx-ladder-02-character-spacing` showed a concrete run-boundary
+  decomposition gap: for an authored run whose preserved text starts with a space, Office emits the leading
+  space as its own `TJ` text operation before the following word, while the candidate emitted `" text"` as one
+  operation. `CreateTextSegments` now splits leading regular spaces into separate layout segments and advances
+  the following segment through the existing run character-spacing boundary rule, preserving glyph positions
+  without font, content, or coordinate special cases. Public `docx-text --skip-slow` passed (`36` passed) and
+  `docx-core --skip-slow` passed (`22` passed; one parallel rerun first hit a transient compiler file lock).
+  Public `docx-ladder-02-character-spacing` run `20260601-122636` stayed raster-neutral against the prior run
+  (`MAE=0.736009`, changed16 `0.007625`, SSIM `0.787077`) while PDF inspection now shows the mixed line as
+  separate candidate operations `" "`, then `"text"`, matching Office's structural split for that boundary.
+  The item remains open for static header/footer tab decomposition, empty paragraph mark/resource differences,
+  and Office's small nominally-zero spacing residuals.
 - [ ] Improve numbering layout: render labels in their own hanging-indent area, support level text expansion
   beyond the current simple label prefix, and honor restart/start rules.
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from

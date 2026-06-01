@@ -1773,9 +1773,7 @@ internal sealed class DocxLayoutEngine
             if (i > start)
             {
                 string text = span.Text[start..i];
-                double width = textMeasurer.MeasureText(span.StyleRun, text, fontSize);
-                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width));
-                segmentX += width;
+                segmentX = AddTextSegment(segments, span.StyleRun, text, segmentX, fontSize, textMeasurer);
             }
 
             if (i < span.Text.Length)
@@ -1786,6 +1784,44 @@ internal sealed class DocxLayoutEngine
         }
 
         return segmentX;
+    }
+
+    private static double AddTextSegment(
+        List<DocxTextSegmentLayout> segments,
+        DocxTextRun styleRun,
+        string text,
+        double segmentX,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer)
+    {
+        int leadingSpaces = CountLeadingOfficeSeparatedSpaces(text);
+        if (leadingSpaces == 0 || leadingSpaces == text.Length)
+        {
+            double width = textMeasurer.MeasureText(styleRun, text, fontSize);
+            segments.Add(new DocxTextSegmentLayout(text, styleRun, segmentX, width));
+            return segmentX + width;
+        }
+
+        string spaceText = text[..leadingSpaces];
+        double spaceWidth = textMeasurer.MeasureText(styleRun, spaceText, fontSize);
+        segments.Add(new DocxTextSegmentLayout(spaceText, styleRun, segmentX, spaceWidth));
+        segmentX += spaceWidth + DocxTextSpacing.BoundarySpacing(styleRun, spaceText, text[leadingSpaces..]);
+
+        string bodyText = text[leadingSpaces..];
+        double bodyWidth = textMeasurer.MeasureText(styleRun, bodyText, fontSize);
+        segments.Add(new DocxTextSegmentLayout(bodyText, styleRun, segmentX, bodyWidth));
+        return segmentX + bodyWidth;
+    }
+
+    private static int CountLeadingOfficeSeparatedSpaces(string text)
+    {
+        int count = 0;
+        while (count < text.Length && text[count] == ' ')
+        {
+            count++;
+        }
+
+        return count;
     }
 
     private static double MeasureTextSpanAdvance(
