@@ -4912,6 +4912,121 @@ internal static class DocxTests
         TestAssert.Equal("D9EAD3", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
     }
 
+    public static void DocxReaderAppliesDefaultTableStyleCellMargins()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:default="1" w:styleId="TableNormal">
+                    <w:tblPr><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar></w:tblPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc><w:p><w:r><w:t>Default</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxTableCellMargins margins = document.Tables[0].Rows[0].Cells[0].Margins;
+
+        TestAssert.Equal("108", margins.LeftValue ?? string.Empty);
+        TestAssert.Equal(5.4d, margins.LeftPoints ?? 0d);
+        TestAssert.Equal("120", margins.RightValue ?? string.Empty);
+        TestAssert.Equal(6d, margins.RightPoints ?? 0d);
+    }
+
+    public static void DocxReaderDirectTableCellMarginsOverrideDefaultTableStyle()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:default="1" w:styleId="TableNormal">
+                    <w:tblPr><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr><w:tblCellMar><w:left w:w="240" w:type="dxa"/></w:tblCellMar></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc><w:p><w:r><w:t>Direct</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxTableCellMargins margins = document.Tables[0].Rows[0].Cells[0].Margins;
+
+        TestAssert.Equal("240", margins.LeftValue ?? string.Empty);
+        TestAssert.Equal(12d, margins.LeftPoints ?? 0d);
+        TestAssert.Equal("108", margins.RightValue ?? string.Empty);
+        TestAssert.Equal(5.4d, margins.RightPoints ?? 0d);
+    }
+
     public static void DocxReaderTableStyleCascadesBasedOnProperties()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -7268,10 +7383,10 @@ internal static class DocxTests
             .Single();
 
         TestAssert.Equal(cellLayout.X + 12d, cellLayout.TextLines[0].X);
-        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 20d, cellLayout.TextLines[0].BaselineY);
+        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 14d, cellLayout.TextLines[0].BaselineY);
     }
 
-    public static void DocxTableLayoutStageUsesWordDefaultHorizontalCellPadding()
+    public static void DocxTableLayoutStageDoesNotInventHorizontalCellPadding()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -7306,7 +7421,7 @@ internal static class DocxTests
             .Cells
             .Single();
 
-        TestAssert.Equal(cellLayout.X + 5.4d, cellLayout.TextLines[0].X);
+        TestAssert.Equal(cellLayout.X, cellLayout.TextLines[0].X);
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d, cellLayout.TextLines[0].BaselineY);
     }
 
@@ -7350,7 +7465,7 @@ internal static class DocxTests
             .Cells
             .Single();
 
-        TestAssert.Equal(cellLayout.X + 5.64d, cellLayout.TextLines[0].X);
+        TestAssert.Equal(cellLayout.X + 0.24d, cellLayout.TextLines[0].X);
     }
 
     public static void DocxTableLayoutStageUsesWordDefaultRowMinimumForAutoRows()

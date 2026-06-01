@@ -488,8 +488,6 @@ internal sealed class DocxLayoutEngine
     private const double WordDefaultTabStopPoints = 36d;
     private const double WordDefaultTableRowMinimumTwips = 401d;
     private const double WordDefaultTableRowMinimumHeight = WordDefaultTableRowMinimumTwips / 20d;
-    private const double WordDefaultTableCellHorizontalPadding = 5.4d;
-    private const double AuthoredMarginTableCellFirstBaselineInset = 17d;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -1807,7 +1805,7 @@ internal sealed class DocxLayoutEngine
 
     private static double ResolveTableCellHorizontalPadding(double? points)
     {
-        return Math.Max(0d, points ?? WordDefaultTableCellHorizontalPadding);
+        return Math.Max(0d, points ?? 0d);
     }
 
     private static double ResolveTableCellBorderContentInset(DocxTableCell cell, string edge)
@@ -1836,20 +1834,7 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        if (HasAuthoredTableCellMargin(cell.Margins))
-        {
-            return AuthoredMarginTableCellFirstBaselineInset;
-        }
-
         return firstTextParagraph.Runs.Max(run => run.FontSize);
-    }
-
-    private static bool HasAuthoredTableCellMargin(DocxTableCellMargins margins)
-    {
-        return margins.TopPoints is not null ||
-            margins.RightPoints is not null ||
-            margins.BottomPoints is not null ||
-            margins.LeftPoints is not null;
     }
 
     private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs)

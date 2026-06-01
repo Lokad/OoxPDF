@@ -1375,7 +1375,8 @@ internal sealed class DocxReader
         IReadOnlyList<DocxTableCellBorder> tableBorders = ReadTableBorders(tableProperties);
         DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
             ? parsedTableStyle
-            : DocxTableStyle.Empty;
+            : styles.DefaultTableStyle ?? DocxTableStyle.Empty;
+        DocxTableCellMargins tableCellMargins = ReadTableStyleCellMargins(tableProperties);
         IReadOnlyList<double> columns = table
             .Element(WordprocessingNamespace + "tblGrid")
             ?.Elements(WordprocessingNamespace + "gridCol")
@@ -1388,6 +1389,7 @@ internal sealed class DocxReader
         {
             XElement row = rowElements[rowIndex];
             DocxTableCellMargins rowExceptionMargins = ReadTablePropertyExceptionCellMargins(row);
+            DocxTableCellMargins rowInheritedMargins = MergeTableCellMargins(rowExceptionMargins, MergeTableCellMargins(tableCellMargins, tableStyle.Cell.Margins));
             var cells = new List<DocxTableCell>();
             XElement[] cellElements = row.Elements(WordprocessingNamespace + "tc").ToArray();
             for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
@@ -1427,7 +1429,8 @@ internal sealed class DocxReader
                     cellIndex,
                     rowElements.Length,
                     cellElements.Length);
-                DocxTableCellMargins margins = MergeTableCellMargins(ReadTableCellMargins(cellProperties), conditionalStyle.Margins);
+                DocxTableCellMargins inheritedMargins = MergeTableCellMargins(rowInheritedMargins, conditionalStyle.Margins);
+                DocxTableCellMargins margins = MergeTableCellMargins(ReadTableCellMargins(cellProperties), inheritedMargins);
                 cells.Add(new DocxTableCell(
                     text,
                     paragraphs,
@@ -1911,6 +1914,7 @@ internal sealed class DocxReader
         var paragraphStyles = new Dictionary<string, DocxStyle>(StringComparer.Ordinal);
         var characterStyles = new Dictionary<string, DocxStyle>(StringComparer.Ordinal);
         var tableStyles = new Dictionary<string, DocxTableStyle>(StringComparer.Ordinal);
+        string? defaultTableStyleId = null;
         foreach (XElement style in stylesXml.Root?.Elements(WordprocessingNamespace + "style") ?? [])
         {
             string? styleId = (string?)style.Attribute(WordprocessingNamespace + "styleId");
@@ -1935,10 +1939,18 @@ internal sealed class DocxReader
             else if (type == "table")
             {
                 tableStyles[styleId] = ReadTableStyle(style);
+                if (OoxBoolean.ParseAttribute(style, WordprocessingNamespace + "default"))
+                {
+                    defaultTableStyleId = styleId;
+                }
             }
         }
 
-        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, ResolveTableStyles(tableStyles));
+        IReadOnlyDictionary<string, DocxTableStyle> resolvedTableStyles = ResolveTableStyles(tableStyles);
+        DocxTableStyle? defaultTableStyle = defaultTableStyleId is not null && resolvedTableStyles.TryGetValue(defaultTableStyleId, out DocxTableStyle? resolvedDefault)
+            ? resolvedDefault
+            : null;
+        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyle);
     }
 
     private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName)
@@ -2356,14 +2368,16 @@ internal sealed class DocxReader
         DocxResolvedParagraphProperties ParagraphDefaults,
         IReadOnlyDictionary<string, DocxStyle> ParagraphStyles,
         IReadOnlyDictionary<string, DocxStyle> CharacterStyles,
-        IReadOnlyDictionary<string, DocxTableStyle> TableStyles)
+        IReadOnlyDictionary<string, DocxTableStyle> TableStyles,
+        DocxTableStyle? DefaultTableStyle)
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, []),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
-            new Dictionary<string, DocxTableStyle>());
+            new Dictionary<string, DocxTableStyle>(),
+            null);
     }
 
     private sealed record DocxStyle(string? BasedOnStyleId, DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);

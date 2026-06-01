@@ -2683,6 +2683,22 @@ High-priority actions:
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as
     direct cell properties.
+    2026-06-01 follow-up: the layout engine no longer invents a hard-coded horizontal cell padding when no
+    margin source exists. Word's normal `5.4pt` inset is now represented structurally by the default table
+    style (`w:style w:type="table" w:default="1"` / `TableNormal` with `w:tblCellMar`), while direct
+    `w:tblPr/w:tblCellMar`, row `w:tblPrEx/w:tblCellMar`, and direct `w:tcPr/w:tcMar` merge through the same
+    margin cascade before layout. This came from public `docx-ladder-03-table-pagination-margins` PDF
+    inspection: the no-style/no-`tblCellMar` second row in Word starts at the cell content rectangle
+    (`x=72.504`) while the old candidate used the baked-in padding (`x=77.88`). After the change candidate
+    table text is structurally aligned (`x=72.48`, baseline `708.00` vs Word `72.504`, `707.74`; first-row
+    explicit margin baseline `120.00` vs Word `119.66`). Public run `20260601-144030` improved pagination
+    page 1 `MAE=0.878900834 -> 0.770108922` and page 2 `0.235116561 -> 0.171588872`. Guard runs:
+    `docx-ladder-02-table-cell-margins` `20260601-144221` improved to `MAE=0.453874`; row-heights
+    `20260601-144231` stayed at `MAE=0.700136`; paragraph-adjacency `20260601-144239` stayed at
+    `MAE=0.545870`; `docx-tables --skip-slow` passed `73`. Private DOCX acceptance run `20260601-144414`
+    stayed structurally stable (`16/16`, no dimension mismatches, no diagnostics) with a small aggregate
+    raster move to `MAE=13.855991`, changed16 `0.127419`; keep the structural default-style cascade because
+    it removes a hard-coded layout heuristic and matches the public Office PDF evidence.
   - [ ] 2026-05-31: Complete table margin/width fidelity: implement table-level width/preferred width,
     cell spacing, `tblInd`, grid spans/merged cells, and style/direct margin priority with public Office PDF
     fixtures.
