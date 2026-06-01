@@ -2395,6 +2395,16 @@ High-priority actions:
     aggregate metrics (`MAE=13.648284`, changed16 `0.125542`), so this is a structural correctness fix rather
     than a current private raster win. Keep this item open for adjacent-edge conflict resolution,
     start/end directionality, and exact border width/unit rules.
+    2026-06-01 progress: DOCX table border PDF emission now uses filled rectangle strips instead of stroked
+    lines. Public Office PDF inspection of `docx-ladder-03-table-pagination-margins` showed Word emits table
+    borders as nonzero fills with the authored border color, while the candidate used stroke operations. The
+    renderer now emits top/bottom/left/right/start/end borders through `re f` strips in the resolved edge path,
+    with public unit coverage checking that explicit and logical cell borders no longer produce `l S` strokes.
+    Public visual run `20260601-023556` improved page 1 from `MAE=0.927605` to `0.888769` and page 2 from
+    `MAE=0.253998` to `0.210261`; candidate PDF inspection shows no stroke graphics operations in that case.
+    Keep the parent open: shared-edge conflict resolution, border precedence, nil/none suppression across
+    adjacent cells, RTL start/end mapping, and exact width/style semantics still need a table-border model
+    before emission rather than relying on per-cell paint order.
   - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as
@@ -4913,6 +4923,14 @@ Current validation baseline:
   visual run `20260601-021353` is dimension-stable at `MAE=0.426487`, changed16 `0.003888` versus baseline
   `0.432740`/`0.003942`. Private DOCX run `20260601-021406` stayed neutral at `16/16` pages, zero dimension
   mismatches, no diagnostics, `MAE=12.716572`, changed16 `0.118448`.
+- DOCX Office-like table-border emission validation:
+  after changing DOCX table borders from stroked lines to filled rectangle strips, `docx-tables --skip-slow`
+  passed `58`, `docx-page --skip-slow` passed `17`, `docx-core --skip-slow` passed `16`, and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Public
+  `docx-ladder-03-table-pagination-margins` run `20260601-023556` improved to page 1 `MAE=0.888769`,
+  changed16 `0.011461`, and page 2 `MAE=0.210261`, changed16 `0.003116`; candidate PDF inspection shows the
+  table graphics as fill operations rather than strokes. Private DOCX run `20260601-023645` stayed at `16/16`
+  pages, zero dimension mismatches, no diagnostics, `MAE=12.503007`, changed16 `0.116841`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

@@ -331,23 +331,23 @@ internal sealed class DocxRenderer
             }
 
             RgbColor color = ReadColor(border.Color);
-            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-            graphics.SetLineWidth(ReadBorderWidth(border.SizeValue));
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            double width = ReadBorderWidth(border.SizeValue);
             switch (border.Edge)
             {
                 case "top":
-                    graphics.StrokeLine(cellLayout.X, cellLayout.Y + cellLayout.Height, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height);
+                    graphics.FillRectangle(cellLayout.X, cellLayout.Y + cellLayout.Height - width, cellLayout.Width, width);
                     break;
                 case "bottom":
-                    graphics.StrokeLine(cellLayout.X, cellLayout.Y, cellLayout.X + cellLayout.Width, cellLayout.Y);
+                    graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, width);
                     break;
                 case "left":
                 case "start":
-                    graphics.StrokeLine(cellLayout.X, cellLayout.Y, cellLayout.X, cellLayout.Y + cellLayout.Height);
+                    graphics.FillRectangle(cellLayout.X, cellLayout.Y, width, cellLayout.Height);
                     break;
                 case "right":
                 case "end":
-                    graphics.StrokeLine(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height);
+                    graphics.FillRectangle(cellLayout.X + cellLayout.Width - width, cellLayout.Y, width, cellLayout.Height);
                     break;
             }
         }

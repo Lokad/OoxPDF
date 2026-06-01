@@ -3056,7 +3056,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
-        TestAssert.Contains(" l S", pdf);
+        TestAssert.Contains(" re f", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Contains("> Tj", pdf);
     }
@@ -3830,7 +3830,7 @@ internal static class DocxTests
         TestAssert.True(table.Look?.NoHorizontalBand == true, "Expected no-horizontal-band table-look token to parse as true.");
     }
 
-    public static void DocxSyntheticTableCellBordersUseAuthoredStroke()
+    public static void DocxSyntheticTableCellBordersUseOfficeLikeFilledStrips()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -3871,9 +3871,10 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 RG", pdf);
-        TestAssert.Contains("2 w", pdf);
-        TestAssert.Contains(" l S", pdf);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains(" re f", pdf);
+        TestAssert.DoesNotContain("2 w", pdf);
+        TestAssert.DoesNotContain(" l S", pdf);
         TestAssert.DoesNotContain(" re S", pdf);
     }
 
@@ -3918,9 +3919,10 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 1 RG", pdf);
-        TestAssert.Contains("1 0 0 RG", pdf);
-        TestAssert.Equal(2, pdf.Split(" l S", StringSplitOptions.None).Length - 1);
+        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 2, "Expected logical borders to render as filled rectangle strips.");
+        TestAssert.DoesNotContain(" l S", pdf);
     }
 
     public static void DocxReaderTablePreservesHeaderRowToken()
@@ -4802,7 +4804,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int firstText = pdf.IndexOf("> Tj", StringComparison.Ordinal);
-        int tableGrid = pdf.IndexOf(" l S", StringComparison.Ordinal);
+        int tableGrid = pdf.IndexOf(" re f", StringComparison.Ordinal);
         int lastText = pdf.LastIndexOf("> Tj", StringComparison.Ordinal);
         TestAssert.True(firstText >= 0 && tableGrid > firstText && lastText > tableGrid, "DOCX tables should render in body order between surrounding paragraphs.");
     }
@@ -4851,7 +4853,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 684 m 216 684 l S", pdf);
+        TestAssert.Contains("72 684 144 0.5 re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream);
