@@ -5473,6 +5473,22 @@ Current validation baseline:
   reference PDFs and, if needed, add small Office-authored probes for ordinary paragraphs, table cells,
   headers/footers, multi-run paragraphs, and style-driven font sizes before changing emission. Do not
   hard-code fonts, private bucket constants, or private page/document conditions.
+  2026-06-01 progress: public PDF inspection split the problem into two parts. Word emits separate text
+  operations for terminal line spaces and for list-label suffix spaces; `ooxpdf` now mirrors that decomposition
+  without changing layout width or underline geometry. Public runs `docx-ladder-01-plain-paragraph`
+  (`20260601-130012`), `docx-numbering` (`20260601-130021`), and `docx-tables` (`20260601-130029`) now match
+  Word's text-operation counts exactly: plain `2/2`, numbering `14/14`, tables `21/21`. The remaining open gap
+  is specifically context-derived PDF character spacing: numbering reference uses `Tc=0.048` on list/body
+  operations while candidate remains `Tc=0`; table reference uses `Tc=0.0509` for header cells and `Tc=-0.0182`
+  for most body cell text while candidate remains `Tc=0`. Public `docx-ladder-02-character-spacing` still shows
+  authored `w:rPr/w:spacing` is not the answer because Word keeps `Tc=0` there and encodes spacing through
+  positioned glyph arrays. Next work should derive the Word `Tc` rule from public structure such as line/cell/list
+  context, font-size grid, and PDF text-state reuse, not from fonts, private bucket constants, or private cases.
+  Private DOCX acceptance run `20260601-130157` stayed stable at `16/16` pages, zero dimension mismatches, no
+  diagnostics, `MAE=13.838763`, changed16 `0.126851`. Aggregate private text-operation inspection improved
+  candidate decomposition from the pre-change `1213` operations to `2184` operations, closer to Word's `2388`,
+  but all candidate operations still use `Tc=0` while Word uses many small positive and negative buckets. This
+  reinforces that the next DOCX fidelity step is the generic Word `Tc` rule, not more operation splitting.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

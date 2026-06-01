@@ -179,6 +179,7 @@ internal sealed class DocxRenderer
     {
         return runs
             .SelectMany(run => run.Run.Text.EnumerateRunes().Select(rune => rune.Value))
+            .Concat(" ".EnumerateRunes().Select(rune => rune.Value))
             .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
             .Distinct()
             .ToArray();
@@ -240,6 +241,8 @@ internal sealed class DocxRenderer
         {
             RenderTextSegment(segment, line.FontSize, line.BaselineY, graphics, fontResources, pageNumber, pageCount);
         }
+
+        RenderTerminalLineSpace(segments, line.FontSize, line.BaselineY, graphics, fontResources);
     }
 
     private static void RenderTextSegment(
@@ -351,6 +354,33 @@ internal sealed class DocxRenderer
 
                 graphics.RestoreState();
             }
+        }
+    }
+
+    private static void RenderTerminalLineSpace(
+        IReadOnlyList<DocxTextSegmentLayout> segments,
+        double fontSize,
+        double baselineY,
+        PdfGraphicsBuilder graphics,
+        DocxFontResources fontResources)
+    {
+        for (int i = segments.Count - 1; i >= 0; i--)
+        {
+            DocxTextSegmentLayout segment = segments[i];
+            if (string.IsNullOrEmpty(segment.Text) || string.IsNullOrWhiteSpace(segment.Text))
+            {
+                continue;
+            }
+
+            DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
+            if (resource is null)
+            {
+                return;
+            }
+
+            RgbColor color = ReadColor(segment.StyleRun.ColorHex);
+            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color);
+            return;
         }
     }
 

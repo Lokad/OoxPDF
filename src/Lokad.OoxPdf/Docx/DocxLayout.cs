@@ -1008,11 +1008,21 @@ internal sealed class DocxLayoutEngine
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
-        return
-        [
-            new DocxTextSegmentLayout(label.Text, labelRun, labelX, labelWidth),
-            .. CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops)
-        ];
+        var segments = new List<DocxTextSegmentLayout>
+        {
+            new(label.Text, labelRun, labelX, labelWidth)
+        };
+
+        string separator = GetListLabelPdfSeparator(label);
+        if (separator.Length != 0)
+        {
+            double separatorX = labelX + labelWidth;
+            double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelRun.FontSize);
+            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth));
+        }
+
+        segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops));
+        return segments;
     }
 
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
@@ -1034,6 +1044,11 @@ internal sealed class DocxLayoutEngine
             "space" => " ",
             _ => "\t"
         };
+    }
+
+    private static string GetListLabelPdfSeparator(DocxListLabel label)
+    {
+        return label.SuffixValue.Equals("nothing", StringComparison.OrdinalIgnoreCase) ? string.Empty : " ";
     }
 
     private static bool IsNumberingTabSuffix(DocxListLabel label)

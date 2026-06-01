@@ -1725,7 +1725,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(1, CountPdfTextShows(pdf));
+        TestAssert.Equal(2, CountPdfTextShows(pdf));
     }
 
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
@@ -3851,7 +3851,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Equal(4, CountPdfTextShows(pdf));
+        TestAssert.Equal(8, CountPdfTextShows(pdf));
     }
 
     public static void DocxReaderPreservesNumberingFormatTokens()
@@ -4118,11 +4118,12 @@ internal static class DocxTests
 
         TestAssert.Equal(72d, document.MarginLeftPoints);
         TestAssert.Equal(90d, line.X);
-        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal(3, line.Segments.Count);
         TestAssert.Equal("1.", line.Segments[0].Text);
         TestAssert.Equal(90d, line.Segments[0].X);
-        TestAssert.Equal("Indented", line.Segments[1].Text);
-        TestAssert.Equal(108d, line.Segments[1].X);
+        TestAssert.Equal(" ", line.Segments[1].Text);
+        TestAssert.Equal("Indented", line.Segments[2].Text);
+        TestAssert.Equal(108d, line.Segments[2].X);
     }
 
     public static void DocxSyntheticNumberingTabPositionMovesMarkerOnly()
@@ -4189,11 +4190,12 @@ internal static class DocxTests
             .Single();
 
         TestAssert.Equal(84d, line.X);
-        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal(3, line.Segments.Count);
         TestAssert.Equal("1.", line.Segments[0].Text);
         TestAssert.Equal(84d, line.Segments[0].X);
-        TestAssert.Equal("Indented", line.Segments[1].Text);
-        TestAssert.Equal(108d, line.Segments[1].X);
+        TestAssert.Equal(" ", line.Segments[1].Text);
+        TestAssert.Equal("Indented", line.Segments[2].Text);
+        TestAssert.Equal(108d, line.Segments[2].X);
     }
 
     public static void DocxSyntheticNumberingSpaceSuffixPlacesTextAfterLabel()
@@ -4261,8 +4263,9 @@ internal static class DocxTests
 
         double expectedTextX = line.Segments[0].X + embedded.MeasureTextPoints("1. ", line.FontSize);
         TestAssert.Equal("space", document.Paragraphs[0].ListLabel?.SuffixValue ?? string.Empty);
-        TestAssert.Equal(expectedTextX, line.Segments[1].X);
-        TestAssert.True(line.Segments[1].X < 108d, "A space suffix should not advance text to the numbering tab stop.");
+        TestAssert.Equal(" ", line.Segments[1].Text);
+        TestAssert.Equal(expectedTextX, line.Segments[2].X);
+        TestAssert.True(line.Segments[2].X < 108d, "A space suffix should not advance text to the numbering tab stop.");
     }
 
     public static void DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth()
@@ -4319,8 +4322,9 @@ internal static class DocxTests
             .ToArray();
 
         TestAssert.True(lines.Length >= 3, "The narrow hanging continuation width should wrap continuation text more tightly than the first line.");
-        TestAssert.Equal(2, lines[0].Segments.Count);
-        TestAssert.True(lines[0].Segments[1].X < 108d, "The first line uses the space suffix immediately after the label.");
+        TestAssert.Equal(3, lines[0].Segments.Count);
+        TestAssert.Equal(" ", lines[0].Segments[1].Text);
+        TestAssert.True(lines[0].Segments[2].X < 108d, "The first line uses the space suffix immediately after the label.");
         for (int i = 1; i < lines.Length; i++)
         {
             TestAssert.Equal(108d, lines[i].X);
@@ -6525,10 +6529,11 @@ internal static class DocxTests
             .Cells[0]
             .TextLines[0];
         TestAssert.Equal("1.\tItem", line.Text);
-        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal(3, line.Segments.Count);
         TestAssert.Equal("1.", line.Segments[0].Text);
-        TestAssert.Equal("Item", line.Segments[1].Text);
-        TestAssert.True(line.Segments[1].X > line.Segments[0].X, "Numbered table-cell text should be segmented after the list label.");
+        TestAssert.Equal(" ", line.Segments[1].Text);
+        TestAssert.Equal("Item", line.Segments[2].Text);
+        TestAssert.True(line.Segments[2].X > line.Segments[0].X, "Numbered table-cell text should be segmented after the list label.");
     }
 
     public static void DocxSyntheticTableKeepsBodyOrder()
@@ -8876,6 +8881,7 @@ internal static class DocxTests
     {
         return Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm")
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
+            .Distinct()
             .ToArray();
     }
 
