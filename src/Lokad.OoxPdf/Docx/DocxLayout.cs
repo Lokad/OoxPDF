@@ -923,11 +923,6 @@ internal sealed class DocxLayoutEngine
         double[] rowHeights = table.Rows
             .Select(row => MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer))
             .ToArray();
-        double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? WordDefaultTableRowMinimumHeight);
-        if (cursorY - tableHeight < document.MarginBottomPoints && hasPageContent())
-        {
-            finishPage();
-        }
 
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
             .Select((row, rowIndex) => (row, rowIndex))

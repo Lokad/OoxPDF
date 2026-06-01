@@ -1947,6 +1947,17 @@ High-priority actions:
     `35.7355pt` at-least wrapped row, `18pt` exact row). Keep the parent open for first-row/header-row
     baseline placement, row clipping semantics, and broader pagination cases rather than the basic
     `auto`/missing/`exact` token distinction.
+    2026-06-01 follow-up: removed the default whole-table preflight from `LayoutTable`; ordinary
+    DOCX tables now paginate by row unless an explicit keep/header rule says otherwise, instead of
+    treating every table as an indivisible block. A measured-whole-table preflight trial was rejected
+    because it produced a 17-page private candidate with a dimension mismatch (`20260601-075711`),
+    proving that whole-table movement was the wrong abstraction even when the measured height was
+    more accurate than the old minimum-row estimate. The landed row-splitting behavior keeps the
+    private case page-stable at `16/16`, zero dimension mismatches, `MAE=13.388935`, changed16
+    `0.124264` (`20260601-075941`); public `docx-ladder-03-table-row-heights` remains stable at
+    `MAE=2.435244`, changed16 `0.018702` (`20260601-075940`). Added a layout unit test that locks
+    the default split-by-row behavior. Keep this parent open for table `keepNext` interactions,
+    header repetition, row clipping, and remaining baseline/row-origin drift.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current

@@ -5912,6 +5912,76 @@ internal static class DocxTests
         TestAssert.True(row.Cells[0].TextLines.Count >= 2, "Expected the narrow cell to wrap content into multiple layout-owned text lines.");
     }
 
+    public static void DocxTableLayoutDoesNotKeepWholeTableTogetherByDefault()
+    {
+        var intro = new DocxParagraph(
+            [new DocxTextRun("Intro", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var first = new DocxParagraph(
+            [new DocxTextRun("First", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var second = new DocxParagraph(
+            [new DocxTextRun("Second", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var firstCell = new DocxTableCell("First", [first], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var secondCell = new DocxTableCell("Second", [second], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [50d], [
+            new DocxTableRow([firstCell], 20d),
+            new DocxTableRow([secondCell], 20d)
+        ]);
+        var document = new DocxDocument(
+            100d,
+            65d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(intro), new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+        TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+        TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
+    }
+
     public static void DocxTableLayoutStageHonorsExactRowHeightRule()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
