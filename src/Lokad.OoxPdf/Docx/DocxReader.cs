@@ -61,6 +61,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, relationships, styles, numbering, FooterRelationshipType, "footerReference");
         IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
         IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
+        IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering);
         IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document);
 
         if (pageSize is null)
@@ -83,6 +84,7 @@ internal sealed class DocxReader
                 FontCatalog = fontCatalog,
                 HeaderParagraphsByType = headersByType,
                 FooterParagraphsByType = footersByType,
+                RelatedStories = relatedStories,
                 Settings = documentSettings
             };
         }
@@ -118,6 +120,7 @@ internal sealed class DocxReader
             FontCatalog = fontCatalog,
             HeaderParagraphsByType = headersByType,
             FooterParagraphsByType = footersByType,
+            RelatedStories = relatedStories,
             Settings = documentSettings
         };
     }
@@ -1435,6 +1438,55 @@ internal sealed class DocxReader
         return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? paragraphs)
             ? paragraphs
             : [];
+    }
+
+    private static IReadOnlyList<DocxRelatedStory> ReadRelatedStories(
+        OoxPackage package,
+        string documentPartName,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering)
+    {
+        return ReadRelatedStories(package, documentPartName, styles, numbering, CommentsRelationshipType, CommentsContentType, "Comment", "comment")
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, "Footnote", "footnote"))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, "Endnote", "endnote"))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<DocxRelatedStory> ReadRelatedStories(
+        OoxPackage package,
+        string documentPartName,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        string relationshipType,
+        string contentType,
+        string kind,
+        string storyElementName)
+    {
+        OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType);
+        if (part is null)
+        {
+            return [];
+        }
+
+        using Stream stream = part.OpenRead();
+        XDocument partXml = SafeXml.Load(stream);
+        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name)
+            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        var numberingCounters = new Dictionary<(string NumId, int Level), int>();
+        return partXml.Root?
+            .Elements(WordprocessingNamespace + storyElementName)
+            .Select(story => new DocxRelatedStory(
+                kind,
+                part.Name,
+                (string?)story.Attribute(WordprocessingNamespace + "id"),
+                story.Elements(WordprocessingNamespace + "p")
+                    .Select(paragraph => ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships))
+                    .Where(paragraph => paragraph is not null)
+                    .Select(paragraph => paragraph!)
+                    .ToArray()))
+            .Where(story => story.Paragraphs.Count > 0)
+            .ToArray() ?? [];
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphElements(

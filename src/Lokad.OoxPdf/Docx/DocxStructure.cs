@@ -96,6 +96,7 @@ internal sealed record DocxStructureSnapshot(
 
         AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType);
         AddStaticStories(stories, "Footer", "document", null, document.FooterParagraphsByType);
+        AddRelatedStories(stories, document.RelatedStories);
         for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
         {
             if (document.BodyElements[blockIndex] is not DocxSectionBreakElement sectionBreak)
@@ -130,6 +131,26 @@ internal sealed record DocxStructureSnapshot(
                 0,
                 entry.Value.Sum(TextLength),
                 entry.Value.Sum(paragraph => paragraph.Images.Count)));
+        }
+    }
+
+    private static void AddRelatedStories(List<DocxStructureStorySnapshot> stories, IReadOnlyList<DocxRelatedStory> relatedStories)
+    {
+        foreach (DocxRelatedStory story in relatedStories
+            .OrderBy(story => story.Kind, StringComparer.Ordinal)
+            .ThenBy(story => story.PartName, StringComparer.Ordinal)
+            .ThenBy(story => story.Id, StringComparer.Ordinal))
+        {
+            stories.Add(new DocxStructureStorySnapshot(
+                story.Kind,
+                story.PartName,
+                null,
+                story.Id,
+                0,
+                story.Paragraphs.Count,
+                0,
+                story.Paragraphs.Sum(TextLength),
+                story.Paragraphs.Sum(paragraph => paragraph.Images.Count)));
         }
     }
 
@@ -382,14 +403,7 @@ internal sealed record DocxStructureSnapshot(
 
     private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
     {
-        IEnumerable<DocxParagraph> bodyParagraphs = document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph);
-        IEnumerable<DocxParagraph> tableParagraphs = document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs);
-        IEnumerable<DocxParagraph> staticParagraphs = document.HeaderParagraphsByType.Values
-            .Concat(document.FooterParagraphsByType.Values)
-            .SelectMany(paragraphs => paragraphs);
-        DocxStructureStyleUsageSnapshot[] paragraphStyles = bodyParagraphs
-            .Concat(tableParagraphs)
-            .Concat(staticParagraphs)
+        DocxStructureStyleUsageSnapshot[] paragraphStyles = EnumerateParagraphs(document)
             .GroupBy(paragraph => paragraph.StyleId, StringComparer.Ordinal)
             .Select(group => new DocxStructureStyleUsageSnapshot(
                 "Paragraph",
@@ -414,9 +428,7 @@ internal sealed record DocxStructureSnapshot(
 
     private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
     {
-        IEnumerable<DocxParagraph> paragraphs = document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph)
-            .Concat(document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs));
-        return paragraphs
+        return EnumerateParagraphs(document)
             .Where(paragraph => paragraph.ListLabel is not null)
             .GroupBy(paragraph => new
             {
@@ -433,6 +445,26 @@ internal sealed record DocxStructureSnapshot(
                 group.Count(),
                 group.Sum(TextLength)))
             .ToArray();
+    }
+
+    private static IEnumerable<DocxParagraph> EnumerateParagraphs(DocxDocument document)
+    {
+        return document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph)
+            .Concat(document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs))
+            .Concat(document.HeaderParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
+            .Concat(document.FooterParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
+            .Concat(EnumeratePageSettingsParagraphs(document.PageSettings))
+            .Concat(document.BodyElements
+                .OfType<DocxSectionBreakElement>()
+                .SelectMany(sectionBreak => EnumeratePageSettingsParagraphs(sectionBreak.PageSettings)))
+            .Concat(document.RelatedStories.SelectMany(story => story.Paragraphs));
+    }
+
+    private static IEnumerable<DocxParagraph> EnumeratePageSettingsParagraphs(DocxPageSettings settings)
+    {
+        return settings.HeaderParagraphsByType.Values
+            .Concat(settings.FooterParagraphsByType.Values)
+            .SelectMany(paragraphs => paragraphs);
     }
 
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(

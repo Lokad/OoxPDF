@@ -20,6 +20,7 @@ internal sealed record DocxDocument(
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyList<DocxRelatedStory> RelatedStories { get; init; } = [];
     public DocxDocumentSettings Settings { get; init; } = DocxDocumentSettings.Empty;
 
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
@@ -27,6 +28,12 @@ internal sealed record DocxDocument(
     {
     }
 }
+
+internal sealed record DocxRelatedStory(
+    string Kind,
+    string PartName,
+    string? Id,
+    IReadOnlyList<DocxParagraph> Paragraphs);
 
 internal sealed record DocxDocumentSettings(
     string? CharacterSpacingControlValue,

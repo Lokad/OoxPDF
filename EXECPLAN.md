@@ -4433,6 +4433,15 @@ block models and richer section/pagination layout before adding more Word pagina
     builds a minimal synthetic package with all three story parts and checks their diagnostic part names.
     Validation passed `docx-core --skip-slow` (`26`). Keep this item open for actual footnote/endnote/comment
     body rendering and placement.
+  - [x] 2026-06-02: comments, footnotes, and endnotes now have a first-class structural home before rendering.
+    `DocxDocument.RelatedStories` stores parsed `DocxRelatedStory` records with kind, owning package part,
+    story id, and paragraphs read through the existing paragraph/style/numbering/run pipeline. `DocxStructureSnapshot`
+    exposes these as `Comment`, `Footnote`, and `Endnote` stories scoped to `/word/comments.xml`,
+    `/word/footnotes.xml`, and `/word/endnotes.xml`, and `DocxFontPlan` includes their runs so future body
+    rendering does not start with missing font resources. The existing minimal related-story package test now
+    checks reader preservation, private-safe structure story metrics, and font-plan participation. Validation
+    passed `docx-core --skip-slow` (`26`). Keep this item open for tables inside side stories, separator
+    footnotes, actual placement/rendering, and reference marker output.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent

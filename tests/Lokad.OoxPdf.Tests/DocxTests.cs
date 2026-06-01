@@ -10218,6 +10218,23 @@ internal static class DocxTests
         TestAssert.True(!diagnostics.Any(d =>
             (d.Id == "DOCX_UNSUPPORTED_COMMENTS" || d.Id == "DOCX_UNSUPPORTED_FOOTNOTE" || d.Id == "DOCX_UNSUPPORTED_ENDNOTE") &&
             d.PartName == "/word/document.xml"), "Story-body diagnostics should not be flattened to document.xml when the related body part exists.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        TestAssert.Equal(3, document.RelatedStories.Count);
+        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Comment" && story.PartName == "/word/comments.xml" && story.Id == "1" && story.Paragraphs.Count == 1), "Comment bodies should be preserved as related DOCX stories.");
+        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
+        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.ParagraphCount == 1), "Structure snapshots should expose comment story ownership.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footnote" && story.Scope == "/word/footnotes.xml" && story.VariantType == "2" && story.TextLength == 13), "Structure snapshots should expose footnote story text metrics.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Endnote" && story.Scope == "/word/endnotes.xml" && story.VariantType == "3" && story.TextLength == 12), "Structure snapshots should expose endnote story text metrics.");
+
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"));
+        TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment body"), "Related story runs should participate in DOCX font planning.");
+        TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Footnote body"), "Footnote runs should participate in DOCX font planning.");
+        TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Endnote body"), "Endnote runs should participate in DOCX font planning.");
     }
 
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
