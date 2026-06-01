@@ -1476,17 +1476,67 @@ internal sealed class DocxReader
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
         return partXml.Root?
             .Elements(WordprocessingNamespace + storyElementName)
-            .Select(story => new DocxRelatedStory(
-                kind,
-                part.Name,
-                (string?)story.Attribute(WordprocessingNamespace + "id"),
-                story.Elements(WordprocessingNamespace + "p")
-                    .Select(paragraph => ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships))
-                    .Where(paragraph => paragraph is not null)
-                    .Select(paragraph => paragraph!)
-                    .ToArray()))
-            .Where(story => story.Paragraphs.Count > 0)
+            .Select(story => ReadRelatedStory(kind, part.Name, story, styles, numbering, numberingCounters, package, relationships))
+            .Where(story => story.BodyElements.Count > 0)
             .ToArray() ?? [];
+    }
+
+    private static DocxRelatedStory ReadRelatedStory(
+        string kind,
+        string partName,
+        XElement story,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        Dictionary<(string NumId, int Level), int> numberingCounters,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        IReadOnlyList<DocxBodyElement> bodyElements = ReadRelatedStoryBodyElements(
+            story.Elements(),
+            styles,
+            numbering,
+            numberingCounters,
+            package,
+            relationships);
+        return new DocxRelatedStory(
+            kind,
+            partName,
+            (string?)story.Attribute(WordprocessingNamespace + "id"),
+            bodyElements,
+            bodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            bodyElements.OfType<DocxTableElement>().Select(element => element.Table).ToArray());
+    }
+
+    private static IReadOnlyList<DocxBodyElement> ReadRelatedStoryBodyElements(
+        IEnumerable<XElement> elements,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        Dictionary<(string NumId, int Level), int> numberingCounters,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        var bodyElements = new List<DocxBodyElement>();
+        foreach (XElement element in elements)
+        {
+            if (element.Name == WordprocessingNamespace + "p")
+            {
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);
+                if (paragraph is not null)
+                {
+                    bodyElements.Add(new DocxParagraphElement(paragraph));
+                }
+            }
+            else if (element.Name == WordprocessingNamespace + "tbl")
+            {
+                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships);
+                if (table is not null)
+                {
+                    bodyElements.Add(new DocxTableElement(table));
+                }
+            }
+        }
+
+        return bodyElements;
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphElements(

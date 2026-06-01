@@ -36,6 +36,11 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
                 .SelectMany(row => row.Cells)
                 .SelectMany(DocxTableCellContent.GetParagraphs))
             .Concat(document.RelatedStories.SelectMany(story => story.Paragraphs))
+            .Concat(document.RelatedStories
+                .SelectMany(story => story.Tables)
+                .SelectMany(table => table.Rows)
+                .SelectMany(row => row.Cells)
+                .SelectMany(DocxTableCellContent.GetParagraphs))
             .SelectMany(GetParagraphFontRuns)
             .ToArray();
 

@@ -33,7 +33,9 @@ internal sealed record DocxRelatedStory(
     string Kind,
     string PartName,
     string? Id,
-    IReadOnlyList<DocxParagraph> Paragraphs);
+    IReadOnlyList<DocxBodyElement> BodyElements,
+    IReadOnlyList<DocxParagraph> Paragraphs,
+    IReadOnlyList<DocxTable> Tables);
 
 internal sealed record DocxDocumentSettings(
     string? CharacterSpacingControlValue,

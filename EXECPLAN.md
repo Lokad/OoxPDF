@@ -4442,6 +4442,14 @@ block models and richer section/pagination layout before adding more Word pagina
     checks reader preservation, private-safe structure story metrics, and font-plan participation. Validation
     passed `docx-core --skip-slow` (`26`). Keep this item open for tables inside side stories, separator
     footnotes, actual placement/rendering, and reference marker output.
+  - [x] 2026-06-02: related DOCX stories now preserve direct table blocks as well as paragraphs.
+    `DocxRelatedStory` carries a side-story block stream plus paragraph and table inventories; comments,
+    footnotes, and endnotes parse direct `w:p` and `w:tbl` children through the existing DOCX paragraph/table
+    readers. Structure snapshots now report side-story block count, paragraph count, table count, text length,
+    and inline-image count across those blocks, and font planning includes runs from side-story table cells.
+    The minimal related-story test now includes a comment-owned table and checks reader/snapshot/font-plan
+    preservation. Validation passed `docx-core --skip-slow` (`26`). Keep this item open for separator
+    footnotes, nested/richer story content, actual placement/rendering, and reference marker output.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent

@@ -10191,7 +10191,10 @@ internal static class DocxTests
             ["word/comments.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:comment w:id="1"><w:p><w:r><w:t>Comment body</w:t></w:r></w:p></w:comment>
+                  <w:comment w:id="1">
+                    <w:p><w:r><w:t>Comment body</w:t></w:r></w:p>
+                    <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Comment table</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+                  </w:comment>
                 </w:comments>
                 """,
             ["word/footnotes.xml"] = """
@@ -10222,17 +10225,18 @@ internal static class DocxTests
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
         TestAssert.Equal(3, document.RelatedStories.Count);
-        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Comment" && story.PartName == "/word/comments.xml" && story.Id == "1" && story.Paragraphs.Count == 1), "Comment bodies should be preserved as related DOCX stories.");
+        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Comment" && story.PartName == "/word/comments.xml" && story.Id == "1" && story.BodyElements.Count == 2 && story.Paragraphs.Count == 1 && story.Tables.Count == 1), "Comment bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
 
         DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
-        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.ParagraphCount == 1), "Structure snapshots should expose comment story ownership.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.BlockCount == 2 && story.ParagraphCount == 1 && story.TableCount == 1 && story.TextLength == 25), "Structure snapshots should expose comment story ownership and table metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footnote" && story.Scope == "/word/footnotes.xml" && story.VariantType == "2" && story.TextLength == 13), "Structure snapshots should expose footnote story text metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Endnote" && story.Scope == "/word/endnotes.xml" && story.VariantType == "3" && story.TextLength == 12), "Structure snapshots should expose endnote story text metrics.");
 
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"));
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment body"), "Related story runs should participate in DOCX font planning.");
+        TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment table"), "Related story table runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Footnote body"), "Footnote runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Endnote body"), "Endnote runs should participate in DOCX font planning.");
     }

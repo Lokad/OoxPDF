@@ -146,11 +146,11 @@ internal sealed record DocxStructureSnapshot(
                 story.PartName,
                 null,
                 story.Id,
-                0,
+                story.BodyElements.Count,
                 story.Paragraphs.Count,
-                0,
-                story.Paragraphs.Sum(TextLength),
-                story.Paragraphs.Sum(paragraph => paragraph.Images.Count)));
+                story.Tables.Count,
+                story.Paragraphs.Sum(TextLength) + story.Tables.Sum(TableTextLength),
+                story.Paragraphs.Sum(paragraph => paragraph.Images.Count) + story.Tables.Sum(TableInlineImageCount)));
         }
     }
 
@@ -414,6 +414,7 @@ internal sealed record DocxStructureSnapshot(
                 group.Sum(TextLength)))
             .ToArray();
         DocxStructureStyleUsageSnapshot[] tableStyles = document.Tables
+            .Concat(document.RelatedStories.SelectMany(story => story.Tables))
             .GroupBy(table => table.StyleId, StringComparer.Ordinal)
             .Select(group => new DocxStructureStyleUsageSnapshot(
                 "Table",
@@ -457,7 +458,8 @@ internal sealed record DocxStructureSnapshot(
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
                 .SelectMany(sectionBreak => EnumeratePageSettingsParagraphs(sectionBreak.PageSettings)))
-            .Concat(document.RelatedStories.SelectMany(story => story.Paragraphs));
+            .Concat(document.RelatedStories.SelectMany(story => story.Paragraphs))
+            .Concat(document.RelatedStories.SelectMany(story => story.Tables).SelectMany(TableParagraphs));
     }
 
     private static IEnumerable<DocxParagraph> EnumeratePageSettingsParagraphs(DocxPageSettings settings)
@@ -465,6 +467,23 @@ internal sealed record DocxStructureSnapshot(
         return settings.HeaderParagraphsByType.Values
             .Concat(settings.FooterParagraphsByType.Values)
             .SelectMany(paragraphs => paragraphs);
+    }
+
+    private static IEnumerable<DocxParagraph> TableParagraphs(DocxTable table)
+    {
+        return table.Rows
+            .SelectMany(row => row.Cells)
+            .SelectMany(DocxTableCellContent.GetParagraphs);
+    }
+
+    private static int TableTextLength(DocxTable table)
+    {
+        return TableParagraphs(table).Sum(TextLength);
+    }
+
+    private static int TableInlineImageCount(DocxTable table)
+    {
+        return TableParagraphs(table).Sum(paragraph => paragraph.Images.Count);
     }
 
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(
