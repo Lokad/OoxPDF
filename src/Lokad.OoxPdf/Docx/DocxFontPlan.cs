@@ -34,7 +34,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             .Concat(document.Tables
                 .SelectMany(table => table.Rows)
                 .SelectMany(row => row.Cells)
-                .SelectMany(GetCellParagraphs))
+                .SelectMany(DocxTableCellContent.GetParagraphs))
             .SelectMany(GetParagraphFontRuns)
             .ToArray();
 
@@ -101,13 +101,6 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     private static bool EqualsCandidate(string? candidate, string family)
     {
         return candidate is not null && candidate.Equals(family, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyList<DocxParagraph> GetCellParagraphs(DocxTableCell cell)
-    {
-        return cell.Paragraphs.Count == 0 && cell.Text.Length != 0
-            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
-            : cell.Paragraphs;
     }
 
     private static IEnumerable<DocxTextRun> GetParagraphFontRuns(DocxParagraph paragraph)

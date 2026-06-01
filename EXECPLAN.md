@@ -6246,6 +6246,13 @@ Current validation baseline:
   `-0.0182/0.0509`). Do not use layout-width minus rounded-PDF-width as the DOCX `Tc` rule. The next viable
   branch needs a lower-level public oracle for glyph advance quantization or shaping/spacing decomposition,
   not another residual rule layered on the current measured segment width.
+  2026-06-02 follow-up: plain table-cell text normalization is now centralized in `DocxTableCellContent` and
+  consumed by font planning plus table-cell height/text-line layout, removing three duplicated synthetic
+  paragraph constructions. Added focused bottom-up coverage so legacy `DocxTableCell.Text` cells still enter
+  layout as 11pt paragraph text. Validation passed `docx-tables --skip-slow` (`89`), `docx-core --skip-slow`
+  (`25`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Keep the broader table-text
+  convergence item open for richer cell paragraph ownership, inline images, vertical merge continuations, and
+  eventual shared text-frame layout.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

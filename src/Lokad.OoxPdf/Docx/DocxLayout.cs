@@ -2363,9 +2363,7 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints,
         double? rowTopPadding = null)
     {
-        IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs.Count == 0 && cell.Text.Length != 0
-            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
-            : cell.Paragraphs;
+        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         if (paragraphs.Count == 0)
         {
             return 0d;
@@ -2431,9 +2429,7 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs.Count == 0 && cell.Text.Length != 0
-            ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
-            : cell.Paragraphs;
+        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         if (paragraphs.Count == 0)
         {
             return [];

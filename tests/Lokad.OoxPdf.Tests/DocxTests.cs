@@ -7859,6 +7859,28 @@ internal static class DocxTests
         TestAssert.True(splitFragments.All(fragment => fragment.Cells[0].TextLines.Count != 0), "Full merged-cell text coordinates should remain available for fragment clipping.");
     }
 
+    public static void DocxTableLayoutStageNormalizesPlainCellTextThroughSharedParagraphs()
+    {
+        var table = new DocxTable(
+            null,
+            [60d],
+            [new DocxTableRow([new DocxTableCell("Plain", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cell = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        DocxTextLineLayout line = cell.TextLines.Single();
+        TestAssert.Equal("Plain", line.Text);
+        TestAssert.Equal(11d, line.FontSize);
+    }
+
     public static void DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary()
     {
         var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
