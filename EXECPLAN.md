@@ -3218,6 +3218,12 @@ document-specific business content into public notes.
   baselines instead of silently concatenating text across the break.
 - [ ] 2026-05-31: Complete DOCX break and whitespace fidelity: distinguish soft line breaks from page/column
   breaks, tabs, preserved spaces, empty break-only lines, and Office's exact line-break baseline advance.
+  - [x] 2026-06-01: Promoted DOCX run-level page-break-only paragraphs (`w:r/w:br w:type="page"`) to
+    `DocxPageBreakElement` without attempting mixed-content paragraph splitting. This handles the safe
+    structural case that was previously dropped as an empty paragraph while preserving the open item for
+    inline page/column breaks inside text-bearing paragraphs. Validation passed `docx-page --skip-slow`
+    (`18`) and `docx-core --skip-slow` (`19`); private DOCX run `20260601-032728` stayed unchanged at `16/16`
+    pages, zero dimension mismatches, no diagnostics, `MAE=13.047852`, changed16 `0.120850`.
 - [x] 2026-05-31: Made DOCX text wrapping preserve authored whitespace tokens instead of splitting with
   `RemoveEmptyEntries`. Leading, trailing, and repeated spaces now remain in layout line text and contribute
   to measured line width; tab stops and Word's exact whitespace trimming rules remain open.

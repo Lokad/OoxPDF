@@ -682,6 +682,18 @@ internal sealed class DocxReader
                     elements.Add(new DocxPageBreakElement("pageBreakBefore", (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val")));
                 }
 
+                if (IsRunPageBreakOnlyParagraph(element))
+                {
+                    elements.Add(new DocxPageBreakElement("runBreak", "page"));
+                    XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
+                    if (breakParagraphSectionProperties is not null)
+                    {
+                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties));
+                    }
+
+                    continue;
+                }
+
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);
                 if (paragraph is not null)
                 {
@@ -705,6 +717,45 @@ internal sealed class DocxReader
         }
 
         return elements;
+    }
+
+    private static bool IsRunPageBreakOnlyParagraph(XElement paragraph)
+    {
+        bool hasPageBreak = paragraph
+            .Elements(WordprocessingNamespace + "r")
+            .SelectMany(run => run.Elements(WordprocessingNamespace + "br"))
+            .Any(IsPageBreak);
+        if (!hasPageBreak)
+        {
+            return false;
+        }
+
+        foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
+        {
+            foreach (XElement child in run.Elements())
+            {
+                if (child.Name == WordprocessingNamespace + "rPr")
+                {
+                    continue;
+                }
+
+                if (child.Name == WordprocessingNamespace + "br" && IsPageBreak(child))
+                {
+                    continue;
+                }
+
+                return false;
+            }
+        }
+
+        return paragraph.Elements().All(element =>
+            element.Name == WordprocessingNamespace + "pPr" ||
+            element.Name == WordprocessingNamespace + "r");
+    }
+
+    private static bool IsPageBreak(XElement breakElement)
+    {
+        return string.Equals((string?)breakElement.Attribute(WordprocessingNamespace + "type"), "page", StringComparison.OrdinalIgnoreCase);
     }
 
     private static DocxSectionBreakElement ReadSectionBreak(XElement sectionProperties)
