@@ -7,6 +7,7 @@ internal sealed record DocxStructureSnapshot(
     int ParagraphBlockCount,
     int TableBlockCount,
     int PageBreakBlockCount,
+    int ManualBreakBlockCount,
     int SectionBreakBlockCount,
     int BodyTextLength,
     int InlineImageCount,
@@ -44,6 +45,9 @@ internal sealed record DocxStructureSnapshot(
                 case DocxPageBreakElement pageBreak:
                     blocks.Add(FromPageBreak(blockIndex, previousKind, nextKind, pageBreak));
                     break;
+                case DocxManualBreakElement manualBreak:
+                    blocks.Add(FromManualBreak(blockIndex, previousKind, nextKind, manualBreak));
+                    break;
                 case DocxSectionBreakElement sectionBreak:
                     blocks.Add(FromSectionBreak(blockIndex, previousKind, nextKind, sectionBreak));
                     break;
@@ -58,6 +62,7 @@ internal sealed record DocxStructureSnapshot(
             blocks.Count(block => block.Kind == "Paragraph"),
             tables.Count,
             blocks.Count(block => block.Kind == "PageBreak"),
+            blocks.Count(block => block.Kind == "ManualBreak"),
             blocks.Count(block => block.Kind == "SectionBreak"),
             blocks.Sum(block => block.TextLength),
             blocks.Sum(block => block.InlineImageCount),
@@ -197,6 +202,20 @@ internal sealed record DocxStructureSnapshot(
             PageBreakConsumesParagraphLine: pageBreak.BreakParagraph is not null,
             PageBreakLineSpacingPoints: pageBreak.BreakParagraph?.LineSpacingPoints,
             PageBreakLineSpacingFactor: pageBreak.BreakParagraph?.LineSpacingFactor);
+    }
+
+    private static DocxStructureBlockSnapshot FromManualBreak(int blockIndex, string? previousKind, string? nextKind, DocxManualBreakElement manualBreak)
+    {
+        return new DocxStructureBlockSnapshot(
+            blockIndex,
+            "ManualBreak",
+            previousKind,
+            nextKind,
+            ManualBreakSourceKind: manualBreak.SourceKind,
+            ManualBreakValue: manualBreak.Value,
+            ManualBreakConsumesParagraphLine: manualBreak.BreakParagraph is not null,
+            ManualBreakLineSpacingPoints: manualBreak.BreakParagraph?.LineSpacingPoints,
+            ManualBreakLineSpacingFactor: manualBreak.BreakParagraph?.LineSpacingFactor);
     }
 
     private static DocxStructureBlockSnapshot FromSectionBreak(int blockIndex, string? previousKind, string? nextKind, DocxSectionBreakElement sectionBreak)
@@ -452,6 +471,7 @@ internal sealed record DocxStructureSnapshot(
             DocxParagraphElement => "Paragraph",
             DocxTableElement => "Table",
             DocxPageBreakElement => "PageBreak",
+            DocxManualBreakElement => "ManualBreak",
             DocxSectionBreakElement => "SectionBreak",
             _ => "Unknown"
         };
@@ -575,6 +595,8 @@ internal sealed record DocxStructureBlockSnapshot(
     string? TableLayoutValue = null,
     string? PageBreakSourceKind = null,
     string? PageBreakValue = null,
+    string? ManualBreakSourceKind = null,
+    string? ManualBreakValue = null,
     string? SectionBreakTypeValue = null,
     string? SectionColumnCountValue = null,
     string? SectionColumnSpaceValue = null,
@@ -595,7 +617,10 @@ internal sealed record DocxStructureBlockSnapshot(
     string? SnapToGridValue = null,
     bool? PageBreakConsumesParagraphLine = null,
     double? PageBreakLineSpacingPoints = null,
-    double? PageBreakLineSpacingFactor = null);
+    double? PageBreakLineSpacingFactor = null,
+    bool? ManualBreakConsumesParagraphLine = null,
+    double? ManualBreakLineSpacingPoints = null,
+    double? ManualBreakLineSpacingFactor = null);
 
 internal sealed record DocxStructureStorySnapshot(
     string Kind,

@@ -1007,6 +1007,21 @@ internal sealed class DocxReader
                     continue;
                 }
 
+                if (IsRunColumnBreakOnlyParagraph(element))
+                {
+                    elements.Add(new DocxManualBreakElement(
+                        "runBreak",
+                        "column",
+                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships)));
+                    XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
+                    if (breakParagraphSectionProperties is not null)
+                    {
+                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings));
+                    }
+
+                    continue;
+                }
+
                 if (HasRunPageBreak(element))
                 {
                     foreach (ParagraphPageBreakPart part in SplitParagraphAtRunPageBreaks(element))
@@ -1255,11 +1270,21 @@ internal sealed class DocxReader
 
     private static bool IsRunPageBreakOnlyParagraph(XElement paragraph)
     {
-        bool hasPageBreak = paragraph
+        return IsRunBreakOnlyParagraph(paragraph, IsPageBreak);
+    }
+
+    private static bool IsRunColumnBreakOnlyParagraph(XElement paragraph)
+    {
+        return IsRunBreakOnlyParagraph(paragraph, IsColumnBreak);
+    }
+
+    private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak)
+    {
+        bool hasBreak = paragraph
             .Elements(WordprocessingNamespace + "r")
             .SelectMany(run => run.Elements(WordprocessingNamespace + "br"))
-            .Any(IsPageBreak);
-        if (!hasPageBreak)
+            .Any(isBreak);
+        if (!hasBreak)
         {
             return false;
         }
@@ -1273,7 +1298,7 @@ internal sealed class DocxReader
                     continue;
                 }
 
-                if (child.Name == WordprocessingNamespace + "br" && IsPageBreak(child))
+                if (child.Name == WordprocessingNamespace + "br" && isBreak(child))
                 {
                     continue;
                 }
@@ -1308,6 +1333,11 @@ internal sealed class DocxReader
     private static bool IsPageBreak(XElement breakElement)
     {
         return string.Equals((string?)breakElement.Attribute(WordprocessingNamespace + "type"), "page", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsColumnBreak(XElement breakElement)
+    {
+        return string.Equals((string?)breakElement.Attribute(WordprocessingNamespace + "type"), "column", StringComparison.OrdinalIgnoreCase);
     }
 
     private static DocxSectionBreakElement ReadSectionBreak(

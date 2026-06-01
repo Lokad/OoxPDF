@@ -4584,6 +4584,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - [ ] Reattempt manual page/column break support with a parser change that does not alter paragraphs when no
   matching break exists; previous paragraph-splitting attempts changed the private page count and were
   reverted.
+  - [x] 2026-06-02: Added the safe structural slice for run-only DOCX column-break paragraphs:
+    `w:br w:type="column"` now becomes a typed `DocxManualBreakElement` in the body stream, structure
+    snapshots count and describe it, and layout treats it as an unsupported single-column boundary instead of
+    forcing a false page break. `DOCX_UNSUPPORTED_MANUAL_BREAK` remains the diagnostic for column breaks until
+    true multi-column flow exists. Keep this item open for inline text-bearing column breaks and actual
+    multi-column pagination.
 - [ ] For every generic capability fixed from a private page, add a small public synthetic test. Do not
   derive public fixtures from private page content.
 - [ ] After each scoped fix, run `pwsh tools/CheckPrivateCase.ps1 -Case
@@ -6302,6 +6308,14 @@ Current validation baseline:
   `docx-core --skip-slow` (`19`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
   Private DOCX run `20260601-094513` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
   `MAE=13.388935`, changed16 `0.124264`.
+  2026-06-02 follow-up: run-only column-break paragraphs are now preserved as `DocxManualBreakElement`
+  body-flow blocks and surfaced in structure snapshots without turning them into page breaks. Layout clears
+  paragraph adjacency across the boundary but remains single-column, so `DOCX_UNSUPPORTED_MANUAL_BREAK` remains
+  for actual column-flow support. Validation passed `docx-page --skip-slow` (`29`), `docx-core --skip-slow`
+  (`25`), `docx-tables --skip-slow` (`92`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
+  A broad unfiltered test run also exercised `DocxReaderPromotesRunColumnBreakOnlyParagraphAsManualBreak` but
+  still failed unrelated existing PPTX/font/numbering tests. Private DOCX run `20260602-010936` stayed neutral
+  at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=8.927687`, changed16 `0.095427`.
 - DOCX section-break page-boundary validation:
   `DocxSectionBreakElement` is now consumed by layout instead of being skipped. `nextPage`, `oddPage`,
   `evenPage`, and default paragraph section breaks force a page boundary when the current page already has

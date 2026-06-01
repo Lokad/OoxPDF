@@ -840,6 +840,13 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
+            if (element is DocxManualBreakElement)
+            {
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                continue;
+            }
+
             if (element is DocxSectionBreakElement sectionBreak)
             {
                 bool startsNewPage = ShouldStartNewPageForSectionBreak(sectionBreak);
@@ -1557,7 +1564,7 @@ internal sealed class DocxLayoutEngine
                 return true;
             }
 
-            if (elements[i] is DocxPageBreakElement or DocxSectionBreakElement)
+            if (elements[i] is DocxPageBreakElement or DocxManualBreakElement or DocxSectionBreakElement)
             {
                 break;
             }

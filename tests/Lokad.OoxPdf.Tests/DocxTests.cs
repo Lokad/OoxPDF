@@ -1379,6 +1379,7 @@ internal static class DocxTests
         TestAssert.Equal(4, snapshot.BlockCount);
         TestAssert.Equal(1, snapshot.ParagraphBlockCount);
         TestAssert.Equal(1, snapshot.PageBreakBlockCount);
+        TestAssert.Equal(0, snapshot.ManualBreakBlockCount);
         TestAssert.Equal(1, snapshot.TableBlockCount);
         TestAssert.Equal(1, snapshot.SectionBreakBlockCount);
         TestAssert.Equal(8, snapshot.BodyTextLength);
@@ -3531,6 +3532,62 @@ internal static class DocxTests
         var pageBreak = (DocxPageBreakElement)elements[1];
         TestAssert.Equal("runBreak", pageBreak.SourceKind);
         TestAssert.Equal("page", pageBreak.Value ?? string.Empty);
+    }
+
+    public static void DocxReaderPromotesRunColumnBreakOnlyParagraphAsManualBreak()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>First</w:t></w:r></w:p>
+                    <w:p><w:r><w:br w:type="column"/></w:r></w:p>
+                    <w:p><w:r><w:t>Second</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxBodyElement[] elements = document.BodyElements.ToArray();
+
+        TestAssert.Equal(3, elements.Length);
+        TestAssert.Equal("First", ((DocxParagraphElement)elements[0]).Paragraph.Runs.Single().Text);
+        TestAssert.True(elements[1] is DocxManualBreakElement, "A run-level column-break-only paragraph should become a body manual break.");
+        var manualBreak = (DocxManualBreakElement)elements[1];
+        TestAssert.Equal("runBreak", manualBreak.SourceKind);
+        TestAssert.Equal("column", manualBreak.Value ?? string.Empty);
+        TestAssert.True(manualBreak.BreakParagraph is not null, "The authored break paragraph should remain available for future column-flow layout.");
+        TestAssert.Equal("Second", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        TestAssert.Equal(1, snapshot.ManualBreakBlockCount);
+        DocxStructureBlockSnapshot block = snapshot.Blocks[1];
+        TestAssert.Equal("ManualBreak", block.Kind);
+        TestAssert.Equal("Paragraph", block.PreviousKind ?? string.Empty);
+        TestAssert.Equal("Paragraph", block.NextKind ?? string.Empty);
+        TestAssert.Equal("runBreak", block.ManualBreakSourceKind ?? string.Empty);
+        TestAssert.Equal("column", block.ManualBreakValue ?? string.Empty);
+        TestAssert.True(block.ManualBreakConsumesParagraphLine == true, "The snapshot should expose the preserved break paragraph.");
     }
 
     public static void DocxReaderPromotesInlineRunPageBreakInsideParagraph()
@@ -7627,6 +7684,22 @@ internal static class DocxTests
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
         TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
+    }
+
+    public static void DocxTableLayoutStageKeepsManualColumnBreakAsUnsupportedBoundary()
+    {
+        DocxTable first = CreateSingleCellTable("first", rowHeight: 20d);
+        DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
+        DocxDocument document = CreateLayoutTestDocument([
+            new DocxTableElement(first),
+            new DocxManualBreakElement("runBreak", "column"),
+            new DocxTableElement(second)
+        ], [first, second]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+
+        TestAssert.Equal(1, layout.Pages.Count);
+        TestAssert.Equal(2, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
     }
 
     public static void DocxTableLayoutStageRunPageBreakParagraphConsumesLineBox()
