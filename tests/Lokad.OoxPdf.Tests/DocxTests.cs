@@ -6547,7 +6547,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 683.5 144 0.5 re f", pdf);
+        TestAssert.Contains("72 683.52 144 0.48 re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream);
@@ -6744,11 +6744,11 @@ internal static class DocxTests
             .ToArray();
 
         TestAssert.Equal(2, rows.Length);
-        TestAssert.Equal(38d, rows[0].Cells[0].Y);
-        TestAssert.Equal(52d, rows[0].Cells[0].Height);
+        TestAssert.True(Math.Abs(rows[0].Cells[0].Y - 38.08d) < 0.001d, $"Expected merged restart y near 38.08pt, got {rows[0].Cells[0].Y.ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(Math.Abs(rows[0].Cells[0].Height - 51.92d) < 0.001d, $"Expected merged restart height near 51.92pt, got {rows[0].Cells[0].Height.ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.True(rows[1].Cells[0].IsVerticalMergeContinuation, "Continuation cell should be layout-visible but skipped by rendering.");
-        TestAssert.Equal(38d, rows[1].Cells[0].Y);
-        TestAssert.Equal(31d, rows[1].Cells[0].Height);
+        TestAssert.True(Math.Abs(rows[1].Cells[0].Y - 38.08d) < 0.001d, $"Expected merge continuation y near 38.08pt, got {rows[1].Cells[0].Y.ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(Math.Abs(rows[1].Cells[0].Height - 30.96d) < 0.001d, $"Expected merge continuation height near 30.96pt, got {rows[1].Cells[0].Height.ToString("0.###", CultureInfo.InvariantCulture)}.");
     }
 
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()
@@ -7223,7 +7223,7 @@ internal static class DocxTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
-        TestAssert.Equal(20.55d, row.Height);
+        TestAssert.Equal(20.53d, row.Height);
     }
 
     public static void DocxTableLayoutStageLetsTablePropertyExceptionRowsUseContentHeight()

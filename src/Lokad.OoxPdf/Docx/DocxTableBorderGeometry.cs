@@ -4,6 +4,8 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxTableBorderGeometry
 {
+    private const double WordPdfBorderWidthScale = 0.96d;
+
     public static DocxTableCellBorder? Find(IReadOnlyList<DocxTableCellBorder> borders, string edge)
     {
         return borders.FirstOrDefault(border => string.Equals(border.Edge, edge, StringComparison.OrdinalIgnoreCase));
@@ -38,8 +40,9 @@ internal static class DocxTableBorderGeometry
             return 0d;
         }
 
-        return int.TryParse(border.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int eighths)
+        double nominalWidth = int.TryParse(border.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int eighths)
             ? Math.Max(0.25d, eighths / 8d)
             : 0.75d;
+        return nominalWidth * WordPdfBorderWidthScale;
     }
 }

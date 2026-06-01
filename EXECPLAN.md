@@ -5334,6 +5334,16 @@ Current validation baseline:
   border-width calibration: Office emits the same nominal `w:sz=4` horizontal strips at about `0.48pt` while
   the candidate emits `0.50pt`, so the remaining row-grid miss belongs to shared border-width normalization,
   not another row-origin offset.
+  2026-06-01 follow-up: the shared DOCX table-border geometry helper now applies Word's PDF border-width
+  scale of `0.96 * (w:sz / 8pt)`, observed on public Office PDFs for both `w:sz=4` (`0.48pt`) and `w:sz=8`
+  (`0.96pt`). This keeps layout row advances and PDF border strips on the same structural width. Public
+  validation passed `docx-tables --skip-slow` (`69`), `docx-core --skip-slow` (`21`), and full solution build
+  (one parallel build had transient CLI copy-lock warnings but succeeded). Visuals improved further:
+  `docx-ladder-03-table-row-heights` run `20260601-114904` reached `MAE=0.867597`, changed16 `0.009963`;
+  `docx-ladder-02-table-cell-margins` run `20260601-114904` reached `MAE=0.535590`, changed16 `0.005766`;
+  `docx-tables` run `20260601-114904` reached `MAE=0.539255`, changed16 `0.004836`; adjacency and pagination
+  stayed at the post-row-advance metrics. Private DOCX run `20260601-114952` stayed at `16/16` pages, zero
+  dimension mismatches, no diagnostics, and improved again to `MAE=13.562167`, changed16 `0.124579`.
 - DOCX unsupported table-border-style diagnostic validation:
   after emitting `DOCX_TABLE_BORDER_STYLE` only for visible non-`single`/`nil`/`none` table and cell border
   styles in document/style parts, `docx-tables --skip-slow` passed `62`, `docx-core --skip-slow` passed `16`
