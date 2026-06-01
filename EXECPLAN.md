@@ -455,6 +455,13 @@ High-priority actions:
   row-allocation/page-break problem rather than evidence against the new fragment path. Keep follow-up work on
   Office's row boundary allocation, header-row repetition on split continuations, vertical-merge fragments, and
   inline-image clipping inside split rows.
+  2026-06-02 follow-up: split-row continuation pages now use the same repeated-header-row path as ordinary
+  row page breaks, and fragment heights reserve that repeated header height on continuation pages. This keeps
+  the table layout model structural: headers remain explicit `DocxTableRowLayout` records, while the carried
+  body row stays one logical row with per-page fragments. Added bottom-up layout coverage for a header row plus
+  a body row split across a page boundary; validation passed `docx-tables --skip-slow` (`85`). Keep the open
+  branch on Office's row-boundary decision itself, plus vertical-merge and inline-image behavior inside
+  fragments.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

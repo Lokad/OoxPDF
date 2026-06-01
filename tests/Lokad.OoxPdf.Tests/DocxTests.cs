@@ -7702,6 +7702,52 @@ internal static class DocxTests
         TestAssert.Equal(60d, secondPageRows[0].Height);
     }
 
+    public static void DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations()
+    {
+        DocxParagraph headerParagraph = CreateDocxLayoutParagraph("Header", 10d, 10d);
+        DocxParagraph fillerParagraph = CreateDocxLayoutParagraph("Filler", 10d, 10d);
+        DocxParagraph[] splitParagraphs = Enumerable.Range(1, 8)
+            .Select(index => CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        var header = new DocxTableRow([new DocxTableCell("Header", [headerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d, IsHeader: true);
+        var filler = new DocxTableRow([new DocxTableCell("Filler", [fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
+        var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var table = new DocxTable(null, [60d], [header, filler, split]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(3, firstPageRows.Length);
+        TestAssert.Equal(2, secondPageRows.Length);
+        TestAssert.Equal(0, firstPageRows[0].RowIndex);
+        TestAssert.True(firstPageRows[0].IsHeader, "The first page should keep the table header before body rows.");
+        TestAssert.Equal(2, firstPageRows[2].RowIndex);
+        TestAssert.Equal(0, firstPageRows[2].FragmentIndex);
+        TestAssert.Equal(2, firstPageRows[2].FragmentCount);
+        TestAssert.Equal(0, secondPageRows[0].RowIndex);
+        TestAssert.True(secondPageRows[0].IsHeader, "Split-row continuations should repeat table headers before the carried fragment.");
+        TestAssert.Equal(2, secondPageRows[1].RowIndex);
+        TestAssert.Equal(1, secondPageRows[1].FragmentIndex);
+        TestAssert.Equal(2, secondPageRows[1].FragmentCount);
+        TestAssert.Equal(60d, secondPageRows[1].Height);
+    }
+
     public static void DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary()
     {
         var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);

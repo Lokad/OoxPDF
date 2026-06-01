@@ -1806,7 +1806,7 @@ internal sealed class DocxLayoutEngine
                 remainingPageHeight > 0.001d &&
                 CanSplitTableRowAtPageBoundary(row, effectiveColumns, scale, rowHeight, remainingPageHeight, textMeasurer, defaultTabStopPoints))
             {
-                AddSplitTableRowLayout(table, tableContext, row, rowIndex, rowHeights, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, tableX, remainingPageHeight, pageContentHeight, finishPage);
+                AddSplitTableRowLayout(table, tableContext, row, rowIndex, rowHeights, headerRows, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, tableX, remainingPageHeight, pageContentHeight, finishPage);
                 continue;
             }
 
@@ -1815,10 +1815,7 @@ internal sealed class DocxLayoutEngine
                 finishPage();
                 if (!row.IsHeader)
                 {
-                    foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)
-                    {
-                        AddTableRowLayout(table, tableContext, headerRow, headerRowIndex, rowHeights, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, tableX);
-                    }
+                    AddRepeatedTableHeaderRows(table, tableContext, rowHeights, headerRows, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, tableX);
                 }
             }
 
@@ -2042,6 +2039,7 @@ internal sealed class DocxLayoutEngine
         DocxTableRow row,
         int rowIndex,
         IReadOnlyList<double> rowHeights,
+        IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows,
         IReadOnlyList<double> effectiveColumns,
         double scale,
         IDocxTextMeasurer? textMeasurer,
@@ -2055,7 +2053,10 @@ internal sealed class DocxLayoutEngine
         Action finishPage)
     {
         double rowHeight = rowHeights[rowIndex];
-        IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, firstFragmentHeight, pageContentHeight);
+        double continuationContentHeight = row.IsHeader
+            ? pageContentHeight
+            : Math.Max(1d, pageContentHeight - SumRepeatedTableHeaderRowsHeight(rowHeights, headerRows));
+        IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, firstFragmentHeight, continuationContentHeight);
         double consumedHeight = 0d;
         for (int fragmentIndex = 0; fragmentIndex < fragmentHeights.Count; fragmentIndex++)
         {
@@ -2082,8 +2083,39 @@ internal sealed class DocxLayoutEngine
             if (fragmentIndex + 1 < fragmentHeights.Count)
             {
                 finishPage();
+                if (!row.IsHeader)
+                {
+                    AddRepeatedTableHeaderRows(table, tableContext, rowHeights, headerRows, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, x);
+                }
             }
         }
+    }
+
+    private static void AddRepeatedTableHeaderRows(
+        DocxTable table,
+        DocxTableLayoutContext tableContext,
+        IReadOnlyList<double> rowHeights,
+        IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows,
+        IReadOnlyList<double> effectiveColumns,
+        double scale,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        Func<int> getPageIndex,
+        ref List<DocxLayoutItem> currentItems,
+        ref double cursorY,
+        double x)
+    {
+        foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)
+        {
+            AddTableRowLayout(table, tableContext, headerRow, headerRowIndex, rowHeights, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, x);
+        }
+    }
+
+    private static double SumRepeatedTableHeaderRowsHeight(
+        IReadOnlyList<double> rowHeights,
+        IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows)
+    {
+        return headerRows.Sum(entry => entry.RowIndex >= 0 && entry.RowIndex < rowHeights.Count ? rowHeights[entry.RowIndex] : 0d);
     }
 
     private static bool CanSplitTableRowAtPageBoundary(
