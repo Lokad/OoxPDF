@@ -1982,11 +1982,47 @@ internal sealed class DocxLayoutEngine
         ref double cursorY,
         double x)
     {
+        double rowHeight = rowHeights[rowIndex];
+        currentItems.Add(CreateTableRowLayout(
+            table,
+            tableContext,
+            row,
+            rowIndex,
+            rowHeights,
+            effectiveColumns,
+            scale,
+            textMeasurer,
+            defaultTabStopPoints,
+            getPageIndex,
+            cursorY,
+            rowHeight,
+            FragmentIndex: 0,
+            FragmentCount: 1));
+        cursorY -= rowHeight;
+    }
+
+    private static DocxTableRowLayout CreateTableRowLayout(
+        DocxTable table,
+        DocxTableLayoutContext tableContext,
+        DocxTableRow row,
+        int rowIndex,
+        IReadOnlyList<double> rowHeights,
+        IReadOnlyList<double> effectiveColumns,
+        double scale,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        Func<int> getPageIndex,
+        double cursorY,
+        double rowHeight,
+        int FragmentIndex,
+        int FragmentCount)
+    {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row);
-        double rowHeight = rowHeights[rowIndex];
-        double cellX = x;
+        double fullRowHeight = rowHeights[rowIndex];
+        double cellX = tableContext.TableX;
         double cellY = cursorY - rowHeight;
+        double fullCellY = cursorY - fullRowHeight;
         var cells = new List<DocxTableCellLayout>(row.Cells.Count);
         int gridColumnIndex = 0;
         for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
@@ -1996,16 +2032,20 @@ internal sealed class DocxLayoutEngine
             bool isVerticalMergeContinuation = IsVerticalMergeContinuation(cell);
             double visualHeight = rowHeight;
             double visualY = cellY;
+            double fullVisualHeight = fullRowHeight;
+            double fullVisualY = fullCellY;
             if (IsVerticalMergeRestart(cell))
             {
-                visualHeight = GetVerticalMergeSpanHeight(table, rowIndex, gridColumnIndex, rowHeights);
-                visualY = cursorY - visualHeight;
+                fullVisualHeight = GetVerticalMergeSpanHeight(table, rowIndex, gridColumnIndex, rowHeights);
+                fullVisualY = cursorY - fullVisualHeight;
+                visualHeight = fullVisualHeight;
+                visualY = fullVisualY;
             }
 
             IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
                 ? []
-                : LayoutTableCellTextLines(cell, cellX, visualY, cellWidth, visualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints);
-            IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
+                : LayoutTableCellTextLines(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints);
+            IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation || FragmentCount > 1
                 ? []
                 : LayoutTableCellInlineImages(cell, cellX, visualY, cellWidth, visualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex());
             cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation));
@@ -2013,11 +2053,11 @@ internal sealed class DocxLayoutEngine
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
 
-        currentItems.Add(new DocxTableRowLayout(
+        return new DocxTableRowLayout(
             tableContext,
             rowIndex,
-            FragmentIndex: 0,
-            FragmentCount: 1,
+            FragmentIndex,
+            FragmentCount,
             cells.ToArray(),
             cellY,
             rowHeight,
@@ -2028,8 +2068,7 @@ internal sealed class DocxLayoutEngine
             row.HeaderValue,
             row.TablePropertyExceptionCellMargins is not null,
             row.CantSplit,
-            row.CantSplitValue));
-        cursorY -= rowHeight;
+            row.CantSplitValue);
     }
 
     private static bool IsVerticalMergeRestart(DocxTableCell cell)

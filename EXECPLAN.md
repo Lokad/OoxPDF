@@ -484,6 +484,14 @@ High-priority actions:
   have a structural home for first/continuation fragments before pagination behavior changes. Keep this open
   until actual split rows carry clipped cell geometry, continuation text lines, and Office-observed border
   suppression.
+  2026-06-01 rejection: a text-only auto-row split trial used measured row line boxes to place a bottom-page
+  top fragment and, when needed, a continuation fragment. It improved both public boundary probes
+  (`docx-ladder-03-table-heading-table-keepnext` page MAE `3.67/7.75/1.37`, and
+  `docx-ladder-03-table-bottom-slack` page MAE `6.53/2.89`), but private acceptance regressed from the
+  `8.927676` baseline to `9.135465`, with pages 14/15 worse. Inspection showed the regressing private rows were
+  text-bearing top fragments with empty continuations. Reverted behavior. The next attempt needs a structural
+  discriminator for when Word keeps such bottom text fragments versus moving the row, not just a line-box fit
+  rule.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
