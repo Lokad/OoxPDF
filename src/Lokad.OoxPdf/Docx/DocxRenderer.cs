@@ -362,6 +362,11 @@ internal sealed class DocxRenderer
                 continue;
             }
 
+            if (char.IsWhiteSpace(segment.Text[^1]))
+            {
+                return;
+            }
+
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
             if (resource is null)
             {

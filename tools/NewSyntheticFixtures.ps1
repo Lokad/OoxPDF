@@ -544,6 +544,75 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-table-explicit-font.docx"
 '@
 }
 
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-font-table-alternate-wrapping.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/_rels/document.xml.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdFontTable" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>
+</Relationships>
+'@
+    "word/fontTable.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:font w:name="Metric Sans">
+    <w:altName w:val="Calibri"/>
+    <w:family w:val="swiss"/>
+    <w:pitch w:val="variable"/>
+    <w:charset w:val="00"/>
+  </w:font>
+  <w:font w:name="Calibri">
+    <w:family w:val="swiss"/>
+    <w:pitch w:val="variable"/>
+    <w:charset w:val="00"/>
+  </w:font>
+</w:fonts>
+'@
+    "word/document.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:pPr>
+        <w:spacing w:after="160" w:line="240" w:lineRule="auto"/>
+      </w:pPr>
+      <w:r>
+        <w:rPr><w:rFonts w:ascii="Metric Sans" w:hAnsi="Metric Sans"/><w:sz w:val="22"/><w:color w:val="333333"/></w:rPr>
+        <w:t>Font table alternate wrapping uses a missing primary face with a declared alternate. Neutral planning words repeat across a constrained measure so Office wrapping decisions expose the resolved advance widths. Capacity planning teams compare service levels, replenishment signals, supplier constraints, forecast accuracy, budget pressure, and operational tradeoffs while the paragraph keeps flowing with ordinary Latin text.</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:spacing w:after="160" w:line="240" w:lineRule="auto"/>
+      </w:pPr>
+      <w:r>
+        <w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/><w:color w:val="333333"/></w:rPr>
+        <w:t>Explicit alternate control uses the same kind of paragraph with the resolved face named directly. Neutral planning words repeat across a constrained measure so Office wrapping decisions expose the resolved advance widths. Capacity planning teams compare service levels, replenishment signals, supplier constraints, forecast accuracy, budget pressure, and operational tradeoffs while the paragraph keeps flowing with ordinary Latin text.</w:t>
+      </w:r>
+    </w:p>
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="5040" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+'@
+}
+
 New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-missing-grid-spans.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>

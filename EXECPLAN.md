@@ -238,6 +238,17 @@ High-priority actions:
   lower on the page, and long body paragraphs fit into suspiciously few candidate lines. Continue this branch
   through Office-observed text wrapping and typeface/advance measurement before changing widow/orphan or
   page-bottom rules.
+  2026-06-01 follow-up: added public `docx-ladder-02-font-table-alternate-wrapping` to cover the private
+  document's dominant font-table-alternate pattern without private content. The probe uses a missing primary
+  Latin face with a declared `w:font/w:altName` alternate and a direct-alternate control paragraph. Office and
+  candidate line breaks already matched, but PDF inspection exposed a structural emission gap: candidate text
+  lines appended an extra standalone terminal-space operation when the wrapped line text already ended in
+  whitespace. `DocxRenderer.RenderTerminalLineSpace` now only appends the terminal space when the last visible
+  segment does not already end in whitespace. Public run `20260601-171530` passes with matching text-line
+  starts (`15/15`, zero deltas at `0.2pt` tolerance); private DOCX run `20260601-171546` stayed neutral at
+  `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.666634`, changed16 `0.126275`. This
+  improves PDF-level structural alignment but does not close the private raster gap; keep the open branch on
+  actual advance/wrapping differences across the worst private pages.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

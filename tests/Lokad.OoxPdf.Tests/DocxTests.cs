@@ -8481,7 +8481,7 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             null)
         {
-            Indent = new DocxParagraphIndent(120d, null, null, null, null, null, null, null, null, null)
+            Indent = new DocxParagraphIndent(120d, null, null, null, null, null, null, null)
         };
         DocxDocument document = CreateLayoutTestDocument(
             [new DocxParagraphElement(first), new DocxParagraphElement(second)],
