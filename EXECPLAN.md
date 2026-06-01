@@ -3595,10 +3595,16 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   PDF glyph emission. The parser treats the token as signed twentieths of a point, not as a font-family
   special case; measured widths and emitted `TJ` positioning now agree for authored positive/negative
   tracking. Public coverage checks reader parsing, layout segment advances, and PDF positioning emission.
-- [ ] Add an Office-authored public DOCX character-spacing ladder before making broader PDF-emission claims:
-  include positive and negative `w:spacing` in body paragraphs, table cells, headers/footers, mixed-run
-  boundaries, and styled runs. Use Office PDF inspection to decide whether Word prefers `Tc`, `TJ`, or mixed
-  decomposition for each surface; do not infer a font-specific rule from private documents.
+- [x] 2026-06-01: Add an Office-authored public DOCX character-spacing ladder before making broader
+  PDF-emission claims. `docx-ladder-02-character-spacing` includes positive and negative `w:spacing` in body
+  paragraphs, mixed-run boundaries, table cells, and header/footer ranges. Public run `20260601-030351` is
+  page- and dimension-stable (`MAE=1.960983`, changed16 `0.016165`). Office PDF inspection shows the authored
+  `+2pt`/`-1pt` spacing as positioned text adjustments near those values, while also using `TJ` text
+  operations and small residual adjustments for nominally zero-spacing runs.
+- [ ] Align DOCX PDF text emission with Office's observed character-spacing decomposition. The new public
+  ladder shows Office emits `28` text operations, all positioned, with nonzero residual adjustments even on
+  some zero-spacing runs; the candidate emits fewer operations and only structural authored spacing drives
+  positioned adjustments. Model this as an emission/layout decomposition issue, not a font-name rule.
 - [ ] Improve numbering layout: render labels in their own hanging-indent area, support level text expansion
   beyond the current simple label prefix, and honor restart/start rules.
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from
@@ -5010,6 +5016,13 @@ Current validation baseline:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Two early parallel validation attempts hit
   transient compiler/Defender output locks and passed on serial rerun. Private DOCX run `20260601-025951`
   stayed at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.494853`, changed16 `0.116738`.
+- DOCX character-spacing visual ladder:
+  added Office-authored `docx-ladder-02-character-spacing` and manifest. Public run `20260601-030351` compared
+  `1/1` pages with matching dimensions, `MAE=1.960983`, changed16 `0.016165`, foreground histogram
+  correlation `1.0`. Office PDF text inspection shows `28` positioned text operations with spacing buckets
+  near authored `+2pt` and `-1pt`, plus residual positioned adjustments on nominally zero-spacing runs. The
+  candidate renders the default header/footer references from `header2.xml`/`footer2.xml` with the authored
+  spacing, but its text-operation decomposition remains less Office-like than the reference.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

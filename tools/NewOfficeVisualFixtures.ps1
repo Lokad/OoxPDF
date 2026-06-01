@@ -587,6 +587,85 @@ try {
         $basic.Close($false)
     }
 
+    $characterSpacing = $word.Documents.Add()
+    try {
+        $characterSpacing.PageSetup.PageWidth = 612
+        $characterSpacing.PageSetup.PageHeight = 792
+        $characterSpacing.PageSetup.TopMargin = 72
+        $characterSpacing.PageSetup.BottomMargin = 72
+        $characterSpacing.PageSetup.LeftMargin = 72
+        $characterSpacing.PageSetup.RightMargin = 72
+        $characterSpacing.Content.Text = "DOCX character spacing`r`nNormal sample text`r`nWide sample text`r`nTight sample text`r`nMixed boundary text`r`n`r`n"
+
+        $title = $characterSpacing.Paragraphs.Item(1).Range
+        $title.Font.Name = "Arial"
+        $title.Font.Size = 22
+        $title.Font.Bold = $true
+        $title.Font.Color = Rgb 47 128 237
+        $title.ParagraphFormat.SpaceAfter = 12
+
+        $normal = $characterSpacing.Paragraphs.Item(2).Range
+        $normal.Font.Name = "Arial"
+        $normal.Font.Size = 14
+        $normal.Font.Spacing = 0
+
+        $wide = $characterSpacing.Paragraphs.Item(3).Range
+        $wide.Font.Name = "Arial"
+        $wide.Font.Size = 14
+        $wide.Font.Spacing = 2
+
+        $tight = $characterSpacing.Paragraphs.Item(4).Range
+        $tight.Font.Name = "Arial"
+        $tight.Font.Size = 14
+        $tight.Font.Spacing = -1
+
+        $mixed = $characterSpacing.Paragraphs.Item(5).Range
+        $mixed.Font.Name = "Arial"
+        $mixed.Font.Size = 14
+        $mixed.Font.Spacing = 0
+        $characterSpacing.Range($mixed.Start, $mixed.Start + 6).Font.Spacing = 2
+        $characterSpacing.Range($mixed.Start + 6, $mixed.Start + 14).Font.Spacing = -1
+
+        $tableRange = $characterSpacing.Paragraphs.Item(7).Range
+        $tbl = $characterSpacing.Tables.Add($tableRange, 2, 2)
+        $tbl.Borders.Enable = $true
+        $tbl.Rows.Alignment = 0
+        $tbl.Columns.Item(1).Width = 180
+        $tbl.Columns.Item(2).Width = 180
+        $tbl.Cell(1, 1).Range.Text = "Table normal"
+        $tbl.Cell(1, 2).Range.Text = "Table wide"
+        $tbl.Cell(2, 1).Range.Text = "Table tight"
+        $tbl.Cell(2, 2).Range.Text = "Table mixed"
+        foreach ($cell in @($tbl.Cell(1, 1), $tbl.Cell(1, 2), $tbl.Cell(2, 1), $tbl.Cell(2, 2))) {
+            $cell.Range.Font.Name = "Arial"
+            $cell.Range.Font.Size = 12
+        }
+        $tbl.Cell(1, 2).Range.Font.Spacing = 2
+        $tbl.Cell(2, 1).Range.Font.Spacing = -1
+        $mixedCell = $tbl.Cell(2, 2).Range
+        $characterSpacing.Range($mixedCell.Start, $mixedCell.Start + 6).Font.Spacing = 2
+        $characterSpacing.Range($mixedCell.Start + 6, $mixedCell.Start + 12).Font.Spacing = -1
+
+        $header = $characterSpacing.Sections.Item(1).Headers.Item(1).Range
+        $header.Text = "Header wide tracking"
+        $header.Font.Name = "Arial"
+        $header.Font.Size = 10
+        $header.Font.Spacing = 2
+        $header.ParagraphFormat.Alignment = 1
+
+        $footer = $characterSpacing.Sections.Item(1).Footers.Item(1).Range
+        $footer.Text = "Footer tight tracking"
+        $footer.Font.Name = "Arial"
+        $footer.Font.Size = 10
+        $footer.Font.Spacing = -1
+        $footer.ParagraphFormat.Alignment = 1
+
+        $characterSpacing.SaveAs2((Join-Path $cases "docx-ladder-02-character-spacing.docx"), 16)
+    }
+    finally {
+        $characterSpacing.Close($false)
+    }
+
     $numbering = $word.Documents.Add()
     try {
         $numbering.PageSetup.PageWidth = 612
