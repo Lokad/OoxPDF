@@ -1478,8 +1478,11 @@ internal sealed class DocxReader
 
         if (columns.Count == 0)
         {
-            int maxCells = rows.Max(r => r.Cells.Count);
-            columns = Enumerable.Repeat(72d, maxCells).ToArray();
+            int inferredGridColumns = rows
+                .Select(row => row.Cells.Sum(cell => Math.Max(1, cell.GridSpan)))
+                .DefaultIfEmpty(0)
+                .Max();
+            columns = Enumerable.Repeat(72d, inferredGridColumns).ToArray();
         }
 
         return new DocxTable(

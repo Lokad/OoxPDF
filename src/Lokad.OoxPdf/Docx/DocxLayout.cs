@@ -1257,7 +1257,10 @@ internal sealed class DocxLayoutEngine
         int columnCount = table.ColumnWidthsPoints.Count;
         if (columnCount == 0)
         {
-            return table.ColumnWidthsPoints;
+            int inferredColumnCount = GetMaxGridColumnCount(table);
+            return inferredColumnCount > 0
+                ? Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray()
+                : table.ColumnWidthsPoints;
         }
 
         double?[] preferredWidths = new double?[columnCount];

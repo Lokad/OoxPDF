@@ -6036,6 +6036,48 @@ internal static class DocxTests
         TestAssert.Equal("2", cell.GridSpanValue ?? string.Empty);
     }
 
+    public static void DocxReaderInfersMissingTableGridFromLogicalGridSpans()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:gridSpan w:val="2"/></w:tcPr><w:p><w:r><w:t>Span</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Tail</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxTable table = new DocxReader().Read(package).Tables[0];
+
+        TestAssert.True(!table.HasExplicitGrid, "Missing tblGrid should remain distinguishable from authored grid geometry.");
+        TestAssert.Equal(3, table.ColumnWidthsPoints.Count);
+    }
+
     public static void DocxReaderTableCellPreservesVerticalMergeToken()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -7132,6 +7174,54 @@ internal static class DocxTests
         TestAssert.Equal(90d, row.Cells[0].Width);
         TestAssert.Equal(100d, row.Cells[1].X);
         TestAssert.Equal(90d, row.Cells[1].Width);
+    }
+
+    public static void DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns()
+    {
+        var table = new DocxTable(
+            null,
+            [72d, 72d, 72d],
+            [new DocxTableRow([
+                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2"),
+                new DocxTableCell("tail", [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], 20d)],
+            HasExplicitGrid: false);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(120d, row.Cells[0].Width);
+        TestAssert.Equal(130d, row.Cells[1].X);
+        TestAssert.Equal(60d, row.Cells[1].Width);
+    }
+
+    public static void DocxTableLayoutStageInfersEmptyMissingGridFromRowSpans()
+    {
+        var table = new DocxTable(
+            null,
+            [],
+            [new DocxTableRow([
+                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2"),
+                new DocxTableCell("tail", [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], 20d)],
+            HasExplicitGrid: false);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(120d, row.Cells[0].Width);
+        TestAssert.Equal(130d, row.Cells[1].X);
+        TestAssert.Equal(60d, row.Cells[1].Width);
     }
 
     public static void DocxTableLayoutStageUsesFirstRowCellPreferredWidths()

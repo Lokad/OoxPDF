@@ -544,5 +544,77 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-table-explicit-font.docx"
 '@
 }
 
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-missing-grid-spans.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/document.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>Missing table grid with logical spans</w:t></w:r></w:p>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="4320" w:type="dxa"/>
+        <w:tblBorders>
+          <w:top w:val="single" w:sz="8" w:color="4F81BD"/>
+          <w:left w:val="single" w:sz="8" w:color="4F81BD"/>
+          <w:bottom w:val="single" w:sz="8" w:color="4F81BD"/>
+          <w:right w:val="single" w:sz="8" w:color="4F81BD"/>
+          <w:insideH w:val="single" w:sz="8" w:color="4F81BD"/>
+          <w:insideV w:val="single" w:sz="8" w:color="4F81BD"/>
+        </w:tblBorders>
+      </w:tblPr>
+      <w:tr>
+        <w:trPr><w:trHeight w:val="720"/></w:trPr>
+        <w:tc>
+          <w:tcPr>
+            <w:tcW w:w="2880" w:type="dxa"/>
+            <w:gridSpan w:val="2"/>
+            <w:shd w:val="clear" w:fill="D9EAF7"/>
+          </w:tcPr>
+          <w:p><w:r><w:rPr><w:sz w:val="24"/><w:color w:val="1F4E79"/></w:rPr><w:t>Two columns</w:t></w:r></w:p>
+        </w:tc>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="1440" w:type="dxa"/><w:shd w:val="clear" w:fill="EAF2DD"/></w:tcPr>
+          <w:p><w:r><w:rPr><w:sz w:val="24"/><w:color w:val="375623"/></w:rPr><w:t>Tail</w:t></w:r></w:p>
+        </w:tc>
+      </w:tr>
+      <w:tr>
+        <w:trPr><w:trHeight w:val="720"/></w:trPr>
+        <w:tc>
+          <w:tcPr>
+            <w:tcW w:w="2880" w:type="dxa"/>
+            <w:gridSpan w:val="2"/>
+            <w:shd w:val="clear" w:fill="FCE4D6"/>
+          </w:tcPr>
+          <w:p><w:r><w:rPr><w:sz w:val="24"/><w:color w:val="843C0C"/></w:rPr><w:t>Wide cell</w:t></w:r></w:p>
+        </w:tc>
+        <w:tc>
+          <w:tcPr><w:tcW w:w="1440" w:type="dxa"/><w:shd w:val="clear" w:fill="E2F0D9"/></w:tcPr>
+          <w:p><w:r><w:rPr><w:sz w:val="24"/><w:color w:val="548235"/></w:rPr><w:t>End</w:t></w:r></w:p>
+        </w:tc>
+      </w:tr>
+    </w:tbl>
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+'@
+}
+
 Get-ChildItem -LiteralPath $cases -Filter "*.pptx"
 Get-ChildItem -LiteralPath $cases -Filter "*.docx"

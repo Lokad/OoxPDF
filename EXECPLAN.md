@@ -2741,6 +2741,18 @@ High-priority actions:
     checks a 25%/75% preferred-cell split after body-width capping; private DOCX run `20260531-185336` stayed
     neutral (`15.849350` MAE, `0.141574` changed16), so the current private case does not appear to exercise
     pct cell widths in a visually material way.
+    2026-06-01 progress: missing `w:tblGrid` inference now counts logical grid columns, including
+    `w:gridSpan`, instead of using physical cell count. This keeps span+tail rows from overflowing by treating
+    the spanned cell as two columns and the tail as the third. Public coverage includes
+    `docx-ladder-03-table-missing-grid-spans` and reader/layout tests for both parser-inferred and
+    layout-inferred empty grids. Office/candidate PDF inspection on run `20260601-145200` shows the tail
+    column text starts at `X=216.48` candidate vs `X=216.53` reference, confirming the structural column
+    ownership. Validation passed `docx-tables --skip-slow` (`76`), `docx-page --skip-slow` (`26`),
+    `docx-text --skip-slow` (`36`), full solution build, and the public `docx-layout` family with `25`
+    cases; private DOCX run `20260601-145516` stayed page-stable at `16/16` pages, zero dimension mismatches,
+    no diagnostics, `MAE=13.855991`, changed16 `0.127419`. Keep this width parent open for `tblLayout`
+    fixed/autofit differences, auto widths, cell spacing in the width equation, and Word's full conflict
+    resolution between `tblGrid`, `tblW`, and `tcW`.
 ## Private Evidence
 
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
@@ -4105,6 +4117,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     --skip-slow` (`53`), `docx-core --skip-slow` (`16`), and full solution build. Private DOCX run
     `20260601-005313` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
     `MAE=12.509698`, changed16 `0.112673`, indicating the selected private tables are explicit-grid cases.
+  - [x] 2026-06-01: Extended missing-`tblGrid` inference through `gridSpan` rows. The parser now synthesizes
+    fallback grid columns from the maximum logical grid width, and layout has a defensive empty-grid inference
+    path. Public `docx-ladder-03-table-missing-grid-spans` isolates a table whose rows have only two physical
+    cells but three logical grid columns; run `20260601-145200` is page-stable with no diagnostics
+    (`MAE=0.615754`, changed16 `0.009697`) and the follow-up family run `20260601-145433` kept the DOCX
+    family passing at `25/25` cases. The remaining visible residual in that case is table text
+    baseline/vertical spacing, not column ownership.
 - [ ] Compute row heights from actual cell content: wrap text within cell width, include cell margins,
   respect explicit `trHeight` rules, and avoid the current fixed/default row-height behavior for
   content-heavy rows.
