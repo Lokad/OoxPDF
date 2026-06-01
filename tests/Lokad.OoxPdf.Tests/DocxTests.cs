@@ -1249,13 +1249,27 @@ internal static class DocxTests
     {
         DocxParagraph paragraph = CreateDocxLayoutParagraph("A1 body.", fontSize: 10d, lineSpacingPoints: 12d) with
         {
+            StyleId = "BodyStyle",
             Indent = new DocxParagraphIndent(12d, 3d, null, 6d, "240", "60", null, "120"),
             TabStops = [new DocxTabStop(36d, "720", "left", null)],
             SnapToGrid = true,
             SnapToGridValue = "1"
         };
         DocxParagraph breakParagraph = CreateDocxLayoutParagraph("Break", fontSize: 9d, lineSpacingPoints: 11d);
-        DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell 42", fontSize: 9d, lineSpacingPoints: 10d);
+        var listLabel = new DocxListLabel(
+            "1",
+            "decimal",
+            "%1.",
+            "tab",
+            "7",
+            0,
+            DocxNumberingIndent.Empty,
+            DocxTextRunStyle.Empty);
+        DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell 42", fontSize: 9d, lineSpacingPoints: 10d) with
+        {
+            StyleId = "CellStyle",
+            ListLabel = listLabel
+        };
         var restartCell = new DocxTableCell(
             string.Empty,
             [cellParagraph],
@@ -1380,6 +1394,13 @@ internal static class DocxTests
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Header" && story.Scope == "document" && story.VariantType == "default"), "Document default header story should be inventoried before layout.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footer" && story.Scope == "document" && story.VariantType == "even"), "Document even footer story should be inventoried before layout.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Header" && story.Scope == "section@3" && story.SectionBreakBlockIndex == 3 && story.VariantType == "first"), "Section header story should be tied to its section-break block.");
+        TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Paragraph" && usage.StyleId == "BodyStyle" && usage.ParagraphCount == 1), "Paragraph style usage should be available before layout.");
+        TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Paragraph" && usage.StyleId == "CellStyle" && usage.ParagraphCount == 1), "Table-cell paragraph style usage should be available before layout.");
+        TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Table" && usage.StyleId == "TableGrid" && usage.TableCount == 1), "Table style usage should be available before layout.");
+        DocxStructureListUsageSnapshot listUsage = snapshot.ListUsages.Single();
+        TestAssert.Equal("7", listUsage.NumberId);
+        TestAssert.Equal("decimal", listUsage.FormatValue);
+        TestAssert.Equal(1, listUsage.ParagraphCount);
         DocxStructureFloatingDrawingSnapshot drawingSnapshot = snapshot.FloatingDrawings.Single();
         TestAssert.Equal("square", drawingSnapshot.WrapKind ?? string.Empty);
         TestAssert.Equal("column", drawingSnapshot.HorizontalRelativeFromValue ?? string.Empty);

@@ -2165,6 +2165,15 @@ High-priority actions:
     inventory run. The private aggregate has `129` table rows and `422` cells; all `129` rows have before/after
     spacing tokens, `67` have shading, `13` have visible borders, and none have `cantSplit` or declared row
     heights. This confirms paragraph spacing tokens alone cannot be the missing row-fragment discriminator.
+    2026-06-01 follow-up: added private-safe style/list usage buckets to `DocxStructureSnapshot`, covering
+    paragraph styles, table styles, and numbering/list labels by number id, level, format, and suffix without
+    emitting text. Public unit coverage checks paragraph, table-cell paragraph, table-style, and list-label
+    buckets. Validation passed serial `docx-tables --skip-slow` (`80`), full solution build, and a private-safe
+    inventory run. The current private DOCX is driven primarily by paragraph styles `Compact` (`472`
+    paragraphs) and `BodyText` (`76`), table styles `PlainTable5` (`12` tables) and `Table` (`1`), plus nine
+    level-0 bullet list ids using tab suffixes; it has no floating drawings or inline images. Use these buckets
+    to prioritize public probes for compact paragraph rhythm, bullet/tab ownership, and simple table flow before
+    anchored drawing or merge-heavy table rendering.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

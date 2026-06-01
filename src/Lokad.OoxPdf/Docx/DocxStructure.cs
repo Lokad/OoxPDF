@@ -14,6 +14,8 @@ internal sealed record DocxStructureSnapshot(
     IReadOnlyList<DocxStructureBlockSnapshot> Blocks,
     IReadOnlyList<DocxStructureStorySnapshot> Stories,
     IReadOnlyList<DocxStructureFloatingDrawingSnapshot> FloatingDrawings,
+    IReadOnlyList<DocxStructureStyleUsageSnapshot> StyleUsages,
+    IReadOnlyList<DocxStructureListUsageSnapshot> ListUsages,
     IReadOnlyList<DocxStructureTableSnapshot> Tables,
     IReadOnlyList<DocxStructureTableAdjacencySnapshot> TableAdjacency)
 {
@@ -63,6 +65,8 @@ internal sealed record DocxStructureSnapshot(
             blocks,
             ToStorySnapshots(document, blocks),
             document.FloatingDrawings.Select((drawing, index) => ToFloatingDrawingSnapshot(drawing, index)).ToArray(),
+            ToStyleUsages(document),
+            ToListUsages(document),
             tables,
             adjacency);
     }
@@ -348,6 +352,61 @@ internal sealed record DocxStructureSnapshot(
             drawing.LockedValue);
     }
 
+    private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
+    {
+        IEnumerable<DocxParagraph> bodyParagraphs = document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph);
+        IEnumerable<DocxParagraph> tableParagraphs = document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs);
+        IEnumerable<DocxParagraph> staticParagraphs = document.HeaderParagraphsByType.Values
+            .Concat(document.FooterParagraphsByType.Values)
+            .SelectMany(paragraphs => paragraphs);
+        DocxStructureStyleUsageSnapshot[] paragraphStyles = bodyParagraphs
+            .Concat(tableParagraphs)
+            .Concat(staticParagraphs)
+            .GroupBy(paragraph => paragraph.StyleId, StringComparer.Ordinal)
+            .Select(group => new DocxStructureStyleUsageSnapshot(
+                "Paragraph",
+                group.Key,
+                group.Count(),
+                group.Count(),
+                0,
+                group.Sum(TextLength)))
+            .ToArray();
+        DocxStructureStyleUsageSnapshot[] tableStyles = document.Tables
+            .GroupBy(table => table.StyleId, StringComparer.Ordinal)
+            .Select(group => new DocxStructureStyleUsageSnapshot(
+                "Table",
+                group.Key,
+                group.Count(),
+                0,
+                group.Count(),
+                group.Sum(table => table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(TextLength))))))
+            .ToArray();
+        return paragraphStyles.Concat(tableStyles).ToArray();
+    }
+
+    private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
+    {
+        IEnumerable<DocxParagraph> paragraphs = document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph)
+            .Concat(document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs));
+        return paragraphs
+            .Where(paragraph => paragraph.ListLabel is not null)
+            .GroupBy(paragraph => new
+            {
+                paragraph.ListLabel!.NumberId,
+                paragraph.ListLabel.Level,
+                paragraph.ListLabel.FormatValue,
+                paragraph.ListLabel.SuffixValue
+            })
+            .Select(group => new DocxStructureListUsageSnapshot(
+                group.Key.NumberId,
+                group.Key.Level,
+                group.Key.FormatValue,
+                group.Key.SuffixValue,
+                group.Count(),
+                group.Sum(TextLength)))
+            .ToArray();
+    }
+
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(
         IReadOnlyList<DocxBodyElement> elements,
         DocxTable table,
@@ -522,6 +581,22 @@ internal sealed record DocxStructureFloatingDrawingSnapshot(
     string? SimplePositionValue,
     string? RelativeHeightValue,
     string? LockedValue);
+
+internal sealed record DocxStructureStyleUsageSnapshot(
+    string Kind,
+    string? StyleId,
+    int Count,
+    int ParagraphCount,
+    int TableCount,
+    int TextLength);
+
+internal sealed record DocxStructureListUsageSnapshot(
+    string NumberId,
+    int Level,
+    string FormatValue,
+    string SuffixValue,
+    int ParagraphCount,
+    int TextLength);
 
 internal sealed record DocxStructureTableSnapshot(
     int TableIndex,
