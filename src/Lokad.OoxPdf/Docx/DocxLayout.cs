@@ -424,7 +424,12 @@ internal static class DocxTextSpacing
 
     public static double BoundarySpacing(DocxTextRun? left, string leftText, string rightText)
     {
-        return leftText.Length == 0 || rightText.Length == 0 ? 0d : left?.CharacterSpacingPoints ?? 0d;
+        return leftText.Length == 0 ||
+            rightText.Length == 0 ||
+            leftText[^1] == '\t' ||
+            rightText[0] == '\t'
+            ? 0d
+            : left?.CharacterSpacingPoints ?? 0d;
     }
 
     private static int CountCharacterSpacingGaps(string text)
@@ -474,6 +479,7 @@ internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocx
 internal sealed class DocxLayoutEngine
 {
     private const double BaselineOffsetFactor = 0.94d;
+    private const double WordDefaultTabStopPoints = 36d;
     private const double WordDefaultTableRowMinimumTwips = 401d;
     private const double WordDefaultTableRowMinimumHeight = WordDefaultTableRowMinimumTwips / 20d;
     private const double WordDefaultTableCellHorizontalPadding = 5.4d;
@@ -1550,9 +1556,7 @@ internal sealed class DocxLayoutEngine
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            double width = textMeasurer.MeasureText(span.StyleRun, span.Text, fontSize);
-            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width));
-            segmentX += width;
+            segmentX = AddTextSegments(segments, span, segmentX, lineX, fontSize, textMeasurer);
             if (i + 1 < spans.Count)
             {
                 segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
@@ -1571,7 +1575,7 @@ internal sealed class DocxLayoutEngine
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            width += textMeasurer.MeasureText(span.StyleRun, span.Text, fontSize);
+            width = MeasureTextSpanAdvance(span, width, fontSize, textMeasurer);
             if (i + 1 < spans.Count)
             {
                 width += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
@@ -1579,6 +1583,74 @@ internal sealed class DocxLayoutEngine
         }
 
         return width;
+    }
+
+    private static double AddTextSegments(
+        List<DocxTextSegmentLayout> segments,
+        DocxTextSpan span,
+        double segmentX,
+        double lineX,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer)
+    {
+        int start = 0;
+        for (int i = 0; i <= span.Text.Length; i++)
+        {
+            if (i < span.Text.Length && span.Text[i] != '\t')
+            {
+                continue;
+            }
+
+            if (i > start)
+            {
+                string text = span.Text[start..i];
+                double width = textMeasurer.MeasureText(span.StyleRun, text, fontSize);
+                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width));
+                segmentX += width;
+            }
+
+            if (i < span.Text.Length)
+            {
+                segmentX = lineX + AdvanceToNextDefaultTabStop(segmentX - lineX);
+                start = i + 1;
+            }
+        }
+
+        return segmentX;
+    }
+
+    private static double MeasureTextSpanAdvance(
+        DocxTextSpan span,
+        double currentWidth,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer)
+    {
+        int start = 0;
+        for (int i = 0; i <= span.Text.Length; i++)
+        {
+            if (i < span.Text.Length && span.Text[i] != '\t')
+            {
+                continue;
+            }
+
+            if (i > start)
+            {
+                currentWidth += textMeasurer.MeasureText(span.StyleRun, span.Text[start..i], fontSize);
+            }
+
+            if (i < span.Text.Length)
+            {
+                currentWidth = AdvanceToNextDefaultTabStop(currentWidth);
+                start = i + 1;
+            }
+        }
+
+        return currentWidth;
+    }
+
+    private static double AdvanceToNextDefaultTabStop(double width)
+    {
+        return (Math.Floor(width / WordDefaultTabStopPoints) + 1d) * WordDefaultTabStopPoints;
     }
 
     private static IEnumerable<DocxWrappedTextLine> WrapTextLines(

@@ -3279,6 +3279,16 @@ document-specific business content into public notes.
     inline page/column breaks inside text-bearing paragraphs. Validation passed `docx-page --skip-slow`
     (`18`) and `docx-core --skip-slow` (`19`); private DOCX run `20260601-032728` stayed unchanged at `16/16`
     pages, zero dimension mismatches, no diagnostics, `MAE=13.047852`, changed16 `0.120850`.
+  - [x] 2026-06-01: Preserved ordinary DOCX `w:tab` tokens as `\t` in run text and expanded them in the
+    layout stage to Word's default 36 pt tab-stop grid instead of measuring or emitting a tab glyph. The
+    visible glyph runs are now separate `DocxTextSegmentLayout` records around the structural tab advance,
+    so PDF text output stays glyph-only while layout width and segment positions observe the tab. Validation
+    passed `docx-text --skip-slow` (`19`), `docx-numbering --skip-slow` (`11`), `docx-tables --skip-slow`
+    (`65`), `docx-page --skip-slow` (`18`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`;
+    private DOCX run `20260601-084645` stayed page-stable at `16/16`, zero dimension mismatches, no
+    diagnostics, `MAE=13.388935`, changed16 `0.124264`. Keep the parent item open for authored
+    paragraph/style tab-stop lists (`w:tabs/w:tab`), leader/alignment variants, and exact Office trimming
+    around tab/space boundaries.
 - [x] 2026-05-31: Made DOCX text wrapping preserve authored whitespace tokens instead of splitting with
   `RemoveEmptyEntries`. Leading, trailing, and repeated spaces now remain in layout line text and contribute
   to measured line width; tab stops and Word's exact whitespace trimming rules remain open.

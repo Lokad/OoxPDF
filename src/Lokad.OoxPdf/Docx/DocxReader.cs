@@ -652,6 +652,10 @@ internal sealed class DocxReader
             {
                 text.Append((string?)child ?? string.Empty);
             }
+            else if (child.Name == WordprocessingNamespace + "tab")
+            {
+                text.Append('\t');
+            }
             else if (child.Name == WordprocessingNamespace + "br" &&
                 string.IsNullOrEmpty((string?)child.Attribute(WordprocessingNamespace + "type")))
             {
