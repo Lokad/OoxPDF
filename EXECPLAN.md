@@ -3348,6 +3348,13 @@ document-specific business content into public notes.
 - [x] 2026-05-31: Made DOCX text wrapping preserve authored whitespace tokens instead of splitting with
   `RemoveEmptyEntries`. Leading, trailing, and repeated spaces now remain in layout line text and contribute
   to measured line width; tab stops and Word's exact whitespace trimming rules remain open.
+- [x] 2026-06-01: Promoted DOCX paragraph `w:jc w:val="both"` to a first-class
+  `DocxTextAlignment.Justified` value instead of collapsing the typed alignment to `Left` while only keeping
+  the raw token. Validation passed `docx-text --skip-slow` (`26`) and full solution build. Private DOCX run
+  `20260601-091420` stayed page-stable at `16/16`, zero dimension mismatches, no diagnostics,
+  `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`. Keep actual justification layout open for
+  Office-backed inter-word/character expansion, last-line handling, tabs, mixed runs, and PDF `TJ`/spacing
+  evidence.
 - [ ] Text emission: derive Office's implicit PDF `Tc` text-state behavior for presentation text where OOXML
   has no explicit `a:rPr @spc`. Private pages 24, 36, 39, and 48 show Office exporting nonzero positive or
   negative `Tc` while OOXPDF currently encodes equivalent or residual advances only through `TJ` positioning.

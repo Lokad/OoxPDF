@@ -422,5 +422,6 @@ internal enum DocxTextAlignment
 {
     Left,
     Center,
-    Right
+    Right,
+    Justified
 }

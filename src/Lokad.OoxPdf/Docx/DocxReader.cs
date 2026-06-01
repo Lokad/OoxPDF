@@ -1711,7 +1711,7 @@ internal sealed class DocxReader
         {
             "center" => DocxTextAlignment.Center,
             "right" => DocxTextAlignment.Right,
-            "both" => DocxTextAlignment.Left,
+            "both" => DocxTextAlignment.Justified,
             null => null,
             _ => DocxTextAlignment.Left
         };

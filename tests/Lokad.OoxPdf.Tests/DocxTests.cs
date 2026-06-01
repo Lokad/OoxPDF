@@ -452,7 +452,7 @@ internal static class DocxTests
 
         TestAssert.Equal(DocxTextAlignment.Center, document.Paragraphs[0].Alignment);
         TestAssert.Equal("center", document.Paragraphs[0].AlignmentValue ?? string.Empty);
-        TestAssert.Equal(DocxTextAlignment.Left, document.Paragraphs[1].Alignment);
+        TestAssert.Equal(DocxTextAlignment.Justified, document.Paragraphs[1].Alignment);
         TestAssert.Equal("both", document.Paragraphs[1].AlignmentValue ?? string.Empty);
         TestAssert.Equal(DocxTextAlignment.Left, document.Paragraphs[2].Alignment);
         TestAssert.Equal("distribute", document.Paragraphs[2].AlignmentValue ?? string.Empty);
