@@ -266,6 +266,12 @@ High-priority actions:
   `compareFirstTextLineStartOnly` to gate wrapping/baseline structure separately from intra-line operation
   splitting. This public case does not reproduce the private over-wrapping by itself, so keep searching for
   the missing discriminator rather than widening body text or adding private page-flow constants.
+  2026-06-01 follow-up: added public `docx-ladder-02-compact-before-spacing` for the private-like compact
+  paragraph rhythm (`before=36`, `after=0`, `line=276`, 10pt Calibri). Office and candidate produce six
+  matching line rows with first starts within `0.02pt`, so the page-9 drift is not caused by the compact
+  before-spacing rule alone. A trial that split DOCX wrap tokens after hyphens/slashes also failed to help
+  the private run (`MAE=13.698394` vs the `13.666634` baseline), so it was rejected pending a public case
+  that specifically proves Word break behavior beyond whitespace.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
