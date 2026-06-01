@@ -584,7 +584,7 @@ internal sealed class DocxLayoutEngine
 {
     private const double BaselineOffsetFactor = 0.94d;
     private const double WordDefaultTabStopPoints = 36d;
-    private const double WordListMinimumAutoLineSpacingFactor = 1.2d;
+    private const double WordListMinimumAutoLineSpacingFactor = 1.19d;
 
     private sealed record DocxPageGeometry(
         double Width,
