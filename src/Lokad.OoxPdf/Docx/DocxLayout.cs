@@ -890,7 +890,7 @@ internal sealed class DocxLayoutEngine
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         double gridTableWidth = table.ColumnWidthsPoints.Sum();
         double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;
-        double targetTableWidth = Math.Min(tableAvailableWidth, ResolvePreferredTableWidth(table, tableAvailableWidth) ?? fallbackTableWidth);
+        double targetTableWidth = ResolveTargetTableWidth(table, tableAvailableWidth, fallbackTableWidth);
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
@@ -1043,8 +1043,7 @@ internal sealed class DocxLayoutEngine
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         double gridTableWidth = table.ColumnWidthsPoints.Sum();
         double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;
-        double preferredTableWidth = ResolvePreferredTableWidth(table, tableAvailableWidth) ?? fallbackTableWidth;
-        double targetTableWidth = Math.Min(tableAvailableWidth, preferredTableWidth);
+        double targetTableWidth = ResolveTargetTableWidth(table, tableAvailableWidth, fallbackTableWidth);
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
@@ -1175,6 +1174,14 @@ internal sealed class DocxLayoutEngine
         }
 
         return null;
+    }
+
+    private static double ResolveTargetTableWidth(DocxTable table, double availableWidth, double fallbackWidth)
+    {
+        double preferredWidth = ResolvePreferredTableWidth(table, availableWidth) ?? fallbackWidth;
+        return table.PreferredWidthType?.Equals("dxa", StringComparison.OrdinalIgnoreCase) == true
+            ? Math.Max(1d, preferredWidth)
+            : Math.Min(availableWidth, preferredWidth);
     }
 
     private static double MeasureTableRowHeight(

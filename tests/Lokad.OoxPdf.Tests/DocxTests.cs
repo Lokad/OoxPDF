@@ -6673,6 +6673,33 @@ internal static class DocxTests
         TestAssert.Equal(30d, row.Cells[1].Width);
     }
 
+    public static void DocxTableLayoutStageDoesNotClampExplicitDxaWidthToBody()
+    {
+        var table = new DocxTable(
+            null,
+            [110d, 110d],
+            [new DocxTableRow([
+                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty),
+                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], 20d)],
+            PreferredWidthPoints: 220d,
+            PreferredWidthValue: "4400",
+            PreferredWidthType: "dxa");
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(110d, row.Cells[0].Width);
+        TestAssert.Equal(120d, row.Cells[1].X);
+        TestAssert.Equal(110d, row.Cells[1].Width);
+        TestAssert.Equal(220d, row.Table.ResolvedTableWidth);
+    }
+
     public static void DocxTableLayoutStageScalesGridToPercentagePreferredWidth()
     {
         var table = new DocxTable(

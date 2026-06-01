@@ -2025,6 +2025,17 @@ High-priority actions:
     changed16 `0.008026` (run `20260601-102458`) and regressed the private DOCX to `MAE=13.877948`,
     changed16 `0.127199` (run `20260601-102514`). The `6pt` value is still suspicious, but the replacement
     needs an Office-backed table-adjacent block-spacing model, not a removal of the gap in isolation.
+    2026-06-01 follow-up: explicit `dxa` table widths now own the layout table width even when they exceed
+    the body text width, while percentage/fallback widths remain bounded by the available body width. Public
+    PDF inspection of `docx-ladder-03-table-row-heights` showed Office drawing the `w:tblW dxa=9400` table
+    past the right margin; the candidate had clamped it to the body width and compressed columns. Public
+    `docx-ladder-03-table-row-heights` improved from `MAE=2.329670`, changed16 `0.017873` to run
+    `20260601-104626` at `MAE=2.053192`, changed16 `0.016159`; neighboring
+    `docx-ladder-03-table-paragraph-adjacency` improved to `MAE=0.846704`, changed16 `0.006517`, and
+    `docx-ladder-02-table-cell-margins` stayed unchanged at `MAE=0.565499`, changed16 `0.007963`. Private
+    DOCX run `20260601-104626` stayed stable at `16/16` pages, zero dimension mismatches, no diagnostics,
+    `MAE=13.286569`, changed16 `0.123783`. Keep the row-height parent open for row-border participation,
+    row clipping, and Office's finer per-cell text-operation decomposition.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
