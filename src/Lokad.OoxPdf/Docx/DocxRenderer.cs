@@ -261,7 +261,7 @@ internal sealed class DocxRenderer
         string text = ResolveStaticFieldPlaceholders(segment.Text, pageNumber, pageCount);
         RgbColor color = ReadColor(style.ColorHex);
         DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color);
-        if (style.Bold)
+        if (ShouldApplySyntheticBold(style, resource))
         {
             DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color);
         }
@@ -364,14 +364,20 @@ internal sealed class DocxRenderer
         double baselineY,
         RgbColor color)
     {
+        bool syntheticItalic = style.Italic && !resource.Resolution.Italic;
         string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, style.CharacterSpacingPoints, fontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {
-            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, style.Italic);
+            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic);
             return;
         }
 
-        graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), style.Italic);
+        graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic);
+    }
+
+    private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
+    {
+        return style.Bold && !resource.Resolution.Bold;
     }
 
     private static void RenderTableRowBorders(

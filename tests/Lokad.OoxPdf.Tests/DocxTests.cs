@@ -263,7 +263,6 @@ internal static class DocxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 18 Tf", pdf);
         TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.Contains("0.213", pdf);
         TestAssert.Contains(" l S", pdf);
     }
 
@@ -1506,6 +1505,55 @@ internal static class DocxTests
         TestAssert.Contains("/F2 ", pdf);
         TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + first.Value.Resolution.FamilyName + "-"), pdf);
         TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + second.Value.Resolution.FamilyName + "-"), pdf);
+    }
+
+    public static void DocxRendererDoesNotSynthesizeBoldWhenResolvedFaceIsBold()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:rPr><w:b/><w:rFonts w:ascii="{{family}}" w:hAnsi="{{family}}"/></w:rPr>
+                        <w:t>Resolved bold face</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var resolver = new SingleResolutionFontResolver(font.Value.Resolution);
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Equal(1, CountPdfTextShows(pdf));
     }
 
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()

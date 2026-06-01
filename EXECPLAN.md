@@ -5264,6 +5264,13 @@ Current validation baseline:
   near authored `+2pt` and `-1pt`, plus residual positioned adjustments on nominally zero-spacing runs. The
   candidate renders the default header/footer references from `header2.xml`/`footer2.xml` with the authored
   spacing, but its text-operation decomposition remains less Office-like than the reference.
+  2026-06-01 follow-up: DOCX text emission now applies synthetic bold and italic only when the resolved font
+  face does not already provide the requested bold/italic attribute. This keeps structural font resolution as
+  the source of truth instead of double-emitting already-bold text or shearing already-italic glyphs. Public
+  `docx-ladder-02-character-spacing` improved from run `20260601-103426` (`MAE=1.714594`, changed16
+  `0.014529`) to run `20260601-103906` (`MAE=1.685749`, changed16 `0.013842`). Private DOCX run
+  `20260601-103906` stayed stable at `16/16` pages, zero dimension mismatches, no diagnostics, and improved
+  from `MAE=13.388935`, changed16 `0.124264` to `MAE=13.286569`, changed16 `0.123783`.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off
