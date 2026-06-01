@@ -2036,6 +2036,19 @@ High-priority actions:
     DOCX run `20260601-104626` stayed stable at `16/16` pages, zero dimension mismatches, no diagnostics,
     `MAE=13.286569`, changed16 `0.123783`. Keep the row-height parent open for row-border participation,
     row clipping, and Office's finer per-cell text-operation decomposition.
+    2026-06-01 follow-up: DOCX single-line automatic line boxes now have a structural Word minimum of `1.15em`
+    after the larger OpenType typographic/Windows line-box metric is applied. This is not a font-name, table,
+    or document rule: the public paragraph-spacing probe showed the first baseline already aligned while the
+    next paragraph/table origin remained too high, meaning the line box itself was too short. Public
+    `docx-ladder-01-paragraph-spacing` improved from failing run `20260601-111037` (`MAE=0.058484`,
+    changed16 `0.000818`) to run `20260601-111301` (`MAE=0.014739`, changed16 `0.000394`), matching the
+    exact line-height fixture run `20260601-111558`. Public `docx-ladder-02-character-spacing` improved from
+    the empty-paragraph baseline (`MAE=1.505741`, changed16 `0.012793`) to run `20260601-111329`
+    (`MAE=0.833100`, changed16 `0.008161`), and `docx-ladder-03-table-row-heights` improved from
+    `MAE=2.053192`, changed16 `0.016159` to run `20260601-111354` (`MAE=1.469789`, changed16 `0.013068`).
+    Neighboring `docx-ladder-03-table-paragraph-adjacency` improved slightly to `MAE=0.778729`, changed16
+    `0.006298` (run `20260601-111558`). Keep the parent open because row-border participation, row clipping,
+    and Office's per-cell text-operation decomposition are still not structurally explained.
     Rejected follow-up: snapping emitted DOCX PDF font sizes to a 600-DPI text-state grid matched the public
     row-height fixture's Office `11.04pt`/`21.96pt` text states and slightly improved that fixture
     (`MAE=2.025428`, changed16 `0.016094`, run `20260601-105119`), but it worsened
@@ -2063,6 +2076,11 @@ High-priority actions:
       diagnostics, but aggregate error worsened to `MAE=13.615949`, changed16 `0.125050` (run
       `20260601-110750`), so styled empty paragraphs still need finer Word-compatible paragraph-mark
       metrics/spacing collapse instead of broad blank-line assumptions.
+      2026-06-01 follow-up: the structural single-line minimum greatly improved public body/table origins but
+      did not undo the private regression introduced by preserving styled empty paragraphs: private run
+      `20260601-111329` stayed accepted at `16/16` pages, zero dimension mismatches, no diagnostics,
+      `MAE=13.615949`, changed16 `0.125050`. Keep this nested item open for paragraph-mark style/default
+      inheritance and spacing-collapse evidence; do not special-case private style names or fonts.
     - [x] 2026-05-31: Converted preserved `beforeLines`/`afterLines` tokens into resolved paragraph spacing
       points when no explicit twip spacing or autospacing owns that paragraph side. The reader now derives
       hundredths-of-line spacing from the resolved paragraph line height, and a public synthetic reader test
@@ -2091,6 +2109,11 @@ High-priority actions:
       `MAE=12.716572`, changed16 `0.118448`. Keep the parent open because Office's exact autospacing amount
       appears slightly lower than the current line-height approximation and table/section collapse is still
       unmodeled.
+      2026-06-01 follow-up: the new structural `1.15em` single-line minimum slightly regressed the public
+      autospacing probe from `MAE=0.355702`, changed16 `0.003403` to run `20260601-111415`
+      (`MAE=0.377856`, changed16 `0.003540`). Keep this open as evidence that `beforeAutospacing` and
+      `afterAutospacing` should not simply reuse the normal single-line box; they need their own Office-backed
+      spacing model while ordinary line boxes retain the Word-compatible minimum.
     - [x] 2026-05-31: Removed the stale style-level keep-rule diagnostic for `w:keepNext`/`w:keepLines` after
       those tokens became part of the resolved paragraph model and block-pagination stage. Public coverage now
       asserts that supported style keep rules do not emit `DOCX_STYLE_PARAGRAPH_KEEP_RULE`. Private DOCX run

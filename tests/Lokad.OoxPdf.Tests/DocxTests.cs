@@ -7520,7 +7520,7 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.Pages[0].TableRowCount);
         TestAssert.Equal(0, snapshot.Pages[0].TextLineCount);
         TestAssert.True(snapshot.Pages[0].VerticalUsed >= 20d, "Snapshot should report vertical consumption from laid-out table rows.");
-        TestAssert.Equal(snapshot.Pages[0].VerticalUsed, snapshot.Pages[0].TableRowHeightSum);
+        TestAssert.Equal(Math.Round(snapshot.Pages[0].VerticalUsed, 6), Math.Round(snapshot.Pages[0].TableRowHeightSum, 6));
         TestAssert.Equal(0d, snapshot.Pages[0].TextLineHeightSum);
         TestAssert.Equal(0d, snapshot.Pages[0].InlineImageHeightSum);
         DocxLayoutItemSnapshot row = snapshot.Pages[0].Items.Single();

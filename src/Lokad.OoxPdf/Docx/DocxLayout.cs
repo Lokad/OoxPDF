@@ -447,18 +447,20 @@ internal static class DocxTextSpacing
 
 internal static class DocxLineMetrics
 {
+    private const double WordSingleLineMinimumEm = 1.15d;
+
     public static double MeasureOpenTypeSingleLineHeight(OpenTypeFont font, double fontSize)
     {
         if (font.UnitsPerEm == 0)
         {
-            return fontSize;
+            return fontSize * WordSingleLineMinimumEm;
         }
 
         double typographicUnits = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
         double windowsUnits = font.Os2.WindowsAscender + font.Os2.WindowsDescender;
         double units = Math.Max(typographicUnits, windowsUnits);
 
-        return Math.Max(fontSize, units * fontSize / font.UnitsPerEm);
+        return Math.Max(fontSize * WordSingleLineMinimumEm, units * fontSize / font.UnitsPerEm);
     }
 }
 
