@@ -1931,6 +1931,14 @@ High-priority actions:
     exactly on the bottom margin, not only when it crosses below it. This keeps the preflight consistent with
     subsequent row placement after the 401-twip row minimum and avoids splitting an exactly-fitted
     paragraph/table keep pair across pages.
+    2026-06-01 follow-up: added Office-authored public fixture `docx-ladder-03-table-row-heights` to make the
+    row-height evidence restartable. Word writes the at-least row as `w:trHeight w:val="360"` without
+    `hRule`, the exact row as `w:hRule="exact" w:val="360"`, and omits row-height tokens for natural auto
+    rows. Public run `20260601-031548` is page- and dimension-stable (`MAE=2.409006`, changed16 `0.018633`);
+    layout inspection shows the candidate matching the basic row-height classes (`21.8678pt` natural rows,
+    `35.7355pt` at-least wrapped row, `18pt` exact row). Keep the parent open for first-row/header-row
+    baseline placement, row clipping semantics, and broader pagination cases rather than the basic
+    `auto`/missing/`exact` token distinction.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current

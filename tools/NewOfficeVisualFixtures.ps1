@@ -793,6 +793,65 @@ try {
         $tableDoc.Close($false)
     }
 
+    $rowHeights = $word.Documents.Add()
+    try {
+        $rowHeights.PageSetup.PageWidth = 612
+        $rowHeights.PageSetup.PageHeight = 792
+        $rowHeights.PageSetup.TopMargin = 72
+        $rowHeights.PageSetup.BottomMargin = 72
+        $rowHeights.PageSetup.LeftMargin = 72
+        $rowHeights.PageSetup.RightMargin = 72
+        $rowHeights.Content.Text = "DOCX table row heights`r`n"
+
+        $heading = $rowHeights.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $range = $rowHeights.Paragraphs.Item(2).Range
+        $tbl = $rowHeights.Tables.Add($range, 4, 3)
+        $tbl.Borders.Enable = $true
+        $tbl.Rows.Alignment = 0
+        $tbl.AllowAutoFit = $false
+        $tbl.Columns.Item(1).Width = 110
+        $tbl.Columns.Item(2).Width = 110
+        $tbl.Columns.Item(3).Width = 250
+
+        $values = @(
+            @("Auto", "short", "Natural row height"),
+            @("At least", "18 pt", "Wrapped phrase with enough neutral words to require multiple table lines"),
+            @("Exact", "18 pt", "Wrapped phrase with enough neutral words to expose clipping or overflow handling"),
+            @("Auto empty", "", "")
+        )
+
+        for ($row = 1; $row -le 4; $row++) {
+            for ($column = 1; $column -le 3; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Text = $values[$row - 1][$column - 1]
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = 11
+                $cell.TopPadding = 0
+                $cell.BottomPadding = 0
+                $cell.LeftPadding = 5.4
+                $cell.RightPadding = 5.4
+            }
+        }
+
+        $tbl.Rows.Item(1).HeightRule = 0
+        $tbl.Rows.Item(2).HeightRule = 1
+        $tbl.Rows.Item(2).Height = 18
+        $tbl.Rows.Item(3).HeightRule = 2
+        $tbl.Rows.Item(3).Height = 18
+        $tbl.Rows.Item(4).HeightRule = 0
+
+        $rowHeights.SaveAs2((Join-Path $cases "docx-ladder-03-table-row-heights.docx"), 16)
+    }
+    finally {
+        $rowHeights.Close($false)
+    }
+
     $headerFooter = $word.Documents.Add()
     try {
         $headerFooter.PageSetup.PageWidth = 612

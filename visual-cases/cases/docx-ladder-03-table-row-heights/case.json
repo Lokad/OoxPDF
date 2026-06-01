@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-03-table-row-heights",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-row-heights.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "table", "row-height"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}
