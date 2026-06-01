@@ -9467,14 +9467,18 @@ internal static class DocxTests
         TestAssert.Equal(3, snapshot.Pages[0].LastSourceBlockIndex ?? -1);
         TestAssert.Equal(4, snapshot.SourceBlocks.Count);
         DocxLayoutSourceBlockSnapshot firstBlock = snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 0);
+        TestAssert.Equal("Paragraph", firstBlock.Kind);
         TestAssert.Equal(1, firstBlock.TextLineCount);
         TestAssert.Equal(0, firstBlock.TableRowCount);
         TestAssert.True(firstBlock.TextLength > 0, "Source block summary should expose text length only, not text.");
         DocxLayoutSourceBlockSnapshot firstTableBlock = snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 1);
+        TestAssert.Equal("Table", firstTableBlock.Kind);
         TestAssert.Equal(0, firstTableBlock.TextLineCount);
         TestAssert.Equal(1, firstTableBlock.TableRowCount);
         TestAssert.Equal(0, firstTableBlock.FirstPageIndex);
         TestAssert.Equal(0, firstTableBlock.LastPageIndex);
+        TestAssert.Equal("Paragraph", snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 2).Kind);
+        TestAssert.Equal("Table", snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 3).Kind);
         TestAssert.Equal(2, snapshot.Tables.Count);
         TestAssert.Equal(0, snapshot.Tables[0].TableIndex);
         TestAssert.Equal(1, snapshot.Tables[0].SourceBlockIndex);

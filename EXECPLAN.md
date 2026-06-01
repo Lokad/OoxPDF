@@ -574,6 +574,10 @@ High-priority actions:
   spacing state without decoded document text. Keep this as the default bottom-up diagnostic path before adding
   more pagination or text-state rules, so future changes can be checked against the renderer's own structural
   model instead of loose PDF-text scripts.
+  2026-06-02 architecture follow-up: layout `SourceBlocks` now classify their private-safe block kind
+  (`Paragraph`, `Table`, `InlineImage`, `Mixed`, or `Unknown`) in addition to page span, text-line counts, row
+  counts, and consumed height. This removes another implicit join between layout and structure snapshots when
+  diagnosing page-flow residuals, and keeps the bottom-up DOCX model closer to the PPTX scene/snapshot pattern.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

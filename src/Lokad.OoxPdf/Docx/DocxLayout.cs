@@ -77,6 +77,7 @@ internal sealed record DocxLayoutSnapshot(
             .OrderBy(group => group.Key)
             .Select(group => new DocxLayoutSourceBlockSnapshot(
                 group.Key,
+                ResolveSourceBlockKind(group.Select(entry => entry.item)),
                 group.Min(entry => entry.pageIndex),
                 group.Max(entry => entry.pageIndex),
                 group.Count(),
@@ -87,6 +88,37 @@ internal sealed record DocxLayoutSnapshot(
                 group.Sum(entry => entry.item.LineHeightPoints ?? entry.item.Height),
                 group.Sum(entry => entry.item.AppliedBeforeSpacingPoints ?? 0d)))
             .ToArray();
+    }
+
+    private static string ResolveSourceBlockKind(IEnumerable<DocxLayoutItemSnapshot> items)
+    {
+        bool hasTextLine = false;
+        bool hasTableRow = false;
+        bool hasInlineImage = false;
+        foreach (DocxLayoutItemSnapshot item in items)
+        {
+            hasTextLine |= item.Kind == "TextLine";
+            hasTableRow |= item.Kind == "TableRow";
+            hasInlineImage |= item.Kind == "InlineImage";
+        }
+
+        int kindCount = (hasTextLine ? 1 : 0) + (hasTableRow ? 1 : 0) + (hasInlineImage ? 1 : 0);
+        if (kindCount > 1)
+        {
+            return "Mixed";
+        }
+
+        if (hasTableRow)
+        {
+            return "Table";
+        }
+
+        if (hasTextLine)
+        {
+            return "Paragraph";
+        }
+
+        return hasInlineImage ? "InlineImage" : "Unknown";
     }
 
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
@@ -401,6 +433,7 @@ internal sealed record DocxLayoutPageSnapshot(
 
 internal sealed record DocxLayoutSourceBlockSnapshot(
     int SourceBlockIndex,
+    string Kind,
     int FirstPageIndex,
     int LastPageIndex,
     int ItemCount,
