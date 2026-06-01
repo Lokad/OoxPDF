@@ -206,7 +206,8 @@ internal sealed class DocxRenderer
         return first is not null &&
             second is not null &&
             first.Table.TableIndex == second.Table.TableIndex &&
-            first.RowIndex + 1 == second.RowIndex;
+            (first.RowIndex + 1 == second.RowIndex ||
+                (first.RowIndex == second.RowIndex && first.FragmentIndex + 1 == second.FragmentIndex));
     }
 
     private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, DocxFontResources fontResources, int pageNumber, int pageCount)

@@ -478,6 +478,12 @@ High-priority actions:
   candidate layout has already pushed the next table row to page 3. On private accepted run `20260601-205142`,
   pages 14..16 show the same boundary class around the worst page without exposing text. This confirms the next
   implementation needs a row-fragment/page-boundary model with text-row carry-over, not another fit predicate.
+  2026-06-01 architecture progress: `DocxTableRowLayout` and `DocxTableRowSnapshot` now carry explicit
+  `FragmentIndex`/`FragmentCount`, and renderer row adjacency treats same-row continuation fragments as table
+  adjacency. Current emitted rows remain single-fragment (`0/1`), but the layout/render/snapshot contracts now
+  have a structural home for first/continuation fragments before pagination behavior changes. Keep this open
+  until actual split rows carry clipped cell geometry, continuation text lines, and Office-observed border
+  suppression.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
