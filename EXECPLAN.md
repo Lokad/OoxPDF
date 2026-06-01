@@ -342,6 +342,14 @@ High-priority actions:
   layout advances against Office PDF rows instead of guessing from style names or font names. Keep this branch
   open on deriving Word's effective single-line metrics and paragraph pitch for compact lists under
   font-table-alternate resolution; do not use a broad `docGrid`, FE-layout, or named-font shortcut.
+  2026-06-01 tooling follow-up: `tools/CompareDocxLayoutPdfFlow.ps1` now carries those line-height and applied
+  before-spacing fields into its private-safe flow map and emits aggregate candidate line-advance buckets. The
+  current private flow map has dominant candidate advance buckets at `14.038`, `20.038`, `22.038`, and
+  `15.838` pt, with the compact-list first lines in the `15.838` bucket. The public compact-bullet-alt-bottom
+  repro has `17.059` pt candidate compact-list advances while Office rows are closer to `16.4..16.6` pt.
+  This confirms the remaining rule is not a single broad page-fit constant; continue by deriving Office's
+  paragraph pitch from public rows and font metrics, then apply only a structural rule that also explains the
+  private compact-list bucket.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

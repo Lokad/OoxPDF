@@ -145,6 +145,9 @@ function Get-LayoutLines($Layout) {
                 SourceBlockIndex = $item.SourceBlockIndex
                 SourceLineIndex = $item.SourceLineIndex
                 LayoutTextLength = [int]$item.TextLength
+                LineHeightPoints = if ($null -eq $item.LineHeightPoints) { $null } else { [Math]::Round([double]$item.LineHeightPoints, 6) }
+                AppliedBeforeSpacingPoints = if ($null -eq $item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.AppliedBeforeSpacingPoints, 6) }
+                IsFirstParagraphLine = $item.IsFirstParagraphLine
             })
         }
     }
@@ -248,6 +251,9 @@ foreach ($line in $layoutLines) {
             CandidateOperationCount = $null
             ReferenceOperationCount = $null
             ExactReferenceMatchCount = 0
+            LineHeightPoints = $line.LineHeightPoints
+            AppliedBeforeSpacingPoints = $line.AppliedBeforeSpacingPoints
+            IsFirstParagraphLine = $line.IsFirstParagraphLine
         })
         continue
     }
@@ -275,6 +281,9 @@ foreach ($line in $layoutLines) {
         CandidateOperationCount = [int]$candidateRow.OperationCount
         ReferenceOperationCount = if ($null -eq $referenceRow) { $null } else { [int]$referenceRow.OperationCount }
         ExactReferenceMatchCount = [int]$referenceMatch.ExactReferenceMatchCount
+        LineHeightPoints = $line.LineHeightPoints
+        AppliedBeforeSpacingPoints = $line.AppliedBeforeSpacingPoints
+        IsFirstParagraphLine = $line.IsFirstParagraphLine
     })
 }
 
@@ -290,6 +299,22 @@ $summary = [pscustomobject]@{
     MissingReferenceMatchCount = @($mapped | Where-Object Status -eq "missing-reference-match").Count
     MissingCandidateRowCount = @($mapped | Where-Object Status -eq "missing-candidate-row").Count
     AmbiguousReferenceMatchCount = @($mapped | Where-Object { $_.ExactReferenceMatchCount -gt 1 }).Count
+    CandidateLineAdvanceBuckets = @(
+        $layoutLines |
+            Where-Object { $null -ne $_.LineHeightPoints } |
+            Group-Object {
+                $spacing = if ($null -eq $_.AppliedBeforeSpacingPoints) { 0d } else { [double]$_.AppliedBeforeSpacingPoints }
+                [Math]::Round([double]$_.LineHeightPoints + $spacing, 3).ToString("0.000", [Globalization.CultureInfo]::InvariantCulture)
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    AdvancePoints = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
     WorstMatchedByAbsDeltaY = @(
         $mapped |
             Where-Object { $_.Status -eq "matched" } |
