@@ -671,16 +671,37 @@ internal sealed class DocxRenderer
                 ? cursorY - lineAscender
                 : cursorY + lineDescender;
             double segmentX = lineX;
+            DocxTextRun? terminalRun = null;
+            DocxRunFontResource? terminalResource = null;
+            double terminalFontSize = 0d;
+            double terminalX = 0d;
+            RgbColor terminalColor = default;
             for (int i = 0; i < segments.Length; i++)
             {
                 (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
                 RgbColor color = ReadColor(run.ColorHex);
                 DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, baselineY, color);
-                segmentX += MeasureStaticSegmentWidth(run, text, fontSize, resource);
+                double segmentWidth = MeasureStaticSegmentWidth(run, text, fontSize, resource);
+                double segmentEndX = segmentX + segmentWidth;
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    terminalRun = run;
+                    terminalResource = resource;
+                    terminalFontSize = fontSize;
+                    terminalX = segmentEndX;
+                    terminalColor = color;
+                }
+
+                segmentX = segmentEndX;
                 if (i + 1 < segments.Length)
                 {
                     segmentX += DocxTextSpacing.BoundarySpacing(run, text, segments[i + 1].Text);
                 }
+            }
+
+            if (terminalRun is not null && terminalResource is not null)
+            {
+                DrawRunGlyphText(graphics, terminalResource, terminalRun, " ", terminalFontSize, terminalX, baselineY, terminalColor);
             }
 
             cursorY -= lineAscender + lineDescender;

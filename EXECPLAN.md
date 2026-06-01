@@ -36,6 +36,9 @@ keep diagnostics honest when a feature is still missing.
 - `tools/SummarizePptxTextStateDeltas.ps1`: private-safe aggregate summary of Office/candidate PPTX text
   emission comparisons, including `Tc` buckets, table/style/frame structure, glyph residuals, and letter-case
   counts. It must not emit private text content.
+- `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
+  from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, and positioned-glyph
+  residual buckets. It must not emit decoded document text.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -5495,6 +5498,14 @@ Current validation baseline:
   reference keeps every operation at `Tc=0`. It also slightly worsened `docx-tables`. Do not use font-size-grid
   residual compensation as the generic DOCX `Tc` rule; the rule must be derived from Word's actual text-state
   choices, not from raster improvement alone.
+  2026-06-01 follow-up: static header/footer rendering now uses the same terminal-space operation split as body
+  paragraphs, preserving layout geometry while aligning Word's PDF text-operation decomposition. Public
+  `docx-ladder-02-character-spacing` run `20260601-131532` now matches Word exactly on text operations and text
+  state for this case: reference `28` `TJ` operations, candidate `28`; reference nonzero `Tc=0`, candidate
+  nonzero `Tc=0`; `/Tf` size buckets also match (`9.96`, `12`, `14.04`, `21.96`). Raster metrics stayed
+  `MAE=0.747573`, changed16 `0.007952`, confirming this was a structural PDF alignment step rather than a
+  raster shortcut. The new `tools/SummarizeDocxTextState.ps1` records these private-safe aggregate checks and
+  should be used before any further DOCX `Tc` work.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

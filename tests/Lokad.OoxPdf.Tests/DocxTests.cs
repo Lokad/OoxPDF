@@ -7909,7 +7909,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Equal(3, CountPdfTextShows(pdf));
+        TestAssert.Equal(6, CountPdfTextShows(pdf));
     }
 
     public static void DocxSyntheticHeaderReferenceTypesSelectDefaultWhenNoFirstOrEvenSetting()
@@ -7987,7 +7987,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(2, CountPdfTextShows(pdf));
+        TestAssert.Equal(4, CountPdfTextShows(pdf));
     }
 
     public static void DocxSyntheticHeaderFooterDistancesUsePageMarginTokens()
@@ -8120,7 +8120,7 @@ internal static class DocxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.Equal(3, CountPdfTextShows(pdf));
+        TestAssert.Equal(5, CountPdfTextShows(pdf));
     }
 
     public static void DocxSyntheticFooterPageFieldsUseGeneratedPageNumbers()
