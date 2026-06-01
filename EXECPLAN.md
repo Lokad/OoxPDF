@@ -578,6 +578,11 @@ High-priority actions:
   (`Paragraph`, `Table`, `InlineImage`, `Mixed`, or `Unknown`) in addition to page span, text-line counts, row
   counts, and consumed height. This removes another implicit join between layout and structure snapshots when
   diagnosing page-flow residuals, and keeps the bottom-up DOCX model closer to the PPTX scene/snapshot pattern.
+  2026-06-02 architecture follow-up: body-level inline image layout items now carry their owning
+  `SourceBlockIndex`, and the layout source-block summary can classify true image-only paragraphs as
+  `InlineImage` while text/image paragraphs remain `Mixed`. Table-cell images remain owned through table-row
+  and cell snapshots. This closes a diagnostic ownership gap for image-bearing DOCX paragraphs without changing
+  rendering behavior.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

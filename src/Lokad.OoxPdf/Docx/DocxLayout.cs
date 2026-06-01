@@ -182,7 +182,7 @@ internal sealed record DocxLayoutSnapshot(
                 image.Height,
                 TextLength: 0,
                 CellCount: 0,
-                SourceBlockIndex: null,
+                image.SourceBlockIndex,
                 SourceLineIndex: null,
                 LineHeightPoints: null,
                 AppliedBeforeSpacingPoints: null,
@@ -671,7 +671,8 @@ internal sealed record DocxInlineImageLayout(
     double Y,
     double Width,
     double Height,
-    int PageIndex) : DocxLayoutItem;
+    int PageIndex,
+    int? SourceBlockIndex = null) : DocxLayoutItem;
 
 internal sealed record DocxTableRowLayout(
     DocxTableLayoutContext Table,
@@ -1143,7 +1144,14 @@ internal sealed class DocxLayoutEngine
                     DocxTextAlignment.Right => x + Math.Max(0, width - imageWidth),
                     _ => x
                 };
-                currentItems.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pages.Count + 1));
+                currentItems.Add(new DocxInlineImageLayout(
+                    image,
+                    imageX,
+                    cursorY - imageHeight,
+                    imageWidth,
+                    imageHeight,
+                    pages.Count + 1,
+                    SourceBlockIndex: elementIndex));
                 cursorY -= imageHeight + 6d;
             }
 

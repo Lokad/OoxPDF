@@ -9496,6 +9496,32 @@ internal static class DocxTests
         TestAssert.Equal(3, tableItems[1].SourceBlockIndex ?? -1);
     }
 
+    public static void DocxLayoutSnapshotReportsInlineImageSourceBlockIndexes()
+    {
+        var image = new DocxInlineImage(24d, 18d, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png");
+        DocxParagraph imageParagraph = CreateDocxLayoutParagraph(string.Empty, 10d, 12d) with
+        {
+            Runs = [],
+            Images = [image]
+        };
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(imageParagraph)], []);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+
+        TestAssert.Equal(1, snapshot.Pages.Count);
+        TestAssert.Equal(1, snapshot.Pages[0].InlineImageCount);
+        TestAssert.Equal(1, snapshot.Pages[0].SourceBlockCount);
+        DocxLayoutItemSnapshot imageItem = snapshot.Pages[0].Items.Single(item => item.Kind == "InlineImage");
+        TestAssert.Equal(0, imageItem.SourceBlockIndex ?? -1);
+        DocxLayoutSourceBlockSnapshot sourceBlock = snapshot.SourceBlocks.Single();
+        TestAssert.Equal(0, sourceBlock.SourceBlockIndex);
+        TestAssert.Equal("InlineImage", sourceBlock.Kind);
+        TestAssert.Equal(1, sourceBlock.InlineImageCount);
+        TestAssert.Equal(0, sourceBlock.TextLineCount);
+        TestAssert.Equal(0, sourceBlock.TextLength);
+        TestAssert.Equal(0, sourceBlock.TableRowCount);
+    }
+
     public static void DocxLayoutStageOwnsSelectedStaticHeaderFooterLines()
     {
         DocxParagraph header = new(
