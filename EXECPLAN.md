@@ -1992,6 +1992,14 @@ High-priority actions:
     row-height trial improved the row-height ladder to `MAE=2.350264` but worsened adjacency to
     `MAE=0.927411` and duplicated renderer border-width logic inside layout, so border participation
     needs a proper Word row line-box/border model rather than another local height adjustment.
+    2026-06-01 follow-up: refreshed the private-safe layout snapshot after the section-break slice. The private
+    DOCX has `129` laid-out table rows, all auto-height, `422` cells with zero resolved cell paragraph
+    after-spacing, and only a small set of center/bottom vertical-aligned cells. Public
+    `docx-ladder-03-table-row-heights` run `20260601-100156` remains at `MAE=2.435244`,
+    changed16 `0.018702`; PDF text inspection shows Office emitting `27` text operations while the candidate
+    emits `14`, with row-baseline deltas growing down the table. Do not address this with another row-height
+    constant; the next acceptable slice needs to separate row-origin/baseline ownership from Office's finer
+    text-operation decomposition on public fixtures.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
