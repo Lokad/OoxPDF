@@ -32,13 +32,14 @@ function Read-JsonArray($path) {
 }
 
 function New-LineGroups($operations) {
-    $ordered = @($operations | Sort-Object -Property @{ Expression = { [double]$_.Y }; Descending = $true }, @{ Expression = { [double]$_.X }; Descending = $false })
+    $ordered = @($operations | Sort-Object -Property @{ Expression = { [int]$_.PageNumber }; Descending = $false }, @{ Expression = { [double]$_.Y }; Descending = $true }, @{ Expression = { [double]$_.X }; Descending = $false })
     $groups = New-Object System.Collections.Generic.List[object]
 
     foreach ($op in $ordered) {
+        $page = [int]$op.PageNumber
         $line = $null
         foreach ($candidateLine in $groups) {
-            if ([Math]::Abs([double]$op.Y - [double]$candidateLine.Y) -le $LineTolerance) {
+            if ([int]$candidateLine.Page -eq $page -and [Math]::Abs([double]$op.Y - [double]$candidateLine.Y) -le $LineTolerance) {
                 $line = $candidateLine
                 break
             }
@@ -46,6 +47,7 @@ function New-LineGroups($operations) {
 
         if ($null -eq $line) {
             $line = [pscustomobject]@{
+                Page = $page
                 Y = [double]$op.Y
                 Operations = New-Object System.Collections.Generic.List[object]
             }
@@ -57,11 +59,12 @@ function New-LineGroups($operations) {
     }
 
     $index = 0
-    foreach ($line in $groups | Sort-Object -Property @{ Expression = { [double]$_.Y }; Descending = $true }) {
+    foreach ($line in $groups | Sort-Object -Property @{ Expression = { [int]$_.Page }; Descending = $false }, @{ Expression = { [double]$_.Y }; Descending = $true }) {
         $orderedOps = @($line.Operations | Sort-Object -Property X)
         $starts = @($orderedOps | ForEach-Object { [double]$_.X })
         [pscustomobject]@{
             Index = $index++
+            Page = [int]$line.Page
             Y = [Math]::Round([double]$line.Y, 6)
             Count = $starts.Count
             Starts = $starts
@@ -118,6 +121,10 @@ if ($MatchByPosition) {
         $bestIndex = -1
         $bestDelta = [double]::PositiveInfinity
         for ($i = 0; $i -lt $unmatched.Count; $i++) {
+            if ([int]$cand.Page -ne [int]$unmatched[$i].Page) {
+                continue
+            }
+
             $delta = [Math]::Abs([double]$cand.Y - [double]$unmatched[$i].Y)
             if ($delta -lt $bestDelta) {
                 $bestDelta = $delta
@@ -158,6 +165,8 @@ foreach ($pair in $pairs) {
         $rows.Add([pscustomobject]@{
             Line = $lineIndex++
             Status = "missing-line"
+            RefPage = if ($null -eq $ref) { $null } else { $ref.Page }
+            CandPage = if ($null -eq $cand) { $null } else { $cand.Page }
             RefY = if ($null -eq $ref) { $null } else { $ref.Y }
             CandY = if ($null -eq $cand) { $null } else { $cand.Y }
             RefCount = if ($null -eq $ref) { $null } else { $ref.Count }
@@ -180,7 +189,10 @@ foreach ($pair in $pairs) {
     }
 
     $status = "ok"
-    if (-not $FirstStartOnly -and $ref.Count -ne $cand.Count) {
+    if ($ref.Page -ne $cand.Page) {
+        $status = "page"
+    }
+    elseif (-not $FirstStartOnly -and $ref.Count -ne $cand.Count) {
         $status = "count"
     }
     elseif ($maxDelta -gt $StartTolerance) {
@@ -194,6 +206,8 @@ foreach ($pair in $pairs) {
     $rows.Add([pscustomobject]@{
         Line = $lineIndex++
         Status = $status
+        RefPage = [int]$ref.Page
+        CandPage = [int]$cand.Page
         RefY = [Math]::Round([double]$ref.Y, 6)
         CandY = [Math]::Round([double]$cand.Y, 6)
         RefCount = $ref.Count
@@ -208,7 +222,7 @@ foreach ($pair in $pairs) {
 
 if ($ShowText) {
     $rows |
-        Select-Object Line, Status, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
+        Select-Object Line, Status, RefPage, CandPage, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
         Format-Table -AutoSize
     foreach ($row in $rows) {
         Write-Host "Line $($row.Line) reference text: $($row.RefText)"
@@ -217,7 +231,7 @@ if ($ShowText) {
 }
 else {
     $rows |
-        Select-Object Line, Status, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
+        Select-Object Line, Status, RefPage, CandPage, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
         Format-Table -AutoSize
 }
 Write-Host "Text line starts: reference=$($referenceLines.Count), candidate=$($candidateLines.Count), deltas=$failures"

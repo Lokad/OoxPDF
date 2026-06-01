@@ -286,6 +286,10 @@ High-priority actions:
   with only a small baseline residual (`MAE=0.165895`, changed16 `0.002063`). Do not suppress after-table empty
   paragraphs as a shortcut. The remaining vertical-flow work should focus on row/page transition heights and
   accumulated paragraph/table spacing, not dropping authored empty blocks.
+  2026-06-01 tooling correction: `tools/ComparePdfTextLineStarts.ps1` now groups and matches text rows per page
+  before comparing starts. The previous page-agnostic grouping could hide pagination mistakes when two pages had
+  similarly placed rows. The existing DOCX wrapping gates still pass with the page-aware comparer, so future
+  pagination probes can safely use line-start gates without masking page shifts.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
