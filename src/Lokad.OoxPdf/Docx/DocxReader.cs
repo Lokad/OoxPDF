@@ -492,6 +492,13 @@ internal sealed class DocxReader
                     AddParagraphRun(insertedRun, ref pageInstructionSeen);
                 }
             }
+            else if (child.Name == WordprocessingNamespace + "hyperlink")
+            {
+                foreach (XElement hyperlinkRun in child.Elements(WordprocessingNamespace + "r"))
+                {
+                    AddParagraphRun(hyperlinkRun, ref pageInstructionSeen);
+                }
+            }
         }
 
         if (runs.Count == 0 && images.Count == 0)

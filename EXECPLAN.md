@@ -3683,6 +3683,13 @@ block models and richer section/pagination layout before adding more Word pagina
     first-class tracked-change mode covering inserted/deleted paragraphs, table rows/cells, move ranges,
     comments, metadata, and whether diagnostics should remain broad once final-view coverage is complete.
 - [ ] Multi-column layout, text boxes, sidebars, bookmarks, hyperlinks, outlines, and document properties.
+  - [x] 2026-06-01: Preserved visible DOCX paragraph runs wrapped in `w:hyperlink` by routing hyperlink child
+    runs through the normal run parser and style cascade. Public coverage checks document-order text and the
+    inherited Hyperlink character style; validation passed `docx-text --skip-slow` (`29`) and full solution
+    build. Private DOCX run `20260601-092152` stayed page-stable at `16/16`, zero dimension mismatches, no
+    diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`. Keep actual PDF link
+    annotations, internal anchors, visited/unvisited style behavior, and relationship-target modeling open
+    under this parent.
 
 ### DOCX Synthetic Fidelity Ladder
 
