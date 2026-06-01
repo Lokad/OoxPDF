@@ -12,6 +12,12 @@ internal sealed class DocxRenderer
     internal const string DefaultDocumentTypefaceRequest = "OOXPDF_DOCUMENT_DEFAULT";
     private readonly IFontResolver fontResolver;
 
+    private enum StaticTextAnchor
+    {
+        Header,
+        Footer
+    }
+
     public DocxRenderer(IFontResolver? fontResolver = null)
     {
         this.fontResolver = fontResolver ?? new WindowsFontResolver();
@@ -69,6 +75,7 @@ internal sealed class DocxRenderer
                 document.MarginLeftPoints,
                 width,
                 document.PageHeightPoints - ResolveHeaderDistance(document),
+                StaticTextAnchor.Header,
                 pageNumber);
             RenderStaticParagraphs(
                 SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, document.PageSettings, pageNumber),
@@ -77,6 +84,7 @@ internal sealed class DocxRenderer
                 document.MarginLeftPoints,
                 width,
                 ResolveFooterDistance(document),
+                StaticTextAnchor.Footer,
                 pageNumber);
 
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray()));
@@ -611,6 +619,7 @@ internal sealed class DocxRenderer
         double x,
         double width,
         double startY,
+        StaticTextAnchor anchor,
         int pageNumber)
     {
         double cursorY = startY;
@@ -625,7 +634,7 @@ internal sealed class DocxRenderer
                 .Select(run => (
                     Run: run,
                     Text: run.Text.Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal),
-                    FontSize: Math.Min(12d, run.FontSize),
+                    FontSize: run.FontSize,
                     Resource: ResolveFontResource(run, fontResources)))
                 .Where(segment => segment.Resource is not null && segment.Text.Length != 0)
                 .Select(segment => (segment.Run, segment.Text, segment.FontSize, segment.Resource!))
@@ -642,12 +651,17 @@ internal sealed class DocxRenderer
                 DocxTextAlignment.Right => x + Math.Max(0, width - lineWidth),
                 _ => x
             };
+            double lineAscender = MeasureStaticLineAscender(segments);
+            double lineDescender = MeasureStaticLineDescender(segments);
+            double baselineY = anchor == StaticTextAnchor.Header
+                ? cursorY - lineAscender
+                : cursorY + lineDescender;
             double segmentX = lineX;
             for (int i = 0; i < segments.Length; i++)
             {
                 (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
                 RgbColor color = ReadColor(run.ColorHex);
-                DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, cursorY, color);
+                DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, baselineY, color);
                 segmentX += MeasureStaticSegmentWidth(run, text, fontSize, resource);
                 if (i + 1 < segments.Length)
                 {
@@ -655,8 +669,32 @@ internal sealed class DocxRenderer
                 }
             }
 
-            cursorY -= segments.Max(segment => segment.FontSize) * 1.2d;
+            cursorY -= lineAscender + lineDescender;
         }
+    }
+
+    private static double MeasureStaticLineAscender((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)
+    {
+        return segments.Max(segment => MeasureWindowsAscender(segment.Resource.Embedded.Font, segment.FontSize));
+    }
+
+    private static double MeasureStaticLineDescender((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)
+    {
+        return segments.Max(segment => MeasureWindowsDescender(segment.Resource.Embedded.Font, segment.FontSize));
+    }
+
+    private static double MeasureWindowsAscender(OpenTypeFont font, double fontSize)
+    {
+        return font.UnitsPerEm == 0
+            ? fontSize
+            : font.Os2.WindowsAscender * fontSize / font.UnitsPerEm;
+    }
+
+    private static double MeasureWindowsDescender(OpenTypeFont font, double fontSize)
+    {
+        return font.UnitsPerEm == 0
+            ? 0d
+            : font.Os2.WindowsDescender * fontSize / font.UnitsPerEm;
     }
 
     private static double MeasureStaticSegmentsWidth((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)

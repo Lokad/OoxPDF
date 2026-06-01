@@ -2186,6 +2186,16 @@ High-priority actions:
       the table-style/row-minimum baseline (`16/16`, zero dimension mismatches, `MAE=12.716572`, changed16
       `0.118448`). Keep the parent open for selected-part layout snapshots, wrapping, and exact Word
       header/footer line boxes rather than first-run resource collapse.
+      2026-06-01 follow-up: replaced the remaining raw static header/footer baseline heuristic with resolved
+      font metric anchoring. Header baselines are now inset from the OOXML header-distance top by the maximum
+      run Windows ascender, footer baselines are inset from the footer-distance bottom by the maximum run
+      Windows descender, and static runs keep their authored font sizes instead of being capped at `12pt`.
+      Public `docx-headers-footers` improved from `MAE=0.498914`, changed16 `0.006279` to `MAE=0.415463`,
+      changed16 `0.005343` (`20260601-082246`); inspected PDF baselines moved to header `746.95pt` versus
+      Office `746.64pt` and footer `38.12pt` versus Office `38.06pt`. Private DOCX run `20260601-082318`
+      stayed accepted (`16/16`, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16
+      `0.124264`). Keep this open for true static header/footer layout records, selected-part snapshots,
+      wrapping, and multi-paragraph line-box behavior.
     - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the

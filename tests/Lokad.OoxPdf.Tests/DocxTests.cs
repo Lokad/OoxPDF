@@ -6344,8 +6344,13 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 36 720 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 36 54 Tm", pdf);
+        double[] leftAlignedBaselines = Regex.Matches(pdf, @"1 0 0 1 36(?:\.\d+)? (?<y>-?\d+(?:\.\d+)?) Tm")
+            .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
+            .ToArray();
+        TestAssert.True(leftAlignedBaselines.Any(y => y > 704d && y < 720d), "Header baseline should be inset from the raw header-distance top by resolved font ascender metrics.");
+        TestAssert.True(leftAlignedBaselines.Any(y => y > 54d && y < 60d), "Footer baseline should be inset from the raw footer-distance bottom by resolved font descender metrics.");
+        TestAssert.DoesNotContain("1 0 0 1 36 720 Tm", pdf);
+        TestAssert.DoesNotContain("1 0 0 1 36 54 Tm", pdf);
     }
 
     public static void DocxStaticHeaderRendersMixedRunColorsSeparately()
