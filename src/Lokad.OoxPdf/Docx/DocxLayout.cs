@@ -1101,8 +1101,6 @@ internal sealed class DocxLayoutEngine
 
             AddTableRowLayout(table, tableContext, row, rowIndex, rowHeights, effectiveColumns, scale, textMeasurer, getPageIndex, ref currentItems, ref cursorY, tableX);
         }
-
-        cursorY -= 6d;
     }
 
     private static IReadOnlyList<double> GetEffectiveTableColumnWidths(DocxTable table, double preferredTableWidth)

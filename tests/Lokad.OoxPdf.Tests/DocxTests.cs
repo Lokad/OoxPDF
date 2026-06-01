@@ -6695,6 +6695,35 @@ internal static class DocxTests
         TestAssert.Equal("Second", secondPageRows[1].Cells[0].Cell.Text);
     }
 
+    public static void DocxTableLayoutStageKeepsFollowingParagraphAdjacent()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("After", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var table = new DocxTable(
+            null,
+            [60d],
+            [new DocxTableRow([new DocxTableCell("Cell", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(paragraph)], [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        DocxTableRowLayout row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        DocxTextLineLayout following = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single();
+        double expectedBaselineY = row.Y - 10d + 10d * 0.299d;
+        TestAssert.Equal(Math.Round(expectedBaselineY, 3), Math.Round(following.BaselineY, 3));
+    }
+
     public static void DocxTableLayoutStageAppliesVerticalMergeGeometry()
     {
         var restart = new DocxTableCell(

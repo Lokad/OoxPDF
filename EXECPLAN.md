@@ -5364,6 +5364,21 @@ Current validation baseline:
   `MAE=13.562167`, changed16 `0.124579`. Keep the follow-up open for baseline anchoring and paragraph/table
   adjacency: the remaining top DOCX misses are still table pagination/row heights/paragraph adjacency rather
   than logical indentation.
+- DOCX table-to-paragraph adjacency validation:
+  Office PDF inspection of `docx-ladder-03-table-paragraph-adjacency` showed table borders and cell baselines
+  were already close, but body paragraphs following the table were about `5.4pt` too low. The candidate table
+  bottom was only about `0.6pt` above Office, so the gap came from a renderer-owned fixed `6pt` table trailing
+  advance rather than OOXML paragraph spacing or row height. The layout stage no longer injects a synthetic
+  post-table gap; following paragraphs now start from the table bottom and use their own before/after spacing.
+  Public validation improved the adjacency case from run `20260601-120538` (`MAE=0.814874`, changed16
+  `0.006597`, SSIM `0.517943`) to run `20260601-121054` (`MAE=0.543831`, changed16 `0.004823`, SSIM
+  `0.683283`). Related table visuals stayed neutral: `docx-ladder-03-table-row-heights` remained at
+  `MAE=0.867597`, changed16 `0.009963`; `docx-ladder-03-table-pagination-margins` remained at `MAE=0.552209`,
+  changed16 `0.006630`. Validation passed `docx-tables --skip-slow` (`70`), `docx-text --skip-slow` (`36`),
+  `docx-core --skip-slow` (`21`), `docx-page --skip-slow` (`24`), and full solution build. Private DOCX run
+  `20260601-121146` stayed structurally valid at `16/16` pages, zero dimension mismatches, and no diagnostics,
+  but worsened to `MAE=13.791252`, changed16 `0.126278`; keep a follow-up open to classify table-adjacent
+  private pages by table/paragraph sequence before adding any replacement spacing rule.
 - DOCX unsupported table-border-style diagnostic validation:
   after emitting `DOCX_TABLE_BORDER_STYLE` only for visible non-`single`/`nil`/`none` table and cell border
   styles in document/style parts, `docx-tables --skip-slow` passed `62`, `docx-core --skip-slow` passed `16`
