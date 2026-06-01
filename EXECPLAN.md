@@ -2182,6 +2182,12 @@ High-priority actions:
       DOCX run `20260601-112215` stayed accepted at `16/16` pages, zero dimension mismatches, no diagnostics,
       `MAE=13.615949`, changed16 `0.125050`. Keep the parent open because the exact Word autospacing ladder
       still needs more font/default/style combinations before downgrading the spacing diagnostic.
+      Rejected follow-up: switching missing DOCX line-spacing fallback from `1.25` to `1.15` while also using
+      the larger OS/2 Windows/typographic line box looked plausible from the public autospacing baseline drift,
+      but it worsened `docx-ladder-02-paragraph-autospacing` to `MAE=0.411331`, changed16 `0.003791` and broke
+      line-spacing unit tests. Do not replace the current default line-box rule with that broad combination;
+      the remaining drift needs a narrower Office-backed explanation, likely style/default line-spacing
+      ownership or PDF text-state decomposition rather than a blanket multiple change.
     - [x] 2026-05-31: Removed the stale style-level keep-rule diagnostic for `w:keepNext`/`w:keepLines` after
       those tokens became part of the resolved paragraph model and block-pagination stage. Public coverage now
       asserts that supported style keep rules do not emit `DOCX_STYLE_PARAGRAPH_KEEP_RULE`. Private DOCX run
