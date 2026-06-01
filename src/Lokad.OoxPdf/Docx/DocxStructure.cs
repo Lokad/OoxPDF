@@ -155,6 +155,8 @@ internal sealed record DocxStructureSnapshot(
             ParagraphIndentRightPoints: paragraph.Indent.RightPoints,
             ParagraphIndentFirstLinePoints: paragraph.Indent.FirstLinePoints,
             ParagraphIndentHangingPoints: paragraph.Indent.HangingPoints,
+            WhitespaceDelimitedTokenCount: CountWhitespaceDelimitedTokens(paragraph),
+            LongestWhitespaceDelimitedTokenLength: LongestWhitespaceDelimitedTokenLength(paragraph),
             SpaceCharacterCount: CountCharacters(paragraph, static c => c == ' '),
             NonAsciiCharacterCount: CountCharacters(paragraph, static c => c > 127),
             PunctuationCharacterCount: CountCharacters(paragraph, char.IsPunctuation),
@@ -249,6 +251,8 @@ internal sealed record DocxStructureSnapshot(
             paragraphCount,
             table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(paragraph => paragraph.Runs.Count))),
             table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(TextLength))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(CountWhitespaceDelimitedTokens))),
+            table.Rows.SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs).Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(paragraph => paragraph.Images.Count))),
             table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Count(paragraph => paragraph.ListLabel is not null))),
             table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true))),
@@ -284,6 +288,8 @@ internal sealed record DocxStructureSnapshot(
             cells.Sum(cell => cell.ParagraphCount),
             cells.Sum(cell => cell.RunCount),
             cells.Sum(cell => cell.TextLength),
+            cells.Sum(cell => cell.WhitespaceDelimitedTokenCount),
+            cells.Select(cell => cell.LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             cells.Sum(cell => cell.InlineImageCount),
             cells.Sum(cell => cell.NumberedParagraphCount),
             cells.Sum(cell => cell.KeepRuleParagraphCount),
@@ -312,6 +318,8 @@ internal sealed record DocxStructureSnapshot(
             cell.Paragraphs.Count,
             cell.Paragraphs.Sum(paragraph => paragraph.Runs.Count),
             cell.Paragraphs.Sum(TextLength),
+            cell.Paragraphs.Sum(CountWhitespaceDelimitedTokens),
+            cell.Paragraphs.Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             cell.Paragraphs.Sum(paragraph => paragraph.Images.Count),
             cell.Paragraphs.Count(paragraph => paragraph.ListLabel is not null),
             cell.Paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
@@ -481,6 +489,44 @@ internal sealed record DocxStructureSnapshot(
         return paragraph.Runs.Sum(run => run.Text.Count(predicate));
     }
 
+    private static int CountWhitespaceDelimitedTokens(DocxParagraph paragraph)
+    {
+        return EnumerateWhitespaceDelimitedTokenLengths(paragraph).Count();
+    }
+
+    private static int LongestWhitespaceDelimitedTokenLength(DocxParagraph paragraph)
+    {
+        return EnumerateWhitespaceDelimitedTokenLengths(paragraph).DefaultIfEmpty(0).Max();
+    }
+
+    private static IEnumerable<int> EnumerateWhitespaceDelimitedTokenLengths(DocxParagraph paragraph)
+    {
+        int currentLength = 0;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            foreach (char c in run.Text)
+            {
+                if (char.IsWhiteSpace(c))
+                {
+                    if (currentLength > 0)
+                    {
+                        yield return currentLength;
+                        currentLength = 0;
+                    }
+
+                    continue;
+                }
+
+                currentLength++;
+            }
+        }
+
+        if (currentLength > 0)
+        {
+            yield return currentLength;
+        }
+    }
+
     private static int CountCharacters(IEnumerable<DocxParagraph> paragraphs, Func<char, bool> predicate)
     {
         return paragraphs.Sum(paragraph => CountCharacters(paragraph, predicate));
@@ -535,6 +581,8 @@ internal sealed record DocxStructureBlockSnapshot(
     double? ParagraphIndentRightPoints = null,
     double? ParagraphIndentFirstLinePoints = null,
     double? ParagraphIndentHangingPoints = null,
+    int? WhitespaceDelimitedTokenCount = null,
+    int? LongestWhitespaceDelimitedTokenLength = null,
     int? SpaceCharacterCount = null,
     int? NonAsciiCharacterCount = null,
     int? PunctuationCharacterCount = null,
@@ -634,6 +682,8 @@ internal sealed record DocxStructureTableSnapshot(
     int ParagraphCount,
     int RunCount,
     int TextLength,
+    int WhitespaceDelimitedTokenCount,
+    int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
@@ -665,6 +715,8 @@ internal sealed record DocxStructureTableRowSnapshot(
     int ParagraphCount,
     int RunCount,
     int TextLength,
+    int WhitespaceDelimitedTokenCount,
+    int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
@@ -690,6 +742,8 @@ internal sealed record DocxStructureTableCellSnapshot(
     int ParagraphCount,
     int RunCount,
     int TextLength,
+    int WhitespaceDelimitedTokenCount,
+    int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,

@@ -2184,6 +2184,14 @@ High-priority actions:
     `SourceBlockIndex` for `TableRow` items, so page-level drift summaries can line up paragraph text lines and
     table rows through the same private-safe ownership field. The same public test covers the item stream.
     Validation passed `docx-tables --skip-slow` (`81`) and full solution build.
+    2026-06-01 follow-up: extended paragraph and table row/cell structure profiles with private-safe
+    whitespace-delimited token counts and longest-token lengths. This fills a bottom-up diagnostic gap for
+    compact paragraph and narrow table-cell wrapping without exposing text. Public structure tests cover body
+    paragraphs plus table, row, and cell aggregates. Validation passed `docx-core --skip-slow` (`25`),
+    `docx-tables --skip-slow` (`81`), full solution build, and a private-safe inspect run. The current private
+    DOCX has `198` paragraph blocks (`185` with tokens), max body token length `27`, `4` paragraph blocks with
+    token length `>=20`, `422` table cells all with tokens, max cell token length `22`, and `5` cells with token
+    length `>=20`; future public probes should cover both paragraph and narrow-cell long-token wrapping.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

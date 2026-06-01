@@ -1387,6 +1387,8 @@ internal static class DocxTests
         TestAssert.Equal("Table", snapshot.Blocks[1].NextKind ?? string.Empty);
         TestAssert.True(snapshot.Blocks[0].SnapToGrid == true, "Paragraph structure should expose snapToGrid before layout.");
         TestAssert.Equal(1, snapshot.Blocks[0].TabStopCount ?? 0);
+        TestAssert.Equal(2, snapshot.Blocks[0].WhitespaceDelimitedTokenCount ?? 0);
+        TestAssert.Equal(5, snapshot.Blocks[0].LongestWhitespaceDelimitedTokenLength ?? 0);
         TestAssert.True(snapshot.Blocks[1].PageBreakConsumesParagraphLine == true, "Page-break structure should expose the consumed paragraph line.");
         TestAssert.Equal("nextPage", snapshot.Blocks[3].SectionBreakTypeValue ?? string.Empty);
         TestAssert.Equal(4, snapshot.Stories.Count);
@@ -1420,6 +1422,8 @@ internal static class DocxTests
         TestAssert.Equal(1, tableSnapshot.VisibleBorderCount);
         TestAssert.Equal(1, tableSnapshot.ParagraphCount);
         TestAssert.Equal(7, tableSnapshot.TextLength);
+        TestAssert.Equal(2, tableSnapshot.WhitespaceDelimitedTokenCount);
+        TestAssert.Equal(4, tableSnapshot.LongestWhitespaceDelimitedTokenLength);
         TestAssert.True(tableSnapshot.LookFirstRow == true, "Table look facts should be present before rendering.");
         TestAssert.Equal("PageBreak", snapshot.TableAdjacency.Single().PreviousKind ?? string.Empty);
         DocxStructureTableRowSnapshot rowSnapshot = tableSnapshot.Rows[0];
@@ -1430,10 +1434,14 @@ internal static class DocxTests
         TestAssert.Equal(1, rowSnapshot.ShadedCellCount);
         TestAssert.Equal(1, rowSnapshot.VisibleBorderCount);
         TestAssert.Equal(7, rowSnapshot.TextLength);
+        TestAssert.Equal(2, rowSnapshot.WhitespaceDelimitedTokenCount);
+        TestAssert.Equal(4, rowSnapshot.LongestWhitespaceDelimitedTokenLength);
         DocxStructureTableCellSnapshot cellSnapshot = rowSnapshot.Cells[0];
         TestAssert.Equal(2, cellSnapshot.GridSpan);
         TestAssert.True(cellSnapshot.HasVerticalMerge, "Cell profile should expose vertical merge state before layout.");
         TestAssert.Equal(2, cellSnapshot.DigitCharacterCount);
+        TestAssert.Equal(2, cellSnapshot.WhitespaceDelimitedTokenCount);
+        TestAssert.Equal(4, cellSnapshot.LongestWhitespaceDelimitedTokenLength);
     }
 
     public static void DocxFontPlanIncludesAllHeaderFooterVariants()
