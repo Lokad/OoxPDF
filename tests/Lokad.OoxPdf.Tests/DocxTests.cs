@@ -3278,9 +3278,13 @@ internal static class DocxTests
             .OfType<DocxTextLineLayout>()
             .ToArray();
 
-        double expected = DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font.Value.Font, 10d) * 1.15d;
+        double typographicUnits = font.Value.Font.Os2.TypographicAscender -
+            font.Value.Font.Os2.TypographicDescender +
+            font.Value.Font.Os2.TypographicLineGap;
+        double expectedSingleLineHeight = Math.Max(11.5d, typographicUnits * 10d / font.Value.Font.UnitsPerEm);
+        double expected = expectedSingleLineHeight * 1.15d;
         double actual = lines[0].BaselineY - lines[1].BaselineY;
-        TestAssert.True(Math.Abs(actual - expected) < 0.01d, $"Auto DOCX line height should advance on the resolved font line box, not the em size. Expected {expected}, actual {actual}.");
+        TestAssert.True(Math.Abs(actual - expected) < 0.01d, $"Auto DOCX line height should advance on the resolved typographic font line box, not the em size or Windows bounding box. Expected {expected}, actual {actual}.");
     }
 
     public static void DocxLayoutStageConsumesEmptyParagraphLineBox()

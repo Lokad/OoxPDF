@@ -5344,6 +5344,26 @@ Current validation baseline:
   `docx-tables` run `20260601-114904` reached `MAE=0.539255`, changed16 `0.004836`; adjacency and pagination
   stayed at the post-row-advance metrics. Private DOCX run `20260601-114952` stayed at `16/16` pages, zero
   dimension mismatches, no diagnostics, and improved again to `MAE=13.562167`, changed16 `0.124579`.
+- DOCX typographic auto-line-height validation:
+  Office evidence from `docx-ladder-02-paragraph-logical-indents` showed the logical-indents geometry itself
+  was correct, but wrapped Aptos 11pt lines were advancing by about `13.44pt` while the candidate advanced by
+  about `14.13pt` from the resolved font's Windows bounding box. Cross-checking `docx-ladder-02-paragraph-indents`
+  showed Arial `w:line=276` auto spacing was already aligned, so this was not an indent bug and not a
+  font-specific exception. DOCX automatic line height now uses the resolved OpenType typographic line box
+  (`sTypoAscender - sTypoDescender + sTypoLineGap`) with the existing Word minimum floor instead of taking the
+  maximum of typographic and Windows boxes. This keeps the rule structural and avoids hard-coded font names.
+  Validation passed `docx-text --skip-slow` (`36`), `docx-core --skip-slow` (`21`), `docx-tables --skip-slow`
+  (`69`), and full solution build; two parallel runs hit transient compiler/Defender output locks and passed
+  on serial rerun. Public visuals improved or stayed neutral: `docx-ladder-02-paragraph-logical-indents`
+  improved from run `20260601-115121` (`MAE=0.690059`, changed16 `0.007701`) to run `20260601-120526`
+  (`MAE=0.475814`, changed16 `0.006385`); `docx-ladder-02-character-spacing` improved from run
+  `20260601-115112` (`MAE=0.876254`, changed16 `0.008339`) to run `20260601-120516` (`MAE=0.770167`,
+  changed16 `0.007879`); `docx-ladder-02-paragraph-indents` stayed neutral at `MAE=0.162103`, changed16
+  `0.004023`. Full `docx-layout` run `20260601-120449` passed all `21` cases. Private DOCX run
+  `20260601-120450` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
+  `MAE=13.562167`, changed16 `0.124579`. Keep the follow-up open for baseline anchoring and paragraph/table
+  adjacency: the remaining top DOCX misses are still table pagination/row heights/paragraph adjacency rather
+  than logical indentation.
 - DOCX unsupported table-border-style diagnostic validation:
   after emitting `DOCX_TABLE_BORDER_STYLE` only for visible non-`single`/`nil`/`none` table and cell border
   styles in document/style parts, `docx-tables --skip-slow` passed `62`, `docx-core --skip-slow` passed `16`
