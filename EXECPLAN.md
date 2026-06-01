@@ -449,6 +449,12 @@ High-priority actions:
   measurement in continued narrow tables; do not add a post-table heading spacing constant or a private
   row-coordinate rule. The next production attempt must explain this public bottom-boundary behavior together
   with the rejected row-fragment trial and the private page-15 drift before changing table pagination.
+  2026-06-01 rejection: a trial that allowed auto-height rows to cross the bottom margin when their laid-out
+  text baselines stayed above the margin did not move `docx-ladder-03-table-heading-table-keepnext`, did not
+  improve `docx-ladder-03-table-bottom-slack`, and added another ad hoc fit predicate. Reverted it. The next
+  attempt should model Office's row page-boundary decision from row line boxes and continuation fragments,
+  including rows whose visible text line boxes can remain inside the body while the row band crosses the
+  nominal margin; do not add another scalar slack test.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
