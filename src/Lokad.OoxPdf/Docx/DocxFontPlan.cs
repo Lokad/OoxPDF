@@ -27,6 +27,10 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         IReadOnlyList<DocxTextRun> runs = document.Paragraphs
             .Concat(GetReferencedHeaderFooterParagraphs(document.HeaderParagraphsByType, document.HeaderParagraphs))
             .Concat(GetReferencedHeaderFooterParagraphs(document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(GetPageSettingsHeaderFooterParagraphs(document.PageSettings))
+            .Concat(document.BodyElements
+                .OfType<DocxSectionBreakElement>()
+                .SelectMany(sectionBreak => GetPageSettingsHeaderFooterParagraphs(sectionBreak.PageSettings)))
             .Concat(document.Tables
                 .SelectMany(table => table.Rows)
                 .SelectMany(row => row.Cells)
@@ -46,6 +50,13 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return paragraphsByType.Count == 0
             ? fallbackParagraphs
             : paragraphsByType.Values.SelectMany(paragraphs => paragraphs);
+    }
+
+    private static IEnumerable<DocxParagraph> GetPageSettingsHeaderFooterParagraphs(DocxPageSettings settings)
+    {
+        return settings.HeaderParagraphsByType.Values
+            .Concat(settings.FooterParagraphsByType.Values)
+            .SelectMany(paragraphs => paragraphs);
     }
 
     private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver)

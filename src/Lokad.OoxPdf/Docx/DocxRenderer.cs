@@ -69,7 +69,11 @@ internal sealed class DocxRenderer
 
             int pageNumber = pageIndex + 1;
             RenderStaticParagraphs(
-                SelectStaticHeaderFooter(document.HeaderParagraphsByType, document.HeaderParagraphs, layoutPage.PageSettings, pageNumber),
+                SelectStaticHeaderFooter(
+                    SelectSectionStaticParagraphs(layoutPage.PageSettings.HeaderParagraphsByType, document.HeaderParagraphsByType),
+                    document.HeaderParagraphs,
+                    layoutPage.PageSettings,
+                    pageNumber),
                 graphics,
                 fontResources,
                 layoutPage.MarginLeft,
@@ -79,7 +83,11 @@ internal sealed class DocxRenderer
                 pageNumber,
                 layout.Pages.Count);
             RenderStaticParagraphs(
-                SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, layoutPage.PageSettings, pageNumber),
+                SelectStaticHeaderFooter(
+                    SelectSectionStaticParagraphs(layoutPage.PageSettings.FooterParagraphsByType, document.FooterParagraphsByType),
+                    document.FooterParagraphs,
+                    layoutPage.PageSettings,
+                    pageNumber),
                 graphics,
                 fontResources,
                 layoutPage.MarginLeft,
@@ -617,6 +625,13 @@ internal sealed class DocxRenderer
         return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaultParagraphs)
             ? defaultParagraphs
             : fallbackParagraphs;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> SelectSectionStaticParagraphs(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> sectionParagraphsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> documentParagraphsByType)
+    {
+        return sectionParagraphsByType.Count == 0 ? documentParagraphsByType : sectionParagraphsByType;
     }
 
     private static double ResolveHeaderDistance(DocxLayoutPage page)

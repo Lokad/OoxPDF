@@ -47,7 +47,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships);
+        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings);
         IReadOnlyList<DocxParagraph> paragraphs = bodyElements.OfType<DocxParagraphElement>().Select(e => e.Paragraph).ToArray();
         IReadOnlyList<DocxTable> tables = bodyElements.OfType<DocxTableElement>().Select(e => e.Table).ToArray();
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, relationships, styles, numbering, HeaderRelationshipType, "headerReference");
@@ -65,7 +65,7 @@ internal sealed class DocxReader
                 72d,
                 72d,
                 72d,
-                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings),
+                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, relationships, styles, numbering),
                 floatingDrawings,
                 headers,
                 footers,
@@ -99,7 +99,7 @@ internal sealed class DocxReader
             right,
             top,
             bottom,
-            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings),
+            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, relationships, styles, numbering),
             floatingDrawings,
             headers,
             footers,
@@ -155,11 +155,19 @@ internal sealed class DocxReader
             (string?)wrap?.Attribute("wrapText"));
     }
 
-    private static DocxPageSettings ReadPageSettings(XElement? pageSize, XElement? pageMargins, XElement? sectionProperties, XDocument? settings)
+    private static DocxPageSettings ReadPageSettings(
+        XElement? pageSize,
+        XElement? pageMargins,
+        XElement? sectionProperties,
+        XDocument? settings,
+        OoxPackage? package,
+        IReadOnlyDictionary<string, OoxRelationship>? relationships,
+        DocxStyleSet? styles,
+        DocxNumberingSet? numbering)
     {
         XElement? titlePage = sectionProperties?.Element(WordprocessingNamespace + "titlePg");
         XElement? evenAndOddHeaders = settings?.Root?.Element(WordprocessingNamespace + "evenAndOddHeaders");
-        return new DocxPageSettings(
+        DocxPageSettings pageSettings = new(
             (string?)pageSize?.Attribute(WordprocessingNamespace + "w"),
             (string?)pageSize?.Attribute(WordprocessingNamespace + "h"),
             (string?)pageSize?.Attribute(WordprocessingNamespace + "orient"),
@@ -175,6 +183,30 @@ internal sealed class DocxReader
             (string?)titlePage?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(evenAndOddHeaders),
             (string?)evenAndOddHeaders?.Attribute(WordprocessingNamespace + "val"));
+        if (sectionProperties is null || package is null || relationships is null || styles is null || numbering is null)
+        {
+            return pageSettings;
+        }
+
+        return pageSettings with
+        {
+            HeaderParagraphsByType = ReadReferencedHeaderFooterParagraphsByType(
+                sectionProperties,
+                package,
+                relationships,
+                styles,
+                numbering,
+                HeaderRelationshipType,
+                "headerReference"),
+            FooterParagraphsByType = ReadReferencedHeaderFooterParagraphsByType(
+                sectionProperties,
+                package,
+                relationships,
+                styles,
+                numbering,
+                FooterRelationshipType,
+                "footerReference")
+        };
     }
 
     private static (double Width, double Height) NormalizePageSize(double width, double height)
@@ -904,7 +936,8 @@ internal sealed class DocxReader
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        XDocument? settings)
     {
         var elements = new List<DocxBodyElement>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
@@ -925,7 +958,7 @@ internal sealed class DocxReader
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties));
+                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings));
                     }
 
                     continue;
@@ -956,7 +989,7 @@ internal sealed class DocxReader
                     XElement? splitSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (splitSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(splitSectionProperties));
+                        elements.Add(ReadSectionBreak(splitSectionProperties, package, relationships, styles, numbering, settings));
                     }
 
                     continue;
@@ -971,7 +1004,7 @@ internal sealed class DocxReader
                 XElement? sectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                 if (sectionProperties is not null)
                 {
-                    elements.Add(ReadSectionBreak(sectionProperties));
+                    elements.Add(ReadSectionBreak(sectionProperties, package, relationships, styles, numbering, settings));
                 }
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
@@ -1234,7 +1267,13 @@ internal sealed class DocxReader
         return string.Equals((string?)breakElement.Attribute(WordprocessingNamespace + "type"), "page", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DocxSectionBreakElement ReadSectionBreak(XElement sectionProperties)
+    private static DocxSectionBreakElement ReadSectionBreak(
+        XElement sectionProperties,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        XDocument? settings)
     {
         XElement? columns = sectionProperties.Element(WordprocessingNamespace + "cols");
         return new DocxSectionBreakElement(
@@ -1242,7 +1281,11 @@ internal sealed class DocxReader
                 sectionProperties.Element(WordprocessingNamespace + "pgSz"),
                 sectionProperties.Element(WordprocessingNamespace + "pgMar"),
                 sectionProperties,
-                null),
+                settings,
+                package,
+                relationships,
+                styles,
+                numbering),
             (string?)sectionProperties
                 .Element(WordprocessingNamespace + "type")
                 ?.Attribute(WordprocessingNamespace + "val"),
@@ -1252,7 +1295,7 @@ internal sealed class DocxReader
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> ReadReferencedHeaderFooterParagraphsByType(
-        XDocument document,
+        XContainer referenceRoot,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxStyleSet styles,
@@ -1261,7 +1304,7 @@ internal sealed class DocxReader
         string referenceElementName)
     {
         var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
-        foreach (XElement reference in document.Descendants(WordprocessingNamespace + referenceElementName))
+        foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
         {
             string? relationshipId = (string?)reference.Attribute(RelationshipsNamespace + "id");
             if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.Type != relationshipType || relationship.ResolvedTarget is null)

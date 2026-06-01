@@ -1819,6 +1819,12 @@ High-priority actions:
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses
     the default part. Private-safe inventory found the current private DOCX carries three header references;
     this closes the structural model gap without using header text or document-specific logic.
+    2026-06-01 follow-up: section-local `w:headerReference` and `w:footerReference` maps now travel with
+    `DocxPageSettings`, so pages render static content from their owning section rather than from the
+    document-wide last reference for a type. `DocxFontPlan` also includes section-scoped static runs, preventing
+    section-only header/footer typefaces from falling back to a resource planned from another section. Keep the
+    remaining Word inheritance/link-to-previous semantics open: omitted section references currently fall back
+    to the document map rather than an explicit inherited static-part chain.
   - [x] 2026-05-31: Preserved DOCX `w:pgMar/@w:header` and `w:pgMar/@w:footer` distances and used those
     authored page-margin tokens for static header/footer baselines. This removes the prior half-margin
     placement fallback for documents that provide Word's header/footer distances, with public coverage that
@@ -5638,6 +5644,15 @@ Current validation baseline:
   run `20260601-135640` (`MAE=0.073352`, changed16 `0.002110`). Private DOCX run `20260601-135549` stayed
   `16/16` pages with zero dimension mismatches and no diagnostics, with aggregate `MAE=13.838763`,
   changed16 `0.126851`.
+  2026-06-01 follow-up: section-local static header/footer reference maps now live on the page settings used by
+  layout/rendering, and the DOCX font plan includes those section-scoped static runs. The public
+  `DocxSyntheticSectionHeadersUsePageLocalGeometry` test now distinguishes first-section vs final-section
+  static content with PDF fill-color operators as well as page-local matrix positions. Validation passed
+  `docx-page --skip-slow` (`25`), `docx-text --skip-slow` (`36`), and full solution build; the first parallel
+  `docx-text` and private-case attempts hit transient compiler output locks and passed on serial rerun. Public
+  `docx-headers-footers` run `20260601-140626` stayed unchanged (`MAE=0.073352`, changed16 `0.002110`).
+  Private DOCX run `20260601-140640` stayed at `16/16` pages with zero dimension mismatches and no diagnostics,
+  `MAE=13.838763`, changed16 `0.126851`.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

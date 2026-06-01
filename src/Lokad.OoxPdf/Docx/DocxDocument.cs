@@ -68,6 +68,12 @@ internal sealed record DocxPageSettings(
     string? EvenAndOddHeadersValue)
 {
     public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
 }
 
 internal sealed record DocxFloatingDrawing(

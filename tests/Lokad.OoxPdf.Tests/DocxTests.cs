@@ -1155,6 +1155,25 @@ internal static class DocxTests
         {
             Fonts = new DocxRunFonts("Even Sans", null, null, null, null, null, null, null)
         });
+        var sectionHeader = CreateFontPlanParagraph(new DocxTextRun("SectionHeader", 11d, null, false, false, false, null, "Section Sans")
+        {
+            Fonts = new DocxRunFonts("Section Sans", null, null, null, null, null, null, null)
+        });
+        var sectionFooter = CreateFontPlanParagraph(new DocxTextRun("SectionFooter", 11d, null, false, false, false, null, "Section Footer Sans")
+        {
+            Fonts = new DocxRunFonts("Section Footer Sans", null, null, null, null, null, null, null)
+        });
+        DocxPageSettings sectionSettings = DocxPageSettings.Empty with
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [sectionHeader]
+            },
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [sectionFooter]
+            }
+        };
         var document = new DocxDocument(
             200d,
             200d,
@@ -1166,7 +1185,7 @@ internal static class DocxTests
             [],
             [defaultHeader],
             [],
-            [],
+            [new DocxSectionBreakElement(sectionSettings, "nextPage", null, null, null)],
             [],
             [])
         {
@@ -1180,11 +1199,11 @@ internal static class DocxTests
                 ["even"] = [evenFooter]
             }
         };
-        var resolver = new MapFontResolver(["Default Sans", "First Sans", "Even Sans"], "Resolver Fallback");
+        var resolver = new MapFontResolver(["Default Sans", "First Sans", "Even Sans", "Section Sans", "Section Footer Sans"], "Resolver Fallback");
 
         string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
 
-        TestAssert.Equal("DefaultHeader|EvenFooter|FirstHeader", plannedTexts);
+        TestAssert.Equal("DefaultHeader|EvenFooter|FirstHeader|SectionFooter|SectionHeader", plannedTexts);
     }
 
     public static void DocxFontPlanTextMeasurerUsesResolvedFontFace()
@@ -8085,6 +8104,8 @@ internal static class DocxTests
                   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
                   <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
                   <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+                  <Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/footer2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
                 </Types>
                 """,
             ["_rels/.rels"] = """
@@ -8098,15 +8119,25 @@ internal static class DocxTests
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
                   <Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+                  <Relationship Id="rIdHeader2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>
+                  <Relationship Id="rIdFooter2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer2.xml"/>
                 </Relationships>
                 """,
             ["word/header1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Section header</w:t></w:r></w:p></w:hdr>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="FF0000"/></w:rPr><w:t>Section header</w:t></w:r></w:p></w:hdr>
                 """,
             ["word/footer1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Section footer</w:t></w:r></w:p></w:ftr>
+                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="0000FF"/></w:rPr><w:t>Section footer</w:t></w:r></w:p></w:ftr>
+                """,
+            ["word/header2.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="00FF00"/></w:rPr><w:t>Final header</w:t></w:r></w:p></w:hdr>
+                """,
+            ["word/footer2.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="FF00FF"/></w:rPr><w:t>Final footer</w:t></w:r></w:p></w:ftr>
                 """,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -8126,8 +8157,8 @@ internal static class DocxTests
                     </w:p>
                     <w:p><w:r><w:t>Second body</w:t></w:r></w:p>
                     <w:sectPr>
-                      <w:headerReference w:type="default" r:id="rIdHeader1"/>
-                      <w:footerReference w:type="default" r:id="rIdFooter1"/>
+                      <w:headerReference w:type="default" r:id="rIdHeader2"/>
+                      <w:footerReference w:type="default" r:id="rIdFooter2"/>
                       <w:pgSz w:w="6000" w:h="6000"/>
                       <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="1080" w:footer="1080"/>
                     </w:sectPr>
@@ -8146,6 +8177,10 @@ internal static class DocxTests
         TestAssert.True(firstSectionLeftBaselines.Any(y => y > 18d && y < 30d), "First-section footer should use the first section footer distance and left margin.");
         TestAssert.True(finalSectionLeftBaselines.Any(y => y > 232d && y < 246d), "Final-section header should use the final section header distance and left margin.");
         TestAssert.True(finalSectionLeftBaselines.Any(y => y > 54d && y < 66d), "Final-section footer should use the final section footer distance and left margin.");
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.Contains("0 1 0 rg", pdf);
+        TestAssert.Contains("1 0 1 rg", pdf);
     }
 
     public static void DocxStaticHeaderRendersMixedRunColorsSeparately()
