@@ -163,7 +163,13 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
     public bool? SnapToGrid { get; init; }
     public string? SnapToGridValue { get; init; }
+    public IReadOnlyList<DocxInlineReference> InlineReferences { get; init; } = [];
 }
+
+internal sealed record DocxInlineReference(
+    string Kind,
+    string? Id,
+    string? CustomMarkFollowsValue);
 
 internal sealed record DocxTabStop(
     double? PositionPoints,

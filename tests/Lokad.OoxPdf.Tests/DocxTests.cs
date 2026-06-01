@@ -10181,7 +10181,7 @@ internal static class DocxTests
                       <w:commentRangeStart w:id="1"/>
                       <w:r><w:t>Referenced story bodies</w:t></w:r>
                       <w:r><w:commentReference w:id="1"/></w:r>
-                      <w:r><w:footnoteReference w:id="2"/></w:r>
+                      <w:r><w:footnoteReference w:id="2" w:customMarkFollows="1"/></w:r>
                       <w:r><w:endnoteReference w:id="3"/></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
@@ -10224,12 +10224,24 @@ internal static class DocxTests
 
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxParagraph referenceParagraph = document.Paragraphs.Single();
+        TestAssert.Equal(3, referenceParagraph.InlineReferences.Count);
+        TestAssert.True(referenceParagraph.InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1" && reference.CustomMarkFollowsValue is null), "Comment reference markers should be preserved as inline DOCX structure.");
+        TestAssert.True(referenceParagraph.InlineReferences.Any(reference => reference.Kind == "Footnote" && reference.Id == "2" && reference.CustomMarkFollowsValue == "1"), "Footnote reference markers should preserve custom mark flags.");
+        TestAssert.True(referenceParagraph.InlineReferences.Any(reference => reference.Kind == "Endnote" && reference.Id == "3" && reference.CustomMarkFollowsValue is null), "Endnote reference markers should be preserved as inline DOCX structure.");
         TestAssert.Equal(3, document.RelatedStories.Count);
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Comment" && story.PartName == "/word/comments.xml" && story.Id == "1" && story.BodyElements.Count == 2 && story.Paragraphs.Count == 1 && story.Tables.Count == 1), "Comment bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
 
         DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureBlockSnapshot referenceBlock = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
+        TestAssert.Equal(3, snapshot.InlineReferenceCount);
+        TestAssert.Equal(3, referenceBlock.InlineReferenceCount);
+        TestAssert.Equal(1, referenceBlock.CommentReferenceCount);
+        TestAssert.Equal(1, referenceBlock.FootnoteReferenceCount);
+        TestAssert.Equal(1, referenceBlock.EndnoteReferenceCount);
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Body" && story.InlineReferenceCount == 3), "Structure snapshots should expose body inline story-reference ownership.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.BlockCount == 2 && story.ParagraphCount == 1 && story.TableCount == 1 && story.TextLength == 25), "Structure snapshots should expose comment story ownership and table metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footnote" && story.Scope == "/word/footnotes.xml" && story.VariantType == "2" && story.TextLength == 13), "Structure snapshots should expose footnote story text metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Endnote" && story.Scope == "/word/endnotes.xml" && story.VariantType == "3" && story.TextLength == 12), "Structure snapshots should expose endnote story text metrics.");

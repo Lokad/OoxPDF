@@ -4450,6 +4450,15 @@ block models and richer section/pagination layout before adding more Word pagina
     The minimal related-story test now includes a comment-owned table and checks reader/snapshot/font-plan
     preservation. Validation passed `docx-core --skip-slow` (`26`). Keep this item open for separator
     footnotes, nested/richer story content, actual placement/rendering, and reference marker output.
+  - [x] 2026-06-02: main-story comment/footnote/endnote reference markers are now preserved as explicit
+    inline paragraph structure instead of disappearing during text extraction. `DocxParagraph` carries
+    `DocxInlineReference` entries with kind, id, and `customMarkFollows` when authored; `DocxReader` captures
+    markers from normal, inserted, hyperlink, and simple-field run paths already consumed by paragraph parsing.
+    Private-safe structure snapshots now expose inline-reference counts at body, block, story, table, row, and
+    cell levels, with comment/footnote/endnote breakdowns for paragraph blocks. This is intentionally a
+    structural alignment slice: renderer glyph choice, numbering display, separator footnotes, and body
+    placement remain open until Office PDF inspection supplies the observable rules. Validation passed
+    `docx-core --skip-slow` (`26`).
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent

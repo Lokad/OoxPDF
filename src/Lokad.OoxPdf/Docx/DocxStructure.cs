@@ -11,6 +11,7 @@ internal sealed record DocxStructureSnapshot(
     int SectionBreakBlockCount,
     int BodyTextLength,
     int InlineImageCount,
+    int InlineReferenceCount,
     int FloatingDrawingCount,
     IReadOnlyList<DocxStructureBlockSnapshot> Blocks,
     IReadOnlyList<DocxStructureStorySnapshot> Stories,
@@ -66,6 +67,7 @@ internal sealed record DocxStructureSnapshot(
             blocks.Count(block => block.Kind == "SectionBreak"),
             blocks.Sum(block => block.TextLength),
             blocks.Sum(block => block.InlineImageCount),
+            blocks.Sum(block => block.InlineReferenceCount),
             document.FloatingDrawings.Count,
             blocks,
             ToStorySnapshots(document, blocks),
@@ -91,7 +93,8 @@ internal sealed record DocxStructureSnapshot(
                 bodyBlocks.Count(block => block.Kind == "Paragraph"),
                 bodyBlocks.Count(block => block.Kind == "Table"),
                 bodyBlocks.Sum(block => block.TextLength),
-                bodyBlocks.Sum(block => block.InlineImageCount))
+                bodyBlocks.Sum(block => block.InlineImageCount),
+                bodyBlocks.Sum(block => block.InlineReferenceCount))
         };
 
         AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType);
@@ -130,7 +133,8 @@ internal sealed record DocxStructureSnapshot(
                 entry.Value.Count,
                 0,
                 entry.Value.Sum(TextLength),
-                entry.Value.Sum(paragraph => paragraph.Images.Count)));
+                entry.Value.Sum(paragraph => paragraph.Images.Count),
+                entry.Value.Sum(ParagraphInlineReferenceCount)));
         }
     }
 
@@ -150,7 +154,8 @@ internal sealed record DocxStructureSnapshot(
                 story.Paragraphs.Count,
                 story.Tables.Count,
                 story.Paragraphs.Sum(TextLength) + story.Tables.Sum(TableTextLength),
-                story.Paragraphs.Sum(paragraph => paragraph.Images.Count) + story.Tables.Sum(TableInlineImageCount)));
+                story.Paragraphs.Sum(paragraph => paragraph.Images.Count) + story.Tables.Sum(TableInlineImageCount),
+                story.Paragraphs.Sum(ParagraphInlineReferenceCount) + story.Tables.Sum(TableInlineReferenceCount)));
         }
     }
 
@@ -167,6 +172,10 @@ internal sealed record DocxStructureSnapshot(
             HasVisibleText: HasVisibleText(paragraph),
             ListFormatValue: paragraph.ListLabel?.FormatValue,
             InlineImageCount: paragraph.Images.Count,
+            InlineReferenceCount: paragraph.InlineReferences.Count,
+            CommentReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Comment"),
+            FootnoteReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Footnote"),
+            EndnoteReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Endnote"),
             SpacingBeforePoints: paragraph.SpacingBeforePoints,
             SpacingAfterPoints: paragraph.SpacingAfterPoints,
             LineSpacingPoints: paragraph.LineSpacingPoints,
@@ -294,6 +303,7 @@ internal sealed record DocxStructureSnapshot(
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(CountWhitespaceDelimitedTokens))),
             table.Rows.SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs).Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(paragraph => paragraph.Images.Count))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphInlineReferenceCount))),
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.ListLabel is not null))),
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true))),
             table.Look?.FirstRow,
@@ -331,6 +341,7 @@ internal sealed record DocxStructureSnapshot(
             cells.Sum(cell => cell.WhitespaceDelimitedTokenCount),
             cells.Select(cell => cell.LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             cells.Sum(cell => cell.InlineImageCount),
+            cells.Sum(cell => cell.InlineReferenceCount),
             cells.Sum(cell => cell.NumberedParagraphCount),
             cells.Sum(cell => cell.KeepRuleParagraphCount),
             cells.Sum(cell => cell.BeforeSpacingTokenParagraphCount),
@@ -362,6 +373,7 @@ internal sealed record DocxStructureSnapshot(
             paragraphs.Sum(CountWhitespaceDelimitedTokens),
             paragraphs.Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             paragraphs.Sum(paragraph => paragraph.Images.Count),
+            paragraphs.Sum(ParagraphInlineReferenceCount),
             paragraphs.Count(paragraph => paragraph.ListLabel is not null),
             paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
             paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
@@ -484,6 +496,16 @@ internal sealed record DocxStructureSnapshot(
     private static int TableInlineImageCount(DocxTable table)
     {
         return TableParagraphs(table).Sum(paragraph => paragraph.Images.Count);
+    }
+
+    private static int TableInlineReferenceCount(DocxTable table)
+    {
+        return TableParagraphs(table).Sum(ParagraphInlineReferenceCount);
+    }
+
+    private static int ParagraphInlineReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.InlineReferences.Count;
     }
 
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(
@@ -626,6 +648,10 @@ internal sealed record DocxStructureBlockSnapshot(
     bool HasVisibleText = false,
     string? ListFormatValue = null,
     int InlineImageCount = 0,
+    int InlineReferenceCount = 0,
+    int CommentReferenceCount = 0,
+    int FootnoteReferenceCount = 0,
+    int EndnoteReferenceCount = 0,
     int TableRowCount = 0,
     int? TableIndex = null,
     double? SpacingBeforePoints = null,
@@ -682,7 +708,8 @@ internal sealed record DocxStructureStorySnapshot(
     int ParagraphCount,
     int TableCount,
     int TextLength,
-    int InlineImageCount);
+    int InlineImageCount,
+    int InlineReferenceCount);
 
 internal sealed record DocxStructureFloatingDrawingSnapshot(
     int Index,
@@ -762,6 +789,7 @@ internal sealed record DocxStructureTableSnapshot(
     int WhitespaceDelimitedTokenCount,
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
+    int InlineReferenceCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
     bool? LookFirstRow,
@@ -795,6 +823,7 @@ internal sealed record DocxStructureTableRowSnapshot(
     int WhitespaceDelimitedTokenCount,
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
+    int InlineReferenceCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
     int BeforeSpacingTokenParagraphCount,
@@ -822,6 +851,7 @@ internal sealed record DocxStructureTableCellSnapshot(
     int WhitespaceDelimitedTokenCount,
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
+    int InlineReferenceCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
     int BeforeSpacingTokenParagraphCount,

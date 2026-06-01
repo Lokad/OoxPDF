@@ -694,6 +694,7 @@ internal sealed class DocxReader
             tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
+        var inlineReferences = new List<DocxInlineReference>();
         bool pageInstructionSeen = false;
         foreach (XElement child in paragraph.Elements())
         {
@@ -752,7 +753,8 @@ internal sealed class DocxReader
             Indent = resolvedParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,
             SnapToGrid = resolvedParagraph.SnapToGrid,
-            SnapToGridValue = resolvedParagraph.SnapToGridValue
+            SnapToGridValue = resolvedParagraph.SnapToGridValue,
+            InlineReferences = inlineReferences
         };
 
         void AddSimpleField(XElement field)
@@ -792,6 +794,7 @@ internal sealed class DocxReader
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
         {
+            AddInlineReferences(run);
             string text = ReadRunText(run);
             string? placeholder = run
                 .Elements(WordprocessingNamespace + "instrText")
@@ -821,6 +824,33 @@ internal sealed class DocxReader
             }
 
             images.AddRange(ReadInlineImages(run, package, relationships));
+        }
+
+        void AddInlineReferences(XElement run)
+        {
+            foreach (XElement reference in run.Elements(WordprocessingNamespace + "commentReference"))
+            {
+                inlineReferences.Add(new DocxInlineReference(
+                    "Comment",
+                    (string?)reference.Attribute(WordprocessingNamespace + "id"),
+                    null));
+            }
+
+            foreach (XElement reference in run.Elements(WordprocessingNamespace + "footnoteReference"))
+            {
+                inlineReferences.Add(new DocxInlineReference(
+                    "Footnote",
+                    (string?)reference.Attribute(WordprocessingNamespace + "id"),
+                    (string?)reference.Attribute(WordprocessingNamespace + "customMarkFollows")));
+            }
+
+            foreach (XElement reference in run.Elements(WordprocessingNamespace + "endnoteReference"))
+            {
+                inlineReferences.Add(new DocxInlineReference(
+                    "Endnote",
+                    (string?)reference.Attribute(WordprocessingNamespace + "id"),
+                    (string?)reference.Attribute(WordprocessingNamespace + "customMarkFollows")));
+            }
         }
     }
 
