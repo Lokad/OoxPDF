@@ -2036,6 +2036,13 @@ High-priority actions:
     DOCX run `20260601-104626` stayed stable at `16/16` pages, zero dimension mismatches, no diagnostics,
     `MAE=13.286569`, changed16 `0.123783`. Keep the row-height parent open for row-border participation,
     row clipping, and Office's finer per-cell text-operation decomposition.
+    Rejected follow-up: snapping emitted DOCX PDF font sizes to a 600-DPI text-state grid matched the public
+    row-height fixture's Office `11.04pt`/`21.96pt` text states and slightly improved that fixture
+    (`MAE=2.025428`, changed16 `0.016094`, run `20260601-105119`), but it worsened
+    `docx-ladder-02-character-spacing` from `MAE=1.685749`, changed16 `0.013842` to `MAE=1.699206`,
+    changed16 `0.014035`, and regressed the private DOCX aggregate to `MAE=13.349049`, changed16
+    `0.124461` (run `20260601-105129`). Do not land a blanket DOCX font-size grid rule; the acceptable path
+    needs text-state decomposition evidence that explains when Word chooses secondary font-size branches.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
