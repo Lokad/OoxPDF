@@ -440,11 +440,15 @@ High-priority actions:
   `~25pt` higher than Office after a narrow row that Office allocates as a taller band. Added public
   `docx-ladder-03-table-heading-table-keepnext` to preserve the structural shape: a multi-page, borderless,
   percentage-width fixed table with compact 9pt cell paragraphs followed by a styled keep-next heading and
-  another table. This public probe does not yet reproduce the private vertical drift; its remaining raster
-  residual is instead PDF text-operation decomposition for punctuation-bearing narrow-cell text (Office splits
-  runs such as hyphen-separated tokens into separate `TJ` operations while the candidate emits one operation).
-  Keep the private issue open on Office row-band allocation and table-cell line-break measurement in continued
-  narrow tables; do not add a post-table heading spacing constant or a private row-coordinate rule.
+  another table. After tightening the probe with generic parenthesized formula-like narrow-cell text matching
+  the private-safe row profile, the public case now reproduces a row-boundary pagination discrepancy:
+  `20260601-211327` renders three pages in both Office and the candidate, but page 2 is high-error
+  (`MAE=9.349741`, changed16 `0.096837`) because Office keeps the last continued-table row on page 2 and
+  starts the kept heading at the top of page 3, while the candidate moves that row to page 3 and pushes the
+  heading down. Keep the private issue open on Office row-band allocation and table-cell line-break
+  measurement in continued narrow tables; do not add a post-table heading spacing constant or a private
+  row-coordinate rule. The next production attempt must explain this public bottom-boundary behavior together
+  with the rejected row-fragment trial and the private page-15 drift before changing table pagination.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

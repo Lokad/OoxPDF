@@ -855,8 +855,8 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-bottom-slack.docx")
 $interTableRows = @(
     for ($i = 1; $i -le 32; $i++) {
         $c2 = if (($i % 4) -eq 0) { "Compact planning marker" } elseif (($i % 4) -eq 1) { "Review marker" } elseif (($i % 4) -eq 2) { "Measured status" } else { "Public row" }
-        $c3 = if (($i % 5) -eq 0) { "North-West" } elseif (($i % 5) -eq 1) { "AA - BB 1 CC DD" } elseif (($i % 5) -eq 2) { "Capacity review" } elseif (($i % 5) -eq 3) { "Q3 target" } else { "Open item" }
-        $c4 = if (($i % 3) -eq 0) { "Demand transfer" } elseif (($i % 3) -eq 1) { "AA - BB 2 CC DD" } else { "Service review" }
+        $c3 = if (($i % 5) -eq 0) { "North-West" } elseif (($i % 5) -eq 1) { "Fixed (ABC + 6 mo)" } elseif (($i % 5) -eq 2) { "Capacity review" } elseif (($i % 5) -eq 3) { "Q3 target" } else { "Open item" }
+        $c4 = if (($i % 3) -eq 0) { "Demand transfer" } elseif (($i % 3) -eq 1) { "Fixed (ABC + 6 mo)" } else { "Service review" }
         $c5 = if (($i % 6) -eq 0) { "Exception marker" } elseif (($i % 6) -eq 1) { "Gamma marker" } elseif (($i % 6) -eq 2) { "Projected coverage" } elseif (($i % 6) -eq 3) { "Risk class" } elseif (($i % 6) -eq 4) { "Short" } else { "Warehouse flow" }
         $c6 = if (($i % 4) -eq 0) { "Delta marker" } elseif (($i % 4) -eq 1) { "Supply review" } elseif (($i % 4) -eq 2) { "Late inbound" } else { "Open constraint" }
         @"
