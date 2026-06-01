@@ -8695,6 +8695,7 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.Tables.Count);
         DocxTableSnapshot tableSnapshot = snapshot.Tables.Single();
         TestAssert.Equal(0, tableSnapshot.TableIndex);
+        TestAssert.Equal(0, tableSnapshot.SourceBlockIndex);
         TestAssert.Equal(0, tableSnapshot.PageStartIndex);
         TestAssert.Equal(0, tableSnapshot.PageEndIndex);
         TestAssert.Equal(1, tableSnapshot.RowCount);
@@ -8727,6 +8728,7 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.Pages[0].TableRows.Count);
         DocxTableRowSnapshot tableRow = snapshot.Pages[0].TableRows[0];
         TestAssert.Equal(0, tableRow.TableIndex);
+        TestAssert.Equal(0, tableRow.SourceBlockIndex);
         TestAssert.Equal(0, tableRow.PageRowIndex);
         TestAssert.Equal(0, tableRow.RowIndex);
         TestAssert.Equal(1, tableRow.TableRowCount);
@@ -8815,6 +8817,34 @@ internal static class DocxTests
         TestAssert.Equal(1, textLines[2].SourceBlockIndex ?? -1);
         TestAssert.Equal(1, textLines[2].SourceLineIndex ?? -1);
         TestAssert.True(textLines.All(line => line.TextLength > 0), "Snapshot source indexes must not expose line text.");
+    }
+
+    public static void DocxLayoutSnapshotReportsTableSourceBlockIndexes()
+    {
+        DocxParagraph before = CreateDocxLayoutParagraph("Before", 10d, 12d);
+        DocxTable first = CreateSingleCellTable("first", 20d);
+        DocxParagraph middle = CreateDocxLayoutParagraph("Middle", 10d, 12d);
+        DocxTable second = CreateSingleCellTable("second", 20d);
+        DocxDocument document = CreateLayoutTestDocument(
+            [
+                new DocxParagraphElement(before),
+                new DocxTableElement(first),
+                new DocxParagraphElement(middle),
+                new DocxTableElement(second)
+            ],
+            [first, second]);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+
+        TestAssert.Equal(2, snapshot.Tables.Count);
+        TestAssert.Equal(0, snapshot.Tables[0].TableIndex);
+        TestAssert.Equal(1, snapshot.Tables[0].SourceBlockIndex);
+        TestAssert.Equal(1, snapshot.Tables[1].TableIndex);
+        TestAssert.Equal(3, snapshot.Tables[1].SourceBlockIndex);
+        DocxTableRowSnapshot[] rows = snapshot.Pages.SelectMany(page => page.TableRows).ToArray();
+        TestAssert.Equal(2, rows.Length);
+        TestAssert.Equal(1, rows.Single(row => row.TableIndex == 0).SourceBlockIndex);
+        TestAssert.Equal(3, rows.Single(row => row.TableIndex == 1).SourceBlockIndex);
     }
 
     public static void DocxLayoutStageOwnsSelectedStaticHeaderFooterLines()

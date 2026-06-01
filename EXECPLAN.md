@@ -2174,6 +2174,12 @@ High-priority actions:
     level-0 bullet list ids using tab suffixes; it has no floating drawings or inline images. Use these buckets
     to prioritize public probes for compact paragraph rhythm, bullet/tab ownership, and simple table flow before
     anchored drawing or merge-heavy table rendering.
+    2026-06-01 follow-up: table layout snapshots now carry the table's source body block index on both
+    `DocxTableSnapshot` and `DocxTableRowSnapshot`. This connects the pre-layout structure snapshot to the
+    rendered layout trace without relying on table order, which is necessary before comparing representative
+    private tables against public probes. Public unit coverage locks a paragraph/table/paragraph/table body
+    stream with source block indexes `1` and `3`. Validation passed `docx-tables --skip-slow` (`81`) and full
+    solution build.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

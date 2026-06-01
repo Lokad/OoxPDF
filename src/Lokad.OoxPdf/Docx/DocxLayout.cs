@@ -27,6 +27,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                 DocxTableRowSnapshot first = group.First().row;
                 return new DocxTableSnapshot(
                     group.Key,
+                    first.SourceBlockIndex,
                     group.Min(entry => entry.pageIndex),
                     group.Max(entry => entry.pageIndex),
                     first.TableRowCount,
@@ -141,6 +142,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             .Min();
         return new DocxTableRowSnapshot(
             row.Table.TableIndex,
+            row.Table.SourceBlockIndex,
             rowIndex,
             row.RowIndex,
             row.Table.RowCount,
@@ -362,6 +364,7 @@ internal sealed record DocxLayoutItemSnapshot(
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,
+    int SourceBlockIndex,
     int PageRowIndex,
     int RowIndex,
     int TableRowCount,
@@ -401,6 +404,7 @@ internal sealed record DocxTableRowSnapshot(
 
 internal sealed record DocxTableSnapshot(
     int TableIndex,
+    int SourceBlockIndex,
     int PageStartIndex,
     int PageEndIndex,
     int RowCount,
@@ -547,6 +551,7 @@ internal sealed record DocxTableRowLayout(
 
 internal sealed record DocxTableLayoutContext(
     int TableIndex,
+    int SourceBlockIndex,
     int RowCount,
     int GridColumnCount,
     double GridColumnsWidthSum,
@@ -839,7 +844,7 @@ internal sealed class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                LayoutTable(tableElement.Table, tableIndex++, page.MarginBottom, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                LayoutTable(tableElement.Table, tableIndex++, elementIndex, page.MarginBottom, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
                 continue;
             }
 
@@ -1746,6 +1751,7 @@ internal sealed class DocxLayoutEngine
     private static void LayoutTable(
         DocxTable table,
         int tableIndex,
+        int sourceBlockIndex,
         double marginBottom,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
@@ -1767,6 +1773,7 @@ internal sealed class DocxLayoutEngine
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         var tableContext = new DocxTableLayoutContext(
             tableIndex,
+            sourceBlockIndex,
             table.Rows.Count,
             table.ColumnWidthsPoints.Count,
             table.ColumnWidthsPoints.Sum(),
