@@ -852,6 +852,75 @@ try {
         $rowHeights.Close($false)
     }
 
+    $tableParagraphAdjacency = $word.Documents.Add()
+    try {
+        $tableParagraphAdjacency.PageSetup.PageWidth = 612
+        $tableParagraphAdjacency.PageSetup.PageHeight = 792
+        $tableParagraphAdjacency.PageSetup.TopMargin = 72
+        $tableParagraphAdjacency.PageSetup.BottomMargin = 72
+        $tableParagraphAdjacency.PageSetup.LeftMargin = 72
+        $tableParagraphAdjacency.PageSetup.RightMargin = 72
+        $tableParagraphAdjacency.Content.Text = "DOCX table paragraph adjacency`r`nAfter table zero before`r`nAfter table twenty-four before"
+        $tableParagraphAdjacency.Content.Font.Name = "Arial"
+        $tableParagraphAdjacency.Content.Font.Size = 12
+        $tableParagraphAdjacency.Content.ParagraphFormat.SpaceBefore = 0
+        $tableParagraphAdjacency.Content.ParagraphFormat.SpaceAfter = 0
+
+        $heading = $tableParagraphAdjacency.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 20
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $range = $tableParagraphAdjacency.Paragraphs.Item(2).Range
+        $range.Collapse(1)
+        $tbl = $tableParagraphAdjacency.Tables.Add($range, 2, 2)
+        $tbl.Borders.Enable = $true
+        $tbl.AllowAutoFit = $false
+        $tbl.Columns.Item(1).Width = 120
+        $tbl.Columns.Item(2).Width = 240
+
+        $values = @(
+            @("A1", "A2"),
+            @("B1", "B2")
+        )
+
+        for ($row = 1; $row -le 2; $row++) {
+            for ($column = 1; $column -le 2; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Text = $values[$row - 1][$column - 1]
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = 11
+                $cell.TopPadding = 0
+                $cell.BottomPadding = 0
+                $cell.LeftPadding = 5.4
+                $cell.RightPadding = 5.4
+            }
+        }
+
+        $zeroBefore = $tableParagraphAdjacency.Content
+        if ($zeroBefore.Find.Execute("After table zero before")) {
+            $zeroBefore.Font.Name = "Arial"
+            $zeroBefore.Font.Size = 12
+            $zeroBefore.ParagraphFormat.SpaceBefore = 0
+            $zeroBefore.ParagraphFormat.SpaceAfter = 0
+        }
+
+        $twentyFourBefore = $tableParagraphAdjacency.Content
+        if ($twentyFourBefore.Find.Execute("After table twenty-four before")) {
+            $twentyFourBefore.Font.Name = "Arial"
+            $twentyFourBefore.Font.Size = 12
+            $twentyFourBefore.ParagraphFormat.SpaceBefore = 24
+            $twentyFourBefore.ParagraphFormat.SpaceAfter = 0
+        }
+
+        $tableParagraphAdjacency.SaveAs2((Join-Path $cases "docx-ladder-03-table-paragraph-adjacency.docx"), 16)
+    }
+    finally {
+        $tableParagraphAdjacency.Close($false)
+    }
+
     $headerFooter = $word.Documents.Add()
     try {
         $headerFooter.PageSetup.PageWidth = 612

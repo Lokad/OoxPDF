@@ -1958,6 +1958,16 @@ High-priority actions:
     `MAE=2.435244`, changed16 `0.018702` (`20260601-075940`). Added a layout unit test that locks
     the default split-by-row behavior. Keep this parent open for table `keepNext` interactions,
     header repetition, row clipping, and remaining baseline/row-origin drift.
+    2026-06-01 follow-up: added public Office-backed fixture
+    `docx-ladder-03-table-paragraph-adjacency` after the hard-coded post-table `6pt` gap looked
+    suspicious. The fixture shows a deeper row-height issue instead: Word compresses short table rows
+    with explicit zero cell paragraph after-spacing to about `15.12pt` baseline spacing, while the
+    candidate still applies the generic `401twip` auto-row floor and leaves the following paragraphs
+    too low (`MAE=1.108290`, changed16 `0.009178`, run `20260601-081230`). A content-owned natural
+    auto-row trial improved that public probe to `MAE=0.815674`, changed16 `0.007123`, but collapsed
+    the private DOCX to `15` candidate pages with one dimension mismatch (`20260601-081115`), so do
+    not land it as-is. The next structural fix must distinguish Word's non-empty natural row height
+    from the empty/default row floor without using the private page count as the only guard.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
