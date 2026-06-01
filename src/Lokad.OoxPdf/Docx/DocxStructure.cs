@@ -214,7 +214,7 @@ internal sealed record DocxStructureSnapshot(
     private static DocxStructureTableSnapshot ToTableSnapshot(DocxTable table, int tableIndex, int blockIndex)
     {
         int cellCount = table.Rows.Sum(row => row.Cells.Count);
-        int paragraphCount = table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Count));
+        int paragraphCount = table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count));
         return new DocxStructureTableSnapshot(
             tableIndex,
             blockIndex,
@@ -249,13 +249,13 @@ internal sealed record DocxStructureSnapshot(
             table.Rows.Sum(row => row.Cells.Count(cell => cell.PreferredWidthPoints is not null || cell.PreferredWidthValue is not null)),
             table.Rows.Sum(row => row.Cells.Sum(cell => cell.Borders.Count(border => !string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) && !string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase)))),
             paragraphCount,
-            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(paragraph => paragraph.Runs.Count))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(TextLength))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(CountWhitespaceDelimitedTokens))),
-            table.Rows.SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs).Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
-            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(paragraph => paragraph.Images.Count))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Count(paragraph => paragraph.ListLabel is not null))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(paragraph => paragraph.Runs.Count))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(TextLength))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(CountWhitespaceDelimitedTokens))),
+            table.Rows.SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs).Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(paragraph => paragraph.Images.Count))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.ListLabel is not null))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true))),
             table.Look?.FirstRow,
             table.Look?.FirstColumn,
             table.Look?.NoHorizontalBand,
@@ -301,6 +301,7 @@ internal sealed record DocxStructureSnapshot(
 
     private static DocxStructureTableCellSnapshot ToTableCellSnapshot(DocxTableCell cell, int cellIndex)
     {
+        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         return new DocxStructureTableCellSnapshot(
             cellIndex,
             Math.Max(1, cell.GridSpan),
@@ -315,23 +316,23 @@ internal sealed record DocxStructureSnapshot(
             cell.PreferredWidthValue,
             cell.PreferredWidthType,
             cell.Borders.Count(border => !string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) && !string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase)),
-            cell.Paragraphs.Count,
-            cell.Paragraphs.Sum(paragraph => paragraph.Runs.Count),
-            cell.Paragraphs.Sum(TextLength),
-            cell.Paragraphs.Sum(CountWhitespaceDelimitedTokens),
-            cell.Paragraphs.Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
-            cell.Paragraphs.Sum(paragraph => paragraph.Images.Count),
-            cell.Paragraphs.Count(paragraph => paragraph.ListLabel is not null),
-            cell.Paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
-            cell.Paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
-            cell.Paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.Spacing)),
-            cell.Paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.FontSize).DefaultIfEmpty(0d).Max(),
-            CountCharacters(cell.Paragraphs, static c => c == ' '),
-            CountCharacters(cell.Paragraphs, static c => c > 127),
-            CountCharacters(cell.Paragraphs, char.IsPunctuation),
-            CountCharacters(cell.Paragraphs, char.IsDigit),
-            CountCharacters(cell.Paragraphs, char.IsUpper),
-            CountCharacters(cell.Paragraphs, char.IsLower));
+            paragraphs.Count,
+            paragraphs.Sum(paragraph => paragraph.Runs.Count),
+            paragraphs.Sum(TextLength),
+            paragraphs.Sum(CountWhitespaceDelimitedTokens),
+            paragraphs.Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
+            paragraphs.Sum(paragraph => paragraph.Images.Count),
+            paragraphs.Count(paragraph => paragraph.ListLabel is not null),
+            paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
+            paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
+            paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.Spacing)),
+            paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.FontSize).DefaultIfEmpty(0d).Max(),
+            CountCharacters(paragraphs, static c => c == ' '),
+            CountCharacters(paragraphs, static c => c > 127),
+            CountCharacters(paragraphs, char.IsPunctuation),
+            CountCharacters(paragraphs, char.IsDigit),
+            CountCharacters(paragraphs, char.IsUpper),
+            CountCharacters(paragraphs, char.IsLower));
     }
 
     private static DocxStructureFloatingDrawingSnapshot ToFloatingDrawingSnapshot(DocxFloatingDrawing drawing, int index)
@@ -363,7 +364,7 @@ internal sealed record DocxStructureSnapshot(
     private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
     {
         IEnumerable<DocxParagraph> bodyParagraphs = document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph);
-        IEnumerable<DocxParagraph> tableParagraphs = document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs);
+        IEnumerable<DocxParagraph> tableParagraphs = document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs);
         IEnumerable<DocxParagraph> staticParagraphs = document.HeaderParagraphsByType.Values
             .Concat(document.FooterParagraphsByType.Values)
             .SelectMany(paragraphs => paragraphs);
@@ -387,7 +388,7 @@ internal sealed record DocxStructureSnapshot(
                 group.Count(),
                 0,
                 group.Count(),
-                group.Sum(table => table.Rows.Sum(row => row.Cells.Sum(cell => cell.Paragraphs.Sum(TextLength))))))
+                group.Sum(table => table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(TextLength))))))
             .ToArray();
         return paragraphStyles.Concat(tableStyles).ToArray();
     }
@@ -395,7 +396,7 @@ internal sealed record DocxStructureSnapshot(
     private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
     {
         IEnumerable<DocxParagraph> paragraphs = document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph)
-            .Concat(document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs));
+            .Concat(document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs));
         return paragraphs
             .Where(paragraph => paragraph.ListLabel is not null)
             .GroupBy(paragraph => new

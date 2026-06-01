@@ -6253,6 +6253,11 @@ Current validation baseline:
   (`25`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Keep the broader table-text
   convergence item open for richer cell paragraph ownership, inline images, vertical merge continuations, and
   eventual shared text-frame layout.
+  2026-06-02 follow-up: the same normalized table-cell paragraph stream now also feeds private-safe
+  `DocxStructure` table metrics, style/list usage, and `DocxLayoutSnapshot` table-cell text profiles. This
+  closes a diagnostic blind spot where legacy plain `DocxTableCell.Text` could render but disappear from
+  pre-layout/snapshot counters. Added bottom-up structure and layout snapshot coverage for plain table cells.
+  Validation passed `docx-tables --skip-slow` (`91`), `docx-core --skip-slow` (`25`), and full solution build.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

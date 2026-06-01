@@ -1444,6 +1444,27 @@ internal static class DocxTests
         TestAssert.Equal(4, cellSnapshot.LongestWhitespaceDelimitedTokenLength);
     }
 
+    public static void DocxStructureSnapshotNormalizesPlainTableCellText()
+    {
+        DocxTable table = CreateSingleCellTable("Plain 123", 20d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+
+        DocxStructureTableSnapshot tableSnapshot = snapshot.Tables.Single();
+        DocxStructureTableCellSnapshot cellSnapshot = tableSnapshot.Rows.Single().Cells.Single();
+        TestAssert.Equal(1, tableSnapshot.ParagraphCount);
+        TestAssert.Equal(9, tableSnapshot.TextLength);
+        TestAssert.Equal(2, tableSnapshot.WhitespaceDelimitedTokenCount);
+        TestAssert.Equal(5, tableSnapshot.LongestWhitespaceDelimitedTokenLength);
+        TestAssert.Equal(1, cellSnapshot.ParagraphCount);
+        TestAssert.Equal(1, cellSnapshot.RunCount);
+        TestAssert.Equal(9, cellSnapshot.TextLength);
+        TestAssert.Equal(3, cellSnapshot.DigitCharacterCount);
+        TestAssert.Equal(1, cellSnapshot.SpaceCharacterCount);
+        TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Paragraph" && usage.StyleId is null && usage.ParagraphCount == 1 && usage.TextLength == 9), "Plain table-cell text should contribute to paragraph style usage through the shared cell content stream.");
+    }
+
     public static void DocxFontPlanIncludesAllHeaderFooterVariants()
     {
         var defaultHeader = CreateFontPlanParagraph(new DocxTextRun("DefaultHeader", 11d, null, false, false, false, null, "Default Sans")
@@ -9101,6 +9122,23 @@ internal static class DocxTests
         TestAssert.True(tableCell.HasConditionalFormat, "Snapshot should expose conditional-format presence without document text.");
         TestAssert.True(tableCell.HasVerticalMerge, "Snapshot should expose vertical-merge presence without document text.");
         TestAssert.Equal("restart", tableCell.VerticalMergeValue ?? string.Empty);
+    }
+
+    public static void DocxLayoutSnapshotNormalizesPlainTableCellText()
+    {
+        DocxTable table = CreateSingleCellTable("Plain 123", 20d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+
+        DocxTableRowSnapshot row = snapshot.Pages[0].TableRows.Single();
+        DocxTableCellSnapshot cell = row.Cells.Single();
+        TestAssert.Equal(9, row.TextLength);
+        TestAssert.Equal(9, cell.TextLength);
+        TestAssert.Equal(1, cell.ParagraphCount);
+        TestAssert.Equal(1, cell.SpaceCharacterCount);
+        TestAssert.Equal(3, cell.DigitCharacterCount);
+        TestAssert.Equal(5, cell.LongestBreakableTokenLength);
     }
 
     public static void DocxLayoutSnapshotReportsPrivateSafeSourceLineIndexes()
