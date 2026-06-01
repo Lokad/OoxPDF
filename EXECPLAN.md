@@ -4610,6 +4610,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   page index range, row count, column count, `tblGrid`, preferred table width, resolved table width, row
   height declarations, vertical merges, and resolved column grid. This remains open because the current trace
   is enough to inspect private table bands but does not yet expose table-level width/grid ownership.
+  - [x] 2026-06-02: Extended `DocxLayoutSnapshot` table ownership with authored-vs-inferred grid provenance,
+    authored header-row count, aggregate row-height declaration counts (`exact`/`atLeast`), and cant-split row
+    count while preserving existing table ordinal, source block, page range, resolved grid, preferred width,
+    indent, spacing, layout, and vertical-merge facts. Keep this item open for actual fragmented-row and
+    fragmented-cell geometry, where repeated header rows and split rows need richer ownership than aggregate
+    table counts. Validation passed `docx-tables --skip-slow` (`92`) and full solution build.
   - [x] 2026-06-01: Added stable table ordinals and document-level table snapshots derived from layout rows.
     The trace now reports page index range, source row count, laid-out row count, repeated header-row layout
     count, grid column count, grid-column width sum, resolved table width, table X, preferred table width

@@ -8248,6 +8248,7 @@ internal static class DocxTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
+        TestAssert.True(!row.Table.HasExplicitGrid, "Layout context should preserve missing-grid provenance after width resolution.");
         TestAssert.Equal(90d, row.Cells[0].Width);
         TestAssert.Equal(100d, row.Cells[1].X);
         TestAssert.Equal(90d, row.Cells[1].Width);
@@ -9129,8 +9130,10 @@ internal static class DocxTests
         TestAssert.Equal(1, tableSnapshot.RowCount);
         TestAssert.Equal(1, tableSnapshot.LaidOutRowCount);
         TestAssert.Equal(1, tableSnapshot.HeaderRowLayoutCount);
+        TestAssert.Equal(1, tableSnapshot.AuthoredHeaderRowCount);
         TestAssert.Equal(2, tableSnapshot.GridColumnCount);
         TestAssert.Equal(80d, tableSnapshot.GridColumnsWidthSum);
+        TestAssert.True(tableSnapshot.HasExplicitGrid, "Snapshot should distinguish authored table grids from inferred grids.");
         TestAssert.Equal(2, tableSnapshot.ResolvedColumnWidths.Count);
         TestAssert.Equal(42d, tableSnapshot.ResolvedColumnWidths[0]);
         TestAssert.Equal(42d, tableSnapshot.ResolvedColumnWidths[1]);
@@ -9140,6 +9143,10 @@ internal static class DocxTests
         TestAssert.Equal("dxa", tableSnapshot.PreferredWidthType ?? string.Empty);
         TestAssert.Equal(6d, tableSnapshot.IndentPoints ?? 0d);
         TestAssert.Equal(1d, tableSnapshot.CellSpacingPoints ?? 0d);
+        TestAssert.Equal(1, tableSnapshot.DeclaredHeightRowCount);
+        TestAssert.Equal(0, tableSnapshot.ExactHeightRowCount);
+        TestAssert.Equal(1, tableSnapshot.AtLeastHeightRowCount);
+        TestAssert.Equal(0, tableSnapshot.CantSplitRowCount);
         TestAssert.True(tableSnapshot.HasVerticalMerge, "Snapshot should expose vertical-merge presence without cell text.");
         TestAssert.Equal(1, snapshot.Pages.Count);
         TestAssert.Equal(1, snapshot.Pages[0].ItemCount);
@@ -9162,6 +9169,7 @@ internal static class DocxTests
         TestAssert.Equal(1, tableRow.TableRowCount);
         TestAssert.Equal(2, tableRow.GridColumnCount);
         TestAssert.Equal(80d, tableRow.GridColumnsWidthSum);
+        TestAssert.True(tableRow.HasExplicitGrid, "Row snapshot should carry the table grid provenance.");
         TestAssert.Equal(2, tableRow.ResolvedColumnWidths.Count);
         TestAssert.Equal(42d, tableRow.ResolvedColumnWidths[0]);
         TestAssert.Equal(42d, tableRow.ResolvedColumnWidths[1]);

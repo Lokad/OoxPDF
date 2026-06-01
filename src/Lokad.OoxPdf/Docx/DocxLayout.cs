@@ -25,6 +25,11 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             .Select(group =>
             {
                 DocxTableRowSnapshot first = group.First().row;
+                DocxTableRowSnapshot[] distinctRows = group
+                    .Select(entry => entry.row)
+                    .GroupBy(row => row.RowIndex)
+                    .Select(rowGroup => rowGroup.First())
+                    .ToArray();
                 return new DocxTableSnapshot(
                     group.Key,
                     first.SourceBlockIndex,
@@ -33,8 +38,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                     first.TableRowCount,
                     group.Count(),
                     group.Count(entry => entry.row.IsHeader),
+                    distinctRows.Count(row => row.IsHeader),
                     first.GridColumnCount,
                     first.GridColumnsWidthSum,
+                    first.HasExplicitGrid,
                     first.ResolvedColumnWidths,
                     first.ResolvedTableWidth,
                     first.TableX,
@@ -44,6 +51,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                     first.IndentPoints,
                     first.CellSpacingPoints,
                     first.LayoutValue,
+                    distinctRows.Count(row => row.DeclaredHeightPoints is not null),
+                    distinctRows.Count(row => string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase)),
+                    distinctRows.Count(row => string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)),
+                    distinctRows.Count(row => row.CantSplit),
                     group.Any(entry => entry.row.Cells.Any(cell => cell.HasVerticalMerge)));
             })
             .ToArray();
@@ -148,6 +159,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             row.Table.RowCount,
             row.Table.GridColumnCount,
             row.Table.GridColumnsWidthSum,
+            row.Table.HasExplicitGrid,
             row.Table.ResolvedColumnWidths,
             row.Table.ResolvedTableWidth,
             row.Table.TableX,
@@ -370,6 +382,7 @@ internal sealed record DocxTableRowSnapshot(
     int TableRowCount,
     int GridColumnCount,
     double GridColumnsWidthSum,
+    bool HasExplicitGrid,
     IReadOnlyList<double> ResolvedColumnWidths,
     double ResolvedTableWidth,
     double TableX,
@@ -410,8 +423,10 @@ internal sealed record DocxTableSnapshot(
     int RowCount,
     int LaidOutRowCount,
     int HeaderRowLayoutCount,
+    int AuthoredHeaderRowCount,
     int GridColumnCount,
     double GridColumnsWidthSum,
+    bool HasExplicitGrid,
     IReadOnlyList<double> ResolvedColumnWidths,
     double ResolvedTableWidth,
     double X,
@@ -421,6 +436,10 @@ internal sealed record DocxTableSnapshot(
     double? IndentPoints,
     double? CellSpacingPoints,
     string? LayoutValue,
+    int DeclaredHeightRowCount,
+    int ExactHeightRowCount,
+    int AtLeastHeightRowCount,
+    int CantSplitRowCount,
     bool HasVerticalMerge);
 
 internal sealed record DocxTableCellSnapshot(
@@ -555,6 +574,7 @@ internal sealed record DocxTableLayoutContext(
     int RowCount,
     int GridColumnCount,
     double GridColumnsWidthSum,
+    bool HasExplicitGrid,
     IReadOnlyList<double> ResolvedColumnWidths,
     double ResolvedTableWidth,
     double TableX,
@@ -1806,6 +1826,7 @@ internal sealed class DocxLayoutEngine
             table.Rows.Count,
             table.ColumnWidthsPoints.Count,
             table.ColumnWidthsPoints.Sum(),
+            table.HasExplicitGrid,
             effectiveColumns.Select(width => width * scale).ToArray(),
             targetTableWidth,
             tableX,
