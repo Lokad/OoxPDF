@@ -277,12 +277,7 @@ internal sealed class DocxRenderer
             DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
         }
 
-        if (style.Underline)
-        {
-            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-            graphics.SetLineWidth(Math.Max(0.5d, fontSize / 18d));
-            graphics.StrokeLine(segment.X, baselineY - fontSize * 0.12d, segment.X + segment.Width, baselineY - fontSize * 0.12d);
-        }
+        RenderTextDecorations(style, resource.Embedded.Font, segment.X, segment.Width, fontSize, baselineY, color, graphics);
     }
 
     private static DocxRunFontResource? ResolveFontResource(DocxTextRun run, DocxFontResources fontResources)
@@ -422,6 +417,51 @@ internal sealed class DocxRenderer
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
     {
         return style.Bold && !resource.Resolution.Bold;
+    }
+
+    private static void RenderTextDecorations(
+        DocxTextRun style,
+        OpenTypeFont font,
+        double x,
+        double width,
+        double fontSize,
+        double baselineY,
+        RgbColor color,
+        PdfGraphicsBuilder graphics)
+    {
+        if (width <= 0d)
+        {
+            return;
+        }
+
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        if (style.Underline)
+        {
+            double thickness = ResolveDecorationThickness(font.Post.UnderlineThickness, font, fontSize);
+            double y = baselineY + font.Post.UnderlinePosition * fontSize / font.UnitsPerEm;
+            graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
+        }
+
+        if (style.Strike || style.DoubleStrike)
+        {
+            double thickness = ResolveDecorationThickness(font.Os2.StrikeoutSize, font, fontSize);
+            double y = baselineY + font.Os2.StrikeoutPosition * fontSize / font.UnitsPerEm;
+            if (style.DoubleStrike)
+            {
+                double offset = Math.Max(thickness, fontSize / 18d);
+                graphics.FillRectangle(x, y - offset - thickness / 2d, width, thickness);
+                graphics.FillRectangle(x, y + offset - thickness / 2d, width, thickness);
+            }
+            else
+            {
+                graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
+            }
+        }
+    }
+
+    private static double ResolveDecorationThickness(short metricValue, OpenTypeFont font, double fontSize)
+    {
+        return Math.Max(0.25d, Math.Abs(metricValue) * fontSize / font.UnitsPerEm);
     }
 
     private static void RenderTableRowBorders(
@@ -718,8 +758,9 @@ internal sealed class DocxRenderer
             {
                 (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
                 RgbColor color = ReadColor(run.ColorHex);
-                DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, baselineY, color);
                 double segmentWidth = MeasureStaticSegmentWidth(run, text, fontSize, resource);
+                DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, baselineY, color);
+                RenderTextDecorations(run, resource.Embedded.Font, segmentX, segmentWidth, fontSize, baselineY, color, graphics);
                 double segmentEndX = segmentX + segmentWidth;
                 if (!string.IsNullOrWhiteSpace(text))
                 {

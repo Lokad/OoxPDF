@@ -1,0 +1,11 @@
+{
+  "id": "docx-ladder-02-text-decorations",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-text-decorations.docx",
+  "support": {
+    "minStructuralSimilarity": 0.98,
+    "minForegroundColorHistogramCorrelation": 0.98,
+    "maxMeanAbsoluteError": 2.0,
+    "maxChangedPixelRatioAtThreshold16": 0.05
+  }
+}

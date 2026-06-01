@@ -3487,6 +3487,17 @@ document-specific business content into public notes.
   Keep strikethrough drawing open for a public Office PDF ladder that derives the actual line rectangle
   position, thickness, double-strike separation, and interaction with baseline shifts and run boundaries before
   changing renderer geometry.
+  2026-06-01 follow-up: underline rendering no longer uses the old `fontSize * 0.12` / `fontSize / 18`
+  heuristic, and strike/double-strike tokens now render. Body and static header/footer text decorations use
+  OpenType `post` underline metrics and `OS/2` strikeout metrics from the resolved run font, emitting filled
+  rectangles like Office rather than stroked heuristic lines. Public `docx-ladder-02-text-decorations` run
+  `20260601-150426` is page-stable with no diagnostics (`MAE=0.229168`, changed16 `0.002961`); PDF inspection
+  shows close Office/candidate decoration boxes, for example underline `Y=702.10..703.30` reference vs
+  `702.68..703.85` candidate. Validation passed `docx-text --skip-slow` (`37`), `docx-page --skip-slow`
+  (`26`), full solution build, and the public `docx-layout` family with `26` cases. Private DOCX run
+  `20260601-150717` stayed page-stable at `16/16` pages, zero dimension mismatches, no diagnostics,
+  `MAE=13.855991`, changed16 `0.127419`. Keep this open for baseline-shift interaction, wrapped mixed-run
+  decoration segmentation, and exact double-strike separation across fonts.
 - [x] 2026-06-01: Preserved DOCX run-level highlight and run-shading tokens through the resolved
   run-property cascade. `w:highlight @w:val`, inherited character-style highlights, and `w:rPr/w:shd`
   `fill`/`val`/`color` now survive into `DocxTextRun` and `DocxTextRunStyle`. Validation passed
