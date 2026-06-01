@@ -2380,6 +2380,13 @@ High-priority actions:
       stayed accepted (`16/16`, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16
       `0.124264`). Keep this open for true static header/footer layout records, selected-part snapshots,
       wrapping, and multi-paragraph line-box behavior.
+      2026-06-01 follow-up: static header/footer draw order now matches Office's observable PDF structure by
+      emitting selected static content before body content on each page. The previous body-first order was
+      visually neutral for non-overlapping fixtures but disagreed with the `docx-headers-footers` reference
+      content stream. Public run `20260601-143229` stayed raster-identical (`MAE=0.073352`, changed16
+      `0.002110`, SSIM `0.982572`), while candidate PDF text operations now start with the header/footer text
+      like Office. Private DOCX run `20260601-143252` stayed neutral at `16/16` pages, zero dimension
+      mismatches, no diagnostics, `MAE=13.838763`, changed16 `0.126851`.
     - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the

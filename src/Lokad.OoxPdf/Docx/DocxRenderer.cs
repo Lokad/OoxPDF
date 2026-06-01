@@ -59,14 +59,6 @@ internal sealed class DocxRenderer
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
             double staticBodyWidth = Math.Max(1d, layoutPage.Width - layoutPage.MarginLeft - layoutPage.MarginRight);
-            for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
-            {
-                DocxLayoutItem item = layoutPage.Items[itemIndex];
-                DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
-                DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
-            }
-
             int pageNumber = pageIndex + 1;
             RenderStaticParagraphs(
                 SelectStaticHeaderFooter(
@@ -96,6 +88,14 @@ internal sealed class DocxRenderer
                 StaticTextAnchor.Footer,
                 pageNumber,
                 layout.Pages.Count);
+
+            for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
+            {
+                DocxLayoutItem item = layoutPage.Items[itemIndex];
+                DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
+                DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
+                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
+            }
 
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray()));
         }
