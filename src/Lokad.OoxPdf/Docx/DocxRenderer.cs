@@ -412,25 +412,36 @@ internal sealed class DocxRenderer
                 continue;
             }
 
-            double fontSize = Math.Min(12d, paragraph.Runs.Max(r => r.FontSize));
-            string text = string.Concat(paragraph.Runs.Select(r => r.Text)).Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-            DocxTextRun firstRun = paragraph.Runs[0];
-            DocxRunFontResource? resource = ResolveFontResource(firstRun, fontResources);
-            if (resource is null)
+            (DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments = paragraph.Runs
+                .Select(run => (
+                    Run: run,
+                    Text: run.Text.Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal),
+                    FontSize: Math.Min(12d, run.FontSize),
+                    Resource: ResolveFontResource(run, fontResources)))
+                .Where(segment => segment.Resource is not null && segment.Text.Length != 0)
+                .Select(segment => (segment.Run, segment.Text, segment.FontSize, segment.Resource!))
+                .ToArray();
+            if (segments.Length == 0)
             {
                 continue;
             }
 
-            RgbColor color = ReadColor(firstRun.ColorHex);
-            double lineWidth = resource.Embedded.MeasureTextPoints(text, fontSize);
+            double lineWidth = segments.Sum(segment => segment.Resource.Embedded.MeasureTextPoints(segment.Text, segment.FontSize));
             double lineX = paragraph.Alignment switch
             {
                 DocxTextAlignment.Center => x + Math.Max(0, width - lineWidth) / 2d,
                 DocxTextAlignment.Right => x + Math.Max(0, width - lineWidth),
                 _ => x
             };
-            graphics.DrawGlyphText(resource.Name, fontSize, lineX, cursorY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), firstRun.Italic);
-            cursorY -= fontSize * 1.2d;
+            double segmentX = lineX;
+            foreach ((DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) in segments)
+            {
+                RgbColor color = ReadColor(run.ColorHex);
+                graphics.DrawGlyphText(resource.Name, fontSize, segmentX, cursorY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), run.Italic);
+                segmentX += resource.Embedded.MeasureTextPoints(text, fontSize);
+            }
+
+            cursorY -= segments.Max(segment => segment.FontSize) * 1.2d;
         }
     }
 

@@ -474,7 +474,7 @@ internal sealed class DocxLayoutEngine
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
-                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, textMeasurer) < document.MarginBottomPoints)
+                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, textMeasurer) <= document.MarginBottomPoints)
             {
                 FinishPage();
             }

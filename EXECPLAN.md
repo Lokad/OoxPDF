@@ -1927,6 +1927,10 @@ High-priority actions:
     correct run cascade and improves aggregate metrics, but keep the item open for a broader Office-authored
     ladder around empty rows, multi-line rows, explicit `auto/atLeast/exact` heights, and first-row/header-row
     baseline placement before treating the 401-twip default as fully explained.
+    2026-06-01 follow-up: kept-block preflight now moves a `keepNext` block when the estimated block lands
+    exactly on the bottom margin, not only when it crosses below it. This keeps the preflight consistent with
+    subsequent row placement after the 401-twip row minimum and avoids splitting an exactly-fitted
+    paragraph/table keep pair across pages.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
@@ -2119,7 +2123,14 @@ High-priority actions:
       with selected-part ownership, Word-compatible header/footer line boxes and baselines, and public
       Office-PDF-backed fixtures; do not re-enable static fallback-free rendering as a side effect of the
       document-level fallback resource.
-    - [ ] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
+      2026-06-01 progress: static header/footer emission now preserves run-level segmentation for the selected
+      header/footer part while keeping the existing static placement model. Each run resolves its own PDF font
+      resource, color, italic state, and `{PAGE}` substitution before line alignment. Public unit coverage
+      checks mixed red/blue header runs emit separately. Private run `20260601-020720` stayed neutral against
+      the table-style/row-minimum baseline (`16/16`, zero dimension mismatches, `MAE=12.716572`, changed16
+      `0.118448`). Keep the parent open for selected-part layout snapshots, wrapping, and exact Word
+      header/footer line boxes rather than first-run resource collapse.
+    - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the
       aggregate metrics above, which means the missing piece is not the gate itself but exact table-cell
@@ -2138,6 +2149,12 @@ High-priority actions:
       On a representative private page, candidate text operations rose from `60` to `93` while Office had
       `140`, so the trial added incomplete table text bands instead of closing the Office text coverage gap.
       Keep the gate until table-cell text ownership is complete enough to reduce private raster mismatch.
+      2026-06-01 closure: after run-level font resources, table-cell paragraph ownership, row minimums, and
+      table-style run precedence landed together, table text no longer depends on the document fallback gate.
+      Public `docx-ladder-02-table-explicit-font` remains stable at `MAE=0.229378`, changed16 `0.003197`,
+      and the private DOCX run `20260601-020048` stayed `16/16` pages with zero dimension mismatches while
+      improving aggregate MAE/changed16. Keep static header/footer fallback-free rendering as a separate open
+      item because it still lacks a selected-part line-layout stage.
     - [ ] 2026-05-31: Resolve the DOCX pagination gap exposed by structural font/style alignment. Private
       DOCX run `20260531-203336` improved aggregate MAE to `13.852449` and changed16 to `0.125076`, but the
       candidate now paginates as `14` pages against Office's `16` reference pages with `2` dimension mismatches.
