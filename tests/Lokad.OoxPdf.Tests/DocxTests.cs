@@ -1309,6 +1309,27 @@ internal static class DocxTests
             }
         };
         var sectionBreak = new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "720");
+        var floatingDrawing = new DocxFloatingDrawing(
+            "0",
+            "0",
+            "114300",
+            "114300",
+            "0",
+            "251659264",
+            "0",
+            "0",
+            "1",
+            "1",
+            "914400",
+            "457200",
+            "column",
+            "center",
+            null,
+            "paragraph",
+            null,
+            "12700",
+            "square",
+            "bothSides");
         var document = new DocxDocument(
             200d,
             200d,
@@ -1317,7 +1338,7 @@ internal static class DocxTests
             10d,
             10d,
             DocxPageSettings.Empty,
-            [],
+            [floatingDrawing],
             [],
             [],
             [
@@ -1347,6 +1368,7 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.TableBlockCount);
         TestAssert.Equal(1, snapshot.SectionBreakBlockCount);
         TestAssert.Equal(8, snapshot.BodyTextLength);
+        TestAssert.Equal(1, snapshot.FloatingDrawingCount);
         TestAssert.Equal("Paragraph", snapshot.Blocks[1].PreviousKind ?? string.Empty);
         TestAssert.Equal("Table", snapshot.Blocks[1].NextKind ?? string.Empty);
         TestAssert.True(snapshot.Blocks[0].SnapToGrid == true, "Paragraph structure should expose snapToGrid before layout.");
@@ -1358,6 +1380,10 @@ internal static class DocxTests
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Header" && story.Scope == "document" && story.VariantType == "default"), "Document default header story should be inventoried before layout.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footer" && story.Scope == "document" && story.VariantType == "even"), "Document even footer story should be inventoried before layout.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Header" && story.Scope == "section@3" && story.SectionBreakBlockIndex == 3 && story.VariantType == "first"), "Section header story should be tied to its section-break block.");
+        DocxStructureFloatingDrawingSnapshot drawingSnapshot = snapshot.FloatingDrawings.Single();
+        TestAssert.Equal("square", drawingSnapshot.WrapKind ?? string.Empty);
+        TestAssert.Equal("column", drawingSnapshot.HorizontalRelativeFromValue ?? string.Empty);
+        TestAssert.Equal("paragraph", drawingSnapshot.VerticalRelativeFromValue ?? string.Empty);
 
         DocxStructureTableSnapshot tableSnapshot = snapshot.Tables.Single();
         TestAssert.Equal(2, tableSnapshot.RowCount);

@@ -10,8 +10,10 @@ internal sealed record DocxStructureSnapshot(
     int SectionBreakBlockCount,
     int BodyTextLength,
     int InlineImageCount,
+    int FloatingDrawingCount,
     IReadOnlyList<DocxStructureBlockSnapshot> Blocks,
     IReadOnlyList<DocxStructureStorySnapshot> Stories,
+    IReadOnlyList<DocxStructureFloatingDrawingSnapshot> FloatingDrawings,
     IReadOnlyList<DocxStructureTableSnapshot> Tables,
     IReadOnlyList<DocxStructureTableAdjacencySnapshot> TableAdjacency)
 {
@@ -57,8 +59,10 @@ internal sealed record DocxStructureSnapshot(
             blocks.Count(block => block.Kind == "SectionBreak"),
             blocks.Sum(block => block.TextLength),
             blocks.Sum(block => block.InlineImageCount),
+            document.FloatingDrawings.Count,
             blocks,
             ToStorySnapshots(document, blocks),
+            document.FloatingDrawings.Select((drawing, index) => ToFloatingDrawingSnapshot(drawing, index)).ToArray(),
             tables,
             adjacency);
     }
@@ -250,6 +254,32 @@ internal sealed record DocxStructureSnapshot(
             table.Look?.NoVerticalBand);
     }
 
+    private static DocxStructureFloatingDrawingSnapshot ToFloatingDrawingSnapshot(DocxFloatingDrawing drawing, int index)
+    {
+        return new DocxStructureFloatingDrawingSnapshot(
+            index,
+            drawing.WrapKind,
+            drawing.WrapTextValue,
+            drawing.BehindDocumentValue,
+            drawing.LayoutInCellValue,
+            drawing.AllowOverlapValue,
+            drawing.HorizontalRelativeFromValue,
+            drawing.HorizontalAlignValue,
+            drawing.HorizontalOffsetValue,
+            drawing.VerticalRelativeFromValue,
+            drawing.VerticalAlignValue,
+            drawing.VerticalOffsetValue,
+            drawing.ExtentCxValue,
+            drawing.ExtentCyValue,
+            drawing.DistanceTopValue,
+            drawing.DistanceBottomValue,
+            drawing.DistanceLeftValue,
+            drawing.DistanceRightValue,
+            drawing.SimplePositionValue,
+            drawing.RelativeHeightValue,
+            drawing.LockedValue);
+    }
+
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(
         IReadOnlyList<DocxBodyElement> elements,
         DocxTable table,
@@ -396,6 +426,29 @@ internal sealed record DocxStructureStorySnapshot(
     int TableCount,
     int TextLength,
     int InlineImageCount);
+
+internal sealed record DocxStructureFloatingDrawingSnapshot(
+    int Index,
+    string? WrapKind,
+    string? WrapTextValue,
+    string? BehindDocumentValue,
+    string? LayoutInCellValue,
+    string? AllowOverlapValue,
+    string? HorizontalRelativeFromValue,
+    string? HorizontalAlignValue,
+    string? HorizontalOffsetValue,
+    string? VerticalRelativeFromValue,
+    string? VerticalAlignValue,
+    string? VerticalOffsetValue,
+    string? ExtentCxValue,
+    string? ExtentCyValue,
+    string? DistanceTopValue,
+    string? DistanceBottomValue,
+    string? DistanceLeftValue,
+    string? DistanceRightValue,
+    string? SimplePositionValue,
+    string? RelativeHeightValue,
+    string? LockedValue);
 
 internal sealed record DocxStructureTableSnapshot(
     int TableIndex,

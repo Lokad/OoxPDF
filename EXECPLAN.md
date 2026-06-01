@@ -2143,6 +2143,13 @@ High-priority actions:
     slide/layout/master ownership is explicit before rendering. The same public unit test now checks body,
     document default header, document even footer, and section first-header story facts. Validation passed
     `docx-tables --skip-slow` (`80`) and full solution build.
+    2026-06-01 follow-up: extended the pre-layout structure snapshot with floating drawing ownership:
+    `FloatingDrawingCount` and per-drawing wrap, relative positioning, extent, distance, overlap, behind-doc,
+    and layout-in-cell tokens. This is intentionally diagnostic/structural only; anchored drawing rendering
+    remains open, but future DOCX drawing work now has a bottom-up feature inventory instead of inspecting raw
+    XML or private content. The same public unit test covers a square-wrap, column/paragraph-relative drawing.
+    Validation passed full solution build and serial `docx-tables --skip-slow` (`80`); the first parallel test
+    attempt hit the known compiler output lock.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses
