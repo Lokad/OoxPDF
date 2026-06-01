@@ -347,9 +347,7 @@ internal sealed class DocxRenderer
         double baselineY,
         RgbColor color)
     {
-        string? positioningArray = Math.Abs(style.CharacterSpacingPoints) > 0.001d
-            ? resource.Embedded.EncodeGlyphPositioningArray(text, style.CharacterSpacingPoints, fontSize)
-            : null;
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, style.CharacterSpacingPoints, fontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {
             graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, style.Italic);

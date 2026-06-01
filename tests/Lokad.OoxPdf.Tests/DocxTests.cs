@@ -189,7 +189,7 @@ internal static class DocxTests
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Contains("/F1 14 Tf", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("> Tj", pdf);
+        TestAssert.True(CountPdfTextShows(pdf) >= 1, "Expected DOCX paragraph text to render as a PDF text-show operation.");
         TestAssert.Contains(" l S", pdf);
     }
 
@@ -2384,7 +2384,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Equal(4, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
+        TestAssert.Equal(4, CountPdfTextShows(pdf));
     }
 
     public static void DocxReaderPreservesNumberingFormatTokens()
@@ -3168,7 +3168,7 @@ internal static class DocxTests
         TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
         TestAssert.Contains(" re f", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Contains("> Tj", pdf);
+        TestAssert.True(CountPdfTextShows(pdf) >= 1, "Expected DOCX paragraph text to render as a PDF text-show operation.");
     }
 
     public static void DocxSyntheticTableWithoutBordersDoesNotInventCellGrid()
@@ -3216,7 +3216,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.DoesNotContain(" re S", pdf);
-        TestAssert.Contains("> Tj", pdf);
+        TestAssert.True(CountPdfTextShows(pdf) >= 1, "Expected DOCX table text to render as a PDF text-show operation.");
     }
 
     public static void DocxSyntheticTableTextRendersWithRunFontResourceWithoutFallback()
@@ -3276,7 +3276,7 @@ internal static class DocxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Contains("/F1 11 Tf", pdf);
-        TestAssert.Contains("> Tj", pdf);
+        TestAssert.True(CountPdfTextShows(pdf) >= 1, "Expected DOCX table text to render as a PDF text-show operation.");
     }
 
     public static void DocxReaderTablePreservesLayoutToken()
@@ -5116,9 +5116,9 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int firstText = pdf.IndexOf("> Tj", StringComparison.Ordinal);
+        int firstText = FirstPdfTextShowIndex(pdf);
         int tableGrid = pdf.IndexOf(" re f", StringComparison.Ordinal);
-        int lastText = pdf.LastIndexOf("> Tj", StringComparison.Ordinal);
+        int lastText = LastPdfTextShowIndex(pdf);
         TestAssert.True(firstText >= 0 && tableGrid > firstText && lastText > tableGrid, "DOCX tables should render in body order between surrounding paragraphs.");
     }
 
@@ -6086,7 +6086,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Equal(3, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
+        TestAssert.Equal(3, CountPdfTextShows(pdf));
     }
 
     public static void DocxSyntheticHeaderReferenceTypesSelectDefaultWhenNoFirstOrEvenSetting()
@@ -6164,7 +6164,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(2, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
+        TestAssert.Equal(2, CountPdfTextShows(pdf));
     }
 
     public static void DocxSyntheticHeaderFooterDistancesUsePageMarginTokens()
@@ -6292,7 +6292,7 @@ internal static class DocxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.Equal(3, pdf.Split("> Tj", StringSplitOptions.None).Length - 1);
+        TestAssert.Equal(3, CountPdfTextShows(pdf));
     }
 
     public static void DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers()
@@ -6358,7 +6358,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("<< /Type /Pages /Count 2 /Kids [3 0 R 5 0 R] >>", pdf);
-        TestAssert.True(pdf.Split("> Tj", StringSplitOptions.None).Length - 1 >= 47, "Footer page field should render on each generated page.");
+        TestAssert.True(CountPdfTextShows(pdf) >= 47, "Footer page field should render on each generated page.");
     }
 
     public static void DocxUnsupportedFeaturesEmitDiagnostics()
@@ -7044,5 +7044,47 @@ internal static class DocxTests
         return Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm")
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
             .ToArray();
+    }
+
+    private static int CountPdfTextShows(string pdf)
+    {
+        return CountOccurrences(pdf, "> Tj") + CountOccurrences(pdf, "] TJ");
+    }
+
+    private static int FirstPdfTextShowIndex(string pdf)
+    {
+        int tj = pdf.IndexOf("> Tj", StringComparison.Ordinal);
+        int positioned = pdf.IndexOf("] TJ", StringComparison.Ordinal);
+        return MinNonNegative(tj, positioned);
+    }
+
+    private static int LastPdfTextShowIndex(string pdf)
+    {
+        return Math.Max(
+            pdf.LastIndexOf("> Tj", StringComparison.Ordinal),
+            pdf.LastIndexOf("] TJ", StringComparison.Ordinal));
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
+    }
+
+    private static int MinNonNegative(int first, int second)
+    {
+        if (first < 0)
+        {
+            return second;
+        }
+
+        return second < 0 ? first : Math.Min(first, second);
     }
 }

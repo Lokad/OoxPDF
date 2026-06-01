@@ -3601,10 +3601,20 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   page- and dimension-stable (`MAE=1.960983`, changed16 `0.016165`). Office PDF inspection shows the authored
   `+2pt`/`-1pt` spacing as positioned text adjustments near those values, while also using `TJ` text
   operations and small residual adjustments for nominally zero-spacing runs.
-- [ ] Align DOCX PDF text emission with Office's observed character-spacing decomposition. The new public
-  ladder shows Office emits `28` text operations, all positioned, with nonzero residual adjustments even on
-  some zero-spacing runs; the candidate emits fewer operations and only structural authored spacing drives
-  positioned adjustments. Model this as an emission/layout decomposition issue, not a font-name rule.
+- [x] 2026-06-01: Align the first DOCX PDF text-emission layer with Office's observed positioned text
+  strategy. The renderer now emits DOCX glyph runs as positioned `TJ` arrays even when authored
+  `w:rPr/w:spacing` is zero, so kerning and structural tracking share one PDF operation form instead of
+  falling back to plain `Tj` for nominally untracked runs. Public `docx-ladder-02-character-spacing` run
+  `20260601-031105` stayed page- and dimension-stable (`MAE=1.960958`, changed16 `0.016143`), and PDF
+  inspection now shows candidate text operations as `15` `TJ` operations versus Office's `28` `TJ`
+  operations. Private DOCX run `20260601-031243` stayed accepted at `16/16` pages with zero dimension
+  mismatches and no diagnostics, but the aggregate moved to `MAE=13.047852`, changed16 `0.120850`; treat
+  this as a structural PDF-alignment step, not a completed visual improvement.
+- [ ] Continue DOCX text decomposition alignment against Office's observed character-spacing output. The
+  public ladder still shows Office emitting more text operations (`28` vs candidate `15`) and small residual
+  positioned adjustments on some nominally zero-spacing runs. Investigate run splitting, script/field/static
+  part boundaries, kerning decomposition, and line-segment ownership with Office-backed public fixtures before
+  changing spacing math. Do not introduce font-name rules or private-document exceptions.
 - [ ] Improve numbering layout: render labels in their own hanging-indent area, support level text expansion
   beyond the current simple label prefix, and honor restart/start rules.
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from
