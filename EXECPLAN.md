@@ -280,6 +280,12 @@ High-priority actions:
   with only one line of remaining page space should split; Office and candidate both move the paragraph to the
   next page. Keep the current widow-control rule and continue with public probes for accumulated paragraph
   line-height, empty-paragraph, table-boundary, and table-row flow instead of weakening widow/orphan handling.
+  2026-06-01 follow-up: added public `docx-ladder-03-table-empty-paragraph-boundary` after the private flow map
+  highlighted empty body paragraphs after tables. Office does preserve the empty paragraph as vertical flow in
+  this public table -> empty paragraph -> body paragraph sequence; candidate and Office match operation counts
+  with only a small baseline residual (`MAE=0.165895`, changed16 `0.002063`). Do not suppress after-table empty
+  paragraphs as a shortcut. The remaining vertical-flow work should focus on row/page transition heights and
+  accumulated paragraph/table spacing, not dropping authored empty blocks.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
