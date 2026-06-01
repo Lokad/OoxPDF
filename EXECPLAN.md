@@ -2192,6 +2192,13 @@ High-priority actions:
     DOCX has `198` paragraph blocks (`185` with tokens), max body token length `27`, `4` paragraph blocks with
     token length `>=20`, `422` table cells all with tokens, max cell token length `22`, and `5` cells with token
     length `>=20`; future public probes should cover both paragraph and narrow-cell long-token wrapping.
+    2026-06-01 follow-up: added public `docx-ladder-02-long-token-wrapping` to cover that token-risk shape with
+    a constrained Calibri body paragraph plus a narrow fixed table. Public-safe inspection reports `2` paragraph
+    blocks, max body token length `29`, one body paragraph with token length `>=20`, one table with `3` cells,
+    max cell token length `24`, and two cells with token length `>=20`. Visual run `20260602-002745` completed
+    with `1/1` page, matching dimensions, no diagnostics, `MAE=1.282270`, and changed16 `0.018130`; keep it as
+    a bottom-up Office-backed probe for paragraph and table-cell word-break behavior before changing wrapping
+    logic.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

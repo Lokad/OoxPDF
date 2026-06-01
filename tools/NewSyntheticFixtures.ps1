@@ -657,6 +657,62 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-calibri-body-wrapping.doc
 '@
 }
 
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-long-token-wrapping.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/document.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:color w:val="333333"/></w:rPr><w:t>Long token wrapping probe uses public identifiers such as PlanningReferenceTokenAlpha17 and ReplenishmentBoundaryMarker29 inside an ordinary paragraph. The narrow measure forces Office to decide whether these tokens stay intact, move as units, or split differently from surrounding short words.</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:color w:val="333333"/></w:rPr><w:t>Control words around the same width use short breakable terms so the case separates word-break behavior from generic line-height or paragraph-spacing behavior.</w:t></w:r>
+    </w:p>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="5000" w:type="dxa"/>
+        <w:tblLayout w:type="fixed"/>
+        <w:tblBorders>
+          <w:top w:val="single" w:sz="4" w:color="666666"/>
+          <w:left w:val="single" w:sz="4" w:color="666666"/>
+          <w:bottom w:val="single" w:sz="4" w:color="666666"/>
+          <w:right w:val="single" w:sz="4" w:color="666666"/>
+          <w:insideH w:val="single" w:sz="4" w:color="666666"/>
+          <w:insideV w:val="single" w:sz="4" w:color="666666"/>
+        </w:tblBorders>
+      </w:tblPr>
+      <w:tblGrid><w:gridCol w:w="1660"/><w:gridCol w:w="1660"/><w:gridCol w:w="1680"/></w:tblGrid>
+      <w:tr>
+        <w:tc><w:tcPr><w:tcW w:w="1660" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>CellAlphaPlanningToken21 wraps beside short terms</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="1660" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>short words remain breakable across the same width</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="1680" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>BoundaryMarkerOmega34 tests final cell wrapping</w:t></w:r></w:p></w:tc>
+      </w:tr>
+    </w:tbl>
+    <w:sectPr>
+      <w:pgSz w:w="11900" w:h="16840"/>
+      <w:pgMar w:top="1440" w:right="3960" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+'@
+}
+
 New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-compact-before-spacing.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>
