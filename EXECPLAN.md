@@ -4575,6 +4575,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     (`25`). Keep this item open for the actual Word-backed first-baseline fixture and metric replacement.
 - [ ] Revisit keep rules only after layout tracing exists: support style-derived `keepNext`, `keepLines`, and
   widow/orphan control with synthetic tests and private page-count checks.
+  2026-06-02 follow-up: keep-block preflight now returns a typed `DocxKeepBlockEstimate` with measured
+  height plus paragraph and first-table-row target counts instead of a bare height. This preserves the
+  current pagination behavior while making the structure being kept explicit for future table-fragment and
+  widow/orphan work. Added bottom-up coverage for a `keepNext` paragraph that must move with the first row of
+  the following table; validation passed `docx-tables --skip-slow` (`88`). Keep this item open for true
+  line-level orphan/widow behavior and richer keep chains across fragmented tables.
 - [ ] Reattempt manual page/column break support with a parser change that does not alter paragraphs when no
   matching break exists; previous paragraph-splitting attempts changed the private page count and were
   reverted.

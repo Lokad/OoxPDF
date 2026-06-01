@@ -7920,6 +7920,41 @@ internal static class DocxTests
         TestAssert.Equal(Math.Round(expectedBaselineY, 3), Math.Round(following.BaselineY, 3));
     }
 
+    public static void DocxTableLayoutStageKeepsParagraphWithFollowingTableFirstRow()
+    {
+        DocxParagraph filler = CreateDocxLayoutParagraph("Filler", 10d, 60d);
+        DocxParagraph heading = CreateDocxLayoutParagraph(
+            "Heading",
+            10d,
+            20d,
+            new DocxParagraphKeepRules(true, "1", null, null, null, null));
+        var table = new DocxTable(
+            null,
+            [60d],
+            [new DocxTableRow([new DocxTableCell("Cell", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(filler), new DocxParagraphElement(heading), new DocxTableElement(table)],
+            [filler, heading],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal("Filler", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal("Heading", layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
+    }
+
     public static void DocxTableLayoutStageAppliesVerticalMergeGeometry()
     {
         var restart = new DocxTableCell(

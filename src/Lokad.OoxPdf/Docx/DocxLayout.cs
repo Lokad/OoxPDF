@@ -584,6 +584,11 @@ internal sealed record DocxFontResources(
     IReadOnlyDictionary<DocxTextRun, DocxRunFontResource> RunResources,
     DocxRunFontResource? Fallback);
 
+internal readonly record struct DocxKeepBlockEstimate(
+    double Height,
+    int ParagraphCount,
+    int FirstTableRowCount);
+
 internal interface IDocxTextMeasurer
 {
     double MeasureText(DocxTextRun? run, string text, double fontSize);
@@ -878,7 +883,7 @@ internal sealed class DocxLayoutEngine
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
-                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints) <= page.MarginBottom)
+                cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints).Height <= page.MarginBottom)
             {
                 FinishPage();
             }
@@ -1491,7 +1496,7 @@ internal sealed class DocxLayoutEngine
             string.Equals(previousParagraph.StyleId, paragraph.StyleId, StringComparison.Ordinal);
     }
 
-    private static double EstimateKeptParagraphBlockHeight(
+    private static DocxKeepBlockEstimate EstimateKeptParagraphBlock(
         IReadOnlyList<DocxBodyElement> elements,
         int elementIndex,
         double availableWidth,
@@ -1500,11 +1505,13 @@ internal sealed class DocxLayoutEngine
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
-            return 0d;
+            return new DocxKeepBlockEstimate(0d, 0, 0);
         }
 
         DocxParagraph paragraph = paragraphElement.Paragraph;
         double height = EstimateParagraphContentHeight(paragraph, availableWidth, textMeasurer, defaultTabStopPoints);
+        int paragraphCount = 1;
+        int firstTableRowCount = 0;
         int nextSearchIndex = elementIndex + 1;
         while (paragraph.KeepRules.KeepNext == true &&
             TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
@@ -1513,6 +1520,7 @@ internal sealed class DocxLayoutEngine
             {
                 height += Math.Max(paragraph.SpacingAfterPoints, nextParagraph.Paragraph.SpacingBeforePoints);
                 height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer, defaultTabStopPoints);
+                paragraphCount++;
                 paragraph = nextParagraph.Paragraph;
                 nextSearchIndex = nextIndex + 1;
                 continue;
@@ -1522,12 +1530,13 @@ internal sealed class DocxLayoutEngine
             {
                 height += paragraph.SpacingAfterPoints;
                 height += EstimateFirstTableRowHeight(nextTable.Table, availableWidth, textMeasurer, defaultTabStopPoints);
+                firstTableRowCount++;
             }
 
             break;
         }
 
-        return height;
+        return new DocxKeepBlockEstimate(height, paragraphCount, firstTableRowCount);
     }
 
     private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out DocxBodyElement? target)
