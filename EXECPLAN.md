@@ -290,6 +290,12 @@ High-priority actions:
   before comparing starts. The previous page-agnostic grouping could hide pagination mistakes when two pages had
   similarly placed rows. The existing DOCX wrapping gates still pass with the page-aware comparer, so future
   pagination probes can safely use line-start gates without masking page shifts.
+  2026-06-01 settings inventory: private-safe inspection now exposes DOCX document settings and Word compatibility
+  facts such as `characterSpacingControl`, `defaultTabStop`, `useFELayout`, and named `compatSetting` entries.
+  The current private acceptance document carries modern compatibility mode, enabled FE layout, and
+  non-compressing character-spacing control. These are now preserved in `DocxDocument.Settings` and emitted by
+  `DocxInspect`, but rendering remains unchanged until public Office probes show which setting changes layout
+  or PDF text-state behavior.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

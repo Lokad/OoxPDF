@@ -34,6 +34,9 @@ File.WriteAllText(
     Path.Combine(outputDirectory, "font-plan-snapshot.json"),
     JsonSerializer.Serialize(fontPlan, options));
 File.WriteAllText(
+    Path.Combine(outputDirectory, "document-settings.json"),
+    JsonSerializer.Serialize(document.Settings, options));
+File.WriteAllText(
     Path.Combine(outputDirectory, "page-summary.json"),
     JsonSerializer.Serialize(layout.Pages.Select((page, index) => new
     {

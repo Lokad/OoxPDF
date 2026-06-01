@@ -20,12 +20,29 @@ internal sealed record DocxDocument(
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+    public DocxDocumentSettings Settings { get; init; } = DocxDocumentSettings.Empty;
 
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
         : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
     {
     }
 }
+
+internal sealed record DocxDocumentSettings(
+    string? CharacterSpacingControlValue,
+    string? DefaultTabStopValue,
+    double? DefaultTabStopPoints,
+    bool? UseFELayout,
+    string? UseFELayoutValue,
+    IReadOnlyList<DocxCompatSetting> CompatSettings)
+{
+    public static DocxDocumentSettings Empty { get; } = new(null, null, null, null, null, []);
+}
+
+internal sealed record DocxCompatSetting(
+    string? Name,
+    string? Uri,
+    string? Value);
 
 internal sealed record DocxFontCatalog(
     IReadOnlyList<DocxFontTableEntry> Entries,

@@ -44,6 +44,7 @@ internal sealed class DocxReader
         DocxStyleSet styles = LoadStyles(package, documentPart.Name);
         DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog);
         XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _);
+        DocxDocumentSettings documentSettings = ReadDocumentSettings(settings);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -75,7 +76,8 @@ internal sealed class DocxReader
             {
                 FontCatalog = fontCatalog,
                 HeaderParagraphsByType = headersByType,
-                FooterParagraphsByType = footersByType
+                FooterParagraphsByType = footersByType,
+                Settings = documentSettings
             };
         }
 
@@ -109,8 +111,38 @@ internal sealed class DocxReader
         {
             FontCatalog = fontCatalog,
             HeaderParagraphsByType = headersByType,
-            FooterParagraphsByType = footersByType
+            FooterParagraphsByType = footersByType,
+            Settings = documentSettings
         };
+    }
+
+    private static DocxDocumentSettings ReadDocumentSettings(XDocument? settings)
+    {
+        XElement? root = settings?.Root;
+        if (root is null)
+        {
+            return DocxDocumentSettings.Empty;
+        }
+
+        XElement? characterSpacingControl = root.Element(WordprocessingNamespace + "characterSpacingControl");
+        XElement? defaultTabStop = root.Element(WordprocessingNamespace + "defaultTabStop");
+        XElement? useFELayout = root.Element(WordprocessingNamespace + "compat")?.Element(WordprocessingNamespace + "useFELayout");
+        IReadOnlyList<DocxCompatSetting> compatSettings = root
+            .Element(WordprocessingNamespace + "compat")?
+            .Elements(WordprocessingNamespace + "compatSetting")
+            .Select(setting => new DocxCompatSetting(
+                (string?)setting.Attribute(WordprocessingNamespace + "name"),
+                (string?)setting.Attribute(WordprocessingNamespace + "uri"),
+                (string?)setting.Attribute(WordprocessingNamespace + "val")))
+            .ToArray() ?? [];
+
+        return new DocxDocumentSettings(
+            (string?)characterSpacingControl?.Attribute(WordprocessingNamespace + "val"),
+            (string?)defaultTabStop?.Attribute(WordprocessingNamespace + "val"),
+            ReadTwipsAttribute(defaultTabStop, WordprocessingNamespace + "val"),
+            ReadOnOff(useFELayout),
+            (string?)useFELayout?.Attribute(WordprocessingNamespace + "val"),
+            compatSettings);
     }
 
     private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(XDocument document)
