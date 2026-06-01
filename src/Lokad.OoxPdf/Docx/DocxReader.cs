@@ -216,8 +216,7 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_COMMENTS", "comments");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "ins").Any() ||
-            document.Descendants(WordprocessingNamespace + "del").Any())
+        if (HasUnsupportedTrackedChanges(document))
         {
             Emit("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
         }
@@ -337,6 +336,27 @@ internal sealed class DocxReader
             .Any(element => element.Name.Namespace == WordprocessingNamespace &&
                 IsTableBorderContainer(element.Parent) &&
                 IsUnsupportedVisibleBorderStyle((string?)element.Attribute(WordprocessingNamespace + "val")));
+    }
+
+    private static bool HasUnsupportedTrackedChanges(XDocument document)
+    {
+        XName[] unsupportedTrackChangeContainers =
+        [
+            WordprocessingNamespace + "moveFrom",
+            WordprocessingNamespace + "moveTo",
+            WordprocessingNamespace + "moveFromRangeStart",
+            WordprocessingNamespace + "moveFromRangeEnd",
+            WordprocessingNamespace + "moveToRangeStart",
+            WordprocessingNamespace + "moveToRangeEnd"
+        ];
+        if (unsupportedTrackChangeContainers.Any(name => document.Descendants(name).Any()))
+        {
+            return true;
+        }
+
+        return document.Descendants(WordprocessingNamespace + "ins").Any(insertion =>
+            insertion.Parent?.Name != WordprocessingNamespace + "p" ||
+            insertion.Elements().Any(child => child.Name != WordprocessingNamespace + "r"));
     }
 
     private static bool IsTableBorderContainer(XElement? element)

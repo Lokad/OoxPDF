@@ -5236,6 +5236,13 @@ Current validation baseline:
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off
   --nologo -v minimal` passed, and private DOCX run `20260601-093234` stayed neutral at `16/16` pages, zero
   dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+- DOCX simple tracked-change final-view validation:
+  simple paragraph-child `w:ins` runs are already rendered and direct `w:del` content is hidden, matching the
+  final document view instead of exposing revision markup. The `DOCX_UNSUPPORTED_TRACKED_CHANGES` diagnostic is
+  now limited to unsupported move/range revision structures and insertions whose content is not direct runs.
+  Validation passed `docx-text --skip-slow` (`33`), `docx-core --skip-slow` (`19`), and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-095044` stayed
+  neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
 - DOCX non-positioning tab-stop validation:
   authored `w:tabs` records with `w:val="bar"` or `w:val="clear"` remain preserved in the paragraph model,
   but no longer act as text-positioning stops during layout tab advance. This keeps non-positioning tab
