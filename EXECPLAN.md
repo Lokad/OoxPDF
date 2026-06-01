@@ -583,6 +583,10 @@ High-priority actions:
   `InlineImage` while text/image paragraphs remain `Mixed`. Table-cell images remain owned through table-row
   and cell snapshots. This closes a diagnostic ownership gap for image-bearing DOCX paragraphs without changing
   rendering behavior.
+  2026-06-02 tooling follow-up: layout source-block summaries now include private-safe vertical bounds
+  (`VerticalTop`/`VerticalBottom`) in addition to consumed height. This lets row-boundary and paragraph-flow
+  diagnostics locate each block's emitted page span directly from `source-block-summary.json`, instead of
+  re-walking every layout item in downstream scripts.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
