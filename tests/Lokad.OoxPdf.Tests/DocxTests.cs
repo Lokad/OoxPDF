@@ -547,6 +547,47 @@ internal static class DocxTests
         TestAssert.True(paragraph.KeepRules.WidowControl == true, "Style widowControl should survive the paragraph cascade.");
     }
 
+    public static void DocxReaderPreservesEmptyParagraphBodyElement()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Alpha</w:t></w:r></w:p>
+                    <w:p/>
+                    <w:p><w:r><w:t>Beta</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxParagraphElement[] paragraphs = document.BodyElements.OfType<DocxParagraphElement>().ToArray();
+        TestAssert.Equal(3, paragraphs.Length);
+        TestAssert.Equal(1, paragraphs[1].Paragraph.Runs.Count);
+        TestAssert.Equal(string.Empty, paragraphs[1].Paragraph.Runs[0].Text);
+    }
+
     public static void DocxReaderAppliesParagraphLineBasedSpacing()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -3191,6 +3232,40 @@ internal static class DocxTests
         double expected = DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font.Value.Font, 10d) * 1.15d;
         double actual = lines[0].BaselineY - lines[1].BaselineY;
         TestAssert.True(Math.Abs(actual - expected) < 0.01d, $"Auto DOCX line height should advance on the resolved font line box, not the em size. Expected {expected}, actual {actual}.");
+    }
+
+    public static void DocxLayoutStageConsumesEmptyParagraphLineBox()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("Alpha", 10d, 10d);
+        var empty = new DocxParagraph(
+            [],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph second = CreateDocxLayoutParagraph("Beta", 10d, 10d);
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(first), new DocxParagraphElement(empty), new DocxParagraphElement(second)],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("Alpha", lines[0].Text);
+        TestAssert.Equal("Beta", lines[1].Text);
+        TestAssert.Equal(20d, Math.Round(lines[0].BaselineY - lines[1].BaselineY, 3));
     }
 
     public static void DocxSyntheticContextualSpacingSuppressesSameStyleGap()
@@ -7151,6 +7226,39 @@ internal static class DocxTests
             .Single();
 
         TestAssert.Equal(22d, row.Height);
+    }
+
+    public static void DocxTableLayoutStageConsumesEmptyCellParagraphLineBox()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("A", 10d, 10d);
+        var empty = new DocxParagraph(
+            [],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph second = CreateDocxLayoutParagraph("B", 10d, 10d);
+        var cell = new DocxTableCell(string.Empty, [first, empty, second], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(30d, row.Height);
+        TestAssert.Equal(2, row.Cells[0].TextLines.Count);
+        TestAssert.Equal(20d, Math.Round(row.Cells[0].TextLines[0].BaselineY - row.Cells[0].TextLines[1].BaselineY, 3));
     }
 
     public static void DocxTableLayoutStageAppliesCellVerticalAlignment()

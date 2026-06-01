@@ -624,7 +624,13 @@ internal sealed class DocxReader
 
         if (runs.Count == 0 && images.Count == 0)
         {
-            return null;
+            DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
+                paragraphProperties?.Element(WordprocessingNamespace + "rPr"),
+                paragraphStyleId,
+                characterStyleId: null,
+                styles,
+                tableCellStyle?.Run);
+            AddResolvedTextRun(runs, string.Empty, paragraphMarkRun, complexScript: false);
         }
 
         double paragraphFontSize = runs.Count == 0 ? 11d : runs.Max(run => run.FontSize);

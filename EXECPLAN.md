@@ -2051,6 +2051,18 @@ High-priority actions:
     `beforeAutospacing`/`afterAutospacing` values, implement exact Word adjacent-spacing collapse around
     tables/sections, and keep public Office-backed fixtures for each variant before downgrading
     `DOCX_STYLE_PARAGRAPH_SPACING`.
+    - [ ] 2026-06-01: Refine empty/styled paragraph line-box ownership against Office PDF evidence. Public
+      `docx-ladder-02-character-spacing` proved that a body `<w:p/>` between text and a table must remain in
+      the typed model and consume vertical layout space; dropping it kept the table roughly one paragraph too
+      high. The reader now preserves empty paragraphs as zero-length paragraph-mark runs resolved through the
+      normal run cascade, and layout consumes empty paragraph line boxes in body flow and table cells without
+      emitting visible text. Public `docx-ladder-02-character-spacing` improved from `MAE=1.685749`,
+      changed16 `0.013842` to run `20260601-110750` at `MAE=1.505741`, changed16 `0.012793`; neighboring
+      `docx-ladder-03-table-paragraph-adjacency` stayed unchanged at `MAE=0.846704`, changed16 `0.006517`.
+      Keep this item open: the private DOCX remained accepted at `16/16` pages, zero dimension mismatches, no
+      diagnostics, but aggregate error worsened to `MAE=13.615949`, changed16 `0.125050` (run
+      `20260601-110750`), so styled empty paragraphs still need finer Word-compatible paragraph-mark
+      metrics/spacing collapse instead of broad blank-line assumptions.
     - [x] 2026-05-31: Converted preserved `beforeLines`/`afterLines` tokens into resolved paragraph spacing
       points when no explicit twip spacing or autospacing owns that paragraph side. The reader now derives
       hundredths-of-line spacing from the resolved paragraph line height, and a public synthetic reader test
