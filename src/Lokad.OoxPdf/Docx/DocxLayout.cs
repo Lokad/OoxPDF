@@ -166,6 +166,8 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
         IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs;
         IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.SpacingBeforePoints).ToArray();
         IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.SpacingAfterPoints).ToArray();
+        string cellText = string.Concat(paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
+        TextProfile textProfile = BuildTextProfile(cellText);
         return new DocxTableCellSnapshot(
             cellIndex,
             cellLayout.X,
@@ -204,7 +206,94 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cell.ConditionalFormat?.IsDefined == true,
             cell.HasVerticalMerge,
             cell.VerticalMergeValue,
-            cellLayout.IsVerticalMergeContinuation);
+            cellLayout.IsVerticalMergeContinuation,
+            textProfile.SpaceCharacterCount,
+            textProfile.NonAsciiCharacterCount,
+            textProfile.PunctuationCharacterCount,
+            textProfile.DigitCharacterCount,
+            textProfile.UppercaseCharacterCount,
+            textProfile.LowercaseCharacterCount,
+            textProfile.LongestBreakableTokenLength);
+    }
+
+    private static TextProfile BuildTextProfile(string text)
+    {
+        int spaceCharacterCount = 0;
+        int nonAsciiCharacterCount = 0;
+        int punctuationCharacterCount = 0;
+        int digitCharacterCount = 0;
+        int uppercaseCharacterCount = 0;
+        int lowercaseCharacterCount = 0;
+        foreach (char value in text)
+        {
+            if (char.IsWhiteSpace(value))
+            {
+                spaceCharacterCount++;
+            }
+
+            if (value > 0x7f)
+            {
+                nonAsciiCharacterCount++;
+            }
+
+            if (char.IsPunctuation(value))
+            {
+                punctuationCharacterCount++;
+            }
+
+            if (char.IsDigit(value))
+            {
+                digitCharacterCount++;
+            }
+
+            if (char.IsUpper(value))
+            {
+                uppercaseCharacterCount++;
+            }
+
+            if (char.IsLower(value))
+            {
+                lowercaseCharacterCount++;
+            }
+        }
+
+        int longestBreakableTokenLength = ResolveLongestBreakableTokenLength(text);
+        return new TextProfile(
+            spaceCharacterCount,
+            nonAsciiCharacterCount,
+            punctuationCharacterCount,
+            digitCharacterCount,
+            uppercaseCharacterCount,
+            lowercaseCharacterCount,
+            longestBreakableTokenLength);
+    }
+
+    private static int ResolveLongestBreakableTokenLength(string text)
+    {
+        int longest = 0;
+        int current = 0;
+        foreach (char value in text)
+        {
+            if (char.IsWhiteSpace(value) &&
+                value != '\u00A0' &&
+                value != '\u202F' &&
+                value != '\u2007')
+            {
+                longest = Math.Max(longest, current);
+                current = 0;
+            }
+            else
+            {
+                current++;
+                if (DocxWordBreakRules.IsOpportunityAfter(value))
+                {
+                    longest = Math.Max(longest, current);
+                    current = 0;
+                }
+            }
+        }
+
+        return Math.Max(longest, current);
     }
 
     private static bool HasBeforeSpacingToken(DocxParagraphSpacing spacing)
@@ -341,7 +430,31 @@ internal sealed record DocxTableCellSnapshot(
     bool HasConditionalFormat,
     bool HasVerticalMerge,
     string? VerticalMergeValue,
-    bool IsVerticalMergeContinuation);
+    bool IsVerticalMergeContinuation,
+    int SpaceCharacterCount,
+    int NonAsciiCharacterCount,
+    int PunctuationCharacterCount,
+    int DigitCharacterCount,
+    int UppercaseCharacterCount,
+    int LowercaseCharacterCount,
+    int LongestBreakableTokenLength);
+
+internal sealed record TextProfile(
+    int SpaceCharacterCount,
+    int NonAsciiCharacterCount,
+    int PunctuationCharacterCount,
+    int DigitCharacterCount,
+    int UppercaseCharacterCount,
+    int LowercaseCharacterCount,
+    int LongestBreakableTokenLength);
+
+internal static class DocxWordBreakRules
+{
+    public static bool IsOpportunityAfter(char value)
+    {
+        return value is '-' or '/' or '\\' or '\u2010' or '\u2011' or '\u2012' or '\u2013' or '\u2014';
+    }
+}
 
 internal sealed record DocxLayoutPage(
     double Width,
@@ -2790,6 +2903,12 @@ internal sealed class DocxLayoutEngine
             bool breakableWhitespace = IsBreakableWhitespaceChar(text[i]);
             if (breakableWhitespace == inBreakableWhitespace)
             {
+                if (!breakableWhitespace && DocxWordBreakRules.IsOpportunityAfter(text[i]))
+                {
+                    tokens.Add(new TextToken(text[start..(i + 1)], start, i + 1 - start));
+                    start = i + 1;
+                }
+
                 continue;
             }
 
