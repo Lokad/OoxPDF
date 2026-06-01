@@ -227,6 +227,9 @@ if ($manifest.expected.maxTextLineStartDelta -ne $null) {
         if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
             $lineStartArgs.FirstStartOnly = $true
         }
+        if ($manifest.expected.ignoreWhitespaceOnlyTextLineStartOperations -eq $true) {
+            $lineStartArgs.IgnoreWhitespaceOnlyOperations = $true
+        }
 
         & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
     }
@@ -239,6 +242,9 @@ if ($manifest.expected.maxTextLineStartDelta -ne $null) {
         }
         if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
             $lineStartArgs.FirstStartOnly = $true
+        }
+        if ($manifest.expected.ignoreWhitespaceOnlyTextLineStartOperations -eq $true) {
+            $lineStartArgs.IgnoreWhitespaceOnlyOperations = $true
         }
 
         & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs

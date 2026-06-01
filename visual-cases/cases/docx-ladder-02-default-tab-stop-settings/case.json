@@ -1,0 +1,20 @@
+{
+  "id": "docx-ladder-02-default-tab-stop-settings",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-default-tab-stop-settings.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "paragraph", "tabs", "settings"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.02,
+    "maxChangedPixelRatioAtThreshold16": 0.0004,
+    "maxTextLineStartDelta": 0.15,
+    "maxTextLineStartYDelta": 0.5,
+    "matchTextLineStartsByPosition": true,
+    "ignoreWhitespaceOnlyTextLineStartOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

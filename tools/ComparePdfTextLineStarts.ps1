@@ -13,6 +13,8 @@ param(
 
     [switch] $FirstStartOnly,
 
+    [switch] $IgnoreWhitespaceOnlyOperations,
+
     [switch] $ShowText
 )
 
@@ -61,6 +63,14 @@ function New-LineGroups($operations) {
     $index = 0
     foreach ($line in $groups | Sort-Object -Property @{ Expression = { [int]$_.Page }; Descending = $false }, @{ Expression = { [double]$_.Y }; Descending = $true }) {
         $orderedOps = @($line.Operations | Sort-Object -Property X)
+        if ($IgnoreWhitespaceOnlyOperations) {
+            $orderedOps = @($orderedOps | Where-Object { -not [string]::IsNullOrWhiteSpace((TextContent $_).Replace([char]0x00A0, ' ')) })
+        }
+
+        if ($IgnoreWhitespaceOnlyOperations -and $orderedOps.Count -eq 0) {
+            continue
+        }
+
         $starts = @($orderedOps | ForEach-Object { [double]$_.X })
         [pscustomobject]@{
             Index = $index++

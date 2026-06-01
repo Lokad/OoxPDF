@@ -785,6 +785,55 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-empty-paragraph-bou
 '@
 }
 
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-default-tab-stop-settings.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/_rels/document.xml.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+</Relationships>
+'@
+    "word/settings.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:defaultTabStop w:val="1440"/>
+</w:settings>
+'@
+    "word/document.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:pPr><w:spacing w:after="120" w:line="240" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:color w:val="333333"/></w:rPr><w:t>Left</w:t><w:tab/><w:t>Wide tab stop</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:spacing w:after="120" w:line="240" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:color w:val="333333"/></w:rPr><w:t>Second</w:t><w:tab/><w:t>Aligned by settings</w:t></w:r>
+    </w:p>
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+'@
+}
+
 New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-missing-grid-spans.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>

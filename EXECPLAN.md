@@ -296,6 +296,13 @@ High-priority actions:
   non-compressing character-spacing control. These are now preserved in `DocxDocument.Settings` and emitted by
   `DocxInspect`, but rendering remains unchanged until public Office probes show which setting changes layout
   or PDF text-state behavior.
+  2026-06-01 default-tab progress: DOCX layout now uses `w:settings/w:defaultTabStop` for default tab advances
+  instead of the fixed 36pt fallback when no explicit positioning tab stop applies. Public
+  `docx-ladder-02-default-tab-stop-settings` locks a 72pt default tab grid against Office, with visible text
+  starts matching within `0.02pt`; the line-start gate now has an option to ignore whitespace-only spacer
+  operations because Word emits the tab gap as a separate whitespace `TJ`. Private acceptance stays neutral
+  because its default tab stop is the normal 36pt (`20260601-180758`: `16/16` pages, no diagnostics,
+  `MAE=13.666634`, changed16 `0.126275`).
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
