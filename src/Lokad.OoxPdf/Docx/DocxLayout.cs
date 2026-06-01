@@ -145,6 +145,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
         DocxTableCell cell = cellLayout.Cell;
         DocxTextLineLayout? firstLine = cellLayout.TextLines.FirstOrDefault();
         DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
+        IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs;
+        IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.SpacingBeforePoints).ToArray();
+        IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.SpacingAfterPoints).ToArray();
         return new DocxTableCellSnapshot(
             cellIndex,
             cellLayout.X,
@@ -158,6 +161,15 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             firstLine?.BaselineY,
             lastLine?.BaselineY,
             cellLayout.InlineImages.Count,
+            paragraphs.Count,
+            paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
+            paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.Spacing)),
+            paragraphs.Count(paragraph => string.Equals(paragraph.Spacing.BeforeValue, "0", StringComparison.Ordinal)),
+            paragraphs.Count(paragraph => string.Equals(paragraph.Spacing.AfterValue, "0", StringComparison.Ordinal)),
+            spacingBeforePoints.Count == 0 ? null : spacingBeforePoints.Min(),
+            spacingBeforePoints.Count == 0 ? null : spacingBeforePoints.Max(),
+            spacingAfterPoints.Count == 0 ? null : spacingAfterPoints.Min(),
+            spacingAfterPoints.Count == 0 ? null : spacingAfterPoints.Max(),
             cell.GridSpan,
             cell.GridSpanValue,
             cell.PreferredWidthPoints,
@@ -175,6 +187,20 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             cell.HasVerticalMerge,
             cell.VerticalMergeValue,
             cellLayout.IsVerticalMergeContinuation);
+    }
+
+    private static bool HasBeforeSpacingToken(DocxParagraphSpacing spacing)
+    {
+        return spacing.BeforeValue is not null ||
+            spacing.BeforeLinesValue is not null ||
+            spacing.BeforeAutoSpacingValue is not null;
+    }
+
+    private static bool HasAfterSpacingToken(DocxParagraphSpacing spacing)
+    {
+        return spacing.AfterValue is not null ||
+            spacing.AfterLinesValue is not null ||
+            spacing.AfterAutoSpacingValue is not null;
     }
 }
 
@@ -265,6 +291,15 @@ internal sealed record DocxTableCellSnapshot(
     double? FirstBaselineY,
     double? LastBaselineY,
     int InlineImageCount,
+    int ParagraphCount,
+    int ParagraphsWithBeforeSpacingToken,
+    int ParagraphsWithAfterSpacingToken,
+    int ParagraphsWithZeroBeforeSpacing,
+    int ParagraphsWithZeroAfterSpacing,
+    double? MinSpacingBeforePoints,
+    double? MaxSpacingBeforePoints,
+    double? MinSpacingAfterPoints,
+    double? MaxSpacingAfterPoints,
     int GridSpan,
     string? GridSpanValue,
     double? PreferredWidthPoints,

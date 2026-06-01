@@ -1968,6 +1968,14 @@ High-priority actions:
     the private DOCX to `15` candidate pages with one dimension mismatch (`20260601-081115`), so do
     not land it as-is. The next structural fix must distinguish Word's non-empty natural row height
     from the empty/default row floor without using the private page count as the only guard.
+    2026-06-01 follow-up: promoted private-safe cell paragraph spacing counts into the DOCX layout
+    snapshot (`ParagraphsWith*SpacingToken`, zero-spacing counts, and min/max resolved spacing). The
+    new trace confirms the public adjacency probe has explicit zero cell after-spacing, and the private
+    DOCX also has zero after-spacing in all currently laid-out table cells (`422/422`), explaining why
+    the naive content-owned trial affected pagination globally. Keep the row-height item open until the
+    snapshot can also explain the remaining Office-vs-candidate distinction, likely through paragraph
+    line metrics, cell margin exception handling, table style/default paragraph inheritance, or row
+    grid/border accounting rather than through `after=0` alone.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
