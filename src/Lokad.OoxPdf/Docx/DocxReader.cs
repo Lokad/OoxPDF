@@ -861,9 +861,8 @@ internal sealed class DocxReader
     private static bool HasRunPageBreak(XElement paragraph)
     {
         return paragraph
-            .Elements(WordprocessingNamespace + "r")
-            .SelectMany(run => run.Elements(WordprocessingNamespace + "br"))
-            .Any(IsPageBreak);
+            .Elements()
+            .Any(HasVisibleRunPageBreak);
     }
 
     private static DocxParagraph AdjustPageBreakParagraphFragment(DocxParagraph paragraph, ParagraphPageBreakPart part)
@@ -905,6 +904,11 @@ internal sealed class DocxReader
         foreach (XElement child in paragraph.Elements())
         {
             if (child.Name == WordprocessingNamespace + "pPr")
+            {
+                continue;
+            }
+
+            if (TrySplitRunPageBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak))
             {
                 continue;
             }
@@ -952,6 +956,80 @@ internal sealed class DocxReader
 
         AddParagraphPart(endsBeforeBreak: false);
         return parts;
+    }
+
+    private static bool TrySplitRunPageBreakContainer(
+        XElement child,
+        List<XElement> paragraphChildren,
+        Action<bool> addParagraphPart,
+        List<ParagraphPageBreakPart> parts,
+        ref bool startsAfterBreak)
+    {
+        if (!IsVisibleRunContainer(child) || !HasVisibleRunPageBreak(child))
+        {
+            return false;
+        }
+
+        var containerChildren = new List<XElement>();
+        foreach (XElement containerChild in child.Elements())
+        {
+            if (containerChild.Name != WordprocessingNamespace + "r")
+            {
+                containerChildren.Add(new XElement(containerChild));
+                continue;
+            }
+
+            XElement? runProperties = containerChild.Element(WordprocessingNamespace + "rPr");
+            var runChildren = new List<XElement>();
+            if (runProperties is not null)
+            {
+                runChildren.Add(new XElement(runProperties));
+            }
+
+            foreach (XElement runChild in containerChild.Elements())
+            {
+                if (runChild.Name == WordprocessingNamespace + "rPr")
+                {
+                    continue;
+                }
+
+                if (runChild.Name == WordprocessingNamespace + "br" && IsPageBreak(runChild))
+                {
+                    AddRunPart(containerChildren, runProperties, runChildren);
+                    AddContainerPart(paragraphChildren, child, containerChildren);
+                    addParagraphPart(true);
+                    parts.Add(new ParagraphPageBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
+                    startsAfterBreak = true;
+                    runChildren.Clear();
+                    if (runProperties is not null)
+                    {
+                        runChildren.Add(new XElement(runProperties));
+                    }
+
+                    continue;
+                }
+
+                runChildren.Add(new XElement(runChild));
+            }
+
+            AddRunPart(containerChildren, runProperties, runChildren);
+        }
+
+        AddContainerPart(paragraphChildren, child, containerChildren);
+        return true;
+    }
+
+    private static void AddContainerPart(List<XElement> paragraphChildren, XElement sourceContainer, List<XElement> containerChildren)
+    {
+        if (containerChildren.Count == 0)
+        {
+            return;
+        }
+
+        var container = new XElement(sourceContainer.Name, sourceContainer.Attributes());
+        container.Add(containerChildren.Select(child => new XElement(child)));
+        paragraphChildren.Add(container);
+        containerChildren.Clear();
     }
 
     private static void AddRunPart(List<XElement> paragraphChildren, XElement? runProperties, List<XElement> runChildren)
@@ -1002,6 +1080,24 @@ internal sealed class DocxReader
         return paragraph.Elements().All(element =>
             element.Name == WordprocessingNamespace + "pPr" ||
             element.Name == WordprocessingNamespace + "r");
+    }
+
+    private static bool HasVisibleRunPageBreak(XElement element)
+    {
+        if (element.Name == WordprocessingNamespace + "r")
+        {
+            return element.Elements(WordprocessingNamespace + "br").Any(IsPageBreak);
+        }
+
+        return IsVisibleRunContainer(element) &&
+            element.Elements(WordprocessingNamespace + "r").Any(HasVisibleRunPageBreak);
+    }
+
+    private static bool IsVisibleRunContainer(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "fldSimple" ||
+            element.Name == WordprocessingNamespace + "hyperlink" ||
+            element.Name == WordprocessingNamespace + "ins";
     }
 
     private static bool IsPageBreak(XElement breakElement)
