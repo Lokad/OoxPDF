@@ -3292,6 +3292,13 @@ document-specific business content into public notes.
   worst page 9 `17.162084`. Keep highlight/shading drawing open for a public Office PDF ladder that derives
   the actual background rectangle geometry, named highlight color mapping, pattern semantics, and behavior
   across wrapped/mixed runs before emitting visual rectangles.
+- [x] 2026-06-01: Preserved DOCX run-level `w:smallCaps` tokens through direct run properties,
+  character-style inheritance, `DocxTextRunStyle`, and emitted `DocxTextRun` records. Public coverage checks
+  explicit off, inherited val-less on, and missing-token behavior; validation passed `docx-text --skip-slow`
+  (`27`) and full solution build. Private DOCX run `20260601-091708` stayed page-stable at `16/16`, zero
+  dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`.
+  Keep small-caps rendering open for Office-backed glyph casing, size scaling, baseline interaction, and PDF
+  text-operation evidence rather than treating it like ordinary all-caps.
 - [x] 2026-06-01: Preserved cached DOCX `w:fldSimple` result runs in paragraph order for non-PAGE fields
   instead of dropping them. The reader now walks paragraph child elements in document order, keeps cached
   simple-field result text and run styles, and still maps simple PAGE fields to the existing page placeholder.

@@ -1714,6 +1714,67 @@ internal static class DocxTests
         TestAssert.True(runs[3].ShadingColor is null, "Expected missing run shading color to keep a null source token.");
     }
 
+    public static void DocxReaderPreservesParagraphRunSmallCapsTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="character" w:styleId="SmallCapsStyle">
+                    <w:rPr><w:smallCaps/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:smallCaps w:val="0"/></w:rPr><w:t>Off</w:t></w:r>
+                      <w:r><w:rPr><w:rStyle w:val="SmallCapsStyle"/></w:rPr><w:t>Inherited</w:t></w:r>
+                      <w:r><w:t>Plain</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
+
+        TestAssert.True(!runs[0].SmallCaps, "Expected w:smallCaps val=0 to disable small caps.");
+        TestAssert.Equal("0", runs[0].SmallCapsValue ?? string.Empty);
+        TestAssert.True(runs[1].SmallCaps, "Expected inherited w:smallCaps to enable small caps.");
+        TestAssert.True(runs[1].SmallCapsValue is null, "Expected val-less inherited small caps to keep a null source token.");
+        TestAssert.True(!runs[2].SmallCaps, "Expected missing small caps to remain disabled.");
+        TestAssert.True(runs[2].SmallCapsValue is null, "Expected missing small caps to keep a null source token.");
+    }
+
     public static void DocxReaderPreservesParagraphSimpleFieldCachedResultRunsInOrder()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

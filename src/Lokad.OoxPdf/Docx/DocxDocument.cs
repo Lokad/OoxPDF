@@ -214,7 +214,9 @@ internal sealed record DocxTextRun(
     string? HighlightValue = null,
     string? ShadingFillHex = null,
     string? ShadingValue = null,
-    string? ShadingColor = null)
+    string? ShadingColor = null,
+    bool SmallCaps = false,
+    string? SmallCapsValue = null)
 {
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
 }
@@ -238,9 +240,11 @@ internal sealed record DocxTextRunStyle(
     string? HighlightValue = null,
     string? ShadingFillHex = null,
     string? ShadingValue = null,
-    string? ShadingColor = null)
+    string? ShadingColor = null,
+    bool? SmallCaps = null,
+    string? SmallCapsValue = null)
 {
-    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null);
+    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
     public DocxTextRun ApplyTo(DocxTextRun? baseRun, string text, double fallbackFontSize)
     {
@@ -264,7 +268,9 @@ internal sealed record DocxTextRunStyle(
             HighlightValue ?? source.HighlightValue,
             ShadingFillHex ?? source.ShadingFillHex,
             ShadingValue ?? source.ShadingValue,
-            ShadingColor ?? source.ShadingColor)
+            ShadingColor ?? source.ShadingColor,
+            SmallCaps ?? source.SmallCaps,
+            SmallCapsValue ?? source.SmallCapsValue)
         {
             Fonts = MergeRunFonts(source.Fonts, Fonts)
         };
