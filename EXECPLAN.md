@@ -3684,6 +3684,13 @@ block models and richer section/pagination layout before adding more Word pagina
     page-stable at `16/16`, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16
     `0.124264`, worst page 9 `17.162084`. Keep body-field replacement, complex-field ranges, dynamic dates,
     document properties, and PDF link/field structure open.
+  - [x] 2026-06-01: Extended `PAGE`/`NUMPAGES` placeholder substitution from static headers/footers to body
+    and table-cell text emission. The layout stage still measures placeholders approximately, but PDF output
+    no longer emits literal field placeholders for normal rendered lines. Validation passed `docx-page
+    --skip-slow` (`18`) and `docx-tables --skip-slow` (`65` after a serial rerun of a transient compiler file
+    lock), plus full solution build. Private DOCX run `20260601-092932` stayed page-stable at `16/16`, zero
+    dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`.
+    Keep layout-time field sizing and complex-field ranges open.
 - [ ] Fields: `PAGE`, `NUMPAGES`, `DATE`, `REF`, `HYPERLINK`, `TOC`, `SEQ`, form fields, and cached-field
   fallback semantics.
 - [ ] Footnotes/endnotes/comments: render bodies or emit precise diagnostics with usable fallback behavior.

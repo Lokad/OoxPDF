@@ -64,7 +64,7 @@ internal sealed class DocxRenderer
                 DocxLayoutItem item = layoutPage.Items[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
+                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
             }
 
             int pageNumber = pageIndex + 1;
@@ -205,18 +205,20 @@ internal sealed class DocxRenderer
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        int pageNumber,
+        int pageCount,
         ref int imageIndex)
     {
         switch (item)
         {
             case DocxTextLineLayout textLine:
-                RenderTextLine(textLine, graphics, fontResources);
+                RenderTextLine(textLine, graphics, fontResources, pageNumber, pageCount);
                 break;
             case DocxInlineImageLayout image:
                 RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
                 break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, diagnosticSink, ref imageIndex);
+                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, diagnosticSink, pageNumber, pageCount, ref imageIndex);
                 break;
         }
     }
@@ -229,14 +231,14 @@ internal sealed class DocxRenderer
             first.RowIndex + 1 == second.RowIndex;
     }
 
-    private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, DocxFontResources fontResources)
+    private static void RenderTextLine(DocxTextLineLayout line, PdfGraphicsBuilder graphics, DocxFontResources fontResources, int pageNumber, int pageCount)
     {
         IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
             ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width)]
             : line.Segments;
         foreach (DocxTextSegmentLayout segment in segments)
         {
-            RenderTextSegment(segment, line.FontSize, line.BaselineY, graphics, fontResources);
+            RenderTextSegment(segment, line.FontSize, line.BaselineY, graphics, fontResources, pageNumber, pageCount);
         }
     }
 
@@ -245,7 +247,9 @@ internal sealed class DocxRenderer
         double fontSize,
         double baselineY,
         PdfGraphicsBuilder graphics,
-        DocxFontResources fontResources)
+        DocxFontResources fontResources,
+        int pageNumber,
+        int pageCount)
     {
         DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
         if (resource is null)
@@ -254,11 +258,12 @@ internal sealed class DocxRenderer
         }
 
         DocxTextRun style = segment.StyleRun;
+        string text = ResolveStaticFieldPlaceholders(segment.Text, pageNumber, pageCount);
         RgbColor color = ReadColor(style.ColorHex);
-        DrawRunGlyphText(graphics, resource, style, segment.Text, fontSize, segment.X, baselineY, color);
+        DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color);
         if (style.Bold)
         {
-            DrawRunGlyphText(graphics, resource, style, segment.Text, fontSize, segment.X + 0.35d, baselineY, color);
+            DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color);
         }
 
         if (style.Underline)
@@ -302,6 +307,8 @@ internal sealed class DocxRenderer
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        int pageNumber,
+        int pageCount,
         ref int imageIndex)
     {
         foreach (DocxTableCellLayout cellLayout in row.Cells)
@@ -334,7 +341,7 @@ internal sealed class DocxRenderer
                 graphics.ClipRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
-                    RenderTextLine(line, graphics, fontResources);
+                    RenderTextLine(line, graphics, fontResources, pageNumber, pageCount);
                 }
 
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
