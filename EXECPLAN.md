@@ -275,6 +275,16 @@ High-priority actions:
   before-spacing rule alone. A trial that split DOCX wrap tokens after hyphens/slashes also failed to help
   the private run (`MAE=13.698394` vs the `13.666634` baseline), so it was rejected pending a public case
   that specifically proves Word break behavior beyond whitespace.
+  2026-06-02 follow-up: public `docx-ladder-02-long-token-wrapping` now supplies that missing case. PDF
+  inspection showed body paragraph rows already matched, while Office decomposed hyphenated body words into
+  smaller text operations and split overwide alphabetic table-cell tokens (`CellAlphaPlanningTok`/`en21`,
+  `BoundaryMarkerOme`/`ga34`). `DocxLayout` now keeps preferred punctuation break opportunities first, then
+  falls back to a general Unicode-safe character boundary only when a non-whitespace token itself exceeds the
+  available table-cell line width. This improved the public visual run `20260602-003527` to `MAE=1.188618`,
+  changed16 `0.017627`, SSIM `0.723631` from the previous `MAE=1.282270`, changed16 `0.018130`, SSIM
+  `0.682413`. Keep the residual open: candidate now matches the table-token split prefixes but still emits an
+  extra standalone space operation after each split prefix, and body hyphenated words remain a PDF text
+  operation decomposition issue rather than a visible wrapping failure.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring

@@ -2982,7 +2982,43 @@ internal sealed class DocxLayoutEngine
             }
         }
 
+        for (int length = token.Length - 1; length > 0; length--)
+        {
+            if (!IsSafeEmergencyTokenBreak(text, token, length))
+            {
+                continue;
+            }
+
+            double prefixWidth = MeasureTextSpans(SliceTextSpans(spans, token.Start, length), fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+            if (prefixWidth <= maxWidth)
+            {
+                breakLength = length;
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    private static bool IsSafeEmergencyTokenBreak(string text, TextToken token, int length)
+    {
+        if (length <= 0 || length >= token.Length)
+        {
+            return false;
+        }
+
+        int breakIndex = token.Start + length;
+        char before = text[breakIndex - 1];
+        char after = text[breakIndex];
+        if (char.IsHighSurrogate(before) && char.IsLowSurrogate(after))
+        {
+            return false;
+        }
+
+        UnicodeCategory afterCategory = char.GetUnicodeCategory(after);
+        return afterCategory is not UnicodeCategory.NonSpacingMark and
+            not UnicodeCategory.SpacingCombiningMark and
+            not UnicodeCategory.EnclosingMark;
     }
 
     private static IReadOnlyList<TextToken> ReplaceToken(IReadOnlyList<TextToken> tokens, int index, TextToken replacement)

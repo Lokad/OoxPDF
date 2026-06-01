@@ -8512,6 +8512,45 @@ internal static class DocxTests
         TestAssert.True(row.Cells[0].TextLines.Count >= 2, "Expected the narrow cell to wrap content into multiple layout-owned text lines.");
     }
 
+    public static void DocxTableLayoutStageSplitsOverwideCellTokensAtSafeCharacterBoundaries()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABCDEFGHIJ", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("ABCDEFGHIJ", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            null,
+            [16d],
+            [new DocxTableRow([cell], 10d)],
+            PreferredWidthPoints: 16d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.True(cellLayout.TextLines.Count >= 3, "Expected an overwide table-cell token to split into fitting line fragments.");
+        TestAssert.Equal("ABC", cellLayout.TextLines[0].Text);
+        TestAssert.Equal("DEF", cellLayout.TextLines[1].Text);
+        TestAssert.Equal("GHI", cellLayout.TextLines[2].Text);
+        TestAssert.True(cellLayout.TextLines.All(line => line.Width <= cellLayout.Width + 0.001d), "Split token fragments should stay inside the cell frame.");
+    }
+
     public static void DocxTableLayoutDoesNotKeepWholeTableTogetherByDefault()
     {
         var intro = new DocxParagraph(
