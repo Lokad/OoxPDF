@@ -303,6 +303,18 @@ High-priority actions:
   operations because Word emits the tab gap as a separate whitespace `TJ`. Private acceptance stays neutral
   because its default tab stop is the normal 36pt (`20260601-180758`: `16/16` pages, no diagnostics,
   `MAE=13.666634`, changed16 `0.126275`).
+  2026-06-01 row-minimum progress: private-safe PDF graphics inspection traced the next large DOCX page-flow
+  drift to table rows without `w:tblPrEx`: Office fit more compact rows on the page, while the candidate
+  injected a hard-coded 401-twip default row minimum and pushed later text down by roughly 60pt. Added public
+  `docx-ladder-03-table-no-row-exceptions`, plus companion `docx-ladder-03-table-cell-before-spacing` and
+  `docx-ladder-03-table-compact-row-pagination`, then removed the implicit default row minimum so auto-height
+  rows are governed by measured cell content unless OOXML declares a row height. The no-row-exception public
+  case improved from MAE `3.065771`, changed16 `0.102824` to MAE `1.107443`, changed16 `0.010343`; existing
+  public `docx-ladder-03-table-row-heights` stayed at MAE `0.700136`, and `docx-tables` stayed at MAE
+  `0.455760`. Private acceptance run `20260601-182935` improved from prior `MAE=13.666634` to
+  `MAE=9.982157`, with `16/16` pages, no diagnostics, and zero dimension mismatches. Keep this branch open:
+  row geometry is closer, but remaining worst pages point to broader table/text flow alignment rather than a
+  single-row minimum.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
@@ -4825,6 +4837,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Measuring cell text blocks before row placement gives pagination a structural row height and prevents
   private-case table drift from being handled with downstream PDF clipping or baseline heuristics.
   Date/Author: 2026-05-31 / Codex.
+- Decision: Remove the implicit 401-twip default DOCX table row minimum for auto-height rows.
+  Rationale: Public no-`tblPrEx` Office fixtures and private-safe graphics inspection show Word lays out
+  auto-height rows from measured cell content when no row height is declared. The 401-twip fallback was a
+  renderer-side shortcut that added false row height and caused page-flow drift; declared `exact` and
+  non-auto row heights still apply through their OOXML tokens.
+  Date/Author: 2026-06-01 / Codex.
 - Decision: Render DOCX table-cell inline images through cell-owned layout records.
   Rationale: Inline images inside cells participate in row height and pagination just like text. Routing them
   through `DocxTableCellLayout` keeps their geometry visible to layout inspection and reuses the shared PDF
@@ -5863,6 +5881,18 @@ Current validation baseline:
   The remaining gap is the actual uniform `Tc` selection and residual split; long strings still differ in
   Office/candidate chunk buckets because Office sometimes introduces intra-run `TJ` segmentation where candidate
   has no measured residual yet.
+  2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
+  rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
+  at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
+  run character spacing. This did move the candidate into the same broad structural class as Word on public
+  short-token probes, but it produced systematically wrong signs and magnitudes: `docx-ladder-03-text-state-context`
+  candidate nonzero buckets became only negative (`-0.044`, `-0.049`, `-0.051`, `-0.053`, `-0.058`) while Word
+  requires both negative and positive buckets (`-0.0182`, `-0.0437`, `-0.0509`, `0.0509`), and
+  `docx-ladder-03-text-state-size-matrix` worsened from MAE `0.894614` to `0.899455`. `docx-tables` also
+  matched the nonzero operation count but not the Word buckets (`candidate -0.044/-0.053` vs Word
+  `-0.0182/0.0509`). Do not use layout-width minus rounded-PDF-width as the DOCX `Tc` rule. The next viable
+  branch needs a lower-level public oracle for glyph advance quantization or shaping/spacing decomposition,
+  not another residual rule layered on the current measured segment width.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

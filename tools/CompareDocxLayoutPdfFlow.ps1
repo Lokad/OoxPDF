@@ -184,20 +184,33 @@ function Find-NearestCandidateRow($Rows, $Line, $Used) {
     return $best
 }
 
-function Find-ReferenceRow($ReferenceRows, $CandidateRow, $Used) {
+function Find-ReferenceRow($ReferenceRows, $CandidateRow, $Used, [int] $MinimumGlobalIndex) {
+    $allExactMatches = @($ReferenceRows | Where-Object {
+        $_.TextHash -eq $CandidateRow.TextHash -and
+        $_.NormalizedText -eq $CandidateRow.NormalizedText
+    })
     $matches = @($ReferenceRows | Where-Object {
         $_.TextHash -eq $CandidateRow.TextHash -and
         $_.NormalizedText -eq $CandidateRow.NormalizedText -and
+        [int]$_.GlobalIndex -ge $MinimumGlobalIndex -and
         -not $Used.ContainsKey([int]$_.GlobalIndex)
     })
 
     if ($matches.Count -eq 0) {
-        return $null
+        return [pscustomobject]@{
+            Row = $null
+            ExactReferenceMatchCount = $allExactMatches.Count
+        }
     }
 
-    return @($matches | Sort-Object -Property `
-        @{ Expression = { [Math]::Abs([int]$_.GlobalIndex - [int]$CandidateRow.GlobalIndex) }; Descending = $false },
+    $row = @($matches | Sort-Object -Property `
+        @{ Expression = { [int]$_.GlobalIndex }; Descending = $false },
         @{ Expression = { [Math]::Abs([int]$_.Page - [int]$CandidateRow.Page) }; Descending = $false })[0]
+
+    return [pscustomobject]@{
+        Row = $row
+        ExactReferenceMatchCount = $allExactMatches.Count
+    }
 }
 
 $resolvedRun = (Resolve-Path -LiteralPath $RunDirectory).Path
@@ -215,6 +228,7 @@ $layoutLines = @(Get-LayoutLines $layout)
 $usedCandidate = @{}
 $usedReference = @{}
 $mapped = New-Object System.Collections.Generic.List[object]
+$minimumReferenceGlobalIndex = 0
 
 foreach ($line in $layoutLines) {
     $candidateRow = Find-NearestCandidateRow $candidateRows $line $usedCandidate
@@ -233,14 +247,17 @@ foreach ($line in $layoutLines) {
             DeltaPage = $null
             CandidateOperationCount = $null
             ReferenceOperationCount = $null
+            ExactReferenceMatchCount = 0
         })
         continue
     }
 
     $usedCandidate[[int]$candidateRow.GlobalIndex] = $true
-    $referenceRow = Find-ReferenceRow $referenceRows $candidateRow $usedReference
+    $referenceMatch = Find-ReferenceRow $referenceRows $candidateRow $usedReference $minimumReferenceGlobalIndex
+    $referenceRow = $referenceMatch.Row
     if ($null -ne $referenceRow) {
         $usedReference[[int]$referenceRow.GlobalIndex] = $true
+        $minimumReferenceGlobalIndex = [int]$referenceRow.GlobalIndex + 1
     }
 
     $mapped.Add([pscustomobject]@{
@@ -257,6 +274,7 @@ foreach ($line in $layoutLines) {
         DeltaPage = if ($null -eq $referenceRow) { $null } else { [int]$candidateRow.Page - [int]$referenceRow.Page }
         CandidateOperationCount = [int]$candidateRow.OperationCount
         ReferenceOperationCount = if ($null -eq $referenceRow) { $null } else { [int]$referenceRow.OperationCount }
+        ExactReferenceMatchCount = [int]$referenceMatch.ExactReferenceMatchCount
     })
 }
 
@@ -271,6 +289,7 @@ $summary = [pscustomobject]@{
     MatchedLineCount = @($mapped | Where-Object Status -eq "matched").Count
     MissingReferenceMatchCount = @($mapped | Where-Object Status -eq "missing-reference-match").Count
     MissingCandidateRowCount = @($mapped | Where-Object Status -eq "missing-candidate-row").Count
+    AmbiguousReferenceMatchCount = @($mapped | Where-Object { $_.ExactReferenceMatchCount -gt 1 }).Count
     WorstMatchedByAbsDeltaY = @(
         $mapped |
             Where-Object { $_.Status -eq "matched" } |

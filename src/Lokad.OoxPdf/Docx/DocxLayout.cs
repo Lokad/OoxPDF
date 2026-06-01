@@ -569,8 +569,6 @@ internal sealed class DocxLayoutEngine
 {
     private const double BaselineOffsetFactor = 0.94d;
     private const double WordDefaultTabStopPoints = 36d;
-    private const double WordDefaultTableRowMinimumTwips = 401d;
-    private const double WordDefaultTableRowMinimumHeight = WordDefaultTableRowMinimumTwips / 20d;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -1747,10 +1745,9 @@ internal sealed class DocxLayoutEngine
             return Math.Max(1d, exactHeight);
         }
 
-        bool hasRowPropertyExceptionMargins = row.TablePropertyExceptionCellMargins is not null;
         double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
-            ? (hasRowPropertyExceptionMargins ? 0d : WordDefaultTableRowMinimumHeight)
-            : row.HeightPoints ?? (hasRowPropertyExceptionMargins ? 0d : WordDefaultTableRowMinimumHeight);
+            ? 0d
+            : row.HeightPoints ?? 0d;
         if (row.HeightPoints is not null &&
             !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
         {
