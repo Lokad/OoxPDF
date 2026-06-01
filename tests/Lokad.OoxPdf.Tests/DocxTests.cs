@@ -3223,9 +3223,15 @@ internal static class DocxTests
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(200d, layout.Pages[0].Width);
         TestAssert.Equal(200d, layout.Pages[0].Height);
+        TestAssert.Equal(18d, layout.Pages[0].MarginLeft);
+        TestAssert.Equal(18d, layout.Pages[0].MarginTop);
+        TestAssert.Equal("360", layout.Pages[0].PageSettings.MarginLeftValue ?? string.Empty);
         TestAssert.Equal(18d, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().X);
         TestAssert.Equal(300d, layout.Pages[1].Width);
         TestAssert.Equal(300d, layout.Pages[1].Height);
+        TestAssert.Equal(72d, layout.Pages[1].MarginLeft);
+        TestAssert.Equal(72d, layout.Pages[1].MarginTop);
+        TestAssert.Equal("1440", layout.Pages[1].PageSettings.MarginLeftValue ?? string.Empty);
         TestAssert.Equal(72d, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().X);
     }
 
@@ -8061,6 +8067,87 @@ internal static class DocxTests
         TestAssert.DoesNotContain("1 0 0 1 36 54 Tm", pdf);
     }
 
+    public static void DocxSyntheticSectionHeadersUsePageLocalGeometry()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                  <Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+                </Relationships>
+                """,
+            ["word/header1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Section header</w:t></w:r></w:p></w:hdr>
+                """,
+            ["word/footer1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Section footer</w:t></w:r></w:p></w:ftr>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p><w:r><w:t>First body</w:t></w:r></w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:sectPr>
+                          <w:headerReference w:type="default" r:id="rIdHeader1"/>
+                          <w:footerReference w:type="default" r:id="rIdFooter1"/>
+                          <w:pgSz w:w="4000" w:h="4000"/>
+                          <w:pgMar w:top="720" w:right="360" w:bottom="720" w:left="360" w:header="360" w:footer="360"/>
+                          <w:type w:val="nextPage"/>
+                        </w:sectPr>
+                      </w:pPr>
+                    </w:p>
+                    <w:p><w:r><w:t>Second body</w:t></w:r></w:p>
+                    <w:sectPr>
+                      <w:headerReference w:type="default" r:id="rIdHeader1"/>
+                      <w:footerReference w:type="default" r:id="rIdFooter1"/>
+                      <w:pgSz w:w="6000" w:h="6000"/>
+                      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="1080" w:footer="1080"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        double[] firstSectionLeftBaselines = ExtractTextBaselinesAtX(pdf, 18d);
+        double[] finalSectionLeftBaselines = ExtractTextBaselinesAtX(pdf, 72d);
+        TestAssert.True(firstSectionLeftBaselines.Any(y => y > 168d && y < 182d), "First-section header should use the first section header distance and left margin.");
+        TestAssert.True(firstSectionLeftBaselines.Any(y => y > 18d && y < 30d), "First-section footer should use the first section footer distance and left margin.");
+        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 232d && y < 246d), "Final-section header should use the final section header distance and left margin.");
+        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 54d && y < 66d), "Final-section footer should use the final section footer distance and left margin.");
+    }
+
     public static void DocxStaticHeaderRendersMixedRunColorsSeparately()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -8881,6 +8968,15 @@ internal static class DocxTests
     private static double[] ExtractTextBaselines(string pdf)
     {
         return Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm")
+            .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
+            .Distinct()
+            .ToArray();
+    }
+
+    private static double[] ExtractTextBaselinesAtX(string pdf, double x)
+    {
+        string escapedX = Regex.Escape(x.ToString("0.###", CultureInfo.InvariantCulture));
+        return Regex.Matches(pdf, $@"1 0 0 1 {escapedX}(?:\.\d+)? (?<y>-?\d+(?:\.\d+)?) Tm")
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
             .Distinct()
             .ToArray();

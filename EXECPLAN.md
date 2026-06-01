@@ -1907,6 +1907,18 @@ High-priority actions:
     passed `docx-page --skip-slow` (`24`), `docx-tables --skip-slow` (`65`), and full solution build. Private
     DOCX run `20260601-103219` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
     `MAE=13.388935`, changed16 `0.124264`.
+  - [x] 2026-06-01: Extended section-owned geometry through static header/footer placement. `DocxLayoutPage`
+    now carries the section page margins and `DocxPageSettings` that owned the body layout, and static
+    header/footer rendering uses those page-local margins, body width, page height, and header/footer
+    distances instead of the document-level final section. Public coverage checks both the layout page
+    metadata and emitted PDF text matrices for a two-section document. This is structural page ownership,
+    not section-specific header/footer relationship resolution: keep that open for true per-section selected
+    parts, odd/even inserted blank pages, continuous-section geometry, and columns. Validation passed
+    `docx-page --skip-slow` (`25`), `docx-text --skip-slow` (`36`), and full solution build; public
+    `docx-headers-footers` improved to run `20260601-135640` (`MAE=0.073352`, changed16 `0.002110`). Private
+    DOCX run `20260601-135549` stayed page- and diagnostic-stable (`16/16`, zero dimension mismatches, no
+    diagnostics) but moved to `MAE=13.838763`, changed16 `0.126851`, so keep private aggregate monitoring
+    active when the next section/header slice lands.
   - [ ] 2026-06-01: Separate DOCX table-style paragraph-property precedence from table-cell text rendering.
     Public Office inspection confirms table-style `w:rPr` must sit below paragraph-style and character-style
     run properties; that run-property precedence belongs in the active table-text slice. A broader table-style
@@ -5613,11 +5625,19 @@ Current validation baseline:
 - DOCX section-break page-boundary validation:
   `DocxSectionBreakElement` is now consumed by layout instead of being skipped. `nextPage`, `oddPage`,
   `evenPage`, and default paragraph section breaks force a page boundary when the current page already has
-  content; `continuous` remains in-flow. Keep `DOCX_UNSUPPORTED_SECTION_BREAK` open because section-owned page
-  settings, header/footer selection, odd/even blank-page parity, and columns are not yet fully applied.
+  content; `continuous` remains in-flow. Section-owned page size, margins, and header/footer distances now
+  flow through each layout page into static header/footer placement. Keep `DOCX_UNSUPPORTED_SECTION_BREAK`
+  open because continuous-section geometry, true per-section header/footer relationship selection, odd/even
+  blank-page parity, and columns are not yet fully applied.
   Validation passed `docx-page --skip-slow` (`22`) and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
   -v minimal`. Private DOCX run `20260601-095811` stayed neutral at `16/16` pages, zero dimension mismatches,
   no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+  2026-06-01 follow-up: `DocxLayoutPage` now stores page-local margins and page settings; static header/footer
+  rendering uses those instead of document-level final-section geometry. Validation passed `docx-page
+  --skip-slow` (`25`), `docx-text --skip-slow` (`36`), full solution build, and public `docx-headers-footers`
+  run `20260601-135640` (`MAE=0.073352`, changed16 `0.002110`). Private DOCX run `20260601-135549` stayed
+  `16/16` pages with zero dimension mismatches and no diagnostics, with aggregate `MAE=13.838763`,
+  changed16 `0.126851`.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

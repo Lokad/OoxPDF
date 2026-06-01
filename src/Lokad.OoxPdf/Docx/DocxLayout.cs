@@ -324,6 +324,11 @@ internal sealed record DocxTableCellSnapshot(
 internal sealed record DocxLayoutPage(
     double Width,
     double Height,
+    double MarginLeft,
+    double MarginRight,
+    double MarginTop,
+    double MarginBottom,
+    DocxPageSettings PageSettings,
     IReadOnlyList<DocxLayoutItem> Items);
 
 internal abstract record DocxLayoutItem;
@@ -492,7 +497,8 @@ internal sealed class DocxLayoutEngine
         double MarginLeft,
         double MarginRight,
         double MarginTop,
-        double MarginBottom)
+        double MarginBottom,
+        DocxPageSettings PageSettings)
     {
         public double BodyWidth => Math.Max(1d, Width - MarginLeft - MarginRight);
     }
@@ -517,7 +523,15 @@ internal sealed class DocxLayoutEngine
 
         void FinishPage()
         {
-            pages.Add(new DocxLayoutPage(page.Width, page.Height, currentItems.ToArray()));
+            pages.Add(new DocxLayoutPage(
+                page.Width,
+                page.Height,
+                page.MarginLeft,
+                page.MarginRight,
+                page.MarginTop,
+                page.MarginBottom,
+                page.PageSettings,
+                currentItems.ToArray()));
             currentItems = [];
             cursorY = page.Height - page.MarginTop;
             pendingSpacingAfter = 0d;
@@ -718,6 +732,7 @@ internal sealed class DocxLayoutEngine
 
     private static DocxPageGeometry ResolveSectionGeometry(DocxDocument document, DocxPageSettings? settings)
     {
+        DocxPageSettings effectiveSettings = settings ?? document.PageSettings;
         double width = ReadTwipsValue(settings?.WidthValue, document.PageWidthPoints);
         double height = ReadTwipsValue(settings?.HeightValue, document.PageHeightPoints);
         (width, height) = NormalizePageSize(width, height);
@@ -732,7 +747,8 @@ internal sealed class DocxLayoutEngine
             ReadTwipsValue(settings?.MarginLeftValue, document.MarginLeftPoints),
             ReadTwipsValue(settings?.MarginRightValue, document.MarginRightPoints),
             ReadTwipsValue(settings?.MarginTopValue, document.MarginTopPoints),
-            ReadTwipsValue(settings?.MarginBottomValue, document.MarginBottomPoints));
+            ReadTwipsValue(settings?.MarginBottomValue, document.MarginBottomPoints),
+            effectiveSettings);
     }
 
     private static double ReadTwipsValue(string? value, double fallback)

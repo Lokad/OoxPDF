@@ -53,12 +53,12 @@ internal sealed class DocxRenderer
         var pages = new List<PdfPage>(layout.Pages.Count);
         int imageIndex = 1;
 
-        double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
+            double staticBodyWidth = Math.Max(1d, layoutPage.Width - layoutPage.MarginLeft - layoutPage.MarginRight);
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
             {
                 DocxLayoutItem item = layoutPage.Items[itemIndex];
@@ -69,22 +69,22 @@ internal sealed class DocxRenderer
 
             int pageNumber = pageIndex + 1;
             RenderStaticParagraphs(
-                SelectStaticHeaderFooter(document.HeaderParagraphsByType, document.HeaderParagraphs, document.PageSettings, pageNumber),
+                SelectStaticHeaderFooter(document.HeaderParagraphsByType, document.HeaderParagraphs, layoutPage.PageSettings, pageNumber),
                 graphics,
                 fontResources,
-                document.MarginLeftPoints,
-                width,
-                document.PageHeightPoints - ResolveHeaderDistance(document),
+                layoutPage.MarginLeft,
+                staticBodyWidth,
+                layoutPage.Height - ResolveHeaderDistance(layoutPage),
                 StaticTextAnchor.Header,
                 pageNumber,
                 layout.Pages.Count);
             RenderStaticParagraphs(
-                SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, document.PageSettings, pageNumber),
+                SelectStaticHeaderFooter(document.FooterParagraphsByType, document.FooterParagraphs, layoutPage.PageSettings, pageNumber),
                 graphics,
                 fontResources,
-                document.MarginLeftPoints,
-                width,
-                ResolveFooterDistance(document),
+                layoutPage.MarginLeft,
+                staticBodyWidth,
+                ResolveFooterDistance(layoutPage),
                 StaticTextAnchor.Footer,
                 pageNumber,
                 layout.Pages.Count);
@@ -619,14 +619,14 @@ internal sealed class DocxRenderer
             : fallbackParagraphs;
     }
 
-    private static double ResolveHeaderDistance(DocxDocument document)
+    private static double ResolveHeaderDistance(DocxLayoutPage page)
     {
-        return document.PageSettings.HeaderDistancePoints ?? Math.Max(18d, document.MarginTopPoints / 2d);
+        return page.PageSettings.HeaderDistancePoints ?? Math.Max(18d, page.MarginTop / 2d);
     }
 
-    private static double ResolveFooterDistance(DocxDocument document)
+    private static double ResolveFooterDistance(DocxLayoutPage page)
     {
-        return document.PageSettings.FooterDistancePoints ?? Math.Max(18d, document.MarginBottomPoints / 2d);
+        return page.PageSettings.FooterDistancePoints ?? Math.Max(18d, page.MarginBottom / 2d);
     }
 
     private static void RenderStaticParagraphs(
