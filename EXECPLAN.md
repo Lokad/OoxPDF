@@ -2010,6 +2010,11 @@ High-priority actions:
     private DOCX run `20260601-101840` stayed neutral at `16/16` pages, zero dimension mismatches, no
     diagnostics, `MAE=13.388935`, changed16 `0.124264`. Keep this parent open for row-border participation,
     row clipping, and Office's finer per-cell text-operation decomposition.
+    Rejected follow-up: removing the remaining hard-coded post-table `6pt` drop and letting the next paragraph
+    own table/paragraph adjacency spacing worsened the public adjacency fixture to `MAE=0.949619`,
+    changed16 `0.008026` (run `20260601-102458`) and regressed the private DOCX to `MAE=13.877948`,
+    changed16 `0.127199` (run `20260601-102514`). The `6pt` value is still suspicious, but the replacement
+    needs an Office-backed table-adjacent block-spacing model, not a removal of the gap in isolation.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
