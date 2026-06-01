@@ -457,7 +457,7 @@ internal sealed class DocxRenderer
             DocxTableCellBorder? right = DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "right") ?? DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "end");
             if (cellIndex == row.Cells.Count - 1)
             {
-                RenderVerticalTableCellBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, graphics, alignInsideLeft: true);
+                RenderVerticalTableCellBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, graphics);
                 continue;
             }
 
@@ -528,7 +528,14 @@ internal sealed class DocxRenderer
             return;
         }
 
-        graphics.FillRectangle(x, cellLayout.Y - width / 2d, right - x, width);
+        double leftBorderWidth = ResolveLeftVerticalBorderWidth(cellLayout);
+        double segmentX = Math.Min(right, x + leftBorderWidth);
+        if (right <= segmentX)
+        {
+            return;
+        }
+
+        graphics.FillRectangle(segmentX, cellLayout.Y - width / 2d, right - segmentX, width);
     }
 
     private static double HorizontalOverlap(DocxTableCellLayout first, DocxTableCellLayout second)
@@ -550,12 +557,31 @@ internal sealed class DocxRenderer
         switch (edge)
         {
             case "top":
-                graphics.FillRectangle(cellLayout.X, cellLayout.Y + cellLayout.Height - width, cellLayout.Width, width);
+                double topX = cellLayout.X + ResolveLeftVerticalBorderWidth(cellLayout);
+                double topWidth = cellLayout.Width - (topX - cellLayout.X);
+                if (topWidth > 0d)
+                {
+                    graphics.FillRectangle(topX, cellLayout.Y + cellLayout.Height - width, topWidth, width);
+                }
                 break;
             case "bottom":
-                graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, width);
+                double bottomX = cellLayout.X + ResolveLeftVerticalBorderWidth(cellLayout);
+                double bottomWidth = cellLayout.Width - (bottomX - cellLayout.X);
+                if (bottomWidth > 0d)
+                {
+                    graphics.FillRectangle(bottomX, cellLayout.Y, bottomWidth, width);
+                }
                 break;
         }
+    }
+
+    private static double ResolveLeftVerticalBorderWidth(DocxTableCellLayout cellLayout)
+    {
+        DocxTableCellBorder? left = DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "left") ??
+            DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "start");
+        return DocxTableBorderGeometry.IsSuppressed(left)
+            ? 0d
+            : DocxTableBorderGeometry.ResolveVisibleWidth(left);
     }
 
     private static void RenderSharedVerticalTableBorder(
@@ -580,7 +606,7 @@ internal sealed class DocxRenderer
         RgbColor color = ReadColor(border.Color);
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         double width = DocxTableBorderGeometry.ResolveVisibleWidth(border);
-        graphics.FillRectangle(boundaryX - width / 2d, y, width, height);
+        graphics.FillRectangle(boundaryX, y, width, height);
     }
 
     private static void RenderVerticalTableCellBorder(
@@ -588,8 +614,7 @@ internal sealed class DocxRenderer
         double y,
         double height,
         DocxTableCellBorder? border,
-        PdfGraphicsBuilder graphics,
-        bool alignInsideLeft = false)
+        PdfGraphicsBuilder graphics)
     {
         if (border is null || DocxTableBorderGeometry.IsSuppressed(border))
         {
@@ -599,7 +624,7 @@ internal sealed class DocxRenderer
         RgbColor color = ReadColor(border.Color);
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         double width = DocxTableBorderGeometry.ResolveVisibleWidth(border);
-        graphics.FillRectangle(alignInsideLeft ? boundaryX - width : boundaryX, y, width, height);
+        graphics.FillRectangle(boundaryX, y, width, height);
     }
 
     private static IReadOnlyList<DocxParagraph> SelectStaticHeaderFooter(

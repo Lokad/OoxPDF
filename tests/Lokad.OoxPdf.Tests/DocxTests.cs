@@ -6664,7 +6664,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 683.52 144 0.48 re f", pdf);
+        TestAssert.Contains("72.48 683.52 143.52 0.48 re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream);

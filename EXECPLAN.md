@@ -2091,6 +2091,18 @@ High-priority actions:
     changed16 `0.014035`, and regressed the private DOCX aggregate to `MAE=13.349049`, changed16
     `0.124461` (run `20260601-105129`). Do not land a blanket DOCX font-size grid rule; the acceptable path
     needs text-state decomposition evidence that explains when Word chooses secondary font-size branches.
+    2026-06-01 follow-up: aligned DOCX table border emission with Office's filled-rectangle structure.
+    Vertical borders now fill from the cell boundary to the right instead of being centered on shared
+    boundaries or pulled inside the right edge, and horizontal border fills start after the left vertical
+    border instead of painting underneath it. This is PDF-structure work, not a row-height constant: the public
+    row-height reference PDF showed Word emitting separate vertical strips and horizontal strips between those
+    strips. Public `docx-ladder-03-table-row-heights` improved from `MAE=0.778754`, changed16 `0.008189`,
+    SSIM `0.792710` to run `20260601-142401` at `MAE=0.700136`, changed16 `0.007778`, SSIM `0.820054`.
+    Public `docx-ladder-03-table-paragraph-adjacency` improved from `MAE=0.568657`, changed16 `0.005616` to
+    run `20260601-142411` at `MAE=0.545870`, changed16 `0.005497`. Private DOCX run `20260601-142431` stayed
+    neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.838763`, changed16
+    `0.126851`. Keep this parent open for row clipping, header repetition, and remaining row-origin/text
+    operation decomposition.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
