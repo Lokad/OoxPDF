@@ -8845,6 +8845,12 @@ internal static class DocxTests
         TestAssert.Equal(2, rows.Length);
         TestAssert.Equal(1, rows.Single(row => row.TableIndex == 0).SourceBlockIndex);
         TestAssert.Equal(3, rows.Single(row => row.TableIndex == 1).SourceBlockIndex);
+        DocxLayoutItemSnapshot[] tableItems = snapshot.Pages.SelectMany(page => page.Items)
+            .Where(item => item.Kind == "TableRow")
+            .ToArray();
+        TestAssert.Equal(2, tableItems.Length);
+        TestAssert.Equal(1, tableItems[0].SourceBlockIndex ?? -1);
+        TestAssert.Equal(3, tableItems[1].SourceBlockIndex ?? -1);
     }
 
     public static void DocxLayoutStageOwnsSelectedStaticHeaderFooterLines()

@@ -2180,6 +2180,10 @@ High-priority actions:
     private tables against public probes. Public unit coverage locks a paragraph/table/paragraph/table body
     stream with source block indexes `1` and `3`. Validation passed `docx-tables --skip-slow` (`81`) and full
     solution build.
+    2026-06-01 follow-up: the generic per-page `DocxLayoutItemSnapshot` stream now also reports
+    `SourceBlockIndex` for `TableRow` items, so page-level drift summaries can line up paragraph text lines and
+    table rows through the same private-safe ownership field. The same public test covers the item stream.
+    Validation passed `docx-tables --skip-slow` (`81`) and full solution build.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

@@ -116,7 +116,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                 row.Height,
                 TextLength: row.Cells.Sum(cell => cell.TextLines.Sum(line => line.Text.Length)),
                 CellCount: row.Cells.Count,
-                SourceBlockIndex: null,
+                SourceBlockIndex: row.Table.SourceBlockIndex,
                 SourceLineIndex: null,
                 LineHeightPoints: null,
                 AppliedBeforeSpacingPoints: null,
