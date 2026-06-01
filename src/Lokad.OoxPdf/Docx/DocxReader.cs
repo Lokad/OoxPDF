@@ -302,10 +302,17 @@ internal sealed class DocxReader
                 .Elements(WordprocessingNamespace + "pPr")
                 .Elements(WordprocessingNamespace + "ind")
                 .Any(ind =>
-                    ind.Attribute(WordprocessingNamespace + "right") is not null ||
-                    ind.Attribute(WordprocessingNamespace + "firstLine") is not null))
+                    ind.Attribute(WordprocessingNamespace + "firstLine") is not null ||
+                    HasCharacterUnitIndent(ind)))
         {
             Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "ind").Any(HasCharacterUnitIndent) ||
+            styles?.Descendants(WordprocessingNamespace + "ind").Any(HasCharacterUnitIndent) == true ||
+            numbering?.Descendants(WordprocessingNamespace + "ind").Any(HasCharacterUnitIndent) == true)
+        {
+            Emit("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", "character-unit paragraph indent");
         }
 
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
@@ -1493,12 +1500,12 @@ internal sealed class DocxReader
     {
         XElement? indent = properties?.Element(WordprocessingNamespace + "ind");
         return new DocxParagraphIndent(
-            ReadTwipsAttribute(indent, WordprocessingNamespace + "left"),
-            ReadTwipsAttribute(indent, WordprocessingNamespace + "right"),
+            ReadLogicalStartTwips(indent),
+            ReadLogicalEndTwips(indent),
             ReadTwipsAttribute(indent, WordprocessingNamespace + "firstLine"),
             ReadTwipsAttribute(indent, WordprocessingNamespace + "hanging"),
-            (string?)indent?.Attribute(WordprocessingNamespace + "left"),
-            (string?)indent?.Attribute(WordprocessingNamespace + "right"),
+            ReadLogicalStartValue(indent),
+            ReadLogicalEndValue(indent),
             (string?)indent?.Attribute(WordprocessingNamespace + "firstLine"),
             (string?)indent?.Attribute(WordprocessingNamespace + "hanging"));
     }
@@ -1593,6 +1600,40 @@ internal sealed class DocxReader
         return element?.Attribute(name) is { } value
             ? OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture))
             : null;
+    }
+
+    private static double? ReadLogicalStartTwips(XElement? indent)
+    {
+        return ReadTwipsAttribute(indent, WordprocessingNamespace + "start") ??
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "left");
+    }
+
+    private static double? ReadLogicalEndTwips(XElement? indent)
+    {
+        return ReadTwipsAttribute(indent, WordprocessingNamespace + "end") ??
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "right");
+    }
+
+    private static string? ReadLogicalStartValue(XElement? indent)
+    {
+        return (string?)indent?.Attribute(WordprocessingNamespace + "start") ??
+            (string?)indent?.Attribute(WordprocessingNamespace + "left");
+    }
+
+    private static string? ReadLogicalEndValue(XElement? indent)
+    {
+        return (string?)indent?.Attribute(WordprocessingNamespace + "end") ??
+            (string?)indent?.Attribute(WordprocessingNamespace + "right");
+    }
+
+    private static bool HasCharacterUnitIndent(XElement indent)
+    {
+        return indent.Attribute(WordprocessingNamespace + "leftChars") is not null ||
+            indent.Attribute(WordprocessingNamespace + "rightChars") is not null ||
+            indent.Attribute(WordprocessingNamespace + "startChars") is not null ||
+            indent.Attribute(WordprocessingNamespace + "endChars") is not null ||
+            indent.Attribute(WordprocessingNamespace + "firstLineChars") is not null ||
+            indent.Attribute(WordprocessingNamespace + "hangingChars") is not null;
     }
 
     private static int? ReadPositiveIntAttribute(XElement? element, XName name)
@@ -2055,13 +2096,13 @@ internal sealed class DocxReader
                 "num",
                 StringComparison.OrdinalIgnoreCase));
         return new DocxNumberingIndent(
-            ReadTwipsAttribute(indent, WordprocessingNamespace + "left"),
-            ReadTwipsAttribute(indent, WordprocessingNamespace + "right"),
+            ReadLogicalStartTwips(indent),
+            ReadLogicalEndTwips(indent),
             ReadTwipsAttribute(indent, WordprocessingNamespace + "firstLine"),
             ReadTwipsAttribute(indent, WordprocessingNamespace + "hanging"),
             ReadTwipsAttribute(numberingTab, WordprocessingNamespace + "pos"),
-            (string?)indent?.Attribute(WordprocessingNamespace + "left"),
-            (string?)indent?.Attribute(WordprocessingNamespace + "right"),
+            ReadLogicalStartValue(indent),
+            ReadLogicalEndValue(indent),
             (string?)indent?.Attribute(WordprocessingNamespace + "firstLine"),
             (string?)indent?.Attribute(WordprocessingNamespace + "hanging"),
             (string?)numberingTab?.Attribute(WordprocessingNamespace + "val"),

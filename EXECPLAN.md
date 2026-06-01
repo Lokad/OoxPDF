@@ -3535,6 +3535,18 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.481106`, changed16 `0.116738`. Keep the
     parent open for `w:start`/`w:end`, char-unit indents, mirror indents, and exact interaction with numbering
     styles.
+  - [x] 2026-06-01: Resolved logical paragraph and numbering indents for the current left-to-right layout path:
+    `w:start`/`w:end` now feed the effective start/end twip values before falling back to physical
+    `w:left`/`w:right`, and character-unit indent attributes now emit a precise
+    `DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT` diagnostic instead of disappearing silently. Public parser
+    coverage checks `start`/`end` precedence; public visual `docx-ladder-02-paragraph-logical-indents` run
+    `20260601-022902` is dimension-stable at `MAE=0.094507`, changed16 `0.002454`, SSIM `0.986713`. Public
+    validation passed `docx-text --skip-slow` (`18`), `docx-core --skip-slow` (`16`), `docx-numbering
+    --skip-slow` (`11`), `docx-page --skip-slow` (`17`), `docx-tables --skip-slow` (`58`), and `dotnet build
+    Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-022931` stayed stable at
+    `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.481106`, changed16 `0.116738`. Keep the
+    parent open for character-unit conversion from Word's document grid/font metrics, mirror/Bidi indents, and
+    exact numbered first-line/right-indent interactions.
 - [ ] 2026-05-31: Resolve DOCX `w:basedOn` style inheritance with pagination-safe Office fixtures before
   enabling it broadly. The private style graph uses chains such as body/table styles based on Normal, but a
   naive recursive paragraph/character merge changed the private candidate from 16 pages to 14 pages in run
@@ -4598,6 +4610,14 @@ Current validation baseline:
   `20260601-022308` is dimension-stable at `MAE=1.104564`, changed16 `0.011547`; private DOCX run
   `20260601-022152` compared `16/16` pages with zero dimension mismatches, no diagnostics, `MAE=12.481106`,
   changed16 `0.116738`.
+- DOCX logical indent validation:
+  after resolving `w:start`/`w:end` as effective left-to-right start/end indents and diagnosing character-unit
+  indent attributes explicitly, `docx-text --skip-slow` passed `18`, `docx-core --skip-slow` passed `16`,
+  `docx-numbering --skip-slow` passed `11`, `docx-page --skip-slow` passed `17`, `docx-tables --skip-slow`
+  passed `58`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Public visual
+  `docx-ladder-02-paragraph-logical-indents` run `20260601-022902` is dimension-stable at `MAE=0.094507`,
+  changed16 `0.002454`, SSIM `0.986713`; private DOCX run `20260601-022931` compared `16/16` pages with zero
+  dimension mismatches, no diagnostics, `MAE=12.481106`, changed16 `0.116738`.
 - DOCX table-cell vertical alignment validation:
   after shifting layout-owned cell text blocks for `w:vAlign`, `docx-tables --skip-slow` passed `15` tests,
   public `docx-tables` visual case passed in run `20260531-145618`, and the full DOCX group sweep passed

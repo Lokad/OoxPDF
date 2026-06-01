@@ -416,7 +416,7 @@ internal static class DocxTests
                       <w:keepLines w:val="0"/>
                       <w:widowControl w:val="1"/>
                       <w:contextualSpacing/>
-                      <w:ind w:left="720" w:right="240" w:hanging="360"/>
+                      <w:ind w:left="720" w:start="960" w:right="240" w:end="480" w:hanging="360"/>
                       <w:spacing w:beforeAutospacing="1" w:afterLines="240" w:lineRule="exact"/>
                     </w:pPr>
                   </w:style>
@@ -455,9 +455,11 @@ internal static class DocxTests
         TestAssert.Equal("1", paragraph.Spacing.AfterAutoSpacingValue ?? string.Empty);
         TestAssert.Equal("480", paragraph.Spacing.LineValue ?? string.Empty);
         TestAssert.Equal("exact", paragraph.Spacing.LineRuleValue ?? string.Empty);
-        TestAssert.Equal(36d, paragraph.Indent.LeftPoints ?? 0d);
-        TestAssert.Equal(12d, paragraph.Indent.RightPoints ?? 0d);
+        TestAssert.Equal(48d, paragraph.Indent.LeftPoints ?? 0d);
+        TestAssert.Equal(24d, paragraph.Indent.RightPoints ?? 0d);
         TestAssert.Equal(6d, paragraph.Indent.FirstLinePoints ?? 0d);
+        TestAssert.Equal("960", paragraph.Indent.LeftValue ?? string.Empty);
+        TestAssert.Equal("480", paragraph.Indent.RightValue ?? string.Empty);
         TestAssert.Equal("120", paragraph.Indent.FirstLineValue ?? string.Empty);
         TestAssert.Equal(string.Empty, paragraph.Indent.HangingValue ?? string.Empty);
         TestAssert.True(paragraph.Spacing.ContextualSpacing == true, "Style contextual spacing should survive the paragraph cascade.");
@@ -6076,6 +6078,7 @@ internal static class DocxTests
                         <w:widowControl/>
                         <w:pageBreakBefore/>
                         <w:spacing w:line="240" w:lineRule="exact"/>
+                        <w:ind w:startChars="200" w:hangingChars="100"/>
                         <w:sectPr/>
                       </w:pPr>
                       <w:commentRangeStart w:id="1"/>
@@ -6104,6 +6107,7 @@ internal static class DocxTests
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.Contains("DOCX_UNSUPPORTED_COMMENTS", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_ENDNOTE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_EQUATION", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_FLOATING_DRAWING", ids);
