@@ -1,0 +1,14 @@
+{
+  "id": "docx-ladder-03-docgrid-list-use-fe",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-docgrid-list-use-fe.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "numbering", "docgrid", "compat"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

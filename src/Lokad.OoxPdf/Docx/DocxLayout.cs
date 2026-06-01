@@ -1446,11 +1446,6 @@ internal sealed class DocxLayoutEngine
         }
 
         DocxNumberingIndent indent = paragraph.ListLabel.Indent;
-        if (indent.NumberingTabPositionPoints is { } numberingTabPosition)
-        {
-            return Math.Max(0d, numberingTabPosition);
-        }
-
         double left = indent.LeftPoints ?? 0d;
         double hanging = indent.HangingPoints ?? 0d;
         double firstLine = indent.FirstLinePoints ?? 0d;

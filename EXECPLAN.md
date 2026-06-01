@@ -315,6 +315,20 @@ High-priority actions:
   `MAE=9.982157`, with `16/16` pages, no diagnostics, and zero dimension mismatches. Keep this branch open:
   row geometry is closer, but remaining worst pages point to broader table/text flow alignment rather than a
   single-row minimum.
+  2026-06-01 follow-up: the next private-safe flow comparison kept the accepted private run at `16/16` pages
+  and showed the remaining page-9/page-10 drift is accumulated compact bullet paragraph rhythm before a later
+  page break, not a fresh table-row minimum. A public two-line widow probe (`docx-ladder-03-widow-two-line-boundary`)
+  showed Word allows a four-line paragraph to split `2/2`, so do not broaden widow/orphan control for the
+  private block split. Public `docGrid` probes (`docx-ladder-03-docgrid-line-pitch`,
+  `docx-ladder-03-docgrid-use-fe-layout`, and `docx-ladder-03-docgrid-list-use-fe`) were visually neutral,
+  including with `useFELayout`, so `docGrid`/FE layout alone is not the missing compact-list spacing rule.
+  A public compact bullet fixture (`docx-ladder-03-compact-bullet-spacing`) exposed one real horizontal
+  numbering bug: Word places the marker at `left - hanging` and uses the numbering tab/left position for the
+  following paragraph text. The renderer now follows that structure. The fixture improved slightly
+  (`MAE=0.810522` to `0.803030`), `docx-numbering` and `docx-ladder-03-docgrid-list-use-fe` stayed unchanged,
+  and private run `20260601-185704` stayed neutral at `MAE=9.982157`, changed16 `0.103396`. Keep the open
+  vertical-flow target on compact bullet paragraph advance/spacing and Word text-state decomposition; do not
+  turn numbering tabs, `docGrid`, FE layout, font names, or private style names into shortcuts.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
@@ -2627,6 +2641,12 @@ High-priority actions:
     same font-plan measurement and PDF glyph embedding as body/table runs. Keep this parent open only for
     remaining numbering semantics: exact tab-stop ownership, restart/override edges, and Word fixture coverage
     for suffix and continuation-line behavior.
+    2026-06-01 correction: the earlier interpretation that an explicit `w:tab w:val="num"` position can move
+    the marker itself was too broad. Public `docx-ladder-03-compact-bullet-spacing` shows Office PDF output
+    placing the bullet marker at the hanging position (`left - hanging`) and placing following paragraph text
+    at the tab/left position. `DocxLayout` now treats the numbering tab as post-marker text geometry rather
+    than marker origin. This keeps exact tab-stop ownership open for richer list fixtures, but rejects the
+    prior marker-at-tab rule as a structural mismatch.
   2026-05-31 progress: paragraph wrapping now carries separate first-line and continuation-line widths, so
     numbered body and table-cell paragraphs wrap continuation lines against the hanging text column rather than
     reusing the wider first-line space-suffix box. Public `docx-numbering --skip-slow` passed `8` tests with a
@@ -4843,6 +4863,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   renderer-side shortcut that added false row height and caused page-flow drift; declared `exact` and
   non-auto row heights still apply through their OOXML tokens.
   Date/Author: 2026-06-01 / Codex.
+- Decision: Treat DOCX numbering tab stops as post-marker text placement, not marker origin.
+  Rationale: Public compact-bullet Office PDF inspection places the bullet marker at the hanging position
+  (`left - hanging`) and the paragraph text at the numbering tab/left position. Using `w:tab w:val="num"` as
+  the marker origin moved the label into the text column, which is a structural numbering geometry mismatch.
+  The remaining list work stays on tab-stop ownership for text starts, suffix behavior, restarts, and
+  continuation lines rather than font or private-style exceptions.
+  Date/Author: 2026-06-01 / Codex.
 - Decision: Render DOCX table-cell inline images through cell-owned layout records.
   Rationale: Inline images inside cells participate in row height and pagination just like text. Routing them
   through `DocxTableCellLayout` keeps their geometry visible to layout inspection and reuses the shared PDF
@@ -5242,6 +5269,12 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 
 Current validation baseline:
 
+- DOCX numbering label-start slice:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; `docx-numbering --skip-slow` passed;
+  public `docx-ladder-03-compact-bullet-spacing` run `20260601-185503` improved from MAE `0.810522` to
+  `0.803030` while moving the bullet marker to the Office-observed hanging position; public `docx-numbering`
+  and `docx-ladder-03-docgrid-list-use-fe` stayed unchanged. Private DOCX acceptance run `20260601-185704`
+  stayed at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=9.982157`, changed16 `0.103396`.
 - DOCX border diagnostics/fidelity:
   `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group docx-core --skip-slow`
   passed `16`; `docx-tables --skip-slow` passed `62`; `docx-page --skip-slow` passed `17`; full solution

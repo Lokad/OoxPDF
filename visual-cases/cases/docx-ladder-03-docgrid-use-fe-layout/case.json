@@ -1,0 +1,14 @@
+{
+  "id": "docx-ladder-03-docgrid-use-fe-layout",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-docgrid-use-fe-layout.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "pagination", "docgrid", "compat"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}
