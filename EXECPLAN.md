@@ -462,6 +462,11 @@ High-priority actions:
   a body row split across a page boundary; validation passed `docx-tables --skip-slow` (`85`). Keep the open
   branch on Office's row-boundary decision itself, plus vertical-merge and inline-image behavior inside
   fragments.
+  2026-06-02 follow-up: split-row table cells now keep inline image layouts in full-row coordinates and filter
+  them by overlap with each fragment rectangle, relying on the existing renderer cell clip path instead of
+  dropping images whenever `FragmentCount > 1`. Added bottom-up coverage for a split row containing text plus
+  an inline image; validation passed `docx-tables --skip-slow` (`86`). Keep vertical-merge fragment behavior
+  open separately because merged-cell height ownership crosses logical rows, not just fragments of one row.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

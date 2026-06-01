@@ -2226,9 +2226,11 @@ internal sealed class DocxLayoutEngine
             IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
                 ? []
                 : LayoutTableCellTextLines(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints);
-            IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation || FragmentCount > 1
+            IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
                 ? []
-                : LayoutTableCellInlineImages(cell, cellX, visualY, cellWidth, visualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex());
+                : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
+                    .Where(image => VerticalOverlap(image.Y, image.Height, visualY, visualHeight) > 0.001d)
+                    .ToArray();
             cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
             gridColumnIndex += Math.Max(1, cell.GridSpan);
@@ -2256,6 +2258,11 @@ internal sealed class DocxLayoutEngine
     {
         return cell.HasVerticalMerge &&
             string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static double VerticalOverlap(double firstY, double firstHeight, double secondY, double secondHeight)
+    {
+        return Math.Min(firstY + firstHeight, secondY + secondHeight) - Math.Max(firstY, secondY);
     }
 
     private static bool IsVerticalMergeContinuation(DocxTableCell cell)

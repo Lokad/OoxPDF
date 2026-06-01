@@ -7748,6 +7748,55 @@ internal static class DocxTests
         TestAssert.Equal(60d, secondPageRows[1].Height);
     }
 
+    public static void DocxTableLayoutStageKeepsInlineImagesInSplitRowFragments()
+    {
+        var image = new DocxInlineImage(20d, 20d, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png");
+        DocxParagraph fillerParagraph = CreateDocxLayoutParagraph("Filler", 10d, 10d);
+        DocxParagraph[] splitParagraphs = Enumerable.Range(1, 7)
+            .Select(index => CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .Append(new DocxParagraph(
+                [],
+                [image],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                0d,
+                1d,
+                10d,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty,
+                null))
+            .ToArray();
+        var filler = new DocxTableRow([new DocxTableCell("Filler", [fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
+        var table = new DocxTable(null, [60d], [filler, split]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] splitFragments = layout.Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .Where(row => row.RowIndex == 1)
+            .ToArray();
+
+        TestAssert.Equal(2, splitFragments.Length);
+        TestAssert.True(splitFragments.All(fragment => fragment.FragmentCount == 2), "The image-owning body row should split into two fragments.");
+        TestAssert.True(splitFragments.Sum(fragment => fragment.Cells.Sum(cell => cell.InlineImages.Count)) > 0, "Split row fragments should keep overlapping inline image layouts for the renderer clip path.");
+    }
+
     public static void DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary()
     {
         var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
