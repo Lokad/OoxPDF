@@ -1935,9 +1935,10 @@ High-priority actions:
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
     document, but this removes another style-spacing heuristic gap.
-  - [ ] 2026-05-31: Finish DOCX paragraph spacing variants: implement `beforeAutospacing`/`afterAutospacing`,
-    `beforeLines`/`afterLines`, exact Word adjacent-spacing collapse around tables/sections, and public
-    Office-backed fixtures for each variant before downgrading `DOCX_STYLE_PARAGRAPH_SPACING`.
+  - [ ] 2026-05-31: Finish DOCX paragraph spacing variants: refine exact
+    `beforeAutospacing`/`afterAutospacing` values, implement exact Word adjacent-spacing collapse around
+    tables/sections, and keep public Office-backed fixtures for each variant before downgrading
+    `DOCX_STYLE_PARAGRAPH_SPACING`.
     - [x] 2026-05-31: Converted preserved `beforeLines`/`afterLines` tokens into resolved paragraph spacing
       points when no explicit twip spacing or autospacing owns that paragraph side. The reader now derives
       hundredths-of-line spacing from the resolved paragraph line height, and a public synthetic reader test
@@ -1956,6 +1957,16 @@ High-priority actions:
       DOCX run `20260531-222149` stayed at `16/16` pages with zero dimension mismatches and unchanged aggregate
       metrics (`14.818900` MAE, `0.134293` changed16), while `DOCX_STYLE_PARAGRAPH_SPACING` dropped from the
       private diagnostic list because the remaining private style-spacing triggers were already-supported forms.
+    - [x] 2026-06-01: Added public visual fixture `docx-ladder-02-paragraph-autospacing` and moved
+      `beforeAutospacing`/`afterAutospacing` from the previous fixed `0pt`/`6pt` placeholders to resolved
+      line-height-owned spacing. The spacing cascade is now side-aware: a higher-priority `before*` or `after*`
+      token replaces lower-priority twip, line-based, or auto tokens on that same side instead of merging
+      incompatible alternatives. Public run `20260601-021353` is dimension-stable and improves the fixture to
+      `MAE=0.426487`, changed16 `0.003888` from baseline `0.432740`/`0.003942`; private DOCX run
+      `20260601-021406` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
+      `MAE=12.716572`, changed16 `0.118448`. Keep the parent open because Office's exact autospacing amount
+      appears slightly lower than the current line-height approximation and table/section collapse is still
+      unmodeled.
     - [x] 2026-05-31: Removed the stale style-level keep-rule diagnostic for `w:keepNext`/`w:keepLines` after
       those tokens became part of the resolved paragraph model and block-pagination stage. Public coverage now
       asserts that supported style keep rules do not emit `DOCX_STYLE_PARAGRAPH_KEEP_RULE`. Private DOCX run
@@ -3510,9 +3521,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - [x] 2026-05-31: Extended the internal DOCX layout snapshot with public-safe per-page vertical consumption
   and block-kind height sums for text lines, inline images, and table rows. This does not expose document text
   and gives private pagination investigations a stable place to compare block-level drift.
-- [ ] Implement style-derived paragraph spacing accurately, including before/after values,
-  `contextualSpacing`, `beforeAutospacing`/`afterAutospacing`, and Word-like adjacent paragraph spacing
-  collapse.
+- [ ] Implement style-derived paragraph spacing accurately, including exact Office autospacing magnitudes,
+  Word-like adjacent paragraph spacing collapse around tables/sections, and diagnostics that distinguish
+  supported tokens from unresolved spacing semantics.
 - [ ] Implement paragraph and numbering indents: left/right/first-line/hanging indents from paragraph styles
   and numbering levels, with corresponding wrapping-width changes.
 - [ ] 2026-05-31: Resolve DOCX `w:basedOn` style inheritance with pagination-safe Office fixtures before
@@ -4857,6 +4868,14 @@ Current validation baseline:
   pagination/page count. A narrower run-only cascade trial was also rejected after private run
   `20260601-013756` changed the candidate to `15` pages (`MAE=13.645890`, changed16 `0.124541`), despite
   passing public `docx-tables` and `docx-text`.
+- DOCX paragraph autospacing validation:
+  added `docx-ladder-02-paragraph-autospacing` and changed `beforeAutospacing`/`afterAutospacing` to resolve
+  from paragraph line height after fixing spacing cascade ownership per side. `docx-text --skip-slow` passed
+  `17`, `docx-page --skip-slow` passed `17`, `docx-tables --skip-slow` passed `58`, `docx-numbering
+  --skip-slow` passed `11`, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Public
+  visual run `20260601-021353` is dimension-stable at `MAE=0.426487`, changed16 `0.003888` versus baseline
+  `0.432740`/`0.003942`. Private DOCX run `20260601-021406` stayed neutral at `16/16` pages, zero dimension
+  mismatches, no diagnostics, `MAE=12.716572`, changed16 `0.118448`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

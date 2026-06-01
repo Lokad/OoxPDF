@@ -445,11 +445,11 @@ internal static class DocxTests
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal("Risky", paragraph.StyleId ?? string.Empty);
         TestAssert.Equal(18d, paragraph.SpacingBeforePoints);
-        TestAssert.Equal(6d, paragraph.SpacingAfterPoints);
+        TestAssert.Equal(22d, paragraph.SpacingAfterPoints);
         TestAssert.Equal("360", paragraph.Spacing.BeforeValue ?? string.Empty);
-        TestAssert.Equal("120", paragraph.Spacing.AfterValue ?? string.Empty);
-        TestAssert.Equal("240", paragraph.Spacing.AfterLinesValue ?? string.Empty);
-        TestAssert.Equal("1", paragraph.Spacing.BeforeAutoSpacingValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, paragraph.Spacing.AfterValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, paragraph.Spacing.AfterLinesValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, paragraph.Spacing.BeforeAutoSpacingValue ?? string.Empty);
         TestAssert.Equal("1", paragraph.Spacing.AfterAutoSpacingValue ?? string.Empty);
         TestAssert.Equal("480", paragraph.Spacing.LineValue ?? string.Empty);
         TestAssert.Equal("exact", paragraph.Spacing.LineRuleValue ?? string.Empty);

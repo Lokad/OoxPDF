@@ -556,7 +556,7 @@ internal sealed class DocxReader
 
         if (OoxBoolean.IsTrue(paragraph.Spacing.BeforeAutoSpacingValue))
         {
-            return 0d;
+            return lineHeight;
         }
 
         return TryReadLineBasedSpacing(paragraph.Spacing.BeforeLinesValue, lineHeight, out double linePoints)
@@ -573,7 +573,7 @@ internal sealed class DocxReader
 
         if (OoxBoolean.IsTrue(paragraph.Spacing.AfterAutoSpacingValue))
         {
-            return 6d;
+            return lineHeight;
         }
 
         return TryReadLineBasedSpacing(paragraph.Spacing.AfterLinesValue, lineHeight, out double linePoints)
@@ -2064,11 +2064,13 @@ internal sealed class DocxReader
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
+            bool hasOtherBeforeSide = HasBeforeSpacingSide(other.Spacing);
+            bool hasOtherAfterSide = HasAfterSpacingSide(other.Spacing);
             return new DocxResolvedParagraphProperties(
                 other.Alignment ?? Alignment,
                 other.AlignmentValue ?? AlignmentValue,
-                other.SpacingBeforePoints ?? SpacingBeforePoints,
-                other.SpacingAfterPoints ?? SpacingAfterPoints,
+                hasOtherBeforeSide ? other.SpacingBeforePoints : other.SpacingBeforePoints ?? SpacingBeforePoints,
+                hasOtherAfterSide ? other.SpacingAfterPoints : other.SpacingAfterPoints ?? SpacingAfterPoints,
                 other.LineSpacingFactor ?? LineSpacingFactor,
                 other.LineSpacingPoints ?? LineSpacingPoints,
                 MergeSpacing(Spacing, other.Spacing),
@@ -2078,16 +2080,32 @@ internal sealed class DocxReader
 
     private static DocxParagraphSpacing MergeSpacing(DocxParagraphSpacing current, DocxParagraphSpacing other)
     {
+        bool hasOtherBeforeSide = HasBeforeSpacingSide(other);
+        bool hasOtherAfterSide = HasAfterSpacingSide(other);
         return new DocxParagraphSpacing(
-            other.BeforeValue ?? current.BeforeValue,
-            other.AfterValue ?? current.AfterValue,
-            other.BeforeLinesValue ?? current.BeforeLinesValue,
-            other.AfterLinesValue ?? current.AfterLinesValue,
-            other.BeforeAutoSpacingValue ?? current.BeforeAutoSpacingValue,
-            other.AfterAutoSpacingValue ?? current.AfterAutoSpacingValue,
+            hasOtherBeforeSide ? other.BeforeValue : current.BeforeValue,
+            hasOtherAfterSide ? other.AfterValue : current.AfterValue,
+            hasOtherBeforeSide ? other.BeforeLinesValue : current.BeforeLinesValue,
+            hasOtherAfterSide ? other.AfterLinesValue : current.AfterLinesValue,
+            hasOtherBeforeSide ? other.BeforeAutoSpacingValue : current.BeforeAutoSpacingValue,
+            hasOtherAfterSide ? other.AfterAutoSpacingValue : current.AfterAutoSpacingValue,
             other.LineValue ?? current.LineValue,
             other.LineRuleValue ?? current.LineRuleValue,
             other.ContextualSpacing ?? current.ContextualSpacing);
+    }
+
+    private static bool HasBeforeSpacingSide(DocxParagraphSpacing spacing)
+    {
+        return spacing.BeforeValue is not null ||
+            spacing.BeforeLinesValue is not null ||
+            spacing.BeforeAutoSpacingValue is not null;
+    }
+
+    private static bool HasAfterSpacingSide(DocxParagraphSpacing spacing)
+    {
+        return spacing.AfterValue is not null ||
+            spacing.AfterLinesValue is not null ||
+            spacing.AfterAutoSpacingValue is not null;
     }
 
     private static DocxParagraphKeepRules MergeKeepRules(DocxParagraphKeepRules current, DocxParagraphKeepRules other)
