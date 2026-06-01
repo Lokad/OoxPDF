@@ -1661,7 +1661,7 @@ internal sealed class DocxLayoutEngine
     private static double AdvanceToNextTabStop(double width, IReadOnlyList<DocxTabStop> tabStops)
     {
         foreach (DocxTabStop tabStop in tabStops
-            .Where(tabStop => tabStop.PositionPoints is not null)
+            .Where(tabStop => tabStop.PositionPoints is not null && IsPositioningTabStop(tabStop))
             .OrderBy(tabStop => tabStop.PositionPoints!.Value))
         {
             if (tabStop.PositionPoints!.Value > width + 0.001d)
@@ -1671,6 +1671,12 @@ internal sealed class DocxLayoutEngine
         }
 
         return AdvanceToNextDefaultTabStop(width);
+    }
+
+    private static bool IsPositioningTabStop(DocxTabStop tabStop)
+    {
+        return !string.Equals(tabStop.Value, "bar", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(tabStop.Value, "clear", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<DocxWrappedTextLine> WrapTextLines(
