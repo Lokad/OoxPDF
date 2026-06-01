@@ -381,20 +381,17 @@ High-priority actions:
   `docx-ladder-03-docgrid-list-use-fe` at `MAE=0.019271`. Private acceptance improved from `MAE=9.982157` to
   `MAE=8.915684`, with pages 9..11 notably lower; page 15 is now the worst remaining private page.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
-  punctuation, digit/letter, non-ASCII, and longest breakable-token counts. Page-15 inspection showed the
-  worst table-to-heading residual is not a table width or column-position error; the 6-column table has
-  Office-aligned x positions, but Office wraps some narrow punctuation-bearing cells into taller bands while
-  the candidate keeps those rows shorter. Added a structural DOCX word-break rule for common punctuation
-  break opportunities (`-`, slash/backslash, and Unicode dash forms), preserving the punctuation on the
-  previous line. This is not enough to move the inspected page-15 table rows yet, but it improves the private
-  acceptance aggregate slightly (`8.915684 -> 8.895896`) and page 15 (`12.157179 -> 11.705572`) while
-  improving flow matching (`280 -> 290` matched lines, missing reference matches `102 -> 92`) and leaving
-  public guards in-band: `docx-ladder-03-table-compact-row-pagination` `MAE=1.578313`,
-  `docx-ladder-03-table-row-heights` `MAE=0.700136`, `docx-ladder-03-table-pagination-margins` pages
-  `0.770109/0.171589`, `docx-ladder-03-compact-bullet-alt-line115` page 1 `MAE=15.195190`, and the compact
-  list/docGrid guards unchanged. Keep the branch open: the next public fixture should isolate narrow DOCX
-  table-cell wrapping around punctuation/long tokens and compare Office row bands directly before changing
-  row-height or cell-width math.
+  punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
+  showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table
+  has Office-aligned x positions, but Office wraps some narrow punctuation-bearing cells into taller bands
+  while the candidate keeps those rows shorter. Added public
+  `docx-ladder-03-table-punctuation-wrapping` to make this branch public and Office-observable. A broad
+  punctuation word-break trial was rejected even though it slightly improved the private aggregate, because the
+  public probe showed candidate overwrapping `North-West/2026`-style cells that Office keeps on one row. Keep
+  this branch open on effective table-cell text measurement/fit and Office row-band structure, not on a
+  punctuation shortcut or a row-height constant. With the rejected break rule reverted, the new public probe is
+  an accepted open mismatch at `MAE=2.575378`, and private acceptance returns to the current baseline
+  `MAE=8.915684`.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

@@ -285,11 +285,6 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             else
             {
                 current++;
-                if (DocxWordBreakRules.IsOpportunityAfter(value))
-                {
-                    longest = Math.Max(longest, current);
-                    current = 0;
-                }
             }
         }
 
@@ -447,14 +442,6 @@ internal sealed record TextProfile(
     int UppercaseCharacterCount,
     int LowercaseCharacterCount,
     int LongestBreakableTokenLength);
-
-internal static class DocxWordBreakRules
-{
-    public static bool IsOpportunityAfter(char value)
-    {
-        return value is '-' or '/' or '\\' or '\u2010' or '\u2011' or '\u2012' or '\u2013' or '\u2014';
-    }
-}
 
 internal sealed record DocxLayoutPage(
     double Width,
@@ -2903,12 +2890,6 @@ internal sealed class DocxLayoutEngine
             bool breakableWhitespace = IsBreakableWhitespaceChar(text[i]);
             if (breakableWhitespace == inBreakableWhitespace)
             {
-                if (!breakableWhitespace && DocxWordBreakRules.IsOpportunityAfter(text[i]))
-                {
-                    tokens.Add(new TextToken(text[start..(i + 1)], start, i + 1 - start));
-                    start = i + 1;
-                }
-
                 continue;
             }
 
