@@ -5445,6 +5445,34 @@ Current validation baseline:
   `0.014529`) to run `20260601-103906` (`MAE=1.685749`, changed16 `0.013842`). Private DOCX run
   `20260601-103906` stayed stable at `16/16` pages, zero dimension mismatches, no diagnostics, and improved
   from `MAE=13.388935`, changed16 `0.124264` to `MAE=13.286569`, changed16 `0.123783`.
+  2026-06-01 follow-up: the DOCX layout stage now justifies wrapped non-final `w:jc="both"` lines by
+  expanding ordinary inter-word spaces structurally in layout instead of leaving trailing-space width in the
+  line box. Final paragraph lines remain natural width, and list-label first lines are kept out of the new
+  path until public Office evidence covers that interaction. Validation passed `docx-core --skip-slow` (`23`),
+  `docx-text --skip-slow` (`36`), `docx-tables --skip-slow` (`71`), and full solution build. Private DOCX run
+  `20260601-124141` stayed unchanged at `16/16` pages, zero dimension mismatches, no diagnostics,
+  `MAE=13.791190`, changed16 `0.126277`; inspection found no direct body `w:jc` tokens in that private case,
+  so justification is closed as a generic missing DOCX feature but is not the current private-driver gap.
+  2026-06-01 follow-up: the Office PDF font-size emission grid is now shared between PPTX and DOCX through
+  `OfficePdfTextEmissionProfile` instead of being a PPTX-private duplicate. DOCX `/Tf` sizes and glyph
+  positioning arrays now use the same 600-DPI Office grid already observed on PPTX. This structurally moves
+  candidate DOCX font-size buckets toward Word's PDF output: in private run `20260601-124523`, candidate
+  buckets became `9.96:847`, `9:323`, `14.04:24`, `18:9`, `11.04:8`, `12:1`, `26.04:1`, while the reference
+  uses the same size grid with higher operation counts. Raster impact was mixed: aggregate private MAE moved
+  from `13.791190` to `13.838763`, but several worst pages improved (`9`, `10`, `11`, and `8`). Public
+  `docx-ladder-02-character-spacing` run `20260601-124606` and `docx-numbering` run `20260601-124606` also
+  moved slightly worse in raster while gaining the shared `/Tf` structure. Keep the shared grid; the remaining
+  driver is text-state and operation decomposition, not a reason to restore pre-grid font sizes.
+- [ ] DOCX Office PDF text-state decomposition:
+  private DOCX inspection after the shared font grid still shows the candidate emits only `Tc=0` (`1213`
+  operations), while Word emits widespread nonzero character-spacing buckets (`0`, `-0.003`, `-0.010`,
+  `-0.050`, `0.110`, `0.031`, `0.051`, `0.058`, and related small values). Public
+  `docx-ladder-02-character-spacing` shows authored run spacing should remain encoded through positioned
+  glyph adjustments rather than blindly promoted to `Tc`, because Word uses `Tc=0` there; the mismatch is a
+  separate Office PDF text-state/operation-splitting behavior. Next work must survey existing public DOCX
+  reference PDFs and, if needed, add small Office-authored probes for ordinary paragraphs, table cells,
+  headers/footers, multi-run paragraphs, and style-driven font sizes before changing emission. Do not
+  hard-code fonts, private bucket constants, or private page/document conditions.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

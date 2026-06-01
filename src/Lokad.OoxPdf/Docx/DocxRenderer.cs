@@ -365,14 +365,15 @@ internal sealed class DocxRenderer
         RgbColor color)
     {
         bool syntheticItalic = style.Italic && !resource.Resolution.Italic;
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, style.CharacterSpacingPoints, fontSize, forcePositioningArray: true);
+        double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(fontSize);
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, style.CharacterSpacingPoints, pdfFontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {
-            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic);
+            graphics.DrawGlyphPositionedText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic);
             return;
         }
 
-        graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic);
+        graphics.DrawGlyphText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic);
     }
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)

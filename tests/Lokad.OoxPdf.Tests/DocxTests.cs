@@ -187,7 +187,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Contains("/F1 14 Tf", pdf);
+        TestAssert.Contains("/F1 14.04 Tf", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.True(CountPdfTextShows(pdf) >= 1, "Expected DOCX paragraph text to render as a PDF text-show operation.");
         TestAssert.Contains(" l S", pdf);
@@ -1318,6 +1318,53 @@ internal static class DocxTests
         TestAssert.Equal(line.Segments[1].X + line.Segments[1].Width, line.Segments[2].X);
         TestAssert.Equal("Wide", line.Segments[1].StyleRun.FontFamily ?? string.Empty);
         TestAssert.Equal("Wide", line.Segments[2].StyleRun.FontFamily ?? string.Empty);
+    }
+
+    public static void DocxLayoutStageJustifiesWrappedNonFinalLines()
+    {
+        var run = new DocxTextRun("A B C D E F", 12d, null, false, false, false, null, "Narrow");
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Justified,
+            "both",
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            72d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        DocxTextLineLayout firstLine = lines[0];
+        TestAssert.Equal(5, firstLine.Segments.Count);
+        TestAssert.True(firstLine.Segments.All(segment => segment.Text.IndexOf(' ') < 0), "Expected justified DOCX layout to make word positions explicit instead of rendering stretchable spaces.");
+        TestAssert.True(Math.Abs(firstLine.Width - 52d) < 0.001d, "Expected justified line inspection to expose the full paragraph width.");
+        TestAssert.True(Math.Abs(firstLine.Segments.Last().X + firstLine.Segments.Last().Width - 62d) < 0.001d, "Expected non-final justified DOCX lines to stretch to the paragraph edge while excluding trailing wrap spaces.");
+        TestAssert.True(lines[1].Width < firstLine.Width, "Expected the final line to keep its natural width instead of being justified.");
     }
 
     public static void DocxLayoutStageWrapsMixedRunTextWithRunAwareWidths()
@@ -4695,7 +4742,7 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Contains("/F1 11 Tf", pdf);
+        TestAssert.Contains("/F1 11.04 Tf", pdf);
         TestAssert.True(CountPdfTextShows(pdf) >= 1, "Expected DOCX table text to render as a PDF text-show operation.");
     }
 

@@ -614,14 +614,16 @@ internal sealed class DocxLayoutEngine
                     FinishPage();
                 }
 
-                foreach (DocxWrappedTextLine line in lines)
+                for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
+                    DocxWrappedTextLine line = lines[lineIndex];
                     if (cursorY - lineHeight < page.MarginBottom && HasPageContent())
                     {
                         FinishPage();
                     }
 
                     double lineWidth = MeasureTextSpans(line.Spans, paragraphFontSize, textMeasurer, paragraph.TabStops);
+                    double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, paragraphFontSize, textMeasurer, paragraph.TabStops);
                     double lineX = paragraph.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -631,13 +633,19 @@ internal sealed class DocxLayoutEngine
                     double baselineOffset = paragraph.LineSpacingPoints is null
                         ? paragraphFontSize * BaselineOffsetFactor
                         : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
+                    bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
+                        ShouldJustifyTextLine(paragraph.Alignment, lineIndex == lines.Length - 1, drawableLineWidth, paragraphWidth, line.Spans);
                     IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
                         ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, x + labelStartOffset, lineX, paragraphFontSize, textMeasurer, paragraph.TabStops)
-                        : CreateTextSegments(line.Spans, lineX, paragraphFontSize, textMeasurer, paragraph.TabStops);
+                        : justifyLine
+                            ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, paragraphFontSize, textMeasurer, paragraph.TabStops)
+                            : CreateTextSegments(line.Spans, lineX, paragraphFontSize, textMeasurer, paragraph.TabStops);
                     double effectiveX = firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX;
                     double effectiveWidth = firstLine && paragraph.ListLabel is not null
                         ? Math.Max(lineX + lineWidth, x + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, paragraphFontSize, textMeasurer)) - (x + labelStartOffset)
-                        : lineWidth;
+                        : justifyLine
+                            ? paragraphWidth
+                            : lineWidth;
                     currentItems.Add(new DocxTextLineLayout(
                         firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,
                         firstRun,
@@ -1497,22 +1505,31 @@ internal sealed class DocxLayoutEngine
                 double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                 bool firstLine = true;
-                foreach (DocxWrappedTextLine line in WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops))
+                DocxWrappedTextLine[] wrappedLines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops).ToArray();
+                for (int lineIndex = 0; lineIndex < wrappedLines.Length; lineIndex++)
                 {
+                    DocxWrappedTextLine line = wrappedLines[lineIndex];
                     double lineWidth = MeasureTextSpans(line.Spans, fontSize, textMeasurer, paragraph.TabStops);
+                    double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, fontSize, textMeasurer, paragraph.TabStops);
                     double lineX = paragraph.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
                         DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
                         _ => paragraphX
                     };
+                    bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
+                        ShouldJustifyTextLine(paragraph.Alignment, lineIndex == wrappedLines.Length - 1, drawableLineWidth, paragraphWidth, line.Spans);
                     IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
                         ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, cellX + paddingLeft + labelStartOffset, lineX, fontSize, textMeasurer, paragraph.TabStops)
-                        : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, paragraph.TabStops);
+                        : justifyLine
+                            ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, fontSize, textMeasurer, paragraph.TabStops)
+                            : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, paragraph.TabStops);
                     double effectiveX = firstLine && paragraph.ListLabel is not null ? cellX + paddingLeft + labelStartOffset : lineX;
                     double effectiveWidth = firstLine && paragraph.ListLabel is not null
                         ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - (cellX + paddingLeft + labelStartOffset)
-                        : lineWidth;
+                        : justifyLine
+                            ? paragraphWidth
+                            : lineWidth;
                     lines.Add(new DocxTextLineLayout(
                         firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,
                         firstRun,
@@ -1751,6 +1768,151 @@ internal sealed class DocxLayoutEngine
         }
 
         return width;
+    }
+
+    private static double MeasureDrawableTextSpans(
+        IReadOnlyList<DocxTextSpan> spans,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
+    {
+        int length = spans.Sum(span => span.Text.Length);
+        int drawableLength = FindDrawableTextLength(spans);
+        return drawableLength == length
+            ? MeasureTextSpans(spans, fontSize, textMeasurer, tabStops)
+            : MeasureTextSpans(SliceTextSpans(spans, 0, drawableLength), fontSize, textMeasurer, tabStops);
+    }
+
+    private static bool ShouldJustifyTextLine(
+        DocxTextAlignment alignment,
+        bool isLastLine,
+        double drawableLineWidth,
+        double paragraphWidth,
+        IReadOnlyList<DocxTextSpan> spans)
+    {
+        return alignment == DocxTextAlignment.Justified &&
+            !isLastLine &&
+            paragraphWidth - drawableLineWidth > 0.001d &&
+            CountStretchableJustificationSpaces(spans) > 0 &&
+            !spans.Any(span => span.Text.IndexOf('\t') >= 0);
+    }
+
+    private static IReadOnlyList<DocxTextSegmentLayout> CreateJustifiedTextSegments(
+        IReadOnlyList<DocxTextSpan> spans,
+        double lineX,
+        double drawableLineWidth,
+        double paragraphWidth,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
+    {
+        int stretchableSpaces = CountStretchableJustificationSpaces(spans);
+        if (stretchableSpaces == 0 || spans.Any(span => span.Text.IndexOf('\t') >= 0))
+        {
+            return CreateTextSegments(spans, lineX, fontSize, textMeasurer, tabStops);
+        }
+
+        double extraPerSpace = Math.Max(0d, paragraphWidth - drawableLineWidth) / stretchableSpaces;
+        int drawableLength = FindDrawableTextLength(spans);
+        IReadOnlyList<DocxTextSpan> drawableSpans = SliceTextSpans(spans, 0, drawableLength);
+        var segments = new List<DocxTextSegmentLayout>(drawableSpans.Count);
+        double segmentX = lineX;
+        for (int i = 0; i < drawableSpans.Count; i++)
+        {
+            DocxTextSpan span = drawableSpans[i];
+            segmentX = AddJustifiedSpanSegments(segments, span, segmentX, fontSize, textMeasurer, extraPerSpace);
+            if (i + 1 < drawableSpans.Count)
+            {
+                segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, drawableSpans[i + 1].Text);
+            }
+        }
+
+        return segments;
+    }
+
+    private static double AddJustifiedSpanSegments(
+        List<DocxTextSegmentLayout> segments,
+        DocxTextSpan span,
+        double segmentX,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        double extraPerSpace)
+    {
+        int start = 0;
+        while (start < span.Text.Length)
+        {
+            bool isSpace = IsJustificationSpace(span.Text[start]);
+            int end = start + 1;
+            while (end < span.Text.Length && IsJustificationSpace(span.Text[end]) == isSpace)
+            {
+                end++;
+            }
+
+            string text = span.Text[start..end];
+            double width = textMeasurer.MeasureText(span.StyleRun, text, fontSize);
+            if (isSpace)
+            {
+                segmentX += width + text.Length * extraPerSpace;
+            }
+            else
+            {
+                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width));
+                segmentX += width;
+            }
+
+            start = end;
+        }
+
+        return segmentX;
+    }
+
+    private static int CountStretchableJustificationSpaces(IReadOnlyList<DocxTextSpan> spans)
+    {
+        int drawableLength = FindDrawableTextLength(spans);
+        int seen = 0;
+        int count = 0;
+        foreach (DocxTextSpan span in spans)
+        {
+            foreach (char c in span.Text)
+            {
+                if (seen++ >= drawableLength)
+                {
+                    return count;
+                }
+
+                if (IsJustificationSpace(c))
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private static int FindDrawableTextLength(IReadOnlyList<DocxTextSpan> spans)
+    {
+        int length = spans.Sum(span => span.Text.Length);
+        int index = length;
+        for (int spanIndex = spans.Count - 1; spanIndex >= 0; spanIndex--)
+        {
+            string text = spans[spanIndex].Text;
+            for (int i = text.Length - 1; i >= 0; i--)
+            {
+                index--;
+                if (!IsBreakableWhitespaceChar(text[i]))
+                {
+                    return index + 1;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    private static bool IsJustificationSpace(char c)
+    {
+        return c == ' ';
     }
 
     private static double AddTextSegments(

@@ -1186,21 +1186,11 @@ internal sealed partial class PptxRenderer
 
     private static class PptxPdfTextEmissionProfile
     {
-        private const double OfficeExportFontGridDpi = 600d;
-        private const double PointsPerInch = 72d;
-
         public static double FontSize(PptxPdfTextEmissionContext context) => FontSize(context.LayoutFontSize);
 
         public static double CharacterSpacing(PptxPdfTextEmissionContext context, double layoutCharacterSpacing) => layoutCharacterSpacing;
 
-        public static double FontSize(double layoutFontSize)
-        {
-            double deviceUnits = Math.Round(
-                layoutFontSize * OfficeExportFontGridDpi / PointsPerInch,
-                MidpointRounding.AwayFromZero);
-
-            return deviceUnits * PointsPerInch / OfficeExportFontGridDpi;
-        }
+        public static double FontSize(double layoutFontSize) => OfficePdfTextEmissionProfile.FontSize(layoutFontSize);
     }
 
     private static class PptxChartMetricRules
