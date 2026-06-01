@@ -361,11 +361,6 @@ internal sealed class DocxRenderer
             {
                 RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
             }
-            else
-            {
-                DocxTableCellLayout? nextRowCell = cellIndex < nextRow.Cells.Count ? nextRow.Cells[cellIndex] : null;
-                RenderSharedHorizontalTableBorder(cellLayout, nextRowCell, graphics);
-            }
 
             DocxTableCellBorder? left = FindBorder(cellLayout.Cell.Borders, "left") ?? FindBorder(cellLayout.Cell.Borders, "start");
             if (cellIndex == 0)
@@ -384,15 +379,48 @@ internal sealed class DocxRenderer
             DocxTableCellBorder? nextLeft = FindBorder(nextCell.Cell.Borders, "left") ?? FindBorder(nextCell.Cell.Borders, "start");
             RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
         }
+
+        if (nextRow is not null)
+        {
+            RenderSharedHorizontalTableBorders(row, nextRow, graphics);
+        }
     }
 
-    private static void RenderSharedHorizontalTableBorder(
+    private static void RenderSharedHorizontalTableBorders(
+        DocxTableRowLayout row,
+        DocxTableRowLayout nextRow,
+        PdfGraphicsBuilder graphics)
+    {
+        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        {
+            if (cellLayout.IsVerticalMergeContinuation)
+            {
+                continue;
+            }
+
+            DocxTableCellLayout[] overlappingNextCells = nextRow.Cells
+                .Where(nextCell => !nextCell.IsVerticalMergeContinuation && HorizontalOverlap(cellLayout, nextCell) > 0d)
+                .ToArray();
+            if (overlappingNextCells.Length == 0)
+            {
+                RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
+                continue;
+            }
+
+            foreach (DocxTableCellLayout nextRowCell in overlappingNextCells)
+            {
+                RenderSharedHorizontalTableBorderSegment(cellLayout, nextRowCell, graphics);
+            }
+        }
+    }
+
+    private static void RenderSharedHorizontalTableBorderSegment(
         DocxTableCellLayout cellLayout,
-        DocxTableCellLayout? nextRowCell,
+        DocxTableCellLayout nextRowCell,
         PdfGraphicsBuilder graphics)
     {
         DocxTableCellBorder? bottom = FindBorder(cellLayout.Cell.Borders, "bottom");
-        DocxTableCellBorder? nextTop = nextRowCell is null ? null : FindBorder(nextRowCell.Cell.Borders, "top");
+        DocxTableCellBorder? nextTop = FindBorder(nextRowCell.Cell.Borders, "top");
         if (IsSuppressedBorder(bottom) || IsSuppressedBorder(nextTop))
         {
             return;
@@ -407,17 +435,19 @@ internal sealed class DocxRenderer
         RgbColor color = ReadColor(border.Color);
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         double width = ReadBorderWidth(border.SizeValue);
-        double x = nextRowCell is null ? cellLayout.X : Math.Max(cellLayout.X, nextRowCell.X);
-        double right = nextRowCell is null
-            ? cellLayout.X + cellLayout.Width
-            : Math.Min(cellLayout.X + cellLayout.Width, nextRowCell.X + nextRowCell.Width);
+        double x = Math.Max(cellLayout.X, nextRowCell.X);
+        double right = Math.Min(cellLayout.X + cellLayout.Width, nextRowCell.X + nextRowCell.Width);
         if (right <= x)
         {
-            x = cellLayout.X;
-            right = cellLayout.X + cellLayout.Width;
+            return;
         }
 
         graphics.FillRectangle(x, cellLayout.Y - width / 2d, right - x, width);
+    }
+
+    private static double HorizontalOverlap(DocxTableCellLayout first, DocxTableCellLayout second)
+    {
+        return Math.Min(first.X + first.Width, second.X + second.Width) - Math.Max(first.X, second.X);
     }
 
     private static void RenderHorizontalTableCellBorder(DocxTableCellLayout cellLayout, string edge, PdfGraphicsBuilder graphics)
