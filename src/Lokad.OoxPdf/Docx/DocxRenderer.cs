@@ -634,6 +634,7 @@ internal sealed class DocxRenderer
             }
 
             (DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments = paragraph.Runs
+                .Where(run => !run.Hidden)
                 .Select(run => (
                     Run: run,
                     Text: ResolveStaticFieldPlaceholders(run.Text, pageNumber, pageCount),

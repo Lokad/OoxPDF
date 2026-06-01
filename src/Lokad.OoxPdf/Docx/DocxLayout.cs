@@ -1541,7 +1541,7 @@ internal sealed class DocxLayoutEngine
     private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs)
     {
         return runs
-            .Where(run => run.Text.Length != 0)
+            .Where(run => run.Text.Length != 0 && !run.Hidden)
             .Select(run => new DocxTextSpan(run.Text, run))
             .ToArray();
     }

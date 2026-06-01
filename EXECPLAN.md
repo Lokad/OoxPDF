@@ -3299,6 +3299,13 @@ document-specific business content into public notes.
   dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`.
   Keep small-caps rendering open for Office-backed glyph casing, size scaling, baseline interaction, and PDF
   text-operation evidence rather than treating it like ordinary all-caps.
+- [x] 2026-06-01: Preserved DOCX run-level `w:vanish` hidden-text tokens and suppress hidden runs from body
+  layout and static header/footer rendering. Direct off values such as `w:val="0"` keep the run visible, while
+  inherited val-less hidden runs remain in the source-bearing model but do not emit visible text. Validation
+  passed `docx-text --skip-slow` (`30`) and full solution build. Private DOCX run `20260601-092656` stayed
+  page-stable at `16/16`, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`,
+  worst page 9 `17.162084`. Keep hidden-text mode options, hidden drawings/fields, paragraph spacing edge
+  cases for hidden-only paragraphs, and Office-backed diagnostics open.
 - [x] 2026-06-01: Preserved cached DOCX `w:fldSimple` result runs in paragraph order for non-PAGE fields
   instead of dropping them. The reader now walks paragraph child elements in document order, keeps cached
   simple-field result text and run styles, and still maps simple PAGE fields to the existing page placeholder.

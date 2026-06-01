@@ -677,7 +677,9 @@ internal sealed class DocxReader
             resolvedRun.ShadingValue,
             resolvedRun.ShadingColor,
             resolvedRun.SmallCaps ?? false,
-            resolvedRun.SmallCapsValue)
+            resolvedRun.SmallCapsValue,
+            resolvedRun.Hidden ?? false,
+            resolvedRun.HiddenValue)
         {
             Fonts = resolvedRun.Fonts
         });
@@ -1776,6 +1778,9 @@ internal sealed class DocxReader
         XElement? smallCapsElement = properties?.Element(WordprocessingNamespace + "smallCaps");
         bool? smallCaps = ReadOnOff(smallCapsElement);
         string? smallCapsValue = (string?)smallCapsElement?.Attribute(WordprocessingNamespace + "val");
+        XElement? hiddenElement = properties?.Element(WordprocessingNamespace + "vanish");
+        bool? hidden = ReadOnOff(hiddenElement);
+        string? hiddenValue = (string?)hiddenElement?.Attribute(WordprocessingNamespace + "val");
         XElement? strikeElement = properties?.Element(WordprocessingNamespace + "strike");
         XElement? doubleStrikeElement = properties?.Element(WordprocessingNamespace + "dstrike");
         bool? strike = ReadOnOff(strikeElement);
@@ -1799,7 +1804,7 @@ internal sealed class DocxReader
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue, highlightValue, shadingFill, shadingValue, shadingColor, smallCaps, smallCapsValue);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue, highlightValue, shadingFill, shadingValue, shadingColor, smallCaps, smallCapsValue, hidden, hiddenValue);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -2344,7 +2349,9 @@ internal sealed class DocxReader
             run.ShadingValue,
             run.ShadingColor,
             run.SmallCaps,
-            run.SmallCapsValue);
+            run.SmallCapsValue,
+            run.Hidden,
+            run.HiddenValue);
     }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
@@ -2484,9 +2491,11 @@ internal sealed class DocxReader
         string? ShadingValue = null,
         string? ShadingColor = null,
         bool? SmallCaps = null,
-        string? SmallCapsValue = null)
+        string? SmallCapsValue = null,
+        bool? Hidden = null,
+        string? HiddenValue = null)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -2513,7 +2522,9 @@ internal sealed class DocxReader
                 other.ShadingValue ?? ShadingValue,
                 other.ShadingColor ?? ShadingColor,
                 other.SmallCaps ?? SmallCaps,
-                other.SmallCapsValue ?? SmallCapsValue);
+                other.SmallCapsValue ?? SmallCapsValue,
+                other.Hidden ?? Hidden,
+                other.HiddenValue ?? HiddenValue);
         }
     }
 }
