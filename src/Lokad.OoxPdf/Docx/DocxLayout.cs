@@ -453,11 +453,9 @@ internal static class DocxLineMetrics
             return fontSize;
         }
 
-        double units = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
-        if (units <= 0d)
-        {
-            units = font.Os2.WindowsAscender + font.Os2.WindowsDescender;
-        }
+        double typographicUnits = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
+        double windowsUnits = font.Os2.WindowsAscender + font.Os2.WindowsDescender;
+        double units = Math.Max(typographicUnits, windowsUnits);
 
         return Math.Max(fontSize, units * fontSize / font.UnitsPerEm);
     }

@@ -2000,6 +2000,16 @@ High-priority actions:
     emits `14`, with row-baseline deltas growing down the table. Do not address this with another row-height
     constant; the next acceptable slice needs to separate row-origin/baseline ownership from Office's finer
     text-operation decomposition on public fixtures.
+    2026-06-01 follow-up: DOCX automatic line height now uses the larger of the OpenType typographic line box
+    and Windows ascender/descender line box. This is a structural font-metric rule rather than a table-row
+    offset: Office's public row-height fixture showed wrapped table-cell line steps larger than the candidate
+    typographic-only line box, and using the larger authored font metric moves row origins and baselines closer
+    without adding a row-height constant. Public `docx-ladder-03-table-row-heights` improved from
+    `MAE=2.435244`, changed16 `0.018702` to `MAE=2.329670`, changed16 `0.017873` (run `20260601-101829`).
+    The neighboring table-adjacency fixture stayed bounded at `MAE=0.873157`, changed16 `0.007549`, and the
+    private DOCX run `20260601-101840` stayed neutral at `16/16` pages, zero dimension mismatches, no
+    diagnostics, `MAE=13.388935`, changed16 `0.124264`. Keep this parent open for row-border participation,
+    row clipping, and Office's finer per-cell text-operation decomposition.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
