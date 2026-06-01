@@ -5317,6 +5317,23 @@ Current validation baseline:
   from the filled-border baseline (page 1 `MAE=0.888769`, page 2 `MAE=0.210261`). Private DOCX run
   `20260601-024621` stayed at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.494853`,
   changed16 `0.116738`.
+- DOCX collapsed-border row-advance validation:
+  Office's table row boundaries in `docx-ladder-03-table-row-heights` showed non-`exact` row advances include
+  the resolved horizontal collapsed-border width, while `exact` rows keep the authored height. The layout stage
+  now adds the visible bottom horizontal border width, falling back to top when no bottom border exists, through
+  the same shared `w:sz` eighth-point border geometry helper used by PDF border emission. Public row-height run
+  `20260601-114414` improved from run `20260601-113307` (`MAE=1.469789`, changed16 `0.013068`) to
+  `MAE=1.001114`, changed16 `0.010631`; inspected table text baselines now sit within roughly `0.1pt` of
+  Office through the table. Collateral checks were acceptable but not free: `docx-ladder-03-table-paragraph-adjacency`
+  moved from `MAE=0.778729`, changed16 `0.006298` to run `20260601-114024` at `MAE=0.814874`, changed16
+  `0.006597`; `docx-ladder-03-table-pagination-margins` run `20260601-114004` moved page 1 from `0.888769` to
+  `0.872023` and page 2 from `0.210261` to `0.232394`. Validation passed `docx-tables --skip-slow` (`69`),
+  `docx-core --skip-slow` (`21`), `docx-text --skip-slow` (`36`), and full solution build. Private DOCX run
+  `20260601-114151` stayed at `16/16` pages, zero dimension mismatches, no diagnostics, and improved from
+  `MAE=13.615949`, changed16 `0.125050` to `MAE=13.577699`, changed16 `0.124754`. Keep a follow-up open for
+  border-width calibration: Office emits the same nominal `w:sz=4` horizontal strips at about `0.48pt` while
+  the candidate emits `0.50pt`, so the remaining row-grid miss belongs to shared border-width normalization,
+  not another row-origin offset.
 - DOCX unsupported table-border-style diagnostic validation:
   after emitting `DOCX_TABLE_BORDER_STYLE` only for visible non-`single`/`nil`/`none` table and cell border
   styles in document/style parts, `docx-tables --skip-slow` passed `62`, `docx-core --skip-slow` passed `16`

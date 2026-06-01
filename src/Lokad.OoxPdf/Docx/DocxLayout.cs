@@ -1234,7 +1234,26 @@ internal sealed class DocxLayoutEngine
             declaredHeight += ResolveTableRowTopPadding(row);
         }
 
-        return Math.Max(1d, Math.Max(declaredHeight, contentHeight));
+        double height = Math.Max(declaredHeight, contentHeight);
+        height += ResolveTableRowCollapsedHorizontalBorderAdvance(row);
+        return Math.Max(1d, height);
+    }
+
+    private static double ResolveTableRowCollapsedHorizontalBorderAdvance(DocxTableRow row)
+    {
+        double maxBottom = row.Cells
+            .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")))
+            .DefaultIfEmpty(0d)
+            .Max();
+        if (maxBottom > 0d)
+        {
+            return maxBottom;
+        }
+
+        return row.Cells
+            .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "top")))
+            .DefaultIfEmpty(0d)
+            .Max();
     }
 
     private static void AddTableRowLayout(

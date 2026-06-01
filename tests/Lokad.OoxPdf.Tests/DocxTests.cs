@@ -6547,7 +6547,7 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 684 144 0.5 re f", pdf);
+        TestAssert.Contains("72 683.5 144 0.5 re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream);
@@ -6744,11 +6744,11 @@ internal static class DocxTests
             .ToArray();
 
         TestAssert.Equal(2, rows.Length);
-        TestAssert.Equal(40d, rows[0].Cells[0].Y);
-        TestAssert.Equal(50d, rows[0].Cells[0].Height);
+        TestAssert.Equal(38d, rows[0].Cells[0].Y);
+        TestAssert.Equal(52d, rows[0].Cells[0].Height);
         TestAssert.True(rows[1].Cells[0].IsVerticalMergeContinuation, "Continuation cell should be layout-visible but skipped by rendering.");
-        TestAssert.Equal(40d, rows[1].Cells[0].Y);
-        TestAssert.Equal(30d, rows[1].Cells[0].Height);
+        TestAssert.Equal(38d, rows[1].Cells[0].Y);
+        TestAssert.Equal(31d, rows[1].Cells[0].Height);
     }
 
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()
@@ -7193,6 +7193,39 @@ internal static class DocxTests
         TestAssert.Equal(20.05d, row.Height);
     }
 
+    public static void DocxTableLayoutStageIncludesCollapsedHorizontalBorderAdvanceForAutoRows()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var borders = new[]
+        {
+            new DocxTableCellBorder("bottom", "single", "auto", "4")
+        };
+        var cell = new DocxTableCell("A", [paragraph], null, null, null, null, borders, DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(20.55d, row.Height);
+    }
+
     public static void DocxTableLayoutStageLetsTablePropertyExceptionRowsUseContentHeight()
     {
         var paragraph = new DocxParagraph(
@@ -7496,6 +7529,39 @@ internal static class DocxTests
         TestAssert.Equal("200", row.HeightValue ?? string.Empty);
         TestAssert.Equal("exact", row.HeightRuleValue ?? string.Empty);
         TestAssert.Equal(10d, row.DeclaredHeightPoints ?? 0d);
+    }
+
+    public static void DocxTableLayoutStageDoesNotExpandExactRowsForCollapsedBorders()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var borders = new[]
+        {
+            new DocxTableCellBorder("bottom", "single", "auto", "4")
+        };
+        var cell = new DocxTableCell("A", [paragraph], null, null, null, null, borders, DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 10d, HeightValue: "200", HeightRuleValue: "exact")]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.Equal(10d, row.Height);
     }
 
     public static void DocxLayoutSnapshotReportsPublicSafeCounts()
