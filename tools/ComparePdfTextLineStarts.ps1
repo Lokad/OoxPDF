@@ -11,6 +11,8 @@ param(
 
     [switch] $MatchByPosition,
 
+    [switch] $FirstStartOnly,
+
     [switch] $ShowText
 )
 
@@ -169,14 +171,16 @@ foreach ($pair in $pairs) {
         continue
     }
 
-    $startCount = [Math]::Max($ref.Starts.Count, $cand.Starts.Count)
     $maxDelta = 0d
-    for ($i = 0; $i -lt [Math]::Min($ref.Starts.Count, $cand.Starts.Count); $i++) {
-        $maxDelta = [Math]::Max($maxDelta, [Math]::Abs((Delta -left ([double]$ref.Starts[$i]) -right ([double]$cand.Starts[$i]))))
+    $startCount = if ($FirstStartOnly) { [Math]::Min(1, [Math]::Min($ref.Starts.Count, $cand.Starts.Count)) } else { [Math]::Min($ref.Starts.Count, $cand.Starts.Count) }
+    for ($i = 0; $i -lt $startCount; $i++) {
+        $maxDelta = [Math]::Max(
+            $maxDelta,
+            [Math]::Abs((Delta -left ([double]$ref.Starts[$i]) -right ([double]$cand.Starts[$i]))))
     }
 
     $status = "ok"
-    if ($ref.Count -ne $cand.Count) {
+    if (-not $FirstStartOnly -and $ref.Count -ne $cand.Count) {
         $status = "count"
     }
     elseif ($maxDelta -gt $StartTolerance) {

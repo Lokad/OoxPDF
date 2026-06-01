@@ -258,6 +258,14 @@ High-priority actions:
   paragraph indent points and character buckets; the suspect blocks have no paragraph indents and ordinary
   Latin/space/punctuation profiles, so the next branch is precise Calibri advance/word-break behavior rather
   than page-bottom, indent, or charset logic.
+  2026-06-01 follow-up: added public `docx-ladder-02-calibri-body-wrapping` for A4-width 10pt Calibri body
+  paragraphs with `w:spacing line=276 lineRule=auto` and 8pt after-spacing, matching the private failure
+  surface without private text. Office and candidate both produce `15` text rows with first starts within
+  `0.02pt`; the remaining PDF difference is Office splitting some rows into additional text operations.
+  `ComparePdfTextLineStarts.ps1` now supports `-FirstStartOnly`, and visual manifests can set
+  `compareFirstTextLineStartOnly` to gate wrapping/baseline structure separately from intra-line operation
+  splitting. This public case does not reproduce the private over-wrapping by itself, so keep searching for
+  the missing discriminator rather than widening body text or adding private page-flow constants.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

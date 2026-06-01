@@ -217,19 +217,31 @@ if ($manifest.expected.maxTextLineStartDelta -ne $null) {
     }
 
     if ($manifest.expected.matchTextLineStartsByPosition -eq $true) {
-        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") `
-            -Reference $referenceTextOperations `
-            -Candidate $candidateTextOperations `
-            -StartTolerance $lineStartTolerance `
-            -LineTolerance $lineYTolerance `
-            -MatchByPosition
+        $lineStartArgs = @{
+            Reference = $referenceTextOperations
+            Candidate = $candidateTextOperations
+            StartTolerance = $lineStartTolerance
+            LineTolerance = $lineYTolerance
+            MatchByPosition = $true
+        }
+        if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
+            $lineStartArgs.FirstStartOnly = $true
+        }
+
+        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
     }
     else {
-        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") `
-            -Reference $referenceTextOperations `
-            -Candidate $candidateTextOperations `
-            -StartTolerance $lineStartTolerance `
-            -LineTolerance $lineYTolerance
+        $lineStartArgs = @{
+            Reference = $referenceTextOperations
+            Candidate = $candidateTextOperations
+            StartTolerance = $lineStartTolerance
+            LineTolerance = $lineYTolerance
+        }
+        if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
+            $lineStartArgs.FirstStartOnly = $true
+        }
+
+        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
     }
     if ($LASTEXITCODE -ne 0) {
         throw "PDF text line-start gate failed."

@@ -613,6 +613,50 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-font-table-alternate-wrap
 '@
 }
 
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-calibri-body-wrapping.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/document.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:color w:val="333333"/></w:rPr><w:t>Operational planning teams compare demand signals, capacity constraints, supplier confirmations, inventory targets, service commitments, and financial exposure while documenting assumptions for review. The paragraph uses ordinary Latin text, punctuation, and repeated business terms so line wrapping depends on measured Calibri advances rather than tables, graphics, or page-break rules.</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:color w:val="333333"/></w:rPr><w:t>Forecast accuracy, replenishment cadence, projected shortages, shelf availability, and warehouse workload are reviewed together because a small width error can move the final sentence to the next page. The text intentionally mixes short and medium words with commas, parentheses, and several numeric markers such as 2026 and 48 to exercise stable word wrapping.</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:color w:val="333333"/></w:rPr><w:t>Teams also record exceptions: delayed inbound shipments, constrained production slots, demand transfers between regions, and unresolved data quality issues. The goal of this public fixture is not private content similarity, but an Office-observed body paragraph surface where typeface resolution, glyph advances, and breakable spaces decide the page flow.</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:color w:val="333333"/></w:rPr><w:t>Finally, a compact paragraph checks the transition after several long bodies. If Office and the candidate agree on line starts, later pagination work can focus on true page-break behavior instead of compensating for accumulated width drift.</w:t></w:r>
+    </w:p>
+    <w:sectPr>
+      <w:pgSz w:w="11900" w:h="16840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+'@
+}
+
 New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-missing-grid-spans.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>

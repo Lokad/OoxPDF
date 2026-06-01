@@ -1,0 +1,20 @@
+{
+  "id": "docx-ladder-02-calibri-body-wrapping",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-calibri-body-wrapping.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "wrapping", "typography"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 3.5,
+    "maxChangedPixelRatioAtThreshold16": 0.05,
+    "maxTextLineStartDelta": 0.25,
+    "maxTextLineStartYDelta": 0.25,
+    "matchTextLineStartsByPosition": true,
+    "compareFirstTextLineStartOnly": true
+  },
+  "allowedUnsupportedFeatures": []
+}
