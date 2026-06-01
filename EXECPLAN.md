@@ -2336,6 +2336,14 @@ High-priority actions:
       faces into the existing run model, but it is not a full OpenType shaping engine, bidi reordering model,
       or per-script fallback ladder. Keep this as an explicit long-term gap so future fixes do not devolve
       into font-name or document-specific exceptions.
+    - [ ] 2026-06-01: Add an OpenType shaping/positioning stage for DOCX Latin text before chasing residual
+      text-state differences with font-name or document-specific rules. Public `docx-numbering` is visually
+      close (`20260601-142558`, `MAE=0.019271`, changed16 `0.000744`), but Office's reference PDF emits
+      intra-word `TJ` positioning adjustments for ordinary Latin text while the current candidate usually
+      emits one glyph chunk per segment. The existing measurement/emission path consumes simple glyph advances
+      and legacy `kern` pairs, but it does not apply GPOS pair positioning, mark positioning, glyph
+      substitution, or a true shaping buffer. Keep this as a structural text-emission gap shared by body,
+      table, numbering, and static header/footer text.
     - [ ] 2026-05-31: Split DOCX static header/footer rendering into run-level line segments instead of
       concatenating all runs and drawing them with the first run's resource/style. This is now the clearest
       remaining font-resource architecture gap: body/table text can use the run resource map, but static
