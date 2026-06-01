@@ -263,7 +263,8 @@ internal sealed record DocxFontPlanSnapshot(
     int ResolverFallbackCount,
     int MissingCount,
     int DistinctCandidateFamilyCount,
-    int DistinctResolvedFamilyCount)
+    int DistinctResolvedFamilyCount,
+    IReadOnlyList<DocxFontMetricBucketSnapshot> MetricBuckets)
 {
     public static DocxFontPlanSnapshot FromPlan(DocxFontPlan plan)
     {
@@ -282,11 +283,50 @@ internal sealed record DocxFontPlanSnapshot(
                 .Select(run => run.ResolvedFamily)
                 .Where(family => !string.IsNullOrWhiteSpace(family))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Count());
+                .Count(),
+            ToMetricBuckets(plan));
     }
 
     private static int Count(DocxFontPlan plan, DocxTypefaceResolutionSource source)
     {
         return plan.Runs.Count(run => run.Source == source);
     }
+
+    private static IReadOnlyList<DocxFontMetricBucketSnapshot> ToMetricBuckets(DocxFontPlan plan)
+    {
+        return plan.Runs
+            .GroupBy(run => new
+            {
+                run.Source,
+                FontSize = Math.Round(run.Run.FontSize, 3),
+                ResolvedFamilyHash = HashFamily(run.ResolvedFamily)
+            })
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key.Source.ToString(), StringComparer.Ordinal)
+            .ThenBy(group => group.Key.FontSize)
+            .Select(group => new DocxFontMetricBucketSnapshot(
+                group.Key.Source.ToString(),
+                group.Key.FontSize,
+                group.Key.ResolvedFamilyHash,
+                group.Count()))
+            .ToArray();
+    }
+
+    private static string? HashFamily(string? family)
+    {
+        if (string.IsNullOrWhiteSpace(family))
+        {
+            return null;
+        }
+
+        byte[] bytes = Encoding.UTF8.GetBytes(family.ToUpperInvariant());
+        byte[] hash = System.Security.Cryptography.SHA256.HashData(bytes);
+        return Convert.ToHexString(hash).Substring(0, 12).ToLowerInvariant();
+    }
 }
+
+internal sealed record DocxFontMetricBucketSnapshot(
+    string Source,
+    double FontSize,
+    string? ResolvedFamilyHash,
+    int RunCount);

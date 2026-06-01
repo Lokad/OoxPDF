@@ -357,6 +357,16 @@ High-priority actions:
   and badly regressed private acceptance (`MAE=9.982157 -> 13.879306`, worst page shifted to page 9). Do not
   replace the global DOCX auto-line metric this way; any future metric change needs a discriminator visible in
   OOXML/font state and must improve both compact-list public cases plus the private acceptance aggregate.
+  2026-06-01 follow-up: `DocxFontPlanSnapshot` and `DocxInspect` now emit private-safe resolved-font metric
+  buckets using resolved-family hashes, source buckets, and font sizes, plus block-level `LineSpacingFactor`.
+  This showed the public font-table-alternate compact case and the private dominant alternate path share the
+  same resolved-family hash; the visible discriminator is line factor (`1.25` in the original public stress
+  case, `1.15` in the private compact blocks). Added public `docx-ladder-03-compact-bullet-alt-line115` with
+  font-table alternate plus `line=276 lineRule=auto`: Office renders two pages while the candidate fits all
+  rows on one page, reproducing the private failure shape. A trial list-only minimum auto factor fixed that
+  public page-count mismatch but still worsened private acceptance (`MAE=9.982157 -> 10.156234`), so it was
+  rejected. Keep the fixture; the next implementation must explain why Word applies a larger effective pitch
+  only at some compact-list boundaries without shifting the whole private document.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
