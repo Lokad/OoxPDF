@@ -8228,7 +8228,7 @@ internal static class DocxTests
         DocxParagraph header = new(
             [
                 new DocxTextRun("H", 10d, "FF0000", false, false, false, null, "Narrow"),
-                new DocxTextRun("{PAGE}", 10d, "0000FF", false, false, false, null, "Narrow")
+                new DocxTextRun("{PAGE}", 14d, "0000FF", false, false, false, null, "Narrow")
             ],
             [],
             null,
@@ -8302,8 +8302,10 @@ internal static class DocxTests
         TestAssert.Equal(2, staticLines.Length);
         TestAssert.Equal("H1", staticLines[0].Text);
         TestAssert.Equal(95d, staticLines[0].X);
-        TestAssert.Equal(178d, staticLines[0].BaselineY);
+        TestAssert.Equal(174d, staticLines[0].BaselineY);
         TestAssert.Equal(2, staticLines[0].Segments.Count);
+        TestAssert.Equal(10d, staticLines[0].Segments[0].FontSize ?? 0d);
+        TestAssert.Equal(14d, staticLines[0].Segments[1].FontSize ?? 0d);
         TestAssert.Equal("1", staticLines[0].Segments[1].Text);
         TestAssert.Equal("0000FF", staticLines[0].Segments[1].StyleRun.ColorHex ?? string.Empty);
         TestAssert.Equal("F", staticLines[1].Text);
@@ -8886,8 +8888,8 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:p>
-                    <w:r><w:rPr><w:color w:val="FF0000"/></w:rPr><w:t>Red</w:t></w:r>
-                    <w:r><w:rPr><w:color w:val="0000FF"/></w:rPr><w:t>Blue</w:t></w:r>
+                    <w:r><w:rPr><w:color w:val="FF0000"/><w:sz w:val="20"/></w:rPr><w:t>Red</w:t></w:r>
+                    <w:r><w:rPr><w:color w:val="0000FF"/><w:sz w:val="40"/></w:rPr><w:t>Blue</w:t></w:r>
                   </w:p>
                 </w:hdr>
                 """,
@@ -8911,6 +8913,8 @@ internal static class DocxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.Contains(" 9.96 Tf", pdf);
+        TestAssert.Contains(" 20.04 Tf", pdf);
         TestAssert.Equal(5, CountPdfTextShows(pdf));
     }
 

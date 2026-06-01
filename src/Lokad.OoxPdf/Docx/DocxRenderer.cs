@@ -216,10 +216,27 @@ internal sealed class DocxRenderer
             : line.Segments;
         foreach (DocxTextSegmentLayout segment in segments)
         {
-            RenderTextSegment(segment, line.FontSize, line.BaselineY, graphics, fontResources, pageNumber, pageCount);
+            RenderTextSegment(
+                segment,
+                GetSegmentFontSize(segment, line.FontSize),
+                GetSegmentBaselineY(segment, line.BaselineY),
+                graphics,
+                fontResources,
+                pageNumber,
+                pageCount);
         }
 
         RenderTerminalLineSpace(segments, line.FontSize, line.BaselineY, graphics, fontResources);
+    }
+
+    private static double GetSegmentFontSize(DocxTextSegmentLayout segment, double lineFontSize)
+    {
+        return segment.FontSize ?? lineFontSize;
+    }
+
+    private static double GetSegmentBaselineY(DocxTextSegmentLayout segment, double lineBaselineY)
+    {
+        return lineBaselineY + segment.BaselineOffsetY;
     }
 
     private static void RenderTextSegment(
@@ -352,7 +369,9 @@ internal sealed class DocxRenderer
             }
 
             RgbColor color = ReadColor(segment.StyleRun.ColorHex);
-            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
+            double segmentFontSize = GetSegmentFontSize(segment, fontSize);
+            double segmentBaselineY = GetSegmentBaselineY(segment, baselineY);
+            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", segmentFontSize, segment.X + segment.Width, segmentBaselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
             return;
         }
     }

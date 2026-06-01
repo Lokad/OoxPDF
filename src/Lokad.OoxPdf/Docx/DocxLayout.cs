@@ -350,6 +350,8 @@ internal sealed record DocxTextSegmentLayout(
     DocxTextRun StyleRun,
     double X,
     double Width,
+    double? FontSize = null,
+    double BaselineOffsetY = 0d,
     double PdfCharacterSpacing = 0d,
     bool CompensatePdfCharacterSpacing = true);
 
@@ -954,7 +956,7 @@ internal sealed class DocxLayoutEngine
         {
             DocxTextSpan span = spans[i];
             double width = textMeasurer.MeasureText(span.StyleRun, span.Text, span.StyleRun.FontSize);
-            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width));
+            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width, span.StyleRun.FontSize));
             segmentX += width;
             if (i + 1 < spans.Count)
             {
@@ -1436,7 +1438,14 @@ internal sealed class DocxLayoutEngine
         double pdfCharacterSpacing = OfficeNumberedTextStateCharacterSpacing(fontSize);
         var segments = new List<DocxTextSegmentLayout>
         {
-            new(label.Text, labelRun, labelX, labelWidth, pdfCharacterSpacing, CompensatePdfCharacterSpacing: false)
+            new(
+                label.Text,
+                labelRun,
+                labelX,
+                labelWidth,
+                labelRun.FontSize,
+                PdfCharacterSpacing: pdfCharacterSpacing,
+                CompensatePdfCharacterSpacing: false)
         };
 
         string separator = GetListLabelPdfSeparator(label);
@@ -1444,7 +1453,7 @@ internal sealed class DocxLayoutEngine
         {
             double separatorX = labelX + labelWidth;
             double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelRun.FontSize);
-            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth));
+            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelRun.FontSize));
         }
 
         segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops));
@@ -2293,7 +2302,7 @@ internal sealed class DocxLayoutEngine
             }
             else
             {
-                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width));
+                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width, fontSize));
                 segmentX += width;
             }
 
@@ -2397,18 +2406,18 @@ internal sealed class DocxLayoutEngine
         if (leadingSpaces == 0 || leadingSpaces == text.Length)
         {
             double width = textMeasurer.MeasureText(styleRun, text, fontSize);
-            segments.Add(new DocxTextSegmentLayout(text, styleRun, segmentX, width));
+            segments.Add(new DocxTextSegmentLayout(text, styleRun, segmentX, width, fontSize));
             return segmentX + width;
         }
 
         string spaceText = text[..leadingSpaces];
         double spaceWidth = textMeasurer.MeasureText(styleRun, spaceText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(spaceText, styleRun, segmentX, spaceWidth));
+        segments.Add(new DocxTextSegmentLayout(spaceText, styleRun, segmentX, spaceWidth, fontSize));
         segmentX += spaceWidth + DocxTextSpacing.BoundarySpacing(styleRun, spaceText, text[leadingSpaces..]);
 
         string bodyText = text[leadingSpaces..];
         double bodyWidth = textMeasurer.MeasureText(styleRun, bodyText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(bodyText, styleRun, segmentX, bodyWidth));
+        segments.Add(new DocxTextSegmentLayout(bodyText, styleRun, segmentX, bodyWidth, fontSize));
         return segmentX + bodyWidth;
     }
 
