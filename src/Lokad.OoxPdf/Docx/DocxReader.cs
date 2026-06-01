@@ -40,9 +40,9 @@ internal sealed class DocxReader
         XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
         XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
 
-        DocxStyleSet styles = LoadStyles(package, documentPart.Name);
-        DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name);
         DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name);
+        DocxStyleSet styles = LoadStyles(package, documentPart.Name);
+        DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog);
         XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
@@ -167,6 +167,7 @@ internal sealed class DocxReader
     {
         XElement? titlePage = sectionProperties?.Element(WordprocessingNamespace + "titlePg");
         XElement? evenAndOddHeaders = settings?.Root?.Element(WordprocessingNamespace + "evenAndOddHeaders");
+        XElement? docGrid = sectionProperties?.Element(WordprocessingNamespace + "docGrid");
         DocxPageSettings pageSettings = new(
             (string?)pageSize?.Attribute(WordprocessingNamespace + "w"),
             (string?)pageSize?.Attribute(WordprocessingNamespace + "h"),
@@ -182,7 +183,11 @@ internal sealed class DocxReader
             ReadOnOff(titlePage),
             (string?)titlePage?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(evenAndOddHeaders),
-            (string?)evenAndOddHeaders?.Attribute(WordprocessingNamespace + "val"));
+            (string?)evenAndOddHeaders?.Attribute(WordprocessingNamespace + "val"))
+        {
+            DocGridLinePitchPoints = ReadTwipsAttribute(docGrid, WordprocessingNamespace + "linePitch"),
+            DocGridLinePitchValue = (string?)docGrid?.Attribute(WordprocessingNamespace + "linePitch")
+        };
         if (sectionProperties is null || package is null || relationships is null || styles is null || numbering is null)
         {
             return pageSettings;
@@ -553,7 +558,8 @@ internal sealed class DocxReader
                 (string?)font.Element(WordprocessingNamespace + "altName")?.Attribute(WordprocessingNamespace + "val"),
                 (string?)font.Element(WordprocessingNamespace + "family")?.Attribute(WordprocessingNamespace + "val"),
                 (string?)font.Element(WordprocessingNamespace + "pitch")?.Attribute(WordprocessingNamespace + "val"),
-                (string?)font.Element(WordprocessingNamespace + "panose1")?.Attribute(WordprocessingNamespace + "val")))
+                (string?)font.Element(WordprocessingNamespace + "panose1")?.Attribute(WordprocessingNamespace + "val"),
+                (string?)font.Element(WordprocessingNamespace + "charset")?.Attribute(WordprocessingNamespace + "val")))
             .Where(entry => entry.Name.Length != 0)
             .ToArray();
     }
@@ -684,7 +690,9 @@ internal sealed class DocxReader
             CreateListLabel(paragraphProperties, numbering, numberingCounters))
         {
             Indent = resolvedParagraph.Indent,
-            TabStops = resolvedParagraph.TabStops
+            TabStops = resolvedParagraph.TabStops,
+            SnapToGrid = resolvedParagraph.SnapToGrid,
+            SnapToGridValue = resolvedParagraph.SnapToGridValue
         };
 
         void AddSimpleField(XElement field)
@@ -1956,7 +1964,7 @@ internal sealed class DocxReader
         return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyle);
     }
 
-    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName)
+    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog)
     {
         OoxRelationship? numberingRelationship = package.GetRelationships(documentPartName)
             .FirstOrDefault(r => !r.IsExternal && r.Type == NumberingRelationshipType && r.ResolvedTarget is not null);
@@ -1991,7 +1999,8 @@ internal sealed class DocxReader
                 string text = (string?)level.Element(WordprocessingNamespace + "lvlText")?.Attribute(WordprocessingNamespace + "val") ??
                     (format.Equals("bullet", StringComparison.OrdinalIgnoreCase) ? "\u2022" : "%" + (levelIndex + 1) + ".");
                 string suffix = (string?)level.Element(WordprocessingNamespace + "suff")?.Attribute(WordprocessingNamespace + "val") ?? "tab";
-                levels[(abstractId, levelIndex)] = new DocxNumberingLevel(format, text, suffix, start, ReadNumberingIndent(level), ReadTextRunStyle(level.Element(WordprocessingNamespace + "rPr")));
+                DocxTextRunStyle style = ReadTextRunStyle(level.Element(WordprocessingNamespace + "rPr"));
+                levels[(abstractId, levelIndex)] = new DocxNumberingLevel(format, ResolveNumberingSymbolText(text, style, fontCatalog), suffix, start, ReadNumberingIndent(level), style);
             }
         }
 
@@ -2024,6 +2033,39 @@ internal sealed class DocxReader
         }
 
         return new DocxNumberingSet(numToAbstract, levels, startOverrides);
+    }
+
+    private static string ResolveNumberingSymbolText(string text, DocxTextRunStyle style, DocxFontCatalog fontCatalog)
+    {
+        return UsesSymbolCharset(style, fontCatalog) ? MapSymbolCharsetText(text) : text;
+    }
+
+    private static bool UsesSymbolCharset(DocxTextRunStyle style, DocxFontCatalog fontCatalog)
+    {
+        string? family = FirstNonEmpty(style.Fonts.Ascii, style.Fonts.HighAnsi, style.FontFamily, style.Fonts.ComplexScript);
+        if (family is null)
+        {
+            return false;
+        }
+
+        DocxFontTableEntry? entry = fontCatalog.Entries
+            .FirstOrDefault(item => item.Name.Equals(family, StringComparison.OrdinalIgnoreCase));
+        return entry?.CharsetValue is { } charset &&
+            (charset.Equals("02", StringComparison.OrdinalIgnoreCase) || charset.Equals("2", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string MapSymbolCharsetText(string text)
+    {
+        Span<char> mapped = text.Length <= 256
+            ? stackalloc char[text.Length]
+            : new char[text.Length];
+        for (int i = 0; i < text.Length; i++)
+        {
+            char ch = text[i];
+            mapped[i] = ch <= 0x00FF ? (char)(0xF000 + ch) : ch;
+        }
+
+        return new string(mapped);
     }
 
     private static DocxResolvedParagraphProperties ResolveParagraphProperties(
@@ -2136,8 +2178,21 @@ internal sealed class DocxReader
             (string?)properties?.Element(WordprocessingNamespace + "widowControl")?.Attribute(WordprocessingNamespace + "val"));
         DocxParagraphIndent indent = ReadParagraphIndent(properties);
         IReadOnlyList<DocxTabStop> tabStops = ReadParagraphTabStops(properties);
+        XElement? snapToGrid = properties?.Element(WordprocessingNamespace + "snapToGrid");
 
-        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints, paragraphSpacing, keepRules, indent, tabStops);
+        return new DocxResolvedParagraphProperties(
+            alignment,
+            alignmentValue,
+            before,
+            after,
+            lineFactor,
+            linePoints,
+            paragraphSpacing,
+            keepRules,
+            indent,
+            tabStops,
+            ReadOnOff(snapToGrid),
+            (string?)snapToGrid?.Attribute(WordprocessingNamespace + "val"));
     }
 
     private static IReadOnlyList<DocxTabStop> ReadParagraphTabStops(XElement? properties)
@@ -2376,7 +2431,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, []),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxTableStyle>(),
@@ -2828,9 +2883,11 @@ internal sealed class DocxReader
         DocxParagraphSpacing Spacing,
         DocxParagraphKeepRules KeepRules,
         DocxParagraphIndent Indent,
-        IReadOnlyList<DocxTabStop> TabStops)
+        IReadOnlyList<DocxTabStop> TabStops,
+        bool? SnapToGrid,
+        string? SnapToGridValue)
     {
-        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, []);
+        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null);
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -2846,7 +2903,9 @@ internal sealed class DocxReader
                 MergeSpacing(Spacing, other.Spacing),
                 MergeKeepRules(KeepRules, other.KeepRules),
                 MergeIndent(Indent, other.Indent),
-                other.TabStops.Count != 0 ? other.TabStops : TabStops);
+                other.TabStops.Count != 0 ? other.TabStops : TabStops,
+                other.SnapToGrid ?? SnapToGrid,
+                other.SnapToGridValue ?? SnapToGridValue);
         }
     }
 

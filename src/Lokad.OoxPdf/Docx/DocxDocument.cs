@@ -39,7 +39,8 @@ internal sealed record DocxFontTableEntry(
     string? AlternateName,
     string? FamilyValue,
     string? PitchValue,
-    string? PanoseValue);
+    string? PanoseValue,
+    string? CharsetValue);
 
 internal sealed record DocxThemeFonts(
     string? MajorLatinTypeface,
@@ -68,6 +69,9 @@ internal sealed record DocxPageSettings(
     string? EvenAndOddHeadersValue)
 {
     public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+
+    public double? DocGridLinePitchPoints { get; init; }
+    public string? DocGridLinePitchValue { get; init; }
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
@@ -129,6 +133,8 @@ internal sealed record DocxParagraph(
 {
     public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
+    public bool? SnapToGrid { get; init; }
+    public string? SnapToGridValue { get; init; }
 }
 
 internal sealed record DocxTabStop(

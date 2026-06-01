@@ -39,6 +39,9 @@ keep diagnostics honest when a feature is still missing.
 - `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
   from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, and positioned-glyph
   residual buckets. It must not emit decoded document text.
+- `tools/SummarizePdfTextPageDeltas.ps1`: private-safe per-page Office/candidate PDF text-operation summary
+  for visual run directories. It reports operation counts, `Tc` buckets, text-class buckets, and coordinate
+  span deltas without decoded document text.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -214,6 +217,15 @@ High-priority actions:
   44 as private acceptance evidence for the existing `Tc`/secondary-`Tf`/operation-splitting typography work;
   do not add more private chart offsets unless a new PDF graphics inspection shows a real structural geometry
   mismatch.
+- [ ] 2026-06-01: Continue DOCX vertical-flow work from Office-observed page text and table structure, not
+  from a broad `docGrid` shortcut. Private DOCX inspection showed the acceptance document has section
+  `w:docGrid/@w:linePitch` and no explicit `w:snapToGrid` overrides, so the reader now preserves
+  `docGrid`/`snapToGrid` tokens in the model. A local Office probe with ordinary Latin paragraphs, zero
+  paragraph spacing, `w:docGrid w:linePitch="480"`, explicit `w:snapToGrid`, and `w:useFELayout` still showed
+  Office baseline advances of about `13.32` pt rather than the `24` pt grid pitch. A trial candidate line-grid
+  rule improved aggregate private MAE but spilled to an extra page, so it was rejected. Keep this item open:
+  the next acceptable implementation path is public Office probes for table row height/pagination, paragraph
+  spacing collapse, and final-page table flow before applying any grid-derived layout behavior.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

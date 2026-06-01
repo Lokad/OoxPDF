@@ -111,6 +111,7 @@ internal static class DocxTests
                     <w:sectPr>
                       <w:pgSz w:w="16840" w:h="11900" w:orient="landscape"/>
                       <w:pgMar w:top="720" w:right="1440" w:bottom="1080" w:left="1800" w:header="1440" w:footer="1080"/>
+                      <w:docGrid w:linePitch="326"/>
                     </w:sectPr>
                   </w:body>
                 </w:document>
@@ -133,9 +134,50 @@ internal static class DocxTests
         TestAssert.Equal("1080", settings.FooterDistanceValue ?? string.Empty);
         TestAssert.Equal(72d, settings.HeaderDistancePoints ?? 0d);
         TestAssert.Equal(54d, settings.FooterDistancePoints ?? 0d);
+        TestAssert.Equal("326", settings.DocGridLinePitchValue ?? string.Empty);
+        TestAssert.Equal(16.3d, settings.DocGridLinePitchPoints ?? 0d);
         TestAssert.Equal(842d, document.PageWidthPoints);
         TestAssert.Equal(595d, document.PageHeightPoints);
         TestAssert.Equal(90d, document.MarginLeftPoints);
+    }
+
+    public static void DocxReaderPreservesParagraphSnapToGridTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:snapToGrid w:val="0"/></w:pPr><w:r><w:t>Free line</w:t></w:r></w:p>
+                    <w:p><w:pPr><w:snapToGrid/></w:pPr><w:r><w:t>Grid line</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        TestAssert.True(document.Paragraphs[0].SnapToGrid == false, "Explicit w:snapToGrid val=0 should opt out.");
+        TestAssert.Equal("0", document.Paragraphs[0].SnapToGridValue ?? string.Empty);
+        TestAssert.True(document.Paragraphs[1].SnapToGrid == true, "Empty w:snapToGrid should opt in.");
     }
 
     public static void DocxSyntheticParagraphRendersText()
@@ -764,6 +806,7 @@ internal static class DocxTests
                     <w:panose1 w:val="020B0604020202020204"/>
                     <w:family w:val="swiss"/>
                     <w:pitch w:val="variable"/>
+                    <w:charset w:val="00"/>
                   </w:font>
                 </w:fonts>
                 """,
@@ -790,6 +833,7 @@ internal static class DocxTests
         TestAssert.Equal("swiss", entry.FamilyValue ?? string.Empty);
         TestAssert.Equal("variable", entry.PitchValue ?? string.Empty);
         TestAssert.Equal("020B0604020202020204", entry.PanoseValue ?? string.Empty);
+        TestAssert.Equal("00", entry.CharsetValue ?? string.Empty);
         TestAssert.Equal("Aptos Display", document.FontCatalog.ThemeFonts.MajorLatinTypeface ?? string.Empty);
         TestAssert.Equal("Aptos", document.FontCatalog.ThemeFonts.MinorLatinTypeface ?? string.Empty);
     }
@@ -981,7 +1025,7 @@ internal static class DocxTests
     public static void DocxFontResolverBuildsLatinTypefaceCandidatesFromCatalogAndTheme()
     {
         var catalog = new DocxFontCatalog(
-            [new DocxFontTableEntry("Corporate Sans", "Aptos", "swiss", "variable", null)],
+            [new DocxFontTableEntry("Corporate Sans", "Aptos", "swiss", "variable", null, null)],
             new DocxThemeFonts("Aptos Display", "Aptos"));
         var run = new DocxTextRun("Text", 11d, null, false, false, false, null, "Corporate Sans")
         {
@@ -1020,7 +1064,7 @@ internal static class DocxTests
         DocxDocument document = CreateFontPlanDocument(
             run,
             new DocxFontCatalog(
-                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null)],
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
                 new DocxThemeFonts("Theme Display", "Theme Sans")));
         var resolver = new MapFontResolver(["Installed Sans", "Theme Sans"], "Resolver Fallback");
 
@@ -1049,7 +1093,7 @@ internal static class DocxTests
         DocxDocument document = CreateFontPlanDocument(
             run,
             new DocxFontCatalog(
-                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null)],
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
                 new DocxThemeFonts("Theme Display", "Theme Sans")));
         var resolver = new MapFontResolver(["Corporate Sans", "Installed Sans", "Theme Display"], "Resolver Fallback");
 
@@ -1125,7 +1169,7 @@ internal static class DocxTests
         DocxDocument document = CreateFontPlanDocument(
             [primaryRun, alternateRun, missingRun],
             new DocxFontCatalog(
-                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null)],
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
                 DocxThemeFonts.Empty));
         var resolver = new MapFontResolver(["Primary Sans", "Installed Sans"], "Resolver Fallback");
 
@@ -4141,6 +4185,72 @@ internal static class DocxTests
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Equal(2, Regex.Matches(pdf, "0\\.044 Tc").Count);
         TestAssert.Equal(8, CountPdfTextShows(pdf));
+    }
+
+    public static void DocxReaderMapsSymbolCharsetNumberingText()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                  <Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                  <Relationship Id="rIdFontTable" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>
+                </Relationships>
+                """,
+            ["word/fontTable.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:font w:name="Marker Symbols"><w:charset w:val="02"/></w:font>
+                </w:fonts>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="7">
+                    <w:lvl w:ilvl="0">
+                      <w:numFmt w:val="bullet"/>
+                      <w:lvlText w:val="§"/>
+                      <w:rPr><w:rFonts w:ascii="Marker Symbols" w:hAnsi="Marker Symbols"/></w:rPr>
+                    </w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="3"><w:abstractNumId w:val="7"/></w:num>
+                </w:numbering>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr><w:r><w:t>Symbol marker</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxListLabel? label = document.Paragraphs.Single().ListLabel;
+        TestAssert.Equal("\uF0A7", label?.Text ?? string.Empty);
+        TestAssert.Equal("Marker Symbols", label?.Style.Fonts.Ascii ?? string.Empty);
     }
 
     public static void DocxReaderPreservesNumberingFormatTokens()
