@@ -852,6 +852,126 @@ New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-bottom-slack.docx")
     "word/document.xml" = $tableBottomSlackDocument
 }
 
+$interTableRows = @(
+    for ($i = 1; $i -le 32; $i++) {
+        $c2 = if (($i % 4) -eq 0) { "Compact planning marker" } elseif (($i % 4) -eq 1) { "Review marker" } elseif (($i % 4) -eq 2) { "Measured status" } else { "Public row" }
+        $c3 = if (($i % 5) -eq 0) { "North-West" } elseif (($i % 5) -eq 1) { "AA - BB 1 CC DD" } elseif (($i % 5) -eq 2) { "Capacity review" } elseif (($i % 5) -eq 3) { "Q3 target" } else { "Open item" }
+        $c4 = if (($i % 3) -eq 0) { "Demand transfer" } elseif (($i % 3) -eq 1) { "AA - BB 2 CC DD" } else { "Service review" }
+        $c5 = if (($i % 6) -eq 0) { "Exception marker" } elseif (($i % 6) -eq 1) { "Gamma marker" } elseif (($i % 6) -eq 2) { "Projected coverage" } elseif (($i % 6) -eq 3) { "Risk class" } elseif (($i % 6) -eq 4) { "Short" } else { "Warehouse flow" }
+        $c6 = if (($i % 4) -eq 0) { "Delta marker" } elseif (($i % 4) -eq 1) { "Supply review" } elseif (($i % 4) -eq 2) { "Late inbound" } else { "Open constraint" }
+        @"
+      <w:tr>
+        <w:tc><w:tcPr><w:tcW w:w="733" w:type="dxa"/><w:shd w:val="clear" w:fill="F2F2F2"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$("{0:00}" -f $i)</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="1906" w:type="dxa"/><w:shd w:val="clear" w:fill="F2F2F2"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$c2</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="1320" w:type="dxa"/><w:shd w:val="clear" w:fill="F2F2F2"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$c3</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="1320" w:type="dxa"/><w:shd w:val="clear" w:fill="F2F2F2"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$c4</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="1320" w:type="dxa"/><w:shd w:val="clear" w:fill="F2F2F2"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$c5</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="1320" w:type="dxa"/><w:shd w:val="clear" w:fill="F2F2F2"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>$c6</w:t></w:r></w:p></w:tc>
+      </w:tr>
+"@
+    }
+) -join "`n"
+
+$followingTableRows = @(
+    for ($i = 1; $i -le 4; $i++) {
+        @"
+      <w:tr>
+        <w:tc><w:tcPr><w:tcW w:w="733" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>N$i</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="7333" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:before="36" w:after="0" w:line="276" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>Following compact table row after a styled keep-next heading.</w:t></w:r></w:p></w:tc>
+      </w:tr>
+"@
+    }
+) -join "`n"
+
+$tableHeadingTableDocument = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="5000" w:type="pct"/>
+        <w:tblLayout w:type="fixed"/>
+        <w:tblCellMar>
+          <w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/>
+          <w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/>
+        </w:tblCellMar>
+      </w:tblPr>
+      <w:tblGrid><w:gridCol w:w="733"/><w:gridCol w:w="1906"/><w:gridCol w:w="1320"/><w:gridCol w:w="1320"/><w:gridCol w:w="1320"/><w:gridCol w:w="1320"/></w:tblGrid>
+$interTableRows
+    </w:tbl>
+    <w:p>
+      <w:pPr><w:pStyle w:val="Heading1"/></w:pPr>
+      <w:r><w:t>Kept public heading</w:t></w:r>
+    </w:p>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="5000" w:type="pct"/>
+        <w:tblLayout w:type="fixed"/>
+        <w:tblCellMar>
+          <w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/>
+          <w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/>
+        </w:tblCellMar>
+      </w:tblPr>
+      <w:tblGrid><w:gridCol w:w="733"/><w:gridCol w:w="7333"/></w:tblGrid>
+$followingTableRows
+    </w:tbl>
+    <w:sectPr>
+      <w:pgSz w:w="11900" w:h="8640"/>
+      <w:pgMar w:top="720" w:right="1440" w:bottom="720" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+"@
+
+New-ZipPackage -Path (Join-Path $cases "docx-ladder-03-table-heading-table-keepnext.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/_rels/document.xml.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>
+'@
+    "word/styles.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/></w:rPr></w:rPrDefault>
+    <w:pPrDefault><w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:styleId="Heading1">
+    <w:name w:val="heading 1"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:keepNext/>
+      <w:keepLines/>
+      <w:spacing w:before="480" w:after="120" w:line="276" w:lineRule="auto"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri Light" w:hAnsi="Calibri Light"/>
+      <w:b/>
+      <w:color w:val="2F5597"/>
+      <w:sz w:val="28"/>
+    </w:rPr>
+  </w:style>
+</w:styles>
+'@
+    "word/document.xml" = $tableHeadingTableDocument
+}
+
 New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-default-tab-stop-settings.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>

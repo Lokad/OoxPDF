@@ -432,6 +432,19 @@ High-priority actions:
   Keep the public probe and `w:cantSplit` preservation, but do not reintroduce row fragmentation until the
   layout model can represent line-box-derived fragment heights, declared-height row behavior, and continuation
   border suppression from public Office evidence rather than clipping full-row layouts after the fact.
+  2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
+  simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
+  higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
+  follows a paragraph. Deeper page-15 text-row hashing showed the drift starts inside the continued table
+  before the heading: candidate row baselines around the same first-column labels are already `~12pt` to
+  `~25pt` higher than Office after a narrow row that Office allocates as a taller band. Added public
+  `docx-ladder-03-table-heading-table-keepnext` to preserve the structural shape: a multi-page, borderless,
+  percentage-width fixed table with compact 9pt cell paragraphs followed by a styled keep-next heading and
+  another table. This public probe does not yet reproduce the private vertical drift; its remaining raster
+  residual is instead PDF text-operation decomposition for punctuation-bearing narrow-cell text (Office splits
+  runs such as hyphen-separated tokens into separate `TJ` operations while the candidate emits one operation).
+  Keep the private issue open on Office row-band allocation and table-cell line-break measurement in continued
+  narrow tables; do not add a post-table heading spacing constant or a private row-coordinate rule.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
