@@ -2284,6 +2284,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double extraPerSpace)
     {
+        double spanFontSize = GetTextSpanFontSize(span, fontSize);
         int start = 0;
         while (start < span.Text.Length)
         {
@@ -2295,14 +2296,14 @@ internal sealed class DocxLayoutEngine
             }
 
             string text = span.Text[start..end];
-            double width = textMeasurer.MeasureText(span.StyleRun, text, fontSize);
+            double width = textMeasurer.MeasureText(span.StyleRun, text, spanFontSize);
             if (isSpace)
             {
                 segmentX += width + text.Length * extraPerSpace;
             }
             else
             {
-                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width, fontSize));
+                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width, spanFontSize));
                 segmentX += width;
             }
 
@@ -2370,6 +2371,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops)
     {
+        double spanFontSize = GetTextSpanFontSize(span, fontSize);
         int start = 0;
         for (int i = 0; i <= span.Text.Length; i++)
         {
@@ -2381,7 +2383,7 @@ internal sealed class DocxLayoutEngine
             if (i > start)
             {
                 string text = span.Text[start..i];
-                segmentX = AddTextSegment(segments, span.StyleRun, text, segmentX, fontSize, textMeasurer);
+                segmentX = AddTextSegment(segments, span.StyleRun, text, segmentX, spanFontSize, textMeasurer);
             }
 
             if (i < span.Text.Length)
@@ -2439,6 +2441,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops)
     {
+        double spanFontSize = GetTextSpanFontSize(span, fontSize);
         int start = 0;
         for (int i = 0; i <= span.Text.Length; i++)
         {
@@ -2449,7 +2452,7 @@ internal sealed class DocxLayoutEngine
 
             if (i > start)
             {
-                currentWidth += textMeasurer.MeasureText(span.StyleRun, span.Text[start..i], fontSize);
+                currentWidth += textMeasurer.MeasureText(span.StyleRun, span.Text[start..i], spanFontSize);
             }
 
             if (i < span.Text.Length)
@@ -2460,6 +2463,11 @@ internal sealed class DocxLayoutEngine
         }
 
         return currentWidth;
+    }
+
+    private static double GetTextSpanFontSize(DocxTextSpan span, double fallbackFontSize)
+    {
+        return span.StyleRun.FontSize > 0d ? span.StyleRun.FontSize : fallbackFontSize;
     }
 
     private static double AdvanceToNextDefaultTabStop(double width)

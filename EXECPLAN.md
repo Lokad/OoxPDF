@@ -3520,16 +3520,22 @@ document-specific business content into public notes.
 - [x] 2026-06-01: Moved DOCX text segment rendering toward a run-resolved layout contract instead of
   line-wide text emission. `DocxTextSegmentLayout` now carries an optional resolved font size and baseline
   offset; the renderer consumes those values for glyphs, backgrounds, decorations, and terminal line spaces.
-  Body/table text currently passes the existing line font size through explicitly, while static header/footer
-  segments pass each run's authored size, matching how those segments are measured and avoiding a hidden
-  renderer-side flattening step. This is intentionally only the structural landing zone for `w:vertAlign`:
+  Follow-up, 2026-06-01: body, table, and justified text measurement now use each text span's resolved
+  run font size for wrapping, advances, and emitted `DocxTextSegmentLayout.FontSize`, while paragraph line
+  boxes still use the maximum run size for baseline and line-height decisions. Public unit coverage now
+  proves that mixed-size runs keep their own measured widths and that a small run followed by a larger run
+  does not wrap as if the whole paragraph used the maximum font size. This closes the body/table flattening
+  gap without adding font-name or token-string conditions. Static header/footer segments already pass each
+  run's authored size, matching how those segments are measured and avoiding a hidden renderer-side
+  flattening step. This is intentionally only the structural landing zone for `w:vertAlign`:
   superscript/subscript scaling and shifts remain open until a public Office-backed ladder derives the Word
   behavior from PDF evidence rather than guessed constants.
-  Validation passed `docx-page --skip-slow` (`29`), `docx-text --skip-slow` (`38`), `docx-tables --skip-slow`
+  Validation passed `docx-page --skip-slow` (`29`), `docx-text --skip-slow` (`40`), `docx-core --skip-slow`
+  (`23`), `docx-tables --skip-slow`
   (`77`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Public `docx-headers-footers`
   run `20260601-155239` stayed unchanged (`MAE=0.073352`, changed16 `0.002110`, SSIM `0.982572`). Private
-  DOCX run `20260601-155209` stayed page-stable at `16/16`, zero dimension mismatches, no diagnostics,
-  `MAE=13.855936`, changed16 `0.127419`.
+  DOCX run `20260601-155830` stayed page-stable at `16/16`, zero dimension mismatches, no diagnostics,
+  `MAE=13.666634`, changed16 `0.126275`.
 - [x] 2026-06-01: Preserved DOCX run-level strike tokens through the same run-property cascade:
   `w:strike`, explicit off values such as `w:val="0"`, and inherited `w:dstrike` now survive into
   `DocxTextRun`/`DocxTextRunStyle` with source token values. Validation passed `docx-text --skip-slow`

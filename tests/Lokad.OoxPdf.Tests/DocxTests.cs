@@ -1261,6 +1261,41 @@ internal static class DocxTests
         TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width, line.Segments[1].X);
     }
 
+    public static void DocxParagraphLayoutStageMeasuresMixedRunSegmentsWithRunFontSizes()
+    {
+        var smallRun = new DocxTextRun("A", 10d, null, false, false, false, null, "Body");
+        var largeRun = new DocxTextRun("B", 20d, null, false, false, false, null, "Body");
+        var paragraph = new DocxParagraph(
+            [smallRun, largeRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FontSizeWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal(20d, line.FontSize);
+        TestAssert.Equal(10d, line.Segments[0].Width);
+        TestAssert.Equal(20d, line.Segments[1].Width);
+        TestAssert.Equal(10d, line.Segments[0].FontSize ?? 0d);
+        TestAssert.Equal(20d, line.Segments[1].FontSize ?? 0d);
+        TestAssert.Equal(line.Segments[0].X + line.Segments[0].Width, line.Segments[1].X);
+    }
+
     public static void DocxLayoutStageIncludesRunCharacterSpacingBetweenSegments()
     {
         var firstRun = new DocxTextRun("A", 12d, null, false, false, false, null, "Narrow", 3d);
@@ -1429,6 +1464,51 @@ internal static class DocxTests
         TestAssert.Equal("A ", lines[0].Text);
         TestAssert.Equal("B", lines[1].Text);
         TestAssert.Equal("Wide", lines[1].Segments.Single().StyleRun.FontFamily ?? string.Empty);
+    }
+
+    public static void DocxParagraphLayoutStageWrapsMixedRunTextWithRunFontSizes()
+    {
+        var smallRun = new DocxTextRun("A ", 10d, null, false, false, false, null, "Body");
+        var largeRun = new DocxTextRun("B", 20d, null, false, false, false, null, "Body");
+        var paragraph = new DocxParagraph(
+            [smallRun, largeRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            65d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [paragraph],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FontSizeWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.Equal("A B", lines[0].Text);
+        TestAssert.Equal(40d, lines[0].Width);
+        TestAssert.Equal(2, lines[0].Segments.Count);
     }
 
     public static void DocxRendererUsesThemeTypefaceForThemeOnlyDefaultRun()
@@ -9618,6 +9698,24 @@ internal static class DocxTests
         {
             double width = run?.FontFamily == "Wide" ? 40d : 5d;
             return text.Length * width;
+        }
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+        {
+            return fontSize;
+        }
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+        {
+            return fontSize * 0.2d;
+        }
+    }
+
+    private sealed class FontSizeWidthTextMeasurer : IDocxTextMeasurer, IDocxStaticTextMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize)
+        {
+            return text.Length * fontSize;
         }
 
         public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
