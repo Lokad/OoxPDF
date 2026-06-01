@@ -382,7 +382,9 @@ internal sealed record DocxTableRow(
     string? HeaderValue = null,
     string? HeightValue = null,
     string? HeightRuleValue = null,
-    DocxTableCellMargins? TablePropertyExceptionCellMargins = null);
+    DocxTableCellMargins? TablePropertyExceptionCellMargins = null,
+    bool CantSplit = false,
+    string? CantSplitValue = null);
 
 internal sealed record DocxTableCell(
     string Text,

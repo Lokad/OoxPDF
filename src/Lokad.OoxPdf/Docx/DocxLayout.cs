@@ -155,6 +155,8 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             row.IsHeader,
             row.HeaderValue,
             row.HasTablePropertyExceptionCellMargins,
+            row.CantSplit,
+            row.CantSplitValue,
             cells);
     }
 
@@ -365,6 +367,8 @@ internal sealed record DocxTableRowSnapshot(
     bool IsHeader,
     string? HeaderValue,
     bool HasTablePropertyExceptionCellMargins,
+    bool CantSplit,
+    string? CantSplitValue,
     IReadOnlyList<DocxTableCellSnapshot> Cells);
 
 internal sealed record DocxTableSnapshot(
@@ -507,7 +511,9 @@ internal sealed record DocxTableRowLayout(
     string? HeightRuleValue,
     bool IsHeader,
     string? HeaderValue,
-    bool HasTablePropertyExceptionCellMargins) : DocxLayoutItem;
+    bool HasTablePropertyExceptionCellMargins,
+    bool CantSplit,
+    string? CantSplitValue) : DocxLayoutItem;
 
 internal sealed record DocxTableLayoutContext(
     int TableIndex,
@@ -1988,7 +1994,9 @@ internal sealed class DocxLayoutEngine
             row.HeightRuleValue,
             row.IsHeader,
             row.HeaderValue,
-            row.TablePropertyExceptionCellMargins is not null));
+            row.TablePropertyExceptionCellMargins is not null,
+            row.CantSplit,
+            row.CantSplitValue));
         cursorY -= rowHeight;
     }
 

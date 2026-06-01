@@ -1497,6 +1497,9 @@ internal sealed class DocxReader
                 XElement? header = row
                     .Element(WordprocessingNamespace + "trPr")
                     ?.Element(WordprocessingNamespace + "tblHeader");
+                XElement? cantSplit = row
+                    .Element(WordprocessingNamespace + "trPr")
+                    ?.Element(WordprocessingNamespace + "cantSplit");
                 XElement? rowHeight = row
                     .Element(WordprocessingNamespace + "trPr")
                     ?.Element(WordprocessingNamespace + "trHeight");
@@ -1507,7 +1510,9 @@ internal sealed class DocxReader
                     (string?)header?.Attribute(WordprocessingNamespace + "val"),
                     (string?)rowHeight?.Attribute(WordprocessingNamespace + "val"),
                     (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule"),
-                    HasAnyTableCellMargin(rowExceptionMargins) ? rowExceptionMargins : null));
+                    HasAnyTableCellMargin(rowExceptionMargins) ? rowExceptionMargins : null,
+                    ReadOnOff(cantSplit) == true,
+                    (string?)cantSplit?.Attribute(WordprocessingNamespace + "val")));
             }
         }
 

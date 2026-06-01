@@ -407,6 +407,24 @@ High-priority actions:
   `MAE=12.157179` to `11.744805`; aggregate MAE moved slightly from `8.915684` to `8.927676` because page 16
   worsened while pages 14/15 improved. Keep the branch open on the post-table/page-16 flow residual and PDF
   text-state decomposition; do not broaden punctuation breaks outside table-cell overwide fitting.
+  2026-06-01 follow-up: private-safe PDF graphics inspection of `20260601-201837` narrowed the page-16
+  residual to table row allocation, not ordinary post-table paragraph spacing. Office shows five shaded row
+  bands on page 16 for the continued table, while candidate shows four; candidate keeps one additional
+  unshaded row at the bottom of page 15 with its lowest text baseline around `77.31pt`, below Office's
+  observed low text baseline around `81.24pt`. A broad trial that added a font-size-derived table-row bottom
+  inset preserved public table guards but badly regressed the private acceptance run (`8.927676 -> 12.078142`
+  average MAE, worst pages shifting by `+4..+7` MAE) and did not move the intended table-row boundary in the
+  layout snapshot, so it was rejected. The next acceptable slice is a public Office probe that isolates
+  table-row page-boundary allocation with small positive bottom slack, alternating fills, 9pt table text, and
+  a following empty paragraph before changing pagination rules.
+  2026-06-01 follow-up: added public `docx-ladder-03-table-bottom-slack` as that probe. Office/candidate PDF
+  inspection showed the generic missing rule is row fragmentation, not a scalar bottom-margin correction:
+  with no `w:cantSplit`, Office places row 11's first line and shaded fragment at the bottom of page 1 and
+  continues the row on page 2, while the candidate moves the whole row to page 2. This is the opposite
+  allocation direction from the private residual but the same structural weakness: `DocxLayout` treats table
+  rows as atomic page items. The next implementation slice should preserve `w:cantSplit`, then introduce
+  explicit row-fragment layout records so split rows carry per-fragment cell rectangles, clipped text lines,
+  and suppressed continuation borders instead of using a hard-coded page slack heuristic.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
