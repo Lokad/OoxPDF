@@ -350,6 +350,13 @@ High-priority actions:
   This confirms the remaining rule is not a single broad page-fit constant; continue by deriving Office's
   paragraph pitch from public rows and font metrics, then apply only a structural rule that also explains the
   private compact-list bucket.
+  2026-06-01 negative evidence: rejected an OpenType metric trial that applied the automatic line-spacing
+  factor to the typographic ascender/descender body and added typographic line gap only once. It improved the
+  public font-table-alternate compact-list stress case (`docx-ladder-03-compact-bullet-alt-bottom` page 1
+  `MAE=15.916448 -> 13.390454`) but regressed the existing compact-bullet fixture (`MAE=0.803030 -> 0.978554`)
+  and badly regressed private acceptance (`MAE=9.982157 -> 13.879306`, worst page shifted to page 9). Do not
+  replace the global DOCX auto-line metric this way; any future metric change needs a discriminator visible in
+  OOXML/font state and must improve both compact-list public cases plus the private acceptance aggregate.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
