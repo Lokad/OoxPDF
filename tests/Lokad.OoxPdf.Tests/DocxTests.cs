@@ -8316,6 +8316,74 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
     }
 
+    public static void DocxLayoutStageWrapsStaticHeaderLines()
+    {
+        DocxParagraph header = new(
+            [new DocxTextRun("Alpha Beta", 10d, null, false, false, false, null, "Narrow")],
+            [],
+            null,
+            DocxTextAlignment.Center,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = new(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            12d,
+            12d,
+            "240",
+            "240",
+            null,
+            null,
+            null,
+            null)
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [header]
+            }
+        };
+        DocxDocument document = new(
+            100d,
+            200d,
+            10d,
+            50d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        DocxTextLineLayout[] staticLines = layout.Pages[0].StaticTextLines.ToArray();
+        TestAssert.Equal(2, staticLines.Length);
+        TestAssert.Equal("Alpha ", staticLines[0].Text);
+        TestAssert.Equal(15d, staticLines[0].X);
+        TestAssert.Equal(178d, staticLines[0].BaselineY);
+        TestAssert.Equal("Beta", staticLines[1].Text);
+        TestAssert.Equal(20d, staticLines[1].X);
+        TestAssert.Equal(166d, staticLines[1].BaselineY);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        TestAssert.Equal(2, snapshot.Pages[0].StaticTextLineCount);
+    }
+
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

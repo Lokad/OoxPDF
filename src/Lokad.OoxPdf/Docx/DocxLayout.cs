@@ -816,29 +816,110 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
-            double lineWidth = MeasureStaticTextSpans(spans, textMeasurer);
-            double lineX = paragraph.Alignment switch
+            foreach (DocxWrappedTextLine line in WrapStaticTextLines(spans, width, textMeasurer))
             {
-                DocxTextAlignment.Center => x + Math.Max(0d, width - lineWidth) / 2d,
-                DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
-                _ => x
-            };
-            double ascender = spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.FontSize));
-            double descender = spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.FontSize));
-            double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
-            IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(spans, lineX, textMeasurer);
-            lines.Add(new DocxTextLineLayout(
-                string.Concat(spans.Select(span => span.Text)),
-                spans[0].StyleRun,
-                spans.Max(span => span.StyleRun.FontSize),
-                lineX,
-                baselineY,
-                lineWidth,
-                segments));
-            cursorY -= ascender + descender;
+                if (line.Spans.Count == 0)
+                {
+                    continue;
+                }
+
+                double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer);
+                double lineX = paragraph.Alignment switch
+                {
+                    DocxTextAlignment.Center => x + Math.Max(0d, width - lineWidth) / 2d,
+                    DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
+                    _ => x
+                };
+                double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.FontSize));
+                double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.FontSize));
+                double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
+                IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX, textMeasurer);
+                lines.Add(new DocxTextLineLayout(
+                    line.Text,
+                    line.Spans[0].StyleRun,
+                    line.Spans.Max(span => span.StyleRun.FontSize),
+                    lineX,
+                    baselineY,
+                    lineWidth,
+                    segments));
+                cursorY -= ascender + descender;
+            }
         }
 
         return lines;
+    }
+
+    private static IEnumerable<DocxWrappedTextLine> WrapStaticTextLines(
+        IReadOnlyList<DocxTextSpan> spans,
+        double maxWidth,
+        IDocxTextMeasurer textMeasurer)
+    {
+        string text = string.Concat(spans.Select(span => span.Text));
+        int segmentStart = 0;
+        while (segmentStart <= text.Length)
+        {
+            int breakIndex = text.IndexOf('\n', segmentStart);
+            int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
+            bool yielded = false;
+            foreach (DocxWrappedTextLine line in WrapStaticWords(text, spans, segmentStart, segmentLength, maxWidth, textMeasurer))
+            {
+                yielded = true;
+                yield return line;
+            }
+
+            if (!yielded && segmentLength == 0)
+            {
+                yield return new DocxWrappedTextLine(string.Empty, []);
+            }
+
+            if (breakIndex < 0)
+            {
+                yield break;
+            }
+
+            segmentStart = breakIndex + 1;
+        }
+    }
+
+    private static IEnumerable<DocxWrappedTextLine> WrapStaticWords(
+        string text,
+        IReadOnlyList<DocxTextSpan> spans,
+        int segmentStart,
+        int segmentLength,
+        double maxWidth,
+        IDocxTextMeasurer textMeasurer)
+    {
+        IReadOnlyList<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
+        if (tokens.Count == 0)
+        {
+            yield break;
+        }
+
+        int lineStart = tokens[0].Start;
+        int lineLength = 0;
+        foreach (TextToken token in tokens)
+        {
+            int candidateLength = token.Start + token.Length - lineStart;
+            bool lineHasNonWhitespace = HasNonWhitespace(text, lineStart, lineLength);
+            if (lineLength > 0 &&
+                lineHasNonWhitespace &&
+                !token.IsBreakableWhitespace &&
+                MeasureStaticTextSpans(SliceTextSpans(spans, lineStart, candidateLength), textMeasurer) > maxWidth)
+            {
+                yield return CreateWrappedTextLine(text, spans, lineStart, lineLength);
+                lineStart = token.Start;
+                lineLength = token.Length;
+            }
+            else
+            {
+                lineLength = candidateLength;
+            }
+        }
+
+        if (lineLength > 0)
+        {
+            yield return CreateWrappedTextLine(text, spans, lineStart, lineLength);
+        }
     }
 
     private static IReadOnlyList<DocxTextSegmentLayout> CreateStaticTextSegments(

@@ -2406,6 +2406,16 @@ High-priority actions:
       neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.855991`, changed16
       `0.127419`. Keep this item open for static wrapping, multi-paragraph line boxes, true field evaluation,
       and selected-part snapshot details beyond counts.
+      2026-06-01 follow-up: static header/footer paragraphs now wrap inside the selected page body width at
+      the layout stage and still emit ordinary `DocxTextLineLayout` records per visual line. The wrapper uses
+      the same whitespace/soft-break tokenization shape as body text, but measures static spans with each run's
+      own authored font size so the earlier mixed-run resource work is not collapsed back to a paragraph-wide
+      size. Public `docx-page --skip-slow` passed (`28`), `docx-text --skip-slow` passed (`38`),
+      `docx-tables --skip-slow` passed (`77`), and `docx-headers-footers` stayed unchanged at `MAE=0.073352`,
+      changed16 `0.002110` (`20260601-154404`). Private DOCX run `20260601-154426` stayed neutral at `16/16`
+      pages, zero dimension mismatches, no diagnostics, `MAE=13.855991`, changed16 `0.127419`. Keep this
+      parent open for exact footer stacking direction, paragraph spacing inside headers/footers, true Word
+      field evaluation, and richer private-safe snapshots of selected static parts beyond counts.
     - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the
