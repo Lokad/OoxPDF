@@ -567,6 +567,13 @@ High-priority actions:
   `docx-ladder-03-table-heading-table-keepnext` `4.160735/9.349741/3.494976`), `docx-tables --skip-slow`
   passed `79`, `docx-page --skip-slow` passed `29`, and private DOCX acceptance run `20260601-223133` stayed
   at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=8.927676`.
+  2026-06-02 tooling follow-up: `tools/InspectDocx.ps1` now emits the model-level DOCX text-emission snapshot
+  alongside layout, structure, font-plan, source-block, and page summaries. The new
+  `text-emission-snapshot.json`, `text-emission-summary.json`, and `source-block-summary.json` files expose
+  page/source-block line counts, terminal-space emissions, PDF `Tc` use, font resource IDs, and positioned
+  spacing state without decoded document text. Keep this as the default bottom-up diagnostic path before adding
+  more pagination or text-state rules, so future changes can be checked against the renderer's own structural
+  model instead of loose PDF-text scripts.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

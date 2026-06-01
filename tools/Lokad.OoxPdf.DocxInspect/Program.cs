@@ -28,6 +28,7 @@ var options = new JsonSerializerOptions
 DocxLayoutSnapshot layout = renderer.InspectLayout(document);
 DocxFontPlanSnapshot fontPlan = renderer.InspectFontPlan(document);
 DocxStructureSnapshot structure = renderer.InspectStructure(document);
+DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
 File.WriteAllText(
     Path.Combine(outputDirectory, "layout-snapshot.json"),
     JsonSerializer.Serialize(layout, options));
@@ -37,6 +38,9 @@ File.WriteAllText(
 File.WriteAllText(
     Path.Combine(outputDirectory, "structure-snapshot.json"),
     JsonSerializer.Serialize(structure, options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "text-emission-snapshot.json"),
+    JsonSerializer.Serialize(textEmission, options));
 File.WriteAllText(
     Path.Combine(outputDirectory, "document-settings.json"),
     JsonSerializer.Serialize(document.Settings, options));
@@ -50,8 +54,51 @@ File.WriteAllText(
         page.ItemCount,
         page.TextLineCount,
         page.InlineImageCount,
-        page.TableRowCount
+        page.TableRowCount,
+        page.SourceBlockCount,
+        page.FirstSourceBlockIndex,
+        page.LastSourceBlockIndex
     }), options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "source-block-summary.json"),
+    JsonSerializer.Serialize(layout.SourceBlocks, options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "text-emission-summary.json"),
+    JsonSerializer.Serialize(new
+    {
+        textEmission.LineCount,
+        textEmission.SegmentCount,
+        textEmission.TerminalSpaceSegmentCount,
+        textEmission.NonzeroPdfCharacterSpacingSegmentCount,
+        textEmission.CompensatedCharacterSpacingSegmentCount,
+        LinesByPage = textEmission.Lines
+            .GroupBy(line => line.PageIndex)
+            .OrderBy(group => group.Key)
+            .Select(group => new
+            {
+                PageIndex = group.Key,
+                LineCount = group.Count(),
+                StaticLineCount = group.Count(line => line.IsStaticStory),
+                BodyLineCount = group.Count(line => !line.IsStaticStory),
+                SegmentCount = group.Sum(line => line.SegmentCount),
+                TerminalSpaceSegmentCount = group.Sum(line => line.TerminalSpaceSegmentCount),
+                NonzeroPdfCharacterSpacingSegmentCount = group.Sum(line => line.NonzeroPdfCharacterSpacingSegmentCount),
+                SourceBlockCount = group
+                    .Select(line => line.SourceBlockIndex)
+                    .Where(index => index is not null)
+                    .Distinct()
+                    .Count(),
+                FirstSourceBlockIndex = group
+                    .Select(line => line.SourceBlockIndex)
+                    .Where(index => index is not null)
+                    .FirstOrDefault(),
+                LastSourceBlockIndex = group
+                    .Select(line => line.SourceBlockIndex)
+                    .Where(index => index is not null)
+                    .LastOrDefault()
+            })
+            .ToArray()
+    }, options));
 File.WriteAllText(
     Path.Combine(outputDirectory, "block-sequence.json"),
     JsonSerializer.Serialize(structure.Blocks, options));
