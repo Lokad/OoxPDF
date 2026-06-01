@@ -5521,6 +5521,16 @@ Current validation baseline:
   cells, `-0.0182` on four body value cells). Keep table/body `Tc` open and add public probes before changing
   rendering; the next rule must come from table structure and graphics/text-state lifetime, not from text
   length, column number, per-cell constants, or the obsolete unstacked summary.
+  2026-06-01 table-text-state probe: added Office-authored public fixture
+  `docx-ladder-03-table-text-state` to vary table header/body text classes without using private content. Run
+  `20260601-133647` matches operation count (`35/35`) but confirms the remaining structural table text-state
+  gap: Word emits `Tc=-0.0182` on six 11.04pt digit-only body value operations while the candidate emits
+  `Tc=0` everywhere. The existing `docx-tables` run still shows the companion positive header/value bucket
+  (`Tc=0.0509` on two alphanumeric header value operations). `tools/SummarizeDocxTextState.ps1` now includes
+  private-safe `TextClassByTc` and `NonzeroTcByTextClass` buckets, so future private and public inspections can
+  distinguish digits/letters/alphanumeric/empty operations without exposing decoded text. Keep rendering
+  unchanged until another probe separates text class from table role and header/body state; do not collapse
+  this into a digit-only or column-number shortcut.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

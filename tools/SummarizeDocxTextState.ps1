@@ -80,6 +80,42 @@ function TextLength($Operation) {
     return ([string]$Operation.DecodedText).Length
 }
 
+function TextClass($Operation) {
+    if ($null -eq $Operation.DecodedText) {
+        return "(missing)"
+    }
+
+    $text = [string]$Operation.DecodedText
+    if ($text.Length -eq 0) {
+        return "empty"
+    }
+
+    if ($text -match '^\s+$') {
+        return "whitespace"
+    }
+
+    $letters = [regex]::IsMatch($text, '\p{L}')
+    $digits = [regex]::IsMatch($text, '\p{Nd}')
+    $other = [regex]::IsMatch($text, '[^\p{L}\p{Nd}\s]')
+    if ($letters -and -not $digits -and -not $other) {
+        return "letters"
+    }
+
+    if ($digits -and -not $letters -and -not $other) {
+        return "digits"
+    }
+
+    if ($letters -and $digits -and -not $other) {
+        return "alphanumeric"
+    }
+
+    if ($other -and -not $letters -and -not $digits) {
+        return "punctuation"
+    }
+
+    return "mixed"
+}
+
 function Ensure-TextOperations([string] $Run, [string] $Side) {
     $pdf = if ($Side -eq "reference") {
         Join-Path $Run "reference\reference.pdf"
@@ -125,9 +161,17 @@ function Summarize-Operations($Operations) {
             param($op)
             "len=" + (TextLength $op) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
         })
+        TextClassByTc = @(Group-Count $Operations {
+            param($op)
+            (TextClass $op) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
+        })
         NonzeroTcByFontSize = @(Group-Count $nonzeroTc {
             param($op)
             (RoundedKey $op.FontSize 3) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
+        })
+        NonzeroTcByTextClass = @(Group-Count $nonzeroTc {
+            param($op)
+            TextClass $op
         })
         NetAverageSpacingByTc = @(Group-Count $Operations {
             param($op)

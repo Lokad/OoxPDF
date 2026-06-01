@@ -793,6 +793,64 @@ try {
         $tableDoc.Close($false)
     }
 
+    $tableTextState = $word.Documents.Add()
+    try {
+        $tableTextState.PageSetup.PageWidth = 612
+        $tableTextState.PageSetup.PageHeight = 792
+        $tableTextState.PageSetup.TopMargin = 72
+        $tableTextState.PageSetup.BottomMargin = 72
+        $tableTextState.PageSetup.LeftMargin = 72
+        $tableTextState.PageSetup.RightMargin = 72
+        $tableTextState.Content.Text = "DOCX table text state`r`n"
+
+        $heading = $tableTextState.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $range = $tableTextState.Paragraphs.Item(2).Range
+        $tbl = $tableTextState.Tables.Add($range, 4, 4)
+        $tbl.Borders.Enable = $true
+        $tbl.AllowAutoFit = $false
+        $tbl.Rows.Alignment = 0
+        $tbl.Columns.Item(1).Width = 120
+        $tbl.Columns.Item(2).Width = 95
+        $tbl.Columns.Item(3).Width = 95
+        $tbl.Columns.Item(4).Width = 160
+
+        $values = @(
+            @("Segment", "Value A", "Value B", "Status"),
+            @("North", "42", "48", "Stable demand"),
+            @("South", "37", "41", "Tight capacity"),
+            @("East", "128", "133", "Longer planning note")
+        )
+        for ($row = 1; $row -le 4; $row++) {
+            for ($column = 1; $column -le 4; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Text = $values[$row - 1][$column - 1]
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = 11
+                $cell.Range.ParagraphFormat.SpaceBefore = 0
+                $cell.Range.ParagraphFormat.SpaceAfter = 0
+                if ($row -eq 1) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 47 128 237
+                    $cell.Range.Font.Color = Rgb 255 255 255
+                    $cell.Range.Font.Bold = $true
+                }
+                elseif (($row + $column) % 2 -eq 0) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 232 244 253
+                }
+            }
+        }
+
+        $tableTextState.SaveAs2((Join-Path $cases "docx-ladder-03-table-text-state.docx"), 16)
+    }
+    finally {
+        $tableTextState.Close($false)
+    }
+
     $rowHeights = $word.Documents.Add()
     try {
         $rowHeights.PageSetup.PageWidth = 612
