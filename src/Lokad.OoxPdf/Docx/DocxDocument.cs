@@ -37,6 +37,64 @@ internal sealed record DocxRelatedStory(
     IReadOnlyList<DocxParagraph> Paragraphs,
     IReadOnlyList<DocxTable> Tables);
 
+internal static class DocxBlockTraversal
+{
+    public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(DocxDocument document)
+    {
+        return EnumerateBodyParagraphs(document.BodyElements);
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(DocxRelatedStory story)
+    {
+        return EnumerateBodyParagraphs(story.BodyElements);
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(IEnumerable<DocxBodyElement> bodyElements)
+    {
+        foreach (DocxBodyElement element in bodyElements)
+        {
+            switch (element)
+            {
+                case DocxParagraphElement paragraph:
+                    yield return paragraph.Paragraph;
+                    break;
+                case DocxTableElement table:
+                    foreach (DocxParagraph cellParagraph in EnumerateTableParagraphs(table.Table))
+                    {
+                        yield return cellParagraph;
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    public static IEnumerable<DocxTable> EnumerateBodyTables(DocxDocument document)
+    {
+        return EnumerateBodyTables(document.BodyElements);
+    }
+
+    public static IEnumerable<DocxTable> EnumerateBodyTables(DocxRelatedStory story)
+    {
+        return EnumerateBodyTables(story.BodyElements);
+    }
+
+    public static IEnumerable<DocxTable> EnumerateBodyTables(IEnumerable<DocxBodyElement> bodyElements)
+    {
+        foreach (DocxTableElement table in bodyElements.OfType<DocxTableElement>())
+        {
+            yield return table.Table;
+        }
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateTableParagraphs(DocxTable table)
+    {
+        return table.Rows
+            .SelectMany(row => row.Cells)
+            .SelectMany(DocxTableCellContent.GetParagraphs);
+    }
+}
+
 internal sealed record DocxDocumentSettings(
     string? CharacterSpacingControlValue,
     string? DefaultTabStopValue,

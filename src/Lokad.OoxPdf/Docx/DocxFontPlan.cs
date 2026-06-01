@@ -24,23 +24,14 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 {
     public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver)
     {
-        IReadOnlyList<DocxTextRun> runs = document.Paragraphs
+        IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateBodyParagraphs(document)
             .Concat(GetReferencedHeaderFooterParagraphs(document.HeaderParagraphsByType, document.HeaderParagraphs))
             .Concat(GetReferencedHeaderFooterParagraphs(document.FooterParagraphsByType, document.FooterParagraphs))
             .Concat(GetPageSettingsHeaderFooterParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
                 .SelectMany(sectionBreak => GetPageSettingsHeaderFooterParagraphs(sectionBreak.PageSettings)))
-            .Concat(document.Tables
-                .SelectMany(table => table.Rows)
-                .SelectMany(row => row.Cells)
-                .SelectMany(DocxTableCellContent.GetParagraphs))
-            .Concat(document.RelatedStories.SelectMany(story => story.Paragraphs))
-            .Concat(document.RelatedStories
-                .SelectMany(story => story.Tables)
-                .SelectMany(table => table.Rows)
-                .SelectMany(row => row.Cells)
-                .SelectMany(DocxTableCellContent.GetParagraphs))
+            .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
             .SelectMany(GetParagraphFontRuns)
             .ToArray();
 

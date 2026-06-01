@@ -4398,6 +4398,12 @@ block models and richer section/pagination layout before adding more Word pagina
   stream or a single normalized inventory. This should be fixed structurally, with tests covering body,
   table-cell, header/footer, section-header/footer, and related-story paragraphs, rather than by adding another
   ad hoc traversal.
+  2026-06-02 progress: introduced shared `DocxBlockTraversal` helpers and moved DOCX font planning plus
+  private-safe structure style/list summaries to the body/story block stream for main-story and related-story
+  paragraphs/tables. Bottom-up tests now cover body paragraphs and body tables with empty parallel
+  `Paragraphs`/`Tables` inventories, closing the concrete downstream divergence found by the text-emission
+  snapshot work. Validation passed `docx-core --skip-slow` (`29`). Keep the item open until the public model
+  no longer needs parallel inventories for compatibility with existing tests and callers.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

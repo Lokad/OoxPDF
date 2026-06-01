@@ -425,8 +425,8 @@ internal sealed record DocxStructureSnapshot(
                 0,
                 group.Sum(TextLength)))
             .ToArray();
-        DocxStructureStyleUsageSnapshot[] tableStyles = document.Tables
-            .Concat(document.RelatedStories.SelectMany(story => story.Tables))
+        DocxStructureStyleUsageSnapshot[] tableStyles = DocxBlockTraversal.EnumerateBodyTables(document)
+            .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyTables))
             .GroupBy(table => table.StyleId, StringComparer.Ordinal)
             .Select(group => new DocxStructureStyleUsageSnapshot(
                 "Table",
@@ -462,16 +462,14 @@ internal sealed record DocxStructureSnapshot(
 
     private static IEnumerable<DocxParagraph> EnumerateParagraphs(DocxDocument document)
     {
-        return document.BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph)
-            .Concat(document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs))
+        return DocxBlockTraversal.EnumerateBodyParagraphs(document)
             .Concat(document.HeaderParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
             .Concat(document.FooterParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
             .Concat(EnumeratePageSettingsParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
                 .SelectMany(sectionBreak => EnumeratePageSettingsParagraphs(sectionBreak.PageSettings)))
-            .Concat(document.RelatedStories.SelectMany(story => story.Paragraphs))
-            .Concat(document.RelatedStories.SelectMany(story => story.Tables).SelectMany(TableParagraphs));
+            .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs));
     }
 
     private static IEnumerable<DocxParagraph> EnumeratePageSettingsParagraphs(DocxPageSettings settings)
@@ -483,9 +481,7 @@ internal sealed record DocxStructureSnapshot(
 
     private static IEnumerable<DocxParagraph> TableParagraphs(DocxTable table)
     {
-        return table.Rows
-            .SelectMany(row => row.Cells)
-            .SelectMany(DocxTableCellContent.GetParagraphs);
+        return DocxBlockTraversal.EnumerateTableParagraphs(table);
     }
 
     private static int TableTextLength(DocxTable table)

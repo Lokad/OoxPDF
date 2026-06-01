@@ -1178,6 +1178,43 @@ internal static class DocxTests
         TestAssert.Equal(0, resolved.CandidateFamilies.Count);
     }
 
+    public static void DocxFontPlanUsesBodyElementInventoryAsCanonicalSource()
+    {
+        var bodyRun = new DocxTextRun("Body", 11d, null, false, false, false, null, "Body Sans")
+        {
+            Fonts = new DocxRunFonts("Body Sans", null, null, null, null, null, null, null)
+        };
+        DocxParagraph bodyParagraph = CreateFontPlanParagraph(bodyRun);
+        var cellRun = new DocxTextRun("Cell", 11d, null, false, false, false, null, "Cell Sans")
+        {
+            Fonts = new DocxRunFonts("Cell Sans", null, null, null, null, null, null, null)
+        };
+        DocxParagraph cellParagraph = CreateFontPlanParagraph(cellRun);
+        var table = new DocxTable(
+            null,
+            [40d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(table)],
+            [],
+            []);
+        var resolver = new MapFontResolver(["Body Sans", "Cell Sans"], "Resolver Fallback");
+
+        string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
+
+        TestAssert.Equal("Body|Cell", plannedTexts);
+    }
+
     public static void DocxFontPlanIncludesNumberingMarkerTypeface()
     {
         var bodyRun = new DocxTextRun("Body", 11d, null, false, false, false, null, "Body Sans")
@@ -1464,6 +1501,39 @@ internal static class DocxTests
         TestAssert.Equal(3, cellSnapshot.DigitCharacterCount);
         TestAssert.Equal(1, cellSnapshot.SpaceCharacterCount);
         TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Paragraph" && usage.StyleId is null && usage.ParagraphCount == 1 && usage.TextLength == 9), "Plain table-cell text should contribute to paragraph style usage through the shared cell content stream.");
+    }
+
+    public static void DocxStructureSnapshotUsesBodyElementInventoryAsCanonicalSource()
+    {
+        DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell", fontSize: 9d, lineSpacingPoints: 10d) with
+        {
+            StyleId = "CellStyle"
+        };
+        var table = new DocxTable(
+            null,
+            [40d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)],
+            StyleId: "TableStyle");
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            []);
+
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
+
+        TestAssert.Equal(1, snapshot.TableBlockCount);
+        TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Table" && usage.StyleId == "TableStyle" && usage.TableCount == 1), "Table style usage should come from the body block stream.");
+        TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Paragraph" && usage.StyleId == "CellStyle" && usage.ParagraphCount == 1), "Cell paragraph style usage should come from the body block stream.");
     }
 
     public static void DocxFontPlanIncludesAllHeaderFooterVariants()
