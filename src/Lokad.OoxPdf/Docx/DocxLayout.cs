@@ -731,7 +731,7 @@ internal sealed class DocxLayoutEngine
     {
         if (paragraph.ListLabel is null)
         {
-            return 0d;
+            return Math.Max(0d, paragraph.Indent.LeftPoints ?? 0d);
         }
 
         DocxNumberingIndent indent = paragraph.ListLabel.Indent;
@@ -744,7 +744,7 @@ internal sealed class DocxLayoutEngine
     {
         if (paragraph.ListLabel is null)
         {
-            return 0d;
+            return GetParagraphFirstLineIndentOffset(paragraph);
         }
 
         if (IsNumberingTabSuffix(paragraph.ListLabel))
@@ -782,12 +782,22 @@ internal sealed class DocxLayoutEngine
 
     private static double GetParagraphStartOffset(DocxParagraph paragraph)
     {
-        return GetParagraphLabelStartOffset(paragraph);
+        return paragraph.ListLabel is null
+            ? GetParagraphFirstLineIndentOffset(paragraph)
+            : GetParagraphLabelStartOffset(paragraph);
     }
 
     private static double GetParagraphRightInset(DocxParagraph paragraph)
     {
-        return paragraph.ListLabel?.Indent.RightPoints ?? 0d;
+        return paragraph.ListLabel?.Indent.RightPoints ?? paragraph.Indent.RightPoints ?? 0d;
+    }
+
+    private static double GetParagraphFirstLineIndentOffset(DocxParagraph paragraph)
+    {
+        double left = paragraph.Indent.LeftPoints ?? 0d;
+        double firstLine = paragraph.Indent.FirstLinePoints ?? 0d;
+        double hanging = paragraph.Indent.HangingPoints ?? 0d;
+        return Math.Max(0d, left + firstLine - hanging);
     }
 
     private static IReadOnlyList<DocxTextSegmentLayout> CreateNumberedLineSegments(

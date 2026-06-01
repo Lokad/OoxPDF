@@ -3526,6 +3526,15 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   supported tokens from unresolved spacing semantics.
 - [ ] Implement paragraph and numbering indents: left/right/first-line/hanging indents from paragraph styles
   and numbering levels, with corresponding wrapping-width changes.
+  - [x] 2026-06-01: Added typed `DocxParagraphIndent` for ordinary paragraph `w:ind` values and cascaded it
+    through defaults/styles/direct paragraph properties. Layout now applies left/right/first-line/hanging
+    indents to non-numbered body and table-cell paragraph wrapping, while keeping numbering-specific label/tab
+    geometry on `DocxNumberingIndent`. Public unit coverage checks style/direct first-line-vs-hanging cascade
+    and wrapping x/width changes. Public visual `docx-ladder-02-paragraph-indents` run `20260601-022308` is
+    dimension-stable at `MAE=1.104564`, changed16 `0.011547`. Private DOCX run `20260601-022152` improved to
+    `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=12.481106`, changed16 `0.116738`. Keep the
+    parent open for `w:start`/`w:end`, char-unit indents, mirror indents, and exact interaction with numbering
+    styles.
 - [ ] 2026-05-31: Resolve DOCX `w:basedOn` style inheritance with pagination-safe Office fixtures before
   enabling it broadly. The private style graph uses chains such as body/table styles based on Normal, but a
   naive recursive paragraph/character merge changed the private candidate from 16 pages to 14 pages in run
@@ -4581,6 +4590,14 @@ Current validation baseline:
   passed `14` tests, public `docx-tables` visual case passed in run `20260531-145403`, and the full DOCX group
   sweep passed (`docx-core` `4`, `docx-page` `8`, `docx-text` `6`, `docx-numbering` `3`, `docx-images` `2`,
   `docx-tables` `14`).
+- DOCX paragraph indent validation:
+  after preserving cascaded paragraph `w:ind` left/right/first-line/hanging tokens and applying them to ordinary
+  paragraph wrapping, `docx-text --skip-slow` passed `18` tests, `docx-page --skip-slow` passed `17`,
+  `docx-tables --skip-slow` passed `58`, `docx-numbering --skip-slow` passed `11`, and `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed. Public `docx-ladder-02-paragraph-indents` visual run
+  `20260601-022308` is dimension-stable at `MAE=1.104564`, changed16 `0.011547`; private DOCX run
+  `20260601-022152` compared `16/16` pages with zero dimension mismatches, no diagnostics, `MAE=12.481106`,
+  changed16 `0.116738`.
 - DOCX table-cell vertical alignment validation:
   after shifting layout-owned cell text blocks for `w:vAlign`, `docx-tables --skip-slow` passed `15` tests,
   public `docx-tables` visual case passed in run `20260531-145618`, and the full DOCX group sweep passed

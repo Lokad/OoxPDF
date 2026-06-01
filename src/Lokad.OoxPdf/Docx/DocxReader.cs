@@ -490,7 +490,10 @@ internal sealed class DocxReader
             resolvedParagraph.LineSpacingPoints,
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
-            CreateListLabel(paragraphProperties, numbering, numberingCounters));
+            CreateListLabel(paragraphProperties, numbering, numberingCounters))
+        {
+            Indent = resolvedParagraph.Indent
+        };
     }
 
     private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun)
@@ -1481,8 +1484,23 @@ internal sealed class DocxReader
             (string?)properties?.Element(WordprocessingNamespace + "keepLines")?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(properties?.Element(WordprocessingNamespace + "widowControl")),
             (string?)properties?.Element(WordprocessingNamespace + "widowControl")?.Attribute(WordprocessingNamespace + "val"));
+        DocxParagraphIndent indent = ReadParagraphIndent(properties);
 
-        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints, paragraphSpacing, keepRules);
+        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints, paragraphSpacing, keepRules, indent);
+    }
+
+    private static DocxParagraphIndent ReadParagraphIndent(XElement? properties)
+    {
+        XElement? indent = properties?.Element(WordprocessingNamespace + "ind");
+        return new DocxParagraphIndent(
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "left"),
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "right"),
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "firstLine"),
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "hanging"),
+            (string?)indent?.Attribute(WordprocessingNamespace + "left"),
+            (string?)indent?.Attribute(WordprocessingNamespace + "right"),
+            (string?)indent?.Attribute(WordprocessingNamespace + "firstLine"),
+            (string?)indent?.Attribute(WordprocessingNamespace + "hanging"));
     }
 
     private static string? ReadAlignmentValue(XElement? properties)
@@ -1629,7 +1647,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxTableStyle>());
@@ -2058,9 +2076,10 @@ internal sealed class DocxReader
         double? LineSpacingFactor,
         double? LineSpacingPoints,
         DocxParagraphSpacing Spacing,
-        DocxParagraphKeepRules KeepRules)
+        DocxParagraphKeepRules KeepRules,
+        DocxParagraphIndent Indent)
     {
-        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty);
+        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty);
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -2074,7 +2093,8 @@ internal sealed class DocxReader
                 other.LineSpacingFactor ?? LineSpacingFactor,
                 other.LineSpacingPoints ?? LineSpacingPoints,
                 MergeSpacing(Spacing, other.Spacing),
-                MergeKeepRules(KeepRules, other.KeepRules));
+                MergeKeepRules(KeepRules, other.KeepRules),
+                MergeIndent(Indent, other.Indent));
         }
     }
 
@@ -2117,6 +2137,20 @@ internal sealed class DocxReader
             other.KeepLinesValue ?? current.KeepLinesValue,
             other.WidowControl ?? current.WidowControl,
             other.WidowControlValue ?? current.WidowControlValue);
+    }
+
+    private static DocxParagraphIndent MergeIndent(DocxParagraphIndent current, DocxParagraphIndent other)
+    {
+        bool hasOtherFirstLineSide = other.FirstLineValue is not null || other.HangingValue is not null;
+        return new DocxParagraphIndent(
+            other.LeftPoints ?? current.LeftPoints,
+            other.RightPoints ?? current.RightPoints,
+            hasOtherFirstLineSide ? other.FirstLinePoints : current.FirstLinePoints,
+            hasOtherFirstLineSide ? other.HangingPoints : current.HangingPoints,
+            other.LeftValue ?? current.LeftValue,
+            other.RightValue ?? current.RightValue,
+            hasOtherFirstLineSide ? other.FirstLineValue : current.FirstLineValue,
+            hasOtherFirstLineSide ? other.HangingValue : current.HangingValue);
     }
 
     private readonly record struct DocxResolvedRunProperties(

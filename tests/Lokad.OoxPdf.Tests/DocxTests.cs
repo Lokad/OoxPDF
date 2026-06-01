@@ -416,6 +416,7 @@ internal static class DocxTests
                       <w:keepLines w:val="0"/>
                       <w:widowControl w:val="1"/>
                       <w:contextualSpacing/>
+                      <w:ind w:left="720" w:right="240" w:hanging="360"/>
                       <w:spacing w:beforeAutospacing="1" w:afterLines="240" w:lineRule="exact"/>
                     </w:pPr>
                   </w:style>
@@ -429,6 +430,7 @@ internal static class DocxTests
                       <w:pPr>
                         <w:pStyle w:val="Risky"/>
                         <w:spacing w:before="360" w:afterAutospacing="1" w:line="480"/>
+                        <w:ind w:firstLine="120"/>
                       </w:pPr>
                       <w:r><w:t>Styled spacing</w:t></w:r>
                     </w:p>
@@ -453,6 +455,11 @@ internal static class DocxTests
         TestAssert.Equal("1", paragraph.Spacing.AfterAutoSpacingValue ?? string.Empty);
         TestAssert.Equal("480", paragraph.Spacing.LineValue ?? string.Empty);
         TestAssert.Equal("exact", paragraph.Spacing.LineRuleValue ?? string.Empty);
+        TestAssert.Equal(36d, paragraph.Indent.LeftPoints ?? 0d);
+        TestAssert.Equal(12d, paragraph.Indent.RightPoints ?? 0d);
+        TestAssert.Equal(6d, paragraph.Indent.FirstLinePoints ?? 0d);
+        TestAssert.Equal("120", paragraph.Indent.FirstLineValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, paragraph.Indent.HangingValue ?? string.Empty);
         TestAssert.True(paragraph.Spacing.ContextualSpacing == true, "Style contextual spacing should survive the paragraph cascade.");
         TestAssert.True(paragraph.KeepRules.KeepNext == true, "Style keepNext should survive the paragraph cascade.");
         TestAssert.True(paragraph.KeepRules.KeepLines == false, "Explicit off keepLines should survive the paragraph cascade.");
@@ -1724,6 +1731,42 @@ internal static class DocxTests
         double[] baselines = ExtractTextBaselines(pdf);
         TestAssert.True(baselines.Length >= 2, "Expected at least two rendered text baselines.");
         TestAssert.True(Math.Abs((baselines[0] - baselines[1]) - 36d) < 0.01d, "Exact DOCX line height should advance the next paragraph by 36 points.");
+    }
+
+    public static void DocxLayoutStageAppliesParagraphIndentsToWrapping()
+    {
+        DocxParagraph indented = CreateDocxLayoutParagraph(
+            "One two three four five six seven eight nine",
+            fontSize: 10d,
+            lineSpacingPoints: 10d,
+            indent: new DocxParagraphIndent(20d, 10d, 10d, null, "400", "200", "200", null));
+        var document = new DocxDocument(
+            120d,
+            120d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(indented)],
+            [indented],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.True(lines.Length > 1, "Indented paragraph should wrap so first and continuation indents are both exercised.");
+        TestAssert.Equal(40d, lines[0].X);
+        TestAssert.Equal(30d, lines[1].X);
+        TestAssert.True(lines[0].Width <= 60d, "First-line width should subtract left, first-line, and right indents.");
+        TestAssert.True(lines[1].Width <= 70d, "Continuation width should subtract left and right indents.");
     }
 
     public static void DocxLayoutStageUsesFontMetricsForAutoLineHeight()
@@ -6589,7 +6632,8 @@ internal static class DocxTests
         string text,
         double fontSize,
         double lineSpacingPoints,
-        DocxParagraphKeepRules? keepRules = null)
+        DocxParagraphKeepRules? keepRules = null,
+        DocxParagraphIndent? indent = null)
     {
         return new DocxParagraph(
             [new DocxTextRun(text, fontSize, null, false, false, false, null, null)],
@@ -6603,7 +6647,10 @@ internal static class DocxTests
             lineSpacingPoints,
             DocxParagraphSpacing.Empty,
             keepRules ?? DocxParagraphKeepRules.Empty,
-            null);
+            null)
+        {
+            Indent = indent ?? DocxParagraphIndent.Empty
+        };
     }
 
     private static double[] ExtractTextBaselines(string pdf)

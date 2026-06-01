@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-02-paragraph-indents",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-paragraph-indents.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "paragraph", "indent"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}

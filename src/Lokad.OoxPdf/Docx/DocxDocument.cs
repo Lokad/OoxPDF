@@ -119,7 +119,10 @@ internal sealed record DocxParagraph(
     double? LineSpacingPoints,
     DocxParagraphSpacing Spacing,
     DocxParagraphKeepRules KeepRules,
-    DocxListLabel? ListLabel);
+    DocxListLabel? ListLabel)
+{
+    public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
+}
 
 internal sealed record DocxParagraphSpacing(
     string? BeforeValue,
@@ -144,6 +147,19 @@ internal sealed record DocxParagraphKeepRules(
     string? WidowControlValue)
 {
     public static DocxParagraphKeepRules Empty { get; } = new(null, null, null, null, null, null);
+}
+
+internal sealed record DocxParagraphIndent(
+    double? LeftPoints,
+    double? RightPoints,
+    double? FirstLinePoints,
+    double? HangingPoints,
+    string? LeftValue,
+    string? RightValue,
+    string? FirstLineValue,
+    string? HangingValue)
+{
+    public static DocxParagraphIndent Empty { get; } = new(null, null, null, null, null, null, null, null);
 }
 
 internal sealed record DocxListLabel(
