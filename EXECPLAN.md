@@ -5243,6 +5243,14 @@ Current validation baseline:
   Validation passed `docx-text --skip-slow` (`33`), `docx-core --skip-slow` (`19`), and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-095044` stayed
   neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+- DOCX complex-field cached-result validation:
+  complex-field diagnostics now distinguish malformed/evaluation-only fields from closed fields that can be
+  rendered from cached result runs. PAGE/NUMPAGES placeholders remain supported, and closed fields with an
+  authored cached result no longer warn just because `w:fldChar`/`w:instrText` exists. This keeps static PDF
+  rendering aligned with Word's stored field result without adding field-evaluation logic. Validation passed
+  `docx-text --skip-slow` (`33`), `docx-core --skip-slow` (`20`), and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-095525` stayed
+  neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
 - DOCX non-positioning tab-stop validation:
   authored `w:tabs` records with `w:val="bar"` or `w:val="clear"` remain preserved in the paragraph model,
   but no longer act as text-positioning stops during layout tab advance. This keeps non-positioning tab

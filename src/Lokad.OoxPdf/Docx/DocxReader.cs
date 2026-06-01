@@ -221,8 +221,7 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "fldChar").Any() ||
-            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !(((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)))
+        if (HasUnsupportedComplexFields(document))
         {
             Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field");
         }
@@ -357,6 +356,109 @@ internal sealed class DocxReader
         return document.Descendants(WordprocessingNamespace + "ins").Any(insertion =>
             insertion.Parent?.Name != WordprocessingNamespace + "p" ||
             insertion.Elements().Any(child => child.Name != WordprocessingNamespace + "r"));
+    }
+
+    private static bool HasUnsupportedComplexFields(XDocument document)
+    {
+        foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "p"))
+        {
+            if (HasUnsupportedComplexFieldInParagraph(paragraph))
+            {
+                return true;
+            }
+        }
+
+        return document.Descendants(WordprocessingNamespace + "fldChar").Any(fieldChar => !IsDirectParagraphRunChild(fieldChar)) ||
+            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !IsDirectParagraphRunChild(instruction));
+    }
+
+    private static bool IsDirectParagraphRunChild(XElement element)
+    {
+        return element.Parent?.Name == WordprocessingNamespace + "r" &&
+            element.Parent.Parent?.Name == WordprocessingNamespace + "p";
+    }
+
+    private static bool HasUnsupportedComplexFieldInParagraph(XElement paragraph)
+    {
+        bool inField = false;
+        bool inResult = false;
+        bool hasSeparate = false;
+        bool hasCachedResult = false;
+        var instruction = new StringBuilder();
+
+        foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
+        {
+            foreach (XElement child in run.Elements())
+            {
+                if (child.Name == WordprocessingNamespace + "fldChar")
+                {
+                    string? fieldCharType = (string?)child.Attribute(WordprocessingNamespace + "fldCharType");
+                    if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (inField)
+                        {
+                            return true;
+                        }
+
+                        inField = true;
+                        inResult = false;
+                        hasSeparate = false;
+                        hasCachedResult = false;
+                        instruction.Clear();
+                        continue;
+                    }
+
+                    if (string.Equals(fieldCharType, "separate", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!inField)
+                        {
+                            return true;
+                        }
+
+                        hasSeparate = true;
+                        inResult = true;
+                        continue;
+                    }
+
+                    if (string.Equals(fieldCharType, "end", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!inField)
+                        {
+                            return true;
+                        }
+
+                        if (ResolveFieldPlaceholder(instruction.ToString()) is null && (!hasSeparate || !hasCachedResult))
+                        {
+                            return true;
+                        }
+
+                        inField = false;
+                        inResult = false;
+                        continue;
+                    }
+
+                    return true;
+                }
+
+                if (child.Name == WordprocessingNamespace + "instrText")
+                {
+                    if (!inField || inResult)
+                    {
+                        return true;
+                    }
+
+                    instruction.Append((string?)child);
+                    continue;
+                }
+
+                if (inResult && child.Name == WordprocessingNamespace + "t")
+                {
+                    hasCachedResult = true;
+                }
+            }
+        }
+
+        return inField;
     }
 
     private static bool IsTableBorderContainer(XElement? element)
