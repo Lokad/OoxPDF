@@ -249,6 +249,15 @@ High-priority actions:
   `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.666634`, changed16 `0.126275`. This
   improves PDF-level structural alignment but does not close the private raster gap; keep the open branch on
   actual advance/wrapping differences across the worst private pages.
+  2026-06-01 follow-up: rejected a DOCX trial that measured wrap widths using the Office PDF 600-DPI emitted
+  font-size grid. It preserved ordinary paragraph tests but regressed the public font-table alternate
+  structural text-line gate: the same-line secondary text start moved from about `0.12pt` off to `0.83pt`.
+  Keep nominal font-size measurement for DOCX wrapping unless a public Office case proves otherwise. Private
+  block-level mapping now points the page-10 drift back to earlier page-9 paragraphs that consume extra
+  candidate lines and push a later block to the next page. `DocxInspect` block summaries now include
+  paragraph indent points and character buckets; the suspect blocks have no paragraph indents and ordinary
+  Latin/space/punctuation profiles, so the next branch is precise Calibri advance/word-break behavior rather
+  than page-bottom, indent, or charset logic.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

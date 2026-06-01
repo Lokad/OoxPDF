@@ -241,7 +241,17 @@ static DocxBlockSequenceEntry FromParagraph(int index, string? previousKind, str
         null,
         null,
         null,
-        null);
+        null,
+        paragraph.Indent?.LeftPoints,
+        paragraph.Indent?.RightPoints,
+        paragraph.Indent?.FirstLinePoints,
+        paragraph.Indent?.HangingPoints,
+        CountCharacters(paragraph, static c => c == ' '),
+        CountCharacters(paragraph, static c => c > 127),
+        CountCharacters(paragraph, char.IsPunctuation),
+        CountCharacters(paragraph, char.IsDigit),
+        CountCharacters(paragraph, char.IsUpper),
+        CountCharacters(paragraph, char.IsLower));
 }
 
 static DocxBlockSequenceEntry FromTable(int index, string? previousKind, string? nextKind, DocxTable table, int tableIndex)
@@ -322,6 +332,11 @@ static int TextLength(DocxParagraph paragraph)
     return paragraph.Runs.Sum(run => run.Text.Length);
 }
 
+static int CountCharacters(DocxParagraph paragraph, Func<char, bool> predicate)
+{
+    return paragraph.Runs.Sum(run => run.Text.Count(predicate));
+}
+
 static bool HasVisibleText(DocxParagraph paragraph)
 {
     return paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text));
@@ -364,7 +379,17 @@ internal sealed record DocxBlockSequenceEntry(
     string? PageBreakValue,
     string? SectionBreakTypeValue,
     string? SectionColumnCountValue,
-    string? SectionColumnSpaceValue);
+    string? SectionColumnSpaceValue,
+    double? ParagraphIndentLeftPoints = null,
+    double? ParagraphIndentRightPoints = null,
+    double? ParagraphIndentFirstLinePoints = null,
+    double? ParagraphIndentHangingPoints = null,
+    int? SpaceCharacterCount = null,
+    int? NonAsciiCharacterCount = null,
+    int? PunctuationCharacterCount = null,
+    int? DigitCharacterCount = null,
+    int? UppercaseCharacterCount = null,
+    int? LowercaseCharacterCount = null);
 
 internal sealed record DocxTableAdjacencyEntry(
     int TableIndex,
