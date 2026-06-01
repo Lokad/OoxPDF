@@ -2150,6 +2150,12 @@ High-priority actions:
     XML or private content. The same public unit test covers a square-wrap, column/paragraph-relative drawing.
     Validation passed full solution build and serial `docx-tables --skip-slow` (`80`); the first parallel test
     attempt hit the known compiler output lock.
+    2026-06-01 follow-up: `tools/Lokad.OoxPdf.DocxInspect` now writes `block-sequence.json` and
+    `table-adjacency-summary.json` from `DocxStructureSnapshot` instead of maintaining duplicate tool-local
+    parsers and record types. This keeps private-safe DOCX diagnostics aligned with the library model boundary.
+    Validation passed full solution build, serial `docx-tables --skip-slow` (`80`), and a public
+    `InspectDocx` run that produced `structure-snapshot.json`, `block-sequence.json`, and
+    `table-adjacency-summary.json`.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses
