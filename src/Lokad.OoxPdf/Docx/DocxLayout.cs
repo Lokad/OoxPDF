@@ -430,6 +430,7 @@ internal sealed class DocxLayoutEngine
     private const double BaselineOffsetFactor = 0.94d;
     private const double WordDefaultTableRowMinimumTwips = 401d;
     private const double WordDefaultTableRowMinimumHeight = WordDefaultTableRowMinimumTwips / 20d;
+    private const double WordDefaultTableCellHorizontalPadding = 5.4d;
     private const double AuthoredMarginTableCellFirstBaselineInset = 17d;
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
@@ -1209,10 +1210,10 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        double paddingLeft = ResolveTableCellPadding(cell.Margins.LeftPoints);
-        double paddingRight = ResolveTableCellPadding(cell.Margins.RightPoints);
-        double paddingTop = ResolveTableCellPadding(cell.Margins.TopPoints);
-        double paddingBottom = ResolveTableCellPadding(cell.Margins.BottomPoints);
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints);
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints);
+        double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
+        double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double contentHeight = paddingTop + paddingBottom;
         double pendingSpacingAfter = 0d;
@@ -1272,10 +1273,10 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        double paddingLeft = ResolveTableCellPadding(cell.Margins.LeftPoints);
-        double paddingRight = ResolveTableCellPadding(cell.Margins.RightPoints);
-        double paddingTop = ResolveTableCellPadding(cell.Margins.TopPoints);
-        double paddingBottom = ResolveTableCellPadding(cell.Margins.BottomPoints);
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints);
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints);
+        double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
+        double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
@@ -1371,10 +1372,10 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        double paddingLeft = ResolveTableCellPadding(cell.Margins.LeftPoints);
-        double paddingRight = ResolveTableCellPadding(cell.Margins.RightPoints);
-        double paddingTop = ResolveTableCellPadding(cell.Margins.TopPoints);
-        double paddingBottom = ResolveTableCellPadding(cell.Margins.BottomPoints);
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints);
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints);
+        double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
+        double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
@@ -1445,7 +1446,12 @@ internal sealed class DocxLayoutEngine
             .ToArray();
     }
 
-    private static double ResolveTableCellPadding(double? points)
+    private static double ResolveTableCellHorizontalPadding(double? points)
+    {
+        return Math.Max(0d, points ?? WordDefaultTableCellHorizontalPadding);
+    }
+
+    private static double ResolveTableCellVerticalPadding(double? points)
     {
         return Math.Max(0d, points ?? 0d);
     }
@@ -1453,7 +1459,7 @@ internal sealed class DocxLayoutEngine
     private static double ResolveTableRowTopPadding(DocxTableRow row)
     {
         return row.Cells
-            .Select(cell => ResolveTableCellPadding(cell.Margins.TopPoints))
+            .Select(cell => ResolveTableCellVerticalPadding(cell.Margins.TopPoints))
             .DefaultIfEmpty(0d)
             .Max();
     }

@@ -5668,7 +5668,7 @@ internal static class DocxTests
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 20d, cellLayout.TextLines[0].BaselineY);
     }
 
-    public static void DocxTableLayoutStageDoesNotInventMarginsForAbsentCellMargins()
+    public static void DocxTableLayoutStageUsesWordDefaultHorizontalCellPadding()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -5703,7 +5703,7 @@ internal static class DocxTests
             .Cells
             .Single();
 
-        TestAssert.Equal(cellLayout.X, cellLayout.TextLines[0].X);
+        TestAssert.Equal(cellLayout.X + 5.4d, cellLayout.TextLines[0].X);
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d, cellLayout.TextLines[0].BaselineY);
     }
 

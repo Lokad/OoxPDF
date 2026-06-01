@@ -1833,8 +1833,16 @@ High-priority actions:
     PDF emission instead of collapsing the paragraph to the first run's style.
   - [x] 2026-05-31: Preserved DOCX `w:tcMar` table-cell margin tokens and used resolved `dxa` margins to
     define the table-cell text box. Authored left/right margins now affect text line width and x-position, and
-    authored top margins move the first baseline before PDF emission; the legacy 4 pt inset remains only for
-    cells without explicit margins.
+    authored top margins move the first baseline before PDF emission.
+    2026-06-01 follow-up: replaced the zero/default horizontal table-cell padding assumption with Word's
+    missing-`w:tcMar` horizontal inset (`5.4pt`) while keeping missing top/bottom padding at `0pt`. The new
+    `docx-ladder-03-table-row-heights` fixture exposed this from Office's text matrices: reference cell text
+    starts around `5.66pt` inside the cell, while the candidate had been flush to the left border. Public
+    `docx-ladder-02-table-explicit-font` improved from the prior `MAE=0.229378`, changed16 `0.003197` to
+    run `20260601-032007` at `MAE=0.211186`, changed16 `0.003175`; the row-height ladder shifted x closer but
+    stayed dominated by vertical-baseline drift (`MAE=2.435244`, changed16 `0.018702`). Private DOCX run
+    `20260601-032030` stayed unchanged at `16/16` pages, zero dimension mismatches, no diagnostics,
+    `MAE=13.047852`, changed16 `0.120850`.
   - [x] 2026-05-31: Applied DOCX table-cell vertical alignment in layout. `w:vAlign` `center` and `bottom`
     now shift the layout-owned cell text block inside the row after paragraph wrapping/spacing and margin
     resolution, keeping the geometry visible to layout inspection before PDF emission.
