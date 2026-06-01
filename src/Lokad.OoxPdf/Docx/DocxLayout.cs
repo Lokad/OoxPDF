@@ -1394,8 +1394,8 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints);
-        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints);
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
         double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
@@ -1460,8 +1460,8 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints);
-        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints);
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
         double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
@@ -1564,8 +1564,8 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints);
-        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints);
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
         double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
@@ -1648,6 +1648,11 @@ internal sealed class DocxLayoutEngine
     private static double ResolveTableCellHorizontalPadding(double? points)
     {
         return Math.Max(0d, points ?? WordDefaultTableCellHorizontalPadding);
+    }
+
+    private static double ResolveTableCellBorderContentInset(DocxTableCell cell, string edge)
+    {
+        return DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, edge)) / 2d;
     }
 
     private static double ResolveTableCellVerticalPadding(double? points)

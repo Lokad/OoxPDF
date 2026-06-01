@@ -7197,6 +7197,49 @@ internal static class DocxTests
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d, cellLayout.TextLines[0].BaselineY);
     }
 
+    public static void DocxTableLayoutStageStartsTextInsideVisibleCellBorder()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Bordered", 12d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var borders = new[]
+        {
+            new DocxTableCellBorder("left", "single", "auto", "4"),
+            new DocxTableCellBorder("right", "single", "auto", "4")
+        };
+        var cell = new DocxTableCell("Bordered", [paragraph], null, null, null, null, borders, DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 30d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Bordered".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.Equal(cellLayout.X + 5.64d, cellLayout.TextLines[0].X);
+    }
+
     public static void DocxTableLayoutStageUsesWordDefaultRowMinimumForAutoRows()
     {
         var paragraph = new DocxParagraph(

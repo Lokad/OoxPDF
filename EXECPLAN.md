@@ -5379,6 +5379,24 @@ Current validation baseline:
   `20260601-121146` stayed structurally valid at `16/16` pages, zero dimension mismatches, and no diagnostics,
   but worsened to `MAE=13.791252`, changed16 `0.126278`; keep a follow-up open to classify table-adjacent
   private pages by table/paragraph sequence before adding any replacement spacing rule.
+- DOCX bordered-cell content inset validation:
+  Office PDF inspection of `docx-ladder-03-table-row-heights` showed bordered table text starts about one half
+  of the visible collapsed border width farther inside each cell than the candidate. This was not a font or
+  row-height issue: row baselines were already within roughly `0.1pt`, while the table text X positions were
+  consistently about `0.24pt` left with `w:sz=4` borders rendered as `0.48pt` strips. The DOCX cell content
+  box now adds half of the resolved visible left/right border width to the horizontal content insets used by
+  measurement, text layout, and inline images. Unbordered cells keep the Word default `5.4pt` horizontal
+  padding; the extra inset is derived from actual border structure. Public validation improved
+  `docx-ladder-03-table-row-heights` from run `20260601-121040` (`MAE=0.867597`, changed16 `0.009963`, SSIM
+  `0.787208`) to run `20260601-121747` (`MAE=0.631193`, changed16 `0.006442`, SSIM `0.823925`), improved
+  `docx-tables` from `MAE=0.539255`, changed16 `0.004836` to `MAE=0.507449`, changed16 `0.004190`, and
+  slightly improved table/paragraph adjacency. The explicit-margin and explicit-font ladders moved slightly
+  worse (`docx-ladder-02-table-cell-margins` from `MAE=0.535590` to `0.546795`; explicit-font from
+  `0.198498` to `0.199818`), so keep a follow-up open for Office's exact interaction between authored cell
+  margins and collapsed border inside edges. Validation passed `docx-tables --skip-slow` (`71`),
+  `docx-text --skip-slow` (`36`), `docx-core --skip-slow` (`21`), and full solution build. Private DOCX run
+  `20260601-121847` stayed at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.791252`,
+  changed16 `0.126278`.
 - DOCX unsupported table-border-style diagnostic validation:
   after emitting `DOCX_TABLE_BORDER_STYLE` only for visible non-`single`/`nil`/`none` table and cell border
   styles in document/style parts, `docx-tables --skip-slow` passed `62`, `docx-core --skip-slow` passed `16`
