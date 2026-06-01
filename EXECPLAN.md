@@ -5506,6 +5506,22 @@ Current validation baseline:
   `MAE=0.747573`, changed16 `0.007952`, confirming this was a structural PDF alignment step rather than a
   raster shortcut. The new `tools/SummarizeDocxTextState.ps1` records these private-safe aggregate checks and
   should be used before any further DOCX `Tc` work.
+  2026-06-01 numbered-text slice: public `docx-numbering` now carries Word's list/body text-state bucket as
+  compensated PDF emission. The rule is currently structural and narrow: numbered line segments inherit
+  `Tc=fontSize*0.004` (`12pt -> 0.048` in the public Office reference, `11pt -> 0.044` in the synthetic unit
+  fixture), while `TJ` positioning subtracts the same value so layout and raster advances are not moved twice.
+  Public run `20260601-132453` keeps raster metrics stable (`MAE=0.019271`, changed16 `0.000744`,
+  `SSIM=0.996098`) and matches Word's inspected text-state buckets exactly: reference/candidate `14/14` `TJ`
+  operations, `Tc=0` on `2`, `Tc=0.048` on `12`, and matching `/Tf` buckets (`12`, `21.96`). Public
+  `docx-ladder-02-character-spacing` run `20260601-132504` remains the guard against overgeneralization:
+  reference/candidate both emit `28/28` `TJ` operations, all with `Tc=0`, and unchanged raster metrics
+  (`MAE=0.747573`, changed16 `0.007952`). A deliberately uncompensated numbered `Tc` experiment is rejected:
+  run `20260601-132246` matched the same inspected `Tc` buckets but worsened numbering raster to
+  `MAE=0.179409`, changed16 `0.003006`, proving that Word's observable text-state bucket cannot simply be
+  added on top of the existing glyph advances. Keep the item open for table/body text-state: raw public table
+  PDF streams show Word sets `Tc` statefully (`0.0509` for header-like cells, later negative buckets for body
+  cells) and terminal spaces can inherit the current state without an explicit reset. The next table slice must
+  model PDF text-state inheritance and context, not per-cell constants or a hard-coded bucket list.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

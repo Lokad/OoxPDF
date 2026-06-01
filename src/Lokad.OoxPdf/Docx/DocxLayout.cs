@@ -341,7 +341,8 @@ internal sealed record DocxTextSegmentLayout(
     string Text,
     DocxTextRun StyleRun,
     double X,
-    double Width);
+    double Width,
+    double PdfCharacterSpacing = 0d);
 
 internal sealed record DocxTextSpan(
     string Text,
@@ -1008,9 +1009,10 @@ internal sealed class DocxLayoutEngine
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
+        double pdfCharacterSpacing = OfficeNumberedTextStateCharacterSpacing(fontSize);
         var segments = new List<DocxTextSegmentLayout>
         {
-            new(label.Text, labelRun, labelX, labelWidth)
+            new(label.Text, labelRun, labelX, labelWidth, pdfCharacterSpacing)
         };
 
         string separator = GetListLabelPdfSeparator(label);
@@ -1018,11 +1020,18 @@ internal sealed class DocxLayoutEngine
         {
             double separatorX = labelX + labelWidth;
             double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelRun.FontSize);
-            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth));
+            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, pdfCharacterSpacing));
         }
 
-        segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops));
+        segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops)
+            .Select(segment => segment with { PdfCharacterSpacing = pdfCharacterSpacing }));
         return segments;
+    }
+
+    private static double OfficeNumberedTextStateCharacterSpacing(double fontSize)
+    {
+        const double docxNumberedTextStateSpacingEm = 0.004d;
+        return fontSize * docxNumberedTextStateSpacingEm;
     }
 
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)

@@ -263,10 +263,10 @@ internal sealed class DocxRenderer
         DocxTextRun style = segment.StyleRun;
         string text = ResolveStaticFieldPlaceholders(segment.Text, pageNumber, pageCount);
         RgbColor color = ReadColor(style.ColorHex);
-        DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color);
+        DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color, segment.PdfCharacterSpacing);
         if (ShouldApplySyntheticBold(style, resource))
         {
-            DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color);
+            DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X + 0.35d, baselineY, color, segment.PdfCharacterSpacing);
         }
 
         if (style.Underline)
@@ -379,7 +379,7 @@ internal sealed class DocxRenderer
             }
 
             RgbColor color = ReadColor(segment.StyleRun.ColorHex);
-            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color);
+            DrawRunGlyphText(graphics, resource, segment.StyleRun, " ", fontSize, segment.X + segment.Width, baselineY, color, segment.PdfCharacterSpacing);
             return;
         }
     }
@@ -392,18 +392,20 @@ internal sealed class DocxRenderer
         double fontSize,
         double x,
         double baselineY,
-        RgbColor color)
+        RgbColor color,
+        double pdfCharacterSpacing = 0d)
     {
         bool syntheticItalic = style.Italic && !resource.Resolution.Italic;
         double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(fontSize);
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, style.CharacterSpacingPoints, pdfFontSize, forcePositioningArray: true);
+        double positioningCharacterSpacing = style.CharacterSpacingPoints - pdfCharacterSpacing;
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, positioningCharacterSpacing, pdfFontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {
-            graphics.DrawGlyphPositionedText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic);
+            graphics.DrawGlyphPositionedText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, pdfCharacterSpacing);
             return;
         }
 
-        graphics.DrawGlyphText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic);
+        graphics.DrawGlyphText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic, pdfCharacterSpacing);
     }
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
