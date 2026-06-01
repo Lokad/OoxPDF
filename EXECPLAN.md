@@ -4404,6 +4404,11 @@ block models and richer section/pagination layout before adding more Word pagina
   `Paragraphs`/`Tables` inventories, closing the concrete downstream divergence found by the text-emission
   snapshot work. Validation passed `docx-core --skip-slow` (`29`). Keep the item open until the public model
   no longer needs parallel inventories for compatibility with existing tests and callers.
+  2026-06-02 follow-up: related-story structure summaries now also use the shared body/story block traversal,
+  and production DOCX code no longer reads `document.Paragraphs`, `document.Tables`, `story.Paragraphs`, or
+  `story.Tables` as downstream rendering/diagnostic sources. The parallel inventories remain on the internal
+  model for reader/test compatibility, but font planning and private-safe structure diagnostics now derive
+  from the block stream consistently. Validation passed `docx-core --skip-slow` (`29`).
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

@@ -145,17 +145,20 @@ internal sealed record DocxStructureSnapshot(
             .ThenBy(story => story.PartName, StringComparer.Ordinal)
             .ThenBy(story => story.Id, StringComparer.Ordinal))
         {
+            DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(story).ToArray();
+            DocxTable[] tables = DocxBlockTraversal.EnumerateBodyTables(story).ToArray();
+            int directParagraphCount = story.BodyElements.OfType<DocxParagraphElement>().Count();
             stories.Add(new DocxStructureStorySnapshot(
                 story.Kind,
                 story.PartName,
                 null,
                 story.Id,
                 story.BodyElements.Count,
-                story.Paragraphs.Count,
-                story.Tables.Count,
-                story.Paragraphs.Sum(TextLength) + story.Tables.Sum(TableTextLength),
-                story.Paragraphs.Sum(paragraph => paragraph.Images.Count) + story.Tables.Sum(TableInlineImageCount),
-                story.Paragraphs.Sum(ParagraphInlineReferenceCount) + story.Tables.Sum(TableInlineReferenceCount)));
+                directParagraphCount,
+                tables.Length,
+                paragraphs.Sum(TextLength),
+                paragraphs.Sum(paragraph => paragraph.Images.Count),
+                paragraphs.Sum(ParagraphInlineReferenceCount)));
         }
     }
 
@@ -477,26 +480,6 @@ internal sealed record DocxStructureSnapshot(
         return settings.HeaderParagraphsByType.Values
             .Concat(settings.FooterParagraphsByType.Values)
             .SelectMany(paragraphs => paragraphs);
-    }
-
-    private static IEnumerable<DocxParagraph> TableParagraphs(DocxTable table)
-    {
-        return DocxBlockTraversal.EnumerateTableParagraphs(table);
-    }
-
-    private static int TableTextLength(DocxTable table)
-    {
-        return TableParagraphs(table).Sum(TextLength);
-    }
-
-    private static int TableInlineImageCount(DocxTable table)
-    {
-        return TableParagraphs(table).Sum(paragraph => paragraph.Images.Count);
-    }
-
-    private static int TableInlineReferenceCount(DocxTable table)
-    {
-        return TableParagraphs(table).Sum(ParagraphInlineReferenceCount);
     }
 
     private static int ParagraphInlineReferenceCount(DocxParagraph paragraph)
