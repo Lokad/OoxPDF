@@ -6,8 +6,8 @@
   "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "font-table", "line-spacing"],
   "expected": {
     "minAgentRating": 2,
-    "pageCountMustMatch": false,
-    "dimensionsMustMatch": false,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true
   },
   "allowedUnsupportedFeatures": []

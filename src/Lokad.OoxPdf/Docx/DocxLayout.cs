@@ -584,6 +584,7 @@ internal sealed class DocxLayoutEngine
 {
     private const double BaselineOffsetFactor = 0.94d;
     private const double WordDefaultTabStopPoints = 36d;
+    private const double WordListMinimumAutoLineSpacingFactor = 1.2d;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -1276,7 +1277,20 @@ internal sealed class DocxLayoutEngine
         double singleLineHeight = textMeasurer is IDocxLineMetricsProvider metricsProvider
             ? metricsProvider.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), fontSize)
             : fontSize;
-        return singleLineHeight * paragraph.LineSpacingFactor;
+        return singleLineHeight * ResolveAutoLineSpacingFactor(paragraph);
+    }
+
+    private static double ResolveAutoLineSpacingFactor(DocxParagraph paragraph)
+    {
+        if (paragraph.ListLabel is not null &&
+            paragraph.LineSpacingPoints is null &&
+            paragraph.SpacingBeforePoints > 0d &&
+            paragraph.Spacing.LineRuleValue?.Equals("auto", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return Math.Max(paragraph.LineSpacingFactor, WordListMinimumAutoLineSpacingFactor);
+        }
+
+        return paragraph.LineSpacingFactor;
     }
 
     private static bool ShouldMoveParagraphForWidowControl(

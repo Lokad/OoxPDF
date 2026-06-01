@@ -367,6 +367,16 @@ High-priority actions:
   public page-count mismatch but still worsened private acceptance (`MAE=9.982157 -> 10.156234`), so it was
   rejected. Keep the fixture; the next implementation must explain why Word applies a larger effective pitch
   only at some compact-list boundaries without shifting the whole private document.
+  2026-06-01 progress: the accepted rule is a narrower auto-spacing floor, not a page-bottom reserve and not a
+  global font metric change. For list paragraphs with an authored positive before-spacing and auto line
+  spacing below `1.2`, `DocxLayout` now uses `1.2` as the minimum effective auto-line factor. This preserves
+  the existing `1.25` compact-list and zero-before docGrid cases while matching the private-like `line=276`
+  compact-list page split. Public `docx-ladder-03-compact-bullet-alt-line115` improved from a page-count
+  mismatch and page-1 `MAE=17.230239` to matching page count with page-1 `MAE=11.440381`; page 2 improved from
+  missing to `MAE=0.253264`. Guards stayed neutral: `docx-ladder-03-compact-bullet-alt-bottom` remained at
+  page-1 `MAE=15.916448`, `docx-ladder-03-compact-bullet-spacing` at `MAE=0.803030`, and
+  `docx-ladder-03-docgrid-list-use-fe` at `MAE=0.019271`. Private acceptance improved from `MAE=9.982157` to
+  `MAE=9.386077`, with pages 9..11 notably lower, while page 3 is now the worst remaining private page.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
