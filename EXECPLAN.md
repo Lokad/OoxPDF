@@ -272,6 +272,14 @@ High-priority actions:
   before-spacing rule alone. A trial that split DOCX wrap tokens after hyphens/slashes also failed to help
   the private run (`MAE=13.698394` vs the `13.666634` baseline), so it was rejected pending a public case
   that specifically proves Word break behavior beyond whitespace.
+  2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
+  source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
+  lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
+  around bottom-of-page paragraph/table transitions, not a single bad table row. A public
+  `docx-ladder-03-widow-page-boundary` probe then tested the tempting hypothesis that a four-line paragraph
+  with only one line of remaining page space should split; Office and candidate both move the paragraph to the
+  next page. Keep the current widow-control rule and continue with public probes for accumulated paragraph
+  line-height, empty-paragraph, table-boundary, and table-row flow instead of weakening widow/orphan handling.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
