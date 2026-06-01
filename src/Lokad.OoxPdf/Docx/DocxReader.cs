@@ -586,7 +586,8 @@ internal sealed class DocxReader
             resolvedRun.UnderlineValue,
             fontFamily,
             resolvedRun.CharacterSpacingPoints ?? 0d,
-            resolvedRun.AllCaps ?? false)
+            resolvedRun.AllCaps ?? false,
+            resolvedRun.VerticalAlignmentValue)
         {
             Fonts = resolvedRun.Fonts
         });
@@ -1661,13 +1662,16 @@ internal sealed class DocxReader
         bool? complexScriptItalic = ReadOnOff(properties?.Element(WordprocessingNamespace + "iCs"));
         bool? allCaps = ReadOnOff(properties?.Element(WordprocessingNamespace + "caps"));
         double? characterSpacingPoints = ReadSignedTwipsElement(properties?.Element(WordprocessingNamespace + "spacing"));
+        string? verticalAlignmentValue = (string?)properties?
+            .Element(WordprocessingNamespace + "vertAlign")
+            ?.Attribute(WordprocessingNamespace + "val");
         string? underlineValue = (string?)properties?
             .Element(WordprocessingNamespace + "u")
             ?.Attribute(WordprocessingNamespace + "val");
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -2201,7 +2205,8 @@ internal sealed class DocxReader
             run.FontFamily,
             run.Fonts,
             run.CharacterSpacingPoints,
-            run.AllCaps);
+            run.AllCaps,
+            run.VerticalAlignmentValue);
     }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
@@ -2328,9 +2333,10 @@ internal sealed class DocxReader
         string? UnderlineValue,
         DocxRunFonts Fonts,
         double? CharacterSpacingPoints,
-        bool? AllCaps)
+        bool? AllCaps,
+        string? VerticalAlignmentValue = null)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -2346,7 +2352,8 @@ internal sealed class DocxReader
                 other.UnderlineValue ?? UnderlineValue,
                 MergeRunFonts(Fonts, other.Fonts),
                 other.CharacterSpacingPoints ?? CharacterSpacingPoints,
-                other.AllCaps ?? AllCaps);
+                other.AllCaps ?? AllCaps,
+                other.VerticalAlignmentValue ?? VerticalAlignmentValue);
         }
     }
 }

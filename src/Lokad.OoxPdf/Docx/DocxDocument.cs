@@ -198,7 +198,8 @@ internal sealed record DocxTextRun(
     string? UnderlineValue,
     string? FontFamily,
     double CharacterSpacingPoints = 0d,
-    bool AllCaps = false)
+    bool AllCaps = false,
+    string? VerticalAlignmentValue = null)
 {
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
 }
@@ -213,9 +214,10 @@ internal sealed record DocxTextRunStyle(
     string? FontFamily,
     DocxRunFonts Fonts,
     double? CharacterSpacingPoints = null,
-    bool? AllCaps = null)
+    bool? AllCaps = null,
+    string? VerticalAlignmentValue = null)
 {
-    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null);
+    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null);
 
     public DocxTextRun ApplyTo(DocxTextRun? baseRun, string text, double fallbackFontSize)
     {
@@ -230,7 +232,8 @@ internal sealed record DocxTextRunStyle(
             UnderlineValue ?? source.UnderlineValue,
             FontFamily ?? source.FontFamily,
             CharacterSpacingPoints ?? source.CharacterSpacingPoints,
-            AllCaps ?? source.AllCaps)
+            AllCaps ?? source.AllCaps,
+            VerticalAlignmentValue ?? source.VerticalAlignmentValue)
         {
             Fonts = MergeRunFonts(source.Fonts, Fonts)
         };
