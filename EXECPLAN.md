@@ -467,6 +467,13 @@ High-priority actions:
   dropping images whenever `FragmentCount > 1`. Added bottom-up coverage for a split row containing text plus
   an inline image; validation passed `docx-tables --skip-slow` (`86`). Keep vertical-merge fragment behavior
   open separately because merged-cell height ownership crosses logical rows, not just fragments of one row.
+  2026-06-02 follow-up: split-row fragments now separate vertical-merge coordinate ownership from page
+  clipping. A `w:vMerge restart` cell still lays out text/images in the full merged-cell span, but when the
+  restart row is physically split across pages, each fragment exposes only its own visible row-fragment
+  rectangle to the renderer clip path instead of reusing the full cross-row span as the clip. Added bottom-up
+  coverage for a split merged restart row followed by a continuation row; validation passed
+  `docx-tables --skip-slow` (`87`). Keep the broader cross-page vertical-merge branch open for continuations
+  whose own logical rows cross page boundaries, because that needs an explicit merged-cell fragment model.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

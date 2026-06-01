@@ -7797,6 +7797,68 @@ internal static class DocxTests
         TestAssert.True(splitFragments.Sum(fragment => fragment.Cells.Sum(cell => cell.InlineImages.Count)) > 0, "Split row fragments should keep overlapping inline image layouts for the renderer clip path.");
     }
 
+    public static void DocxTableLayoutStageClipsVerticalMergeRestartToSplitRowFragments()
+    {
+        DocxParagraph fillerParagraph = CreateDocxLayoutParagraph("Filler", 10d, 10d);
+        DocxParagraph[] splitParagraphs = Enumerable.Range(1, 8)
+            .Select(index => CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        var filler = new DocxTableRow([new DocxTableCell("Filler", [fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var restart = new DocxTableRow([
+            new DocxTableCell(
+                "Merged",
+                splitParagraphs,
+                null,
+                null,
+                null,
+                null,
+                [],
+                DocxTableCellMargins.Empty,
+                HasVerticalMerge: true,
+                VerticalMergeValue: "restart")
+        ], 100d);
+        var continuation = new DocxTableRow([
+            new DocxTableCell(
+                "Continuation",
+                [],
+                null,
+                null,
+                null,
+                null,
+                [],
+                DocxTableCellMargins.Empty,
+                HasVerticalMerge: true)
+        ], 20d);
+        var table = new DocxTable(null, [60d], [filler, restart, continuation]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxTableRowLayout[] splitFragments = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .Where(row => row.RowIndex == 1)
+            .ToArray();
+
+        TestAssert.Equal(2, splitFragments.Length);
+        TestAssert.True(splitFragments.All(fragment => fragment.FragmentCount == 2), "The merged restart row should still split into physical row fragments.");
+        TestAssert.True(splitFragments.All(fragment => fragment.Cells[0].Y == fragment.Y), "A split merged restart cell should use the fragment top as its visible clip.");
+        TestAssert.True(splitFragments.All(fragment => fragment.Cells[0].Height == fragment.Height), "A split merged restart cell should clip to the fragment height, not the full cross-row merged span.");
+        TestAssert.True(splitFragments.All(fragment => fragment.Cells[0].TextLines.Count != 0), "Full merged-cell text coordinates should remain available for fragment clipping.");
+    }
+
     public static void DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary()
     {
         var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);

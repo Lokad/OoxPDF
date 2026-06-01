@@ -2219,8 +2219,11 @@ internal sealed class DocxLayoutEngine
             {
                 fullVisualHeight = GetVerticalMergeSpanHeight(table, rowIndex, gridColumnIndex, rowHeights);
                 fullVisualY = cursorY - fullVisualHeight;
-                visualHeight = fullVisualHeight;
-                visualY = fullVisualY;
+                if (FragmentCount == 1)
+                {
+                    visualHeight = fullVisualHeight;
+                    visualY = fullVisualY;
+                }
             }
 
             IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
