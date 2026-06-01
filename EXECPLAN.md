@@ -492,6 +492,17 @@ High-priority actions:
   text-bearing top fragments with empty continuations. Reverted behavior. The next attempt needs a structural
   discriminator for when Word keeps such bottom text fragments versus moving the row, not just a line-box fit
   rule.
+  2026-06-01 rejection: a refined continuation-height trial kept the same text-only row-fragment shape but
+  advanced continuation rows by the remaining line boxes plus bottom padding/border instead of a full normal
+  row body. This improved the public structural probes further: `docx-ladder-03-table-bottom-slack` reached
+  page MAE `6.534271/2.019980`, and `docx-ladder-03-table-heading-table-keepnext` reached
+  `3.670558/4.095706/1.374215`; the row-boundary hash summary confirmed candidate page 1 now includes the
+  same bottom split-row hash as Office. It still regressed private DOCX acceptance from the accepted
+  `8.927676` baseline to `9.134550`, with pages 14/15 worse. Private-safe structure inspection showed only two
+  split rows were introduced, so the issue is not random over-application but an unresolved structural
+  discriminator: public probes and regressing private rows both have paragraph spacing tokens inside split
+  cells. Reverted production behavior and do not reattempt row splitting until the pre-layout/table-structure
+  model can express the missing Word decision boundary.
   2026-06-01 follow-up: added public `docx-ladder-03-table-row-fragment-threshold` as an open diagnostic probe
   with repeated compact fixed tables, a wrapped shaded target row, and a `w:cantSplit` contrast. After removing
   a confounding page-top heading before-spacing signal, Office-backed run `20260601-222516` renders seven
@@ -2117,6 +2128,15 @@ High-priority actions:
     reports page dimensions, item counts, item kinds, bounds, cell counts, and text lengths, but not document
     text. This gives private DOCX pagination/table work a restartable trace target before adding Word layout
     rules.
+  - [x] 2026-06-01: Added a private-safe `DocxStructureSnapshot` pre-layout inspection surface in the library,
+    exposed through `DocxRenderer.InspectStructure` and `tools/Lokad.OoxPdf.DocxInspect` as
+    `structure-snapshot.json`. This is the DOCX analogue of the PPTX scene/snapshot discipline at the document
+    block boundary: it records stable block indices, neighboring block kinds, paragraph spacing/keep/list/tab
+    facts, page-break and section-break tokens, table width/style/layout facts, row/cell feature counts,
+    vertical merges, grid spans, shading, borders, and table adjacency without emitting document text. Public
+    unit coverage `DocxStructureSnapshotReportsPreLayoutBlockAndTableFacts` locks the bottom-up contract.
+    Validation passed `docx-tables --skip-slow` (`80` after the new test) and `docx-core --skip-slow` (`25`);
+    one parallel dotnet run hit the known compiler output lock and the serial rerun passed.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

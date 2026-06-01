@@ -39,6 +39,11 @@ internal sealed class DocxRenderer
         return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver));
     }
 
+    internal DocxStructureSnapshot InspectStructure(DocxDocument document)
+    {
+        return DocxStructureSnapshot.FromDocument(document);
+    }
+
     private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver);

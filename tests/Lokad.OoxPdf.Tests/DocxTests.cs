@@ -1245,6 +1245,113 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.DistinctResolvedFamilyCount);
     }
 
+    public static void DocxStructureSnapshotReportsPreLayoutBlockAndTableFacts()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("A1 body.", fontSize: 10d, lineSpacingPoints: 12d) with
+        {
+            Indent = new DocxParagraphIndent(12d, 3d, null, 6d, "240", "60", null, "120"),
+            TabStops = [new DocxTabStop(36d, "720", "left", null)],
+            SnapToGrid = true,
+            SnapToGridValue = "1"
+        };
+        DocxParagraph breakParagraph = CreateDocxLayoutParagraph("Break", fontSize: 9d, lineSpacingPoints: 11d);
+        DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell 42", fontSize: 9d, lineSpacingPoints: 10d);
+        var restartCell = new DocxTableCell(
+            string.Empty,
+            [cellParagraph],
+            "D9EAF7",
+            "clear",
+            null,
+            "center",
+            [new DocxTableCellBorder("bottom", "single", "auto", "4")],
+            DocxTableCellMargins.Empty,
+            GridSpan: 2,
+            GridSpanValue: "2",
+            HasVerticalMerge: true,
+            VerticalMergeValue: "restart");
+        var continuationCell = new DocxTableCell(
+            string.Empty,
+            [],
+            null,
+            null,
+            null,
+            null,
+            [],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true,
+            VerticalMergeValue: "continue");
+        var table = new DocxTable(
+            "fixed",
+            [20d, 20d],
+            [
+                new DocxTableRow([restartCell], 18d, IsHeader: true, HeaderValue: "1", HeightValue: "360", HeightRuleValue: "atLeast", CantSplit: true, CantSplitValue: "1"),
+                new DocxTableRow([continuationCell], null)
+            ],
+            StyleId: "TableGrid",
+            PreferredWidthPoints: 40d,
+            PreferredWidthValue: "800",
+            PreferredWidthType: "dxa",
+            IndentPoints: 6d,
+            IndentValue: "120",
+            IndentType: "dxa",
+            CellSpacingPoints: 1d,
+            CellSpacingValue: "20",
+            CellSpacingType: "dxa",
+            Look: new DocxTableLook(null, true, "1", null, null, true, "1", null, null, null, null, null, null));
+        var sectionBreak = new DocxSectionBreakElement(DocxPageSettings.Empty, "nextPage", "2", "1", "720");
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(paragraph),
+                new DocxPageBreakElement("runBreak", "page", breakParagraph),
+                new DocxTableElement(table),
+                sectionBreak
+            ],
+            [paragraph],
+            [table]);
+
+        DocxStructureSnapshot snapshot = new DocxRenderer(new MapFontResolver([], "Fallback")).InspectStructure(document);
+
+        TestAssert.Equal(4, snapshot.BlockCount);
+        TestAssert.Equal(1, snapshot.ParagraphBlockCount);
+        TestAssert.Equal(1, snapshot.PageBreakBlockCount);
+        TestAssert.Equal(1, snapshot.TableBlockCount);
+        TestAssert.Equal(1, snapshot.SectionBreakBlockCount);
+        TestAssert.Equal(8, snapshot.BodyTextLength);
+        TestAssert.Equal("Paragraph", snapshot.Blocks[1].PreviousKind ?? string.Empty);
+        TestAssert.Equal("Table", snapshot.Blocks[1].NextKind ?? string.Empty);
+        TestAssert.True(snapshot.Blocks[0].SnapToGrid == true, "Paragraph structure should expose snapToGrid before layout.");
+        TestAssert.Equal(1, snapshot.Blocks[0].TabStopCount ?? 0);
+        TestAssert.True(snapshot.Blocks[1].PageBreakConsumesParagraphLine == true, "Page-break structure should expose the consumed paragraph line.");
+        TestAssert.Equal("nextPage", snapshot.Blocks[3].SectionBreakTypeValue ?? string.Empty);
+
+        DocxStructureTableSnapshot tableSnapshot = snapshot.Tables.Single();
+        TestAssert.Equal(2, tableSnapshot.RowCount);
+        TestAssert.Equal(2, tableSnapshot.MaxColumnCount);
+        TestAssert.Equal(1, tableSnapshot.HeaderRowCount);
+        TestAssert.Equal(1, tableSnapshot.CantSplitRowCount);
+        TestAssert.Equal(1, tableSnapshot.DeclaredHeightRowCount);
+        TestAssert.Equal(1, tableSnapshot.AtLeastHeightRowCount);
+        TestAssert.Equal(1, tableSnapshot.GridSpanCellCount);
+        TestAssert.Equal(2, tableSnapshot.VerticalMergeCellCount);
+        TestAssert.Equal(1, tableSnapshot.VerticalMergeRestartCellCount);
+        TestAssert.Equal(1, tableSnapshot.ShadedCellCount);
+        TestAssert.Equal(1, tableSnapshot.VisibleBorderCount);
+        TestAssert.Equal(1, tableSnapshot.ParagraphCount);
+        TestAssert.Equal(7, tableSnapshot.TextLength);
+        TestAssert.True(tableSnapshot.LookFirstRow == true, "Table look facts should be present before rendering.");
+        TestAssert.Equal("PageBreak", snapshot.TableAdjacency.Single().PreviousKind ?? string.Empty);
+    }
+
     public static void DocxFontPlanIncludesAllHeaderFooterVariants()
     {
         var defaultHeader = CreateFontPlanParagraph(new DocxTextRun("DefaultHeader", 11d, null, false, false, false, null, "Default Sans")

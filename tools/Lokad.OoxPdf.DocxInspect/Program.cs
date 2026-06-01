@@ -27,12 +27,16 @@ var options = new JsonSerializerOptions
 
 DocxLayoutSnapshot layout = renderer.InspectLayout(document);
 DocxFontPlanSnapshot fontPlan = renderer.InspectFontPlan(document);
+DocxStructureSnapshot structure = renderer.InspectStructure(document);
 File.WriteAllText(
     Path.Combine(outputDirectory, "layout-snapshot.json"),
     JsonSerializer.Serialize(layout, options));
 File.WriteAllText(
     Path.Combine(outputDirectory, "font-plan-snapshot.json"),
     JsonSerializer.Serialize(fontPlan, options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "structure-snapshot.json"),
+    JsonSerializer.Serialize(structure, options));
 File.WriteAllText(
     Path.Combine(outputDirectory, "document-settings.json"),
     JsonSerializer.Serialize(document.Settings, options));
