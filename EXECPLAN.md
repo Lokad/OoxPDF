@@ -3674,6 +3674,14 @@ block models and richer section/pagination layout before adding more Word pagina
   fallback semantics.
 - [ ] Footnotes/endnotes/comments: render bodies or emit precise diagnostics with usable fallback behavior.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
+  - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
+    `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent
+    from rendered paragraph text. Validation passed `docx-text --skip-slow` (`28`) and `docx-core
+    --skip-slow` (`19` after a serial rerun of a transient compiler output lock), plus full solution build.
+    Private DOCX run `20260601-091958` stayed page-stable at `16/16`, zero dimension mismatches, no
+    diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`. Keep the parent open for a
+    first-class tracked-change mode covering inserted/deleted paragraphs, table rows/cells, move ranges,
+    comments, metadata, and whether diagnostics should remain broad once final-view coverage is complete.
 - [ ] Multi-column layout, text boxes, sidebars, bookmarks, hyperlinks, outlines, and document properties.
 
 ### DOCX Synthetic Fidelity Ladder

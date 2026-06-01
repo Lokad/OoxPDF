@@ -485,6 +485,13 @@ internal sealed class DocxReader
             {
                 AddSimpleField(child);
             }
+            else if (child.Name == WordprocessingNamespace + "ins")
+            {
+                foreach (XElement insertedRun in child.Elements(WordprocessingNamespace + "r"))
+                {
+                    AddParagraphRun(insertedRun, ref pageInstructionSeen);
+                }
+            }
         }
 
         if (runs.Count == 0 && images.Count == 0)
