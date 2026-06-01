@@ -917,6 +917,66 @@ try {
         $textStateContext.Close($false)
     }
 
+    $textStateSizeMatrix = $word.Documents.Add()
+    try {
+        $textStateSizeMatrix.PageSetup.PageWidth = 612
+        $textStateSizeMatrix.PageSetup.PageHeight = 792
+        $textStateSizeMatrix.PageSetup.TopMargin = 72
+        $textStateSizeMatrix.PageSetup.BottomMargin = 72
+        $textStateSizeMatrix.PageSetup.LeftMargin = 72
+        $textStateSizeMatrix.PageSetup.RightMargin = 72
+        $textStateSizeMatrix.Content.Text = "DOCX text-state size matrix`r`n"
+
+        $heading = $textStateSizeMatrix.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $range = $textStateSizeMatrix.Paragraphs.Item(2).Range
+        $tbl = $textStateSizeMatrix.Tables.Add($range, 6, 5)
+        $tbl.Borders.Enable = $true
+        $tbl.AllowAutoFit = $false
+        $tbl.Rows.Alignment = 0
+        $tbl.Columns.Item(1).Width = 70
+        $tbl.Columns.Item(2).Width = 80
+        $tbl.Columns.Item(3).Width = 80
+        $tbl.Columns.Item(4).Width = 80
+        $tbl.Columns.Item(5).Width = 160
+
+        $sizes = @(8, 9, 10, 11, 12, 14)
+        $values = @("42", "Q1", "AB", "North")
+        for ($row = 1; $row -le $sizes.Count; $row++) {
+            $fontSize = $sizes[$row - 1]
+            $tbl.Cell($row, 1).Range.Text = "$fontSize pt"
+            for ($column = 2; $column -le 5; $column++) {
+                $tbl.Cell($row, $column).Range.Text = $values[$column - 2]
+            }
+
+            for ($column = 1; $column -le 5; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = $fontSize
+                $cell.Range.Font.Color = Rgb 30 30 30
+                $cell.Range.ParagraphFormat.SpaceBefore = 0
+                $cell.Range.ParagraphFormat.SpaceAfter = 0
+                $cell.TopPadding = 1.5
+                $cell.BottomPadding = 1.5
+                $cell.LeftPadding = 5.4
+                $cell.RightPadding = 5.4
+                if ($row % 2 -eq 0) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 232 244 253
+                }
+            }
+        }
+
+        $textStateSizeMatrix.SaveAs2((Join-Path $cases "docx-ladder-03-text-state-size-matrix.docx"), 16)
+    }
+    finally {
+        $textStateSizeMatrix.Close($false)
+    }
+
     $rowHeights = $word.Documents.Add()
     try {
         $rowHeights.PageSetup.PageWidth = 612

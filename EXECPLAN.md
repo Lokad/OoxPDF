@@ -5541,6 +5541,21 @@ Current validation baseline:
   emission decomposition that can promote uniform short-run advance residuals into `Tc` where Word does, not a
   table-specific or text-class-specific special case. Candidate still has a decomposition gap here (`35`
   reference operations vs `33` candidate operations, all candidate `Tc=0`).
+  2026-06-01 size-matrix probe: added Office-authored public fixture
+  `docx-ladder-03-text-state-size-matrix` to vary the same short tokens across `8`, `9`, `10`, `11`, `12`, and
+  `14` pt Arial table rows. Run `20260601-134305` shows the Word rule is not a single font-size-grid residual:
+  reference emits `19` nonzero `Tc` operations across all tested sizes, while candidate emits `63` operations
+  all at `Tc=0`. Public decoded reference examples are `42`: `-0.0302`, `0.036`, `-0.0178`, `-0.0182`,
+  `0.048`, `-0.00624`; `Q1`: `-0.0151`, `-0.042`, `0.0511`, `0.0509`, `0.024`, `-0.00312`; and `AB`:
+  `0.0373`, `-0.003`, `-0.0433`, `-0.0437`, `0.036`, `-0.00468`. For these nonzero operations Word uses
+  one text chunk, zero `TJ` numeric adjustments, and `NetAverageCharacterSpacing` equal to `Tc`; longer strings
+  and separator fragments still use `Tc=0` and may carry residuals through positioned glyph arrays. The
+  durable implementation target is therefore an Office PDF text-emission planner that can decompose a measured
+  run into a uniform text-state component plus residual `TJ` adjustments after layout, with public evidence for
+  when Word chooses that decomposition. Do not encode token strings, font names, table roles, or the observed
+  buckets as renderer conditions. `tools/SummarizeDocxTextState.ps1` now records `TextChunkCountByTc`,
+  `AdjustmentCountByTc`, and `AverageAdjustmentByTc` so this split is visible in future public/private-safe
+  summaries.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

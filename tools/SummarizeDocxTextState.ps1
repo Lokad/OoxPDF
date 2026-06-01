@@ -177,6 +177,18 @@ function Summarize-Operations($Operations) {
             param($op)
             "net=" + (RoundedKey $op.NetAverageCharacterSpacing 6) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
         })
+        TextChunkCountByTc = @(Group-Count $Operations {
+            param($op)
+            "chunks=" + (RoundedKey $op.TextChunkCount 0) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
+        })
+        AdjustmentCountByTc = @(Group-Count $Operations {
+            param($op)
+            "adj=" + (RoundedKey $op.AdjustmentCount 0) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
+        })
+        AverageAdjustmentByTc = @(Group-Count $Operations {
+            param($op)
+            "avgAdj=" + (RoundedKey $op.AverageAdjustmentPoints 6) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
+        })
     }
 }
 
