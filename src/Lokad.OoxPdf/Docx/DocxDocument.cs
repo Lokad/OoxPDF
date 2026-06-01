@@ -203,7 +203,11 @@ internal sealed record DocxTextRun(
     bool Strike = false,
     string? StrikeValue = null,
     bool DoubleStrike = false,
-    string? DoubleStrikeValue = null)
+    string? DoubleStrikeValue = null,
+    string? HighlightValue = null,
+    string? ShadingFillHex = null,
+    string? ShadingValue = null,
+    string? ShadingColor = null)
 {
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
 }
@@ -223,9 +227,13 @@ internal sealed record DocxTextRunStyle(
     bool? Strike = null,
     string? StrikeValue = null,
     bool? DoubleStrike = null,
-    string? DoubleStrikeValue = null)
+    string? DoubleStrikeValue = null,
+    string? HighlightValue = null,
+    string? ShadingFillHex = null,
+    string? ShadingValue = null,
+    string? ShadingColor = null)
 {
-    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null);
+    public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null);
 
     public DocxTextRun ApplyTo(DocxTextRun? baseRun, string text, double fallbackFontSize)
     {
@@ -245,7 +253,11 @@ internal sealed record DocxTextRunStyle(
             Strike ?? source.Strike,
             StrikeValue ?? source.StrikeValue,
             DoubleStrike ?? source.DoubleStrike,
-            DoubleStrikeValue ?? source.DoubleStrikeValue)
+            DoubleStrikeValue ?? source.DoubleStrikeValue,
+            HighlightValue ?? source.HighlightValue,
+            ShadingFillHex ?? source.ShadingFillHex,
+            ShadingValue ?? source.ShadingValue,
+            ShadingColor ?? source.ShadingColor)
         {
             Fonts = MergeRunFonts(source.Fonts, Fonts)
         };

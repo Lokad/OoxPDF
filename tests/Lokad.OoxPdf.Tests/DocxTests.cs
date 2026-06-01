@@ -1636,6 +1636,71 @@ internal static class DocxTests
         TestAssert.True(runs[3].DoubleStrikeValue is null, "Expected missing double strike to keep a null source token.");
     }
 
+    public static void DocxReaderPreservesParagraphRunHighlightAndShadingTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="character" w:styleId="Marked">
+                    <w:rPr><w:highlight w:val="green"/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:highlight w:val="yellow"/></w:rPr><w:t>Highlight</w:t></w:r>
+                      <w:r><w:rPr><w:rStyle w:val="Marked"/></w:rPr><w:t>Inherited</w:t></w:r>
+                      <w:r><w:rPr><w:shd w:val="pct20" w:color="112233" w:fill="D9EAD3"/></w:rPr><w:t>Shading</w:t></w:r>
+                      <w:r><w:t>Plain</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
+
+        TestAssert.Equal("yellow", runs[0].HighlightValue ?? string.Empty);
+        TestAssert.Equal("green", runs[1].HighlightValue ?? string.Empty);
+        TestAssert.Equal("D9EAD3", runs[2].ShadingFillHex ?? string.Empty);
+        TestAssert.Equal("pct20", runs[2].ShadingValue ?? string.Empty);
+        TestAssert.Equal("112233", runs[2].ShadingColor ?? string.Empty);
+        TestAssert.True(runs[3].HighlightValue is null, "Expected missing highlight to keep a null source token.");
+        TestAssert.True(runs[3].ShadingFillHex is null, "Expected missing run shading fill to keep a null source token.");
+        TestAssert.True(runs[3].ShadingValue is null, "Expected missing run shading value to keep a null source token.");
+        TestAssert.True(runs[3].ShadingColor is null, "Expected missing run shading color to keep a null source token.");
+    }
+
     public static void DocxParagraphLayoutPreservesSoftLineBreaks()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -591,7 +591,11 @@ internal sealed class DocxReader
             resolvedRun.Strike ?? false,
             resolvedRun.StrikeValue,
             resolvedRun.DoubleStrike ?? false,
-            resolvedRun.DoubleStrikeValue)
+            resolvedRun.DoubleStrikeValue,
+            resolvedRun.HighlightValue,
+            resolvedRun.ShadingFillHex,
+            resolvedRun.ShadingValue,
+            resolvedRun.ShadingColor)
         {
             Fonts = resolvedRun.Fonts
         });
@@ -1675,13 +1679,20 @@ internal sealed class DocxReader
         string? verticalAlignmentValue = (string?)properties?
             .Element(WordprocessingNamespace + "vertAlign")
             ?.Attribute(WordprocessingNamespace + "val");
+        string? highlightValue = (string?)properties?
+            .Element(WordprocessingNamespace + "highlight")
+            ?.Attribute(WordprocessingNamespace + "val");
+        XElement? shading = properties?.Element(WordprocessingNamespace + "shd");
+        string? shadingFill = (string?)shading?.Attribute(WordprocessingNamespace + "fill");
+        string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val");
+        string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color");
         string? underlineValue = (string?)properties?
             .Element(WordprocessingNamespace + "u")
             ?.Attribute(WordprocessingNamespace + "val");
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue, highlightValue, shadingFill, shadingValue, shadingColor);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -2220,7 +2231,11 @@ internal sealed class DocxReader
             run.Strike,
             run.StrikeValue,
             run.DoubleStrike,
-            run.DoubleStrikeValue);
+            run.DoubleStrikeValue,
+            run.HighlightValue,
+            run.ShadingFillHex,
+            run.ShadingValue,
+            run.ShadingColor);
     }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
@@ -2352,9 +2367,13 @@ internal sealed class DocxReader
         bool? Strike = null,
         string? StrikeValue = null,
         bool? DoubleStrike = null,
-        string? DoubleStrikeValue = null)
+        string? DoubleStrikeValue = null,
+        string? HighlightValue = null,
+        string? ShadingFillHex = null,
+        string? ShadingValue = null,
+        string? ShadingColor = null)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -2375,7 +2394,11 @@ internal sealed class DocxReader
                 other.Strike ?? Strike,
                 other.StrikeValue ?? StrikeValue,
                 other.DoubleStrike ?? DoubleStrike,
-                other.DoubleStrikeValue ?? DoubleStrikeValue);
+                other.DoubleStrikeValue ?? DoubleStrikeValue,
+                other.HighlightValue ?? HighlightValue,
+                other.ShadingFillHex ?? ShadingFillHex,
+                other.ShadingValue ?? ShadingValue,
+                other.ShadingColor ?? ShadingColor);
         }
     }
 }
