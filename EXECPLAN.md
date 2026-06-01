@@ -5556,6 +5556,16 @@ Current validation baseline:
   buckets as renderer conditions. `tools/SummarizeDocxTextState.ps1` now records `TextChunkCountByTc`,
   `AdjustmentCountByTc`, and `AverageAdjustmentByTc` so this split is visible in future public/private-safe
   summaries.
+  2026-06-01 PDF chunking progress: the shared DOCX glyph-positioning encoder now coalesces consecutive glyphs
+  inside one hex string until a real numeric `TJ` adjustment is needed, instead of emitting one PDF text chunk
+  per glyph. This is a structural alignment step, not a raster tuning step: `docx-ladder-03-text-state-size-matrix`
+  rerun `20260601-134643` kept raster metrics unchanged (`MAE=1.559806`, changed16 `0.012952`) while candidate
+  chunk buckets moved to `chunks=1|tc=0` on `62/63` operations. Guard runs stayed visually unchanged:
+  `docx-numbering` `20260601-134708` remained at `MAE=0.019271`, changed16 `0.000744`, and
+  `docx-ladder-02-character-spacing` `20260601-134708` remained at `MAE=0.747573`, changed16 `0.007952`.
+  The remaining gap is the actual uniform `Tc` selection and residual split; long strings still differ in
+  Office/candidate chunk buckets because Office sometimes introduces intra-run `TJ` segmentation where candidate
+  has no measured residual yet.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

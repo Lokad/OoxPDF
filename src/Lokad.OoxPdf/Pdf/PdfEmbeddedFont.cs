@@ -177,6 +177,7 @@ internal sealed class PdfEmbeddedFont
             : -characterSpacingPoints * 1000d / fontSize;
         bool hasPositioning = false;
         var builder = new StringBuilder("[");
+        var glyphChunk = new StringBuilder();
         for (int i = 0; i < glyphs.Count; i++)
         {
             if (i > 0)
@@ -190,16 +191,29 @@ internal sealed class PdfEmbeddedFont
 
                 if (Math.Abs(adjustment) > 0.001d)
                 {
+                    AppendGlyphChunk(builder, glyphChunk);
                     builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
                     hasPositioning = true;
                 }
             }
 
-            builder.Append('<').Append(glyphs[i].ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+            glyphChunk.Append(glyphs[i].ToString("X4", CultureInfo.InvariantCulture));
         }
 
+        AppendGlyphChunk(builder, glyphChunk);
         builder.Append(']');
         return hasPositioning || forcePositioningArray ? builder.ToString() : null;
+    }
+
+    private static void AppendGlyphChunk(StringBuilder builder, StringBuilder glyphChunk)
+    {
+        if (glyphChunk.Length == 0)
+        {
+            return;
+        }
+
+        builder.Append('<').Append(glyphChunk).Append('>');
+        glyphChunk.Clear();
     }
 
     public double MeasureTextPoints(string text, double fontSize)
