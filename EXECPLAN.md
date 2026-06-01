@@ -329,6 +329,19 @@ High-priority actions:
   and private run `20260601-185704` stayed neutral at `MAE=9.982157`, changed16 `0.103396`. Keep the open
   vertical-flow target on compact bullet paragraph advance/spacing and Word text-state decomposition; do not
   turn numbering tabs, `docGrid`, FE layout, font names, or private style names into shortcuts.
+  2026-06-01 follow-up: added public `docx-ladder-03-compact-bullet-alt-bottom` to isolate compact bullet
+  pagination when the requested primary Latin face is missing and `w:font/w:altName` resolves the actual face,
+  matching the dominant private-safe font-table-alternate pattern without private content. The public case
+  reproduces a real compact-list pagination/line-pitch discrepancy: candidate page 1 is still high-error
+  (`MAE=15.916448`, changed16 `0.154725`) while page 2 is much closer (`MAE=0.750764`, changed16 `0.007434`).
+  A trial that replaced adjacent compact-list before-spacing with a `docGrid`-derived total pitch was rejected:
+  it worsened this public fixture (`MAE=18.261426` on page 1), worsened `docx-ladder-03-compact-bullet-spacing`
+  (`MAE=0.914388` vs accepted `0.803030`), and worsened the private aggregate (`MAE=10.578667` first page in
+  the rejected run). `DocxLayoutSnapshot` now emits private-safe `LineHeightPoints`,
+  `AppliedBeforeSpacingPoints`, and `IsFirstParagraphLine` for text lines so the next step can compare actual
+  layout advances against Office PDF rows instead of guessing from style names or font names. Keep this branch
+  open on deriving Word's effective single-line metrics and paragraph pitch for compact lists under
+  font-table-alternate resolution; do not use a broad `docGrid`, FE-layout, or named-font shortcut.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text
