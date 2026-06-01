@@ -3276,6 +3276,14 @@ document-specific business content into public notes.
   `17.162084`. Keep superscript/subscript layout open for an Office-backed ladder that derives Word's exact
   font-size scaling, baseline shifts, underline/highlight interaction, and line-box impact from reference PDFs
   instead of adding a guessed offset.
+- [x] 2026-06-01: Preserved DOCX run-level strike tokens through the same run-property cascade:
+  `w:strike`, explicit off values such as `w:val="0"`, and inherited `w:dstrike` now survive into
+  `DocxTextRun`/`DocxTextRunStyle` with source token values. Validation passed `docx-text --skip-slow`
+  (`21`) and full solution build. Private DOCX run `20260601-085424` stayed page-stable at `16/16`, zero
+  dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`.
+  Keep strikethrough drawing open for a public Office PDF ladder that derives the actual line rectangle
+  position, thickness, double-strike separation, and interaction with baseline shifts and run boundaries before
+  changing renderer geometry.
 - [x] 2026-05-31: Preserved DOCX plain `w:br` soft line breaks in run text and layout wrapping. The reader now
   keeps authored soft breaks as line separators, and the layout stage wraps each segment onto separate
   baselines instead of silently concatenating text across the break.

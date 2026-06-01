@@ -587,7 +587,11 @@ internal sealed class DocxReader
             fontFamily,
             resolvedRun.CharacterSpacingPoints ?? 0d,
             resolvedRun.AllCaps ?? false,
-            resolvedRun.VerticalAlignmentValue)
+            resolvedRun.VerticalAlignmentValue,
+            resolvedRun.Strike ?? false,
+            resolvedRun.StrikeValue,
+            resolvedRun.DoubleStrike ?? false,
+            resolvedRun.DoubleStrikeValue)
         {
             Fonts = resolvedRun.Fonts
         });
@@ -1661,6 +1665,12 @@ internal sealed class DocxReader
         bool? complexScriptBold = ReadOnOff(properties?.Element(WordprocessingNamespace + "bCs"));
         bool? complexScriptItalic = ReadOnOff(properties?.Element(WordprocessingNamespace + "iCs"));
         bool? allCaps = ReadOnOff(properties?.Element(WordprocessingNamespace + "caps"));
+        XElement? strikeElement = properties?.Element(WordprocessingNamespace + "strike");
+        XElement? doubleStrikeElement = properties?.Element(WordprocessingNamespace + "dstrike");
+        bool? strike = ReadOnOff(strikeElement);
+        bool? doubleStrike = ReadOnOff(doubleStrikeElement);
+        string? strikeValue = (string?)strikeElement?.Attribute(WordprocessingNamespace + "val");
+        string? doubleStrikeValue = (string?)doubleStrikeElement?.Attribute(WordprocessingNamespace + "val");
         double? characterSpacingPoints = ReadSignedTwipsElement(properties?.Element(WordprocessingNamespace + "spacing"));
         string? verticalAlignmentValue = (string?)properties?
             .Element(WordprocessingNamespace + "vertAlign")
@@ -1671,7 +1681,7 @@ internal sealed class DocxReader
         bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -2206,7 +2216,11 @@ internal sealed class DocxReader
             run.Fonts,
             run.CharacterSpacingPoints,
             run.AllCaps,
-            run.VerticalAlignmentValue);
+            run.VerticalAlignmentValue,
+            run.Strike,
+            run.StrikeValue,
+            run.DoubleStrike,
+            run.DoubleStrikeValue);
     }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
@@ -2334,9 +2348,13 @@ internal sealed class DocxReader
         DocxRunFonts Fonts,
         double? CharacterSpacingPoints,
         bool? AllCaps,
-        string? VerticalAlignmentValue = null)
+        string? VerticalAlignmentValue = null,
+        bool? Strike = null,
+        string? StrikeValue = null,
+        bool? DoubleStrike = null,
+        string? DoubleStrikeValue = null)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -2353,7 +2371,11 @@ internal sealed class DocxReader
                 MergeRunFonts(Fonts, other.Fonts),
                 other.CharacterSpacingPoints ?? CharacterSpacingPoints,
                 other.AllCaps ?? AllCaps,
-                other.VerticalAlignmentValue ?? VerticalAlignmentValue);
+                other.VerticalAlignmentValue ?? VerticalAlignmentValue,
+                other.Strike ?? Strike,
+                other.StrikeValue ?? StrikeValue,
+                other.DoubleStrike ?? DoubleStrike,
+                other.DoubleStrikeValue ?? DoubleStrikeValue);
         }
     }
 }

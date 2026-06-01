@@ -1570,6 +1570,72 @@ internal static class DocxTests
         TestAssert.True(runs[2].VerticalAlignmentValue is null, "Expected missing vertical alignment to keep a null source token.");
     }
 
+    public static void DocxReaderPreservesParagraphRunStrikeTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="character" w:styleId="DoubleStrike">
+                    <w:rPr><w:dstrike/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:strike/></w:rPr><w:t>Strike</w:t></w:r>
+                      <w:r><w:rPr><w:strike w:val="0"/></w:rPr><w:t>NoStrike</w:t></w:r>
+                      <w:r><w:rPr><w:rStyle w:val="DoubleStrike"/></w:rPr><w:t>Double</w:t></w:r>
+                      <w:r><w:t>Plain</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
+
+        TestAssert.True(runs[0].Strike, "Expected w:strike to enable strike.");
+        TestAssert.True(runs[0].StrikeValue is null, "Expected val-less w:strike to keep a null source token.");
+        TestAssert.True(!runs[1].Strike, "Expected w:strike val=0 to disable strike.");
+        TestAssert.Equal("0", runs[1].StrikeValue ?? string.Empty);
+        TestAssert.True(runs[2].DoubleStrike, "Expected inherited w:dstrike to enable double strike.");
+        TestAssert.True(runs[2].DoubleStrikeValue is null, "Expected val-less w:dstrike to keep a null source token.");
+        TestAssert.True(!runs[3].Strike, "Expected missing strike to remain disabled.");
+        TestAssert.True(runs[3].StrikeValue is null, "Expected missing strike to keep a null source token.");
+        TestAssert.True(!runs[3].DoubleStrike, "Expected missing double strike to remain disabled.");
+        TestAssert.True(runs[3].DoubleStrikeValue is null, "Expected missing double strike to keep a null source token.");
+    }
+
     public static void DocxParagraphLayoutPreservesSoftLineBreaks()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
