@@ -1822,9 +1822,12 @@ High-priority actions:
     2026-06-01 follow-up: section-local `w:headerReference` and `w:footerReference` maps now travel with
     `DocxPageSettings`, so pages render static content from their owning section rather than from the
     document-wide last reference for a type. `DocxFontPlan` also includes section-scoped static runs, preventing
-    section-only header/footer typefaces from falling back to a resource planned from another section. Keep the
-    remaining Word inheritance/link-to-previous semantics open: omitted section references currently fall back
-    to the document map rather than an explicit inherited static-part chain.
+    section-only header/footer typefaces from falling back to a resource planned from another section.
+    2026-06-01 follow-up: layout now builds an explicit effective static-part chain for section settings:
+    omitted section header/footer references inherit previously defined references by type, while the renderer
+    no longer treats an empty section map as permission to backfill from document-global references. Public
+    coverage guards the important non-backfill edge where the first section omits static references and the
+    final section owns them.
   - [x] 2026-05-31: Preserved DOCX `w:pgMar/@w:header` and `w:pgMar/@w:footer` distances and used those
     authored page-margin tokens for static header/footer baselines. This removes the prior half-margin
     placement fallback for documents that provide Word's header/footer distances, with public coverage that
@@ -1925,6 +1928,17 @@ High-priority actions:
     DOCX run `20260601-135549` stayed page- and diagnostic-stable (`16/16`, zero dimension mismatches, no
     diagnostics) but moved to `MAE=13.838763`, changed16 `0.126851`, so keep private aggregate monitoring
     active when the next section/header slice lands.
+  - [x] 2026-06-01: Replaced document-global static-content fallback with layout-owned effective section
+    static content. `DocxLayoutEngine` resolves section settings in document order, merges inherited
+    header/footer references by type, and applies the final body `sectPr` over the inherited chain. Static
+    header/footer rendering now consumes only `layoutPage.PageSettings`, which prevents a later/final section
+    header or footer from appearing on an earlier section that omitted the reference. This is still not a full
+    section model: continuous sections, Word's odd/even blank-page insertion, columns, and any future explicit
+    "link to previous" surface remain open. Validation passed `docx-page --skip-slow` (`26`), `docx-text
+    --skip-slow` (`36`), and full solution build; public `docx-headers-footers` run `20260601-141617` stayed
+    at `MAE=0.073352`, changed16 `0.002110`, SSIM `0.982572`. Private DOCX run `20260601-141624` stayed
+    unchanged at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.838763`, changed16
+    `0.126851`.
   - [ ] 2026-06-01: Separate DOCX table-style paragraph-property precedence from table-cell text rendering.
     Public Office inspection confirms table-style `w:rPr` must sit below paragraph-style and character-style
     run properties; that run-property precedence belongs in the active table-text slice. A broader table-style

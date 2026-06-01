@@ -513,7 +513,8 @@ internal sealed class DocxLayoutEngine
     {
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
-        DocxPageGeometry page = ResolveSectionGeometry(document, FindSectionBreakAtOrAfter(document.BodyElements, 0)?.PageSettings);
+        IReadOnlyDictionary<int, DocxPageSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxPageSettings finalSectionSettings);
+        DocxPageGeometry page = ResolveSectionGeometry(document, FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings);
         double x = page.MarginLeft;
         double width = page.BodyWidth;
         double cursorY = page.Height - page.MarginTop;
@@ -540,7 +541,7 @@ internal sealed class DocxLayoutEngine
 
         void ApplySectionAfterBreak(int elementIndex)
         {
-            page = ResolveSectionGeometry(document, FindSectionBreakAtOrAfter(document.BodyElements, elementIndex + 1)?.PageSettings);
+            page = ResolveSectionGeometry(document, FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings);
             x = page.MarginLeft;
             width = page.BodyWidth;
             if (!HasPageContent())
@@ -717,13 +718,115 @@ internal sealed class DocxLayoutEngine
         return new DocxLayout(pages.ToArray());
     }
 
-    private static DocxSectionBreakElement? FindSectionBreakAtOrAfter(IReadOnlyList<DocxBodyElement> elements, int startIndex)
+    private static IReadOnlyDictionary<int, DocxPageSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxPageSettings finalSectionSettings)
+    {
+        var sectionSettingsByElementIndex = new Dictionary<int, DocxPageSettings>();
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType =
+            new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType =
+            new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+
+        for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
+        {
+            if (document.BodyElements[elementIndex] is not DocxSectionBreakElement sectionBreak)
+            {
+                continue;
+            }
+
+            DocxPageSettings effectiveSettings = ResolveEffectiveSectionSettings(
+                sectionBreak.PageSettings,
+                inheritedHeadersByType,
+                inheritedFootersByType);
+            sectionSettingsByElementIndex[elementIndex] = effectiveSettings;
+            inheritedHeadersByType = effectiveSettings.HeaderParagraphsByType;
+            inheritedFootersByType = effectiveSettings.FooterParagraphsByType;
+        }
+
+        finalSectionSettings = ResolveEffectiveSectionSettings(
+            BuildFinalSectionSettings(document),
+            inheritedHeadersByType,
+            inheritedFootersByType);
+        return sectionSettingsByElementIndex;
+    }
+
+    private static DocxPageSettings BuildFinalSectionSettings(DocxDocument document)
+    {
+        DocxPageSettings settings = document.PageSettings;
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = settings.HeaderParagraphsByType.Count == 0 && document.HeaderParagraphsByType.Count > 0
+            ? document.HeaderParagraphsByType
+            : settings.HeaderParagraphsByType;
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = settings.FooterParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count > 0
+            ? document.FooterParagraphsByType
+            : settings.FooterParagraphsByType;
+
+        if (headersByType.Count == 0 && document.HeaderParagraphs.Count > 0)
+        {
+            headersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = document.HeaderParagraphs
+            };
+        }
+
+        if (footersByType.Count == 0 && document.FooterParagraphs.Count > 0)
+        {
+            footersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = document.FooterParagraphs
+            };
+        }
+
+        return settings with
+        {
+            HeaderParagraphsByType = headersByType,
+            FooterParagraphsByType = footersByType
+        };
+    }
+
+    private static DocxPageSettings ResolveEffectiveSectionSettings(
+        DocxPageSettings settings,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType)
+    {
+        return settings with
+        {
+            HeaderParagraphsByType = MergeInheritedStaticParagraphs(inheritedHeadersByType, settings.HeaderParagraphsByType),
+            FooterParagraphsByType = MergeInheritedStaticParagraphs(inheritedFootersByType, settings.FooterParagraphsByType)
+        };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> MergeInheritedStaticParagraphs(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedParagraphsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> localParagraphsByType)
+    {
+        if (inheritedParagraphsByType.Count == 0)
+        {
+            return localParagraphsByType;
+        }
+
+        if (localParagraphsByType.Count == 0)
+        {
+            return inheritedParagraphsByType;
+        }
+
+        var merged = new Dictionary<string, IReadOnlyList<DocxParagraph>>(inheritedParagraphsByType, StringComparer.OrdinalIgnoreCase);
+        foreach ((string type, IReadOnlyList<DocxParagraph> paragraphs) in localParagraphsByType)
+        {
+            merged[type] = paragraphs;
+        }
+
+        return merged;
+    }
+
+    private static DocxPageSettings? FindSectionSettingsAtOrAfter(
+        IReadOnlyList<DocxBodyElement> elements,
+        int startIndex,
+        IReadOnlyDictionary<int, DocxPageSettings> sectionSettingsByElementIndex)
     {
         for (int i = Math.Max(0, startIndex); i < elements.Count; i++)
         {
-            if (elements[i] is DocxSectionBreakElement sectionBreak)
+            if (elements[i] is DocxSectionBreakElement && sectionSettingsByElementIndex.TryGetValue(i, out DocxPageSettings? settings))
             {
-                return sectionBreak;
+                return settings;
             }
         }
 
@@ -733,10 +836,10 @@ internal sealed class DocxLayoutEngine
     private static DocxPageGeometry ResolveSectionGeometry(DocxDocument document, DocxPageSettings? settings)
     {
         DocxPageSettings effectiveSettings = settings ?? document.PageSettings;
-        double width = ReadTwipsValue(settings?.WidthValue, document.PageWidthPoints);
-        double height = ReadTwipsValue(settings?.HeightValue, document.PageHeightPoints);
+        double width = ReadTwipsValue(effectiveSettings.WidthValue, document.PageWidthPoints);
+        double height = ReadTwipsValue(effectiveSettings.HeightValue, document.PageHeightPoints);
         (width, height) = NormalizePageSize(width, height);
-        if (settings?.OrientationValue?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
+        if (effectiveSettings.OrientationValue?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
         {
             (width, height) = (height, width);
         }
@@ -744,10 +847,10 @@ internal sealed class DocxLayoutEngine
         return new DocxPageGeometry(
             width,
             height,
-            ReadTwipsValue(settings?.MarginLeftValue, document.MarginLeftPoints),
-            ReadTwipsValue(settings?.MarginRightValue, document.MarginRightPoints),
-            ReadTwipsValue(settings?.MarginTopValue, document.MarginTopPoints),
-            ReadTwipsValue(settings?.MarginBottomValue, document.MarginBottomPoints),
+            ReadTwipsValue(effectiveSettings.MarginLeftValue, document.MarginLeftPoints),
+            ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints),
+            ReadTwipsValue(effectiveSettings.MarginTopValue, document.MarginTopPoints),
+            ReadTwipsValue(effectiveSettings.MarginBottomValue, document.MarginBottomPoints),
             effectiveSettings);
     }
 

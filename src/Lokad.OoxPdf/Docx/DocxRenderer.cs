@@ -70,8 +70,8 @@ internal sealed class DocxRenderer
             int pageNumber = pageIndex + 1;
             RenderStaticParagraphs(
                 SelectStaticHeaderFooter(
-                    SelectSectionStaticParagraphs(layoutPage.PageSettings.HeaderParagraphsByType, document.HeaderParagraphsByType),
-                    document.HeaderParagraphs,
+                    layoutPage.PageSettings.HeaderParagraphsByType,
+                    [],
                     layoutPage.PageSettings,
                     pageNumber),
                 graphics,
@@ -84,8 +84,8 @@ internal sealed class DocxRenderer
                 layout.Pages.Count);
             RenderStaticParagraphs(
                 SelectStaticHeaderFooter(
-                    SelectSectionStaticParagraphs(layoutPage.PageSettings.FooterParagraphsByType, document.FooterParagraphsByType),
-                    document.FooterParagraphs,
+                    layoutPage.PageSettings.FooterParagraphsByType,
+                    [],
                     layoutPage.PageSettings,
                     pageNumber),
                 graphics,
@@ -625,13 +625,6 @@ internal sealed class DocxRenderer
         return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaultParagraphs)
             ? defaultParagraphs
             : fallbackParagraphs;
-    }
-
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> SelectSectionStaticParagraphs(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> sectionParagraphsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> documentParagraphsByType)
-    {
-        return sectionParagraphsByType.Count == 0 ? documentParagraphsByType : sectionParagraphsByType;
     }
 
     private static double ResolveHeaderDistance(DocxLayoutPage page)

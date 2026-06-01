@@ -8183,6 +8183,85 @@ internal static class DocxTests
         TestAssert.Contains("1 0 1 rg", pdf);
     }
 
+    public static void DocxSyntheticSectionHeadersDoNotBackfillEarlierSectionsFromFinalReferences()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/footer2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeader2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>
+                  <Relationship Id="rIdFooter2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer2.xml"/>
+                </Relationships>
+                """,
+            ["word/header2.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="00FF00"/></w:rPr><w:t>Final header</w:t></w:r></w:p></w:hdr>
+                """,
+            ["word/footer2.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="FF00FF"/></w:rPr><w:t>Final footer</w:t></w:r></w:p></w:ftr>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p><w:r><w:t>First body</w:t></w:r></w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:sectPr>
+                          <w:pgSz w:w="4000" w:h="4000"/>
+                          <w:pgMar w:top="720" w:right="360" w:bottom="720" w:left="360" w:header="360" w:footer="360"/>
+                          <w:type w:val="nextPage"/>
+                        </w:sectPr>
+                      </w:pPr>
+                    </w:p>
+                    <w:p><w:r><w:t>Second body</w:t></w:r></w:p>
+                    <w:sectPr>
+                      <w:headerReference w:type="default" r:id="rIdHeader2"/>
+                      <w:footerReference w:type="default" r:id="rIdFooter2"/>
+                      <w:pgSz w:w="6000" w:h="6000"/>
+                      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="1080" w:footer="1080"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        double[] firstSectionLeftBaselines = ExtractTextBaselinesAtX(pdf, 18d);
+        double[] finalSectionLeftBaselines = ExtractTextBaselinesAtX(pdf, 72d);
+        TestAssert.True(!firstSectionLeftBaselines.Any(y => y > 168d && y < 182d), "Final-section header should not backfill the earlier section that omits a header reference.");
+        TestAssert.True(!firstSectionLeftBaselines.Any(y => y > 18d && y < 30d), "Final-section footer should not backfill the earlier section that omits a footer reference.");
+        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 232d && y < 246d), "Final-section header should still render on its owning section.");
+        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 54d && y < 66d), "Final-section footer should still render on its owning section.");
+    }
+
     public static void DocxStaticHeaderRendersMixedRunColorsSeparately()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
