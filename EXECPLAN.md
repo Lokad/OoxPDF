@@ -2137,6 +2137,12 @@ High-priority actions:
     unit coverage `DocxStructureSnapshotReportsPreLayoutBlockAndTableFacts` locks the bottom-up contract.
     Validation passed `docx-tables --skip-slow` (`80` after the new test) and `docx-core --skip-slow` (`25`);
     one parallel dotnet run hit the known compiler output lock and the serial rerun passed.
+    2026-06-01 follow-up: extended the same pre-layout structure snapshot with DOCX story ownership. It now
+    inventories the body story, document-scope header/footer variants, and section-scope static stories tied to
+    the source section-break block index. This moves DOCX closer to the proven PPTX scene discipline where
+    slide/layout/master ownership is explicit before rendering. The same public unit test now checks body,
+    document default header, document even footer, and section first-header story facts. Validation passed
+    `docx-tables --skip-slow` (`80`) and full solution build.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

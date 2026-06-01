@@ -1298,7 +1298,17 @@ internal static class DocxTests
             CellSpacingValue: "20",
             CellSpacingType: "dxa",
             Look: new DocxTableLook(null, true, "1", null, null, true, "1", null, null, null, null, null, null));
-        var sectionBreak = new DocxSectionBreakElement(DocxPageSettings.Empty, "nextPage", "2", "1", "720");
+        DocxParagraph documentHeader = CreateDocxLayoutParagraph("Header", fontSize: 9d, lineSpacingPoints: 10d);
+        DocxParagraph documentFooter = CreateDocxLayoutParagraph("Footer", fontSize: 9d, lineSpacingPoints: 10d);
+        DocxParagraph sectionHeader = CreateDocxLayoutParagraph("Section", fontSize: 9d, lineSpacingPoints: 10d);
+        DocxPageSettings sectionSettings = DocxPageSettings.Empty with
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["first"] = [sectionHeader]
+            }
+        };
+        var sectionBreak = new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "720");
         var document = new DocxDocument(
             200d,
             200d,
@@ -1317,7 +1327,17 @@ internal static class DocxTests
                 sectionBreak
             ],
             [paragraph],
-            [table]);
+            [table])
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [documentHeader]
+            },
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["even"] = [documentFooter]
+            }
+        };
 
         DocxStructureSnapshot snapshot = new DocxRenderer(new MapFontResolver([], "Fallback")).InspectStructure(document);
 
@@ -1333,6 +1353,11 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.Blocks[0].TabStopCount ?? 0);
         TestAssert.True(snapshot.Blocks[1].PageBreakConsumesParagraphLine == true, "Page-break structure should expose the consumed paragraph line.");
         TestAssert.Equal("nextPage", snapshot.Blocks[3].SectionBreakTypeValue ?? string.Empty);
+        TestAssert.Equal(4, snapshot.Stories.Count);
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Body" && story.BlockCount == 4), "Body story should summarize the document block stream.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Header" && story.Scope == "document" && story.VariantType == "default"), "Document default header story should be inventoried before layout.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footer" && story.Scope == "document" && story.VariantType == "even"), "Document even footer story should be inventoried before layout.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Header" && story.Scope == "section@3" && story.SectionBreakBlockIndex == 3 && story.VariantType == "first"), "Section header story should be tied to its section-break block.");
 
         DocxStructureTableSnapshot tableSnapshot = snapshot.Tables.Single();
         TestAssert.Equal(2, tableSnapshot.RowCount);

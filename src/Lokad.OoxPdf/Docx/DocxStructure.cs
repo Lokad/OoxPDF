@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxStructureSnapshot(
@@ -9,6 +11,7 @@ internal sealed record DocxStructureSnapshot(
     int BodyTextLength,
     int InlineImageCount,
     IReadOnlyList<DocxStructureBlockSnapshot> Blocks,
+    IReadOnlyList<DocxStructureStorySnapshot> Stories,
     IReadOnlyList<DocxStructureTableSnapshot> Tables,
     IReadOnlyList<DocxStructureTableAdjacencySnapshot> TableAdjacency)
 {
@@ -55,8 +58,66 @@ internal sealed record DocxStructureSnapshot(
             blocks.Sum(block => block.TextLength),
             blocks.Sum(block => block.InlineImageCount),
             blocks,
+            ToStorySnapshots(document, blocks),
             tables,
             adjacency);
+    }
+
+    private static IReadOnlyList<DocxStructureStorySnapshot> ToStorySnapshots(
+        DocxDocument document,
+        IReadOnlyList<DocxStructureBlockSnapshot> bodyBlocks)
+    {
+        var stories = new List<DocxStructureStorySnapshot>
+        {
+            new(
+                "Body",
+                "document",
+                null,
+                null,
+                bodyBlocks.Count,
+                bodyBlocks.Count(block => block.Kind == "Paragraph"),
+                bodyBlocks.Count(block => block.Kind == "Table"),
+                bodyBlocks.Sum(block => block.TextLength),
+                bodyBlocks.Sum(block => block.InlineImageCount))
+        };
+
+        AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType);
+        AddStaticStories(stories, "Footer", "document", null, document.FooterParagraphsByType);
+        for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
+        {
+            if (document.BodyElements[blockIndex] is not DocxSectionBreakElement sectionBreak)
+            {
+                continue;
+            }
+
+            string scope = "section@" + blockIndex.ToString(CultureInfo.InvariantCulture);
+            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderParagraphsByType);
+            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterParagraphsByType);
+        }
+
+        return stories;
+    }
+
+    private static void AddStaticStories(
+        List<DocxStructureStorySnapshot> stories,
+        string kind,
+        string scope,
+        int? sectionBreakBlockIndex,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType)
+    {
+        foreach (KeyValuePair<string, IReadOnlyList<DocxParagraph>> entry in paragraphsByType.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            stories.Add(new DocxStructureStorySnapshot(
+                kind,
+                scope,
+                sectionBreakBlockIndex,
+                entry.Key,
+                0,
+                entry.Value.Count,
+                0,
+                entry.Value.Sum(TextLength),
+                entry.Value.Sum(paragraph => paragraph.Images.Count)));
+        }
     }
 
     private static DocxStructureBlockSnapshot FromParagraph(int blockIndex, string? previousKind, string? nextKind, DocxParagraph paragraph)
@@ -324,6 +385,17 @@ internal sealed record DocxStructureBlockSnapshot(
     bool? PageBreakConsumesParagraphLine = null,
     double? PageBreakLineSpacingPoints = null,
     double? PageBreakLineSpacingFactor = null);
+
+internal sealed record DocxStructureStorySnapshot(
+    string Kind,
+    string Scope,
+    int? SectionBreakBlockIndex,
+    string? VariantType,
+    int BlockCount,
+    int ParagraphCount,
+    int TableCount,
+    int TextLength,
+    int InlineImageCount);
 
 internal sealed record DocxStructureTableSnapshot(
     int TableIndex,
