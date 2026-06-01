@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
@@ -483,6 +484,17 @@ internal sealed class DocxLayoutEngine
     private const double WordDefaultTableCellHorizontalPadding = 5.4d;
     private const double AuthoredMarginTableCellFirstBaselineInset = 17d;
 
+    private sealed record DocxPageGeometry(
+        double Width,
+        double Height,
+        double MarginLeft,
+        double MarginRight,
+        double MarginTop,
+        double MarginBottom)
+    {
+        public double BodyWidth => Math.Max(1d, Width - MarginLeft - MarginRight);
+    }
+
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
     {
         IDocxTextMeasurer? textMeasurer = embedded is null ? null : new DocxEmbeddedTextMeasurer(embedded);
@@ -493,20 +505,32 @@ internal sealed class DocxLayoutEngine
     {
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
-        double x = document.MarginLeftPoints;
-        double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
-        double cursorY = document.PageHeightPoints - document.MarginTopPoints;
+        DocxPageGeometry page = ResolveSectionGeometry(document, FindSectionBreakAtOrAfter(document.BodyElements, 0)?.PageSettings);
+        double x = page.MarginLeft;
+        double width = page.BodyWidth;
+        double cursorY = page.Height - page.MarginTop;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         int tableIndex = 0;
 
         void FinishPage()
         {
-            pages.Add(new DocxLayoutPage(document.PageWidthPoints, document.PageHeightPoints, currentItems.ToArray()));
+            pages.Add(new DocxLayoutPage(page.Width, page.Height, currentItems.ToArray()));
             currentItems = [];
-            cursorY = document.PageHeightPoints - document.MarginTopPoints;
+            cursorY = page.Height - page.MarginTop;
             pendingSpacingAfter = 0d;
             previousParagraph = null;
+        }
+
+        void ApplySectionAfterBreak(int elementIndex)
+        {
+            page = ResolveSectionGeometry(document, FindSectionBreakAtOrAfter(document.BodyElements, elementIndex + 1)?.PageSettings);
+            x = page.MarginLeft;
+            width = page.BodyWidth;
+            if (!HasPageContent())
+            {
+                cursorY = page.Height - page.MarginTop;
+            }
         }
 
         bool HasPageContent() => currentItems.Count > 0;
@@ -528,9 +552,15 @@ internal sealed class DocxLayoutEngine
 
             if (element is DocxSectionBreakElement sectionBreak)
             {
-                if (ShouldStartNewPageForSectionBreak(sectionBreak) && HasPageContent())
+                bool startsNewPage = ShouldStartNewPageForSectionBreak(sectionBreak);
+                if (startsNewPage && HasPageContent())
                 {
                     FinishPage();
+                }
+
+                if (startsNewPage)
+                {
+                    ApplySectionAfterBreak(elementIndex);
                 }
 
                 pendingSpacingAfter = 0d;
@@ -543,7 +573,7 @@ internal sealed class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                LayoutTable(tableElement.Table, tableIndex++, document, textMeasurer, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                LayoutTable(tableElement.Table, tableIndex++, page.MarginBottom, textMeasurer, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
                 continue;
             }
 
@@ -562,7 +592,7 @@ internal sealed class DocxLayoutEngine
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
-                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, textMeasurer) <= document.MarginBottomPoints)
+                cursorY - EstimateKeptParagraphBlockHeight(document.BodyElements, elementIndex, width, textMeasurer) <= page.MarginBottom)
             {
                 FinishPage();
             }
@@ -579,14 +609,14 @@ internal sealed class DocxLayoutEngine
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                 DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, paragraph.TabStops).ToArray();
-                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, document.MarginBottomPoints, HasPageContent()))
+                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, page.MarginBottom, HasPageContent()))
                 {
                     FinishPage();
                 }
 
                 foreach (DocxWrappedTextLine line in lines)
                 {
-                    if (cursorY - lineHeight < document.MarginBottomPoints && HasPageContent())
+                    if (cursorY - lineHeight < page.MarginBottom && HasPageContent())
                     {
                         FinishPage();
                     }
@@ -627,7 +657,7 @@ internal sealed class DocxLayoutEngine
             {
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-                if (cursorY - imageHeight < document.MarginBottomPoints && HasPageContent())
+                if (cursorY - imageHeight < page.MarginBottom && HasPageContent())
                 {
                     FinishPage();
                 }
@@ -652,6 +682,55 @@ internal sealed class DocxLayoutEngine
         }
 
         return new DocxLayout(pages.ToArray());
+    }
+
+    private static DocxSectionBreakElement? FindSectionBreakAtOrAfter(IReadOnlyList<DocxBodyElement> elements, int startIndex)
+    {
+        for (int i = Math.Max(0, startIndex); i < elements.Count; i++)
+        {
+            if (elements[i] is DocxSectionBreakElement sectionBreak)
+            {
+                return sectionBreak;
+            }
+        }
+
+        return null;
+    }
+
+    private static DocxPageGeometry ResolveSectionGeometry(DocxDocument document, DocxPageSettings? settings)
+    {
+        double width = ReadTwipsValue(settings?.WidthValue, document.PageWidthPoints);
+        double height = ReadTwipsValue(settings?.HeightValue, document.PageHeightPoints);
+        (width, height) = NormalizePageSize(width, height);
+        if (settings?.OrientationValue?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
+        {
+            (width, height) = (height, width);
+        }
+
+        return new DocxPageGeometry(
+            width,
+            height,
+            ReadTwipsValue(settings?.MarginLeftValue, document.MarginLeftPoints),
+            ReadTwipsValue(settings?.MarginRightValue, document.MarginRightPoints),
+            ReadTwipsValue(settings?.MarginTopValue, document.MarginTopPoints),
+            ReadTwipsValue(settings?.MarginBottomValue, document.MarginBottomPoints));
+    }
+
+    private static double ReadTwipsValue(string? value, double fallback)
+    {
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long twips)
+            ? OoxUnits.TwipsToPoints(twips)
+            : fallback;
+    }
+
+    private static (double Width, double Height) NormalizePageSize(double width, double height)
+    {
+        if (Math.Abs(width - 595d) < 0.01d && Math.Abs(height - 842d) < 0.01d)
+        {
+            return (594.96d, 842.04d);
+        }
+
+        return (width, height);
     }
 
     private static bool ShouldStartNewPageForSectionBreak(DocxSectionBreakElement sectionBreak)
@@ -950,7 +1029,7 @@ internal sealed class DocxLayoutEngine
     private static void LayoutTable(
         DocxTable table,
         int tableIndex,
-        DocxDocument document,
+        double marginBottom,
         IDocxTextMeasurer? textMeasurer,
         Func<int> getPageIndex,
         ref List<DocxLayoutItem> currentItems,
@@ -996,7 +1075,7 @@ internal sealed class DocxLayoutEngine
         {
             DocxTableRow row = table.Rows[rowIndex];
             double rowHeight = rowHeights[rowIndex];
-            if (cursorY - rowHeight < document.MarginBottomPoints && hasPageContent())
+            if (cursorY - rowHeight < marginBottom && hasPageContent())
             {
                 finishPage();
                 if (!row.IsHeader)

@@ -1894,6 +1894,16 @@ High-priority actions:
       whose first row wraps taller after the indent is applied. Private DOCX run `20260531-224646` stayed
       page- and metric-neutral (`16/16`, MAE `14.791805`, changed16 `0.133893`). The parent item remains open
       for Office-backed keep-with-table edge cases and exact diagnostic narrowing.
+  - [x] 2026-06-01: Started section-owned page geometry in DOCX layout. Paragraph-level `sectPr` already
+    preserved page settings; layout now uses the upcoming section break's page size and margins for the
+    preceding section, then switches to the following section after a `nextPage`/`oddPage`/`evenPage` break.
+    This fixes the ownership direction without applying prior-section settings to following pages. Public
+    layout coverage checks that the first section uses the paragraph-section page settings and the next page
+    returns to the final body section settings. Keep `DOCX_UNSUPPORTED_SECTION_BREAK` open for continuous
+    section geometry, header/footer selection per section, odd/even blank pages, and columns. Validation
+    passed `docx-page --skip-slow` (`24`), `docx-tables --skip-slow` (`65`), and full solution build. Private
+    DOCX run `20260601-103219` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
+    `MAE=13.388935`, changed16 `0.124264`.
   - [ ] 2026-06-01: Separate DOCX table-style paragraph-property precedence from table-cell text rendering.
     Public Office inspection confirms table-style `w:rPr` must sit below paragraph-style and character-style
     run properties; that run-property precedence belongs in the active table-text slice. A broader table-style

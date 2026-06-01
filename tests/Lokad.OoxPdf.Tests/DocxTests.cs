@@ -2943,6 +2943,72 @@ internal static class DocxTests
         TestAssert.Equal("Second", layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().Text);
     }
 
+    public static void DocxSectionBreakPageSettingsOwnPrecedingLayoutSection()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
+        DocxParagraph second = CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
+        var firstSectionSettings = new DocxPageSettings(
+            "4000",
+            "4000",
+            null,
+            "360",
+            "360",
+            "360",
+            "360",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        var finalSectionSettings = new DocxPageSettings(
+            "6000",
+            "6000",
+            null,
+            "1440",
+            "1440",
+            "1440",
+            "1440",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            72d,
+            72d,
+            72d,
+            72d,
+            finalSectionSettings,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null),
+                new DocxParagraphElement(second)
+            ],
+            [first, second],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(200d, layout.Pages[0].Width);
+        TestAssert.Equal(200d, layout.Pages[0].Height);
+        TestAssert.Equal(18d, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().X);
+        TestAssert.Equal(300d, layout.Pages[1].Width);
+        TestAssert.Equal(300d, layout.Pages[1].Height);
+        TestAssert.Equal(72d, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().X);
+    }
+
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
