@@ -226,6 +226,12 @@ High-priority actions:
   rule improved aggregate private MAE but spilled to an extra page, so it was rejected. Keep this item open:
   the next acceptable implementation path is public Office probes for table row height/pagination, paragraph
   spacing collapse, and final-page table flow before applying any grid-derived layout behavior.
+  2026-06-01 follow-up: public `docx-ladder-02-table-cell-margins` showed Office aligns row text to the
+  maximum top cell margin across the row, not each cell's own smaller top margin independently. `DocxLayout`
+  now uses row-level top padding for cell text and inline-image placement. Public cell-margin MAE improved
+  `0.45 -> 0.39`; `docx-ladder-03-table-row-heights` and `docx-ladder-03-table-pagination-margins` stayed in
+  the same metric band. Private DOCX run `20260601-170045` stayed neutral at `16/16` pages, zero dimension
+  mismatches, no diagnostics, `MAE=13.666634`, changed16 `0.126275`.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

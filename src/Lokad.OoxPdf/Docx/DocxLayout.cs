@@ -1384,8 +1384,9 @@ internal sealed class DocxLayoutEngine
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+        double rowTopPadding = ResolveTableRowTopPadding(row);
         double contentHeight = row.Cells
-            .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer))
+            .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, rowTopPadding))
             .DefaultIfEmpty(0d)
             .Max();
         return ResolveTableRowHeight(row, contentHeight);
@@ -1711,10 +1712,11 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+        double rowTopPadding = ResolveTableRowTopPadding(row);
         double contentHeight = textMeasurer is null
             ? 0d
             : row.Cells
-                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer))
+                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, rowTopPadding))
                 .DefaultIfEmpty(0d)
                 .Max();
         return ResolveTableRowHeight(row, contentHeight);
@@ -1775,6 +1777,7 @@ internal sealed class DocxLayoutEngine
         double x)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+        double rowTopPadding = ResolveTableRowTopPadding(row);
         double rowHeight = rowHeights[rowIndex];
         double cellX = x;
         double cellY = cursorY - rowHeight;
@@ -1795,10 +1798,10 @@ internal sealed class DocxLayoutEngine
 
             IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
                 ? []
-                : LayoutTableCellTextLines(cell, cellX, visualY, cellWidth, visualHeight, textMeasurer);
+                : LayoutTableCellTextLines(cell, cellX, visualY, cellWidth, visualHeight, rowTopPadding, textMeasurer);
             IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
                 ? []
-                : LayoutTableCellInlineImages(cell, cellX, visualY, cellWidth, visualHeight, textMeasurer, getPageIndex());
+                : LayoutTableCellInlineImages(cell, cellX, visualY, cellWidth, visualHeight, rowTopPadding, textMeasurer, getPageIndex());
             cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
             gridColumnIndex += Math.Max(1, cell.GridSpan);
@@ -1892,7 +1895,11 @@ internal sealed class DocxLayoutEngine
         return widths;
     }
 
-    private static double MeasureTableCellContentHeight(DocxTableCell cell, double cellWidth, IDocxTextMeasurer textMeasurer)
+    private static double MeasureTableCellContentHeight(
+        DocxTableCell cell,
+        double cellWidth,
+        IDocxTextMeasurer textMeasurer,
+        double? rowTopPadding = null)
     {
         IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs.Count == 0 && cell.Text.Length != 0
             ? [new DocxParagraph([new DocxTextRun(cell.Text, 11d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)]
@@ -1904,7 +1911,7 @@ internal sealed class DocxLayoutEngine
 
         double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
         double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
-        double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
+        double paddingTop = rowTopPadding ?? ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double contentHeight = paddingTop + paddingBottom;
@@ -1953,6 +1960,7 @@ internal sealed class DocxLayoutEngine
         double cellY,
         double cellWidth,
         double cellHeight,
+        double rowTopPadding,
         IDocxTextMeasurer? textMeasurer)
     {
         if (textMeasurer is null)
@@ -1970,7 +1978,7 @@ internal sealed class DocxLayoutEngine
 
         double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
         double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
-        double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
+        double paddingTop = rowTopPadding;
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
@@ -2072,6 +2080,7 @@ internal sealed class DocxLayoutEngine
         double cellY,
         double cellWidth,
         double cellHeight,
+        double rowTopPadding,
         IDocxTextMeasurer? textMeasurer,
         int pageIndex)
     {
@@ -2083,7 +2092,7 @@ internal sealed class DocxLayoutEngine
 
         double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
         double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
-        double paddingTop = ResolveTableCellVerticalPadding(cell.Margins.TopPoints);
+        double paddingTop = rowTopPadding;
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints);
         double baselineInset = ResolveTableCellFirstBaselineInset(cell, paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
