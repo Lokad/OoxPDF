@@ -7864,6 +7864,11 @@ internal static class DocxTests
         TestAssert.Equal(1, secondPageRows[0].FragmentIndex);
         TestAssert.Equal(2, secondPageRows[0].FragmentCount);
         TestAssert.Equal(60d, secondPageRows[0].Height);
+
+        DocxTableSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout).Tables.Single();
+        TestAssert.Equal(1, snapshot.FragmentedRowCount);
+        TestAssert.Equal(2, snapshot.FragmentedRowLayoutCount);
+        TestAssert.Equal(2, snapshot.MaxRowFragmentCount);
     }
 
     public static void DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations()
@@ -9217,6 +9222,9 @@ internal static class DocxTests
         TestAssert.Equal(0, tableSnapshot.ExactHeightRowCount);
         TestAssert.Equal(1, tableSnapshot.AtLeastHeightRowCount);
         TestAssert.Equal(0, tableSnapshot.CantSplitRowCount);
+        TestAssert.Equal(0, tableSnapshot.FragmentedRowCount);
+        TestAssert.Equal(0, tableSnapshot.FragmentedRowLayoutCount);
+        TestAssert.Equal(1, tableSnapshot.MaxRowFragmentCount);
         TestAssert.True(tableSnapshot.HasVerticalMerge, "Snapshot should expose vertical-merge presence without cell text.");
         TestAssert.Equal(1, snapshot.Pages.Count);
         TestAssert.Equal(1, snapshot.Pages[0].ItemCount);

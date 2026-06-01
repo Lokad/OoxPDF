@@ -4670,6 +4670,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     indent, spacing, layout, and vertical-merge facts. Keep this item open for actual fragmented-row and
     fragmented-cell geometry, where repeated header rows and split rows need richer ownership than aggregate
     table counts. Validation passed `docx-tables --skip-slow` (`92`) and full solution build.
+  - [x] 2026-06-02: Added table-level row-fragment ownership to `DocxTableSnapshot`: authored fragmented row
+    count, laid-out row-fragment count, and max fragments per row. This keeps the existing per-row fragment
+    geometry but makes split-row/table pagination drift visible at table scope for private-safe inspection.
+    Public coverage checks both the non-fragmented baseline and a tall row split across two pages. Validation
+    passed `docx-tables --skip-slow` (`92`).
   - [x] 2026-06-01: Added stable table ordinals and document-level table snapshots derived from layout rows.
     The trace now reports page index range, source row count, laid-out row count, repeated header-row layout
     count, grid column count, grid-column width sum, resolved table width, table X, preferred table width

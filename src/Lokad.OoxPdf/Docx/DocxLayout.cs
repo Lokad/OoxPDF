@@ -56,6 +56,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                     distinctRows.Count(row => string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase)),
                     distinctRows.Count(row => string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)),
                     distinctRows.Count(row => row.CantSplit),
+                    distinctRows.Count(row => row.FragmentCount > 1),
+                    group.Count(entry => entry.row.FragmentCount > 1),
+                    group.Max(entry => entry.row.FragmentCount),
                     group.Any(entry => entry.row.Cells.Any(cell => cell.HasVerticalMerge)));
             })
             .ToArray();
@@ -441,6 +444,9 @@ internal sealed record DocxTableSnapshot(
     int ExactHeightRowCount,
     int AtLeastHeightRowCount,
     int CantSplitRowCount,
+    int FragmentedRowCount,
+    int FragmentedRowLayoutCount,
+    int MaxRowFragmentCount,
     bool HasVerticalMerge);
 
 internal sealed record DocxTableCellSnapshot(
