@@ -3859,6 +3859,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - [x] 2026-05-31: Extended the internal DOCX layout snapshot with public-safe per-page vertical consumption
   and block-kind height sums for text lines, inline images, and table rows. This does not expose document text
   and gives private pagination investigations a stable place to compare block-level drift.
+- [x] 2026-06-01: Extended `tools/Lokad.OoxPdf.DocxInspect` with public-safe `block-sequence.json` and
+  `table-adjacency-summary.json` outputs. The new summaries expose body block kinds, paragraph spacing/style
+  facts, table ordinals, row/column counts, and table-neighbor classifications without private text. Private
+  DOCX inspection showed the current acceptance document has `198` paragraph blocks and `13` tables, and all
+  tables are paragraph-to-table-to-paragraph transitions. The refreshed private run `20260601-123301` stayed at
+  `16/16` pages with zero diagnostics, `MAE=13.791190`, changed16 `0.126277`; worst pages are not exclusively
+  table-heavy. Do not add a blanket replacement post-table gap from this evidence: the remaining private drift
+  also needs text-line/style/numbering investigation.
 - [ ] Implement style-derived paragraph spacing accurately, including exact Office autospacing magnitudes,
   Word-like adjacent paragraph spacing collapse around tables/sections, and diagnostics that distinguish
   supported tokens from unresolved spacing semantics.
