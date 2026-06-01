@@ -1401,6 +1401,18 @@ internal static class DocxTests
         TestAssert.Equal(7, tableSnapshot.TextLength);
         TestAssert.True(tableSnapshot.LookFirstRow == true, "Table look facts should be present before rendering.");
         TestAssert.Equal("PageBreak", snapshot.TableAdjacency.Single().PreviousKind ?? string.Empty);
+        DocxStructureTableRowSnapshot rowSnapshot = tableSnapshot.Rows[0];
+        TestAssert.True(rowSnapshot.IsHeader, "Row profile should expose header rows before pagination.");
+        TestAssert.True(rowSnapshot.CantSplit, "Row profile should expose cantSplit before pagination.");
+        TestAssert.Equal(1, rowSnapshot.GridSpanCellCount);
+        TestAssert.Equal(1, rowSnapshot.VerticalMergeRestartCellCount);
+        TestAssert.Equal(1, rowSnapshot.ShadedCellCount);
+        TestAssert.Equal(1, rowSnapshot.VisibleBorderCount);
+        TestAssert.Equal(7, rowSnapshot.TextLength);
+        DocxStructureTableCellSnapshot cellSnapshot = rowSnapshot.Cells[0];
+        TestAssert.Equal(2, cellSnapshot.GridSpan);
+        TestAssert.True(cellSnapshot.HasVerticalMerge, "Cell profile should expose vertical merge state before layout.");
+        TestAssert.Equal(2, cellSnapshot.DigitCharacterCount);
     }
 
     public static void DocxFontPlanIncludesAllHeaderFooterVariants()

@@ -2156,6 +2156,15 @@ High-priority actions:
     Validation passed full solution build, serial `docx-tables --skip-slow` (`80`), and a public
     `InspectDocx` run that produced `structure-snapshot.json`, `block-sequence.json`, and
     `table-adjacency-summary.json`.
+    2026-06-01 follow-up: extended `DocxStructureSnapshot` tables with per-row and per-cell private-safe
+    profiles: row index, logical grid span, header/cantSplit/height facts, table-property exceptions, grid
+    spans, vertical merges, shading, preferred widths, visible border counts, paragraph/run/text/image counts,
+    numbering/keep counts, spacing-token counts, max font size, and character-class counts. This is the
+    bottom-up structural surface needed before revisiting row fragmentation. Public unit coverage locks these
+    fields. Validation passed serial `docx-tables --skip-slow` (`80`), full solution build, and a private-safe
+    inventory run. The private aggregate has `129` table rows and `422` cells; all `129` rows have before/after
+    spacing tokens, `67` have shading, `13` have visible borders, and none have `cantSplit` or declared row
+    heights. This confirms paragraph spacing tokens alone cannot be the missing row-fragment discriminator.
   - [x] 2026-05-31: Preserved DOCX header/footer reference types (`default`, `first`, `even`) instead of
     flattening every referenced part into one static paragraph list. Static header/footer rendering now selects
     the first-page or even-page part only when the corresponding Word settings are active, otherwise it uses

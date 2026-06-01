@@ -251,7 +251,75 @@ internal sealed record DocxStructureSnapshot(
             table.Look?.FirstRow,
             table.Look?.FirstColumn,
             table.Look?.NoHorizontalBand,
-            table.Look?.NoVerticalBand);
+            table.Look?.NoVerticalBand,
+            table.Rows.Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex)).ToArray());
+    }
+
+    private static DocxStructureTableRowSnapshot ToTableRowSnapshot(DocxTableRow row, int rowIndex)
+    {
+        DocxStructureTableCellSnapshot[] cells = row.Cells.Select(ToTableCellSnapshot).ToArray();
+        return new DocxStructureTableRowSnapshot(
+            rowIndex,
+            row.Cells.Count,
+            row.Cells.Sum(cell => Math.Max(1, cell.GridSpan)),
+            row.IsHeader,
+            row.HeaderValue,
+            row.CantSplit,
+            row.CantSplitValue,
+            row.HeightPoints,
+            row.HeightValue,
+            row.HeightRuleValue,
+            row.TablePropertyExceptionCellMargins is not null,
+            cells.Count(cell => cell.GridSpan > 1),
+            cells.Count(cell => cell.HasVerticalMerge),
+            cells.Count(cell => string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase)),
+            cells.Count(cell => cell.HasShading),
+            cells.Count(cell => cell.VerticalAlignmentValue is not null),
+            cells.Count(cell => cell.HasPreferredWidth),
+            cells.Sum(cell => cell.VisibleBorderCount),
+            cells.Sum(cell => cell.ParagraphCount),
+            cells.Sum(cell => cell.RunCount),
+            cells.Sum(cell => cell.TextLength),
+            cells.Sum(cell => cell.InlineImageCount),
+            cells.Sum(cell => cell.NumberedParagraphCount),
+            cells.Sum(cell => cell.KeepRuleParagraphCount),
+            cells.Sum(cell => cell.BeforeSpacingTokenParagraphCount),
+            cells.Sum(cell => cell.AfterSpacingTokenParagraphCount),
+            cells.Select(cell => cell.MaxFontSize).DefaultIfEmpty(0d).Max(),
+            cells);
+    }
+
+    private static DocxStructureTableCellSnapshot ToTableCellSnapshot(DocxTableCell cell, int cellIndex)
+    {
+        return new DocxStructureTableCellSnapshot(
+            cellIndex,
+            Math.Max(1, cell.GridSpan),
+            cell.GridSpanValue,
+            cell.HasVerticalMerge,
+            cell.VerticalMergeValue,
+            cell.FillHex is not null || cell.ShadingValue is not null,
+            cell.ShadingValue,
+            cell.VerticalAlignmentValue,
+            cell.PreferredWidthPoints is not null || cell.PreferredWidthValue is not null,
+            cell.PreferredWidthPoints,
+            cell.PreferredWidthValue,
+            cell.PreferredWidthType,
+            cell.Borders.Count(border => !string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) && !string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase)),
+            cell.Paragraphs.Count,
+            cell.Paragraphs.Sum(paragraph => paragraph.Runs.Count),
+            cell.Paragraphs.Sum(TextLength),
+            cell.Paragraphs.Sum(paragraph => paragraph.Images.Count),
+            cell.Paragraphs.Count(paragraph => paragraph.ListLabel is not null),
+            cell.Paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
+            cell.Paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
+            cell.Paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.Spacing)),
+            cell.Paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.FontSize).DefaultIfEmpty(0d).Max(),
+            CountCharacters(cell.Paragraphs, static c => c == ' '),
+            CountCharacters(cell.Paragraphs, static c => c > 127),
+            CountCharacters(cell.Paragraphs, char.IsPunctuation),
+            CountCharacters(cell.Paragraphs, char.IsDigit),
+            CountCharacters(cell.Paragraphs, char.IsUpper),
+            CountCharacters(cell.Paragraphs, char.IsLower));
     }
 
     private static DocxStructureFloatingDrawingSnapshot ToFloatingDrawingSnapshot(DocxFloatingDrawing drawing, int index)
@@ -352,6 +420,11 @@ internal sealed record DocxStructureSnapshot(
     private static int CountCharacters(DocxParagraph paragraph, Func<char, bool> predicate)
     {
         return paragraph.Runs.Sum(run => run.Text.Count(predicate));
+    }
+
+    private static int CountCharacters(IEnumerable<DocxParagraph> paragraphs, Func<char, bool> predicate)
+    {
+        return paragraphs.Sum(paragraph => CountCharacters(paragraph, predicate));
     }
 
     private static bool HasVisibleText(DocxParagraph paragraph)
@@ -492,7 +565,68 @@ internal sealed record DocxStructureTableSnapshot(
     bool? LookFirstRow,
     bool? LookFirstColumn,
     bool? LookNoHorizontalBand,
-    bool? LookNoVerticalBand);
+    bool? LookNoVerticalBand,
+    IReadOnlyList<DocxStructureTableRowSnapshot> Rows);
+
+internal sealed record DocxStructureTableRowSnapshot(
+    int RowIndex,
+    int CellCount,
+    int LogicalGridSpan,
+    bool IsHeader,
+    string? HeaderValue,
+    bool CantSplit,
+    string? CantSplitValue,
+    double? HeightPoints,
+    string? HeightValue,
+    string? HeightRuleValue,
+    bool HasTablePropertyExceptionCellMargins,
+    int GridSpanCellCount,
+    int VerticalMergeCellCount,
+    int VerticalMergeRestartCellCount,
+    int ShadedCellCount,
+    int VerticalAlignmentCellCount,
+    int PreferredWidthCellCount,
+    int VisibleBorderCount,
+    int ParagraphCount,
+    int RunCount,
+    int TextLength,
+    int InlineImageCount,
+    int NumberedParagraphCount,
+    int KeepRuleParagraphCount,
+    int BeforeSpacingTokenParagraphCount,
+    int AfterSpacingTokenParagraphCount,
+    double MaxFontSize,
+    IReadOnlyList<DocxStructureTableCellSnapshot> Cells);
+
+internal sealed record DocxStructureTableCellSnapshot(
+    int CellIndex,
+    int GridSpan,
+    string? GridSpanValue,
+    bool HasVerticalMerge,
+    string? VerticalMergeValue,
+    bool HasShading,
+    string? ShadingValue,
+    string? VerticalAlignmentValue,
+    bool HasPreferredWidth,
+    double? PreferredWidthPoints,
+    string? PreferredWidthValue,
+    string? PreferredWidthType,
+    int VisibleBorderCount,
+    int ParagraphCount,
+    int RunCount,
+    int TextLength,
+    int InlineImageCount,
+    int NumberedParagraphCount,
+    int KeepRuleParagraphCount,
+    int BeforeSpacingTokenParagraphCount,
+    int AfterSpacingTokenParagraphCount,
+    double MaxFontSize,
+    int SpaceCharacterCount,
+    int NonAsciiCharacterCount,
+    int PunctuationCharacterCount,
+    int DigitCharacterCount,
+    int UppercaseCharacterCount,
+    int LowercaseCharacterCount);
 
 internal sealed record DocxStructureTableAdjacencySnapshot(
     int TableIndex,
