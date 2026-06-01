@@ -528,6 +528,18 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
+            if (element is DocxSectionBreakElement sectionBreak)
+            {
+                if (ShouldStartNewPageForSectionBreak(sectionBreak) && HasPageContent())
+                {
+                    FinishPage();
+                }
+
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                continue;
+            }
+
             if (element is DocxTableElement tableElement)
             {
                 cursorY -= pendingSpacingAfter;
@@ -642,6 +654,14 @@ internal sealed class DocxLayoutEngine
         }
 
         return new DocxLayout(pages.ToArray());
+    }
+
+    private static bool ShouldStartNewPageForSectionBreak(DocxSectionBreakElement sectionBreak)
+    {
+        return sectionBreak.TypeValue is null ||
+            sectionBreak.TypeValue.Equals("nextPage", StringComparison.OrdinalIgnoreCase) ||
+            sectionBreak.TypeValue.Equals("oddPage", StringComparison.OrdinalIgnoreCase) ||
+            sectionBreak.TypeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)

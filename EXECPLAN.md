@@ -5275,6 +5275,14 @@ Current validation baseline:
   `docx-core --skip-slow` (`19`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
   Private DOCX run `20260601-094513` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
   `MAE=13.388935`, changed16 `0.124264`.
+- DOCX section-break page-boundary validation:
+  `DocxSectionBreakElement` is now consumed by layout instead of being skipped. `nextPage`, `oddPage`,
+  `evenPage`, and default paragraph section breaks force a page boundary when the current page already has
+  content; `continuous` remains in-flow. Keep `DOCX_UNSUPPORTED_SECTION_BREAK` open because section-owned page
+  settings, header/footer selection, odd/even blank-page parity, and columns are not yet fully applied.
+  Validation passed `docx-page --skip-slow` (`22`) and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+  -v minimal`. Private DOCX run `20260601-095811` stayed neutral at `16/16` pages, zero dimension mismatches,
+  no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

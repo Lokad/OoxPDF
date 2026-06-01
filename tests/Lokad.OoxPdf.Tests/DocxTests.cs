@@ -2852,6 +2852,51 @@ internal static class DocxTests
         TestAssert.True(document.BodyElements[1] is DocxSectionBreakElement, "Section break should be part of body flow.");
     }
 
+    public static void DocxSectionBreakNextPageStartsNewLayoutPage()
+    {
+        var first = new DocxParagraph(
+            [new DocxTextRun("First", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.25d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var second = first with
+        {
+            Runs = [new DocxTextRun("Second", 11d, null, false, false, false, null, null)]
+        };
+        var document = new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxSectionBreakElement(DocxPageSettings.Empty, "nextPage", null, null, null),
+                new DocxParagraphElement(second)
+            ],
+            [first, second],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal("First", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal("Second", layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().Text);
+    }
+
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
