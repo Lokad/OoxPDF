@@ -5489,6 +5489,12 @@ Current validation baseline:
   candidate decomposition from the pre-change `1213` operations to `2184` operations, closer to Word's `2388`,
   but all candidate operations still use `Tc=0` while Word uses many small positive and negative buckets. This
   reinforces that the next DOCX fidelity step is the generic Word `Tc` rule, not more operation splitting.
+  2026-06-01 negative result: an emission-only font-grid width-residual `Tc` experiment improved public
+  `docx-numbering` raster metrics (`MAE` about `0.01927` -> `0.00814`) and slightly improved
+  `docx-ladder-02-character-spacing`, but it introduced nonzero candidate `Tc` in a public case where Word's
+  reference keeps every operation at `Tc=0`. It also slightly worsened `docx-tables`. Do not use font-size-grid
+  residual compensation as the generic DOCX `Tc` rule; the rule must be derived from Word's actual text-state
+  choices, not from raster improvement alone.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off
