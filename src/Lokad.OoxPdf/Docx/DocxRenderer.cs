@@ -293,8 +293,17 @@ internal sealed class DocxRenderer
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
                 graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
             }
+        }
 
-            RenderTableCellBorders(cellLayout, graphics);
+        RenderTableRowBorders(row, graphics);
+
+        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        {
+            if (cellLayout.IsVerticalMergeContinuation)
+            {
+                continue;
+            }
+
             if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0)
             {
                 graphics.SaveState();
@@ -314,43 +323,129 @@ internal sealed class DocxRenderer
         }
     }
 
-    private static void RenderTableCellBorders(DocxTableCellLayout cellLayout, PdfGraphicsBuilder graphics)
+    private static void RenderTableRowBorders(DocxTableRowLayout row, PdfGraphicsBuilder graphics)
     {
-        IReadOnlyList<DocxTableCellBorder> borders = cellLayout.Cell.Borders;
-        if (borders.Count == 0)
+        for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
-            return;
-        }
-
-        foreach (DocxTableCellBorder border in borders)
-        {
-            if (string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase))
+            DocxTableCellLayout cellLayout = row.Cells[cellIndex];
+            if (cellLayout.IsVerticalMergeContinuation)
             {
                 continue;
             }
 
-            RgbColor color = ReadColor(border.Color);
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-            double width = ReadBorderWidth(border.SizeValue);
-            switch (border.Edge)
+            RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
+            RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
+
+            DocxTableCellBorder? left = FindBorder(cellLayout.Cell.Borders, "left") ?? FindBorder(cellLayout.Cell.Borders, "start");
+            if (cellIndex == 0)
             {
-                case "top":
-                    graphics.FillRectangle(cellLayout.X, cellLayout.Y + cellLayout.Height - width, cellLayout.Width, width);
-                    break;
-                case "bottom":
-                    graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, width);
-                    break;
-                case "left":
-                case "start":
-                    graphics.FillRectangle(cellLayout.X, cellLayout.Y, width, cellLayout.Height);
-                    break;
-                case "right":
-                case "end":
-                    graphics.FillRectangle(cellLayout.X + cellLayout.Width - width, cellLayout.Y, width, cellLayout.Height);
-                    break;
+                RenderVerticalTableCellBorder(cellLayout.X, cellLayout.Y, cellLayout.Height, left, graphics);
             }
+
+            DocxTableCellBorder? right = FindBorder(cellLayout.Cell.Borders, "right") ?? FindBorder(cellLayout.Cell.Borders, "end");
+            if (cellIndex == row.Cells.Count - 1)
+            {
+                RenderVerticalTableCellBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, graphics, alignInsideLeft: true);
+                continue;
+            }
+
+            DocxTableCellLayout nextCell = row.Cells[cellIndex + 1];
+            DocxTableCellBorder? nextLeft = FindBorder(nextCell.Cell.Borders, "left") ?? FindBorder(nextCell.Cell.Borders, "start");
+            RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
         }
+    }
+
+    private static void RenderHorizontalTableCellBorder(DocxTableCellLayout cellLayout, string edge, PdfGraphicsBuilder graphics)
+    {
+        DocxTableCellBorder? border = FindBorder(cellLayout.Cell.Borders, edge);
+        if (border is null || IsSuppressedBorder(border))
+        {
+            return;
+        }
+
+        RgbColor color = ReadColor(border.Color);
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        double width = ReadBorderWidth(border.SizeValue);
+        switch (edge)
+        {
+            case "top":
+                graphics.FillRectangle(cellLayout.X, cellLayout.Y + cellLayout.Height - width, cellLayout.Width, width);
+                break;
+            case "bottom":
+                graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, width);
+                break;
+        }
+    }
+
+    private static void RenderSharedVerticalTableBorder(
+        double boundaryX,
+        double y,
+        double height,
+        DocxTableCellBorder? leftCellRight,
+        DocxTableCellBorder? rightCellLeft,
+        PdfGraphicsBuilder graphics)
+    {
+        if (IsSuppressedBorder(leftCellRight) || IsSuppressedBorder(rightCellLeft))
+        {
+            return;
+        }
+
+        DocxTableCellBorder? border = SelectStrongerBorder(leftCellRight, rightCellLeft);
+        if (border is null)
+        {
+            return;
+        }
+
+        RgbColor color = ReadColor(border.Color);
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        double width = ReadBorderWidth(border.SizeValue);
+        graphics.FillRectangle(boundaryX - width / 2d, y, width, height);
+    }
+
+    private static void RenderVerticalTableCellBorder(
+        double boundaryX,
+        double y,
+        double height,
+        DocxTableCellBorder? border,
+        PdfGraphicsBuilder graphics,
+        bool alignInsideLeft = false)
+    {
+        if (border is null || IsSuppressedBorder(border))
+        {
+            return;
+        }
+
+        RgbColor color = ReadColor(border.Color);
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        double width = ReadBorderWidth(border.SizeValue);
+        graphics.FillRectangle(alignInsideLeft ? boundaryX - width : boundaryX, y, width, height);
+    }
+
+    private static DocxTableCellBorder? SelectStrongerBorder(DocxTableCellBorder? first, DocxTableCellBorder? second)
+    {
+        if (first is null)
+        {
+            return second;
+        }
+
+        if (second is null)
+        {
+            return first;
+        }
+
+        return ReadBorderWidth(second.SizeValue) > ReadBorderWidth(first.SizeValue) ? second : first;
+    }
+
+    private static DocxTableCellBorder? FindBorder(IReadOnlyList<DocxTableCellBorder> borders, string edge)
+    {
+        return borders.FirstOrDefault(border => string.Equals(border.Edge, edge, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsSuppressedBorder(DocxTableCellBorder? border)
+    {
+        return border is not null &&
+            (string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase));
     }
 
     private static double ReadBorderWidth(string? sizeValue)
