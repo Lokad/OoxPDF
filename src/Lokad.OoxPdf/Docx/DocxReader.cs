@@ -28,6 +28,7 @@ internal sealed class DocxReader
     private const string SettingsContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml";
     private const string FontTableContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml";
     private const string ThemeContentType = "application/vnd.openxmlformats-officedocument.theme+xml";
+    private const double WordAutomaticParagraphSpacingPoints = 14d;
     public DocxDocument Read(OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         OoxPart documentPart = FindDocumentPart(package);
@@ -826,7 +827,7 @@ internal sealed class DocxReader
 
         if (OoxBoolean.IsTrue(paragraph.Spacing.BeforeAutoSpacingValue))
         {
-            return lineHeight;
+            return WordAutomaticParagraphSpacingPoints;
         }
 
         return TryReadLineBasedSpacing(paragraph.Spacing.BeforeLinesValue, lineHeight, out double linePoints)
@@ -843,7 +844,7 @@ internal sealed class DocxReader
 
         if (OoxBoolean.IsTrue(paragraph.Spacing.AfterAutoSpacingValue))
         {
-            return lineHeight;
+            return WordAutomaticParagraphSpacingPoints;
         }
 
         return TryReadLineBasedSpacing(paragraph.Spacing.AfterLinesValue, lineHeight, out double linePoints)

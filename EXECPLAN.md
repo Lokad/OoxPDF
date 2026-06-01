@@ -2114,6 +2114,16 @@ High-priority actions:
       (`MAE=0.377856`, changed16 `0.003540`). Keep this open as evidence that `beforeAutospacing` and
       `afterAutospacing` should not simply reuse the normal single-line box; they need their own Office-backed
       spacing model while ordinary line boxes retain the Word-compatible minimum.
+      2026-06-01 follow-up: split `beforeAutospacing`/`afterAutospacing` away from line-height-derived
+      spacing and resolved them to Word's observed automatic paragraph spacing (`14pt`). Office PDF probes on
+      the public autospacing fixture and a temporary 24pt variant both showed the auto gap staying near `14pt`
+      rather than scaling with the run size or the normal line box. Public `docx-ladder-02-paragraph-autospacing`
+      improved from run `20260601-111415` (`MAE=0.377856`, changed16 `0.003540`) to run `20260601-112135`
+      (`MAE=0.362752`, changed16 `0.003422`), while `docx-ladder-01-paragraph-spacing`,
+      `docx-ladder-02-character-spacing`, and `docx-ladder-03-table-row-heights` stayed unchanged. Private
+      DOCX run `20260601-112215` stayed accepted at `16/16` pages, zero dimension mismatches, no diagnostics,
+      `MAE=13.615949`, changed16 `0.125050`. Keep the parent open because the exact Word autospacing ladder
+      still needs more font/default/style combinations before downgrading the spacing diagnostic.
     - [x] 2026-05-31: Removed the stale style-level keep-rule diagnostic for `w:keepNext`/`w:keepLines` after
       those tokens became part of the resolved paragraph model and block-pagination stage. Public coverage now
       asserts that supported style keep rules do not emit `DOCX_STYLE_PARAGRAPH_KEEP_RULE`. Private DOCX run
