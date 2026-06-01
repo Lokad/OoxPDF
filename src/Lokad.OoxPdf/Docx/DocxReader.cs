@@ -509,7 +509,8 @@ internal sealed class DocxReader
             resolvedParagraph.KeepRules,
             CreateListLabel(paragraphProperties, numbering, numberingCounters))
         {
-            Indent = resolvedParagraph.Indent
+            Indent = resolvedParagraph.Indent,
+            TabStops = resolvedParagraph.TabStops
         };
 
         void AddSimpleField(XElement field)
@@ -1657,8 +1658,22 @@ internal sealed class DocxReader
             ReadOnOff(properties?.Element(WordprocessingNamespace + "widowControl")),
             (string?)properties?.Element(WordprocessingNamespace + "widowControl")?.Attribute(WordprocessingNamespace + "val"));
         DocxParagraphIndent indent = ReadParagraphIndent(properties);
+        IReadOnlyList<DocxTabStop> tabStops = ReadParagraphTabStops(properties);
 
-        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints, paragraphSpacing, keepRules, indent);
+        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints, paragraphSpacing, keepRules, indent, tabStops);
+    }
+
+    private static IReadOnlyList<DocxTabStop> ReadParagraphTabStops(XElement? properties)
+    {
+        return properties?
+            .Element(WordprocessingNamespace + "tabs")
+            ?.Elements(WordprocessingNamespace + "tab")
+            .Select(tab => new DocxTabStop(
+                ReadTwipsAttribute(tab, WordprocessingNamespace + "pos"),
+                (string?)tab.Attribute(WordprocessingNamespace + "pos"),
+                (string?)tab.Attribute(WordprocessingNamespace + "val"),
+                (string?)tab.Attribute(WordprocessingNamespace + "leader")))
+            .ToArray() ?? [];
     }
 
     private static DocxParagraphIndent ReadParagraphIndent(XElement? properties)
@@ -1877,7 +1892,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, []),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxTableStyle>());
@@ -2317,9 +2332,10 @@ internal sealed class DocxReader
         double? LineSpacingPoints,
         DocxParagraphSpacing Spacing,
         DocxParagraphKeepRules KeepRules,
-        DocxParagraphIndent Indent)
+        DocxParagraphIndent Indent,
+        IReadOnlyList<DocxTabStop> TabStops)
     {
-        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty);
+        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, []);
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -2334,7 +2350,8 @@ internal sealed class DocxReader
                 other.LineSpacingPoints ?? LineSpacingPoints,
                 MergeSpacing(Spacing, other.Spacing),
                 MergeKeepRules(KeepRules, other.KeepRules),
-                MergeIndent(Indent, other.Indent));
+                MergeIndent(Indent, other.Indent),
+                other.TabStops.Count != 0 ? other.TabStops : TabStops);
         }
     }
 

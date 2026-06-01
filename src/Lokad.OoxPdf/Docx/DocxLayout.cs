@@ -568,7 +568,7 @@ internal sealed class DocxLayoutEngine
                 IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
-                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer).ToArray();
+                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, paragraph.TabStops).ToArray();
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, document.MarginBottomPoints, HasPageContent()))
                 {
                     FinishPage();
@@ -581,7 +581,7 @@ internal sealed class DocxLayoutEngine
                         FinishPage();
                     }
 
-                    double lineWidth = MeasureTextSpans(line.Spans, paragraphFontSize, textMeasurer);
+                    double lineWidth = MeasureTextSpans(line.Spans, paragraphFontSize, textMeasurer, paragraph.TabStops);
                     double lineX = paragraph.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -592,8 +592,8 @@ internal sealed class DocxLayoutEngine
                         ? paragraphFontSize * BaselineOffsetFactor
                         : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
                     IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-                        ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, x + labelStartOffset, lineX, paragraphFontSize, textMeasurer)
-                        : CreateTextSegments(line.Spans, lineX, paragraphFontSize, textMeasurer);
+                        ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, x + labelStartOffset, lineX, paragraphFontSize, textMeasurer, paragraph.TabStops)
+                        : CreateTextSegments(line.Spans, lineX, paragraphFontSize, textMeasurer, paragraph.TabStops);
                     double effectiveX = firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX;
                     double effectiveWidth = firstLine && paragraph.ListLabel is not null
                         ? Math.Max(lineX + lineWidth, x + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, paragraphFontSize, textMeasurer)) - (x + labelStartOffset)
@@ -769,7 +769,7 @@ internal sealed class DocxLayoutEngine
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer).Count() * lineHeight;
+            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops).Count() * lineHeight;
         }
 
         foreach (DocxInlineImage image in paragraph.Images)
@@ -885,14 +885,15 @@ internal sealed class DocxLayoutEngine
         double labelX,
         double lineX,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
         return
         [
             new DocxTextSegmentLayout(label.Text, labelRun, labelX, labelWidth),
-            .. CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer)
+            .. CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops)
         ];
     }
 
@@ -1284,7 +1285,7 @@ internal sealed class DocxLayoutEngine
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-            int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer).Count();
+            int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops).Count();
             contentHeight += lineCount * lineHeight;
             foreach (DocxInlineImage image in paragraph.Images)
             {
@@ -1355,9 +1356,9 @@ internal sealed class DocxLayoutEngine
             double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
             bool firstLine = true;
-            foreach (DocxWrappedTextLine line in WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer))
+            foreach (DocxWrappedTextLine line in WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops))
             {
-                double lineWidth = MeasureTextSpans(line.Spans, fontSize, textMeasurer);
+                double lineWidth = MeasureTextSpans(line.Spans, fontSize, textMeasurer, paragraph.TabStops);
                 double lineX = paragraph.Alignment switch
                 {
                     DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -1365,8 +1366,8 @@ internal sealed class DocxLayoutEngine
                     _ => paragraphX
                 };
                 IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-                    ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, cellX + paddingLeft + labelStartOffset, lineX, fontSize, textMeasurer)
-                    : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer);
+                    ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, cellX + paddingLeft + labelStartOffset, lineX, fontSize, textMeasurer, paragraph.TabStops)
+                    : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, paragraph.TabStops);
                 double effectiveX = firstLine && paragraph.ListLabel is not null ? cellX + paddingLeft + labelStartOffset : lineX;
                 double effectiveWidth = firstLine && paragraph.ListLabel is not null
                     ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - (cellX + paddingLeft + labelStartOffset)
@@ -1446,7 +1447,7 @@ internal sealed class DocxLayoutEngine
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
                 double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
-                cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer).Count() * lineHeight;
+                cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops).Count() * lineHeight;
             }
 
             foreach (DocxInlineImage image in paragraph.Images)
@@ -1549,14 +1550,15 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> spans,
         double lineX,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
     {
         var segments = new List<DocxTextSegmentLayout>(spans.Count);
         double segmentX = lineX;
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            segmentX = AddTextSegments(segments, span, segmentX, lineX, fontSize, textMeasurer);
+            segmentX = AddTextSegments(segments, span, segmentX, lineX, fontSize, textMeasurer, tabStops);
             if (i + 1 < spans.Count)
             {
                 segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
@@ -1569,13 +1571,14 @@ internal sealed class DocxLayoutEngine
     private static double MeasureTextSpans(
         IReadOnlyList<DocxTextSpan> spans,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
     {
         double width = 0d;
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            width = MeasureTextSpanAdvance(span, width, fontSize, textMeasurer);
+            width = MeasureTextSpanAdvance(span, width, fontSize, textMeasurer, tabStops);
             if (i + 1 < spans.Count)
             {
                 width += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
@@ -1591,7 +1594,8 @@ internal sealed class DocxLayoutEngine
         double segmentX,
         double lineX,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
     {
         int start = 0;
         for (int i = 0; i <= span.Text.Length; i++)
@@ -1611,7 +1615,7 @@ internal sealed class DocxLayoutEngine
 
             if (i < span.Text.Length)
             {
-                segmentX = lineX + AdvanceToNextDefaultTabStop(segmentX - lineX);
+                segmentX = lineX + AdvanceToNextTabStop(segmentX - lineX, tabStops);
                 start = i + 1;
             }
         }
@@ -1623,7 +1627,8 @@ internal sealed class DocxLayoutEngine
         DocxTextSpan span,
         double currentWidth,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
     {
         int start = 0;
         for (int i = 0; i <= span.Text.Length; i++)
@@ -1640,7 +1645,7 @@ internal sealed class DocxLayoutEngine
 
             if (i < span.Text.Length)
             {
-                currentWidth = AdvanceToNextDefaultTabStop(currentWidth);
+                currentWidth = AdvanceToNextTabStop(currentWidth, tabStops);
                 start = i + 1;
             }
         }
@@ -1653,12 +1658,28 @@ internal sealed class DocxLayoutEngine
         return (Math.Floor(width / WordDefaultTabStopPoints) + 1d) * WordDefaultTabStopPoints;
     }
 
+    private static double AdvanceToNextTabStop(double width, IReadOnlyList<DocxTabStop> tabStops)
+    {
+        foreach (DocxTabStop tabStop in tabStops
+            .Where(tabStop => tabStop.PositionPoints is not null)
+            .OrderBy(tabStop => tabStop.PositionPoints!.Value))
+        {
+            if (tabStop.PositionPoints!.Value > width + 0.001d)
+            {
+                return tabStop.PositionPoints.Value;
+            }
+        }
+
+        return AdvanceToNextDefaultTabStop(width);
+    }
+
     private static IEnumerable<DocxWrappedTextLine> WrapTextLines(
         IReadOnlyList<DocxTextSpan> spans,
         double firstLineMaxWidth,
         double continuationLineMaxWidth,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int lineIndex = 0;
@@ -1668,7 +1689,7 @@ internal sealed class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer))
+            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops))
             {
                 yielded = true;
                 yield return line;
@@ -1697,7 +1718,8 @@ internal sealed class DocxLayoutEngine
         int segmentLength,
         Func<int, double> maxWidth,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops)
     {
         IReadOnlyList<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
         if (tokens.Count == 0)
@@ -1715,7 +1737,7 @@ internal sealed class DocxLayoutEngine
             if (lineLength > 0 &&
                 lineHasNonWhitespace &&
                 !string.IsNullOrWhiteSpace(token.Text) &&
-                MeasureTextSpans(SliceTextSpans(spans, lineStart, candidateLength), fontSize, textMeasurer) > maxWidth(lineIndex))
+                MeasureTextSpans(SliceTextSpans(spans, lineStart, candidateLength), fontSize, textMeasurer, tabStops) > maxWidth(lineIndex))
             {
                 yield return CreateWrappedTextLine(text, spans, lineStart, lineLength);
                 lineIndex++;

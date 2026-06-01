@@ -122,7 +122,14 @@ internal sealed record DocxParagraph(
     DocxListLabel? ListLabel)
 {
     public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
+    public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
 }
+
+internal sealed record DocxTabStop(
+    double? PositionPoints,
+    string? PositionValue,
+    string? Value,
+    string? LeaderValue);
 
 internal sealed record DocxParagraphSpacing(
     string? BeforeValue,

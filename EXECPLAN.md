@@ -3322,6 +3322,16 @@ document-specific business content into public notes.
     diagnostics, `MAE=13.388935`, changed16 `0.124264`. Keep the parent item open for authored
     paragraph/style tab-stop lists (`w:tabs/w:tab`), leader/alignment variants, and exact Office trimming
     around tab/space boundaries.
+  - [x] 2026-06-01: Added the first authored DOCX paragraph tab-stop layer. `w:pPr/w:tabs/w:tab` now produces
+    typed `DocxTabStop` records with position, kind, and leader source tokens; layout and wrapping advance
+    ordinary `w:tab` characters to the next authored position before falling back to Word's default 36 pt
+    grid. Public coverage checks a 1440-twip authored left tab stop and source token preservation; validation
+    passed `docx-text --skip-slow` (`24`), `docx-numbering --skip-slow` (`11`), `docx-tables --skip-slow`
+    (`65`), `docx-page --skip-slow` (`18`), and full solution build. Private DOCX run `20260601-090624`
+    stayed page-stable at `16/16`, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16
+    `0.124264`, worst page 9 `17.162084`. Keep the parent item open for tab-stop clearing,
+    right/center/decimal alignment, leader glyph emission, style/list tab merging, and exact indent-relative
+    coordinate rules from Office PDF probes.
 - [x] 2026-05-31: Made DOCX text wrapping preserve authored whitespace tokens instead of splitting with
   `RemoveEmptyEntries`. Leading, trailing, and repeated spaces now remain in layout line text and contribute
   to measured line width; tab stops and Word's exact whitespace trimming rules remain open.
