@@ -294,6 +294,15 @@ internal sealed class DocxReader
                 Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated");
             }
 
+            if (HasUnsupportedTableBorderStyle(styles))
+            {
+                Emit("DOCX_TABLE_BORDER_STYLE", "table border style", stylesPartName ?? partName, "Approximated");
+            }
+        }
+
+        if (HasUnsupportedTableBorderStyle(document))
+        {
+            Emit("DOCX_TABLE_BORDER_STYLE", "table border style", partName, "Approximated");
         }
 
         XDocument? numbering = LoadRelatedXmlPart(package, partName, NumberingRelationshipType, NumberingContentType, out string? numberingPartName);
@@ -320,6 +329,36 @@ internal sealed class DocxReader
         {
             Emit("DOCX_UNSUPPORTED_MACRO", "macro");
         }
+    }
+
+    private static bool HasUnsupportedTableBorderStyle(XDocument document)
+    {
+        return document
+            .Descendants()
+            .Any(element => element.Name.Namespace == WordprocessingNamespace &&
+                IsTableBorderContainer(element.Parent) &&
+                IsUnsupportedVisibleBorderStyle((string?)element.Attribute(WordprocessingNamespace + "val")));
+    }
+
+    private static bool IsTableBorderContainer(XElement? element)
+    {
+        return element is not null &&
+            element.Name.Namespace == WordprocessingNamespace &&
+            (element.Name.LocalName.Equals("tblBorders", StringComparison.OrdinalIgnoreCase) ||
+                element.Name.LocalName.Equals("tcBorders", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsUnsupportedVisibleBorderStyle(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            value.Equals("single", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("nil", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName)

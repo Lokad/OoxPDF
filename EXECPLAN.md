@@ -2425,6 +2425,14 @@ High-priority actions:
     row boundary as two emitted segments. This closes the first span-related emission miss, but full merged-cell
     conflict resolution still remains open for vertical merges, non-rectangular spans, and page-break
     continuation boundaries.
+    2026-06-01 discovery/progress: table/cell border values beyond `single`, `nil`, and `none` are now
+    surfaced as `DOCX_TABLE_BORDER_STYLE` diagnostics instead of being silently flattened into solid filled
+    strips. The diagnostic is scoped to `w:tblBorders`/`w:tcBorders` in document and style parts, with public
+    coverage proving supported `single`/`nil`/`none` remain quiet and a style-level `double` border points at
+    `/word/styles.xml`. Private DOCX run `20260601-025057` stayed stable (`16/16`, zero dimension mismatches,
+    no diagnostics, `MAE=12.494853`, changed16 `0.116738`), so the next high-impact border work remains
+    Office-backed rendering of non-single border styles and full conflict ranking rather than a private
+    regression response.
   - [x] 2026-05-31: Applied DOCX table-style `w:tblCellMar` as inherited cell margins. Style-level table
     cell margins now merge with direct `w:tcMar` and feed the existing layout-owned cell text box calculation.
     Private impact was small but positive, and the implementation keeps margins in the same structural path as
@@ -4566,6 +4574,13 @@ pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
 
 Current validation baseline:
 
+- DOCX border diagnostics/fidelity:
+  `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group docx-core --skip-slow`
+  passed `16`; `docx-tables --skip-slow` passed `62`; `docx-page --skip-slow` passed `17`; full solution
+  build passed. Private DOCX run `20260601-025057` compared `16/16` pages with zero dimension mismatches,
+  no diagnostics, `MAE=12.494853`, and changed16 `0.116738`. This locks the table-border diagnostic addition
+  as behavior-neutral on the current private document while keeping non-single Word border styles visible as
+  open rendering work.
 - Private deck: `pwsh tools\CheckPrivateCase.ps1 -Case private-cases\lokad-value-based.json` run
   `20260531-123236` compared `84/84` pages. Page 80 improved from run `20260531-120513` MAE `3.62`,
   changed16 `0.11`, SSIM `0.91` to MAE `0.96`, changed16 `0.02`, SSIM `0.96`; PDF inspection now shows the
