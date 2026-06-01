@@ -84,7 +84,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                 text.Width,
                 text.FontSize,
                 TextLength: text.Text.Length,
-                CellCount: 0),
+                CellCount: 0,
+                text.SourceBlockIndex,
+                text.SourceLineIndex),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
                 image.X,
@@ -92,7 +94,9 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                 image.Width,
                 image.Height,
                 TextLength: 0,
-                CellCount: 0),
+                CellCount: 0,
+                SourceBlockIndex: null,
+                SourceLineIndex: null),
             DocxTableRowLayout row => new DocxLayoutItemSnapshot(
                 "TableRow",
                 row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
@@ -100,8 +104,10 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
                 row.Cells.Sum(cell => cell.Width),
                 row.Height,
                 TextLength: row.Cells.Sum(cell => cell.TextLines.Sum(line => line.Text.Length)),
-                CellCount: row.Cells.Count),
-            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0)
+                CellCount: row.Cells.Count,
+                SourceBlockIndex: null,
+                SourceLineIndex: null),
+            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null)
         };
     }
 
@@ -229,7 +235,9 @@ internal sealed record DocxLayoutItemSnapshot(
     double Width,
     double Height,
     int TextLength,
-    int CellCount);
+    int CellCount,
+    int? SourceBlockIndex,
+    int? SourceLineIndex);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,
@@ -343,7 +351,9 @@ internal sealed record DocxTextLineLayout(
     double X,
     double BaselineY,
     double Width,
-    IReadOnlyList<DocxTextSegmentLayout> Segments) : DocxLayoutItem;
+    IReadOnlyList<DocxTextSegmentLayout> Segments,
+    int? SourceBlockIndex = null,
+    int? SourceLineIndex = null) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
@@ -742,7 +752,9 @@ internal sealed class DocxLayoutEngine
                         effectiveX,
                         cursorY - baselineOffset,
                         effectiveWidth,
-                        segments));
+                        segments,
+                        elementIndex,
+                        lineIndex));
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
@@ -2045,7 +2057,9 @@ internal sealed class DocxLayoutEngine
                         effectiveX,
                         cursorY,
                         effectiveWidth,
-                        segments));
+                        segments,
+                        SourceBlockIndex: null,
+                        SourceLineIndex: lineIndex));
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));

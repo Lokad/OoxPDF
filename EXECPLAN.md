@@ -232,6 +232,12 @@ High-priority actions:
   `0.45 -> 0.39`; `docx-ladder-03-table-row-heights` and `docx-ladder-03-table-pagination-margins` stayed in
   the same metric band. Private DOCX run `20260601-170045` stayed neutral at `16/16` pages, zero dimension
   mismatches, no diagnostics, `MAE=13.666634`, changed16 `0.126275`.
+  2026-06-01 follow-up: source-indexed layout snapshots now expose private-safe `SourceBlockIndex` and
+  `SourceLineIndex` on body text lines. The acceptance document's worst private pages `9..11` are ordinary
+  paragraph flow, not table flow: candidate body lines start at the same top coordinate as Word but continue
+  lower on the page, and long body paragraphs fit into suspiciously few candidate lines. Continue this branch
+  through Office-observed text wrapping and typeface/advance measurement before changing widow/orphan or
+  page-bottom rules.
 - [x] 2026-05-31: Investigate private slide 42 as a high-priority PPTX schema/text-layout issue. On the left
   schema, Office places the numbers centered inside their rectangles, while the candidate places the numbers
   incorrectly and emits the wrong color. Treat this as a generic shape/text-frame alignment and inherited text

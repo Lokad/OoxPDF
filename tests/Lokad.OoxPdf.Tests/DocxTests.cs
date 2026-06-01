@@ -8452,6 +8452,56 @@ internal static class DocxTests
         TestAssert.Equal("restart", tableCell.VerticalMergeValue ?? string.Empty);
     }
 
+    public static void DocxLayoutSnapshotReportsPrivateSafeSourceLineIndexes()
+    {
+        var first = new DocxParagraph(
+            [new DocxTextRun("Alpha Beta Gamma", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var second = new DocxParagraph(
+            [new DocxTextRun("Delta Epsilon", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Indent = new DocxParagraphIndent(120d, null, null, null, null, null, null, null, null, null)
+        };
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
+            []);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items
+            .Where(item => item.Kind == "TextLine")
+            .ToArray();
+
+        TestAssert.Equal(3, textLines.Length);
+        TestAssert.Equal(0, textLines[0].SourceBlockIndex ?? -1);
+        TestAssert.Equal(0, textLines[0].SourceLineIndex ?? -1);
+        TestAssert.Equal(1, textLines[1].SourceBlockIndex ?? -1);
+        TestAssert.Equal(0, textLines[1].SourceLineIndex ?? -1);
+        TestAssert.Equal(1, textLines[2].SourceBlockIndex ?? -1);
+        TestAssert.Equal(1, textLines[2].SourceLineIndex ?? -1);
+        TestAssert.True(textLines.All(line => line.TextLength > 0), "Snapshot source indexes must not expose line text.");
+    }
+
     public static void DocxLayoutStageOwnsSelectedStaticHeaderFooterLines()
     {
         DocxParagraph header = new(
