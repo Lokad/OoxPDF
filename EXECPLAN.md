@@ -5291,6 +5291,13 @@ Current validation baseline:
   Validation passed `docx-page --skip-slow` (`22`) and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
   -v minimal`. Private DOCX run `20260601-095811` stayed neutral at `16/16` pages, zero dimension mismatches,
   no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+- DOCX header/footer font-plan validation:
+  the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
+  paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
+  whose glyph subset was built without their text or requested typeface. Validation passed `docx-page
+  --skip-slow` (`23`), `docx-core --skip-slow` (`20`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+  -v minimal`. Private DOCX run `20260601-100716` stayed neutral at `16/16` pages, zero dimension mismatches,
+  no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

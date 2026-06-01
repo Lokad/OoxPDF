@@ -25,8 +25,8 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver)
     {
         IReadOnlyList<DocxTextRun> runs = document.Paragraphs
-            .Concat(document.HeaderParagraphs)
-            .Concat(document.FooterParagraphs)
+            .Concat(GetReferencedHeaderFooterParagraphs(document.HeaderParagraphsByType, document.HeaderParagraphs))
+            .Concat(GetReferencedHeaderFooterParagraphs(document.FooterParagraphsByType, document.FooterParagraphs))
             .Concat(document.Tables
                 .SelectMany(table => table.Rows)
                 .SelectMany(row => row.Cells)
@@ -37,6 +37,15 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return new DocxFontPlan(runs
             .Select(run => ResolveRunTypeface(run, document.FontCatalog, fontResolver))
             .ToArray());
+    }
+
+    private static IEnumerable<DocxParagraph> GetReferencedHeaderFooterParagraphs(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
+        IReadOnlyList<DocxParagraph> fallbackParagraphs)
+    {
+        return paragraphsByType.Count == 0
+            ? fallbackParagraphs
+            : paragraphsByType.Values.SelectMany(paragraphs => paragraphs);
     }
 
     private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver)

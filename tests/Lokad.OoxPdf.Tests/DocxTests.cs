@@ -1052,6 +1052,52 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.DistinctResolvedFamilyCount);
     }
 
+    public static void DocxFontPlanIncludesAllHeaderFooterVariants()
+    {
+        var defaultHeader = CreateFontPlanParagraph(new DocxTextRun("DefaultHeader", 11d, null, false, false, false, null, "Default Sans")
+        {
+            Fonts = new DocxRunFonts("Default Sans", null, null, null, null, null, null, null)
+        });
+        var firstHeader = CreateFontPlanParagraph(new DocxTextRun("FirstHeader", 11d, null, false, false, false, null, "First Sans")
+        {
+            Fonts = new DocxRunFonts("First Sans", null, null, null, null, null, null, null)
+        });
+        var evenFooter = CreateFontPlanParagraph(new DocxTextRun("EvenFooter", 11d, null, false, false, false, null, "Even Sans")
+        {
+            Fonts = new DocxRunFonts("Even Sans", null, null, null, null, null, null, null)
+        });
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [defaultHeader],
+            [],
+            [],
+            [],
+            [])
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [defaultHeader],
+                ["first"] = [firstHeader]
+            },
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["even"] = [evenFooter]
+            }
+        };
+        var resolver = new MapFontResolver(["Default Sans", "First Sans", "Even Sans"], "Resolver Fallback");
+
+        string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
+
+        TestAssert.Equal("DefaultHeader|EvenFooter|FirstHeader", plannedTexts);
+    }
+
     public static void DocxFontPlanTextMeasurerUsesResolvedFontFace()
     {
         (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
@@ -8091,7 +8137,17 @@ internal static class DocxTests
 
     private static DocxDocument CreateFontPlanDocument(IReadOnlyList<DocxTextRun> runs, DocxFontCatalog fontCatalog)
     {
-        var paragraph = new DocxParagraph(
+        return CreateFontPlanDocument([CreateFontPlanParagraph(runs)], fontCatalog);
+    }
+
+    private static DocxParagraph CreateFontPlanParagraph(DocxTextRun run)
+    {
+        return CreateFontPlanParagraph([run]);
+    }
+
+    private static DocxParagraph CreateFontPlanParagraph(IReadOnlyList<DocxTextRun> runs)
+    {
+        return new DocxParagraph(
             runs,
             [],
             null,
@@ -8104,7 +8160,6 @@ internal static class DocxTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        return CreateFontPlanDocument([paragraph], fontCatalog);
     }
 
     private static DocxDocument CreateFontPlanDocument(IReadOnlyList<DocxParagraph> paragraphs, DocxFontCatalog fontCatalog)
