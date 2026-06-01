@@ -12,12 +12,6 @@ internal sealed class DocxRenderer
     internal const string DefaultDocumentTypefaceRequest = "OOXPDF_DOCUMENT_DEFAULT";
     private readonly IFontResolver fontResolver;
 
-    private enum StaticTextAnchor
-    {
-        Header,
-        Footer
-    }
-
     public DocxRenderer(IFontResolver? fontResolver = null)
     {
         this.fontResolver = fontResolver ?? new WindowsFontResolver();
@@ -58,36 +52,11 @@ internal sealed class DocxRenderer
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
-            double staticBodyWidth = Math.Max(1d, layoutPage.Width - layoutPage.MarginLeft - layoutPage.MarginRight);
             int pageNumber = pageIndex + 1;
-            RenderStaticParagraphs(
-                SelectStaticHeaderFooter(
-                    layoutPage.PageSettings.HeaderParagraphsByType,
-                    [],
-                    layoutPage.PageSettings,
-                    pageNumber),
-                graphics,
-                fontResources,
-                layoutPage.MarginLeft,
-                staticBodyWidth,
-                layoutPage.Height - ResolveHeaderDistance(layoutPage),
-                StaticTextAnchor.Header,
-                pageNumber,
-                layout.Pages.Count);
-            RenderStaticParagraphs(
-                SelectStaticHeaderFooter(
-                    layoutPage.PageSettings.FooterParagraphsByType,
-                    [],
-                    layoutPage.PageSettings,
-                    pageNumber),
-                graphics,
-                fontResources,
-                layoutPage.MarginLeft,
-                staticBodyWidth,
-                ResolveFooterDistance(layoutPage),
-                StaticTextAnchor.Footer,
-                pageNumber,
-                layout.Pages.Count);
+            foreach (DocxTextLineLayout staticLine in layoutPage.StaticTextLines)
+            {
+                RenderTextLine(staticLine, graphics, fontResources, pageNumber, layout.Pages.Count);
+            }
 
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
             {
@@ -434,8 +403,8 @@ internal sealed class DocxRenderer
             return;
         }
 
-        double ascender = MeasureWindowsAscender(font, fontSize);
-        double descender = MeasureWindowsDescender(font, fontSize);
+        double ascender = DocxLineMetrics.MeasureWindowsAscender(font, fontSize);
+        double descender = DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         graphics.FillRectangle(x, baselineY - descender, width, ascender + descender);
     }
@@ -797,177 +766,11 @@ internal sealed class DocxRenderer
         graphics.FillRectangle(boundaryX, y, width, height);
     }
 
-    private static IReadOnlyList<DocxParagraph> SelectStaticHeaderFooter(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
-        IReadOnlyList<DocxParagraph> fallbackParagraphs,
-        DocxPageSettings settings,
-        int pageNumber)
-    {
-        if (settings.TitlePage == true &&
-            pageNumber == 1 &&
-            paragraphsByType.TryGetValue("first", out IReadOnlyList<DocxParagraph>? first))
-        {
-            return first;
-        }
-
-        if (settings.EvenAndOddHeaders == true &&
-            pageNumber % 2 == 0 &&
-            paragraphsByType.TryGetValue("even", out IReadOnlyList<DocxParagraph>? even))
-        {
-            return even;
-        }
-
-        return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaultParagraphs)
-            ? defaultParagraphs
-            : fallbackParagraphs;
-    }
-
-    private static double ResolveHeaderDistance(DocxLayoutPage page)
-    {
-        return page.PageSettings.HeaderDistancePoints ?? Math.Max(18d, page.MarginTop / 2d);
-    }
-
-    private static double ResolveFooterDistance(DocxLayoutPage page)
-    {
-        return page.PageSettings.FooterDistancePoints ?? Math.Max(18d, page.MarginBottom / 2d);
-    }
-
-    private static void RenderStaticParagraphs(
-        IReadOnlyList<DocxParagraph> paragraphs,
-        PdfGraphicsBuilder graphics,
-        DocxFontResources fontResources,
-        double x,
-        double width,
-        double startY,
-        StaticTextAnchor anchor,
-        int pageNumber,
-        int pageCount)
-    {
-        double cursorY = startY;
-        foreach (DocxParagraph paragraph in paragraphs)
-        {
-            if (paragraph.Runs.Count == 0)
-            {
-                continue;
-            }
-
-            (DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments = paragraph.Runs
-                .Where(run => !run.Hidden)
-                .Select(run => (
-                    Run: run,
-                    Text: ResolveStaticFieldPlaceholders(run.Text, pageNumber, pageCount),
-                    FontSize: run.FontSize,
-                    Resource: ResolveFontResource(run, fontResources)))
-                .Where(segment => segment.Resource is not null && segment.Text.Length != 0)
-                .Select(segment => (segment.Run, segment.Text, segment.FontSize, segment.Resource!))
-                .ToArray();
-            if (segments.Length == 0)
-            {
-                continue;
-            }
-
-            double lineWidth = MeasureStaticSegmentsWidth(segments);
-            double lineX = paragraph.Alignment switch
-            {
-                DocxTextAlignment.Center => x + Math.Max(0, width - lineWidth) / 2d,
-                DocxTextAlignment.Right => x + Math.Max(0, width - lineWidth),
-                _ => x
-            };
-            double lineAscender = MeasureStaticLineAscender(segments);
-            double lineDescender = MeasureStaticLineDescender(segments);
-            double baselineY = anchor == StaticTextAnchor.Header
-                ? cursorY - lineAscender
-                : cursorY + lineDescender;
-            double segmentX = lineX;
-            DocxTextRun? terminalRun = null;
-            DocxRunFontResource? terminalResource = null;
-            double terminalFontSize = 0d;
-            double terminalX = 0d;
-            RgbColor terminalColor = default;
-            for (int i = 0; i < segments.Length; i++)
-            {
-                (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
-                RgbColor color = ReadColor(run.ColorHex);
-                double segmentWidth = MeasureStaticSegmentWidth(run, text, fontSize, resource);
-                RenderRunBackground(run, resource.Embedded.Font, segmentX, segmentWidth, fontSize, baselineY, graphics);
-                DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, baselineY, color);
-                RenderTextDecorations(run, resource.Embedded.Font, segmentX, segmentWidth, fontSize, baselineY, color, graphics);
-                double segmentEndX = segmentX + segmentWidth;
-                if (!string.IsNullOrWhiteSpace(text))
-                {
-                    terminalRun = run;
-                    terminalResource = resource;
-                    terminalFontSize = fontSize;
-                    terminalX = segmentEndX;
-                    terminalColor = color;
-                }
-
-                segmentX = segmentEndX;
-                if (i + 1 < segments.Length)
-                {
-                    segmentX += DocxTextSpacing.BoundarySpacing(run, text, segments[i + 1].Text);
-                }
-            }
-
-            if (terminalRun is not null && terminalResource is not null)
-            {
-                DrawRunGlyphText(graphics, terminalResource, terminalRun, " ", terminalFontSize, terminalX, baselineY, terminalColor);
-            }
-
-            cursorY -= lineAscender + lineDescender;
-        }
-    }
-
     private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)
     {
         return text
             .Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
             .Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-    }
-
-    private static double MeasureStaticLineAscender((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)
-    {
-        return segments.Max(segment => MeasureWindowsAscender(segment.Resource.Embedded.Font, segment.FontSize));
-    }
-
-    private static double MeasureStaticLineDescender((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)
-    {
-        return segments.Max(segment => MeasureWindowsDescender(segment.Resource.Embedded.Font, segment.FontSize));
-    }
-
-    private static double MeasureWindowsAscender(OpenTypeFont font, double fontSize)
-    {
-        return font.UnitsPerEm == 0
-            ? fontSize
-            : font.Os2.WindowsAscender * fontSize / font.UnitsPerEm;
-    }
-
-    private static double MeasureWindowsDescender(OpenTypeFont font, double fontSize)
-    {
-        return font.UnitsPerEm == 0
-            ? 0d
-            : font.Os2.WindowsDescender * fontSize / font.UnitsPerEm;
-    }
-
-    private static double MeasureStaticSegmentsWidth((DocxTextRun Run, string Text, double FontSize, DocxRunFontResource Resource)[] segments)
-    {
-        double width = 0d;
-        for (int i = 0; i < segments.Length; i++)
-        {
-            (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
-            width += MeasureStaticSegmentWidth(run, text, fontSize, resource);
-            if (i + 1 < segments.Length)
-            {
-                width += DocxTextSpacing.BoundarySpacing(run, text, segments[i + 1].Text);
-            }
-        }
-
-        return width;
-    }
-
-    private static double MeasureStaticSegmentWidth(DocxTextRun run, string text, double fontSize, DocxRunFontResource resource)
-    {
-        return DocxTextSpacing.AddCharacterSpacing(resource.Embedded.MeasureTextPoints(text, fontSize), run, text);
     }
 
     private static RgbColor ReadColor(string? hex)

@@ -2350,6 +2350,13 @@ High-priority actions:
       and legacy `kern` pairs, but it does not apply GPOS pair positioning, mark positioning, glyph
       substitution, or a true shaping buffer. Keep this as a structural text-emission gap shared by body,
       table, numbering, and static header/footer text.
+      2026-06-01 evidence: public text-state probes show a real PDF-state decomposition mismatch, but not yet
+      a safe renderer rule. Office emits small nonzero `Tc` for short Arial tokens such as `42`, `Q1`, and
+      `AB` while the candidate emits `Tc=0`; however the effective rendered advance is already nearly aligned
+      (for example the public context probe advances `42` to the following space at about `12.24pt` in Office
+      versus `12.235pt` in the candidate). Treat this as evidence for a future shaping/positioning and
+      Office-PDF emission planner, not as permission to bucket by token length, text class, table context, or
+      font name.
     - [ ] 2026-05-31: Split DOCX static header/footer rendering into run-level line segments instead of
       concatenating all runs and drawing them with the first run's resource/style. This is now the clearest
       remaining font-resource architecture gap: body/table text can use the run resource map, but static
@@ -2387,6 +2394,18 @@ High-priority actions:
       `0.002110`, SSIM `0.982572`), while candidate PDF text operations now start with the header/footer text
       like Office. Private DOCX run `20260601-143252` stayed neutral at `16/16` pages, zero dimension
       mismatches, no diagnostics, `MAE=13.838763`, changed16 `0.126851`.
+      2026-06-01 follow-up: selected static header/footer text lines now belong to the DOCX layout model as
+      `DocxLayoutPage.StaticTextLines` instead of being positioned entirely inside `DocxRenderer`. The layout
+      stage resolves first/even/default part selection, `{PAGE}`/`{NUMPAGES}` cached placeholders, alignment,
+      segment x-positions, and font-metric baselines; the renderer consumes those line records through the
+      same run-segment emission path used by body text. The private-safe layout snapshot now reports
+      `StaticTextLineCount`, closing the inspection gap without exposing header/footer text. Public
+      `docx-page --skip-slow` passed (`27`), `docx-text --skip-slow` passed (`38`),
+      `docx-tables --skip-slow` passed (`77`), and post-cleanup `docx-headers-footers` stayed raster-identical at
+      `MAE=0.073352`, changed16 `0.002110` (`20260601-154031`). Private DOCX run `20260601-153607` stayed
+      neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.855991`, changed16
+      `0.127419`. Keep this item open for static wrapping, multi-paragraph line boxes, true field evaluation,
+      and selected-part snapshot details beyond counts.
     - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the

@@ -61,6 +61,7 @@ internal sealed record DocxLayoutSnapshot(IReadOnlyList<DocxLayoutPageSnapshot> 
             page.Width,
             page.Height,
             items.Count,
+            page.StaticTextLines.Count,
             items.Count(item => item.Kind == "TextLine"),
             items.Count(item => item.Kind == "InlineImage"),
             items.Count(item => item.Kind == "TableRow"),
@@ -210,6 +211,7 @@ internal sealed record DocxLayoutPageSnapshot(
     double Width,
     double Height,
     int ItemCount,
+    int StaticTextLineCount,
     int TextLineCount,
     int InlineImageCount,
     int TableRowCount,
@@ -329,6 +331,7 @@ internal sealed record DocxLayoutPage(
     double MarginTop,
     double MarginBottom,
     DocxPageSettings PageSettings,
+    IReadOnlyList<DocxTextLineLayout> StaticTextLines,
     IReadOnlyList<DocxLayoutItem> Items);
 
 internal abstract record DocxLayoutItem;
@@ -423,6 +426,13 @@ internal interface IDocxLineMetricsProvider
     double MeasureSingleLineHeight(DocxTextRun? run, double fontSize);
 }
 
+internal interface IDocxStaticTextMetricsProvider
+{
+    double MeasureWindowsAscender(DocxTextRun? run, double fontSize);
+
+    double MeasureWindowsDescender(DocxTextRun? run, double fontSize);
+}
+
 internal static class DocxTextSpacing
 {
     public static double AddCharacterSpacing(double measuredWidth, DocxTextRun? run, string text)
@@ -467,9 +477,23 @@ internal static class DocxLineMetrics
 
         return Math.Max(fontSize * WordSingleLineMinimumEm, units * fontSize / font.UnitsPerEm);
     }
+
+    public static double MeasureWindowsAscender(OpenTypeFont font, double fontSize)
+    {
+        return font.UnitsPerEm == 0
+            ? fontSize
+            : font.Os2.WindowsAscender * fontSize / font.UnitsPerEm;
+    }
+
+    public static double MeasureWindowsDescender(OpenTypeFont font, double fontSize)
+    {
+        return font.UnitsPerEm == 0
+            ? 0d
+            : font.Os2.WindowsDescender * fontSize / font.UnitsPerEm;
+    }
 }
 
-internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocxTextMeasurer, IDocxLineMetricsProvider
+internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
 {
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
@@ -479,6 +503,16 @@ internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocx
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
     {
         return DocxLineMetrics.MeasureOpenTypeSingleLineHeight(embedded.Font, fontSize);
+    }
+
+    public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+    {
+        return DocxLineMetrics.MeasureWindowsAscender(embedded.Font, fontSize);
+    }
+
+    public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+    {
+        return DocxLineMetrics.MeasureWindowsDescender(embedded.Font, fontSize);
     }
 }
 
@@ -530,6 +564,7 @@ internal sealed class DocxLayoutEngine
                 page.MarginTop,
                 page.MarginBottom,
                 page.PageSettings,
+                [],
                 currentItems.ToArray()));
             currentItems = [];
             cursorY = page.Height - page.MarginTop;
@@ -713,7 +748,176 @@ internal sealed class DocxLayoutEngine
             FinishPage();
         }
 
-        return new DocxLayout(pages.ToArray());
+        return new DocxLayout(AddStaticTextLines(pages, textMeasurer).ToArray());
+    }
+
+    private static IReadOnlyList<DocxLayoutPage> AddStaticTextLines(IReadOnlyList<DocxLayoutPage> pages, IDocxTextMeasurer? textMeasurer)
+    {
+        if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
+        {
+            return pages;
+        }
+
+        var pagesWithStaticText = new DocxLayoutPage[pages.Count];
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            DocxLayoutPage page = pages[pageIndex];
+            int pageNumber = pageIndex + 1;
+            double bodyWidth = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
+            DocxTextLineLayout[] staticLines = CreateStaticTextLines(
+                    SelectStaticHeaderFooter(page.PageSettings.HeaderParagraphsByType, page.PageSettings, pageNumber),
+                    page.MarginLeft,
+                    bodyWidth,
+                    page.Height - ResolveHeaderDistance(page),
+                    true,
+                    pageNumber,
+                    pages.Count,
+                    textMeasurer,
+                    staticMetrics)
+                .Concat(CreateStaticTextLines(
+                    SelectStaticHeaderFooter(page.PageSettings.FooterParagraphsByType, page.PageSettings, pageNumber),
+                    page.MarginLeft,
+                    bodyWidth,
+                    ResolveFooterDistance(page),
+                    false,
+                    pageNumber,
+                    pages.Count,
+                    textMeasurer,
+                    staticMetrics))
+                .ToArray();
+            pagesWithStaticText[pageIndex] = page with { StaticTextLines = staticLines };
+        }
+
+        return pagesWithStaticText;
+    }
+
+    private static IReadOnlyList<DocxTextLineLayout> CreateStaticTextLines(
+        IReadOnlyList<DocxParagraph> paragraphs,
+        double x,
+        double width,
+        double startY,
+        bool isHeader,
+        int pageNumber,
+        int pageCount,
+        IDocxTextMeasurer textMeasurer,
+        IDocxStaticTextMetricsProvider staticMetrics)
+    {
+        var lines = new List<DocxTextLineLayout>();
+        double cursorY = startY;
+        foreach (DocxParagraph paragraph in paragraphs)
+        {
+            DocxTextSpan[] spans = paragraph.Runs
+                .Where(run => !run.Hidden)
+                .Select(run => new DocxTextSpan(ResolveStaticFieldPlaceholders(run.Text, pageNumber, pageCount), run))
+                .Where(span => span.Text.Length != 0)
+                .ToArray();
+            if (spans.Length == 0)
+            {
+                continue;
+            }
+
+            double lineWidth = MeasureStaticTextSpans(spans, textMeasurer);
+            double lineX = paragraph.Alignment switch
+            {
+                DocxTextAlignment.Center => x + Math.Max(0d, width - lineWidth) / 2d,
+                DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
+                _ => x
+            };
+            double ascender = spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.FontSize));
+            double descender = spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.FontSize));
+            double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
+            IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(spans, lineX, textMeasurer);
+            lines.Add(new DocxTextLineLayout(
+                string.Concat(spans.Select(span => span.Text)),
+                spans[0].StyleRun,
+                spans.Max(span => span.StyleRun.FontSize),
+                lineX,
+                baselineY,
+                lineWidth,
+                segments));
+            cursorY -= ascender + descender;
+        }
+
+        return lines;
+    }
+
+    private static IReadOnlyList<DocxTextSegmentLayout> CreateStaticTextSegments(
+        IReadOnlyList<DocxTextSpan> spans,
+        double lineX,
+        IDocxTextMeasurer textMeasurer)
+    {
+        var segments = new List<DocxTextSegmentLayout>(spans.Count);
+        double segmentX = lineX;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            DocxTextSpan span = spans[i];
+            double width = textMeasurer.MeasureText(span.StyleRun, span.Text, span.StyleRun.FontSize);
+            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width));
+            segmentX += width;
+            if (i + 1 < spans.Count)
+            {
+                segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
+            }
+        }
+
+        return segments;
+    }
+
+    private static double MeasureStaticTextSpans(IReadOnlyList<DocxTextSpan> spans, IDocxTextMeasurer textMeasurer)
+    {
+        double width = 0d;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            DocxTextSpan span = spans[i];
+            width += textMeasurer.MeasureText(span.StyleRun, span.Text, span.StyleRun.FontSize);
+            if (i + 1 < spans.Count)
+            {
+                width += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
+            }
+        }
+
+        return width;
+    }
+
+    private static IReadOnlyList<DocxParagraph> SelectStaticHeaderFooter(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
+        DocxPageSettings settings,
+        int pageNumber)
+    {
+        if (settings.TitlePage == true &&
+            pageNumber == 1 &&
+            paragraphsByType.TryGetValue("first", out IReadOnlyList<DocxParagraph>? first))
+        {
+            return first;
+        }
+
+        if (settings.EvenAndOddHeaders == true &&
+            pageNumber % 2 == 0 &&
+            paragraphsByType.TryGetValue("even", out IReadOnlyList<DocxParagraph>? even))
+        {
+            return even;
+        }
+
+        return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaults)
+            ? defaults
+            : [];
+    }
+
+    private static double ResolveHeaderDistance(DocxLayoutPage page)
+    {
+        return page.PageSettings.HeaderDistancePoints ?? Math.Max(18d, page.MarginTop / 2d);
+    }
+
+    private static double ResolveFooterDistance(DocxLayoutPage page)
+    {
+        return page.PageSettings.FooterDistancePoints ?? Math.Max(18d, page.MarginBottom / 2d);
+    }
+
+    private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)
+    {
+        return text
+            .Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
     }
 
     private static IReadOnlyDictionary<int, DocxPageSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxPageSettings finalSectionSettings)

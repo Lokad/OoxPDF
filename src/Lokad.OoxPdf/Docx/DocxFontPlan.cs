@@ -137,7 +137,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     }
 }
 
-internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider
+internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
 {
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
     private readonly FontResolution? fallbackResolution;
@@ -194,6 +194,18 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             : DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize);
     }
 
+    public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+    {
+        OpenTypeFont? font = ResolveFont(run);
+        return font is null ? fontSize : DocxLineMetrics.MeasureWindowsAscender(font, fontSize);
+    }
+
+    public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+    {
+        OpenTypeFont? font = ResolveFont(run);
+        return font is null ? 0d : DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
+    }
+
     private DocxResolvedRunTypeface? ResolveRun(DocxTextRun? run)
     {
         if (run is null)
@@ -202,6 +214,14 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         }
 
         return runs.FirstOrDefault(resolved => resolved.Run.Equals(run));
+    }
+
+    private OpenTypeFont? ResolveFont(DocxTextRun? run)
+    {
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        return (resolved?.Resolution ?? fallbackResolution) is FontResolution resolution
+            ? LoadFont(resolution)
+            : null;
     }
 
     private OpenTypeFont? LoadFont(FontResolution resolution)

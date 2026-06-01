@@ -8223,6 +8223,99 @@ internal static class DocxTests
         TestAssert.Equal("restart", tableCell.VerticalMergeValue ?? string.Empty);
     }
 
+    public static void DocxLayoutStageOwnsSelectedStaticHeaderFooterLines()
+    {
+        DocxParagraph header = new(
+            [
+                new DocxTextRun("H", 10d, "FF0000", false, false, false, null, "Narrow"),
+                new DocxTextRun("{PAGE}", 10d, "0000FF", false, false, false, null, "Narrow")
+            ],
+            [],
+            null,
+            DocxTextAlignment.Center,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph footer = new(
+            [new DocxTextRun("F", 10d, null, false, false, false, null, "Narrow")],
+            [],
+            null,
+            DocxTextAlignment.Right,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = new(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            12d,
+            12d,
+            "240",
+            "240",
+            null,
+            null,
+            null,
+            null)
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [header]
+            },
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [footer]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        DocxTextLineLayout[] staticLines = layout.Pages[0].StaticTextLines.ToArray();
+        TestAssert.Equal(2, staticLines.Length);
+        TestAssert.Equal("H1", staticLines[0].Text);
+        TestAssert.Equal(95d, staticLines[0].X);
+        TestAssert.Equal(178d, staticLines[0].BaselineY);
+        TestAssert.Equal(2, staticLines[0].Segments.Count);
+        TestAssert.Equal("1", staticLines[0].Segments[1].Text);
+        TestAssert.Equal("0000FF", staticLines[0].Segments[1].StyleRun.ColorHex ?? string.Empty);
+        TestAssert.Equal("F", staticLines[1].Text);
+        TestAssert.Equal(185d, staticLines[1].X);
+        TestAssert.Equal(14d, staticLines[1].BaselineY);
+        TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        TestAssert.Equal(2, snapshot.Pages[0].StaticTextLineCount);
+        TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
+    }
+
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -9368,12 +9461,22 @@ internal static class DocxTests
         }
     }
 
-    private sealed class FamilyWidthTextMeasurer : IDocxTextMeasurer
+    private sealed class FamilyWidthTextMeasurer : IDocxTextMeasurer, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize)
         {
             double width = run?.FontFamily == "Wide" ? 40d : 5d;
             return text.Length * width;
+        }
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+        {
+            return fontSize;
+        }
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+        {
+            return fontSize * 0.2d;
         }
     }
 
