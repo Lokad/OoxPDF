@@ -2046,6 +2046,58 @@ internal static class DocxTests
         TestAssert.True(runs[3].ShadingColor is null, "Expected missing run shading color to keep a null source token.");
     }
 
+    public static void DocxParagraphRendererDrawsHighlightAndClearShadingBackgrounds()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:highlight w:val="yellow"/></w:rPr><w:t>Yellow</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:highlight w:val="darkBlue"/><w:color w:val="FFFFFF"/></w:rPr><w:t> Dark</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:shd w:val="clear" w:fill="D9EAD3"/></w:rPr><w:t> Shade</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:shd w:val="pct20" w:color="112233" w:fill="D9EAD3"/></w:rPr><w:t> PatternTokenOnly</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        int filledRectangles = pdf.Split(" re f", StringSplitOptions.None).Length - 1;
+        TestAssert.Equal(7, filledRectangles);
+        TestAssert.Contains("1 1 0 rg", pdf);
+        TestAssert.Contains("0 0 0.502 rg", pdf);
+        TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
+        TestAssert.Contains("0.694 0.761 0.702 rg", pdf);
+    }
+
     public static void DocxReaderPreservesParagraphRunSmallCapsTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

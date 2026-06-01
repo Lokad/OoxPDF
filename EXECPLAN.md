@@ -3503,9 +3503,23 @@ document-specific business content into public notes.
   `fill`/`val`/`color` now survive into `DocxTextRun` and `DocxTextRunStyle`. Validation passed
   `docx-text --skip-slow` (`22`) and full solution build. Private DOCX run `20260601-085653` stayed
   page-stable at `16/16`, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`,
-  worst page 9 `17.162084`. Keep highlight/shading drawing open for a public Office PDF ladder that derives
-  the actual background rectangle geometry, named highlight color mapping, pattern semantics, and behavior
-  across wrapped/mixed runs before emitting visual rectangles.
+  worst page 9 `17.162084`.
+- [x] 2026-06-01: Rendered DOCX run backgrounds for `w:highlight` and run `w:shd` from the resolved
+  run model instead of dropping the parsed tokens. Named Word highlight values now map to their OOXML
+  RGB colors, `w:shd w:val="clear"` uses the fill color, and percentage shading such as `pct20`
+  blends foreground `w:color` with background `w:fill` to match the Office PDF evidence (`D9EAD3`
+  plus `112233` at 20% becomes `B1C2B3`). Background rectangles use the resolved run font's Windows
+  ascender/descender line box and are emitted before text/decorations for body text and static
+  headers/footers. Added public `docx-ladder-02-text-backgrounds` plus unit coverage for highlight,
+  clear shading, and percentage shading. Public run `20260601-151700` improved from the first
+  highlight-only attempt (`MAE=0.726385`, changed16 `0.009851`) to `MAE=0.481045`, changed16
+  `0.006061`; PDF inspection shows the same fill colors and near-matching background rectangles
+  with residual height difference around `18.384pt` Office vs `17.875pt` candidate on 16pt text.
+  Validation passed `docx-text --skip-slow` (`38`), full solution build, the public `docx-layout`
+  family with `27` cases, and private DOCX run `20260601-151717` stayed page-stable at `16/16`,
+  zero dimension mismatches, no diagnostics, `MAE=13.855991`, changed16 `0.127419`. Keep this open
+  for exact Word run-background rectangle height/vertical offset, non-percent pattern families,
+  `auto` foreground/background resolution, wrapped runs, and mixed baseline-shift interactions.
 - [x] 2026-06-01: Preserved DOCX run-level `w:smallCaps` tokens through direct run properties,
   character-style inheritance, `DocxTextRunStyle`, and emitted `DocxTextRun` records. Public coverage checks
   explicit off, inherited val-less on, and missing-token behavior; validation passed `docx-text --skip-slow`

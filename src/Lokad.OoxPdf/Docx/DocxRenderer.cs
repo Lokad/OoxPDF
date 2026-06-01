@@ -271,6 +271,7 @@ internal sealed class DocxRenderer
         DocxTextRun style = segment.StyleRun;
         string text = ResolveStaticFieldPlaceholders(segment.Text, pageNumber, pageCount);
         RgbColor color = ReadColor(style.ColorHex);
+        RenderRunBackground(style, resource.Embedded.Font, segment.X, segment.Width, fontSize, baselineY, graphics);
         DrawRunGlyphText(graphics, resource, style, text, fontSize, segment.X, baselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
         if (ShouldApplySyntheticBold(style, resource))
         {
@@ -417,6 +418,132 @@ internal sealed class DocxRenderer
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
     {
         return style.Bold && !resource.Resolution.Bold;
+    }
+
+    private static void RenderRunBackground(
+        DocxTextRun style,
+        OpenTypeFont font,
+        double x,
+        double width,
+        double fontSize,
+        double baselineY,
+        PdfGraphicsBuilder graphics)
+    {
+        if (width <= 0d || !TryResolveRunBackgroundColor(style, out RgbColor color))
+        {
+            return;
+        }
+
+        double ascender = MeasureWindowsAscender(font, fontSize);
+        double descender = MeasureWindowsDescender(font, fontSize);
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        graphics.FillRectangle(x, baselineY - descender, width, ascender + descender);
+    }
+
+    private static bool TryResolveRunBackgroundColor(DocxTextRun style, out RgbColor color)
+    {
+        if (TryResolveHighlightColor(style.HighlightValue, out color))
+        {
+            return true;
+        }
+
+        string? shadingValue = style.ShadingValue;
+        if (shadingValue is null || shadingValue.Equals("clear", StringComparison.OrdinalIgnoreCase))
+        {
+            return RgbColor.TryParse(style.ShadingFillHex, out color);
+        }
+
+        if (TryResolvePercentageShadingColor(style, out color))
+        {
+            return true;
+        }
+
+        color = default;
+        return false;
+    }
+
+    private static bool TryResolvePercentageShadingColor(DocxTextRun style, out RgbColor color)
+    {
+        color = default;
+        string? value = style.ShadingValue;
+        if (value is null ||
+            !value.StartsWith("pct", StringComparison.OrdinalIgnoreCase) ||
+            !int.TryParse(value.AsSpan(3), NumberStyles.Integer, CultureInfo.InvariantCulture, out int percent) ||
+            !RgbColor.TryParse(style.ShadingFillHex, out RgbColor background) ||
+            !RgbColor.TryParse(style.ShadingColor, out RgbColor foreground))
+        {
+            return false;
+        }
+
+        double weight = Math.Clamp(percent, 0, 100) / 100d;
+        color = new RgbColor(
+            BlendByte(background.Red, foreground.Red, weight),
+            BlendByte(background.Green, foreground.Green, weight),
+            BlendByte(background.Blue, foreground.Blue, weight));
+        return true;
+    }
+
+    private static byte BlendByte(byte background, byte foreground, double foregroundWeight)
+    {
+        return (byte)Math.Round(background * (1d - foregroundWeight) + foreground * foregroundWeight);
+    }
+
+    private static bool TryResolveHighlightColor(string? value, out RgbColor color)
+    {
+        switch (value)
+        {
+            case "black":
+                color = new RgbColor(0x00, 0x00, 0x00);
+                return true;
+            case "blue":
+                color = new RgbColor(0x00, 0x00, 0xFF);
+                return true;
+            case "cyan":
+                color = new RgbColor(0x00, 0xFF, 0xFF);
+                return true;
+            case "green":
+                color = new RgbColor(0x00, 0xFF, 0x00);
+                return true;
+            case "magenta":
+                color = new RgbColor(0xFF, 0x00, 0xFF);
+                return true;
+            case "red":
+                color = new RgbColor(0xFF, 0x00, 0x00);
+                return true;
+            case "yellow":
+                color = new RgbColor(0xFF, 0xFF, 0x00);
+                return true;
+            case "white":
+                color = new RgbColor(0xFF, 0xFF, 0xFF);
+                return true;
+            case "darkBlue":
+                color = new RgbColor(0x00, 0x00, 0x80);
+                return true;
+            case "darkCyan":
+                color = new RgbColor(0x00, 0x80, 0x80);
+                return true;
+            case "darkGreen":
+                color = new RgbColor(0x00, 0x80, 0x00);
+                return true;
+            case "darkMagenta":
+                color = new RgbColor(0x80, 0x00, 0x80);
+                return true;
+            case "darkRed":
+                color = new RgbColor(0x80, 0x00, 0x00);
+                return true;
+            case "darkYellow":
+                color = new RgbColor(0x80, 0x80, 0x00);
+                return true;
+            case "darkGray":
+                color = new RgbColor(0x80, 0x80, 0x80);
+                return true;
+            case "lightGray":
+                color = new RgbColor(0xC0, 0xC0, 0xC0);
+                return true;
+            default:
+                color = default;
+                return false;
+        }
     }
 
     private static void RenderTextDecorations(
@@ -759,6 +886,7 @@ internal sealed class DocxRenderer
                 (DocxTextRun run, string text, double fontSize, DocxRunFontResource resource) = segments[i];
                 RgbColor color = ReadColor(run.ColorHex);
                 double segmentWidth = MeasureStaticSegmentWidth(run, text, fontSize, resource);
+                RenderRunBackground(run, resource.Embedded.Font, segmentX, segmentWidth, fontSize, baselineY, graphics);
                 DrawRunGlyphText(graphics, resource, run, text, fontSize, segmentX, baselineY, color);
                 RenderTextDecorations(run, resource.Embedded.Font, segmentX, segmentWidth, fontSize, baselineY, color, graphics);
                 double segmentEndX = segmentX + segmentWidth;
