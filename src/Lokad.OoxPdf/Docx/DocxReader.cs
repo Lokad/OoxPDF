@@ -757,6 +757,10 @@ internal sealed class DocxReader
             {
                 text.Append('\u00AD');
             }
+            else if (child.Name == WordprocessingNamespace + "cr")
+            {
+                text.Append('\n');
+            }
             else if (child.Name == WordprocessingNamespace + "br" &&
                 string.IsNullOrEmpty((string?)child.Attribute(WordprocessingNamespace + "type")))
             {

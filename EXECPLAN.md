@@ -5231,6 +5231,11 @@ Current validation baseline:
   near authored `+2pt` and `-1pt`, plus residual positioned adjustments on nominally zero-spacing runs. The
   candidate renders the default header/footer references from `header2.xml`/`footer2.xml` with the authored
   spacing, but its text-operation decomposition remains less Office-like than the reference.
+- DOCX carriage-return break validation:
+  `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
+  run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off
+  --nologo -v minimal` passed, and private DOCX run `20260601-093234` stayed neutral at `16/16` pages, zero
+  dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
