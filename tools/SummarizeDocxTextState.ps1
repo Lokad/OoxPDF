@@ -45,6 +45,27 @@ function RoundedKey($Value, [int] $Digits) {
     return ([Math]::Round([double]$Value, $Digits)).ToString("0.######", [Globalization.CultureInfo]::InvariantCulture)
 }
 
+function SubtractOrNull($Left, $Right) {
+    if ($null -eq $Left -or [string]$Left -eq "" -or $null -eq $Right -or [string]$Right -eq "") {
+        return $null
+    }
+
+    return [double]$Left - [double]$Right
+}
+
+function DivideOrNull($Numerator, $Denominator) {
+    if ($null -eq $Numerator -or [string]$Numerator -eq "" -or $null -eq $Denominator -or [string]$Denominator -eq "") {
+        return $null
+    }
+
+    $denominatorValue = [double]$Denominator
+    if ([Math]::Abs($denominatorValue) -lt 0.0000001d) {
+        return $null
+    }
+
+    return [double]$Numerator / $denominatorValue
+}
+
 function Group-Count($Items, [scriptblock] $KeySelector) {
     $groups = @{}
     foreach ($item in $Items) {
@@ -478,6 +499,13 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerSourceParagraphIndex = $segment.SourceParagraphIndex
             PlannerRole = $segment.Role
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
+            PlannerNaturalWidth = $segment.AdvanceProfile.NaturalPdfWidth
+            PlannerRoundedWidth = $segment.AdvanceProfile.RoundedPdfWidth
+            PlannerLayoutWidth = $segment.AdvanceProfile.LayoutWidth
+            ReferenceNaturalMinusPlannerNatural = (SubtractOrNull $reference.NaturalWidthPoints $segment.AdvanceProfile.NaturalPdfWidth)
+            ReferenceEmittedMinusPlannerLayout = (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.LayoutWidth)
+            ReferenceEmittedMinusPlannerRounded = (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.RoundedPdfWidth)
+            ReferenceEmittedMinusPlannerRoundedPerGap = (DivideOrNull (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.RoundedPdfWidth) $segment.AdvanceProfile.GlyphGapCount)
             PlannerResidualPerGap = $segment.AdvanceProfile.UniformResidualPerGap
             PlannerRoundedResidualPerGap = $segment.AdvanceProfile.RoundedResidualPerGap
             PlannerGlyphAdvanceSignature = $segment.GlyphAdvanceSignature.Hash
@@ -581,6 +609,18 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceWidthsByPlannerFontSizeAndGlyphPairSideAdvanceRange = @(Group-Count $pairs {
             param($pair)
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) + "|refNatural=" + (RoundedKey $pair.ReferenceNaturalWidth 6) + "|refEmitted=" + (RoundedKey $pair.ReferenceEmittedAdvance 6)
+        })
+        ReferenceWidthDeltasByPlannerFontSizeAndGlyphPairSideAdvanceRange = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) + "|refNaturalMinusPlannerNatural=" + (RoundedKey $pair.ReferenceNaturalMinusPlannerNatural 6) + "|refEmittedMinusPlannerLayout=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerLayout 6) + "|refEmittedMinusPlannerRounded=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerRounded 6)
+        })
+        ReferenceTcByPlannerWidthDeltas = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|refNaturalMinusPlannerNatural=" + (RoundedKey $pair.ReferenceNaturalMinusPlannerNatural 6) + "|refEmittedMinusPlannerLayout=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerLayout 6) + "|refEmittedMinusPlannerRounded=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerRounded 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerPerGapWidthDeltas = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|refEmittedMinusPlannerRoundedPerGap=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerRoundedPerGap 6) + "|plannerRoundedResidualPerGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceNonzeroTcByPlannerClassGlyphGap = @(Group-Count $nonzeroReferencePairs {
             param($pair)

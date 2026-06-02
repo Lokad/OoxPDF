@@ -521,6 +521,12 @@ High-priority actions:
   This strengthens the next DOCX `Tc` branch: compare Office emitted advance decomposition against the
   renderer's planned natural width and spacing state, rather than deriving a lookup from text content, font
   names, table roles, or observed bucket constants.
+  2026-06-02 evidence refinement: the summary now also emits Office-minus-planner natural/layout/rounded width
+  deltas and per-gap deltas. Across those four public runs, every nonzero Office `Tc` bucket matched
+  `ReferenceEmittedAdvance - PlannerRoundedWidth` divided by the planner glyph-gap count after rounding
+  (`19`, `2`, `7`, and `17` nonzero per-gap keys respectively, zero mismatches). This is not yet a production
+  rule because the renderer does not know Office's emitted advance target; it is the invariant the next
+  architecture slice must explain from OOXML/font/PDF state instead of from private data or font names.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first
