@@ -421,12 +421,9 @@ internal sealed class DocxReader
                 ResolveRelatedPartNameOrDefault(package, partName, EndnotesRelationshipType, EndnotesContentType));
         }
 
-        if (document.Descendants(WordprocessingNamespace + "cols").Any(cols =>
-            cols.Attribute(WordprocessingNamespace + "num") is { } value &&
-            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int columns) &&
-            columns > 1))
+        if (HasUnsupportedMultiColumnSection(document))
         {
-            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column section");
+            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", fallback: "Explicit break-only column flow is supported");
         }
 
         if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
@@ -505,6 +502,52 @@ internal sealed class DocxReader
             !typeValue.Equals("nextPage", StringComparison.OrdinalIgnoreCase) &&
             !typeValue.Equals("oddPage", StringComparison.OrdinalIgnoreCase) &&
             !typeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasUnsupportedMultiColumnSection(XDocument document)
+    {
+        XElement[] multiColumnDeclarations = document
+            .Descendants(WordprocessingNamespace + "cols")
+            .Where(IsMultiColumnDeclaration)
+            .ToArray();
+        if (multiColumnDeclarations.Length == 0)
+        {
+            return false;
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
+        {
+            return true;
+        }
+
+        return !IsSupportedExplicitFinalSectionColumnFlow(document, multiColumnDeclarations);
+    }
+
+    private static bool IsMultiColumnDeclaration(XElement columns)
+    {
+        return columns.Attribute(WordprocessingNamespace + "num") is { } value &&
+            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int columnCount) &&
+            columnCount > 1;
+    }
+
+    private static bool IsSupportedExplicitFinalSectionColumnFlow(XDocument document, IReadOnlyList<XElement> multiColumnDeclarations)
+    {
+        XElement? body = document.Root?.Element(WordprocessingNamespace + "body");
+        XElement? finalSectionProperties = body?.Element(WordprocessingNamespace + "sectPr");
+        XElement? finalColumns = finalSectionProperties?.Element(WordprocessingNamespace + "cols");
+        if (body is null ||
+            finalColumns is null ||
+            multiColumnDeclarations.Count != 1 ||
+            !ReferenceEquals(finalColumns, multiColumnDeclarations[0]))
+        {
+            return false;
+        }
+
+        int columnCount = int.Parse(finalColumns.Attribute(WordprocessingNamespace + "num")!.Value, CultureInfo.InvariantCulture);
+        int supportedColumnBreaks = body
+            .Elements(WordprocessingNamespace + "p")
+            .Count(IsRunColumnBreakOnlyParagraph);
+        return supportedColumnBreaks == columnCount - 1;
     }
 
     private static bool IsUnsupportedColumnBreak(XElement breakElement)

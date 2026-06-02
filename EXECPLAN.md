@@ -7179,6 +7179,14 @@ Current validation baseline:
   while the broad unsupported-feature fixture still triggers the diagnostic through a table-cell keep rule.
   Validation passed `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`),
   `docx-text --skip-slow` (`47`), and full solution build.
+  2026-06-02 architecture follow-up: `DOCX_UNSUPPORTED_MULTI_COLUMN` is no longer emitted for the narrow
+  supported explicit final-section column-flow shape: a final multi-column section whose column transitions are
+  authored as break-only column paragraphs. This reflects the current typed `DocxManualBreakElement` and active
+  column cursor path without claiming generic Word column balancing. The diagnostic remains for inline/text-bearing
+  column breaks, continuous or in-flow column sections, automatic/balanced multi-column flow, table/header
+  continuation semantics, and wrap-exclusion cases that still need Office-observed behavior. Validation passed
+  `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`), `docx-text --skip-slow` (`47`), and full
+  solution build.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
