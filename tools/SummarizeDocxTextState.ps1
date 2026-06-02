@@ -207,6 +207,171 @@ function Read-CandidatePlannerSummary([string] $Run) {
     return $null
 }
 
+function Read-CandidatePlannerSnapshot([string] $Run) {
+    $candidates = @(
+        (Join-Path $Run "comparison\docx-inspect\text-emission-snapshot.json"),
+        (Join-Path $Run "docx-inspect\text-emission-snapshot.json")
+    )
+
+    foreach ($path in $candidates) {
+        if (Test-Path -LiteralPath $path) {
+            return Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+        }
+    }
+
+    return $null
+}
+
+function PlannerTextClass($Segment) {
+    if ($null -eq $Segment -or $null -eq $Segment.CharacterProfile) {
+        return "(missing)"
+    }
+
+    $profile = $Segment.CharacterProfile
+    $length = [int]$Segment.TextLength
+    if ($length -eq 0) {
+        return "empty"
+    }
+
+    if ([int]$profile.WhitespaceCount -eq $length) {
+        return "whitespace"
+    }
+
+    $letters = [int]$profile.LetterCount -gt 0
+    $digits = [int]$profile.DigitCount -gt 0
+    $other = ([int]$profile.PunctuationCount + [int]$profile.SymbolCount + [int]$profile.OtherCount) -gt 0
+    if ($letters -and -not $digits -and -not $other) {
+        return "letters"
+    }
+
+    if ($digits -and -not $letters -and -not $other) {
+        return "digits"
+    }
+
+    if ($letters -and $digits -and -not $other) {
+        return "alphanumeric"
+    }
+
+    if ($other -and -not $letters -and -not $digits) {
+        return "punctuation"
+    }
+
+    return "mixed"
+}
+
+function Flatten-PlannerSegments($Snapshot) {
+    if ($null -eq $Snapshot -or $null -eq $Snapshot.Lines) {
+        return ,@()
+    }
+
+    $segments = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $Snapshot.Lines) {
+        if ($null -eq $line.Segments) {
+            continue
+        }
+
+        foreach ($segment in $line.Segments) {
+            $segments.Add($segment)
+        }
+    }
+
+    return ,$segments.ToArray()
+}
+
+function Group-PlannerAdvance($Segments, [scriptblock] $KeySelector) {
+    $groups = @{}
+    foreach ($segment in $Segments) {
+        $key = & $KeySelector $segment
+        if ($null -eq $key -or [string]$key -eq "") {
+            $key = "(missing)"
+        }
+
+        $key = [string]$key
+        if (-not $groups.ContainsKey($key)) {
+            $groups[$key] = [pscustomobject]@{
+                Key = $key
+                Count = 0
+                GlyphCount = 0
+                GlyphGapCount = 0
+                NaturalPdfWidth = 0d
+                LayoutWidth = 0d
+                LayoutToNaturalResidual = 0d
+            }
+        }
+
+        $group = $groups[$key]
+        $group.Count++
+        if ($null -ne $segment.AdvanceProfile) {
+            $group.GlyphCount += [int]$segment.AdvanceProfile.GlyphCount
+            $group.GlyphGapCount += [int]$segment.AdvanceProfile.GlyphGapCount
+            $group.NaturalPdfWidth += [double]$segment.AdvanceProfile.NaturalPdfWidth
+            $group.LayoutWidth += [double]$segment.AdvanceProfile.LayoutWidth
+            $group.LayoutToNaturalResidual += [double]$segment.AdvanceProfile.LayoutToNaturalResidual
+        }
+    }
+
+    return @(
+        foreach ($key in ($groups.Keys | Sort-Object)) {
+            $group = $groups[$key]
+            [pscustomobject]@{
+                Key = $group.Key
+                Count = $group.Count
+                GlyphCount = $group.GlyphCount
+                GlyphGapCount = $group.GlyphGapCount
+                NaturalPdfWidth = [Math]::Round($group.NaturalPdfWidth, 6)
+                LayoutWidth = [Math]::Round($group.LayoutWidth, 6)
+                LayoutToNaturalResidual = [Math]::Round($group.LayoutToNaturalResidual, 6)
+                UniformResidualPerGap = if ($group.GlyphGapCount -eq 0) { $null } else { [Math]::Round($group.LayoutToNaturalResidual / $group.GlyphGapCount, 6) }
+            }
+        }
+    )
+}
+
+function Summarize-PlannerSnapshot($Snapshot) {
+    if ($null -eq $Snapshot) {
+        return $null
+    }
+
+    $segments = Flatten-PlannerSegments $Snapshot
+    $nonTerminalSegments = @($segments | Where-Object { -not [bool]$_.IsTerminalLineSpace })
+    return [pscustomobject]@{
+        SegmentCount = $segments.Count
+        NonTerminalSegmentCount = $nonTerminalSegments.Count
+        TerminalSpaceSegmentCount = @($segments | Where-Object { [bool]$_.IsTerminalLineSpace }).Count
+        TextClassBuckets = @(Group-Count $segments { param($segment) PlannerTextClass $segment })
+        TextClassByFontSize = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|tf=" + (RoundedKey $segment.PdfFontSize 3)
+        })
+        TextClassByGlyphGap = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|gaps=" + (RoundedKey $segment.AdvanceProfile.GlyphGapCount 0)
+        })
+        TextClassByResidualPerGap = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
+        })
+        TextLengthByResidualPerGap = @(Group-Count $segments {
+            param($segment)
+            "len=" + (RoundedKey $segment.TextLength 0) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
+        })
+        FontSizeByResidualPerGap = @(Group-Count $segments {
+            param($segment)
+            "tf=" + (RoundedKey $segment.PdfFontSize 3) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
+        })
+        TerminalSpaceByResidualPerGap = @(Group-Count $segments {
+            param($segment)
+            "terminal=" + ([bool]$segment.IsTerminalLineSpace).ToString().ToLowerInvariant() + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
+        })
+        AdvanceByTextClass = @(Group-PlannerAdvance $segments { param($segment) PlannerTextClass $segment })
+        AdvanceByFontSize = @(Group-PlannerAdvance $segments { param($segment) "tf=" + (RoundedKey $segment.PdfFontSize 3) })
+        AdvanceByTextClassAndGlyphGap = @(Group-PlannerAdvance $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|gaps=" + (RoundedKey $segment.AdvanceProfile.GlyphGapCount 0)
+        })
+    }
+}
+
 $runs = Expand-PathList $RunDirectory
 if ($runs.Count -eq 0) {
     throw "No run directories were provided."
@@ -238,6 +403,7 @@ $summaries = foreach ($run in $runs) {
         Reference = Summarize-Operations $referenceOps
         Candidate = Summarize-Operations $candidateOps
         CandidatePlanner = Read-CandidatePlannerSummary $resolvedRun
+        CandidatePlannerSegments = Summarize-PlannerSnapshot (Read-CandidatePlannerSnapshot $resolvedRun)
     }
 }
 

@@ -37,8 +37,9 @@ keep diagnostics honest when a feature is still missing.
   emission comparisons, including `Tc` buckets, table/style/frame structure, glyph residuals, and letter-case
   counts. It must not emit private text content.
 - `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
-  from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, and positioned-glyph
-  residual buckets. It must not emit decoded document text.
+  from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, positioned-glyph
+  residual buckets, and candidate planner segment/advance-profile buckets when `DocxInspect` output is present.
+  It must not emit decoded document text.
 - `tools/SummarizeDocxRowBoundary.ps1`: private-safe DOCX table-row boundary summary for visual run directories.
   It combines layout-snapshot row bands and PDF text rows near the page bottom, emitting row indices, geometry,
   baseline diagnostics, lengths, and hashes without decoded document text.
@@ -5458,6 +5459,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   typed document/style/layout/pagination/PDF pipeline and bottom-up public coverage. Private DOCX evidence
   remains useful for prioritization, but production changes should be driven by public synthetic Word output.
   Date/Author: 2026-05-31 / Codex.
+- Decision: Keep DOCX short-run `Tc` work in diagnostics until Word's text-state decomposition is explained by
+  public structural evidence.
+  Rationale: Public and private-safe joined summaries now show candidate advance residuals are useful
+  observables but do not directly equal Word's emitted `Tc`, and Office nonzero `Tc` spans multiple text
+  classes. Promoting raw residuals, digit classes, table roles, font names, or private buckets into rendering
+  logic would repeat rejected heuristics. The next rendering change must be a planner-level decomposition that
+  can be justified against public Office PDF probes.
+  Date/Author: 2026-06-02 / Codex.
 - Decision: Resolve `a:grpFill` through ancestor group solid fill instead of adding any custom-geometry
   default-fill or private-slide color fallback.
   Rationale: A public synthetic custom-geometry fixture shows omitted shape fill stays unfilled in Office, but
@@ -6555,6 +6564,22 @@ Current validation baseline:
   `UniformResidualPerGap=-0.536165`; this aggregate is diagnostic only, not a rule. Validation passed
   `docx-core --skip-slow` (`43`), public `InspectDocx` on `docx-ladder-03-table-text-state`, and full solution
   build.
+  2026-06-02 joined planner-bucket progress: `tools/SummarizeDocxTextState.ps1` now reads
+  `text-emission-snapshot.json` when available and emits private-safe candidate planner segment buckets by
+  text class, Office-grid `/Tf`, glyph-gap count, residual-per-gap, terminal-space status, and weighted advance
+  profile aggregates. This keeps the next `Tc` rule investigation structural without exposing text. On public
+  `docx-ladder-03-table-text-state`, refreshed inspect output shows Word has six `digits|tc=-0.0182`
+  operations, while candidate planner sees the matching digit segments as four `digits|gaps=1` operations with
+  residual-per-gap `-0.044492` and two `digits|gaps=2` operations with residual-per-gap `-0.033369`; the
+  aggregate digit residual-per-gap is `-0.038931`. This is deliberately not equal to Word's `-0.0182` `Tc`,
+  so the rejected raw-residual rule remains rejected. On the private DOCX acceptance run `20260602-035051`,
+  Office has `81` nonzero `Tc` operations out of `2388`, spanning alphanumeric (`4`), digits (`25`), letters
+  (`16`), mixed (`33`), and punctuation (`3`), while candidate still has `0` nonzero `Tc` operations across
+  `2339` operations. Candidate planner aggregate residual-per-gap is `-0.020238`, but class-level residuals
+  include positive and negative signs; this confirms the next rendering change must model Word's text-state
+  decomposition and residual `TJ` split from public probes, not key on digit/table/font/style names or apply an
+  aggregate residual as a global rule. Validation passed `docx-core --skip-slow` (`43`), refreshed public
+  `InspectDocx`, public/private-safe `SummarizeDocxTextState`, and full solution build.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
