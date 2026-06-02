@@ -532,12 +532,13 @@ internal sealed class DocxRenderer
         int pageCount)
     {
         DocxTextEmissionSegmentSnapshot[] segments = CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount)
-            .Select(ToTextEmissionSegmentSnapshot)
+            .Select(segment => ToTextEmissionSegmentSnapshot(segment, line))
             .ToArray();
         return new DocxTextEmissionLineSnapshot(
             pageIndex,
             isStaticStory,
             line.SourceBlockIndex,
+            line.SourceParagraphIndex,
             line.SourceLineIndex,
             line.EndsWithIntraTokenBreak,
             segments.Length,
@@ -547,7 +548,9 @@ internal sealed class DocxRenderer
             segments);
     }
 
-    private static DocxTextEmissionSegmentSnapshot ToTextEmissionSegmentSnapshot(DocxTextEmissionSegment segment)
+    private static DocxTextEmissionSegmentSnapshot ToTextEmissionSegmentSnapshot(
+        DocxTextEmissionSegment segment,
+        DocxTextLineLayout line)
     {
         DocxTextEmissionPlan plan = segment.IsTerminalLineSpace
             ? DocxTextEmissionPlanner.CreateTerminalLineSpace(segment.StyleRun, segment.FontSize)
@@ -558,6 +561,9 @@ internal sealed class DocxRenderer
                 segment.CompensatePdfCharacterSpacing);
         return new DocxTextEmissionSegmentSnapshot(
             segment.Text.Length,
+            line.SourceBlockIndex,
+            line.SourceParagraphIndex,
+            line.SourceLineIndex,
             segment.X,
             segment.BaselineY,
             segment.Width,

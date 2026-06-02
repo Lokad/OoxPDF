@@ -39,8 +39,8 @@ keep diagnostics honest when a feature is still missing.
 - `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
   from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, positioned-glyph
   residual buckets, candidate planner segment/advance-profile/glyph-advance-signature buckets when `DocxInspect`
-  output is present, and sequence-paired Office-operation/planner-segment buckets when the inspected operation
-  counts match. It must not emit decoded document text.
+  output is present, source paragraph-index buckets, and sequence-paired Office-operation/planner-segment
+  buckets when the inspected operation counts match. It must not emit decoded document text.
 - `tools/SummarizeDocxRowBoundary.ps1`: private-safe DOCX table-row boundary summary for visual run directories.
   It combines layout-snapshot row bands and PDF text rows near the page bottom, emitting row indices, geometry,
   baseline diagnostics, lengths, and hashes without decoded document text.
@@ -6637,6 +6637,16 @@ Current validation baseline:
   (`25`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Keep the broader table-text
   convergence item open for richer cell paragraph ownership, inline images, vertical merge continuations, and
   eventual shared text-frame layout.
+  2026-06-02 follow-up: table-cell text line ownership now exposes private-safe `SourceParagraphIndex` through
+  `DocxTextLineLayout`, layout snapshots, text-emission line snapshots, text-emission segment snapshots, and
+  `SummarizeDocxTextState.ps1` buckets. This does not change rendering, but it removes an inspection blind spot
+  where two cell paragraphs with the same line index were indistinguishable once lowered to PDF text operations.
+  Added bottom-up coverage for a two-paragraph table cell in both layout and text-emission snapshots, including
+  segment-level ownership assertions. Public `docx-tables` diagnostics regenerated for run `20260602-041314`;
+  its single-paragraph cells now bucket as `srcPara=0` in `TextClassBySourceParagraphIndex` and paired
+  Office-`Tc` summaries. Validation passed `docx-tables --skip-slow` (`97`), `docx-core --skip-slow` (`43`),
+  and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Keep the rendering branch open for actual
+  Office row/paragraph allocation and text-state decomposition.
   2026-06-02 follow-up: the same normalized table-cell paragraph stream now also feeds private-safe
   `DocxStructure` table metrics, style/list usage, and `DocxLayoutSnapshot` table-cell text profiles. This
   closes a diagnostic blind spot where legacy plain `DocxTableCell.Text` could render but disappear from

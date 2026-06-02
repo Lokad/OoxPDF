@@ -9821,6 +9821,60 @@ internal static class DocxTests
         TestAssert.Equal(5, cell.LongestBreakableTokenLength);
     }
 
+    public static void DocxLayoutSnapshotReportsTableCellParagraphIndexes()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("First line", 10d, 12d);
+        DocxParagraph second = CreateDocxLayoutParagraph("Second line", 10d, 12d);
+        var cell = new DocxTableCell(string.Empty, [first, second], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], 50d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+
+        DocxTableCellSnapshot cellSnapshot = snapshot.Pages[0].TableRows.Single().Cells.Single();
+        TestAssert.Equal(2, cellSnapshot.ParagraphCount);
+        DocxTextLineLayout[] lines = layout.Pages[0].Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells.Single()
+            .TextLines.ToArray();
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(0, lines[0].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(0, lines[0].SourceLineIndex ?? -1);
+        TestAssert.Equal(1, lines[1].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(0, lines[1].SourceLineIndex ?? -1);
+    }
+
+    public static void DocxTextEmissionSnapshotReportsTableCellParagraphIndexes()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        DocxParagraph first = CreateDocxLayoutParagraph("First", 10d, 12d);
+        DocxParagraph second = CreateDocxLayoutParagraph("Second", 10d, 12d);
+        var cell = new DocxTableCell(string.Empty, [first, second], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], 50d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionLineSnapshot[] lines = renderer.InspectTextEmission(document).Lines
+            .Where(line => !line.IsStaticStory)
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.True(lines.All(line => line.SourceBlockIndex is null), "Table-cell line snapshots should not pretend to be top-level body blocks.");
+        TestAssert.Equal(0, lines[0].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(1, lines[1].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(0, lines[0].SourceLineIndex ?? -1);
+        TestAssert.Equal(0, lines[1].SourceLineIndex ?? -1);
+        TestAssert.True(lines[0].Segments.All(segment => segment.SourceParagraphIndex == 0), "First table-cell paragraph ownership should survive to emission segments.");
+        TestAssert.True(lines[1].Segments.All(segment => segment.SourceParagraphIndex == 1), "Second table-cell paragraph ownership should survive to emission segments.");
+    }
+
     public static void DocxLayoutSnapshotReportsPrivateSafeSourceLineIndexes()
     {
         var first = new DocxParagraph(
