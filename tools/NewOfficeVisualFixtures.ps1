@@ -1096,6 +1096,69 @@ try {
         $rowHeights.Close($false)
     }
 
+    $tableCellBaseline = $word.Documents.Add()
+    try {
+        $tableCellBaseline.PageSetup.PageWidth = 612
+        $tableCellBaseline.PageSetup.PageHeight = 792
+        $tableCellBaseline.PageSetup.TopMargin = 72
+        $tableCellBaseline.PageSetup.BottomMargin = 72
+        $tableCellBaseline.PageSetup.LeftMargin = 72
+        $tableCellBaseline.PageSetup.RightMargin = 72
+        $tableCellBaseline.Content.Text = "DOCX table cell baseline`r`n"
+
+        $heading = $tableCellBaseline.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $range = $tableCellBaseline.Paragraphs.Item(2).Range
+        $tbl = $tableCellBaseline.Tables.Add($range, 5, 4)
+        $tbl.Borders.Enable = $true
+        $tbl.Rows.Alignment = 0
+        $tbl.AllowAutoFit = $false
+        $tbl.Columns.Item(1).Width = 90
+        $tbl.Columns.Item(2).Width = 90
+        $tbl.Columns.Item(3).Width = 90
+        $tbl.Columns.Item(4).Width = 220
+
+        $values = @(
+            @("8pt", "0 top", "A8", "Zero top padding"),
+            @("11pt", "0 top", "A11", "Zero top padding"),
+            @("16pt", "0 top", "A16", "Zero top padding"),
+            @("11pt", "6 top", "T6", "Explicit top padding"),
+            @("16pt", "6 top", "T16", "Explicit top padding")
+        )
+        $fontSizes = @(8, 11, 16, 11, 16)
+        $topPaddings = @(0, 0, 0, 6, 6)
+
+        for ($row = 1; $row -le 5; $row++) {
+            for ($column = 1; $column -le 4; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Text = $values[$row - 1][$column - 1]
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = $fontSizes[$row - 1]
+                $cell.Range.Font.Color = Rgb 30 30 30
+                $cell.Range.ParagraphFormat.SpaceBefore = 0
+                $cell.Range.ParagraphFormat.SpaceAfter = 0
+                $cell.Range.ParagraphFormat.LineSpacingRule = 0
+                $cell.TopPadding = $topPaddings[$row - 1]
+                $cell.BottomPadding = 0
+                $cell.LeftPadding = 5.4
+                $cell.RightPadding = 5.4
+                if ($row % 2 -eq 0) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 232 244 253
+                }
+            }
+        }
+
+        $tableCellBaseline.SaveAs2((Join-Path $cases "docx-ladder-03-table-cell-baseline.docx"), 16)
+    }
+    finally {
+        $tableCellBaseline.Close($false)
+    }
+
     $tableParagraphAdjacency = $word.Documents.Add()
     try {
         $tableParagraphAdjacency.PageSetup.PageWidth = 612

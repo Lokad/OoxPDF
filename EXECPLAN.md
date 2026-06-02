@@ -5052,6 +5052,16 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     `DocxLineMetrics.ResolveTableCellFirstBaselineInset`, so future Office-backed replacement can distinguish
     row/cell geometry drift from baseline metric drift. Validation passed `docx-core --skip-slow` (`53`),
     `docx-tables --skip-slow` (`100`), and full solution build.
+    2026-06-02 follow-up: added public Office-authored `docx-ladder-03-table-cell-baseline`, covering five
+    table rows with 8pt/11pt/16pt Arial text and zero versus explicit 6pt top padding. Public visual run
+    `20260602-214330` passed with one page, matching dimensions, no diagnostics, `MAE=0.844994`,
+    changed16 `0.008249`, and SSIM `0.784830`. PDF text inspection shows candidate table text X positions
+    within about `0.02-0.07pt` of Office and Y residuals of about `+0.03pt` at 8pt, `-0.17pt` at 11pt, and
+    `-0.4pt` at 16pt. A new snapshot test records the fixture's current parsed table shape and
+    `FirstBaselineInset` values (`8/11/16/11/16`) so later metric changes have a public structural checkpoint.
+    Keep this item open: the evidence points to a small font-size-dependent line-box/baseline residual, but not
+    enough to replace `ResolveTableCellFirstBaselineInset` or introduce a new table-cell constant without a
+    broader Office-backed line-box model.
 - [ ] Revisit keep rules only after layout tracing exists: support style-derived `keepNext`, `keepLines`, and
   widow/orphan control with synthetic tests and private page-count checks.
   2026-06-02 follow-up: keep-block preflight now returns a typed `DocxKeepBlockEstimate` with measured

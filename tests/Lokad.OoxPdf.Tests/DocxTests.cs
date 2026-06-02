@@ -11085,6 +11085,36 @@ internal static class DocxTests
         TestAssert.Equal(5, cell.LongestBreakableTokenLength);
     }
 
+    public static void DocxLayoutSnapshotReportsOfficeTableCellBaselineFixture()
+    {
+        string input = Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-ladder-03-table-cell-baseline.docx");
+        input = Path.GetFullPath(input);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+
+        DocxTableRowSnapshot[] rows = snapshot.Pages.SelectMany(page => page.TableRows).ToArray();
+        TestAssert.Equal(5, rows.Length);
+        TestAssert.True(rows.All(row => row.CellCount == 4), "The Office-authored baseline fixture should keep a stable 5x4 table.");
+        TestAssert.Equal(8d, rows[0].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(11d, rows[1].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(16d, rows[2].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(11d, rows[3].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(16d, rows[4].Cells[0].FirstBaselineInset);
+        TestAssert.True(rows[0].Cells[0].MarginTopPoints is null || rows[0].Cells[0].MarginTopPoints == 0d, "Zero top padding may serialize as absent or zero.");
+        TestAssert.Equal(6d, rows[3].Cells[0].MarginTopPoints ?? 0d);
+        TestAssert.Equal(6d, rows[4].Cells[0].MarginTopPoints ?? 0d);
+    }
+
     public static void DocxLayoutSnapshotReportsTableCellParagraphIndexes()
     {
         DocxParagraph first = CreateDocxLayoutParagraph("First line", 10d, 12d);
