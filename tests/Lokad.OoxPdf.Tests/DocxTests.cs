@@ -13239,6 +13239,15 @@ internal static class DocxTests
 
         DocxStructureStorySnapshot story = new DocxRenderer().InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
         TestAssert.True(story.FloatingDrawingCount == 1 && story.ParagraphCount == 1, "Static header story snapshots should expose anchored drawing ownership without rendering it yet.");
+
+        DocxLayoutSnapshot layout = new DocxRenderer().InspectLayout(document);
+        DocxFloatingDrawingLayoutSnapshot layoutDrawing = layout.StaticFloatingDrawings.Single();
+        TestAssert.True(layout.FloatingDrawings.Count == 0 && layoutDrawing.StoryKind == "Header" && layoutDrawing.StoryVariantType == "default", "Selected header drawings should be laid out in the static drawing stream, not mixed with body floating drawings.");
+        TestAssert.Equal(0, layoutDrawing.AnchorPageIndex ?? -1);
+        TestAssert.Equal(72d, layoutDrawing.PlacedX ?? 0d);
+        TestAssert.Equal(756d, layoutDrawing.PlacedTop ?? 0d);
+        TestAssert.Equal(72d, layoutDrawing.ExtentWidthPoints ?? 0d);
+        TestAssert.Equal(36d, layoutDrawing.ExtentHeightPoints ?? 0d);
     }
 
     public static void DocxSyntheticHeaderFooterDistancesUsePageMarginTokens()

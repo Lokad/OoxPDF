@@ -10,6 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed record DocxLayout(
     IReadOnlyList<DocxLayoutPage> Pages,
     IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings,
+    IReadOnlyList<DocxFloatingDrawingLayout> StaticFloatingDrawings,
     IReadOnlyList<DocxRelatedStoryLayout> RelatedStories);
 
 internal sealed record DocxRelatedStoryLayout(
@@ -41,7 +42,9 @@ internal sealed record DocxFloatingDrawingLayout(
     double? VerticalReferenceTop,
     double? VerticalReferenceBottom,
     double? PlacedX,
-    double? PlacedTop);
+    double? PlacedTop,
+    string? StoryKind = null,
+    string? StoryVariantType = null);
 
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
@@ -108,6 +111,7 @@ internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxTableSnapshot> Tables,
     IReadOnlyList<DocxLayoutSourceBlockSnapshot> SourceBlocks,
     IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> FloatingDrawings,
+    IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> StaticFloatingDrawings,
     IReadOnlyList<DocxRelatedStoryLayoutSnapshot> RelatedStories)
 {
     public static DocxLayoutSnapshot FromLayout(DocxLayout layout)
@@ -119,6 +123,7 @@ internal sealed record DocxLayoutSnapshot(
             ToTableSnapshots(pages),
             sourceBlocks,
             ToFloatingDrawingSnapshots(layout.FloatingDrawings),
+            ToFloatingDrawingSnapshots(layout.StaticFloatingDrawings),
             ToRelatedStorySnapshots(layout.RelatedStories));
     }
 
@@ -312,7 +317,9 @@ internal sealed record DocxLayoutSnapshot(
                     drawing.Drawing.Image?.PartName,
                     drawing.Drawing.Image?.ContentType,
                     drawing.Drawing.Image?.WidthPoints,
-                    drawing.Drawing.Image?.HeightPoints);
+                    drawing.Drawing.Image?.HeightPoints,
+                    drawing.StoryKind,
+                    drawing.StoryVariantType);
             })
             .ToArray();
     }
@@ -992,7 +999,9 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     string? ImagePartName,
     string? ImageContentType,
     double? ImageWidthPoints,
-    double? ImageHeightPoints);
+    double? ImageHeightPoints,
+    string? StoryKind = null,
+    string? StoryVariantType = null);
 
 internal sealed record DocxStaticStoryLayoutSnapshot(
     string Kind,
@@ -1997,6 +2006,7 @@ internal sealed class DocxLayoutEngine
         return new DocxLayout(
             pagesWithStaticText,
             CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText),
+            CreateStaticFloatingDrawingLayouts(pagesWithStaticText),
             CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints));
     }
 
@@ -2239,36 +2249,102 @@ internal sealed class DocxLayoutEngine
                 DocxLayoutPage? anchorPage = sourceBlock is null
                     ? pages.FirstOrDefault()
                     : pages[sourceBlock.FirstPageIndex];
-                DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
-                DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
-                double? extentWidth = ReadEmuPoints(drawing.ExtentCxValue);
-                double? extentHeight = ReadEmuPoints(drawing.ExtentCyValue);
-                double? horizontalOffset = ReadEmuPoints(drawing.HorizontalOffsetValue);
-                double? verticalOffset = ReadEmuPoints(drawing.VerticalOffsetValue);
-                return new DocxFloatingDrawingLayout(
+                return CreateFloatingDrawingLayout(
                     drawing,
+                    anchorPage,
                     sourceBlock?.FirstPageIndex,
                     sourceBlock?.LastPageIndex,
                     sourceBlock?.FirstPageIndex,
                     sourceBlock?.FirstColumnIndex,
-                    sourceBlock?.VerticalTop,
-                    sourceBlock?.VerticalBottom,
-                    extentWidth,
-                    extentHeight,
-                    horizontalOffset,
-                    verticalOffset,
-                    ReadEmuPoints(drawing.DistanceTopValue),
-                    ReadEmuPoints(drawing.DistanceBottomValue),
-                    ReadEmuPoints(drawing.DistanceLeftValue),
-                    ReadEmuPoints(drawing.DistanceRightValue),
-                    horizontalReference?.Start,
-                    horizontalReference?.Size,
-                    verticalReference?.Start,
-                    verticalReference?.End,
-                    ResolveHorizontalPlacement(horizontalReference, extentWidth, drawing.HorizontalAlignValue, horizontalOffset),
-                    ResolveVerticalPlacement(verticalReference, extentHeight, drawing.VerticalAlignValue, verticalOffset));
+                    sourceBlock);
             })
             .ToArray();
+    }
+
+    private static IReadOnlyList<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(IReadOnlyList<DocxLayoutPage> pages)
+    {
+        var layouts = new List<DocxFloatingDrawingLayout>();
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            DocxLayoutPage page = pages[pageIndex];
+            int pageNumber = pageIndex + 1;
+            DocxSelectedStaticDrawings selectedHeader = SelectStaticHeaderFooterDrawings(
+                page.PageSettings.HeaderFloatingDrawingsByType,
+                page.PageSettings,
+                pageNumber);
+            DocxSelectedStaticDrawings selectedFooter = SelectStaticHeaderFooterDrawings(
+                page.PageSettings.FooterFloatingDrawingsByType,
+                page.PageSettings,
+                pageNumber);
+            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedHeader, "Header", page, pageIndex));
+            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedFooter, "Footer", page, pageIndex));
+        }
+
+        return layouts;
+    }
+
+    private static IEnumerable<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(
+        DocxSelectedStaticDrawings selectedDrawings,
+        string storyKind,
+        DocxLayoutPage page,
+        int pageIndex)
+    {
+        foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
+        {
+            yield return CreateFloatingDrawingLayout(
+                drawing,
+                page,
+                pageStartIndex: pageIndex,
+                pageEndIndex: pageIndex,
+                anchorPageIndex: pageIndex,
+                anchorColumnIndex: null,
+                sourceBlock: null,
+                storyKind,
+                selectedDrawings.VariantType);
+        }
+    }
+
+    private static DocxFloatingDrawingLayout CreateFloatingDrawingLayout(
+        DocxFloatingDrawing drawing,
+        DocxLayoutPage? anchorPage,
+        int? pageStartIndex,
+        int? pageEndIndex,
+        int? anchorPageIndex,
+        int? anchorColumnIndex,
+        DocxLayoutSourceBlockBounds? sourceBlock,
+        string? storyKind = null,
+        string? storyVariantType = null)
+    {
+        DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
+        DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
+        double? extentWidth = ReadEmuPoints(drawing.ExtentCxValue);
+        double? extentHeight = ReadEmuPoints(drawing.ExtentCyValue);
+        double? horizontalOffset = ReadEmuPoints(drawing.HorizontalOffsetValue);
+        double? verticalOffset = ReadEmuPoints(drawing.VerticalOffsetValue);
+        return new DocxFloatingDrawingLayout(
+            drawing,
+            pageStartIndex,
+            pageEndIndex,
+            anchorPageIndex,
+            anchorColumnIndex,
+            sourceBlock?.VerticalTop,
+            sourceBlock?.VerticalBottom,
+            extentWidth,
+            extentHeight,
+            horizontalOffset,
+            verticalOffset,
+            ReadEmuPoints(drawing.DistanceTopValue),
+            ReadEmuPoints(drawing.DistanceBottomValue),
+            ReadEmuPoints(drawing.DistanceLeftValue),
+            ReadEmuPoints(drawing.DistanceRightValue),
+            horizontalReference?.Start,
+            horizontalReference?.Size,
+            verticalReference?.Start,
+            verticalReference?.End,
+            ResolveHorizontalPlacement(horizontalReference, extentWidth, drawing.HorizontalAlignValue, horizontalOffset),
+            ResolveVerticalPlacement(verticalReference, extentHeight, drawing.VerticalAlignValue, verticalOffset),
+            storyKind,
+            storyVariantType);
     }
 
     private static double? ResolveHorizontalPlacement(
@@ -2769,6 +2845,32 @@ internal sealed class DocxLayoutEngine
     }
 
     private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxParagraph> Paragraphs, string? VariantType);
+
+    private static DocxSelectedStaticDrawings SelectStaticHeaderFooterDrawings(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,
+        DocxPageSettings settings,
+        int pageNumber)
+    {
+        if (settings.TitlePage == true &&
+            pageNumber == 1 &&
+            drawingsByType.TryGetValue("first", out IReadOnlyList<DocxFloatingDrawing>? first))
+        {
+            return new DocxSelectedStaticDrawings(first, "first");
+        }
+
+        if (settings.EvenAndOddHeaders == true &&
+            pageNumber % 2 == 0 &&
+            drawingsByType.TryGetValue("even", out IReadOnlyList<DocxFloatingDrawing>? even))
+        {
+            return new DocxSelectedStaticDrawings(even, "even");
+        }
+
+        return drawingsByType.TryGetValue("default", out IReadOnlyList<DocxFloatingDrawing>? defaults)
+            ? new DocxSelectedStaticDrawings(defaults, "default")
+            : new DocxSelectedStaticDrawings([], null);
+    }
+
+    private sealed record DocxSelectedStaticDrawings(IReadOnlyList<DocxFloatingDrawing> Drawings, string? VariantType);
 
     private static double ResolveHeaderDistance(DocxLayoutPage page)
     {

@@ -7490,6 +7490,14 @@ Current validation baseline:
   floating-drawing count. Validation passed `docx-page --skip-slow` (`40`) and `docx-core --skip-slow` (`53`).
   Keep Office-derived placement/rendering for static anchored drawings and selected header/footer row
   acceptance gates open; this slice only closes the invisible-in-model gap.
+  2026-06-02 architecture follow-up: selected static header/footer anchored drawings now advance one stage
+  further into layout ownership. `DocxLayout` carries a separate `StaticFloatingDrawings` stream, selected by
+  the same first/even/default variant rules as static text, with page-local placement resolved through the
+  shared floating-drawing page/margin/offset logic and private-safe story kind/variant metadata in layout
+  snapshots. Bottom-up coverage verifies a page-relative header image lands in the static drawing stream with
+  expected geometry, while body `FloatingDrawings` remains empty. Validation passed `docx-page --skip-slow`
+  (`40`), `docx-core --skip-slow` (`53`), and full solution build. Keep actual static anchored drawing PDF
+  rendering and Office-derived draw-order/row acceptance gates open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
