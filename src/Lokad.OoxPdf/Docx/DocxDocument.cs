@@ -524,7 +524,10 @@ internal sealed record DocxTableCell(
     string? GridSpanValue = null,
     DocxTableCellConditionalFormat? ConditionalFormat = null,
     bool HasVerticalMerge = false,
-    string? VerticalMergeValue = null);
+    string? VerticalMergeValue = null)
+{
+    public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
+}
 
 internal sealed record DocxTableCellConditionalFormat(
     string? Value,

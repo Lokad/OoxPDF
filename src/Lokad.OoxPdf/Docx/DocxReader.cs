@@ -2015,7 +2015,7 @@ internal sealed class DocxReader
                 XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
                 DocxTableCellConditionalFormat? conditionalFormat = ReadTableCellConditionalFormat(cellProperties);
                 DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, tableLook, conditionalFormat, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
-                IReadOnlyList<DocxParagraph> paragraphs = ReadTableCellParagraphs(
+                IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
                     cell,
                     styles,
                     numbering,
@@ -2023,6 +2023,10 @@ internal sealed class DocxReader
                     package,
                     relationships,
                     conditionalStyle);
+                IReadOnlyList<DocxParagraph> paragraphs = cellBodyElements
+                    .OfType<DocxParagraphElement>()
+                    .Select(element => element.Paragraph)
+                    .ToArray();
                 string text = string.Join(" ", paragraphs
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
                     .Where(t => t.Length != 0));
@@ -2066,7 +2070,10 @@ internal sealed class DocxReader
                         ?.Attribute(WordprocessingNamespace + "val"),
                     conditionalFormat,
                     verticalMerge is not null,
-                    (string?)verticalMerge?.Attribute(WordprocessingNamespace + "val")));
+                    (string?)verticalMerge?.Attribute(WordprocessingNamespace + "val"))
+                {
+                    BodyElements = cellBodyElements
+                });
             }
 
             if (cells.Count > 0)
@@ -2146,7 +2153,7 @@ internal sealed class DocxReader
                 : 1;
     }
 
-    private static IReadOnlyList<DocxParagraph> ReadTableCellParagraphs(
+    private static IReadOnlyList<DocxBodyElement> ReadTableCellBodyElements(
         XElement cell,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
@@ -2155,24 +2162,88 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxTableCellStyle tableCellStyle)
     {
-        var paragraphs = new List<DocxParagraph>();
-        foreach (XElement paragraph in cell.Elements(WordprocessingNamespace + "p"))
+        var elements = new List<DocxBodyElement>();
+        foreach (XElement child in cell.Elements())
         {
-            DocxParagraph? parsed = ReadParagraph(
-                paragraph,
-                styles,
-                numbering,
-                numberingCounters,
-                package,
-                relationships,
-                tableCellStyle);
-            if (parsed is not null)
+            if (child.Name == WordprocessingNamespace + "tcPr")
             {
-                paragraphs.Add(parsed);
+                continue;
+            }
+
+            if (child.Name == WordprocessingNamespace + "p")
+            {
+                if (IsRunColumnBreakOnlyParagraph(child))
+                {
+                    DocxParagraph? breakParagraph = ReadParagraph(
+                        child,
+                        styles,
+                        numbering,
+                        numberingCounters,
+                        package,
+                        relationships,
+                        tableCellStyle);
+                    elements.Add(new DocxManualBreakElement("runBreak", "column", breakParagraph));
+                    continue;
+                }
+
+                if (HasRunPageOrColumnBreak(child))
+                {
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child))
+                    {
+                        if (part.BreakValue is not null)
+                        {
+                            elements.Add(string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase)
+                                ? new DocxManualBreakElement("runBreak", "column")
+                                : new DocxPageBreakElement("runBreak", part.BreakValue));
+                            continue;
+                        }
+
+                        if (part.Paragraph is null)
+                        {
+                            continue;
+                        }
+
+                        DocxParagraph? splitParagraph = ReadParagraph(
+                            part.Paragraph,
+                            styles,
+                            numbering,
+                            numberingCounters,
+                            package,
+                            relationships,
+                            tableCellStyle);
+                        if (splitParagraph is not null)
+                        {
+                            elements.Add(new DocxParagraphElement(AdjustBreakParagraphFragment(splitParagraph, part)));
+                        }
+                    }
+
+                    continue;
+                }
+
+                DocxParagraph? parsed = ReadParagraph(
+                    child,
+                    styles,
+                    numbering,
+                    numberingCounters,
+                    package,
+                    relationships,
+                    tableCellStyle);
+                if (parsed is not null)
+                {
+                    elements.Add(new DocxParagraphElement(parsed));
+                }
+            }
+            else if (child.Name == WordprocessingNamespace + "tbl")
+            {
+                DocxTable? nestedTable = ReadTable(child, styles, numbering, numberingCounters, package, relationships);
+                if (nestedTable is not null)
+                {
+                    elements.Add(new DocxTableElement(nestedTable));
+                }
             }
         }
 
-        return paragraphs;
+        return elements;
     }
 
     private static DocxTableCellMargins ReadTableCellMargins(XElement? cellProperties)

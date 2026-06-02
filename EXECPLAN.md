@@ -7206,6 +7206,14 @@ Current validation baseline:
   automatic balancing, continuous in-flow section column changes, and column-aware wrap exclusion also remain open.
   Validation passed `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`), `docx-text --skip-slow`
   (`48`), and full solution build.
+  2026-06-02 architecture follow-up: table cells now retain an authored body-flow stream in addition to the
+  legacy paragraph projection used by current layout. `DocxTableCell.BodyElements` preserves paragraph fragments,
+  typed manual/page breaks, and nested table blocks in source order; `DocxTableCellContent.GetParagraphs` remains
+  the compatibility boundary for existing measurement/rendering. Structure snapshots expose per-cell body-element,
+  manual-break, page-break, and nested-table counts so future row-fragmentation work can detect non-paragraph cell
+  flow without reparsing OOXML. Table-cell column breaks deliberately still emit `DOCX_UNSUPPORTED_MANUAL_BREAK`
+  until table-local row/cell pagination owns their Office semantics. Validation passed `docx-tables --skip-slow`
+  (`100`), `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`), and full solution build.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

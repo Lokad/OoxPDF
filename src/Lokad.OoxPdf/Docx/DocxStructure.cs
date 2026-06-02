@@ -589,7 +589,11 @@ internal sealed record DocxStructureSnapshot(
             CountCharacters(paragraphs, char.IsPunctuation),
             CountCharacters(paragraphs, char.IsDigit),
             CountCharacters(paragraphs, char.IsUpper),
-            CountCharacters(paragraphs, char.IsLower));
+            CountCharacters(paragraphs, char.IsLower),
+            cell.BodyElements.Count,
+            cell.BodyElements.OfType<DocxManualBreakElement>().Count(),
+            cell.BodyElements.OfType<DocxPageBreakElement>().Count(),
+            cell.BodyElements.OfType<DocxTableElement>().Count());
     }
 
     private static DocxStructureFloatingDrawingSnapshot ToFloatingDrawingSnapshot(DocxFloatingDrawing drawing, int index)
@@ -1162,7 +1166,11 @@ internal sealed record DocxStructureTableCellSnapshot(
     int PunctuationCharacterCount,
     int DigitCharacterCount,
     int UppercaseCharacterCount,
-    int LowercaseCharacterCount);
+    int LowercaseCharacterCount,
+    int BodyElementCount = 0,
+    int ManualBreakElementCount = 0,
+    int PageBreakElementCount = 0,
+    int NestedTableElementCount = 0);
 
 internal sealed record DocxStructureTableAdjacencySnapshot(
     int TableIndex,

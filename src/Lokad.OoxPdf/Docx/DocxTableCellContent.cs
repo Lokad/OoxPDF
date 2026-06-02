@@ -6,6 +6,14 @@ internal static class DocxTableCellContent
 
     public static IReadOnlyList<DocxParagraph> GetParagraphs(DocxTableCell cell)
     {
+        if (cell.BodyElements.Count != 0)
+        {
+            return cell.BodyElements
+                .OfType<DocxParagraphElement>()
+                .Select(element => element.Paragraph)
+                .ToArray();
+        }
+
         return cell.Paragraphs.Count == 0 && cell.Text.Length != 0
             ? [CreatePlainTextParagraph(cell.Text)]
             : cell.Paragraphs;
