@@ -1996,6 +1996,126 @@ internal static class DocxTests
         TestAssert.True(annotation.Width > 0d, "The annotation should cover header hyperlink text.");
     }
 
+    public static void DocxFooterRendererEmitsExternalHyperlinkAnnotations()
+    {
+        var runs = new[]
+        {
+            new DocxTextRun("Footer ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var footer = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdFooter", null, null, null, "https://example.invalid/footer", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [footer]
+            }
+        };
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 12d);
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            pageSettings,
+            [],
+            [],
+            [footer],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/footer", annotation.Uri);
+        TestAssert.True(annotation.Y < 60d, "Footer annotation should be anchored near the page bottom static story.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover footer hyperlink text.");
+    }
+
+    public static void DocxStaticStoryRendererEmitsInternalHyperlinkDestinations()
+    {
+        DocxParagraph header = new(
+            [
+                new DocxTextRun("Header ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Jump", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "StaticBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 4)
+            ]
+        };
+        DocxParagraph target = CreateDocxLayoutParagraph("Body target", 10d, 12d) with
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("12", "StaticBookmarkTarget", 0, 0, 0)
+            ]
+        };
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [header]
+            }
+        };
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            pageSettings,
+            [],
+            [header],
+            [],
+            [new DocxParagraphElement(target)],
+            [target],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Uri is null, "Internal static-story links should not be emitted as URI actions.");
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal static-story links should resolve through the shared bookmark destination map.");
+        TestAssert.True(annotation.Y > 150d, "The clickable rectangle should be anchored to the header story text.");
+        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed body bookmark coordinates.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover static-story hyperlink text.");
+    }
+
     public static void DocxStructureSnapshotUsesBodyElementInventoryAsCanonicalSource()
     {
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell", fontSize: 9d, lineSpacingPoints: 10d) with

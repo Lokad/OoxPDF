@@ -309,9 +309,13 @@ High-priority actions:
   only parser/structure metadata. The PDF writer has a first-class `PdfLinkAnnotation` primitive with stable
   object numbering, `/Annots` page wiring, rectangle emission, URI actions, and PDF-string escaping. DOCX
   layout now carries source text-run indexes through span slicing, wrapping, justification, and text-operation
-  splitting so body hyperlink annotations are anchored to placed rendered segments. Table-cell and selected
-  static header/footer text lines use the same annotation path for external URI links. Keep internal PDF
-  destinations open for a later story-owned annotation model.
+  splitting so body hyperlink annotations are anchored to placed rendered segments. Table-cell text lines and
+  static header/footer text lines use the same annotation path for external URI links, and internal links now
+  resolve through the shared bookmark destination map for body, table-cell, and static story sources. Public
+  bottom-up coverage asserts footer external links and static-story internal destinations; validation passed
+  `docx-core --skip-slow` (`52`) and `docx-page --skip-slow` (`31`). Keep only non-rendered related-story
+  annotations open: comment/endnote/footnote stories are preserved structurally, but they are not yet placed
+  page stories and therefore cannot honestly emit PDF link rectangles without a story-owned layout model.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
