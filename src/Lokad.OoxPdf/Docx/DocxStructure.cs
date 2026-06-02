@@ -13,6 +13,7 @@ internal sealed record DocxStructureSnapshot(
     int InlineImageCount,
     int InlineReferenceCount,
     int AnchoredInlineReferenceCount,
+    int ResolvedInlineReferenceCount,
     int MaxInlineReferenceTextOffsetInRun,
     int FieldReferenceCount,
     int PageFieldReferenceCount,
@@ -45,10 +46,10 @@ internal sealed record DocxStructureSnapshot(
             switch (element)
             {
                 case DocxParagraphElement paragraph:
-                    blocks.Add(FromParagraph(blockIndex, previousKind, nextKind, paragraph.Paragraph));
+                    blocks.Add(FromParagraph(blockIndex, previousKind, nextKind, paragraph.Paragraph, document.RelatedStories));
                     break;
                 case DocxTableElement table:
-                    blocks.Add(FromTable(blockIndex, previousKind, nextKind, table.Table, tableIndex));
+                    blocks.Add(FromTable(blockIndex, previousKind, nextKind, table.Table, tableIndex, document.RelatedStories));
                     tables.Add(ToTableSnapshot(table.Table, tableIndex, blockIndex));
                     adjacency.Add(ToTableAdjacencySnapshot(document.BodyElements, table.Table, tableIndex, blockIndex, previousKind, nextKind));
                     tableIndex++;
@@ -80,6 +81,7 @@ internal sealed record DocxStructureSnapshot(
             blocks.Sum(block => block.InlineImageCount),
             blocks.Sum(block => block.InlineReferenceCount),
             blocks.Sum(block => block.AnchoredInlineReferenceCount),
+            blocks.Sum(block => block.ResolvedInlineReferenceCount),
             blocks.Select(block => block.MaxInlineReferenceTextOffsetInRun).DefaultIfEmpty(0).Max(),
             allParagraphs.Sum(ParagraphFieldReferenceCount),
             allParagraphs.Sum(ParagraphPageFieldReferenceCount),
@@ -116,6 +118,7 @@ internal sealed record DocxStructureSnapshot(
                 bodyBlocks.Sum(block => block.TextLength),
                 bodyBlocks.Sum(block => block.InlineImageCount),
                 bodyBlocks.Sum(block => block.InlineReferenceCount),
+                bodyBlocks.Sum(block => block.ResolvedInlineReferenceCount),
                 DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(ParagraphFieldReferenceCount),
                 DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(ParagraphBookmarkAnchorCount),
                 bodyBlocks.Sum(block => block.HyperlinkCount),
@@ -123,8 +126,8 @@ internal sealed record DocxStructureSnapshot(
                 bodyBlocks.Sum(block => block.InternalHyperlinkCount))
         };
 
-        AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType);
-        AddStaticStories(stories, "Footer", "document", null, document.FooterParagraphsByType);
+        AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType, document.RelatedStories);
+        AddStaticStories(stories, "Footer", "document", null, document.FooterParagraphsByType, document.RelatedStories);
         AddRelatedStories(stories, document.RelatedStories);
         for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
         {
@@ -134,8 +137,8 @@ internal sealed record DocxStructureSnapshot(
             }
 
             string scope = "section@" + blockIndex.ToString(CultureInfo.InvariantCulture);
-            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderParagraphsByType);
-            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterParagraphsByType);
+            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderParagraphsByType, document.RelatedStories);
+            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterParagraphsByType, document.RelatedStories);
         }
 
         return stories;
@@ -146,7 +149,8 @@ internal sealed record DocxStructureSnapshot(
         string kind,
         string scope,
         int? sectionBreakBlockIndex,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType)
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
+        IReadOnlyList<DocxRelatedStory> relatedStories)
     {
         foreach (KeyValuePair<string, IReadOnlyList<DocxParagraph>> entry in paragraphsByType.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
         {
@@ -161,6 +165,7 @@ internal sealed record DocxStructureSnapshot(
                 entry.Value.Sum(TextLength),
                 entry.Value.Sum(paragraph => paragraph.Images.Count),
                 entry.Value.Sum(ParagraphInlineReferenceCount),
+                entry.Value.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
                 entry.Value.Sum(ParagraphFieldReferenceCount),
                 entry.Value.Sum(ParagraphBookmarkAnchorCount),
                 entry.Value.Sum(ParagraphHyperlinkCount),
@@ -190,6 +195,7 @@ internal sealed record DocxStructureSnapshot(
                 paragraphs.Sum(TextLength),
                 paragraphs.Sum(paragraph => paragraph.Images.Count),
                 paragraphs.Sum(ParagraphInlineReferenceCount),
+                paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
                 paragraphs.Sum(ParagraphFieldReferenceCount),
                 paragraphs.Sum(ParagraphBookmarkAnchorCount),
                 paragraphs.Sum(ParagraphHyperlinkCount),
@@ -198,7 +204,12 @@ internal sealed record DocxStructureSnapshot(
         }
     }
 
-    private static DocxStructureBlockSnapshot FromParagraph(int blockIndex, string? previousKind, string? nextKind, DocxParagraph paragraph)
+    private static DocxStructureBlockSnapshot FromParagraph(
+        int blockIndex,
+        string? previousKind,
+        string? nextKind,
+        DocxParagraph paragraph,
+        IReadOnlyList<DocxRelatedStory> relatedStories)
     {
         return new DocxStructureBlockSnapshot(
             blockIndex,
@@ -213,6 +224,7 @@ internal sealed record DocxStructureSnapshot(
             InlineImageCount: paragraph.Images.Count,
             InlineReferenceCount: paragraph.InlineReferences.Count,
             AnchoredInlineReferenceCount: paragraph.InlineReferences.Count(HasInlineReferenceAnchor),
+            ResolvedInlineReferenceCount: ParagraphResolvedInlineReferenceCount(paragraph, relatedStories),
             MaxInlineReferenceTextOffsetInRun: paragraph.InlineReferences.Select(reference => reference.TextOffsetInRun).DefaultIfEmpty(0).Max(),
             FieldReferenceCount: paragraph.FieldReferences.Count,
             PageFieldReferenceCount: paragraph.FieldReferences.Count(reference => reference.Kind == "Page"),
@@ -252,13 +264,35 @@ internal sealed record DocxStructureSnapshot(
             SnapToGridValue: paragraph.SnapToGridValue);
     }
 
-    private static DocxStructureBlockSnapshot FromTable(int blockIndex, string? previousKind, string? nextKind, DocxTable table, int tableIndex)
+    private static DocxStructureBlockSnapshot FromTable(
+        int blockIndex,
+        string? previousKind,
+        string? nextKind,
+        DocxTable table,
+        int tableIndex,
+        IReadOnlyList<DocxRelatedStory> relatedStories)
     {
+        DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateTableParagraphs(table).ToArray();
         return new DocxStructureBlockSnapshot(
             blockIndex,
             "Table",
             previousKind,
             nextKind,
+            InlineReferenceCount: paragraphs.Sum(ParagraphInlineReferenceCount),
+            AnchoredInlineReferenceCount: paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(HasInlineReferenceAnchor)),
+            ResolvedInlineReferenceCount: paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
+            MaxInlineReferenceTextOffsetInRun: paragraphs.SelectMany(paragraph => paragraph.InlineReferences).Select(reference => reference.TextOffsetInRun).DefaultIfEmpty(0).Max(),
+            CommentReferenceCount: paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == "Comment")),
+            FootnoteReferenceCount: paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == "Footnote")),
+            EndnoteReferenceCount: paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == "Endnote")),
+            FieldReferenceCount: paragraphs.Sum(ParagraphFieldReferenceCount),
+            PageFieldReferenceCount: paragraphs.Sum(ParagraphPageFieldReferenceCount),
+            NumPagesFieldReferenceCount: paragraphs.Sum(ParagraphNumPagesFieldReferenceCount),
+            OtherFieldReferenceCount: paragraphs.Sum(ParagraphOtherFieldReferenceCount),
+            BookmarkAnchorCount: paragraphs.Sum(ParagraphBookmarkAnchorCount),
+            HyperlinkCount: paragraphs.Sum(ParagraphHyperlinkCount),
+            ExternalHyperlinkCount: paragraphs.Sum(ParagraphExternalHyperlinkCount),
+            InternalHyperlinkCount: paragraphs.Sum(ParagraphInternalHyperlinkCount),
             TableRowCount: table.Rows.Count,
             TableIndex: tableIndex,
             TableMaxColumnCount: MaxColumnCount(table),
@@ -549,6 +583,11 @@ internal sealed record DocxStructureSnapshot(
         return paragraph.InlineReferences.Count;
     }
 
+    private static int ParagraphResolvedInlineReferenceCount(DocxParagraph paragraph, IReadOnlyList<DocxRelatedStory> relatedStories)
+    {
+        return paragraph.InlineReferences.Count(reference => InlineReferenceResolves(reference, relatedStories));
+    }
+
     private static int ParagraphFieldReferenceCount(DocxParagraph paragraph)
     {
         return paragraph.FieldReferences.Count;
@@ -592,6 +631,14 @@ internal sealed record DocxStructureSnapshot(
     private static bool HasInlineReferenceAnchor(DocxInlineReference reference)
     {
         return reference.SourceRunIndex >= 0 && reference.RunChildIndex >= 0;
+    }
+
+    private static bool InlineReferenceResolves(DocxInlineReference reference, IReadOnlyList<DocxRelatedStory> relatedStories)
+    {
+        return reference.Id is not null &&
+            relatedStories.Any(story =>
+                string.Equals(story.Kind, reference.Kind, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(story.Id, reference.Id, StringComparison.Ordinal));
     }
 
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(
@@ -736,6 +783,7 @@ internal sealed record DocxStructureBlockSnapshot(
     int InlineImageCount = 0,
     int InlineReferenceCount = 0,
     int AnchoredInlineReferenceCount = 0,
+    int ResolvedInlineReferenceCount = 0,
     int MaxInlineReferenceTextOffsetInRun = 0,
     int CommentReferenceCount = 0,
     int FootnoteReferenceCount = 0,
@@ -806,6 +854,7 @@ internal sealed record DocxStructureStorySnapshot(
     int TextLength,
     int InlineImageCount,
     int InlineReferenceCount,
+    int ResolvedInlineReferenceCount,
     int FieldReferenceCount,
     int BookmarkAnchorCount,
     int HyperlinkCount,

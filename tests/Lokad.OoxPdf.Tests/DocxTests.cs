@@ -12096,14 +12096,16 @@ internal static class DocxTests
         DocxStructureBlockSnapshot referenceBlock = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(3, snapshot.InlineReferenceCount);
         TestAssert.Equal(3, snapshot.AnchoredInlineReferenceCount);
+        TestAssert.Equal(3, snapshot.ResolvedInlineReferenceCount);
         TestAssert.Equal(6, snapshot.MaxInlineReferenceTextOffsetInRun);
         TestAssert.Equal(3, referenceBlock.InlineReferenceCount);
         TestAssert.Equal(3, referenceBlock.AnchoredInlineReferenceCount);
+        TestAssert.Equal(3, referenceBlock.ResolvedInlineReferenceCount);
         TestAssert.Equal(6, referenceBlock.MaxInlineReferenceTextOffsetInRun);
         TestAssert.Equal(1, referenceBlock.CommentReferenceCount);
         TestAssert.Equal(1, referenceBlock.FootnoteReferenceCount);
         TestAssert.Equal(1, referenceBlock.EndnoteReferenceCount);
-        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Body" && story.InlineReferenceCount == 3), "Structure snapshots should expose body inline story-reference ownership.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Body" && story.InlineReferenceCount == 3 && story.ResolvedInlineReferenceCount == 3), "Structure snapshots should expose body inline story-reference ownership.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.BlockCount == 3 && story.ParagraphCount == 2 && story.TableCount == 1 && story.TextLength == 37 && story.HyperlinkCount == 1 && story.ExternalHyperlinkCount == 1), "Structure snapshots should expose comment story ownership, hyperlinks, and table metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footnote" && story.Scope == "/word/footnotes.xml" && story.VariantType == "2" && story.TextLength == 13), "Structure snapshots should expose footnote story text metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Endnote" && story.Scope == "/word/endnotes.xml" && story.VariantType == "3" && story.TextLength == 12), "Structure snapshots should expose endnote story text metrics.");

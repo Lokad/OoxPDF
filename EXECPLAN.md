@@ -6977,8 +6977,14 @@ Current validation baseline:
   Keep non-rendered related-story links open, and keep deeper bookmark mapping open for offsets within a
   wrapped text run. 2026-06-02 inline-container follow-up: `DocxReader` now uses a shared
   inline-child dispatcher for hyperlink and inserted-run containers, so `w:bookmarkStart` anchors inside those
-  containers are preserved in source/text order instead of being skipped by run-only traversal. Focused
-  coverage locks bookmark anchors inside `w:hyperlink`.
+    containers are preserved in source/text order instead of being skipped by run-only traversal. Focused
+    coverage locks bookmark anchors inside `w:hyperlink`.
+    2026-06-02 architecture follow-up: `DocxStructureSnapshot` now distinguishes syntactic inline
+    comment/footnote/endnote references from references that resolve to parsed related story bodies. Document,
+    body/table block, and story snapshots expose `ResolvedInlineReferenceCount`, using only kind/id matches
+    against preserved related stories. This still does not place comment, footnote, or endnote stories, but it
+    removes a provenance gap before any story-owned layout/link rectangle work: unresolved references can stay
+    diagnostic, while resolved ones have a known target body. Validation passed `docx-core --skip-slow` (`52`).
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off
