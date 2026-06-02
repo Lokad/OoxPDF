@@ -14,6 +14,10 @@ internal sealed record DocxStructureSnapshot(
     int InlineReferenceCount,
     int AnchoredInlineReferenceCount,
     int MaxInlineReferenceTextOffsetInRun,
+    int FieldReferenceCount,
+    int PageFieldReferenceCount,
+    int NumPagesFieldReferenceCount,
+    int OtherFieldReferenceCount,
     int BookmarkAnchorCount,
     int HyperlinkCount,
     int ExternalHyperlinkCount,
@@ -77,6 +81,10 @@ internal sealed record DocxStructureSnapshot(
             blocks.Sum(block => block.InlineReferenceCount),
             blocks.Sum(block => block.AnchoredInlineReferenceCount),
             blocks.Select(block => block.MaxInlineReferenceTextOffsetInRun).DefaultIfEmpty(0).Max(),
+            allParagraphs.Sum(ParagraphFieldReferenceCount),
+            allParagraphs.Sum(ParagraphPageFieldReferenceCount),
+            allParagraphs.Sum(ParagraphNumPagesFieldReferenceCount),
+            allParagraphs.Sum(ParagraphOtherFieldReferenceCount),
             allParagraphs.Sum(ParagraphBookmarkAnchorCount),
             blocks.Sum(block => block.HyperlinkCount),
             blocks.Sum(block => block.ExternalHyperlinkCount),
@@ -108,6 +116,7 @@ internal sealed record DocxStructureSnapshot(
                 bodyBlocks.Sum(block => block.TextLength),
                 bodyBlocks.Sum(block => block.InlineImageCount),
                 bodyBlocks.Sum(block => block.InlineReferenceCount),
+                DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(ParagraphFieldReferenceCount),
                 DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(ParagraphBookmarkAnchorCount),
                 bodyBlocks.Sum(block => block.HyperlinkCount),
                 bodyBlocks.Sum(block => block.ExternalHyperlinkCount),
@@ -152,6 +161,7 @@ internal sealed record DocxStructureSnapshot(
                 entry.Value.Sum(TextLength),
                 entry.Value.Sum(paragraph => paragraph.Images.Count),
                 entry.Value.Sum(ParagraphInlineReferenceCount),
+                entry.Value.Sum(ParagraphFieldReferenceCount),
                 entry.Value.Sum(ParagraphBookmarkAnchorCount),
                 entry.Value.Sum(ParagraphHyperlinkCount),
                 entry.Value.Sum(ParagraphExternalHyperlinkCount),
@@ -180,6 +190,7 @@ internal sealed record DocxStructureSnapshot(
                 paragraphs.Sum(TextLength),
                 paragraphs.Sum(paragraph => paragraph.Images.Count),
                 paragraphs.Sum(ParagraphInlineReferenceCount),
+                paragraphs.Sum(ParagraphFieldReferenceCount),
                 paragraphs.Sum(ParagraphBookmarkAnchorCount),
                 paragraphs.Sum(ParagraphHyperlinkCount),
                 paragraphs.Sum(ParagraphExternalHyperlinkCount),
@@ -203,6 +214,10 @@ internal sealed record DocxStructureSnapshot(
             InlineReferenceCount: paragraph.InlineReferences.Count,
             AnchoredInlineReferenceCount: paragraph.InlineReferences.Count(HasInlineReferenceAnchor),
             MaxInlineReferenceTextOffsetInRun: paragraph.InlineReferences.Select(reference => reference.TextOffsetInRun).DefaultIfEmpty(0).Max(),
+            FieldReferenceCount: paragraph.FieldReferences.Count,
+            PageFieldReferenceCount: paragraph.FieldReferences.Count(reference => reference.Kind == "Page"),
+            NumPagesFieldReferenceCount: paragraph.FieldReferences.Count(reference => reference.Kind == "NumPages"),
+            OtherFieldReferenceCount: paragraph.FieldReferences.Count(reference => reference.Kind == "Other"),
             BookmarkAnchorCount: paragraph.BookmarkAnchors.Count,
             CommentReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Comment"),
             FootnoteReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Footnote"),
@@ -527,6 +542,26 @@ internal sealed record DocxStructureSnapshot(
         return paragraph.InlineReferences.Count;
     }
 
+    private static int ParagraphFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count;
+    }
+
+    private static int ParagraphPageFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.Kind == "Page");
+    }
+
+    private static int ParagraphNumPagesFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.Kind == "NumPages");
+    }
+
+    private static int ParagraphOtherFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.Kind == "Other");
+    }
+
     private static int ParagraphBookmarkAnchorCount(DocxParagraph paragraph)
     {
         return paragraph.BookmarkAnchors.Count;
@@ -698,6 +733,10 @@ internal sealed record DocxStructureBlockSnapshot(
     int CommentReferenceCount = 0,
     int FootnoteReferenceCount = 0,
     int EndnoteReferenceCount = 0,
+    int FieldReferenceCount = 0,
+    int PageFieldReferenceCount = 0,
+    int NumPagesFieldReferenceCount = 0,
+    int OtherFieldReferenceCount = 0,
     int BookmarkAnchorCount = 0,
     int HyperlinkCount = 0,
     int ExternalHyperlinkCount = 0,
@@ -760,6 +799,7 @@ internal sealed record DocxStructureStorySnapshot(
     int TextLength,
     int InlineImageCount,
     int InlineReferenceCount,
+    int FieldReferenceCount,
     int BookmarkAnchorCount,
     int HyperlinkCount,
     int ExternalHyperlinkCount,

@@ -719,6 +719,7 @@ internal sealed class DocxReader
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
         var inlineReferences = new List<DocxInlineReference>();
+        var fieldReferences = new List<DocxFieldReference>();
         var hyperlinkSpans = new List<DocxHyperlinkSpan>();
         var bookmarkAnchors = new List<DocxBookmarkAnchor>();
         bool pageInstructionSeen = false;
@@ -808,6 +809,7 @@ internal sealed class DocxReader
             SnapToGrid = resolvedParagraph.SnapToGrid,
             SnapToGridValue = resolvedParagraph.SnapToGridValue,
             InlineReferences = inlineReferences,
+            FieldReferences = fieldReferences,
             Hyperlinks = hyperlinkSpans,
             BookmarkAnchors = bookmarkAnchors
         };
@@ -849,7 +851,16 @@ internal sealed class DocxReader
 
         void AddSimpleField(XElement field)
         {
-            string? placeholder = ResolveFieldPlaceholder((string?)field.Attribute(WordprocessingNamespace + "instr"));
+            string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
+            string kind = ResolveFieldKind(instruction);
+            string? placeholder = ResolveFieldPlaceholder(instruction);
+            fieldReferences.Add(new DocxFieldReference(
+                kind,
+                "Simple",
+                instruction,
+                placeholder,
+                sourceRunIndex,
+                runs.Count));
             if (placeholder is not null)
             {
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
@@ -887,10 +898,22 @@ internal sealed class DocxReader
             int currentSourceRunIndex = sourceRunIndex++;
             AddInlineReferences(run, currentSourceRunIndex);
             string text = ReadRunText(run);
-            string? placeholder = run
+            string? fieldInstruction = run
                 .Elements(WordprocessingNamespace + "instrText")
-                .Select(instruction => ResolveFieldPlaceholder((string?)instruction))
+                .Select(instruction => (string?)instruction)
                 .FirstOrDefault(value => value is not null);
+            string? placeholder = ResolveFieldPlaceholder(fieldInstruction);
+            if (fieldInstruction is not null)
+            {
+                fieldReferences.Add(new DocxFieldReference(
+                    ResolveFieldKind(fieldInstruction),
+                    "ComplexInstruction",
+                    fieldInstruction,
+                    placeholder,
+                    currentSourceRunIndex,
+                    runs.Count));
+            }
+
             if (placeholder is not null)
             {
                 text = placeholder;
@@ -962,20 +985,40 @@ internal sealed class DocxReader
 
     private static string? ResolveFieldPlaceholder(string? instruction)
     {
-        if (instruction is null)
+        return ResolveFieldKind(instruction) switch
+        {
+            "NumPages" => "{NUMPAGES}",
+            "Page" => "{PAGE}",
+            _ => null
+        };
+    }
+
+    private static string ResolveFieldKind(string? instruction)
+    {
+        string? opcode = ReadFieldOpcode(instruction);
+        return opcode switch
+        {
+            "PAGE" => "Page",
+            "NUMPAGES" => "NumPages",
+            _ => "Other"
+        };
+    }
+
+    private static string? ReadFieldOpcode(string? instruction)
+    {
+        if (string.IsNullOrWhiteSpace(instruction))
         {
             return null;
         }
 
-        string normalized = instruction.ToUpperInvariant();
-        if (normalized.Contains("NUMPAGES", StringComparison.Ordinal))
+        ReadOnlySpan<char> trimmed = instruction.AsSpan().TrimStart();
+        int length = 0;
+        while (length < trimmed.Length && char.IsLetter(trimmed[length]))
         {
-            return "{NUMPAGES}";
+            length++;
         }
 
-        return normalized.Contains("PAGE", StringComparison.Ordinal)
-            ? "{PAGE}"
-            : null;
+        return length == 0 ? null : trimmed[..length].ToString().ToUpperInvariant();
     }
 
     private static string? ReadCharacterStyleId(XElement run)

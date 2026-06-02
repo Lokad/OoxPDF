@@ -3292,6 +3292,74 @@ internal static class DocxTests
         TestAssert.Equal(" After", runs[2].Text);
     }
 
+    public static void DocxReaderPreservesFieldReferencesStructurally()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:fldSimple w:instr=" PAGE "/>
+                      <w:fldSimple w:instr=" NUMPAGES "/>
+                      <w:fldSimple w:instr=" PAGEREF Target "><w:r><w:t>TargetValue</w:t></w:r></w:fldSimple>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> PAGE </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:r><w:t>1</w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+
+        TestAssert.Equal(4, paragraph.FieldReferences.Count);
+        TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.Kind == "Page"));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Kind == "NumPages"));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Kind == "Other"));
+        TestAssert.Equal(3, paragraph.FieldReferences.Count(field => field.SourceKind == "Simple"));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.SourceKind == "ComplexInstruction"));
+        TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.Placeholder == "{PAGE}"));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Placeholder == "{NUMPAGES}"));
+        TestAssert.True(paragraph.FieldReferences.Single(field => field.Instruction?.Contains("PAGEREF", StringComparison.Ordinal) == true).Placeholder is null, "PAGEREF should not be treated as a PAGE placeholder.");
+        TestAssert.Equal("{PAGE}{NUMPAGES}TargetValue{PAGE}", string.Concat(paragraph.Runs.Select(run => run.Text)));
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
+        DocxStructureStorySnapshot bodyStory = snapshot.Stories.Single(story => story.Kind == "Body");
+        TestAssert.Equal(4, snapshot.FieldReferenceCount);
+        TestAssert.Equal(2, snapshot.PageFieldReferenceCount);
+        TestAssert.Equal(1, snapshot.NumPagesFieldReferenceCount);
+        TestAssert.Equal(1, snapshot.OtherFieldReferenceCount);
+        TestAssert.Equal(4, block.FieldReferenceCount);
+        TestAssert.Equal(2, block.PageFieldReferenceCount);
+        TestAssert.Equal(1, block.NumPagesFieldReferenceCount);
+        TestAssert.Equal(1, block.OtherFieldReferenceCount);
+        TestAssert.Equal(4, bodyStory.FieldReferenceCount);
+    }
+
     public static void DocxComplexFieldWithCachedResultDoesNotEmitUnsupportedDiagnostic()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
