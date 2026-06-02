@@ -18,6 +18,13 @@ internal sealed record DocxLineHeightProfile(
     double? EffectiveLineSpacingFactor,
     bool LineSpacingFactorFloorApplied);
 
+internal sealed record DocxParagraphSpacingProfile(
+    double PendingAfterSpacing,
+    double ParagraphBeforeSpacing,
+    double ParagraphAfterSpacing,
+    double AppliedBeforeSpacing,
+    bool ContextualSpacingSuppressed);
+
 internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxLayoutPageSnapshot> Pages,
     IReadOnlyList<DocxTableSnapshot> Tables,
@@ -204,7 +211,11 @@ internal sealed record DocxLayoutSnapshot(
                 text.ListLabelWindowsLineHeight,
                 text.EffectiveLineSpacingFactor,
                 text.LineSpacingFactorFloorApplied,
-                text.IsFirstParagraphLine),
+                text.IsFirstParagraphLine,
+                text.PendingAfterSpacing,
+                text.ParagraphBeforeSpacing,
+                text.ParagraphAfterSpacing,
+                text.ContextualSpacingSuppressed),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
                 image.X,
@@ -224,7 +235,11 @@ internal sealed record DocxLayoutSnapshot(
                 ListLabelWindowsLineHeightPoints: null,
                 EffectiveLineSpacingFactor: null,
                 LineSpacingFactorFloorApplied: null,
-                IsFirstParagraphLine: null),
+                IsFirstParagraphLine: null,
+                PendingAfterSpacingPoints: null,
+                ParagraphBeforeSpacingPoints: null,
+                ParagraphAfterSpacingPoints: null,
+                ContextualSpacingSuppressed: null),
             DocxTableRowLayout row => new DocxLayoutItemSnapshot(
                 "TableRow",
                 row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
@@ -244,8 +259,12 @@ internal sealed record DocxLayoutSnapshot(
                 ListLabelWindowsLineHeightPoints: null,
                 EffectiveLineSpacingFactor: null,
                 LineSpacingFactorFloorApplied: null,
-                IsFirstParagraphLine: null),
-            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null)
+                IsFirstParagraphLine: null,
+                PendingAfterSpacingPoints: null,
+                ParagraphBeforeSpacingPoints: null,
+                ParagraphAfterSpacingPoints: null,
+                ContextualSpacingSuppressed: null),
+            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
         };
     }
 
@@ -511,7 +530,11 @@ internal sealed record DocxLayoutItemSnapshot(
     double? ListLabelWindowsLineHeightPoints,
     double? EffectiveLineSpacingFactor,
     bool? LineSpacingFactorFloorApplied,
-    bool? IsFirstParagraphLine);
+    bool? IsFirstParagraphLine,
+    double? PendingAfterSpacingPoints,
+    double? ParagraphBeforeSpacingPoints,
+    double? ParagraphAfterSpacingPoints,
+    bool? ContextualSpacingSuppressed);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,
@@ -719,6 +742,10 @@ internal sealed record DocxTextLineLayout(
     double? ListLabelWindowsLineHeight = null,
     double? EffectiveLineSpacingFactor = null,
     bool? LineSpacingFactorFloorApplied = null,
+    double? PendingAfterSpacing = null,
+    double? ParagraphBeforeSpacing = null,
+    double? ParagraphAfterSpacing = null,
+    bool? ContextualSpacingSuppressed = null,
     DocxParagraph? SourceParagraph = null) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
@@ -1055,12 +1082,10 @@ internal sealed class DocxLayoutEngine
             {
                 if (pageBreak.BreakParagraph is { } breakParagraph)
                 {
-                    double breakBeforeSpacing = ShouldSuppressContextualSpacing(previousParagraph, breakParagraph)
-                        ? 0d
-                        : Math.Max(pendingSpacingAfter, breakParagraph.SpacingBeforePoints);
+                    DocxParagraphSpacingProfile breakSpacingProfile = ResolveParagraphSpacingProfile(previousParagraph, breakParagraph, pendingSpacingAfter);
                     double breakFontSize = GetParagraphFontSize(breakParagraph);
                     double breakLineHeight = ResolveLineHeight(breakParagraph, breakFontSize, textMeasurer);
-                    double paragraphAdvance = breakBeforeSpacing + breakLineHeight;
+                    double paragraphAdvance = breakSpacingProfile.AppliedBeforeSpacing + breakLineHeight;
                     if (cursorY - paragraphAdvance < page.MarginBottom && HasPageContent())
                     {
                         FinishPage();
@@ -1119,10 +1144,8 @@ internal sealed class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
-            double appliedBeforeSpacing = ShouldSuppressContextualSpacing(previousParagraph, paragraph)
-                ? 0d
-                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
-            cursorY -= appliedBeforeSpacing;
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             double paragraphFontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, paragraphFontSize, textMeasurer);
@@ -1194,7 +1217,7 @@ internal sealed class DocxLayoutEngine
                         SourceParagraphIndex: 0,
                         SourceLineIndex: lineIndex,
                         LineHeight: lineHeight,
-                        AppliedBeforeSpacing: firstLine ? appliedBeforeSpacing : 0d,
+                        AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: firstLine,
                         EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
                         SingleLineHeight: lineHeightProfile.SingleLineHeight,
@@ -1203,6 +1226,10 @@ internal sealed class DocxLayoutEngine
                         ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                         EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                         LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                        PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
+                        ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
+                        ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
+                        ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
                         StoryKind: "Body"));
                     firstLine = false;
@@ -1247,7 +1274,7 @@ internal sealed class DocxLayoutEngine
                 cursorY -= imageHeight + 6d;
             }
 
-            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
 
@@ -1317,10 +1344,8 @@ internal sealed class DocxLayoutEngine
         for (int paragraphIndex = 0; paragraphIndex < paragraphs.Count; paragraphIndex++)
         {
             DocxParagraph paragraph = paragraphs[paragraphIndex];
-            double appliedBeforeSpacing = ShouldSuppressContextualSpacing(previousParagraph, paragraph)
-                ? 0d
-                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
-            cursorY -= appliedBeforeSpacing;
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs, pageNumber, pageCount);
             if (spans.Length == 0)
@@ -1357,18 +1382,21 @@ internal sealed class DocxLayoutEngine
                     lineWidth,
                     segments,
                     LineHeight: ascender + descender,
-                    AppliedBeforeSpacing: appliedBeforeSpacing,
+                    AppliedBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                     IsFirstParagraphLine: sourceLineIndex == 0,
                     SourceLineIndex: sourceLineIndex,
+                    PendingAfterSpacing: sourceLineIndex == 0 ? spacingProfile.PendingAfterSpacing : null,
+                    ParagraphBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.ParagraphBeforeSpacing : null,
+                    ParagraphAfterSpacing: sourceLineIndex == 0 ? spacingProfile.ParagraphAfterSpacing : null,
+                    ContextualSpacingSuppressed: sourceLineIndex == 0 ? spacingProfile.ContextualSpacingSuppressed : null,
                     SourceParagraph: paragraph,
                     SourceParagraphIndex: paragraphIndex,
                     StoryKind: isHeader ? "Header" : "Footer"));
-                appliedBeforeSpacing = 0d;
                 sourceLineIndex++;
                 cursorY -= ascender + descender;
             }
 
-            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
 
@@ -1811,6 +1839,23 @@ internal sealed class DocxLayoutEngine
             previousParagraph?.StyleId is not null &&
             paragraph.StyleId is not null &&
             string.Equals(previousParagraph.StyleId, paragraph.StyleId, StringComparison.Ordinal);
+    }
+
+    private static DocxParagraphSpacingProfile ResolveParagraphSpacingProfile(
+        DocxParagraph? previousParagraph,
+        DocxParagraph paragraph,
+        double pendingAfterSpacing)
+    {
+        bool suppress = ShouldSuppressContextualSpacing(previousParagraph, paragraph);
+        double appliedBefore = suppress
+            ? 0d
+            : Math.Max(pendingAfterSpacing, paragraph.SpacingBeforePoints);
+        return new DocxParagraphSpacingProfile(
+            pendingAfterSpacing,
+            paragraph.SpacingBeforePoints,
+            paragraph.SpacingAfterPoints,
+            appliedBefore,
+            suppress);
     }
 
     private static DocxKeepBlockEstimate EstimateKeptParagraphBlock(
@@ -2748,9 +2793,8 @@ internal sealed class DocxLayoutEngine
         DocxParagraph? previousParagraph = null;
         foreach (DocxParagraph paragraph in paragraphs)
         {
-            contentHeight += ShouldSuppressContextualSpacing(previousParagraph, paragraph)
-                ? 0d
-                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            contentHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             double fontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
@@ -2776,7 +2820,7 @@ internal sealed class DocxLayoutEngine
                 contentHeight += imageHeight + 6d;
             }
 
-            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
 
@@ -2819,10 +2863,8 @@ internal sealed class DocxLayoutEngine
         for (int paragraphIndex = 0; paragraphIndex < paragraphs.Count; paragraphIndex++)
         {
             DocxParagraph paragraph = paragraphs[paragraphIndex];
-            double appliedBeforeSpacing = ShouldSuppressContextualSpacing(previousParagraph, paragraph)
-                ? 0d
-                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
-            cursorY -= appliedBeforeSpacing;
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             double fontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
@@ -2883,7 +2925,7 @@ internal sealed class DocxLayoutEngine
                         SourceLineIndex: lineIndex,
                         StoryKind: "TableCell",
                         LineHeight: lineHeight,
-                        AppliedBeforeSpacing: firstLine ? appliedBeforeSpacing : 0d,
+                        AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: firstLine,
                         EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
                         SingleLineHeight: lineHeightProfile.SingleLineHeight,
@@ -2892,6 +2934,10 @@ internal sealed class DocxLayoutEngine
                         ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                         EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                         LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                        PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
+                        ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
+                        ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
+                        ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph));
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
@@ -2900,7 +2946,7 @@ internal sealed class DocxLayoutEngine
                 }
             }
 
-            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
 
@@ -2951,9 +2997,8 @@ internal sealed class DocxLayoutEngine
         DocxParagraph? previousParagraph = null;
         foreach (DocxParagraph paragraph in paragraphs)
         {
-            cursorY -= ShouldSuppressContextualSpacing(previousParagraph, paragraph)
-                ? 0d
-                : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             if (textMeasurer is not null)
             {
@@ -2989,7 +3034,7 @@ internal sealed class DocxLayoutEngine
                 cursorY -= imageHeight + 6d;
             }
 
-            pendingSpacingAfter = paragraph.SpacingAfterPoints;
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
 

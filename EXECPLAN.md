@@ -44,6 +44,9 @@ keep diagnostics honest when a feature is still missing.
 - `tools/SummarizeDocxRowBoundary.ps1`: private-safe DOCX table-row boundary summary for visual run directories.
   It combines layout-snapshot row bands and PDF text rows near the page bottom, emitting row indices, geometry,
   baseline diagnostics, lengths, and hashes without decoded document text.
+- `tools/CompareDocxLayoutPdfFlow.ps1`: private-safe DOCX layout/PDF row matcher that carries source indexes,
+  line-height profile fields, paragraph spacing profile fields, and row-advance buckets for Office/candidate
+  flow comparisons.
 - `tools/SummarizePdfTextPageDeltas.ps1`: private-safe per-page Office/candidate PDF text-operation summary
   for visual run directories. It reports operation counts, `Tc` buckets, text-class buckets, and coordinate
   span deltas without decoded document text.
@@ -507,6 +510,13 @@ High-priority actions:
   Bottom-up numbering coverage also now asserts the accepted Office-observed numbering-tab structure:
   marker geometry stays at `left - hanging`, while the following paragraph text advances to the
   numbering-tab/left target. Keep this distinction explicit in future compact-list and text-state work.
+  2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
+  `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
+  `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first
+  paragraph lines across body, static header/footer, and table-cell text. `CompareDocxLayoutPdfFlow.ps1` now
+  maps those fields and emits paragraph spacing profile buckets. This is diagnostic groundwork for separating
+  the first list-boundary gap from repeated compact-list row rhythm; do not turn it into a new spacing rule
+  until the Office PDF row deltas point to a structural discriminator.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table

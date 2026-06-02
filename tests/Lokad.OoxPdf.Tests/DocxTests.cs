@@ -10003,9 +10003,15 @@ internal static class DocxTests
 
         TestAssert.Equal(4, textLines.Length);
         TestAssert.Equal(10d, textLines[0].SingleLineHeightPoints ?? 0d);
+        TestAssert.Equal(0d, textLines[0].PendingAfterSpacingPoints ?? -1d);
+        TestAssert.Equal(6d, textLines[0].ParagraphBeforeSpacingPoints ?? 0d);
+        TestAssert.Equal(0d, textLines[0].ParagraphAfterSpacingPoints ?? -1d);
+        TestAssert.True(textLines[0].ContextualSpacingSuppressed == false, "First paragraph should report that contextual spacing suppression did not apply.");
         TestAssert.Equal(1.19d, textLines[0].EffectiveLineSpacingFactor ?? 0d);
         TestAssert.True(Math.Abs((textLines[0].LineHeightPoints ?? 0d) - 11.9d) < 0.0001d, "Effective line height should be the measured single-line height multiplied by the effective factor.");
         TestAssert.True(textLines[0].LineSpacingFactorFloorApplied == true, "Positive before-spacing list paragraphs should report the Word-compatible auto-line floor.");
+        TestAssert.Equal(0d, textLines[1].PendingAfterSpacingPoints ?? -1d);
+        TestAssert.Equal(0d, textLines[1].ParagraphBeforeSpacingPoints ?? -1d);
         TestAssert.Equal(1.15d, textLines[1].EffectiveLineSpacingFactor ?? 0d);
         TestAssert.True(textLines[1].LineSpacingFactorFloorApplied == false, "Lists without positive before spacing should not report the floor.");
         TestAssert.Equal(1.2d, textLines[2].EffectiveLineSpacingFactor ?? 0d);

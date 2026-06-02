@@ -220,6 +220,10 @@ function Get-LayoutLines($Layout) {
                 EffectiveLineSpacingFactor = if ($null -eq $item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$item.EffectiveLineSpacingFactor, 6) }
                 LineSpacingFactorFloorApplied = $item.LineSpacingFactorFloorApplied
                 IsFirstParagraphLine = $item.IsFirstParagraphLine
+                PendingAfterSpacingPoints = if ($null -eq $item.PendingAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.PendingAfterSpacingPoints, 6) }
+                ParagraphBeforeSpacingPoints = if ($null -eq $item.ParagraphBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphBeforeSpacingPoints, 6) }
+                ParagraphAfterSpacingPoints = if ($null -eq $item.ParagraphAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphAfterSpacingPoints, 6) }
+                ContextualSpacingSuppressed = $item.ContextualSpacingSuppressed
             })
         }
     }
@@ -332,6 +336,10 @@ foreach ($line in $layoutLines) {
             EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
             LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
             IsFirstParagraphLine = $line.IsFirstParagraphLine
+            PendingAfterSpacingPoints = $line.PendingAfterSpacingPoints
+            ParagraphBeforeSpacingPoints = $line.ParagraphBeforeSpacingPoints
+            ParagraphAfterSpacingPoints = $line.ParagraphAfterSpacingPoints
+            ContextualSpacingSuppressed = $line.ContextualSpacingSuppressed
         })
         continue
     }
@@ -368,6 +376,10 @@ foreach ($line in $layoutLines) {
         EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
         LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
         IsFirstParagraphLine = $line.IsFirstParagraphLine
+        PendingAfterSpacingPoints = $line.PendingAfterSpacingPoints
+        ParagraphBeforeSpacingPoints = $line.ParagraphBeforeSpacingPoints
+        ParagraphAfterSpacingPoints = $line.ParagraphAfterSpacingPoints
+        ContextualSpacingSuppressed = $line.ContextualSpacingSuppressed
     })
 }
 
@@ -429,6 +441,25 @@ $summary = [pscustomobject]@{
             ForEach-Object {
                 [pscustomobject]@{
                     LineSpacingFactorFloorApplied = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+    CandidateParagraphSpacingProfileBuckets = @(
+        $layoutLines |
+            Where-Object { $_.IsFirstParagraphLine -eq $true } |
+            Group-Object {
+                $pending = if ($null -eq $_.PendingAfterSpacingPoints) { "null" } else { ([double]$_.PendingAfterSpacingPoints).ToString("0.000", [Globalization.CultureInfo]::InvariantCulture) }
+                $before = if ($null -eq $_.ParagraphBeforeSpacingPoints) { "null" } else { ([double]$_.ParagraphBeforeSpacingPoints).ToString("0.000", [Globalization.CultureInfo]::InvariantCulture) }
+                $after = if ($null -eq $_.ParagraphAfterSpacingPoints) { "null" } else { ([double]$_.ParagraphAfterSpacingPoints).ToString("0.000", [Globalization.CultureInfo]::InvariantCulture) }
+                $suppressed = if ($_.ContextualSpacingSuppressed -eq $true) { "true" } elseif ($_.ContextualSpacingSuppressed -eq $false) { "false" } else { "null" }
+                "pendingAfter=$pending|before=$before|after=$after|suppressed=$suppressed"
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    Profile = $_.Name
                     Count = $_.Count
                 }
             }
