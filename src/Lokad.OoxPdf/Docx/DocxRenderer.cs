@@ -97,9 +97,9 @@ internal sealed class DocxRenderer
                 diagnosticSink,
                 ref imageIndex);
 
-            foreach (DocxTextLineLayout staticLine in layoutPage.StaticTextLines)
+            foreach (DocxLayoutItem staticItem in EnumerateStaticLayoutItems(layoutPage))
             {
-                RenderTextLine(staticLine, graphics, fontResources, pageNumber, layout.Pages.Count);
+                RenderLayoutItem(staticItem, previousRow: null, nextRow: null, graphics, pageImages, fontResources, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
             }
 
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
@@ -701,6 +701,19 @@ internal sealed class DocxRenderer
                     break;
             }
         }
+    }
+
+    private static IEnumerable<DocxLayoutItem> EnumerateStaticLayoutItems(DocxLayoutPage page)
+    {
+        return page.StaticTextLines
+            .Cast<DocxLayoutItem>()
+            .Concat(page.StaticInlineImages)
+            .OrderByDescending(item => item switch
+            {
+                DocxTextLineLayout textLine => textLine.BaselineY,
+                DocxInlineImageLayout image => image.Y + image.Height,
+                _ => 0d
+            });
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateTableRowTextLines(DocxTableRowLayout row)

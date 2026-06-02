@@ -7472,6 +7472,16 @@ Current validation baseline:
   rows. Validation built `Lokad.OoxPdf.DocxInspect`, parsed the PowerShell script, smoked `DocxInspect` on
   public `docx-headers-footers.docx`, and ran the comparer switch on a public DOCX visual run. Keep
   Office-derived static header/footer row acceptance gates and non-text static drawings open.
+  2026-06-02 architecture follow-up: selected static header/footer inline images now use the same first-class
+  `DocxInlineImageLayout` path as body, table-cell, and related-story images instead of being dropped by the
+  text-only static-story builder. `DocxLayoutPage` carries `StaticInlineImages`; grouped `StaticStories` and
+  flat `StaticItems` expose private-safe static image ownership, variant type, paragraph index, geometry, and
+  separate inline-image counts; `DocxRenderer` renders static images through the shared inline-image PDF path.
+  The repeated inline-image paragraph gap literal is now a named layout constant shared by body, table-cell,
+  related-story, and static-story image flow. Bottom-up coverage verifies an image-only selected header.
+  Validation passed `docx-page --skip-slow` (`39`) and `docx-images --skip-slow` (`4`). Keep non-inline
+  header/footer drawings, floating/anchored static story shapes, and Office-derived static header/footer row
+  acceptance gates open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

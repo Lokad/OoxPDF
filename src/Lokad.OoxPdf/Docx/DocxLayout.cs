@@ -437,7 +437,10 @@ internal sealed record DocxLayoutSnapshot(
             frame.Width,
             frame.GutterAfterPoints)).ToArray();
         IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(item => ToSnapshot(item, page.ColumnFrames)).ToArray();
-        IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines.Select(ToStaticSnapshot).ToArray();
+        IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines
+            .Select(ToStaticSnapshot)
+            .Concat(page.StaticInlineImages.Select(ToStaticSnapshot))
+            .ToArray();
         int?[] sourceBlockIndexes = items
             .Select(item => item.SourceBlockIndex)
             .Where(index => index is not null)
@@ -470,6 +473,7 @@ internal sealed record DocxLayoutSnapshot(
             columnFrames,
             items.Count,
             page.StaticTextLines.Count,
+            page.StaticInlineImages.Count,
             items.Count(item => item.Kind == "TextLine"),
             items.Count(item => item.Kind == "InlineImage"),
             items.Count(item => item.Kind == "TableRow"),
@@ -513,7 +517,8 @@ internal sealed record DocxLayoutSnapshot(
                 return new DocxStaticStoryLayoutSnapshot(
                     group.Key.Kind,
                     group.Key.VariantType,
-                    storyItems.Length,
+                    storyItems.Count(item => item.Kind.EndsWith("TextLine", StringComparison.Ordinal)),
+                    storyItems.Count(item => item.Kind.EndsWith("InlineImage", StringComparison.Ordinal)),
                     paragraphIndexes.Length,
                     lineIndexes.Length,
                     storyItems.Sum(item => item.TextLength),
@@ -535,6 +540,8 @@ internal sealed record DocxLayoutSnapshot(
         {
             "StaticHeaderTextLine" => "Header",
             "StaticFooterTextLine" => "Footer",
+            "StaticHeaderInlineImage" => "Header",
+            "StaticFooterInlineImage" => "Footer",
             _ => "Static"
         };
     }
@@ -550,6 +557,17 @@ internal sealed record DocxLayoutSnapshot(
             _ => "StaticTextLine"
         };
         return ToSnapshot(text, []) with { Kind = kind };
+    }
+
+    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxInlineImageLayout image)
+    {
+        string kind = image.StoryKind switch
+        {
+            "Header" => "StaticHeaderInlineImage",
+            "Footer" => "StaticFooterInlineImage",
+            _ => "StaticInlineImage"
+        };
+        return ToSnapshot(image, []) with { Kind = kind };
     }
 
     private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item, IReadOnlyList<DocxLayoutColumnFrame> columnFrames)
@@ -609,7 +627,7 @@ internal sealed record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
-                StoryVariantType: null),
+                image.StoryVariantType),
             DocxTableRowLayout row => new DocxLayoutItemSnapshot(
                 "TableRow",
                 row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
@@ -916,6 +934,7 @@ internal sealed record DocxLayoutPageSnapshot(
     IReadOnlyList<DocxLayoutColumnFrameSnapshot> ColumnFrames,
     int ItemCount,
     int StaticTextLineCount,
+    int StaticInlineImageCount,
     int TextLineCount,
     int InlineImageCount,
     int TableRowCount,
@@ -979,6 +998,7 @@ internal sealed record DocxStaticStoryLayoutSnapshot(
     string Kind,
     string? VariantType,
     int TextLineCount,
+    int InlineImageCount,
     int ParagraphCount,
     int SourceLineCount,
     int TextLength,
@@ -1268,6 +1288,7 @@ internal sealed record DocxLayoutPage(
     DocxSectionLayoutProperties SectionProperties,
     IReadOnlyList<DocxLayoutColumnFrame> ColumnFrames,
     IReadOnlyList<DocxTextLineLayout> StaticTextLines,
+    IReadOnlyList<DocxInlineImageLayout> StaticInlineImages,
     IReadOnlyList<DocxLayoutItem> Items);
 
 internal abstract record DocxLayoutItem;
@@ -1339,7 +1360,9 @@ internal sealed record DocxInlineImageLayout(
     double Height,
     int PageIndex,
     int? SourceBlockIndex = null,
-    int? SourceParagraphIndex = null) : DocxLayoutItem;
+    int? SourceParagraphIndex = null,
+    string? StoryKind = null,
+    string? StoryVariantType = null) : DocxLayoutItem;
 
 internal sealed record DocxTableRowLayout(
     DocxTableLayoutContext Table,
@@ -1596,6 +1619,7 @@ internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocx
 internal sealed class DocxLayoutEngine
 {
     private const double WordDefaultTabStopPoints = 36d;
+    private const double InlineImageParagraphGapPoints = 6d;
     private const double WordListMinimumAutoLineSpacingFactor = 1.19d;
     private const double UnpagedRelatedStoryCanvasHeightPoints = 100000d;
 
@@ -1666,6 +1690,7 @@ internal sealed class DocxLayoutEngine
                 page.PageSettings,
                 page.SectionProperties,
                 page.ColumnFrames,
+                [],
                 [],
                 currentItems.ToArray()));
             currentItems = [];
@@ -1956,7 +1981,7 @@ internal sealed class DocxLayoutEngine
                     SourceBlockIndex: elementIndex,
                     SourceParagraphIndex: 0));
                 activeColumnHasContent = true;
-                cursorY -= imageHeight + 6d;
+                cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -1968,7 +1993,7 @@ internal sealed class DocxLayoutEngine
             FinishPage();
         }
 
-        DocxLayoutPage[] pagesWithStaticText = AddStaticTextLines(pages, textMeasurer).ToArray();
+        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pages, textMeasurer).ToArray();
         return new DocxLayout(
             pagesWithStaticText,
             CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText),
@@ -2098,7 +2123,7 @@ internal sealed class DocxLayoutEngine
                     PageIndex: 0,
                     SourceBlockIndex: elementIndex,
                     SourceParagraphIndex: paragraphIndex));
-                cursorY -= imageHeight + 6d;
+                cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -2426,7 +2451,11 @@ internal sealed class DocxLayoutEngine
         public double Size => Math.Abs(Start - End);
     }
 
-    private static IReadOnlyList<DocxLayoutPage> AddStaticTextLines(IReadOnlyList<DocxLayoutPage> pages, IDocxTextMeasurer? textMeasurer)
+    private sealed record DocxStaticStoryLayoutResult(
+        IReadOnlyList<DocxTextLineLayout> TextLines,
+        IReadOnlyList<DocxInlineImageLayout> InlineImages);
+
+    private static IReadOnlyList<DocxLayoutPage> AddStaticContent(IReadOnlyList<DocxLayoutPage> pages, IDocxTextMeasurer? textMeasurer)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -2447,7 +2476,7 @@ internal sealed class DocxLayoutEngine
                 page.PageSettings.FooterParagraphsByType,
                 page.PageSettings,
                 pageNumber);
-            DocxTextLineLayout[] staticLines = CreateStaticTextLines(
+            DocxStaticStoryLayoutResult headerLayout = CreateStaticStoryLayout(
                     selectedHeader,
                     page.MarginLeft,
                     bodyWidth,
@@ -2456,8 +2485,8 @@ internal sealed class DocxLayoutEngine
                     pageNumber,
                     pages.Count,
                     textMeasurer,
-                    staticMetrics)
-                .Concat(CreateStaticTextLines(
+                    staticMetrics);
+            DocxStaticStoryLayoutResult footerLayout = CreateStaticStoryLayout(
                     selectedFooter,
                     page.MarginLeft,
                     bodyWidth,
@@ -2466,15 +2495,18 @@ internal sealed class DocxLayoutEngine
                     pageNumber,
                     pages.Count,
                     textMeasurer,
-                    staticMetrics))
-                .ToArray();
-            pagesWithStaticText[pageIndex] = page with { StaticTextLines = staticLines };
+                    staticMetrics);
+            pagesWithStaticText[pageIndex] = page with
+            {
+                StaticTextLines = headerLayout.TextLines.Concat(footerLayout.TextLines).ToArray(),
+                StaticInlineImages = headerLayout.InlineImages.Concat(footerLayout.InlineImages).ToArray()
+            };
         }
 
         return pagesWithStaticText;
     }
 
-    private static IReadOnlyList<DocxTextLineLayout> CreateStaticTextLines(
+    private static DocxStaticStoryLayoutResult CreateStaticStoryLayout(
         DocxSelectedStaticStory story,
         double x,
         double width,
@@ -2486,6 +2518,7 @@ internal sealed class DocxLayoutEngine
         IDocxStaticTextMetricsProvider staticMetrics)
     {
         var lines = new List<DocxTextLineLayout>();
+        var images = new List<DocxInlineImageLayout>();
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
@@ -2497,60 +2530,80 @@ internal sealed class DocxLayoutEngine
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs, pageNumber, pageCount);
-            if (spans.Length == 0)
+            int sourceLineIndex = 0;
+            if (spans.Length != 0)
             {
-                previousParagraph = paragraph;
-                continue;
+                foreach (DocxWrappedTextLine line in WrapStaticTextLines(spans, width, textMeasurer))
+                {
+                    if (line.Spans.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer);
+                    double lineX = paragraph.Alignment switch
+                    {
+                        DocxTextAlignment.Center => x + Math.Max(0d, width - lineWidth) / 2d,
+                        DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
+                        _ => x
+                    };
+                    double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.FontSize));
+                    double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.FontSize));
+                    double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
+                    IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX, textMeasurer);
+                    lines.Add(new DocxTextLineLayout(
+                        line.Text,
+                        line.Spans[0].StyleRun,
+                        line.Spans.Max(span => span.StyleRun.FontSize),
+                        lineX,
+                        baselineY,
+                        lineWidth,
+                        segments,
+                        LineHeight: ascender + descender,
+                        AppliedBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
+                        IsFirstParagraphLine: sourceLineIndex == 0,
+                        SourceLineIndex: sourceLineIndex,
+                        PendingAfterSpacing: sourceLineIndex == 0 ? spacingProfile.PendingAfterSpacing : null,
+                        ParagraphBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.ParagraphBeforeSpacing : null,
+                        ParagraphAfterSpacing: sourceLineIndex == 0 ? spacingProfile.ParagraphAfterSpacing : null,
+                        ContextualSpacingSuppressed: sourceLineIndex == 0 ? spacingProfile.ContextualSpacingSuppressed : null,
+                        SourceParagraph: paragraph,
+                        SourceParagraphIndex: paragraphIndex,
+                        StoryKind: isHeader ? "Header" : "Footer",
+                        StoryVariantType: story.VariantType));
+                    sourceLineIndex++;
+                    cursorY -= ascender + descender;
+                }
             }
 
-            int sourceLineIndex = 0;
-            foreach (DocxWrappedTextLine line in WrapStaticTextLines(spans, width, textMeasurer))
+            foreach (DocxInlineImage image in paragraph.Images)
             {
-                if (line.Spans.Count == 0)
+                double imageWidth = Math.Min(width, image.WidthPoints);
+                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                double imageX = paragraph.Alignment switch
                 {
-                    continue;
-                }
-
-                double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer);
-                double lineX = paragraph.Alignment switch
-                {
-                    DocxTextAlignment.Center => x + Math.Max(0d, width - lineWidth) / 2d,
-                    DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
+                    DocxTextAlignment.Center => x + Math.Max(0d, width - imageWidth) / 2d,
+                    DocxTextAlignment.Right => x + Math.Max(0d, width - imageWidth),
                     _ => x
                 };
-                double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.FontSize));
-                double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.FontSize));
-                double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
-                IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX, textMeasurer);
-                lines.Add(new DocxTextLineLayout(
-                    line.Text,
-                    line.Spans[0].StyleRun,
-                    line.Spans.Max(span => span.StyleRun.FontSize),
-                    lineX,
-                    baselineY,
-                    lineWidth,
-                    segments,
-                    LineHeight: ascender + descender,
-                    AppliedBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
-                    IsFirstParagraphLine: sourceLineIndex == 0,
-                    SourceLineIndex: sourceLineIndex,
-                    PendingAfterSpacing: sourceLineIndex == 0 ? spacingProfile.PendingAfterSpacing : null,
-                    ParagraphBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.ParagraphBeforeSpacing : null,
-                    ParagraphAfterSpacing: sourceLineIndex == 0 ? spacingProfile.ParagraphAfterSpacing : null,
-                    ContextualSpacingSuppressed: sourceLineIndex == 0 ? spacingProfile.ContextualSpacingSuppressed : null,
-                    SourceParagraph: paragraph,
+                images.Add(new DocxInlineImageLayout(
+                    image,
+                    imageX,
+                    cursorY - imageHeight,
+                    imageWidth,
+                    imageHeight,
+                    pageNumber,
                     SourceParagraphIndex: paragraphIndex,
                     StoryKind: isHeader ? "Header" : "Footer",
                     StoryVariantType: story.VariantType));
-                sourceLineIndex++;
-                cursorY -= ascender + descender;
+                cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
 
-        return lines;
+        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray());
     }
 
     private static DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs, int pageNumber, int pageCount)
@@ -3231,7 +3284,7 @@ internal sealed class DocxLayoutEngine
         {
             double imageWidth = Math.Min(availableWidth, image.WidthPoints);
             double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-            height += imageHeight + 6d;
+            height += imageHeight + InlineImageParagraphGapPoints;
         }
 
         return height;
@@ -4669,7 +4722,7 @@ internal sealed class DocxLayoutEngine
             {
                 double imageWidth = Math.Min(textWidth, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-                contentHeight += imageHeight + 6d;
+                contentHeight += imageHeight + InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -4939,7 +4992,7 @@ internal sealed class DocxLayoutEngine
                     _ => paragraphX
                 };
                 images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex, SourceParagraphIndex: paragraphIndex));
-                cursorY -= imageHeight + 6d;
+                cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -5077,7 +5130,7 @@ internal sealed class DocxLayoutEngine
         {
             double imageWidth = Math.Min(textWidth, image.WidthPoints);
             double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-            height += imageHeight + 6d;
+            height += imageHeight + InlineImageParagraphGapPoints;
         }
 
         return height;

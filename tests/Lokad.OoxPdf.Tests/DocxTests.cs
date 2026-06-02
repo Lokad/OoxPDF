@@ -12793,6 +12793,59 @@ internal static class DocxTests
         TestAssert.True(snapshot.Pages[1].StaticItems.All(item => item.StoryVariantType is "default" or "even"), "Static item snapshots should retain the selected header/footer variant type.");
     }
 
+    public static void DocxLayoutStageOwnsStaticHeaderInlineImages()
+    {
+        DocxInlineImage headerImage = new(36d, 18d, "image/png", [1, 2, 3], "/word/media/header.png");
+        DocxParagraph header = new(
+            [],
+            [headerImage],
+            null,
+            DocxTextAlignment.Center,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [header]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        DocxInlineImageLayout staticImage = layout.Pages[0].StaticInlineImages.Single();
+        TestAssert.True(staticImage.Image == headerImage && staticImage.Width == 36d && staticImage.Height == 18d, "Static header inline images should be first-class page layout items with image geometry.");
+        TestAssert.True(staticImage.SourceParagraphIndex == 0 && staticImage.StoryKind == "Header" && staticImage.StoryVariantType == "default", "Static header inline image layout should retain selected-story provenance.");
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        TestAssert.Equal(1, snapshot.Pages[0].StaticInlineImageCount);
+        DocxLayoutItemSnapshot staticItem = snapshot.Pages[0].StaticItems.Single();
+        TestAssert.True(staticItem.Kind == "StaticHeaderInlineImage" && staticItem.StoryVariantType == "default" && staticItem.SourceParagraphIndex == 0, "Static image snapshots should expose private-safe header story ownership.");
+        DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single();
+        TestAssert.True(headerStory.Kind == "Header" && headerStory.TextLineCount == 0 && headerStory.InlineImageCount == 1 && headerStory.ParagraphCount == 1, "Static story snapshots should summarize inline image ownership separately from text line counts.");
+    }
+
     public static void DocxLayoutStageWrapsStaticHeaderLines()
     {
         DocxParagraph header = new(
