@@ -1282,6 +1282,38 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.DistinctResolvedFamilyCount);
     }
 
+    public static void DocxFontPlanSnapshotReportsPrivateSafeOpenTypeMetrics()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        var run = new DocxTextRun("Metric probe", 10d, null, false, false, false, null, font.Value.Resolution.FamilyName)
+        {
+            Fonts = new DocxRunFonts(font.Value.Resolution.FamilyName, null, null, null, null, null, null, null)
+        };
+        DocxDocument document = CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
+
+        DocxFontPlanSnapshot snapshot = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution)).InspectFontPlan(document);
+
+        DocxFontMetricBucketSnapshot bucket = snapshot.MetricBuckets.Single();
+        TestAssert.Equal(DocxTypefaceResolutionSource.Primary.ToString(), bucket.Source);
+        TestAssert.Equal(10d, bucket.FontSize);
+        TestAssert.Equal(1, bucket.RunCount);
+        TestAssert.Equal(12, bucket.ResolvedFamilyHash?.Length ?? 0);
+        TestAssert.Equal(font.Value.Font.UnitsPerEm, bucket.UnitsPerEm ?? 0);
+        TestAssert.Equal(font.Value.Font.Os2.TypographicAscender, bucket.TypographicAscender ?? 0);
+        TestAssert.Equal(font.Value.Font.Os2.TypographicDescender, bucket.TypographicDescender ?? 0);
+        TestAssert.Equal(font.Value.Font.Os2.TypographicLineGap, bucket.TypographicLineGap ?? 0);
+        TestAssert.Equal(font.Value.Font.Os2.WindowsAscender, bucket.WindowsAscender ?? 0);
+        TestAssert.Equal(font.Value.Font.Os2.WindowsDescender, bucket.WindowsDescender ?? 0);
+        TestAssert.Equal(DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font.Value.Font, 10d), bucket.SingleLineHeightPoints ?? 0d);
+        TestAssert.Equal(DocxLineMetrics.MeasureWindowsAscender(font.Value.Font, 10d), bucket.WindowsAscenderPoints ?? 0d);
+        TestAssert.Equal(DocxLineMetrics.MeasureWindowsDescender(font.Value.Font, 10d), bucket.WindowsDescenderPoints ?? 0d);
+    }
+
     public static void DocxStructureSnapshotReportsPreLayoutBlockAndTableFacts()
     {
         DocxParagraph paragraph = CreateDocxLayoutParagraph("A1 body.", fontSize: 10d, lineSpacingPoints: 12d) with

@@ -294,12 +294,72 @@ internal sealed record DocxFontPlanSnapshot(
             .OrderByDescending(group => group.Count())
             .ThenBy(group => group.Key.Source.ToString(), StringComparer.Ordinal)
             .ThenBy(group => group.Key.FontSize)
-            .Select(group => new DocxFontMetricBucketSnapshot(
+            .Select(group => ToMetricBucketSnapshot(
                 group.Key.Source.ToString(),
                 group.Key.FontSize,
                 group.Key.ResolvedFamilyHash,
-                group.Count()))
+                group.Count(),
+                group.FirstOrDefault()?.Resolution))
             .ToArray();
+    }
+
+    private static DocxFontMetricBucketSnapshot ToMetricBucketSnapshot(
+        string source,
+        double fontSize,
+        string? resolvedFamilyHash,
+        int runCount,
+        FontResolution? resolution)
+    {
+        OpenTypeFont? font = resolution is null ? null : TryLoadFont(resolution.FontFilePath, resolution.FontFaceIndex);
+        if (font is null)
+        {
+            return new DocxFontMetricBucketSnapshot(
+                source,
+                fontSize,
+                resolvedFamilyHash,
+                runCount,
+                UnitsPerEm: null,
+                TypographicAscender: null,
+                TypographicDescender: null,
+                TypographicLineGap: null,
+                WindowsAscender: null,
+                WindowsDescender: null,
+                SingleLineHeightPoints: null,
+                WindowsAscenderPoints: null,
+                WindowsDescenderPoints: null);
+        }
+
+        return new DocxFontMetricBucketSnapshot(
+            source,
+            fontSize,
+            resolvedFamilyHash,
+            runCount,
+            font.UnitsPerEm,
+            font.Os2.TypographicAscender,
+            font.Os2.TypographicDescender,
+            font.Os2.TypographicLineGap,
+            font.Os2.WindowsAscender,
+            font.Os2.WindowsDescender,
+            DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize),
+            DocxLineMetrics.MeasureWindowsAscender(font, fontSize),
+            DocxLineMetrics.MeasureWindowsDescender(font, fontSize));
+    }
+
+    private static OpenTypeFont? TryLoadFont(string? path, int faceIndex)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            return OpenTypeFont.Load(path, faceIndex);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static string? HashFamily(string? family)
@@ -319,4 +379,13 @@ internal sealed record DocxFontMetricBucketSnapshot(
     string Source,
     double FontSize,
     string? ResolvedFamilyHash,
-    int RunCount);
+    int RunCount,
+    int? UnitsPerEm,
+    int? TypographicAscender,
+    int? TypographicDescender,
+    int? TypographicLineGap,
+    int? WindowsAscender,
+    int? WindowsDescender,
+    double? SingleLineHeightPoints,
+    double? WindowsAscenderPoints,
+    double? WindowsDescenderPoints);

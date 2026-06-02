@@ -442,6 +442,19 @@ High-priority actions:
   source-indexed mapping improved from `1/43` rows matched to `43/43`; the worst matched deltas now show
   accumulated source-block drift reaching about `3.41` pt by list items 40-41. Use this per-source mapping to
   validate any future compact-list rhythm rule.
+  2026-06-02 architecture follow-up: `DocxFontPlanSnapshot` now includes private-safe resolved OpenType
+  metric values in each metric bucket (`UnitsPerEm`, typographic ascender/descender/line-gap, Windows
+  ascender/descender, and derived point metrics) while still hashing resolved family names. Bottom-up coverage
+  verifies these fields against an installed OpenType face without exposing the family. Regenerating
+  `docx-ladder-03-compact-bullet-alt-line115` inspection showed the dominant list-label font-table-alternate
+  bucket at 10 pt has single-line height `12.20703125` pt, and the current accepted `1.19` floor therefore
+  produces candidate repeated pitch `12.20703125 * 1.19 + 1.8 = 16.3263671875` pt. Office's repeated-row mean
+  excluding the largest paragraph-boundary gap is `16.3735` pt. The nearby body-run Windows ascent+descent
+  bucket is about `12.2509765625` pt, so the next implementation branch should explicitly investigate line-box
+  metric ownership between paragraph body runs and list-label runs. Do not special-case the resolved family,
+  the bullet character, or this numeric residual; the rule must follow Word's structural treatment of list
+  labels versus paragraph content and be validated against both compact-list public fixtures plus private
+  aggregate flow.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table
