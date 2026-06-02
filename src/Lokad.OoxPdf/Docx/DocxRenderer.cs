@@ -96,6 +96,14 @@ internal sealed class DocxRenderer
                 pageImages,
                 diagnosticSink,
                 ref imageIndex);
+            RenderFloatingDrawings(
+                layout.StaticFloatingDrawings,
+                pageIndex,
+                behindDocument: true,
+                graphics,
+                pageImages,
+                diagnosticSink,
+                ref imageIndex);
 
             foreach (DocxLayoutItem staticItem in EnumerateStaticLayoutItems(layoutPage))
             {
@@ -112,6 +120,14 @@ internal sealed class DocxRenderer
 
             RenderFloatingDrawings(
                 layout.FloatingDrawings,
+                pageIndex,
+                behindDocument: false,
+                graphics,
+                pageImages,
+                diagnosticSink,
+                ref imageIndex);
+            RenderFloatingDrawings(
+                layout.StaticFloatingDrawings,
                 pageIndex,
                 behindDocument: false,
                 graphics,

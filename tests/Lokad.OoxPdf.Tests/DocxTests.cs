@@ -13248,6 +13248,12 @@ internal static class DocxTests
         TestAssert.Equal(756d, layoutDrawing.PlacedTop ?? 0d);
         TestAssert.Equal(72d, layoutDrawing.ExtentWidthPoints ?? 0d);
         TestAssert.Equal(36d, layoutDrawing.ExtentHeightPoints ?? 0d);
+
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.Contains("/Im1 Do", pdf);
     }
 
     public static void DocxSyntheticHeaderFooterDistancesUsePageMarginTokens()

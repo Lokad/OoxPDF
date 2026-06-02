@@ -7498,6 +7498,14 @@ Current validation baseline:
   expected geometry, while body `FloatingDrawings` remains empty. Validation passed `docx-page --skip-slow`
   (`40`), `docx-core --skip-slow` (`53`), and full solution build. Keep actual static anchored drawing PDF
   rendering and Office-derived draw-order/row acceptance gates open.
+  2026-06-02 architecture follow-up: selected static header/footer anchored image drawings now render through
+  the shared floating-drawing PDF path instead of stopping at layout ownership. Static drawings are dispatched
+  in the same behind-document/foreground phases as body anchored drawings, preserving the existing `behindDoc`
+  split and image resource emission path rather than adding header/footer-specific image logic. Bottom-up
+  coverage now converts the synthetic anchored-header case to PDF and asserts that the static drawing emits an
+  image XObject and draw operation. Validation passed `docx-page --skip-slow` (`40`), `docx-images
+  --skip-slow` (`4`), `docx-core --skip-slow` (`53`), and full solution build. Keep Office-derived static
+  story draw-order acceptance gates and PDF row matching open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
