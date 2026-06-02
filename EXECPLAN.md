@@ -306,9 +306,9 @@ High-priority actions:
   only parser/structure metadata. The PDF writer has a first-class `PdfLinkAnnotation` primitive with stable
   object numbering, `/Annots` page wiring, rectangle emission, URI actions, and PDF-string escaping. DOCX
   layout now carries source text-run indexes through span slicing, wrapping, justification, and text-operation
-  splitting so body hyperlink annotations are anchored to placed rendered segments. Table-cell text lines now
-  also carry source paragraph ownership and use the same annotation path. Keep header/footer/static-story URI
-  annotations and internal PDF destinations open for a later story-owned annotation model.
+  splitting so body hyperlink annotations are anchored to placed rendered segments. Table-cell and selected
+  static header/footer text lines use the same annotation path for external URI links. Keep internal PDF
+  destinations open for a later story-owned annotation model.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
@@ -3016,6 +3016,15 @@ High-priority actions:
       diagnostics, `MAE=13.855991`, changed16 `0.127419`. Keep the parent open for exact footer stacking
       direction, contextual-spacing edge cases in static parts, true field evaluation, and richer private-safe
       static-part snapshots.
+      2026-06-02 follow-up: wrapped static header/footer lines now carry `SourceLineIndex` and correct
+      `IsFirstParagraphLine` ownership instead of marking every visual line as a first paragraph line. This is
+      a model/snapshot correction: rendering geometry is unchanged, but selected static parts now line up with
+      the body/table source-line contract used by private-safe diagnostics. Extended the existing wrapped
+      header test to assert `SourceParagraphIndex=0`, `SourceLineIndex=0/1`, and first/continuation line flags.
+      Validation passed `docx-page --skip-slow` (`30`), `docx-text --skip-slow` (`45`), and public
+      `docx-headers-footers` run `20260602-043616` stayed at `MAE=0.073352`, changed16 `0.002110`, SSIM
+      `0.982572`. Keep the parent open for exact footer stacking direction, contextual-spacing edge cases,
+      true field evaluation, and selected-part snapshots beyond counts and source-line ownership.
     - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the

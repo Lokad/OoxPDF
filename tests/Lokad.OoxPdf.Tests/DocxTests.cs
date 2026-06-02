@@ -10467,9 +10467,15 @@ internal static class DocxTests
         TestAssert.Equal("Alpha ", staticLines[0].Text);
         TestAssert.Equal(15d, staticLines[0].X);
         TestAssert.Equal(178d, staticLines[0].BaselineY);
+        TestAssert.Equal(0, staticLines[0].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(0, staticLines[0].SourceLineIndex ?? -1);
+        TestAssert.True(staticLines[0].IsFirstParagraphLine == true, "The first wrapped static line should carry first-line ownership.");
         TestAssert.Equal("Beta", staticLines[1].Text);
         TestAssert.Equal(20d, staticLines[1].X);
         TestAssert.Equal(166d, staticLines[1].BaselineY);
+        TestAssert.Equal(0, staticLines[1].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(1, staticLines[1].SourceLineIndex ?? -1);
+        TestAssert.True(staticLines[1].IsFirstParagraphLine == false, "Continuation static lines should not look like first paragraph lines.");
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         TestAssert.Equal(2, snapshot.Pages[0].StaticTextLineCount);

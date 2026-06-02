@@ -1310,6 +1310,7 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
+            int sourceLineIndex = 0;
             foreach (DocxWrappedTextLine line in WrapStaticTextLines(spans, width, textMeasurer))
             {
                 if (line.Spans.Count == 0)
@@ -1338,10 +1339,12 @@ internal sealed class DocxLayoutEngine
                     segments,
                     LineHeight: ascender + descender,
                     AppliedBeforeSpacing: appliedBeforeSpacing,
-                    IsFirstParagraphLine: true,
+                    IsFirstParagraphLine: sourceLineIndex == 0,
+                    SourceLineIndex: sourceLineIndex,
                     SourceParagraph: paragraph,
                     SourceParagraphIndex: paragraphIndex));
                 appliedBeforeSpacing = 0d;
+                sourceLineIndex++;
                 cursorY -= ascender + descender;
             }
 
