@@ -10565,6 +10565,43 @@ internal static class DocxTests
         TestAssert.True(cellLayout.TextLines[1].BaselineY < cellLayout.TextLines[0].BaselineY, "Separate table-cell paragraphs should produce separate baselines.");
     }
 
+    public static void DocxTableLayoutStageUsesCellBodyElementsForInlineImages()
+    {
+        var image = new DocxInlineImage(18d, 12d, "image/png", [1, 2, 3], "/word/media/image1.png");
+        var paragraph = new DocxParagraph(
+            [],
+            [image],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxParagraphElement(paragraph)]
+        };
+        var table = new DocxTable(null, [60d], [new DocxTableRow([cell], 36d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, embedded: null)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.Equal(1, cellLayout.InlineImages.Count);
+        TestAssert.Equal(18d, cellLayout.InlineImages[0].Width);
+        TestAssert.Equal(12d, cellLayout.InlineImages[0].Height);
+    }
+
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

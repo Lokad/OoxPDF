@@ -7263,6 +7263,12 @@ Current validation baseline:
   flow without reparsing OOXML. Table-cell column breaks deliberately still emit `DOCX_UNSUPPORTED_MANUAL_BREAK`
   until table-local row/cell pagination owns their Office semantics. Validation passed `docx-tables --skip-slow`
   (`100`), `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`), and full solution build.
+  2026-06-02 architecture follow-up: table-cell inline image layout now uses the same
+  `DocxTableCellContent.GetParagraphs` normalized body-flow projection as table-cell text layout and height
+  measurement, instead of reading the legacy `cell.Paragraphs` list directly. Bottom-up coverage verifies that
+  a cell whose authored image paragraph lives only in `BodyElements` still produces a `DocxInlineImageLayout`.
+  Validation passed `docx-tables --skip-slow` (`103`) and full solution build. Keep nested tables, table-local
+  page/column breaks, and richer non-paragraph cell body layout open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

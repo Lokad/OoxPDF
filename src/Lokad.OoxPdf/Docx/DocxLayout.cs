@@ -3729,7 +3729,7 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints,
         int pageIndex)
     {
-        IReadOnlyList<DocxParagraph> paragraphs = cell.Paragraphs;
+        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         if (paragraphs.Count == 0 || !paragraphs.Any(paragraph => paragraph.Images.Count != 0))
         {
             return [];
