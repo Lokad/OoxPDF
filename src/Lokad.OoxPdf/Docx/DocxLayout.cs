@@ -2918,6 +2918,14 @@ internal sealed class DocxLayoutEngine
             double rowHeight = rowHeights[rowIndex];
             double remainingPageHeight = Math.Max(0d, cursorY - marginBottom);
             if (!row.CantSplit &&
+                TryResolveExplicitTableCellPageBreakFragmentHeight(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, out double explicitBreakFragmentHeight))
+            {
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, resolveFrame, explicitBreakFragmentHeight, finishPage);
+                markBoundaryContent();
+                continue;
+            }
+
+            if (!row.CantSplit &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
                 CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, textMeasurer, defaultTabStopPoints))
@@ -3317,6 +3325,125 @@ internal sealed class DocxLayoutEngine
         return false;
     }
 
+    private static bool TryResolveExplicitTableCellPageBreakFragmentHeight(
+        DocxTableRow row,
+        IReadOnlyList<double> effectiveColumns,
+        double scale,
+        double rowHeight,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        out double fragmentHeight)
+    {
+        fragmentHeight = 0d;
+        if (textMeasurer is null || rowHeight <= 1.001d)
+        {
+            return false;
+        }
+
+        double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+        double rowTopPadding = ResolveTableRowTopPadding(row);
+        double? earliestBreakHeight = null;
+        for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+        {
+            DocxTableCell cell = row.Cells[cellIndex];
+            if (IsVerticalMergeContinuation(cell) ||
+                !TryMeasureTableCellHeightBeforePageBreak(cell, cellWidths[cellIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, out double heightBeforeBreak))
+            {
+                continue;
+            }
+
+            earliestBreakHeight = earliestBreakHeight is null
+                ? heightBeforeBreak
+                : Math.Min(earliestBreakHeight.Value, heightBeforeBreak);
+        }
+
+        if (earliestBreakHeight is null)
+        {
+            return false;
+        }
+
+        fragmentHeight = Math.Min(rowHeight - 1d, Math.Max(1d, earliestBreakHeight.Value));
+        return fragmentHeight < rowHeight - 0.001d;
+    }
+
+    private static bool TryMeasureTableCellHeightBeforePageBreak(
+        DocxTableCell cell,
+        double cellWidth,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints,
+        double rowTopPadding,
+        out double heightBeforeBreak)
+    {
+        heightBeforeBreak = 0d;
+        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        if (bodyElements.Count == 0)
+        {
+            return false;
+        }
+
+        int pageBreakIndex = -1;
+        for (int index = 0; index < bodyElements.Count; index++)
+        {
+            if (bodyElements[index] is DocxPageBreakElement)
+            {
+                pageBreakIndex = index;
+                break;
+            }
+        }
+
+        if (pageBreakIndex <= 0 || !bodyElements.Skip(pageBreakIndex + 1).Any(IsRenderableTableCellBodyElement))
+        {
+            return false;
+        }
+
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
+        double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
+        heightBeforeBreak = rowTopPadding;
+        double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
+        for (int index = 0; index < pageBreakIndex; index++)
+        {
+            DocxBodyElement bodyElement = bodyElements[index];
+            if (bodyElement is DocxTableElement tableElement)
+            {
+                heightBeforeBreak += pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                heightBeforeBreak += MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints);
+                continue;
+            }
+
+            if (bodyElement is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            heightBeforeBreak += spacingProfile.AppliedBeforeSpacing;
+            pendingSpacingAfter = 0d;
+            heightBeforeBreak += MeasureTableCellParagraphContentHeight(paragraph, textWidth, textMeasurer, defaultTabStopPoints);
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+            previousParagraph = paragraph;
+        }
+
+        heightBeforeBreak += pendingSpacingAfter;
+        return heightBeforeBreak > rowTopPadding + 0.001d;
+    }
+
+    private static bool IsRenderableTableCellBodyElement(DocxBodyElement bodyElement)
+    {
+        return bodyElement switch
+        {
+            DocxParagraphElement paragraphElement => paragraphElement.Paragraph.Runs.Count != 0 ||
+                paragraphElement.Paragraph.Images.Count != 0 ||
+                paragraphElement.Paragraph.ListLabel is not null,
+            DocxTableElement => true,
+            _ => false
+        };
+    }
+
     private static IReadOnlyList<double> ComputeTableRowFragmentHeights(double rowHeight, double firstFragmentHeight, double pageContentHeight)
     {
         var fragments = new List<double>();
@@ -3400,7 +3527,8 @@ internal sealed class DocxLayoutEngine
             IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
                 ? []
                 : LayoutTableCellTextLines(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints)
-                    .Where(line => IsTextLineVisibleInCellFragment(line, visualY, visualHeight, FragmentIndex, FragmentCount))
+                    .Where(line => IsTextLineOnVisibleSideOfCellPageBreak(cell, line, FragmentIndex, FragmentCount))
+                    .Where(line => IsTextLineVisibleInCellFragmentGeometry(cell, line, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
             IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
                 ? []
@@ -3457,6 +3585,59 @@ internal sealed class DocxLayoutEngine
 
         double bottom = fragmentIndex == 0 ? cellY - 0.001d : cellY + 0.001d;
         return line.BaselineY >= bottom && line.BaselineY <= cellY + cellHeight + 0.001d;
+    }
+
+    private static bool IsTextLineVisibleInCellFragmentGeometry(
+        DocxTableCell cell,
+        DocxTextLineLayout line,
+        double cellY,
+        double cellHeight,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        return fragmentCount > 1 && TryGetFirstTableCellPageBreakParagraphIndex(cell, out _)
+            ? true
+            : IsTextLineVisibleInCellFragment(line, cellY, cellHeight, fragmentIndex, fragmentCount);
+    }
+
+    private static bool IsTextLineOnVisibleSideOfCellPageBreak(
+        DocxTableCell cell,
+        DocxTextLineLayout line,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        if (fragmentCount <= 1 || line.SourceParagraphIndex is not { } paragraphIndex)
+        {
+            return true;
+        }
+
+        if (!TryGetFirstTableCellPageBreakParagraphIndex(cell, out int splitParagraphIndex))
+        {
+            return true;
+        }
+
+        return fragmentIndex == 0
+            ? paragraphIndex < splitParagraphIndex
+            : paragraphIndex >= splitParagraphIndex;
+    }
+
+    private static bool TryGetFirstTableCellPageBreakParagraphIndex(DocxTableCell cell, out int splitParagraphIndex)
+    {
+        splitParagraphIndex = 0;
+        foreach (DocxBodyElement bodyElement in DocxTableCellContent.GetBodyElements(cell))
+        {
+            if (bodyElement is DocxPageBreakElement)
+            {
+                return true;
+            }
+
+            if (bodyElement is DocxParagraphElement)
+            {
+                splitParagraphIndex++;
+            }
+        }
+
+        return false;
     }
 
     private static double VerticalOverlap(double firstY, double firstHeight, double secondY, double secondHeight)

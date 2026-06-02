@@ -7303,6 +7303,15 @@ Current validation baseline:
   four flow nodes in layout snapshots. Validation passed `docx-tables --skip-slow` (`108`) and `docx-core --skip-slow`
   (`53`; serial rerun after a parallel compiler output lock). Keep actual table-local page/column break pagination
   behavior open.
+  2026-06-02 architecture follow-up: explicit page-break elements inside table cells now participate in row
+  fragmentation instead of being only a preserved/diagnosed body-flow token. `DocxLayout` measures the authored
+  cell body stream up to the first cell page break, uses that height as the first row-fragment boundary, then uses
+  source paragraph indexes to keep pre-break and post-break cell text on the correct side of the page transition.
+  Bottom-up coverage verifies a row that would otherwise fit on one page is split into two row fragments and separates
+  the before/after cell paragraphs across pages. Validation passed `docx-tables --skip-slow` (`109`),
+  `docx-core --skip-slow` (`53`), and full solution build. Keep table-cell column breaks, multiple competing cell
+  page breaks, inline images/nested tables around explicit breaks, and Office-exact repeated-header/merged-cell
+  interactions open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

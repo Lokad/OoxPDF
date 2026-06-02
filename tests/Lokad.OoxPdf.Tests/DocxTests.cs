@@ -10756,6 +10756,35 @@ internal static class DocxTests
             $"Paragraph after the nested table should be laid out below the nested table block. AfterBaseline={outerLines[1].BaselineY}, NestedTop={nestedRow.Y + nestedRow.Height}, NestedBottom={nestedRow.Y}.");
     }
 
+    public static void DocxTableLayoutStageSplitsRowsAtCellPageBreakElements()
+    {
+        DocxParagraph before = CreateDocxLayoutParagraph("Before", 10d, 10d);
+        DocxParagraph after = CreateDocxLayoutParagraph("After", 10d, 10d);
+        var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(before),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(after)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(2, rowFragments.Length);
+        TestAssert.Equal(0, rowFragments[0].FragmentIndex);
+        TestAssert.Equal(1, rowFragments[1].FragmentIndex);
+        TestAssert.Equal(2, rowFragments[0].FragmentCount);
+        TestAssert.Equal(2, rowFragments[1].FragmentCount);
+        TestAssert.Equal("Before", rowFragments[0].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("After", rowFragments[1].Cells.Single().TextLines.Single().Text);
+    }
+
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
