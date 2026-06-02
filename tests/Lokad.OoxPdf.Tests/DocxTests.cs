@@ -1569,6 +1569,60 @@ internal static class DocxTests
         TestAssert.Equal(1, cellSnapshot.InternalHyperlinkCount);
     }
 
+    public static void DocxRendererEmitsBodyExternalHyperlinkAnnotations()
+    {
+        var runs = new[]
+        {
+            new DocxTextRun("Before ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null),
+            new DocxTextRun(" After", 10d, null, false, false, false, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/docx", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/docx", annotation.Uri);
+        TestAssert.True(annotation.X > document.MarginLeftPoints, "The annotation should be anchored to the placed hyperlink run, not the paragraph origin.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover the rendered hyperlink text.");
+        TestAssert.True(annotation.Height > 0d, "The annotation should use font metrics for a non-empty rectangle.");
+    }
+
+    public static void DocxRendererDoesNotEmitUriAnnotationsForInternalHyperlinks()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Internal", 10d, 12d) with
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "Bookmark", null, null, null, null, null, 0, 1, 0, 1, 8)
+            ]
+        };
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        TestAssert.Equal(0, page.Annotations.Count);
+    }
+
     public static void DocxStructureSnapshotUsesBodyElementInventoryAsCanonicalSource()
     {
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell", fontSize: 9d, lineSpacingPoints: 10d) with

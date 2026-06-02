@@ -185,6 +185,28 @@ internal static class PdfWriterTests
         TestAssert.Contains("/XStep 16 /YStep 16", pdf);
     }
 
+    public static void WritesLinkAnnotations()
+    {
+        var page = new PdfPage(
+            200,
+            200,
+            string.Empty,
+            [],
+            [],
+            [],
+            [],
+            [],
+            [new PdfLinkAnnotation(10, 20, 30, 40, "https://example.invalid/a?b=(c)\\d")]);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/Annots [5 0 R]", pdf);
+        TestAssert.Contains("/Type /Annot /Subtype /Link", pdf);
+        TestAssert.Contains("/Rect [10 20 40 60]", pdf);
+        TestAssert.Contains("/Border [0 0 0]", pdf);
+        TestAssert.Contains(@"/A << /S /URI /URI (https://example.invalid/a?b=\(c\)\\d) >>", pdf);
+    }
+
     public static void WritesImageBackedTilingPatternResources()
     {
         var graphics = new PdfGraphicsBuilder();

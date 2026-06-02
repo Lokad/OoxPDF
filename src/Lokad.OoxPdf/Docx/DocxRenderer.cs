@@ -100,10 +100,66 @@ internal sealed class DocxRenderer
                 RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
             }
 
-            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray()));
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateBodyHyperlinkAnnotations(document, layoutPage, fontResources, pageNumber, layout.Pages.Count);
+            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray(), [], [], [], annotations));
         }
 
         return pages;
+    }
+
+    private static IReadOnlyList<PdfLinkAnnotation> CreateBodyHyperlinkAnnotations(
+        DocxDocument document,
+        DocxLayoutPage page,
+        DocxFontResources fontResources,
+        int pageNumber,
+        int pageCount)
+    {
+        var annotations = new List<PdfLinkAnnotation>();
+        foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
+        {
+            if (line.SourceBlockIndex is not { } blockIndex ||
+                blockIndex < 0 ||
+                blockIndex >= document.BodyElements.Count ||
+                document.BodyElements[blockIndex] is not DocxParagraphElement paragraphElement ||
+                paragraphElement.Paragraph.Hyperlinks.Count == 0)
+            {
+                continue;
+            }
+
+            IReadOnlyList<DocxHyperlinkSpan> links = paragraphElement.Paragraph.Hyperlinks;
+            foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount))
+            {
+                if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex < 0 || segment.Width <= 0d)
+                {
+                    continue;
+                }
+
+                DocxHyperlinkSpan? link = links.FirstOrDefault(item => IsExternalHyperlinkSegment(item, segment.SourceTextRunIndex));
+                if (link is null)
+                {
+                    continue;
+                }
+
+                double ascender = segment.Resource.Embedded.Font.Os2.WindowsAscender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
+                double descender = segment.Resource.Embedded.Font.Os2.WindowsDescender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
+                annotations.Add(new PdfLinkAnnotation(
+                    segment.X,
+                    segment.BaselineY - descender,
+                    segment.Width,
+                    ascender + descender,
+                    link.Target!));
+            }
+        }
+
+        return annotations;
+    }
+
+    private static bool IsExternalHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
+    {
+        return !string.IsNullOrEmpty(link.Target) &&
+            string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase) &&
+            sourceTextRunIndex >= link.TextRunStartIndex &&
+            sourceTextRunIndex < link.TextRunStartIndex + link.TextRunCount;
     }
 
     private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver)
@@ -398,7 +454,8 @@ internal sealed class DocxRenderer
                     segment.CompensatePdfCharacterSpacing,
                     ShouldApplySyntheticBold(segment.StyleRun, resource),
                     segment.StyleRun.Italic && !resource.Resolution.Italic,
-                    IsTerminalLineSpace: false));
+                    IsTerminalLineSpace: false,
+                    segment.SourceTextRunIndex));
             }
         }
 
@@ -442,7 +499,8 @@ internal sealed class DocxRenderer
                 segment.CompensatePdfCharacterSpacing,
                 SyntheticBold: false,
                 SyntheticItalic: segment.StyleRun.Italic && !resource.Resolution.Italic,
-                IsTerminalLineSpace: true));
+                IsTerminalLineSpace: true,
+                segment.SourceTextRunIndex));
             break;
         }
 

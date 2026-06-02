@@ -87,7 +87,21 @@ internal sealed class PdfDocumentWriter
             patternObjects[patterns[i].ResourceKey] = patternObjectBase + i;
         }
 
-        int objectCount = patternObjectBase + patterns.Count - 1;
+        int annotationObjectBase = patternObjectBase + patterns.Count;
+        var annotationObjectsByPage = new List<int[]>(pages.Count);
+        int nextAnnotationObject = annotationObjectBase;
+        foreach (PdfPage page in pages)
+        {
+            var annotationObjects = new int[page.Annotations.Count];
+            for (int i = 0; i < annotationObjects.Length; i++)
+            {
+                annotationObjects[i] = nextAnnotationObject++;
+            }
+
+            annotationObjectsByPage.Add(annotationObjects);
+        }
+
+        int objectCount = nextAnnotationObject - 1;
         writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
         writer.WriteObject(2, BuildPagesObject(pages));
 
@@ -98,7 +112,7 @@ internal sealed class PdfDocumentWriter
             PdfPage page = pages[i];
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
-                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects)} >>\n"));
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects)}{BuildPageAnnotations(annotationObjectsByPage[i])} >>\n"));
             byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
             writer.WriteObject(contentObjectNumber, FormattableString.Invariant(
                 $"<< /Length {contentBytes.Length} >>\nstream\n{page.Content}endstream\n"));
@@ -127,6 +141,16 @@ internal sealed class PdfDocumentWriter
         foreach (PdfTilingPattern pattern in patterns)
         {
             WriteTilingPatternObject(writer, pattern, patternObjects[pattern.ResourceKey], imageObjects);
+        }
+
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            int[] annotationObjects = annotationObjectsByPage[pageIndex];
+            IReadOnlyList<PdfLinkAnnotation> annotations = pages[pageIndex].Annotations;
+            for (int annotationIndex = 0; annotationIndex < annotations.Count; annotationIndex++)
+            {
+                WriteLinkAnnotationObject(writer, annotations[annotationIndex], annotationObjects[annotationIndex]);
+            }
         }
 
         long xrefOffset = writer.Position;
@@ -158,6 +182,28 @@ internal sealed class PdfDocumentWriter
         }
 
         builder.Append("] >>\n");
+        return builder.ToString();
+    }
+
+    private static string BuildPageAnnotations(IReadOnlyList<int> annotationObjects)
+    {
+        if (annotationObjects.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(" /Annots [");
+        for (int i = 0; i < annotationObjects.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(CultureInfo.InvariantCulture, $"{annotationObjects[i]} 0 R");
+        }
+
+        builder.Append(']');
         return builder.ToString();
     }
 
@@ -312,6 +358,16 @@ internal sealed class PdfDocumentWriter
             $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources {resources} /Length {contentBytes.Length} >>\nstream\n{pattern.Content}endstream\n"));
     }
 
+    private static void WriteLinkAnnotationObject(PdfObjectWriter writer, PdfLinkAnnotation annotation, int objectNumber)
+    {
+        double x1 = annotation.X;
+        double y1 = annotation.Y;
+        double x2 = annotation.X + annotation.Width;
+        double y2 = annotation.Y + annotation.Height;
+        writer.WriteObject(objectNumber, FormattableString.Invariant(
+            $"<< /Type /Annot /Subtype /Link /Rect [{FormatNumber(x1)} {FormatNumber(y1)} {FormatNumber(x2)} {FormatNumber(y2)}] /Border [0 0 0] /A << /S /URI /URI ({EscapePdfString(annotation.Uri)}) >> >>\n"));
+    }
+
     private static string BuildPatternResources(PdfTilingPattern pattern, IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
     {
         var builder = new StringBuilder("<< /XObject <<");
@@ -410,6 +466,36 @@ internal sealed class PdfDocumentWriter
     private static string FormatColor(byte value)
     {
         return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private static string EscapePdfString(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        foreach (char c in value)
+        {
+            switch (c)
+            {
+                case '\\':
+                case '(':
+                case ')':
+                    builder.Append('\\').Append(c);
+                    break;
+                case '\r':
+                    builder.Append(@"\r");
+                    break;
+                case '\n':
+                    builder.Append(@"\n");
+                    break;
+                case '\t':
+                    builder.Append(@"\t");
+                    break;
+                default:
+                    builder.Append(c);
+                    break;
+            }
+        }
+
+        return builder.ToString();
     }
 
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);

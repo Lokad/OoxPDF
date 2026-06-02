@@ -300,6 +300,13 @@ High-priority actions:
   hyphenated words and overwide table token fragments. Treat this long-token operation-order branch as closed;
   any remaining raster gap on this case belongs to broader glyph metrics/positioning, not wrapping, terminal
   spaces, or dash decomposition.
+  2026-06-02 follow-up: DOCX body hyperlinks now lower through explicit PDF link annotations instead of being
+  only parser/structure metadata. The PDF writer has a first-class `PdfLinkAnnotation` primitive with stable
+  object numbering, `/Annots` page wiring, rectangle emission, URI actions, and PDF-string escaping. DOCX
+  layout now carries source text-run indexes through span slicing, wrapping, justification, and text-operation
+  splitting so body hyperlink annotations are anchored to placed rendered segments. Keep table-cell hyperlinks
+  open until `DocxTableCellLayout` carries paragraph ownership/source indexes; table annotations should be
+  driven by the same placed-inline structure, not by scanning cell text or guessing coordinates.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
@@ -6483,6 +6490,14 @@ Current validation baseline:
   without exposing document text. Bottom-up coverage asserts both authored run spacing kept in positioned
   glyph advances and numbered-label spacing emitted through PDF text state. Validation passed
   `docx-core --skip-slow` (`27`). Keep the actual generic Word `Tc` selection rule open.
+  2026-06-02 follow-up: DOCX body external hyperlinks now emit PDF `/Link` annotations from placed text
+  geometry. `DocxTextSpan`, `DocxTextSegmentLayout`, and `DocxTextEmissionSegment` carry source text-run
+  indexes, so annotations survive wrapping, justification segmentation, punctuation splitting, and terminal
+  line-space synthesis without text scanning. Added PDF-writer coverage for link annotation object emission and
+  DOCX renderer coverage for external body links plus internal/bookmark links staying out of URI annotations.
+  Validation passed `pdf --skip-slow` (`17`), `docx-core --skip-slow` (`34`), `docx-text --skip-slow` (`45`),
+  and full solution build. Keep table-cell/header/footer link annotations open until those stories expose the
+  same placed paragraph/run ownership through layout.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off
