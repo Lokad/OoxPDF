@@ -550,6 +550,14 @@ High-priority actions:
   2026-06-02 summary follow-up: planner segment aggregate buckets now include the same planned emitted-advance
   decomposition as the paired Office-reference buckets, including unkerned width, kerning adjustment,
   positioning gap total, `Tc` gap total, planned emitted advance, and planned emitted residual per gap.
+  2026-06-02 ambiguity follow-up: `tools/SummarizeDocxTextState.ps1` now emits private-safe pair rows and
+  candidate-visible `ReferenceTcAmbiguityChecks` for paired Office/candidate operations. Rerunning the four
+  public text-state summaries shows the expected negative evidence: coarse `Tf+role+class+gaps`, pair-range,
+  and rounded-residual keys still collide for nonzero Office `Tc` rows, while `Tf+side-range` and
+  `Tf+gaps+side-range` are collision-free across the current public nonzero rows. Treat this as diagnostic
+  evidence for a glyph-side/shaping decomposition model, not as a renderer lookup; the next production branch
+  still must explain the side-advance discriminator from Word-compatible font/PDF structure and must not key
+  behavior on text strings, font names, roles, classes, or observed bucket constants.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

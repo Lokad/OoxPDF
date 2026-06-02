@@ -94,6 +94,53 @@ function Group-Count($Items, [scriptblock] $KeySelector) {
     )
 }
 
+function New-TcAmbiguityReport(
+    [string] $Name,
+    $Pairs,
+    [scriptblock] $KeySelector,
+    [bool] $OnlyNonzeroTc = $false) {
+    $groups = @{}
+    foreach ($pair in $Pairs) {
+        if ($OnlyNonzeroTc -and [Math]::Abs([double]$pair.ReferenceTc) -le 0.001d) {
+            continue
+        }
+
+        $key = & $KeySelector $pair
+        if ($null -eq $key -or [string]$key -eq "") {
+            $key = "(missing)"
+        }
+
+        $key = [string]$key
+        if (-not $groups.ContainsKey($key)) {
+            $groups[$key] = [pscustomobject]@{
+                Key = $key
+                Count = 0
+                TcValues = New-Object System.Collections.Generic.HashSet[string]
+            }
+        }
+
+        $group = $groups[$key]
+        $group.Count++
+        [void]$group.TcValues.Add((RoundedKey $pair.ReferenceTc 6))
+    }
+
+    $ambiguous = @($groups.Values | Where-Object { $_.TcValues.Count -gt 1 } | Sort-Object Count -Descending)
+    return [pscustomobject]@{
+        Name = $Name
+        OnlyNonzeroTc = $OnlyNonzeroTc
+        PairCount = ($groups.Values | Measure-Object -Property Count -Sum).Sum
+        KeyCount = $groups.Count
+        AmbiguousKeyCount = $ambiguous.Count
+        AmbiguousExamples = @($ambiguous | Select-Object -First 12 | ForEach-Object {
+            [pscustomobject]@{
+                Key = $_.Key
+                Count = $_.Count
+                TcValues = @($_.TcValues | Sort-Object)
+            }
+        })
+    }
+}
+
 function TextLength($Operation) {
     if ($null -eq $Operation.DecodedText) {
         return 0
@@ -634,6 +681,33 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceOperationCount = $ReferenceOperations.Count
         PlannerSegmentCount = $segments.Count
         CountsMatched = $true
+        Pairs = @($pairs.ToArray())
+        ReferenceTcAmbiguityChecks = @(
+            New-TcAmbiguityReport "tf+role+class+gaps" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|role=" + $pair.PlannerRole + "|class=" + $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+            } $false
+            New-TcAmbiguityReport "tf+role+class+gaps" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|role=" + $pair.PlannerRole + "|class=" + $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+            } $true
+            New-TcAmbiguityReport "tf+gaps+pair-range" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|pairMin=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxUnits 0)
+            } $true
+            New-TcAmbiguityReport "tf+gaps+side-range" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0)
+            } $true
+            New-TcAmbiguityReport "tf+side-range" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0)
+            } $true
+            New-TcAmbiguityReport "tf+rounded-residual-per-gap" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|roundedResidualPerGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6)
+            } $true
+        )
         ReferenceTcByPlannerTextClass = @(Group-Count $pairs {
             param($pair)
             $pair.PlannerTextClass + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
