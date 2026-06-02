@@ -6507,6 +6507,16 @@ Current validation baseline:
   generic Office text-emission planner that decomposes measured short runs into uniform `Tc` plus residual
   positioning where public evidence supports it; do not key on token strings, digit-only text,
   table/body/header role, font names, or a single observed bucket.
+  2026-06-02 planner boundary progress: added `DocxTextEmissionPlanner` as the DOCX counterpart to the PPTX
+  Office PDF text-state planning pass. The planner now owns Office-grid `/Tf` size, emitted PDF `Tc`,
+  compensation state, and positioned-glyph character spacing for both regular runs and terminal line spaces;
+  `DocxRenderer` consumes the plan for snapshots and glyph drawing instead of recomputing those values inline.
+  This is behavior-neutral but removes another renderer-local text-state calculation before implementing the
+  generic short-run decomposition. Bottom-up coverage checks compensated authored spacing, numbered-list `Tc`
+  without positioning compensation, and neutral terminal-space `Tc`. Validation: `docx-core --skip-slow` passed
+  (`40`), public `docx-numbering` run `20260602-035348` stayed at `MAE=0.019271`, public
+  `docx-ladder-03-table-text-state` run `20260602-035358` stayed at the known open-gap raster
+  (`MAE=0.632046`, changed16 `0.006503`), and full solution build passed.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored

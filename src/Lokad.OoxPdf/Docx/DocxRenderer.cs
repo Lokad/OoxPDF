@@ -606,17 +606,24 @@ internal sealed class DocxRenderer
 
     private static DocxTextEmissionSegmentSnapshot ToTextEmissionSegmentSnapshot(DocxTextEmissionSegment segment)
     {
+        DocxTextEmissionPlan plan = segment.IsTerminalLineSpace
+            ? DocxTextEmissionPlanner.CreateTerminalLineSpace(segment.StyleRun, segment.FontSize)
+            : DocxTextEmissionPlanner.Create(
+                segment.StyleRun,
+                segment.FontSize,
+                segment.PdfCharacterSpacing,
+                segment.CompensatePdfCharacterSpacing);
         return new DocxTextEmissionSegmentSnapshot(
             segment.Text.Length,
             segment.X,
             segment.BaselineY,
             segment.Width,
             segment.FontSize,
-            OfficePdfTextEmissionProfile.FontSize(segment.FontSize),
+            plan.PdfFontSize,
             segment.StyleRun.CharacterSpacingPoints,
-            segment.PdfCharacterSpacing,
-            ResolvePositioningCharacterSpacing(segment.StyleRun, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing),
-            segment.CompensatePdfCharacterSpacing,
+            plan.PdfCharacterSpacing,
+            plan.PositioningCharacterSpacing,
+            plan.CompensatePdfCharacterSpacing,
             segment.IsTerminalLineSpace,
             segment.Resource.Name,
             segment.SyntheticBold,
@@ -636,23 +643,15 @@ internal sealed class DocxRenderer
         bool compensatePdfCharacterSpacing = true)
     {
         bool syntheticItalic = style.Italic && !resource.Resolution.Italic;
-        double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(fontSize);
-        double positioningCharacterSpacing = ResolvePositioningCharacterSpacing(style, pdfCharacterSpacing, compensatePdfCharacterSpacing);
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, positioningCharacterSpacing, pdfFontSize, forcePositioningArray: true);
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(style, fontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing);
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {
-            graphics.DrawGlyphPositionedText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, pdfCharacterSpacing);
+            graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing);
             return;
         }
 
-        graphics.DrawGlyphText(resource.Name, pdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic, pdfCharacterSpacing);
-    }
-
-    private static double ResolvePositioningCharacterSpacing(DocxTextRun style, double pdfCharacterSpacing, bool compensatePdfCharacterSpacing)
-    {
-        return compensatePdfCharacterSpacing
-            ? style.CharacterSpacingPoints - pdfCharacterSpacing
-            : style.CharacterSpacingPoints;
+        graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic, plan.PdfCharacterSpacing);
     }
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)

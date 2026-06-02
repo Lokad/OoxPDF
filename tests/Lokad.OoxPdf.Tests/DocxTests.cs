@@ -437,6 +437,43 @@ internal static class DocxTests
         TestAssert.Equal(0.044d, OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(11d));
     }
 
+    public static void DocxTextEmissionPlannerOwnsPdfTextStateAndPositioningSpacing()
+    {
+        var run = new DocxTextRun("Tracked", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.25d);
+
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 11d, pdfCharacterSpacing: 0.05d, compensatePdfCharacterSpacing: true);
+
+        TestAssert.Equal(11.04d, plan.PdfFontSize);
+        TestAssert.Equal(0.05d, plan.PdfCharacterSpacing);
+        TestAssert.Equal(0.20d, plan.PositioningCharacterSpacing);
+        TestAssert.True(plan.CompensatePdfCharacterSpacing, "Planner should record that positioned glyph advances compensate PDF Tc.");
+    }
+
+    public static void DocxTextEmissionPlannerKeepsNumberedLabelTcOutOfPositioning()
+    {
+        var run = new DocxTextRun("1", 12d, null, false, false, false, null, null);
+        double numberedTc = OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(12d);
+
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 12d, numberedTc, compensatePdfCharacterSpacing: false);
+
+        TestAssert.Equal(12d, plan.PdfFontSize);
+        TestAssert.Equal(numberedTc, plan.PdfCharacterSpacing);
+        TestAssert.Equal(0d, plan.PositioningCharacterSpacing);
+        TestAssert.True(!plan.CompensatePdfCharacterSpacing, "Numbered labels use PDF Tc as emitted text state, not as a compensated layout offset.");
+    }
+
+    public static void DocxTextEmissionPlannerForcesTerminalLineSpacesToNeutralTc()
+    {
+        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.25d);
+
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateTerminalLineSpace(run, 11d);
+
+        TestAssert.Equal(11.04d, plan.PdfFontSize);
+        TestAssert.Equal(0d, plan.PdfCharacterSpacing);
+        TestAssert.Equal(0.25d, plan.PositioningCharacterSpacing);
+        TestAssert.True(plan.CompensatePdfCharacterSpacing, "Terminal spaces should stay eligible for authored positioning while emitting neutral PDF Tc.");
+    }
+
     public static void DocxReaderPreservesParagraphAlignmentTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
