@@ -1256,13 +1256,22 @@ internal sealed class DocxLayoutEngine
         var currentItems = new List<DocxLayoutItem>();
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
         DocxPageGeometry page = ResolveSectionGeometry(document, FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings);
-        double x = page.MarginLeft;
-        double width = page.BodyWidth;
+        int activeColumnIndex = 0;
+        double x = ResolveActiveColumnFrame(page, activeColumnIndex).X;
+        double width = ResolveActiveColumnFrame(page, activeColumnIndex).Width;
         double cursorY = page.Height - page.MarginTop;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        bool activeColumnHasContent = false;
         int tableIndex = 0;
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
+
+        void ApplyActiveColumnFrame()
+        {
+            DocxLayoutColumnFrame frame = ResolveActiveColumnFrame(page, activeColumnIndex);
+            x = frame.X;
+            width = frame.Width;
+        }
 
         void FinishPage()
         {
@@ -1279,16 +1288,36 @@ internal sealed class DocxLayoutEngine
                 [],
                 currentItems.ToArray()));
             currentItems = [];
+            activeColumnIndex = 0;
+            ApplyActiveColumnFrame();
             cursorY = page.Height - page.MarginTop;
             pendingSpacingAfter = 0d;
             previousParagraph = null;
+            activeColumnHasContent = false;
+        }
+
+        void AdvanceColumnOrPage()
+        {
+            if (activeColumnIndex + 1 < page.ColumnFrames.Count)
+            {
+                activeColumnIndex++;
+                ApplyActiveColumnFrame();
+                cursorY = page.Height - page.MarginTop;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                activeColumnHasContent = false;
+                return;
+            }
+
+            FinishPage();
         }
 
         void ApplySectionAfterBreak(int elementIndex)
         {
             page = ResolveSectionGeometry(document, FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings);
-            x = page.MarginLeft;
-            width = page.BodyWidth;
+            activeColumnIndex = 0;
+            ApplyActiveColumnFrame();
+            activeColumnHasContent = false;
             if (!HasPageContent())
             {
                 cursorY = page.Height - page.MarginTop;
@@ -1296,6 +1325,7 @@ internal sealed class DocxLayoutEngine
         }
 
         bool HasPageContent() => currentItems.Count > 0;
+        bool HasCurrentColumnContent() => activeColumnHasContent;
 
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
@@ -1308,12 +1338,13 @@ internal sealed class DocxLayoutEngine
                     double breakFontSize = GetParagraphFontSize(breakParagraph);
                     double breakLineHeight = ResolveLineHeight(breakParagraph, breakFontSize, textMeasurer);
                     double paragraphAdvance = breakSpacingProfile.AppliedBeforeSpacing + breakLineHeight;
-                    if (cursorY - paragraphAdvance < page.MarginBottom && HasPageContent())
+                    if (cursorY - paragraphAdvance < page.MarginBottom && HasCurrentColumnContent())
                     {
-                        FinishPage();
+                        AdvanceColumnOrPage();
                     }
 
                     cursorY -= paragraphAdvance;
+                    activeColumnHasContent = true;
                 }
 
                 if (HasPageContent() || pageBreak.BreakParagraph is not null)
@@ -1326,8 +1357,14 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
-            if (element is DocxManualBreakElement)
+            if (element is DocxManualBreakElement manualBreak)
             {
+                if (manualBreak.Value?.Equals("column", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    AdvanceColumnOrPage();
+                    continue;
+                }
+
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 continue;
@@ -1356,7 +1393,15 @@ internal sealed class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                LayoutTable(tableElement.Table, tableIndex++, elementIndex, page.MarginBottom, page.Height - page.MarginTop - page.MarginBottom, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, FinishPage, HasPageContent);
+                int itemCountBeforeTable = currentItems.Count;
+                Action advanceTableBoundary = page.ColumnFrames.Count > 1 ? AdvanceColumnOrPage : FinishPage;
+                Func<bool> hasTableBoundaryContent = page.ColumnFrames.Count > 1 ? HasCurrentColumnContent : HasPageContent;
+                LayoutTable(tableElement.Table, tableIndex++, elementIndex, page.MarginBottom, page.Height - page.MarginTop - page.MarginBottom, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, x, width, advanceTableBoundary, hasTableBoundaryContent);
+                if (currentItems.Count > itemCountBeforeTable)
+                {
+                    activeColumnHasContent = true;
+                }
+
                 continue;
             }
 
@@ -1377,7 +1422,7 @@ internal sealed class DocxLayoutEngine
                 ShouldKeepParagraphBlockTogether(paragraph) &&
                 cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints).Height <= page.MarginBottom)
             {
-                FinishPage();
+                AdvanceColumnOrPage();
             }
 
             IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs);
@@ -1392,17 +1437,17 @@ internal sealed class DocxLayoutEngine
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                 DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: false).ToArray();
-                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, page.MarginBottom, HasPageContent()))
+                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, page.MarginBottom, HasCurrentColumnContent()))
                 {
-                    FinishPage();
+                    AdvanceColumnOrPage();
                 }
 
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
                     DocxWrappedTextLine line = lines[lineIndex];
-                    if (cursorY - lineHeight < page.MarginBottom && HasPageContent())
+                    if (cursorY - lineHeight < page.MarginBottom && HasCurrentColumnContent())
                     {
-                        FinishPage();
+                        AdvanceColumnOrPage();
                     }
 
                     double lineWidth = MeasureTextSpans(line.Spans, paragraphFontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints);
@@ -1454,6 +1499,7 @@ internal sealed class DocxLayoutEngine
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
                         StoryKind: "Body"));
+                    activeColumnHasContent = true;
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
@@ -1462,21 +1508,22 @@ internal sealed class DocxLayoutEngine
             }
             else if (paragraph.Images.Count == 0)
             {
-                if (cursorY - lineHeight < page.MarginBottom && HasPageContent())
+                if (cursorY - lineHeight < page.MarginBottom && HasCurrentColumnContent())
                 {
-                    FinishPage();
+                    AdvanceColumnOrPage();
                 }
 
                 cursorY -= lineHeight;
+                activeColumnHasContent = true;
             }
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-                if (cursorY - imageHeight < page.MarginBottom && HasPageContent())
+                if (cursorY - imageHeight < page.MarginBottom && HasCurrentColumnContent())
                 {
-                    FinishPage();
+                    AdvanceColumnOrPage();
                 }
 
                 double imageX = paragraph.Alignment switch
@@ -1493,6 +1540,7 @@ internal sealed class DocxLayoutEngine
                     imageHeight,
                     pages.Count + 1,
                     SourceBlockIndex: elementIndex));
+                activeColumnHasContent = true;
                 cursorY -= imageHeight + 6d;
             }
 
@@ -2162,6 +2210,17 @@ internal sealed class DocxLayoutEngine
                 columnWidth,
                 index + 1 < columnCount ? gutter : null))
             .ToArray();
+    }
+
+    private static DocxLayoutColumnFrame ResolveActiveColumnFrame(DocxPageGeometry page, int activeColumnIndex)
+    {
+        if (page.ColumnFrames.Count == 0)
+        {
+            return new DocxLayoutColumnFrame(0, page.MarginLeft, page.BodyWidth, null);
+        }
+
+        int index = Math.Clamp(activeColumnIndex, 0, page.ColumnFrames.Count - 1);
+        return page.ColumnFrames[index];
     }
 
     private static double ReadTwipsValue(string? value, double fallback)

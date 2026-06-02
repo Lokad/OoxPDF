@@ -5036,6 +5036,52 @@ internal static class DocxTests
         TestAssert.Equal(12d, firstPageSnapshot.ColumnGutterWidthSum);
     }
 
+    public static void DocxPageLayoutStageManualColumnBreakAdvancesActiveColumn()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 12d);
+        DocxParagraph second = first with
+        {
+            Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, null)]
+        };
+        DocxPageSettings sectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "4000",
+            HeightValue = "4000",
+            MarginLeftValue = "360",
+            MarginRightValue = "360",
+            MarginTopValue = "360",
+            MarginBottomValue = "360"
+        };
+        var document = new DocxDocument(
+            300d,
+            300d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxManualBreakElement("runBreak", "column"),
+                new DocxParagraphElement(second),
+                new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "360", [])
+            ],
+            [first, second],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTextLineLayout[] lines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+
+        TestAssert.Equal(1, layout.Pages.Count);
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(18d, lines[0].X);
+        TestAssert.Equal(109d, lines[1].X);
+        TestAssert.Equal(2, lines[1].SourceBlockIndex ?? -1);
+    }
+
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -8955,7 +9001,7 @@ internal static class DocxTests
         TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
     }
 
-    public static void DocxTableLayoutStageKeepsManualColumnBreakAsUnsupportedBoundary()
+    public static void DocxTableLayoutStageManualColumnBreakAdvancesPageInSingleColumn()
     {
         DocxTable first = CreateSingleCellTable("first", rowHeight: 20d);
         DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
@@ -8967,8 +9013,9 @@ internal static class DocxTests
 
         DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
 
-        TestAssert.Equal(1, layout.Pages.Count);
-        TestAssert.Equal(2, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+        TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
     }
 
     public static void DocxTableLayoutStageRunPageBreakParagraphConsumesLineBox()

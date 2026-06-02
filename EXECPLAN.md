@@ -7104,6 +7104,14 @@ Current validation baseline:
   lines still render in the single body frame, column breaks do not advance an active column, and floating
   `relativeFrom="column"` anchors in true multi-column sections still cannot resolve to a specific occupied
   column. Validation passed `docx-page --skip-slow` (`32`) and `docx-core --skip-slow` (`52`).
+  2026-06-02 architecture follow-up: `DocxLayout` now owns an active column cursor for body pagination.
+  Paragraph text, inline images, and tables consume the active `DocxLayoutColumnFrame`; manual column breaks
+  advance to the next column in multi-column sections and to the next page in single-column sections. This closes
+  the old "unsupported boundary" behavior for body-level column breaks without adding per-document positioning
+  shortcuts. Remaining gaps: Word-style column balancing, table/header continuation semantics inside true
+  multi-column sections, and `relativeFrom="column"` floating anchors still require source-block-to-active-column
+  ownership in layout snapshots. Validation passed `docx-page --skip-slow` (`33`), `docx-core --skip-slow`
+  (`52`), and `docx-tables --skip-slow` (`98`).
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
