@@ -55,6 +55,7 @@ File.WriteAllText(
         page.TextLineCount,
         page.InlineImageCount,
         page.TableRowCount,
+        StaticStoryCount = page.StaticStories.Count,
         page.SourceBlockCount,
         page.FirstSourceBlockIndex,
         page.LastSourceBlockIndex
@@ -62,6 +63,49 @@ File.WriteAllText(
 File.WriteAllText(
     Path.Combine(outputDirectory, "source-block-summary.json"),
     JsonSerializer.Serialize(layout.SourceBlocks, options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "static-story-summary.json"),
+    JsonSerializer.Serialize(layout.Pages.SelectMany((page, pageIndex) => page.StaticStories.Select(story => new
+    {
+        Page = pageIndex + 1,
+        story.Kind,
+        story.VariantType,
+        story.TextLineCount,
+        story.ParagraphCount,
+        story.SourceLineCount,
+        story.TextLength,
+        story.FirstParagraphLineCount,
+        story.VerticalTop,
+        story.VerticalBottom,
+        story.FirstSourceParagraphIndex,
+        story.LastSourceParagraphIndex,
+        story.FirstSourceLineIndex,
+        story.LastSourceLineIndex,
+        ItemCount = story.Items.Count
+    })), options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "static-story-item-summary.json"),
+    JsonSerializer.Serialize(layout.Pages.SelectMany((page, pageIndex) => page.StaticStories.SelectMany(story => story.Items.Select(item => new
+    {
+        Page = pageIndex + 1,
+        story.Kind,
+        story.VariantType,
+        ItemKind = item.Kind,
+        item.SourceParagraphIndex,
+        item.SourceLineIndex,
+        item.X,
+        item.Y,
+        item.Width,
+        item.Height,
+        item.TextLength,
+        item.LineHeightPoints,
+        item.AppliedBeforeSpacingPoints,
+        item.IsFirstParagraphLine,
+        item.PendingAfterSpacingPoints,
+        item.ParagraphBeforeSpacingPoints,
+        item.ParagraphAfterSpacingPoints,
+        item.ContextualSpacingSuppressed
+    }))), options));
 File.WriteAllText(
     Path.Combine(outputDirectory, "related-story-summary.json"),
     JsonSerializer.Serialize(layout.RelatedStories.Select(story => new

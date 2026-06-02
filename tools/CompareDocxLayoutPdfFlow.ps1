@@ -13,6 +13,8 @@ param(
 
     [int] $Top = 80,
 
+    [switch] $IncludeStaticStories,
+
     [string] $OutputJson
 )
 
@@ -198,6 +200,40 @@ function Get-LayoutLines($Layout) {
         }
 
         $lineIndex = 0
+        if ($IncludeStaticStories) {
+            foreach ($item in @($Layout.Pages[$pageIndex].StaticItems)) {
+                if ([string]$item.Kind -ne "StaticHeaderTextLine" -and [string]$item.Kind -ne "StaticFooterTextLine" -and [string]$item.Kind -ne "StaticTextLine") {
+                    continue
+                }
+
+                $lines.Add([pscustomobject]@{
+                    CandidatePage = $pageNumber
+                    CandidatePageLine = $lineIndex++
+                    CandidateLayoutY = [Math]::Round([double]$item.Y, 6)
+                    CandidateLayoutX = [Math]::Round([double]$item.X, 6)
+                    SourceBlockIndex = $item.SourceBlockIndex
+                    SourceLineIndex = $item.SourceLineIndex
+                    LayoutTextLength = [int]$item.TextLength
+                    IsStaticStory = $true
+                    StoryKind = if ([string]$item.Kind -eq "StaticHeaderTextLine") { "Header" } elseif ([string]$item.Kind -eq "StaticFooterTextLine") { "Footer" } else { "Static" }
+                    StoryVariantType = $item.StoryVariantType
+                    LineHeightPoints = if ($null -eq $item.LineHeightPoints) { $null } else { [Math]::Round([double]$item.LineHeightPoints, 6) }
+                    AppliedBeforeSpacingPoints = if ($null -eq $item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.AppliedBeforeSpacingPoints, 6) }
+                    SingleLineHeightPoints = if ($null -eq $item.SingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.SingleLineHeightPoints, 6) }
+                    ListLabelSingleLineHeightPoints = if ($null -eq $item.ListLabelSingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelSingleLineHeightPoints, 6) }
+                    BodyWindowsLineHeightPoints = if ($null -eq $item.BodyWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.BodyWindowsLineHeightPoints, 6) }
+                    ListLabelWindowsLineHeightPoints = if ($null -eq $item.ListLabelWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelWindowsLineHeightPoints, 6) }
+                    EffectiveLineSpacingFactor = if ($null -eq $item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$item.EffectiveLineSpacingFactor, 6) }
+                    LineSpacingFactorFloorApplied = $item.LineSpacingFactorFloorApplied
+                    IsFirstParagraphLine = $item.IsFirstParagraphLine
+                    PendingAfterSpacingPoints = if ($null -eq $item.PendingAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.PendingAfterSpacingPoints, 6) }
+                    ParagraphBeforeSpacingPoints = if ($null -eq $item.ParagraphBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphBeforeSpacingPoints, 6) }
+                    ParagraphAfterSpacingPoints = if ($null -eq $item.ParagraphAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphAfterSpacingPoints, 6) }
+                    ContextualSpacingSuppressed = $item.ContextualSpacingSuppressed
+                })
+            }
+        }
+
         foreach ($item in @($Layout.Pages[$pageIndex].Items)) {
             if ([string]$item.Kind -ne "TextLine") {
                 continue
@@ -211,6 +247,9 @@ function Get-LayoutLines($Layout) {
                 SourceBlockIndex = $item.SourceBlockIndex
                 SourceLineIndex = $item.SourceLineIndex
                 LayoutTextLength = [int]$item.TextLength
+                IsStaticStory = $false
+                StoryKind = "Body"
+                StoryVariantType = $null
                 LineHeightPoints = if ($null -eq $item.LineHeightPoints) { $null } else { [Math]::Round([double]$item.LineHeightPoints, 6) }
                 AppliedBeforeSpacingPoints = if ($null -eq $item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.AppliedBeforeSpacingPoints, 6) }
                 SingleLineHeightPoints = if ($null -eq $item.SingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.SingleLineHeightPoints, 6) }
@@ -316,6 +355,9 @@ foreach ($line in $layoutLines) {
             Status = "missing-candidate-row"
             SourceBlockIndex = $line.SourceBlockIndex
             SourceLineIndex = $line.SourceLineIndex
+            IsStaticStory = $line.IsStaticStory
+            StoryKind = $line.StoryKind
+            StoryVariantType = $line.StoryVariantType
             TextLength = $line.LayoutTextLength
             TextHash = $null
             ReferencePage = $null
@@ -356,6 +398,9 @@ foreach ($line in $layoutLines) {
         Status = if ($null -eq $referenceRow) { "missing-reference-match" } else { "matched" }
         SourceBlockIndex = $line.SourceBlockIndex
         SourceLineIndex = $line.SourceLineIndex
+        IsStaticStory = $line.IsStaticStory
+        StoryKind = $line.StoryKind
+        StoryVariantType = $line.StoryVariantType
         TextLength = $candidateRow.TextLength
         TextHash = $candidateRow.TextHash
         ReferencePage = if ($null -eq $referenceRow) { $null } else { [int]$referenceRow.Page }
@@ -388,7 +433,10 @@ $summary = [pscustomobject]@{
     LayoutSnapshot = (Resolve-Path -LiteralPath $LayoutSnapshot).Path
     PageStart = $PageStart
     PageEnd = if ($PageEnd -eq [int]::MaxValue) { $null } else { $PageEnd }
+    IncludeStaticStories = [bool]$IncludeStaticStories
     CandidateLayoutLineCount = $layoutLines.Count
+    CandidateStaticLayoutLineCount = @($layoutLines | Where-Object { $_.IsStaticStory -eq $true }).Count
+    CandidateBodyLayoutLineCount = @($layoutLines | Where-Object { $_.IsStaticStory -ne $true }).Count
     CandidatePdfLineCount = $candidateRows.Count
     ReferencePdfLineCount = $referenceRows.Count
     MatchedLineCount = @($mapped | Where-Object Status -eq "matched").Count

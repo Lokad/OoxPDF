@@ -7464,6 +7464,14 @@ Current validation baseline:
   then asserts first/default/even ownership from the page layout snapshot. Validation passed `docx-page
   --skip-slow` (`38`) and `docx-core --skip-slow` (`53`). Keep non-text static drawings and selected
   header/footer PDF row matching open.
+  2026-06-02 architecture follow-up: `DocxInspect` now writes focused `static-story-summary.json` and
+  `static-story-item-summary.json` files, exposing page, story kind, variant type, source line indexes,
+  vertical bounds, text lengths, and static item geometry without decoded text. `CompareDocxLayoutPdfFlow.ps1`
+  now has an opt-in `-IncludeStaticStories` mode that maps `StaticItems` into the same private-safe
+  layout/PDF row comparison stream and carries `IsStaticStory`, story kind, and story variant into mapped
+  rows. Validation built `Lokad.OoxPdf.DocxInspect`, parsed the PowerShell script, smoked `DocxInspect` on
+  public `docx-headers-footers.docx`, and ran the comparer switch on a public DOCX visual run. Keep
+  Office-derived static header/footer row acceptance gates and non-text static drawings open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
