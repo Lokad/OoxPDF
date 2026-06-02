@@ -783,6 +783,12 @@ High-priority actions:
     resolution consume typed layout data instead of reparsing raw string tokens. Rendering and wrap exclusion
     remain open until public Office probes establish the supported `relativeFrom`/align/offset combinations and
     PDF draw order. Validation passed `docx-core --skip-slow` (`52`).
+    2026-06-02 architecture follow-up: floating drawing layout snapshots now expose resolved anchor reference
+    frames for structurally known single-column cases: horizontal `page` and `margin`/`column`, plus vertical
+    `page`, `margin`, and paragraph-relative anchors. Unsupported frame families remain `null` until public
+    Office probes define their behavior. The initial implementation caught and fixed a coordinate-frame bug
+    where a reference width was mistakenly treated as an endpoint, reinforcing that this branch should proceed
+    through explicit frame records before any drawing emission. Validation passed `docx-core --skip-slow` (`52`).
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

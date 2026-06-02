@@ -6402,7 +6402,10 @@ internal static class DocxTests
                         </w:drawing>
                       </w:r>
                     </w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                    <w:sectPr>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
+                    </w:sectPr>
                   </w:body>
                 </w:document>
                 """),
@@ -6466,6 +6469,11 @@ internal static class DocxTests
         TestAssert.Equal(18d, layoutSnapshot.DistanceBottomPoints ?? 0d);
         TestAssert.Equal(27d, layoutSnapshot.DistanceLeftPoints ?? 0d);
         TestAssert.Equal(36d, layoutSnapshot.DistanceRightPoints ?? 0d);
+        DocxLayoutPageSnapshot layoutPage = new DocxRenderer().InspectLayout(document).Pages.Single();
+        TestAssert.Equal(layoutPage.MarginLeft, layoutSnapshot.HorizontalReferenceX ?? 0d);
+        TestAssert.Equal(layoutPage.Width - layoutPage.MarginLeft - layoutPage.MarginRight, layoutSnapshot.HorizontalReferenceWidth ?? 0d);
+        TestAssert.Equal(layoutSnapshot.AnchorBlockVerticalTop ?? 0d, layoutSnapshot.VerticalReferenceTop ?? 0d);
+        TestAssert.Equal(layoutSnapshot.AnchorBlockVerticalBottom ?? 0d, layoutSnapshot.VerticalReferenceBottom ?? 0d);
         TestAssert.Equal("rIdImage1", layoutSnapshot.ImageRelationshipId ?? string.Empty);
         TestAssert.Equal("/word/media/image1.png", layoutSnapshot.ImagePartName ?? string.Empty);
         TestAssert.Equal("image/png", layoutSnapshot.ImageContentType ?? string.Empty);

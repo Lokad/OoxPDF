@@ -25,7 +25,11 @@ internal sealed record DocxFloatingDrawingLayout(
     double? DistanceTopPoints,
     double? DistanceBottomPoints,
     double? DistanceLeftPoints,
-    double? DistanceRightPoints);
+    double? DistanceRightPoints,
+    double? HorizontalReferenceX,
+    double? HorizontalReferenceWidth,
+    double? VerticalReferenceTop,
+    double? VerticalReferenceBottom);
 
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
@@ -83,6 +87,10 @@ internal sealed record DocxLayoutSnapshot(
                     drawing.DistanceBottomPoints,
                     drawing.DistanceLeftPoints,
                     drawing.DistanceRightPoints,
+                    drawing.HorizontalReferenceX,
+                    drawing.HorizontalReferenceWidth,
+                    drawing.VerticalReferenceTop,
+                    drawing.VerticalReferenceBottom,
                     drawing.Drawing.WrapKind,
                     drawing.Drawing.WrapTextValue,
                     drawing.Drawing.HorizontalRelativeFromValue,
@@ -586,6 +594,10 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     double? DistanceBottomPoints,
     double? DistanceLeftPoints,
     double? DistanceRightPoints,
+    double? HorizontalReferenceX,
+    double? HorizontalReferenceWidth,
+    double? VerticalReferenceTop,
+    double? VerticalReferenceBottom,
     string? WrapKind,
     string? WrapTextValue,
     string? HorizontalRelativeFromValue,
@@ -1434,6 +1446,11 @@ internal sealed class DocxLayoutEngine
                 DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is null
                     ? null
                     : FindSourceBlockBounds(pages, drawing.SourceBlockIndex.Value);
+                DocxLayoutPage? anchorPage = sourceBlock is null
+                    ? pages.FirstOrDefault()
+                    : pages[sourceBlock.FirstPageIndex];
+                DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage);
+                DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
                 return new DocxFloatingDrawingLayout(
                     drawing,
                     sourceBlock?.FirstPageIndex,
@@ -1448,9 +1465,49 @@ internal sealed class DocxLayoutEngine
                     ReadEmuPoints(drawing.DistanceTopValue),
                     ReadEmuPoints(drawing.DistanceBottomValue),
                     ReadEmuPoints(drawing.DistanceLeftValue),
-                    ReadEmuPoints(drawing.DistanceRightValue));
+                    ReadEmuPoints(drawing.DistanceRightValue),
+                    horizontalReference?.Start,
+                    horizontalReference?.Size,
+                    verticalReference?.Start,
+                    verticalReference?.End);
             })
             .ToArray();
+    }
+
+    private static DocxAnchorReferenceFrame? ResolveHorizontalReferenceFrame(
+        DocxFloatingDrawing drawing,
+        DocxLayoutPage? page)
+    {
+        if (page is null)
+        {
+            return null;
+        }
+
+        return drawing.HorizontalRelativeFromValue?.ToLowerInvariant() switch
+        {
+            "page" => new DocxAnchorReferenceFrame(0d, page.Width),
+            "margin" or "column" => new DocxAnchorReferenceFrame(page.MarginLeft, page.Width - page.MarginRight),
+            _ => null
+        };
+    }
+
+    private static DocxAnchorReferenceFrame? ResolveVerticalReferenceFrame(
+        DocxFloatingDrawing drawing,
+        DocxLayoutPage? page,
+        DocxLayoutSourceBlockBounds? sourceBlock)
+    {
+        if (page is null)
+        {
+            return null;
+        }
+
+        return drawing.VerticalRelativeFromValue?.ToLowerInvariant() switch
+        {
+            "page" => new DocxAnchorReferenceFrame(page.Height, 0d),
+            "margin" => new DocxAnchorReferenceFrame(page.Height - page.MarginTop, page.MarginBottom),
+            "paragraph" when sourceBlock is not null => new DocxAnchorReferenceFrame(sourceBlock.VerticalTop, sourceBlock.VerticalBottom),
+            _ => null
+        };
     }
 
     private static double? ReadEmuPoints(string? value)
@@ -1515,6 +1572,11 @@ internal sealed class DocxLayoutEngine
         int LastPageIndex,
         double VerticalTop,
         double VerticalBottom);
+
+    private sealed record DocxAnchorReferenceFrame(double Start, double End)
+    {
+        public double Size => Math.Abs(Start - End);
+    }
 
     private static IReadOnlyList<DocxLayoutPage> AddStaticTextLines(IReadOnlyList<DocxLayoutPage> pages, IDocxTextMeasurer? textMeasurer)
     {
