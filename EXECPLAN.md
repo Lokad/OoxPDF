@@ -6743,6 +6743,14 @@ Current validation baseline:
   residual is near zero. This closes another diagnostic blind spot: the remaining renderer work is to decide
   Office's uniform text-state component from font-size and glyph-pair/shaping structure, not merely to move an
   existing `TJ` adjustment into `Tc` or to replay candidate layout residuals.
+  2026-06-02 font-matrix coverage follow-up: added Office-authored public
+  `docx-ladder-03-text-state-font-matrix`, which keeps the same short text-state tokens at 11pt while varying
+  common Office fonts (`Arial`, `Calibri`, `Times New Roman`, `Courier New`, `Georgia`, `Verdana`). Run
+  `20260602-091115` is valid (`MAE=0.766012`, changed16 `0.008298`) and shows the same open renderer gap:
+  Office emits `19` nonzero `Tc` operations, candidate emits none. The public summary found zero ambiguous
+  `PdfFontSize + pair-side advance range -> Office Tc` keys in this cross-font probe as well. Keep the case as
+  an oracle guard against font-name rules: it broadens the structural evidence for glyph-pair/shaping driven
+  text-state decomposition, but it still does not justify a lookup table of observed font/pair constants.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored

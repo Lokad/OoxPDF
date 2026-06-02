@@ -977,6 +977,66 @@ try {
         $textStateSizeMatrix.Close($false)
     }
 
+    $textStateFontMatrix = $word.Documents.Add()
+    try {
+        $textStateFontMatrix.PageSetup.PageWidth = 612
+        $textStateFontMatrix.PageSetup.PageHeight = 792
+        $textStateFontMatrix.PageSetup.TopMargin = 72
+        $textStateFontMatrix.PageSetup.BottomMargin = 72
+        $textStateFontMatrix.PageSetup.LeftMargin = 72
+        $textStateFontMatrix.PageSetup.RightMargin = 72
+        $textStateFontMatrix.Content.Text = "DOCX text-state font matrix`r`n"
+
+        $heading = $textStateFontMatrix.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $range = $textStateFontMatrix.Paragraphs.Item(2).Range
+        $tbl = $textStateFontMatrix.Tables.Add($range, 6, 5)
+        $tbl.Borders.Enable = $true
+        $tbl.AllowAutoFit = $false
+        $tbl.Rows.Alignment = 0
+        $tbl.Columns.Item(1).Width = 125
+        $tbl.Columns.Item(2).Width = 75
+        $tbl.Columns.Item(3).Width = 75
+        $tbl.Columns.Item(4).Width = 75
+        $tbl.Columns.Item(5).Width = 145
+
+        $fonts = @("Arial", "Calibri", "Times New Roman", "Courier New", "Georgia", "Verdana")
+        $values = @("42", "Q1", "AB", "North")
+        for ($row = 1; $row -le $fonts.Count; $row++) {
+            $fontName = $fonts[$row - 1]
+            $tbl.Cell($row, 1).Range.Text = $fontName
+            for ($column = 2; $column -le 5; $column++) {
+                $tbl.Cell($row, $column).Range.Text = $values[$column - 2]
+            }
+
+            for ($column = 1; $column -le 5; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Font.Name = $fontName
+                $cell.Range.Font.Size = 11
+                $cell.Range.Font.Color = Rgb 30 30 30
+                $cell.Range.ParagraphFormat.SpaceBefore = 0
+                $cell.Range.ParagraphFormat.SpaceAfter = 0
+                $cell.TopPadding = 1.5
+                $cell.BottomPadding = 1.5
+                $cell.LeftPadding = 5.4
+                $cell.RightPadding = 5.4
+                if ($row % 2 -eq 0) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 232 244 253
+                }
+            }
+        }
+
+        $textStateFontMatrix.SaveAs2((Join-Path $cases "docx-ladder-03-text-state-font-matrix.docx"), 16)
+    }
+    finally {
+        $textStateFontMatrix.Close($false)
+    }
+
     $rowHeights = $word.Documents.Add()
     try {
         $rowHeights.PageSetup.PageWidth = 612
