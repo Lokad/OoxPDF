@@ -8,6 +8,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed class DocxReader
 {
+    private const double WordUntokenedAutoLineSpacingFactor = 1.25d;
+    private const double WordSpacingTokenAutoLineSpacingFactor = 1.2d;
+
     private static readonly XNamespace WordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static readonly XNamespace WordprocessingDrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -743,7 +746,8 @@ internal sealed class DocxReader
         }
 
         double paragraphFontSize = runs.Count == 0 ? 11d : runs.Max(run => run.FontSize);
-        double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * (resolvedParagraph.LineSpacingFactor ?? 1.25d);
+        double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ?? ResolveDefaultAutoLineSpacingFactor(resolvedParagraph);
+        double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * lineSpacingFactor;
 
         return new DocxParagraph(
             runs,
@@ -753,7 +757,7 @@ internal sealed class DocxReader
             resolvedParagraph.AlignmentValue,
             ResolveSpacingBeforePoints(resolvedParagraph, paragraphLineHeight),
             ResolveSpacingAfterPoints(resolvedParagraph, paragraphLineHeight),
-            resolvedParagraph.LineSpacingFactor ?? 1.25d,
+            lineSpacingFactor,
             resolvedParagraph.LineSpacingPoints,
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
@@ -1014,6 +1018,13 @@ internal sealed class DocxReader
         return TryReadLineBasedSpacing(paragraph.Spacing.BeforeLinesValue, lineHeight, out double linePoints)
             ? linePoints
             : 0d;
+    }
+
+    private static double ResolveDefaultAutoLineSpacingFactor(DocxResolvedParagraphProperties paragraph)
+    {
+        return HasBeforeSpacingSide(paragraph.Spacing) || HasAfterSpacingSide(paragraph.Spacing)
+            ? WordSpacingTokenAutoLineSpacingFactor
+            : WordUntokenedAutoLineSpacingFactor;
     }
 
     private static double ResolveSpacingAfterPoints(DocxResolvedParagraphProperties paragraph, double lineHeight)

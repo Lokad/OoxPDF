@@ -776,8 +776,8 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(package);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
-        TestAssert.Equal(37.5d, paragraph.SpacingBeforePoints);
-        TestAssert.Equal(50d, paragraph.SpacingAfterPoints);
+        TestAssert.Equal(36d, paragraph.SpacingBeforePoints);
+        TestAssert.Equal(48d, paragraph.SpacingAfterPoints);
         TestAssert.Equal("150", paragraph.Spacing.BeforeLinesValue ?? string.Empty);
         TestAssert.Equal("200", paragraph.Spacing.AfterLinesValue ?? string.Empty);
     }
@@ -820,6 +820,50 @@ internal static class DocxTests
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal(1.15d, paragraph.LineSpacingFactor);
+    }
+
+    public static void DocxReaderUsesWordDefaultAutoLineSpacingWhenLineTokenIsAbsent()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:spacing w:before="36" w:after="0"/></w:pPr>
+                      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>Missing line token</w:t></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>No spacing token</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        TestAssert.Equal(2, document.Paragraphs.Count);
+        TestAssert.Equal(1.2d, document.Paragraphs[0].LineSpacingFactor);
+        TestAssert.Equal(1.25d, document.Paragraphs[1].LineSpacingFactor);
     }
 
     public static void DocxReaderPreservesFontTableAlternatesAndThemeFonts()
@@ -9780,6 +9824,19 @@ internal static class DocxTests
             autoSpacing,
             DocxParagraphKeepRules.Empty,
             label);
+        var defaultAutoList = new DocxParagraph(
+            [new DocxTextRun("Default auto", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.2d,
+            null,
+            new DocxParagraphSpacing(null, null, null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            label);
         var plainParagraph = new DocxParagraph(
             [new DocxTextRun("Plain", 10d, null, false, false, false, null, null)],
             [],
@@ -9794,7 +9851,7 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxDocument document = CreateLayoutTestDocument(
-            [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(plainParagraph)],
+            [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(defaultAutoList), new DocxParagraphElement(plainParagraph)],
             []);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
@@ -9802,15 +9859,17 @@ internal static class DocxTests
             .Where(item => item.Kind == "TextLine")
             .ToArray();
 
-        TestAssert.Equal(3, textLines.Length);
+        TestAssert.Equal(4, textLines.Length);
         TestAssert.Equal(10d, textLines[0].SingleLineHeightPoints ?? 0d);
         TestAssert.Equal(1.19d, textLines[0].EffectiveLineSpacingFactor ?? 0d);
         TestAssert.True(Math.Abs((textLines[0].LineHeightPoints ?? 0d) - 11.9d) < 0.0001d, "Effective line height should be the measured single-line height multiplied by the effective factor.");
         TestAssert.True(textLines[0].LineSpacingFactorFloorApplied == true, "Positive before-spacing list paragraphs should report the Word-compatible auto-line floor.");
         TestAssert.Equal(1.15d, textLines[1].EffectiveLineSpacingFactor ?? 0d);
         TestAssert.True(textLines[1].LineSpacingFactorFloorApplied == false, "Lists without positive before spacing should not report the floor.");
-        TestAssert.Equal(1.15d, textLines[2].EffectiveLineSpacingFactor ?? 0d);
-        TestAssert.True(textLines[2].LineSpacingFactorFloorApplied == false, "Non-list paragraphs should not report the list floor.");
+        TestAssert.Equal(1.2d, textLines[2].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(textLines[2].LineSpacingFactorFloorApplied == false, "Missing w:line list paragraphs should use the Word default auto factor without the explicit-line floor.");
+        TestAssert.Equal(1.15d, textLines[3].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(textLines[3].LineSpacingFactorFloorApplied == false, "Non-list paragraphs should not report the list floor.");
     }
 
     public static void DocxLayoutSnapshotReportsListLabelLineHeightMetricCandidates()
