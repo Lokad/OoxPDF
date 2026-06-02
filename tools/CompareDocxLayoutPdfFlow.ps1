@@ -147,6 +147,9 @@ function Get-LayoutLines($Layout) {
                 LayoutTextLength = [int]$item.TextLength
                 LineHeightPoints = if ($null -eq $item.LineHeightPoints) { $null } else { [Math]::Round([double]$item.LineHeightPoints, 6) }
                 AppliedBeforeSpacingPoints = if ($null -eq $item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.AppliedBeforeSpacingPoints, 6) }
+                SingleLineHeightPoints = if ($null -eq $item.SingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.SingleLineHeightPoints, 6) }
+                EffectiveLineSpacingFactor = if ($null -eq $item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$item.EffectiveLineSpacingFactor, 6) }
+                LineSpacingFactorFloorApplied = $item.LineSpacingFactorFloorApplied
                 IsFirstParagraphLine = $item.IsFirstParagraphLine
             })
         }
@@ -253,6 +256,9 @@ foreach ($line in $layoutLines) {
             ExactReferenceMatchCount = 0
             LineHeightPoints = $line.LineHeightPoints
             AppliedBeforeSpacingPoints = $line.AppliedBeforeSpacingPoints
+            SingleLineHeightPoints = $line.SingleLineHeightPoints
+            EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
+            LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
             IsFirstParagraphLine = $line.IsFirstParagraphLine
         })
         continue
@@ -283,6 +289,9 @@ foreach ($line in $layoutLines) {
         ExactReferenceMatchCount = [int]$referenceMatch.ExactReferenceMatchCount
         LineHeightPoints = $line.LineHeightPoints
         AppliedBeforeSpacingPoints = $line.AppliedBeforeSpacingPoints
+        SingleLineHeightPoints = $line.SingleLineHeightPoints
+        EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
+        LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
         IsFirstParagraphLine = $line.IsFirstParagraphLine
     })
 }
@@ -311,6 +320,36 @@ $summary = [pscustomobject]@{
             ForEach-Object {
                 [pscustomobject]@{
                     AdvancePoints = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+    CandidateEffectiveLineSpacingFactorBuckets = @(
+        $layoutLines |
+            Where-Object { $null -ne $_.EffectiveLineSpacingFactor } |
+            Group-Object {
+                ([double]$_.EffectiveLineSpacingFactor).ToString("0.000000", [Globalization.CultureInfo]::InvariantCulture)
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    EffectiveLineSpacingFactor = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+    CandidateLineSpacingFloorBuckets = @(
+        $layoutLines |
+            Where-Object { $null -ne $_.LineSpacingFactorFloorApplied } |
+            Group-Object {
+                if ($_.LineSpacingFactorFloorApplied -eq $true) { "true" } else { "false" }
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    LineSpacingFactorFloorApplied = $_.Name
                     Count = $_.Count
                 }
             }

@@ -416,6 +416,13 @@ High-priority actions:
   that zero-before lists and non-list paragraphs do not report the floor. This is diagnostic/architectural
   groundwork, not a rendering change. Use it next to compare public compact-list and table-cell line pitches
   against Office PDF rows before changing metrics, row fragmentation, or page-bottom rules.
+  2026-06-02 tooling follow-up: `tools/CompareDocxLayoutPdfFlow.ps1` now includes the same line-height profile
+  fields in mapped rows and emits effective-factor/floor-applied buckets. Public
+  `docx-ladder-03-compact-bullet-alt-line115` run `20260602-021217`, with fresh PDF and DOCX inspections,
+  shows `42` candidate layout lines at effective factor `1.190000` with the floor applied and `1` control line
+  at `1.250000` without the floor. This makes the accepted list-floor decision visible in the public
+  layout/PDF flow map; continue by comparing those candidate pitches to Office row deltas before touching
+  metrics or pagination rules.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table
