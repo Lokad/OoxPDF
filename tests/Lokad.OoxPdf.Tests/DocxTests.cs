@@ -734,6 +734,78 @@ internal static class DocxTests
         TestAssert.True(paragraph.KeepRules.WidowControl == true, "Style widowControl should survive the paragraph cascade.");
     }
 
+    public static void DocxReaderCascadesParagraphSpacingAndRunSizeThroughBasedOnStyles()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="Base">
+                    <w:pPr><w:spacing w:before="120" w:after="240" w:line="360" w:lineRule="auto"/></w:pPr>
+                    <w:rPr><w:sz w:val="28"/><w:color w:val="112233"/></w:rPr>
+                  </w:style>
+                  <w:style w:type="paragraph" w:styleId="Child">
+                    <w:basedOn w:val="Base"/>
+                    <w:pPr><w:spacing w:after="0"/></w:pPr>
+                    <w:rPr><w:b/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:pStyle w:val="Child"/></w:pPr>
+                      <w:r><w:t>Inherited spacing and size</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        DocxTextRun run = paragraph.Runs.Single();
+        TestAssert.Equal("Child", paragraph.StyleId ?? string.Empty);
+        TestAssert.Equal(6d, paragraph.SpacingBeforePoints);
+        TestAssert.Equal(0d, paragraph.SpacingAfterPoints);
+        TestAssert.Equal("120", paragraph.Spacing.BeforeValue ?? string.Empty);
+        TestAssert.Equal("0", paragraph.Spacing.AfterValue ?? string.Empty);
+        TestAssert.Equal("360", paragraph.Spacing.LineValue ?? string.Empty);
+        TestAssert.Equal("auto", paragraph.Spacing.LineRuleValue ?? string.Empty);
+        TestAssert.Equal(1.5d, paragraph.LineSpacingFactor);
+        TestAssert.Equal(14d, run.FontSize);
+        TestAssert.Equal("112233", run.ColorHex ?? string.Empty);
+        TestAssert.True(run.Bold, "Child paragraph style run properties should merge over the inherited base run size/color.");
+    }
+
     public static void DocxReaderPreservesEmptyParagraphBodyElement()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

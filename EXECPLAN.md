@@ -5000,6 +5000,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     while the direct false override suppresses it. Validation passed `docx-page --skip-slow` (`37`) and
     `docx-core --skip-slow` (`53`; serial rerun after a parallel compiler output lock). Keep the parent open
     for Office-backed spacing and font-size inheritance fixtures before claiming the full style graph closed.
+  - [x] 2026-06-02: Added bottom-up synthetic coverage for `w:basedOn` paragraph spacing plus paragraph-style
+    run size/color inheritance. The fixture verifies base-style before/line spacing, child-style after-spacing
+    override, inherited run font size/color, and child run bold merge in the parsed DOCX model. Validation
+    passed `docx-text --skip-slow` (`49`). This confirms the current typed cascade contract but still does not
+    replace the requested Office-authored visual fixture for pagination-sensitive inherited spacing/font-size
+    behavior.
 - [x] 2026-06-01: Promote DOCX run character spacing (`w:rPr/w:spacing`) through the typed run model,
   resolved style cascade, text measurement, wrapping/segment placement, static header/footer placement, and
   PDF glyph emission. The parser treats the token as signed twentieths of a point, not as a font-family
