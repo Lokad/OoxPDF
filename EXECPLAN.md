@@ -4824,6 +4824,13 @@ block models and richer section/pagination layout before adding more Word pagina
   `story.Tables` as downstream rendering/diagnostic sources. The parallel inventories remain on the internal
   model for reader/test compatibility, but font planning and private-safe structure diagnostics now derive
   from the block stream consistently. Validation passed `docx-core --skip-slow` (`29`).
+  2026-06-02 follow-up: related-story layout snapshots now also derive paragraph/table counts from the
+  story `BodyElements` stream instead of the legacy parallel story inventories. A constructed related-story
+  layout test leaves `story.Paragraphs` empty while the body stream owns an image paragraph, and still expects
+  the snapshot paragraph count to come from the body stream. Validation passed `docx-images --skip-slow`
+  (`4`) and `docx-core --skip-slow` (`53`; the parallel run produced a transient apphost copy warning but
+  completed successfully). Keep the public model compatibility work open until the parallel inventories can be
+  deprecated or converted to derived accessors without breaking reader-focused tests.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

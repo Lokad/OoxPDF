@@ -13838,7 +13838,7 @@ internal static class DocxTests
             "/word/comments.xml",
             "9",
             [new DocxParagraphElement(imageParagraph)],
-            [imageParagraph],
+            [],
             []);
         DocxDocument document = new DocxDocument(612d, 792d)
         {
@@ -13851,6 +13851,7 @@ internal static class DocxTests
         DocxRelatedStoryLayoutSnapshot storySnapshot = snapshot.RelatedStories.Single();
 
         TestAssert.True(storySnapshot.Kind == "Comment" && storySnapshot.PartName == "/word/comments.xml" && storySnapshot.Id == "9", "Related-story layout snapshots should preserve the owning story identity.");
+        TestAssert.True(storySnapshot.BlockCount == 1 && storySnapshot.ParagraphCount == 1 && storySnapshot.TableCount == 0, "Related-story layout snapshots should derive counts from the body block stream, not stale parallel inventories.");
         TestAssert.True(storySnapshot.TextLineCount == 0 && storySnapshot.InlineImageCount == 1 && storySnapshot.ContentHeight >= 24d, "Related-story inline images should be owned by story layout instead of only contributing anonymous height.");
         DocxLayoutItemSnapshot imageItem = storySnapshot.Items.Single(item => item.Kind == "InlineImage");
         TestAssert.True(imageItem.SourceBlockIndex == 0 && imageItem.SourceParagraphIndex == 0 && imageItem.Width == 48d && imageItem.Height == 24d, "Related-story image item snapshots should carry private-safe source coordinates and geometry.");
