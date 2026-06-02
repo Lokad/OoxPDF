@@ -4693,6 +4693,13 @@ block models and richer section/pagination layout before adding more Word pagina
     `docx-text --skip-slow` (`45`; a first parallel run hit a transient compiler output lock and passed on
     serial rerun). Keep renderer glyph choice, automatic footnote/endnote numbering display, separator
     footnotes, side-story placement, and PDF link/annotation structure open.
+  - [x] 2026-06-02: bottom-up coverage now locks inline reference anchors through the same inline containers
+    used by other DOCX run content. `DocxReaderPreservesInlineReferencesInsideRunContainers` checks footnote
+    markers in final-view inserted runs, comment markers inside hyperlinks, and endnote markers inside simple
+    fields, including source run index, run child index, and visible text offsets. This intentionally stops at
+    structural preservation: Office-derived marker glyphs, numbering/restart rules, footnote separators,
+    side-story placement, and annotation/link PDF structures remain open until those rules are modeled from
+    OOXML settings and observed Office output instead of guessed. Validation passed the direct test.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent

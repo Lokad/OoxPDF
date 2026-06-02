@@ -3576,6 +3576,77 @@ internal static class DocxTests
         TestAssert.Equal(0, block.InternalHyperlinkCount);
     }
 
+    public static void DocxReaderPreservesInlineReferencesInsideRunContainers()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Base</w:t></w:r>
+                      <w:ins>
+                        <w:r><w:t>Ins</w:t><w:footnoteReference w:id="5" w:customMarkFollows="1"/></w:r>
+                      </w:ins>
+                      <w:hyperlink w:anchor="Target">
+                        <w:r><w:commentReference w:id="6"/><w:t>Link</w:t></w:r>
+                      </w:hyperlink>
+                      <w:fldSimple w:instr=" REF Target ">
+                        <w:r><w:t>Field</w:t><w:endnoteReference w:id="7"/></w:r>
+                      </w:fldSimple>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+
+        TestAssert.Equal(3, paragraph.InlineReferences.Count);
+        DocxInlineReference footnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Footnote");
+        DocxInlineReference comment = paragraph.InlineReferences.Single(reference => reference.Kind == "Comment");
+        DocxInlineReference endnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Endnote");
+        TestAssert.True(footnote.Id == "5" && footnote.CustomMarkFollowsValue == "1", "Inserted footnote marker metadata should survive run-container parsing.");
+        TestAssert.True(comment.Id == "6" && comment.CustomMarkFollowsValue is null, "Hyperlink comment marker metadata should survive run-container parsing.");
+        TestAssert.True(endnote.Id == "7" && endnote.CustomMarkFollowsValue is null, "Simple-field endnote marker metadata should survive run-container parsing.");
+        TestAssert.Equal(1, footnote.SourceRunIndex);
+        TestAssert.Equal(1, footnote.RunChildIndex);
+        TestAssert.Equal(3, footnote.TextOffsetInRun);
+        TestAssert.Equal(2, comment.SourceRunIndex);
+        TestAssert.Equal(0, comment.RunChildIndex);
+        TestAssert.Equal(0, comment.TextOffsetInRun);
+        TestAssert.Equal(3, endnote.SourceRunIndex);
+        TestAssert.Equal(1, endnote.RunChildIndex);
+        TestAssert.Equal(5, endnote.TextOffsetInRun);
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
+        TestAssert.Equal(3, snapshot.InlineReferenceCount);
+        TestAssert.Equal(3, snapshot.AnchoredInlineReferenceCount);
+        TestAssert.Equal(1, block.CommentReferenceCount);
+        TestAssert.Equal(1, block.FootnoteReferenceCount);
+        TestAssert.Equal(1, block.EndnoteReferenceCount);
+    }
+
     public static void DocxReaderPreservesBookmarkAnchorsForInternalHyperlinks()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
