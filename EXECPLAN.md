@@ -7069,6 +7069,14 @@ Current validation baseline:
   `docx-headers-footers` run `20260601-140626` stayed unchanged (`MAE=0.073352`, changed16 `0.002110`).
   Private DOCX run `20260601-140640` stayed at `16/16` pages with zero dimension mismatches and no diagnostics,
   `MAE=13.838763`, changed16 `0.126851`.
+  2026-06-02 architecture follow-up: section column declarations now survive into page-local layout ownership.
+  `DocxLayoutPage` carries `DocxSectionLayoutProperties`, layout snapshots expose raw `w:cols` `num`,
+  `equalWidth`, and `space` tokens plus parsed count/spacing points, and the structure snapshot no longer drops
+  `equalWidth`. A bottom-up page test asserts that a `nextPage` section break owns the preceding page's
+  two-column metadata while the final-section page does not inherit it. Rendering remains single-column:
+  actual multi-column line flow, column balancing, continuous-section geometry changes, column breaks, and
+  floating anchor `column` frames in true multi-column sections remain open. Validation passed `docx-page
+  --skip-slow` (`31`) and `docx-core --skip-slow` (`52`).
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

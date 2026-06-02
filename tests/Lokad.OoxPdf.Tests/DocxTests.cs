@@ -1650,6 +1650,9 @@ internal static class DocxTests
         TestAssert.Equal(5, snapshot.Blocks[0].LongestWhitespaceDelimitedTokenLength ?? 0);
         TestAssert.True(snapshot.Blocks[1].PageBreakConsumesParagraphLine == true, "Page-break structure should expose the consumed paragraph line.");
         TestAssert.Equal("nextPage", snapshot.Blocks[3].SectionBreakTypeValue ?? string.Empty);
+        TestAssert.Equal("2", snapshot.Blocks[3].SectionColumnCountValue ?? string.Empty);
+        TestAssert.Equal("1", snapshot.Blocks[3].SectionColumnEqualWidthValue ?? string.Empty);
+        TestAssert.Equal("720", snapshot.Blocks[3].SectionColumnSpaceValue ?? string.Empty);
         TestAssert.Equal(4, snapshot.Stories.Count);
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Body" && story.BlockCount == 4), "Body story should summarize the document block stream.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Header" && story.Scope == "document" && story.VariantType == "default"), "Document default header story should be inventoried before layout.");
@@ -4912,7 +4915,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null),
+                new DocxSectionBreakElement(firstSectionSettings, "nextPage", "2", "0", "720"),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -4926,12 +4929,19 @@ internal static class DocxTests
         TestAssert.Equal(18d, layout.Pages[0].MarginLeft);
         TestAssert.Equal(18d, layout.Pages[0].MarginTop);
         TestAssert.Equal("360", layout.Pages[0].PageSettings.MarginLeftValue ?? string.Empty);
+        TestAssert.Equal("nextPage", layout.Pages[0].SectionProperties.BreakTypeValue ?? string.Empty);
+        TestAssert.Equal("2", layout.Pages[0].SectionProperties.ColumnCountValue ?? string.Empty);
+        TestAssert.Equal("0", layout.Pages[0].SectionProperties.ColumnEqualWidthValue ?? string.Empty);
+        TestAssert.Equal("720", layout.Pages[0].SectionProperties.ColumnSpaceValue ?? string.Empty);
+        TestAssert.Equal(2, layout.Pages[0].SectionProperties.ColumnCount ?? 0);
+        TestAssert.Equal(36d, layout.Pages[0].SectionProperties.ColumnSpacePoints ?? 0d);
         TestAssert.Equal(18d, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().X);
         TestAssert.Equal(300d, layout.Pages[1].Width);
         TestAssert.Equal(300d, layout.Pages[1].Height);
         TestAssert.Equal(72d, layout.Pages[1].MarginLeft);
         TestAssert.Equal(72d, layout.Pages[1].MarginTop);
         TestAssert.Equal("1440", layout.Pages[1].PageSettings.MarginLeftValue ?? string.Empty);
+        TestAssert.True(layout.Pages[1].SectionProperties.ColumnCountValue is null, "Final section page should not inherit previous section column tokens.");
         TestAssert.Equal(72d, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().X);
     }
 

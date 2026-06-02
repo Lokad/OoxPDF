@@ -47,6 +47,14 @@ internal sealed record DocxParagraphSpacingProfile(
     double AppliedBeforeSpacing,
     bool ContextualSpacingSuppressed);
 
+internal sealed record DocxSectionLayoutProperties(
+    string? BreakTypeValue,
+    string? ColumnCountValue,
+    string? ColumnEqualWidthValue,
+    string? ColumnSpaceValue,
+    int? ColumnCount,
+    double? ColumnSpacePoints);
+
 internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxLayoutPageSnapshot> Pages,
     IReadOnlyList<DocxTableSnapshot> Tables,
@@ -232,6 +240,12 @@ internal sealed record DocxLayoutSnapshot(
             page.MarginRight,
             page.MarginTop,
             page.MarginBottom,
+            page.SectionProperties.BreakTypeValue,
+            page.SectionProperties.ColumnCountValue,
+            page.SectionProperties.ColumnEqualWidthValue,
+            page.SectionProperties.ColumnSpaceValue,
+            page.SectionProperties.ColumnCount,
+            page.SectionProperties.ColumnSpacePoints,
             items.Count,
             page.StaticTextLines.Count,
             items.Count(item => item.Kind == "TextLine"),
@@ -561,6 +575,12 @@ internal sealed record DocxLayoutPageSnapshot(
     double MarginRight,
     double MarginTop,
     double MarginBottom,
+    string? SectionBreakTypeValue,
+    string? SectionColumnCountValue,
+    string? SectionColumnEqualWidthValue,
+    string? SectionColumnSpaceValue,
+    int? SectionColumnCount,
+    double? SectionColumnSpacePoints,
     int ItemCount,
     int StaticTextLineCount,
     int TextLineCount,
@@ -838,6 +858,7 @@ internal sealed record DocxLayoutPage(
     double MarginTop,
     double MarginBottom,
     DocxPageSettings PageSettings,
+    DocxSectionLayoutProperties SectionProperties,
     IReadOnlyList<DocxTextLineLayout> StaticTextLines,
     IReadOnlyList<DocxLayoutItem> Items);
 
@@ -1168,10 +1189,15 @@ internal sealed class DocxLayoutEngine
         double MarginRight,
         double MarginTop,
         double MarginBottom,
-        DocxPageSettings PageSettings)
+        DocxPageSettings PageSettings,
+        DocxSectionLayoutProperties SectionProperties)
     {
         public double BodyWidth => Math.Max(1d, Width - MarginLeft - MarginRight);
     }
+
+    private sealed record DocxEffectiveSectionSettings(
+        DocxPageSettings PageSettings,
+        DocxSectionLayoutProperties SectionProperties);
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
     {
@@ -1183,7 +1209,7 @@ internal sealed class DocxLayoutEngine
     {
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
-        IReadOnlyDictionary<int, DocxPageSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxPageSettings finalSectionSettings);
+        IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
         DocxPageGeometry page = ResolveSectionGeometry(document, FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings);
         double x = page.MarginLeft;
         double width = page.BodyWidth;
@@ -1203,6 +1229,7 @@ internal sealed class DocxLayoutEngine
                 page.MarginTop,
                 page.MarginBottom,
                 page.PageSettings,
+                page.SectionProperties,
                 [],
                 currentItems.ToArray()));
             currentItems = [];
@@ -1874,9 +1901,9 @@ internal sealed class DocxLayoutEngine
             .Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
     }
 
-    private static IReadOnlyDictionary<int, DocxPageSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxPageSettings finalSectionSettings)
+    private static IReadOnlyDictionary<int, DocxEffectiveSectionSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxEffectiveSectionSettings finalSectionSettings)
     {
-        var sectionSettingsByElementIndex = new Dictionary<int, DocxPageSettings>();
+        var sectionSettingsByElementIndex = new Dictionary<int, DocxEffectiveSectionSettings>();
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType =
             new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType =
@@ -1893,16 +1920,31 @@ internal sealed class DocxLayoutEngine
                 sectionBreak.PageSettings,
                 inheritedHeadersByType,
                 inheritedFootersByType);
-            sectionSettingsByElementIndex[elementIndex] = effectiveSettings;
+            sectionSettingsByElementIndex[elementIndex] = new DocxEffectiveSectionSettings(
+                effectiveSettings,
+                CreateSectionLayoutProperties(sectionBreak));
             inheritedHeadersByType = effectiveSettings.HeaderParagraphsByType;
             inheritedFootersByType = effectiveSettings.FooterParagraphsByType;
         }
 
-        finalSectionSettings = ResolveEffectiveSectionSettings(
-            BuildFinalSectionSettings(document),
-            inheritedHeadersByType,
-            inheritedFootersByType);
+        finalSectionSettings = new DocxEffectiveSectionSettings(
+            ResolveEffectiveSectionSettings(
+                BuildFinalSectionSettings(document),
+                inheritedHeadersByType,
+                inheritedFootersByType),
+            new DocxSectionLayoutProperties(null, null, null, null, null, null));
         return sectionSettingsByElementIndex;
+    }
+
+    private static DocxSectionLayoutProperties CreateSectionLayoutProperties(DocxSectionBreakElement sectionBreak)
+    {
+        return new DocxSectionLayoutProperties(
+            sectionBreak.TypeValue,
+            sectionBreak.ColumnCountValue,
+            sectionBreak.ColumnEqualWidthValue,
+            sectionBreak.ColumnSpaceValue,
+            ReadOptionalInt32Value(sectionBreak.ColumnCountValue),
+            ReadOptionalTwipsValue(sectionBreak.ColumnSpaceValue));
     }
 
     private static DocxPageSettings BuildFinalSectionSettings(DocxDocument document)
@@ -1973,14 +2015,14 @@ internal sealed class DocxLayoutEngine
         return merged;
     }
 
-    private static DocxPageSettings? FindSectionSettingsAtOrAfter(
+    private static DocxEffectiveSectionSettings? FindSectionSettingsAtOrAfter(
         IReadOnlyList<DocxBodyElement> elements,
         int startIndex,
-        IReadOnlyDictionary<int, DocxPageSettings> sectionSettingsByElementIndex)
+        IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex)
     {
         for (int i = Math.Max(0, startIndex); i < elements.Count; i++)
         {
-            if (elements[i] is DocxSectionBreakElement && sectionSettingsByElementIndex.TryGetValue(i, out DocxPageSettings? settings))
+            if (elements[i] is DocxSectionBreakElement && sectionSettingsByElementIndex.TryGetValue(i, out DocxEffectiveSectionSettings? settings))
             {
                 return settings;
             }
@@ -1989,9 +2031,9 @@ internal sealed class DocxLayoutEngine
         return null;
     }
 
-    private static DocxPageGeometry ResolveSectionGeometry(DocxDocument document, DocxPageSettings? settings)
+    private static DocxPageGeometry ResolveSectionGeometry(DocxDocument document, DocxEffectiveSectionSettings section)
     {
-        DocxPageSettings effectiveSettings = settings ?? document.PageSettings;
+        DocxPageSettings effectiveSettings = section.PageSettings;
         double width = ReadTwipsValue(effectiveSettings.WidthValue, document.PageWidthPoints);
         double height = ReadTwipsValue(effectiveSettings.HeightValue, document.PageHeightPoints);
         (width, height) = NormalizePageSize(width, height);
@@ -2007,7 +2049,8 @@ internal sealed class DocxLayoutEngine
             ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints),
             ReadTwipsValue(effectiveSettings.MarginTopValue, document.MarginTopPoints),
             ReadTwipsValue(effectiveSettings.MarginBottomValue, document.MarginBottomPoints),
-            effectiveSettings);
+            effectiveSettings,
+            section.SectionProperties);
     }
 
     private static double ReadTwipsValue(string? value, double fallback)
@@ -2015,6 +2058,20 @@ internal sealed class DocxLayoutEngine
         return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long twips)
             ? OoxUnits.TwipsToPoints(twips)
             : fallback;
+    }
+
+    private static double? ReadOptionalTwipsValue(string? value)
+    {
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long twips)
+            ? OoxUnits.TwipsToPoints(twips)
+            : null;
+    }
+
+    private static int? ReadOptionalInt32Value(string? value)
+    {
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result)
+            ? result
+            : null;
     }
 
     private static (double Width, double Height) NormalizePageSize(double width, double height)

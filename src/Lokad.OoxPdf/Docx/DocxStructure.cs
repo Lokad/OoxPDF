@@ -340,6 +340,7 @@ internal sealed record DocxStructureSnapshot(
             nextKind,
             SectionBreakTypeValue: sectionBreak.TypeValue,
             SectionColumnCountValue: sectionBreak.ColumnCountValue,
+            SectionColumnEqualWidthValue: sectionBreak.ColumnEqualWidthValue,
             SectionColumnSpaceValue: sectionBreak.ColumnSpaceValue);
     }
 
@@ -820,6 +821,7 @@ internal sealed record DocxStructureBlockSnapshot(
     string? ManualBreakValue = null,
     string? SectionBreakTypeValue = null,
     string? SectionColumnCountValue = null,
+    string? SectionColumnEqualWidthValue = null,
     string? SectionColumnSpaceValue = null,
     double? ParagraphIndentLeftPoints = null,
     double? ParagraphIndentRightPoints = null,
