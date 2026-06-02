@@ -246,7 +246,7 @@ internal sealed record DocxStructureSnapshot(
                 paragraphs.Sum(ParagraphHyperlinkCount),
                 paragraphs.Sum(ParagraphExternalHyperlinkCount),
                 paragraphs.Sum(ParagraphInternalHyperlinkCount),
-                0));
+                story.FloatingDrawings.Count));
         }
     }
 

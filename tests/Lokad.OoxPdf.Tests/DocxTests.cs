@@ -13888,6 +13888,7 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rIdCommentLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/comment" TargetMode="External"/>
+                  <Relationship Id="rIdCommentImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/comment.png"/>
                 </Relationships>
                 """,
             ["word/document.xml"] = """
@@ -13908,9 +13909,29 @@ internal static class DocxTests
             ["word/comments.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
                             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:comment w:id="1">
-                    <w:p><w:r><w:t>Comment body</w:t></w:r></w:p>
+                    <w:p>
+                      <w:r><w:t>Comment body</w:t></w:r>
+                      <w:r>
+                        <w:drawing>
+                          <wp:anchor distT="0" distB="0" distL="0" distR="0" behindDoc="1">
+                            <wp:extent cx="914400" cy="457200"/>
+                            <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                            <wp:positionV relativeFrom="paragraph"><wp:posOffset>228600</wp:posOffset></wp:positionV>
+                            <wp:wrapNone/>
+                            <a:graphic>
+                              <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic><pic:blipFill><a:blip r:embed="rIdCommentImage"/></pic:blipFill></pic:pic>
+                              </a:graphicData>
+                            </a:graphic>
+                          </wp:anchor>
+                        </w:drawing>
+                      </w:r>
+                    </w:p>
                     <w:p><w:hyperlink r:id="rIdCommentLink"><w:r><w:t>Comment link</w:t></w:r></w:hyperlink></w:p>
                     <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Comment table</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
                   </w:comment>
@@ -13965,6 +13986,9 @@ internal static class DocxTests
         TestAssert.True(commentStory.PartName == "/word/comments.xml" && commentStory.Id == "1" && commentStory.BodyElements.Count == 3 && commentStory.Paragraphs.Count == 2 && commentStory.Tables.Count == 1, "Comment bodies should be preserved as related DOCX stories.");
         TestAssert.Equal(1, commentStory.Paragraphs.Sum(paragraph => paragraph.Hyperlinks.Count));
         TestAssert.Equal("https://example.invalid/comment", commentStory.Paragraphs.SelectMany(paragraph => paragraph.Hyperlinks).Single().Target ?? string.Empty);
+        DocxFloatingDrawing commentDrawing = commentStory.FloatingDrawings.Single();
+        TestAssert.True(commentDrawing.ImageRelationshipId == "rIdCommentImage" && commentDrawing.SourceParagraphIndex == 0 && commentDrawing.SourceBlockIndex == 0, "Related-story anchored drawings should preserve their owning paragraph, block, and part-local image relationship.");
+        TestAssert.True(commentDrawing.HorizontalRelativeFromValue == "page" && commentDrawing.VerticalRelativeFromValue == "paragraph" && commentDrawing.BehindDocumentValue == "1", "Related-story anchored drawing geometry tokens should be preserved structurally before story placement is modeled.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
 
@@ -13982,7 +14006,7 @@ internal static class DocxTests
         TestAssert.Equal(1, referenceBlock.FootnoteReferenceCount);
         TestAssert.Equal(1, referenceBlock.EndnoteReferenceCount);
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Body" && story.InlineReferenceCount == 3 && story.ResolvedInlineReferenceCount == 3), "Structure snapshots should expose body inline story-reference ownership.");
-        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.BlockCount == 3 && story.ParagraphCount == 2 && story.TableCount == 1 && story.TextLength == 37 && story.HyperlinkCount == 1 && story.ExternalHyperlinkCount == 1), "Structure snapshots should expose comment story ownership, hyperlinks, and table metrics.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.BlockCount == 3 && story.ParagraphCount == 2 && story.TableCount == 1 && story.TextLength == 37 && story.HyperlinkCount == 1 && story.ExternalHyperlinkCount == 1 && story.FloatingDrawingCount == 1), "Structure snapshots should expose comment story ownership, hyperlinks, anchored drawings, and table metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footnote" && story.Scope == "/word/footnotes.xml" && story.VariantType == "2" && story.TextLength == 13), "Structure snapshots should expose footnote story text metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Endnote" && story.Scope == "/word/endnotes.xml" && story.VariantType == "3" && story.TextLength == 12), "Structure snapshots should expose endnote story text metrics.");
         TestAssert.Equal(3, snapshot.InlineReferences.Count);
@@ -14000,7 +14024,7 @@ internal static class DocxTests
         TestAssert.Equal(3, layoutSnapshot.RelatedStories.Count);
         DocxRelatedStoryLayoutSnapshot commentLayout = layoutSnapshot.RelatedStories.Single(story => story.Kind == "Comment");
         TestAssert.True(commentLayout.PartName == "/word/comments.xml" && commentLayout.Id == "1" && commentLayout.BlockCount == 3 && commentLayout.ParagraphCount == 2 && commentLayout.TableCount == 1, "Related-story layout snapshots should preserve comment story ownership without flattening it into body layout.");
-        TestAssert.True(commentLayout.TextLineCount >= 2 && commentLayout.TableCellTextLineCount >= 1 && commentLayout.TableRowCount == 1 && commentLayout.TextLength == 37 && commentLayout.ContentHeight > 0d, "Comment story layout should measure paragraph text and table rows without rendering them as page content.");
+        TestAssert.True(commentLayout.TextLineCount >= 2 && commentLayout.TableCellTextLineCount >= 1 && commentLayout.TableRowCount == 1 && commentLayout.FloatingDrawingCount == 1 && commentLayout.TextLength == 37 && commentLayout.ContentHeight > 0d, "Comment story layout should measure paragraph text and table rows while preserving unpaged anchored drawing ownership.");
         TestAssert.True(commentLayout.Items.Count(item => item.Kind == "TextLine") >= 2 && commentLayout.Items.Count(item => item.Kind == "TableRow") == 1 && commentLayout.TableRows.Count == 1, "Related-story snapshots should expose private-safe item and table-row ownership for future story placement.");
         TestAssert.True(commentLayout.SourceBlocks.Count == 3 && commentLayout.SourceBlocks.Any(block => block.Kind == "Table" && block.TableRowCount == 1) && commentLayout.SourceBlocks.Count(block => block.Kind == "Paragraph") == 2, "Related-story snapshots should expose private-safe source-block summaries without assigning fake page indexes.");
         TestAssert.True(layoutSnapshot.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.TextLineCount >= 1 && story.TableRowCount == 0 && story.ContentHeight > 0d), "Footnote story layout should be measured as related-story content.");

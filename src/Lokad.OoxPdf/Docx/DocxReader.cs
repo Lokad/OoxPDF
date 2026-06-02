@@ -271,7 +271,7 @@ internal sealed class DocxReader
     {
         XElement? bodyChild = element
             .Ancestors()
-            .FirstOrDefault(ancestor => ancestor.Parent?.Name == WordprocessingNamespace + "body");
+            .FirstOrDefault(ancestor => bodyBlocks.Any(block => ReferenceEquals(block, ancestor)));
         if (bodyChild is null)
         {
             return null;
@@ -1977,13 +1977,40 @@ internal sealed class DocxReader
             numberingCounters,
             package,
             relationships);
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships);
         return new DocxRelatedStory(
             kind,
             partName,
             (string?)story.Attribute(WordprocessingNamespace + "id"),
             bodyElements,
             bodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
-            DocxBlockTraversal.EnumerateBodyTables(bodyElements).ToArray());
+            DocxBlockTraversal.EnumerateBodyTables(bodyElements).ToArray())
+        {
+            FloatingDrawings = floatingDrawings
+        };
+    }
+
+    private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
+        XElement story,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        XElement[] paragraphs = story
+            .Descendants(WordprocessingNamespace + "p")
+            .ToArray();
+        XElement[] bodyBlocks = story
+            .Elements()
+            .Where(IsBodyBlockElement)
+            .ToArray();
+        return story
+            .Descendants(WordprocessingDrawingNamespace + "anchor")
+            .Select(anchor => ReadFloatingDrawing(
+                anchor,
+                package,
+                relationships,
+                FindSourceParagraphIndex(anchor, paragraphs),
+                FindSourceBlockIndex(anchor, bodyBlocks)))
+            .ToArray();
     }
 
     private static IReadOnlyList<DocxBodyElement> ReadRelatedStoryBodyElements(

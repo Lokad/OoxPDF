@@ -40,7 +40,10 @@ internal sealed record DocxRelatedStory(
     string? Id,
     IReadOnlyList<DocxBodyElement> BodyElements,
     IReadOnlyList<DocxParagraph> Paragraphs,
-    IReadOnlyList<DocxTable> Tables);
+    IReadOnlyList<DocxTable> Tables)
+{
+    public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
+}
 
 internal static class DocxBlockTraversal
 {

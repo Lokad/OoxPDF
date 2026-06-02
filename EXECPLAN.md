@@ -362,6 +362,17 @@ High-priority actions:
   placement is known. A public `docx-headers-footers.docx` inspector run verified that footnote/endnote
   separator stories are also surfaced through this path. Keep actual note/comment placement, separators,
   marker formatting, and related-story PDF link rectangles open.
+  2026-06-02 architecture follow-up: related comment/footnote/endnote stories now preserve `wp:anchor`
+  drawings as story-owned model state instead of leaving them invisible outside the main document body.
+  The reader inventories anchored drawings from the related part XML with that part's relationship table,
+  source paragraph index, and source block index; the source-block resolver now works from the supplied
+  block list rather than assuming a `w:body` parent. Structure snapshots and unpaged related-story layout
+  summaries expose private-safe floating-drawing counts so future note/comment placement can consume typed
+  drawing ownership without returning to raw XML. Bottom-up coverage adds an anchored image drawing inside a
+  comment story and asserts model, structure, and layout-summary ownership. Validation passed `docx-core
+  --skip-slow` (`53`), `docx-images --skip-slow` (`4`), and full solution build. Keep actual note/comment
+  placement, separator behavior, marker formatting, related-story link rectangles, and related-story drawing
+  rendering open until their Office-derived page regions are modeled.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
