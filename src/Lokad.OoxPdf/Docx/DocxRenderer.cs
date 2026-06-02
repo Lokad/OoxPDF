@@ -78,6 +78,7 @@ internal sealed class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
 
         DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.TextMeasurer);
+        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations(layout, fontResources);
         var pages = new List<PdfPage>(layout.Pages.Count);
         int imageIndex = 1;
 
@@ -100,7 +101,7 @@ internal sealed class DocxRenderer
                 RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
             }
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, fontResources, pageNumber, layout.Pages.Count);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, fontResources, pageNumber, layout.Pages.Count, bookmarkDestinations);
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray(), [], [], [], annotations));
         }
 
@@ -111,7 +112,8 @@ internal sealed class DocxRenderer
         DocxLayoutPage page,
         DocxFontResources fontResources,
         int pageNumber,
-        int pageCount)
+        int pageCount,
+        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations)
     {
         var annotations = new List<PdfLinkAnnotation>();
         foreach (DocxTextLineLayout line in page.StaticTextLines.Concat(EnumerateBodyTextLines(page)))
@@ -130,7 +132,7 @@ internal sealed class DocxRenderer
                     continue;
                 }
 
-                DocxHyperlinkSpan? link = links.FirstOrDefault(item => IsExternalHyperlinkSegment(item, segment.SourceTextRunIndex));
+                DocxHyperlinkSpan? link = links.FirstOrDefault(item => IsHyperlinkSegment(item, segment.SourceTextRunIndex));
                 if (link is null)
                 {
                     continue;
@@ -138,24 +140,92 @@ internal sealed class DocxRenderer
 
                 double ascender = segment.Resource.Embedded.Font.Os2.WindowsAscender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
                 double descender = segment.Resource.Embedded.Font.Os2.WindowsDescender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
-                annotations.Add(PdfLinkAnnotation.ToUri(
-                    segment.X,
-                    segment.BaselineY - descender,
-                    segment.Width,
-                    ascender + descender,
-                    link.Target!));
+                if (IsExternalHyperlink(link))
+                {
+                    annotations.Add(PdfLinkAnnotation.ToUri(
+                        segment.X,
+                        segment.BaselineY - descender,
+                        segment.Width,
+                        ascender + descender,
+                        link.Target!));
+                }
+                else if (!string.IsNullOrEmpty(link.Anchor) &&
+                    bookmarkDestinations.TryGetValue(link.Anchor, out PdfLinkDestination destination))
+                {
+                    annotations.Add(PdfLinkAnnotation.ToDestination(
+                        segment.X,
+                        segment.BaselineY - descender,
+                        segment.Width,
+                        ascender + descender,
+                        destination));
+                }
             }
         }
 
         return annotations;
     }
 
-    private static bool IsExternalHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
+    private static IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations(
+        DocxLayout layout,
+        DocxFontResources fontResources)
+    {
+        var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
+        for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
+        {
+            DocxLayoutPage page = layout.Pages[pageIndex];
+            int pageNumber = pageIndex + 1;
+            foreach (DocxTextLineLayout line in page.StaticTextLines.Concat(EnumerateBodyTextLines(page)))
+            {
+                if (line.SourceParagraph is not { } paragraph ||
+                    paragraph.BookmarkAnchors.Count == 0)
+                {
+                    continue;
+                }
+
+                IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count)
+                    .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
+                    .ToArray();
+                if (segments.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (DocxBookmarkAnchor bookmark in paragraph.BookmarkAnchors)
+                {
+                    if (string.IsNullOrEmpty(bookmark.Name) || destinations.ContainsKey(bookmark.Name))
+                    {
+                        continue;
+                    }
+
+                    DocxTextEmissionSegment? target = segments.FirstOrDefault(segment => segment.SourceTextRunIndex >= bookmark.TextRunIndex);
+                    if (target is null)
+                    {
+                        continue;
+                    }
+
+                    double ascender = target.Resource.Embedded.Font.Os2.WindowsAscender * target.FontSize / target.Resource.Embedded.Font.UnitsPerEm;
+                    destinations[bookmark.Name] = new PdfLinkDestination(
+                        pageIndex,
+                        target.X,
+                        target.BaselineY + ascender,
+                        Zoom: null);
+                }
+            }
+        }
+
+        return destinations;
+    }
+
+    private static bool IsHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
+    {
+        return sourceTextRunIndex >= link.TextRunStartIndex &&
+            sourceTextRunIndex < link.TextRunStartIndex + link.TextRunCount;
+    }
+
+    private static bool IsExternalHyperlink(DocxHyperlinkSpan link)
     {
         return !string.IsNullOrEmpty(link.Target) &&
-            string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase) &&
-            sourceTextRunIndex >= link.TextRunStartIndex &&
-            sourceTextRunIndex < link.TextRunStartIndex + link.TextRunCount;
+            string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase);
     }
 
     private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver)

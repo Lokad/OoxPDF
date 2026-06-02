@@ -6730,7 +6730,11 @@ Current validation baseline:
   exposes bookmark-anchor counts across body, static, table-cell, and related-story paragraph traversal.
   Bottom-up coverage pairs a bookmark anchor with an internal hyperlink target. Keep rendering open until
   bookmark anchors are mapped to placed layout coordinates and emitted through the structural PDF destination
-  target.
+  target. 2026-06-02 rendering follow-up: the DOCX annotation pass now builds a bookmark destination map from
+  placed text-emission geometry and emits internal hyperlink annotations as PDF page destinations instead of
+  URI actions when the anchor resolves. Bottom-up coverage locks the URI-vs-destination split and clickable
+  rectangle geometry. Keep non-rendered related-story links open, and keep deeper bookmark mapping open for
+  anchors inside richer inline containers or offsets within a wrapped text run.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

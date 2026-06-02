@@ -1752,6 +1752,51 @@ internal static class DocxTests
         TestAssert.Equal(0, page.Annotations.Count);
     }
 
+    public static void DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Go ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "BookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+            ]
+        };
+        DocxParagraph targetParagraph = CreateDocxLayoutParagraph("Target text", 10d, 12d) with
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("3", "BookmarkTarget", 0, 0, 0)
+            ]
+        };
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Uri is null, "Internal DOCX links should not be emitted as URI actions.");
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal DOCX links should resolve to a PDF page destination.");
+        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed bookmark text coordinates.");
+        TestAssert.True(annotation.Destination?.Top > 0d, "The destination should point to a concrete bookmark line top.");
+        TestAssert.True(annotation.Width > 0d, "The clickable rectangle should still cover the rendered internal-link text.");
+    }
+
     public static void DocxRendererEmitsTableCellExternalHyperlinkAnnotations()
     {
         var runs = new[]
