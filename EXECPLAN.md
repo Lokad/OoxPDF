@@ -7132,6 +7132,13 @@ Current validation baseline:
   coverage now verifies that a second-column `relativeFrom="column"` anchor exposes both its reference frame and
   placed x/top coordinates. Rendering anchored drawings and applying column-aware wrap exclusion remain open.
   Validation passed `docx-page --skip-slow` (`33`) and `docx-core --skip-slow` (`52`).
+  2026-06-02 architecture follow-up: table layout now resolves a current table frame at each row boundary
+  instead of capturing the initial column x/width for the whole table. Multi-column table rows and repeated
+  header rows now consume the active `DocxLayoutColumnFrame` after a column/page advance, and the table loop
+  tracks content emitted inside the table so row-boundary advances can fire before the outer block marks the
+  table complete. Bottom-up coverage verifies that a two-row table in a two-column section places the second row
+  in the second column with matching item column ownership. Validation passed `docx-tables --skip-slow` (`99`),
+  `docx-page --skip-slow` (`33`), and `docx-core --skip-slow` (`52`).
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

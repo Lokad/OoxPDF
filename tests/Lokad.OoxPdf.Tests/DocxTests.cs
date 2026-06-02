@@ -9053,6 +9053,50 @@ internal static class DocxTests
         TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
     }
 
+    public static void DocxTableLayoutStageContinuesRowsInActiveColumnFrame()
+    {
+        var firstRow = new DocxTableRow([new DocxTableCell("first", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
+        var secondRow = new DocxTableRow([new DocxTableCell("second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
+        var table = new DocxTable(null, [60d], [firstRow, secondRow]);
+        DocxPageSettings sectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "4000",
+            HeightValue = "4000",
+            MarginLeftValue = "360",
+            MarginRightValue = "360",
+            MarginTopValue = "360",
+            MarginBottomValue = "360"
+        };
+        var document = new DocxDocument(
+            300d,
+            300d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxTableElement(table),
+                new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "360", [])
+            ],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+
+        TestAssert.Equal(1, layout.Pages.Count);
+        TestAssert.Equal(2, rows.Length);
+        TestAssert.Equal(18d, rows[0].Table.TableX);
+        TestAssert.Equal(109d, rows[1].Table.TableX);
+        TestAssert.Equal(0, snapshot.Pages[0].Items[0].ColumnIndex ?? -1);
+        TestAssert.Equal(1, snapshot.Pages[0].Items[1].ColumnIndex ?? -1);
+    }
+
     public static void DocxTableLayoutStageRunPageBreakParagraphConsumesLineBox()
     {
         DocxTable first = CreateSingleCellTable("first", rowHeight: 150d);
