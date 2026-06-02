@@ -4648,13 +4648,14 @@ block models and richer section/pagination layout before adding more Word pagina
   fallback semantics.
   - [x] 2026-06-02: DOCX paragraphs now preserve a first-class field-reference inventory instead of relying
     only on placeholder text. `DocxFieldReference` records field kind, simple-vs-complex instruction source,
-    optional placeholder, source run index, and text-run insertion index for `w:fldSimple` and complex
-    `w:instrText` paths. Field opcode recognition now uses the first instruction token, so unsupported fields
-    such as `PAGEREF` no longer match `PAGE` by substring. Private-safe structure snapshots expose aggregate
-    field counts plus `PAGE`/`NUMPAGES`/other breakdowns at document, story, and paragraph-block level without
-    exposing instructions. Validation passed the direct `DocxReaderPreservesFieldReferencesStructurally` test.
-    Keep dynamic field evaluation, cached-result range ownership, layout-time field sizing, field-specific
-    PDF structures, and non-page field semantics open.
+    optional placeholder, source run index, text-run insertion index, emitted text-run count, and emitted text
+    length for `w:fldSimple` and complex `w:instrText` paths. Field opcode recognition now uses the first
+    instruction token, so unsupported fields such as `PAGEREF` no longer match `PAGE` by substring.
+    Private-safe structure snapshots expose aggregate field counts plus `PAGE`/`NUMPAGES`/other breakdowns at
+    document, story, and paragraph-block level without exposing instructions. Validation passed the direct
+    `DocxReaderPreservesFieldReferencesStructurally` test. Keep dynamic field evaluation, full complex cached
+    result range ownership, layout-time field sizing, field-specific PDF structures, and non-page field
+    semantics open.
 - [ ] Footnotes/endnotes/comments: render bodies or emit precise diagnostics with usable fallback behavior.
   - [x] 2026-06-02: precise unsupported diagnostics now preserve related story-part ownership when the
     referenced body part exists. `DocxReader` resolves `/word/comments.xml`, `/word/footnotes.xml`, and

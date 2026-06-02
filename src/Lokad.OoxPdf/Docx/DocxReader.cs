@@ -854,24 +854,22 @@ internal sealed class DocxReader
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
             string kind = ResolveFieldKind(instruction);
             string? placeholder = ResolveFieldPlaceholder(instruction);
-            fieldReferences.Add(new DocxFieldReference(
-                kind,
-                "Simple",
-                instruction,
-                placeholder,
-                sourceRunIndex,
-                runs.Count));
+            int fieldSourceRunIndex = sourceRunIndex;
+            int fieldTextRunIndex = runs.Count;
+            int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
             if (placeholder is not null)
             {
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
                 if (firstRun is null)
                 {
                     runs.Add(new DocxTextRun(placeholder, 11d, null, false, false, false, null, null));
+                    AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
                     return;
                 }
 
                 AddFieldPlaceholderRun(firstRun, placeholder);
                 images.AddRange(ReadInlineImages(firstRun, package, relationships));
+                AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
                 return;
             }
 
@@ -880,6 +878,28 @@ internal sealed class DocxReader
                 bool fieldPageInstructionSeen = false;
                 AddParagraphRun(fieldRun, ref fieldPageInstructionSeen);
             }
+
+            AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
+        }
+
+        void AddFieldReference(
+            string kind,
+            string sourceKind,
+            string? instruction,
+            string? placeholder,
+            int fieldSourceRunIndex,
+            int fieldTextRunIndex,
+            int fieldTextLengthStart)
+        {
+            fieldReferences.Add(new DocxFieldReference(
+                kind,
+                sourceKind,
+                instruction,
+                placeholder,
+                fieldSourceRunIndex,
+                fieldTextRunIndex,
+                runs.Count - fieldTextRunIndex,
+                runs.Sum(run => run.Text.Length) - fieldTextLengthStart));
         }
 
         void AddFieldPlaceholderRun(XElement run, string text)
@@ -903,16 +923,8 @@ internal sealed class DocxReader
                 .Select(instruction => (string?)instruction)
                 .FirstOrDefault(value => value is not null);
             string? placeholder = ResolveFieldPlaceholder(fieldInstruction);
-            if (fieldInstruction is not null)
-            {
-                fieldReferences.Add(new DocxFieldReference(
-                    ResolveFieldKind(fieldInstruction),
-                    "ComplexInstruction",
-                    fieldInstruction,
-                    placeholder,
-                    currentSourceRunIndex,
-                    runs.Count));
-            }
+            int fieldTextRunIndex = runs.Count;
+            int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
 
             if (placeholder is not null)
             {
@@ -935,6 +947,18 @@ internal sealed class DocxReader
             {
                 string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
                 AddResolvedTextRuns(runs, displayText, resolvedRun);
+            }
+
+            if (fieldInstruction is not null)
+            {
+                AddFieldReference(
+                    ResolveFieldKind(fieldInstruction),
+                    "ComplexInstruction",
+                    fieldInstruction,
+                    placeholder,
+                    currentSourceRunIndex,
+                    fieldTextRunIndex,
+                    fieldTextLengthStart);
             }
 
             images.AddRange(ReadInlineImages(run, package, relationships));

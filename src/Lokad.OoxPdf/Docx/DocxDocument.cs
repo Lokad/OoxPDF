@@ -248,7 +248,9 @@ internal sealed record DocxFieldReference(
     string? Instruction,
     string? Placeholder,
     int SourceRunIndex,
-    int TextRunIndex);
+    int TextRunIndex,
+    int TextRunCount,
+    int TextLength);
 
 internal sealed record DocxHyperlinkSpan(
     string? RelationshipId,

@@ -3344,6 +3344,22 @@ internal static class DocxTests
         TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.Placeholder == "{PAGE}"));
         TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Placeholder == "{NUMPAGES}"));
         TestAssert.True(paragraph.FieldReferences.Single(field => field.Instruction?.Contains("PAGEREF", StringComparison.Ordinal) == true).Placeholder is null, "PAGEREF should not be treated as a PAGE placeholder.");
+        DocxFieldReference simplePage = paragraph.FieldReferences.First(field => field.Kind == "Page" && field.SourceKind == "Simple");
+        DocxFieldReference simpleNumPages = paragraph.FieldReferences.Single(field => field.Kind == "NumPages");
+        DocxFieldReference pageRef = paragraph.FieldReferences.Single(field => field.Kind == "Other");
+        DocxFieldReference complexPage = paragraph.FieldReferences.Single(field => field.Kind == "Page" && field.SourceKind == "ComplexInstruction");
+        TestAssert.Equal(0, simplePage.TextRunIndex);
+        TestAssert.Equal(1, simplePage.TextRunCount);
+        TestAssert.Equal(6, simplePage.TextLength);
+        TestAssert.Equal(1, simpleNumPages.TextRunIndex);
+        TestAssert.Equal(1, simpleNumPages.TextRunCount);
+        TestAssert.Equal(10, simpleNumPages.TextLength);
+        TestAssert.Equal(2, pageRef.TextRunIndex);
+        TestAssert.Equal(1, pageRef.TextRunCount);
+        TestAssert.Equal(11, pageRef.TextLength);
+        TestAssert.Equal(3, complexPage.TextRunIndex);
+        TestAssert.Equal(1, complexPage.TextRunCount);
+        TestAssert.Equal(6, complexPage.TextLength);
         TestAssert.Equal("{PAGE}{NUMPAGES}TargetValue{PAGE}", string.Concat(paragraph.Runs.Select(run => run.Text)));
 
         DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
