@@ -589,6 +589,19 @@ High-priority actions:
   long-view work is Office-aligned row-boundary selection and fragment-internal text/border geometry, plus an
   explicit merged-cell fragment model for continuations whose logical rows cross pages. Do not replace this
   with a scalar bottom-margin slack, post-table heading gap, or private row-coordinate rule.
+  2026-06-02 follow-up: split-row fragments now own only their visible table-cell text lines instead of
+  carrying every full-row line into every physical fragment. This is an architecture/PDF-structure correction:
+  render-time clipping remains available, but layout snapshots and text-emission enumeration no longer imply
+  duplicate hidden text operations for synthetic split rows. Added bottom-up coverage asserting an eight-line
+  split row distributes its lines across the two fragments without duplication. Public visual probes stayed in
+  the same raster band after the change: `docx-ladder-03-table-row-fragment-threshold` run `20260602-043250`
+  page MAE `6.930984/7.482251/0.000000/7.765324/0.011417/7.732639/0.010649`,
+  `docx-ladder-03-table-bottom-slack` run `20260602-043237` page MAE `6.534271/2.988830`, and
+  `docx-ladder-03-table-heading-table-keepnext` run `20260602-043256` page MAE
+  `3.670558/7.759079/1.374267`. Validation passed `docx-tables --skip-slow` (`97`),
+  `docx-core --skip-slow` (`43`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
+  Keep the row-boundary branch open for the actual Word decision model; this slice only makes fragment
+  ownership and downstream diagnostics trustworthy.
   2026-06-02 architecture follow-up: cross-page vertical merges now carry explicit visual ownership. A
   `DocxTableCellLayout` continuation can retain its restart cell as `VerticalMergeOwnerCell`, so renderer
   decisions are no longer based on a single "skip continuation" flag. Same-page continuations remain suppressed

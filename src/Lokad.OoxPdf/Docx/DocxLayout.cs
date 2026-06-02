@@ -2549,7 +2549,9 @@ internal sealed class DocxLayoutEngine
 
             IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
                 ? []
-                : LayoutTableCellTextLines(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints);
+                : LayoutTableCellTextLines(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints)
+                    .Where(line => IsTextLineVisibleInCellFragment(line, visualY, visualHeight, FragmentIndex, FragmentCount))
+                    .ToArray();
             IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
                 ? []
                 : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
@@ -2582,6 +2584,22 @@ internal sealed class DocxLayoutEngine
     {
         return cell.HasVerticalMerge &&
             string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsTextLineVisibleInCellFragment(
+        DocxTextLineLayout line,
+        double cellY,
+        double cellHeight,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        if (fragmentCount <= 1)
+        {
+            return true;
+        }
+
+        double bottom = fragmentIndex == 0 ? cellY - 0.001d : cellY + 0.001d;
+        return line.BaselineY >= bottom && line.BaselineY <= cellY + cellHeight + 0.001d;
     }
 
     private static double VerticalOverlap(double firstY, double firstHeight, double secondY, double secondHeight)

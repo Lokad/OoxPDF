@@ -8230,6 +8230,9 @@ internal static class DocxTests
         TestAssert.Equal(1, secondPageRows[0].FragmentIndex);
         TestAssert.Equal(2, secondPageRows[0].FragmentCount);
         TestAssert.Equal(60d, secondPageRows[0].Height);
+        TestAssert.True(firstPageRows[1].Cells[0].TextLines.Count > 0, "The first split fragment should own its visible row text.");
+        TestAssert.True(secondPageRows[0].Cells[0].TextLines.Count > 0, "The continuation split fragment should own its visible row text.");
+        TestAssert.Equal(8, firstPageRows[1].Cells[0].TextLines.Count + secondPageRows[0].Cells[0].TextLines.Count);
 
         DocxTableSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout).Tables.Single();
         TestAssert.Equal(1, snapshot.FragmentedRowCount);
