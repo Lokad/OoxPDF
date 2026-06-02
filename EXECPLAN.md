@@ -347,6 +347,13 @@ High-priority actions:
   and the image-only comment fixture asserts image item geometry and source coordinates. Keep rendering open
   until Office-derived footnote/endnote regions, comment display, marker formatting, and link rectangles are
   modeled. Validation passed `docx-core --skip-slow` (`53`) and `docx-images --skip-slow` (`4`).
+  2026-06-02 architecture follow-up: related-story layout snapshots now also expose unpaged source-block
+  summaries (`DocxRelatedStorySourceBlockSnapshot`) with block kind, item counts, text/image/table-row counts,
+  private-safe vertical span, consumed height, and applied before-spacing. This avoids forcing future
+  note/comment placement tools to regroup related-story items by raw source indexes, while still avoiding fake
+  page/column ownership before Office-derived placement is known. Bottom-up coverage now checks paragraph,
+  table, and image-only story blocks. Validation passed `docx-core --skip-slow` (`53`) and `docx-images
+  --skip-slow` (`4`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring

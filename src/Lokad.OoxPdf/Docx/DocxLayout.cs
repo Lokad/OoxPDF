@@ -146,7 +146,36 @@ internal sealed record DocxLayoutSnapshot(
                     CountBodyTextLength(story.Story.BodyElements),
                     story.ContentHeight,
                     items,
+                    ToRelatedStorySourceBlockSnapshots(items),
                     story.TableRows.Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex, pageMarginBottom: 0d)).ToArray());
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<DocxRelatedStorySourceBlockSnapshot> ToRelatedStorySourceBlockSnapshots(
+        IReadOnlyList<DocxLayoutItemSnapshot> items)
+    {
+        return items
+            .Where(item => item.SourceBlockIndex is not null)
+            .GroupBy(item => item.SourceBlockIndex!.Value)
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                DocxLayoutItemSnapshot[] blockItems = group.ToArray();
+                double verticalTop = blockItems.Max(item => item.Y + item.Height);
+                double verticalBottom = blockItems.Min(item => item.Y);
+                return new DocxRelatedStorySourceBlockSnapshot(
+                    group.Key,
+                    ResolveSourceBlockKind(blockItems),
+                    blockItems.Length,
+                    blockItems.Count(item => item.Kind == "TextLine"),
+                    blockItems.Count(item => item.Kind == "InlineImage"),
+                    blockItems.Count(item => item.Kind == "TableRow"),
+                    blockItems.Sum(item => item.TextLength),
+                    verticalTop,
+                    verticalBottom,
+                    Math.Max(0d, verticalTop - verticalBottom),
+                    blockItems.Sum(item => item.AppliedBeforeSpacingPoints ?? 0d));
             })
             .ToArray();
     }
@@ -901,7 +930,21 @@ internal sealed record DocxRelatedStoryLayoutSnapshot(
     int TextLength,
     double ContentHeight,
     IReadOnlyList<DocxLayoutItemSnapshot> Items,
+    IReadOnlyList<DocxRelatedStorySourceBlockSnapshot> SourceBlocks,
     IReadOnlyList<DocxTableRowSnapshot> TableRows);
+
+internal sealed record DocxRelatedStorySourceBlockSnapshot(
+    int SourceBlockIndex,
+    string Kind,
+    int ItemCount,
+    int TextLineCount,
+    int InlineImageCount,
+    int TableRowCount,
+    int TextLength,
+    double VerticalTop,
+    double VerticalBottom,
+    double ConsumedHeight,
+    double AppliedBeforeSpacingSum);
 
 internal sealed record DocxLayoutSourceBlockSnapshot(
     int SourceBlockIndex,
