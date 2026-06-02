@@ -1228,6 +1228,104 @@ try {
         $tableParagraphAdjacency.Close($false)
     }
 
+    $tableContinuationAdjacency = $word.Documents.Add()
+    try {
+        $tableContinuationAdjacency.PageSetup.PageWidth = 612
+        $tableContinuationAdjacency.PageSetup.PageHeight = 792
+        $tableContinuationAdjacency.PageSetup.TopMargin = 72
+        $tableContinuationAdjacency.PageSetup.BottomMargin = 72
+        $tableContinuationAdjacency.PageSetup.LeftMargin = 72
+        $tableContinuationAdjacency.PageSetup.RightMargin = 72
+        $tableContinuationAdjacency.Content.Text = "DOCX table continuation adjacency`r`nAfter continued table twenty-four before`r`n"
+        $tableContinuationAdjacency.Content.Font.Name = "Arial"
+        $tableContinuationAdjacency.Content.Font.Size = 10
+        $tableContinuationAdjacency.Content.ParagraphFormat.SpaceBefore = 0
+        $tableContinuationAdjacency.Content.ParagraphFormat.SpaceAfter = 0
+
+        $heading = $tableContinuationAdjacency.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 18
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 6
+
+        $range = $tableContinuationAdjacency.Paragraphs.Item(2).Range
+        $range.Collapse(1)
+        $firstTable = $tableContinuationAdjacency.Tables.Add($range, 24, 3)
+        $firstTable.Borders.Enable = $true
+        $firstTable.AllowAutoFit = $false
+        $firstTable.Columns.Item(1).Width = 72
+        $firstTable.Columns.Item(2).Width = 180
+        $firstTable.Columns.Item(3).Width = 180
+
+        for ($row = 1; $row -le 24; $row++) {
+            for ($column = 1; $column -le 3; $column++) {
+                $cell = $firstTable.Cell($row, $column)
+                if ($column -eq 1) {
+                    $cell.Range.Text = "R$row"
+                }
+                elseif ($column -eq 2) {
+                    $cell.Range.Text = "Continuation row $row planning text wraps softly"
+                }
+                else {
+                    $cell.Range.Text = "Measured cell $row keeps the row body visible"
+                }
+
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = 9
+                $cell.TopPadding = 0
+                $cell.BottomPadding = 0
+                $cell.LeftPadding = 5.4
+                $cell.RightPadding = 5.4
+            }
+        }
+
+        $afterContinuedTable = $tableContinuationAdjacency.Content
+        if ($afterContinuedTable.Find.Execute("After continued table twenty-four before")) {
+            $afterContinuedTable.Font.Name = "Arial"
+            $afterContinuedTable.Font.Size = 16
+            $afterContinuedTable.Font.Bold = $true
+            $afterContinuedTable.ParagraphFormat.SpaceBefore = 24
+            $afterContinuedTable.ParagraphFormat.SpaceAfter = 6
+        }
+
+        $endRange = $tableContinuationAdjacency.Content
+        $endRange.Collapse(0)
+        $secondTable = $tableContinuationAdjacency.Tables.Add($endRange, 8, 3)
+        $secondTable.Borders.Enable = $true
+        $secondTable.AllowAutoFit = $false
+        $secondTable.Columns.Item(1).Width = 72
+        $secondTable.Columns.Item(2).Width = 180
+        $secondTable.Columns.Item(3).Width = 180
+
+        for ($row = 1; $row -le 8; $row++) {
+            for ($column = 1; $column -le 3; $column++) {
+                $cell = $secondTable.Cell($row, $column)
+                if ($column -eq 1) {
+                    $cell.Range.Text = "N$row"
+                }
+                elseif ($column -eq 2) {
+                    $cell.Range.Text = "Next table row $row"
+                }
+                else {
+                    $cell.Range.Text = "Follows the spaced paragraph"
+                }
+
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = 9
+                $cell.TopPadding = 0
+                $cell.BottomPadding = 0
+                $cell.LeftPadding = 5.4
+                $cell.RightPadding = 5.4
+            }
+        }
+
+        $tableContinuationAdjacency.SaveAs2((Join-Path $cases "docx-ladder-03-table-continuation-adjacency.docx"), 16)
+    }
+    finally {
+        $tableContinuationAdjacency.Close($false)
+    }
+
     $headerFooter = $word.Documents.Add()
     try {
         $headerFooter.PageSetup.PageWidth = 612

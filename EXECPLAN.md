@@ -565,6 +565,19 @@ High-priority actions:
   `MAE=8.927687 -> 8.908377` with changed16 `0.095249`. Keep the active residual on row-advance/baseline
   quantization and Office PDF text-state decomposition; do not reintroduce list-label font ownership, a
   page-bottom reserve, or a new residual constant.
+  2026-06-03 evidence update: current private DOCX acceptance run `20260603-000811` remains valid at `16/16`
+  pages, zero dimension mismatches, no diagnostics, aggregate `MAE=8.908377`, changed16 `0.095249`; worst pages
+  are page 15 (`MAE=11.916343`), page 2 (`11.152835`), page 10 (`11.099188`), page 11 (`11.077034`), and
+  page 9 (`10.973885`). Private-safe flow inspection of pages 9-15 shows the largest matched page-15 delta
+  occurs after a table that continues onto the page: a one-line, 24pt-before paragraph is about one
+  before-spacing quantum away, and the following table rows are shifted relative to Office. Added public
+  `docx-ladder-03-table-continuation-adjacency` to isolate a page-spanning table followed by a 24pt-before
+  paragraph and another table. The public run `20260603-001349` matched page count and dimensions; page 1
+  `MAE=5.948269`, page 2 `MAE=1.426463`. Public flow comparison shows the 24pt paragraph itself aligns
+  within about `0.1pt`, while row-boundary inspection shows table text baselines differ by sub-point amounts
+  and the remaining visual gap belongs to table continuation row/border/text rendering, not to paragraph
+  spacing. Keep the table-continuation branch open, but do not change paragraph-before spacing from this
+  private observation alone.
   2026-06-02 architecture follow-up: DOCX text emission snapshots now carry a private-safe segment role
   (`ListLabel`, `ListSeparator`, or `Text`) from layout through PDF emission, and
   `tools/SummarizeDocxTextState.ps1` buckets planner/reference pairs by that role. This removes the need to
