@@ -3524,6 +3524,53 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.InternalHyperlinkCount);
     }
 
+    public static void DocxReaderPreservesBookmarkAnchorsInsideHyperlinks()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:hyperlink w:anchor="OuterTarget">
+                        <w:bookmarkStart w:id="11" w:name="InnerTarget"/>
+                        <w:r><w:t>Linked</w:t></w:r>
+                      </w:hyperlink>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs.Single();
+
+        DocxBookmarkAnchor bookmark = paragraph.BookmarkAnchors.Single();
+        TestAssert.Equal("InnerTarget", bookmark.Name ?? string.Empty);
+        TestAssert.Equal(1, bookmark.SourceRunIndex);
+        TestAssert.Equal(1, bookmark.TextRunIndex);
+        TestAssert.Equal(7, bookmark.TextOffset);
+        TestAssert.Equal("OuterTarget", paragraph.Hyperlinks.Single().Anchor ?? string.Empty);
+    }
+
     public static void DocxParagraphLayoutPreservesSoftLineBreaks()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

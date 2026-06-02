@@ -717,9 +717,9 @@ internal sealed class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "ins")
             {
-                foreach (XElement insertedRun in child.Elements(WordprocessingNamespace + "r"))
+                foreach (XElement insertedChild in child.Elements())
                 {
-                    AddParagraphRun(insertedRun, ref pageInstructionSeen);
+                    AddInlineContainerChild(insertedChild);
                 }
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
@@ -727,9 +727,9 @@ internal sealed class DocxReader
                 int sourceRunStartIndex = sourceRunIndex;
                 int textRunStartIndex = runs.Count;
                 int textLengthStart = runs.Sum(run => run.Text.Length);
-                foreach (XElement hyperlinkRun in child.Elements(WordprocessingNamespace + "r"))
+                foreach (XElement hyperlinkChild in child.Elements())
                 {
-                    AddParagraphRun(hyperlinkRun, ref pageInstructionSeen);
+                    AddInlineContainerChild(hyperlinkChild);
                 }
 
                 AddHyperlinkSpan(child, sourceRunStartIndex, sourceRunIndex - sourceRunStartIndex, textRunStartIndex, runs.Count - textRunStartIndex, runs.Sum(run => run.Text.Length) - textLengthStart);
@@ -737,6 +737,22 @@ internal sealed class DocxReader
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
                 AddBookmarkAnchor(child);
+            }
+        }
+
+        void AddInlineContainerChild(XElement child)
+        {
+            if (child.Name == WordprocessingNamespace + "r")
+            {
+                AddParagraphRun(child, ref pageInstructionSeen);
+            }
+            else if (child.Name == WordprocessingNamespace + "bookmarkStart")
+            {
+                AddBookmarkAnchor(child);
+            }
+            else if (child.Name == WordprocessingNamespace + "fldSimple")
+            {
+                AddSimpleField(child);
             }
         }
 

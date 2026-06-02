@@ -6734,7 +6734,10 @@ Current validation baseline:
   placed text-emission geometry and emits internal hyperlink annotations as PDF page destinations instead of
   URI actions when the anchor resolves. Bottom-up coverage locks the URI-vs-destination split and clickable
   rectangle geometry. Keep non-rendered related-story links open, and keep deeper bookmark mapping open for
-  anchors inside richer inline containers or offsets within a wrapped text run.
+  offsets within a wrapped text run. 2026-06-02 inline-container follow-up: `DocxReader` now uses a shared
+  inline-child dispatcher for hyperlink and inserted-run containers, so `w:bookmarkStart` anchors inside those
+  containers are preserved in source/text order instead of being skipped by run-only traversal. Focused
+  coverage locks bookmark anchors inside `w:hyperlink`.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off
