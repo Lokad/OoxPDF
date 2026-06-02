@@ -640,8 +640,8 @@ internal sealed class DocxReader
         }
 
         return document.Descendants(WordprocessingNamespace + "ins").Any(insertion =>
-            insertion.Parent?.Name != WordprocessingNamespace + "p" ||
-            insertion.Elements().Any(child => child.Name != WordprocessingNamespace + "r"));
+            !IsSupportedInlineContainerParent(insertion.Parent) ||
+            insertion.Elements().Any(child => !IsSupportedVisibleInlineContainerChild(child)));
     }
 
     private static bool HasUnsupportedComplexFields(XDocument document)
@@ -672,6 +672,18 @@ internal sealed class DocxReader
             (element.Name == WordprocessingNamespace + "hyperlink" ||
             element.Name == WordprocessingNamespace + "fldSimple" ||
             element.Name == WordprocessingNamespace + "ins");
+    }
+
+    private static bool IsSupportedInlineContainerParent(XElement? element)
+    {
+        return element?.Name == WordprocessingNamespace + "p" || IsVisibleInlineContainer(element);
+    }
+
+    private static bool IsSupportedVisibleInlineContainerChild(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "r" ||
+            element.Name == WordprocessingNamespace + "bookmarkStart" ||
+            IsVisibleInlineContainer(element);
     }
 
     private static bool IsSupportedInlineRunChild(XElement element)
@@ -933,15 +945,7 @@ internal sealed class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                int sourceRunStartIndex = sourceRunIndex;
-                int textRunStartIndex = runs.Count;
-                int textLengthStart = runs.Sum(run => run.Text.Length);
-                foreach (XElement hyperlinkChild in child.Elements())
-                {
-                    AddInlineContainerChild(hyperlinkChild);
-                }
-
-                AddHyperlinkSpan(child, sourceRunStartIndex, sourceRunIndex - sourceRunStartIndex, textRunStartIndex, runs.Count - textRunStartIndex, runs.Sum(run => run.Text.Length) - textLengthStart);
+                AddHyperlinkContainer(child);
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
@@ -962,6 +966,17 @@ internal sealed class DocxReader
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
                 AddSimpleField(child);
+            }
+            else if (child.Name == WordprocessingNamespace + "ins")
+            {
+                foreach (XElement insertedChild in child.Elements())
+                {
+                    AddInlineContainerChild(insertedChild);
+                }
+            }
+            else if (child.Name == WordprocessingNamespace + "hyperlink")
+            {
+                AddHyperlinkContainer(child);
             }
         }
 
@@ -1063,10 +1078,9 @@ internal sealed class DocxReader
                 return;
             }
 
-            foreach (XElement fieldRun in field.Elements(WordprocessingNamespace + "r"))
+            foreach (XElement fieldChild in field.Elements())
             {
-                bool fieldPageInstructionSeen = false;
-                AddParagraphRun(fieldRun, ref fieldPageInstructionSeen);
+                AddInlineContainerChild(fieldChild);
             }
 
             AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
@@ -1090,6 +1104,25 @@ internal sealed class DocxReader
                 fieldTextRunIndex,
                 runs.Count - fieldTextRunIndex,
                 runs.Sum(run => run.Text.Length) - fieldTextLengthStart));
+        }
+
+        void AddHyperlinkContainer(XElement hyperlink)
+        {
+            int sourceRunStartIndex = sourceRunIndex;
+            int textRunStartIndex = runs.Count;
+            int textLengthStart = runs.Sum(run => run.Text.Length);
+            foreach (XElement hyperlinkChild in hyperlink.Elements())
+            {
+                AddInlineContainerChild(hyperlinkChild);
+            }
+
+            AddHyperlinkSpan(
+                hyperlink,
+                sourceRunStartIndex,
+                sourceRunIndex - sourceRunStartIndex,
+                textRunStartIndex,
+                runs.Count - textRunStartIndex,
+                runs.Sum(run => run.Text.Length) - textLengthStart);
         }
 
         void AddFieldPlaceholderRun(XElement run, string text)

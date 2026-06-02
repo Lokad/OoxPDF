@@ -13940,6 +13940,66 @@ internal static class DocxTests
         TestAssert.Equal(1, document.BodyElements.OfType<DocxManualBreakElement>().Count(element => element.Value == "column"));
     }
 
+    public static void DocxReaderPreservesNestedVisibleInlineContainerRuns()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/nested" TargetMode="External"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:hyperlink r:id="rIdLink">
+                        <w:bookmarkStart w:id="7" w:name="NestedLinkStart"/>
+                        <w:ins>
+                          <w:r><w:t>Nested</w:t></w:r>
+                        </w:ins>
+                      </w:hyperlink>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_TRACKED_CHANGES"), "Supported visible inserted runs inside hyperlinks should not be rejected by run-only tracked-change diagnostics.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        TestAssert.Equal("Nested", string.Concat(paragraph.Runs.Select(run => run.Text)));
+        TestAssert.Equal(1, paragraph.BookmarkAnchors.Count);
+        TestAssert.Equal(1, paragraph.Hyperlinks.Count);
+        TestAssert.Equal(1, paragraph.Hyperlinks[0].SourceRunCount);
+        TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunCount);
+        TestAssert.Equal(6, paragraph.Hyperlinks[0].TextLength);
+    }
+
     public static void DocxSupportedBodyKeepRulesDoNotEmitUnsupportedKeepDiagnostic()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

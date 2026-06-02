@@ -7181,6 +7181,12 @@ Current validation baseline:
   inline-child dispatcher for hyperlink and inserted-run containers, so `w:bookmarkStart` anchors inside those
     containers are preserved in source/text order instead of being skipped by run-only traversal. Focused
     coverage locks bookmark anchors inside `w:hyperlink`.
+    2026-06-02 architecture follow-up: the same inline-container dispatcher now recurses through nested
+    visible containers (`w:hyperlink`, `w:ins`, and `w:fldSimple`) instead of stopping after one level. This
+    keeps inserted final-view runs, bookmark anchors, simple-field result content, and hyperlink span indexes
+    in the paragraph model when containers are nested, and narrows the tracked-change diagnostic to unsupported
+    revision structures rather than visible inserted runs inside hyperlinks. Validation passed
+    `docx-core --skip-slow` (`55`) and full solution build.
     2026-06-02 architecture follow-up: `DocxStructureSnapshot` now distinguishes syntactic inline
     comment/footnote/endnote references from references that resolve to parsed related story bodies. Document,
     body/table block, and story snapshots expose `ResolvedInlineReferenceCount`, using only kind/id matches
