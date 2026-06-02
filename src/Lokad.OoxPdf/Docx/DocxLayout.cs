@@ -490,8 +490,9 @@ internal sealed record DocxLayoutSnapshot(
         IReadOnlyList<DocxLayoutItemSnapshot> staticItems)
     {
         return staticItems
-            .GroupBy(item => StaticStoryKind(item.Kind), StringComparer.Ordinal)
-            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .GroupBy(item => new StaticStorySnapshotKey(StaticStoryKind(item.Kind), item.StoryVariantType))
+            .OrderBy(group => group.Key.Kind, StringComparer.Ordinal)
+            .ThenBy(group => group.Key.VariantType ?? string.Empty, StringComparer.Ordinal)
             .Select(group =>
             {
                 DocxLayoutItemSnapshot[] storyItems = group.ToArray();
@@ -510,7 +511,8 @@ internal sealed record DocxLayoutSnapshot(
                     .OrderBy(index => index)
                     .ToArray();
                 return new DocxStaticStoryLayoutSnapshot(
-                    group.Key,
+                    group.Key.Kind,
+                    group.Key.VariantType,
                     storyItems.Length,
                     paragraphIndexes.Length,
                     lineIndexes.Length,
@@ -536,6 +538,8 @@ internal sealed record DocxLayoutSnapshot(
             _ => "Static"
         };
     }
+
+    private sealed record StaticStorySnapshotKey(string Kind, string? VariantType);
 
     private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTextLineLayout text)
     {
@@ -578,7 +582,8 @@ internal sealed record DocxLayoutSnapshot(
                 text.PendingAfterSpacing,
                 text.ParagraphBeforeSpacing,
                 text.ParagraphAfterSpacing,
-                text.ContextualSpacingSuppressed),
+                text.ContextualSpacingSuppressed,
+                text.StoryVariantType),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
                 image.X,
@@ -603,7 +608,8 @@ internal sealed record DocxLayoutSnapshot(
                 PendingAfterSpacingPoints: null,
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
-                ContextualSpacingSuppressed: null),
+                ContextualSpacingSuppressed: null,
+                StoryVariantType: null),
             DocxTableRowLayout row => new DocxLayoutItemSnapshot(
                 "TableRow",
                 row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
@@ -628,8 +634,9 @@ internal sealed record DocxLayoutSnapshot(
                 PendingAfterSpacingPoints: null,
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
-                ContextualSpacingSuppressed: null),
-            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                ContextualSpacingSuppressed: null,
+                StoryVariantType: null),
+            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
         };
     }
 
@@ -970,6 +977,7 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
 
 internal sealed record DocxStaticStoryLayoutSnapshot(
     string Kind,
+    string? VariantType,
     int TextLineCount,
     int ParagraphCount,
     int SourceLineCount,
@@ -1055,7 +1063,8 @@ internal sealed record DocxLayoutItemSnapshot(
     double? PendingAfterSpacingPoints,
     double? ParagraphBeforeSpacingPoints,
     double? ParagraphAfterSpacingPoints,
-    bool? ContextualSpacingSuppressed);
+    bool? ContextualSpacingSuppressed,
+    string? StoryVariantType = null);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,
@@ -1289,7 +1298,8 @@ internal sealed record DocxTextLineLayout(
     double? ParagraphBeforeSpacing = null,
     double? ParagraphAfterSpacing = null,
     bool? ContextualSpacingSuppressed = null,
-    DocxParagraph? SourceParagraph = null) : DocxLayoutItem;
+    DocxParagraph? SourceParagraph = null,
+    string? StoryVariantType = null) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
@@ -2429,8 +2439,16 @@ internal sealed class DocxLayoutEngine
             DocxLayoutPage page = pages[pageIndex];
             int pageNumber = pageIndex + 1;
             double bodyWidth = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
+            DocxSelectedStaticStory selectedHeader = SelectStaticHeaderFooter(
+                page.PageSettings.HeaderParagraphsByType,
+                page.PageSettings,
+                pageNumber);
+            DocxSelectedStaticStory selectedFooter = SelectStaticHeaderFooter(
+                page.PageSettings.FooterParagraphsByType,
+                page.PageSettings,
+                pageNumber);
             DocxTextLineLayout[] staticLines = CreateStaticTextLines(
-                    SelectStaticHeaderFooter(page.PageSettings.HeaderParagraphsByType, page.PageSettings, pageNumber),
+                    selectedHeader,
                     page.MarginLeft,
                     bodyWidth,
                     page.Height - ResolveHeaderDistance(page),
@@ -2440,7 +2458,7 @@ internal sealed class DocxLayoutEngine
                     textMeasurer,
                     staticMetrics)
                 .Concat(CreateStaticTextLines(
-                    SelectStaticHeaderFooter(page.PageSettings.FooterParagraphsByType, page.PageSettings, pageNumber),
+                    selectedFooter,
                     page.MarginLeft,
                     bodyWidth,
                     ResolveFooterDistance(page),
@@ -2457,7 +2475,7 @@ internal sealed class DocxLayoutEngine
     }
 
     private static IReadOnlyList<DocxTextLineLayout> CreateStaticTextLines(
-        IReadOnlyList<DocxParagraph> paragraphs,
+        DocxSelectedStaticStory story,
         double x,
         double width,
         double startY,
@@ -2471,6 +2489,7 @@ internal sealed class DocxLayoutEngine
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        IReadOnlyList<DocxParagraph> paragraphs = story.Paragraphs;
         for (int paragraphIndex = 0; paragraphIndex < paragraphs.Count; paragraphIndex++)
         {
             DocxParagraph paragraph = paragraphs[paragraphIndex];
@@ -2521,7 +2540,8 @@ internal sealed class DocxLayoutEngine
                     ContextualSpacingSuppressed: sourceLineIndex == 0 ? spacingProfile.ContextualSpacingSuppressed : null,
                     SourceParagraph: paragraph,
                     SourceParagraphIndex: paragraphIndex,
-                    StoryKind: isHeader ? "Header" : "Footer"));
+                    StoryKind: isHeader ? "Header" : "Footer",
+                    StoryVariantType: story.VariantType));
                 sourceLineIndex++;
                 cursorY -= ascender + descender;
             }
@@ -2671,7 +2691,7 @@ internal sealed class DocxLayoutEngine
         return width;
     }
 
-    private static IReadOnlyList<DocxParagraph> SelectStaticHeaderFooter(
+    private static DocxSelectedStaticStory SelectStaticHeaderFooter(
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         DocxPageSettings settings,
         int pageNumber)
@@ -2680,20 +2700,22 @@ internal sealed class DocxLayoutEngine
             pageNumber == 1 &&
             paragraphsByType.TryGetValue("first", out IReadOnlyList<DocxParagraph>? first))
         {
-            return first;
+            return new DocxSelectedStaticStory(first, "first");
         }
 
         if (settings.EvenAndOddHeaders == true &&
             pageNumber % 2 == 0 &&
             paragraphsByType.TryGetValue("even", out IReadOnlyList<DocxParagraph>? even))
         {
-            return even;
+            return new DocxSelectedStaticStory(even, "even");
         }
 
         return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaults)
-            ? defaults
-            : [];
+            ? new DocxSelectedStaticStory(defaults, "default")
+            : new DocxSelectedStaticStory([], null);
     }
+
+    private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxParagraph> Paragraphs, string? VariantType);
 
     private static double ResolveHeaderDistance(DocxLayoutPage page)
     {

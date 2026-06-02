@@ -12743,9 +12743,54 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.Pages[0].StaticStories.Count);
         DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single(story => story.Kind == "Header");
         DocxStaticStoryLayoutSnapshot footerStory = snapshot.Pages[0].StaticStories.Single(story => story.Kind == "Footer");
-        TestAssert.True(headerStory.TextLineCount == 1 && headerStory.ParagraphCount == 1 && headerStory.TextLength == 2 && headerStory.Items.Single().Kind == "StaticHeaderTextLine", "Static header story snapshots should group private-safe selected header line geometry.");
-        TestAssert.True(footerStory.TextLineCount == 1 && footerStory.ParagraphCount == 1 && footerStory.TextLength == 1 && footerStory.Items.Single().Kind == "StaticFooterTextLine", "Static footer story snapshots should group private-safe selected footer line geometry.");
+        TestAssert.True(headerStory.VariantType == "default" && headerStory.TextLineCount == 1 && headerStory.ParagraphCount == 1 && headerStory.TextLength == 2 && headerStory.Items.Single().Kind == "StaticHeaderTextLine", "Static header story snapshots should group private-safe selected header line geometry.");
+        TestAssert.True(footerStory.VariantType == "default" && footerStory.TextLineCount == 1 && footerStory.ParagraphCount == 1 && footerStory.TextLength == 1 && footerStory.Items.Single().Kind == "StaticFooterTextLine", "Static footer story snapshots should group private-safe selected footer line geometry.");
         TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
+    }
+
+    public static void DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants()
+    {
+        DocxParagraph defaultHeader = CreateDocxLayoutParagraph("DH", 10d, 10d);
+        DocxParagraph firstHeader = CreateDocxLayoutParagraph("FH", 10d, 10d);
+        DocxParagraph evenFooter = CreateDocxLayoutParagraph("EF", 10d, 10d);
+        DocxParagraph firstBody = CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph secondBody = CreateDocxLayoutParagraph("Second", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            TitlePage = true,
+            EvenAndOddHeaders = true,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [defaultHeader],
+                ["first"] = [firstHeader]
+            },
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["even"] = [evenFooter]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [firstBody, secondBody],
+            []);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+
+        TestAssert.Equal(2, snapshot.Pages.Count);
+        TestAssert.Equal("first", snapshot.Pages[0].StaticStories.Single().VariantType ?? string.Empty);
+        TestAssert.Equal("default", snapshot.Pages[1].StaticStories.Single(story => story.Kind == "Header").VariantType ?? string.Empty);
+        TestAssert.Equal("even", snapshot.Pages[1].StaticStories.Single(story => story.Kind == "Footer").VariantType ?? string.Empty);
+        TestAssert.True(snapshot.Pages[1].StaticItems.All(item => item.StoryVariantType is "default" or "even"), "Static item snapshots should retain the selected header/footer variant type.");
     }
 
     public static void DocxLayoutStageWrapsStaticHeaderLines()
