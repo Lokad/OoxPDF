@@ -8,8 +8,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed class DocxReader
 {
-    private const double WordUntokenedAutoLineSpacingFactor = 1.25d;
+    private const double WordUntokenedAutoLineSpacingFactor = 1.2d;
     private const double WordSpacingTokenAutoLineSpacingFactor = 1.2d;
+    private const double WordDefaultSpacingAfterPoints = 8d;
 
     private static readonly XNamespace WordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static readonly XNamespace WordprocessingDrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
@@ -1041,7 +1042,7 @@ internal sealed class DocxReader
 
         return TryReadLineBasedSpacing(paragraph.Spacing.AfterLinesValue, lineHeight, out double linePoints)
             ? linePoints
-            : 6d;
+            : WordDefaultSpacingAfterPoints;
     }
 
     private static bool TryReadLineBasedSpacing(string? value, double lineHeight, out double points)

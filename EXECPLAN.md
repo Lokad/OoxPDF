@@ -385,18 +385,18 @@ High-priority actions:
   This confirms the remaining rule is not a single broad page-fit constant; continue by deriving Office's
   paragraph pitch from public rows and font metrics, then apply only a structural rule that also explains the
   private compact-list bucket.
-  2026-06-02 follow-up: public compact-bullet flow comparison split missing-`w:line` paragraphs into two
-  structural defaults instead of one global line-spacing constant. Paragraphs with spacing-side tokens but no
-  `w:spacing/@w:line` now use an Office-observed `1.2` auto-line factor, while untokened paragraphs keep the
-  existing `1.25` default. This keeps the title paragraph in the explicit `line=276` fixture neutral and
-  closes the real no-line compact-list pitch gap without naming a style or font. Public
+  2026-06-02 follow-up: public compact-bullet flow comparison traced the first-list baseline error to the
+  default paragraph model, not to a list/font/style exception. Paragraphs with no explicit
+  `w:spacing/@w:line` now use an Office-observed `1.2` auto-line factor, and paragraphs with no authored
+  after-spacing side use an `8pt` default after spacing instead of the previous `6pt`. This explains both the
+  untokened title paragraph and the compact list body without naming a style or font. Public
   `docx-ladder-03-compact-bullet-alt-bottom` improved from page-1 `MAE=15.916448`, changed16 `0.154725` to
-  `MAE=14.433383`, changed16 `0.145066`; page 2 improved to the same low-error profile as the explicit-line
-  sibling (`MAE=0.253264`, changed16 `0.002815`). Flow run `20260602-032900` has exact `43/43/43`
-  layout/reference/candidate row counts, zero missing or ambiguous matches, candidate effective factors
-  `1.2` for the 42 compact rows and `1.25` for the untokened title, and row-advance mean without max
-  `16.448425` vs Office `16.4755`. `docx-ladder-03-compact-bullet-alt-line115` stayed at its prior metrics
-  and `docx-ladder-03-compact-bullet-spacing` stayed in the same metric band (`MAE=0.914388`). Keep the branch
+  `MAE=11.188275`, changed16 `0.120160`; page 2 stayed at the low-error profile (`MAE=0.253264`, changed16
+  `0.002815`). Public `docx-ladder-03-compact-bullet-alt-line115` improved from page-1 `MAE=15.195190` to
+  `12.164815`, and `docx-ladder-03-compact-bullet-spacing` improved from the accepted `MAE=0.803030` to
+  `0.626532`. Flow run `20260602-033223` has exact `43/43/43` layout/reference/candidate row counts, zero
+  missing or ambiguous matches, candidate effective factor `1.2` for all rows, title advance `22.648pt` vs
+  Office `22.680pt`, and compact row-advance mean without max `16.44845` vs Office `16.4755`. Keep the branch
   open for residual baseline/advance quantization and text-state decomposition, but do not broaden this into
   a docGrid, FE-layout, font-name, or style-name rule.
   2026-06-01 negative evidence: rejected an OpenType metric trial that applied the automatic line-spacing

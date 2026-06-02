@@ -863,7 +863,7 @@ internal static class DocxTests
 
         TestAssert.Equal(2, document.Paragraphs.Count);
         TestAssert.Equal(1.2d, document.Paragraphs[0].LineSpacingFactor);
-        TestAssert.Equal(1.25d, document.Paragraphs[1].LineSpacingFactor);
+        TestAssert.Equal(1.2d, document.Paragraphs[1].LineSpacingFactor);
     }
 
     public static void DocxReaderPreservesFontTableAlternatesAndThemeFonts()
