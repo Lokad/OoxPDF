@@ -791,6 +791,14 @@ internal sealed record DocxLayoutSnapshot(
             cellLayout.Y,
             cellLayout.Width,
             cellLayout.Height,
+            cellLayout.X + cellLayout.ContentPaddingLeft,
+            cellLayout.Y + cellLayout.ContentPaddingBottom,
+            Math.Max(0d, cellLayout.Width - cellLayout.ContentPaddingLeft - cellLayout.ContentPaddingRight),
+            Math.Max(0d, cellLayout.Height - cellLayout.ContentPaddingTop - cellLayout.ContentPaddingBottom),
+            cellLayout.ContentPaddingLeft,
+            cellLayout.ContentPaddingTop,
+            cellLayout.ContentPaddingRight,
+            cellLayout.ContentPaddingBottom,
             SumTableCellTextLineCount(cellLayout),
             SumTableCellTextLength(cellLayout),
             cellLayout.TextLines.Count == 0 ? 0d : cellLayout.TextLines.Max(line => line.FontSize),
@@ -1200,6 +1208,14 @@ internal sealed record DocxTableCellSnapshot(
     double Y,
     double Width,
     double Height,
+    double ContentBoxX,
+    double ContentBoxY,
+    double ContentBoxWidth,
+    double ContentBoxHeight,
+    double ResolvedPaddingLeftPoints,
+    double ResolvedPaddingTopPoints,
+    double ResolvedPaddingRightPoints,
+    double ResolvedPaddingBottomPoints,
     int TextLineCount,
     int TextLength,
     double MaxFontSize,
@@ -1436,6 +1452,10 @@ internal sealed record DocxTableCellLayout(
     double Y,
     double Width,
     double Height,
+    double ContentPaddingLeft,
+    double ContentPaddingTop,
+    double ContentPaddingRight,
+    double ContentPaddingBottom,
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
     bool IsVerticalMergeContinuation = false,
@@ -4400,6 +4420,10 @@ internal sealed class DocxLayoutEngine
                 : cell;
             double contentY = isVerticalMergeContinuation ? visualY : fullVisualY;
             double contentHeight = isVerticalMergeContinuation ? visualHeight : fullVisualHeight;
+            double contentPaddingLeft = ResolveTableCellHorizontalPadding(contentCell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(contentCell, "left");
+            double contentPaddingTop = rowTopPadding;
+            double contentPaddingRight = ResolveTableCellHorizontalPadding(contentCell.Margins.RightPoints) + ResolveTableCellBorderContentInset(contentCell, "right");
+            double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints);
             IReadOnlyList<DocxTextLineLayout> textLines = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints)
@@ -4418,7 +4442,23 @@ internal sealed class DocxLayoutEngine
                     .Where(rowLayout => IsNestedTableRowOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerNestedTableBoundaryIndex, cellPageBreakUpperNestedTableBoundaryIndex, rowLayout, FragmentCount))
                     .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(cellPageBreakAlignsWithNestedTableBlock, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
-            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, verticalMergeOwner, visualOwnership, nestedTableRows));
+            cells.Add(new DocxTableCellLayout(
+                cell,
+                cellX,
+                visualY,
+                cellWidth,
+                visualHeight,
+                contentPaddingLeft,
+                contentPaddingTop,
+                contentPaddingRight,
+                contentPaddingBottom,
+                textLines,
+                inlineImages,
+                isVerticalMergeContinuation,
+                verticalMergeOwnerCell,
+                verticalMergeOwner,
+                visualOwnership,
+                nestedTableRows));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }

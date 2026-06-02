@@ -12126,7 +12126,16 @@ internal static class DocxTests
         TestAssert.Equal(3d, tableCell.MarginRightPoints ?? 0d);
         TestAssert.Equal(4d, tableCell.MarginBottomPoints ?? 0d);
         TestAssert.Equal(5d, tableCell.MarginLeftPoints ?? 0d);
+        TestAssert.Equal(5d, tableCell.ResolvedPaddingLeftPoints);
+        TestAssert.Equal(2d, tableCell.ResolvedPaddingTopPoints);
+        TestAssert.Equal(3d, tableCell.ResolvedPaddingRightPoints);
+        TestAssert.Equal(4d, tableCell.ResolvedPaddingBottomPoints);
+        TestAssert.Equal(tableCell.X + tableCell.ResolvedPaddingLeftPoints, tableCell.ContentBoxX);
+        TestAssert.Equal(tableCell.Y + tableCell.ResolvedPaddingBottomPoints, tableCell.ContentBoxY);
+        TestAssert.Equal(tableCell.Width - tableCell.ResolvedPaddingLeftPoints - tableCell.ResolvedPaddingRightPoints, tableCell.ContentBoxWidth);
+        TestAssert.Equal(tableCell.Height - tableCell.ResolvedPaddingTopPoints - tableCell.ResolvedPaddingBottomPoints, tableCell.ContentBoxHeight);
         TestAssert.True(tableCell.FirstTextLineX is not null, "Snapshot should expose private-safe cell text x-position.");
+        TestAssert.True((tableCell.FirstTextLineX ?? 0d) >= tableCell.ContentBoxX, "Cell text should be positioned inside the resolved content box.");
         TestAssert.True(tableCell.FirstBaselineY is not null, "Snapshot should expose private-safe first baseline.");
         TestAssert.Equal(11d, tableCell.FirstBaselineInset);
         TestAssert.True(tableCell.LastBaselineY is not null, "Snapshot should expose private-safe last baseline.");

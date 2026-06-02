@@ -5341,6 +5341,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     `20260601-013533` is page- and dimension-stable with no diagnostics; page 1 MAE is `0.927605` and page 2
     MAE is `0.253998`. Text inspection shows the first table row stays on page 1 and the second row starts at
     the top of page 2 in both PDFs.
+    2026-06-02 architecture follow-up: `DocxTableCellLayout` and `DocxTableCellSnapshot` now expose the
+    resolved content box and resolved padding used by table-cell layout. This keeps row-shared top padding,
+    horizontal cell margins, and border/content insets visible to private-safe inspection, so future Office
+    comparisons can separate padding ownership from baseline and vertical-alignment behavior instead of
+    re-inferring the content rectangle from text positions.
 - [ ] Implement table and cell styling: table styles, conditional first/header row formatting, cell shading,
   per-edge borders, border widths/colors, and vertical alignment.
   - [x] 2026-06-01: Reused the DOCX shading resolver for table-cell backgrounds instead of treating
