@@ -334,6 +334,12 @@ High-priority actions:
   marker formatting, and related-story hyperlink rectangles once their story pages/regions are real.
   Validation passed `docx-core --skip-slow` (`53`), `docx-tables --skip-slow` (`118`), and full solution
   build.
+  2026-06-02 architecture follow-up: `DocxRelatedStoryLayout` now owns top-level related-story inline images
+  as `DocxInlineImageLayout` records instead of only charging anonymous image height. `DocxLayoutSnapshot`
+  counts related-story paragraph images together with table-cell images, and bottom-up `docx-images` coverage
+  locks an image-only comment story so future note/comment placement can consume measured image layout rather
+  than returning to raw story XML. Keep open the same page-owned placement and PDF annotation questions above.
+  Validation passed `docx-images --skip-slow` (`4`) and `docx-core --skip-slow` (`53`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring

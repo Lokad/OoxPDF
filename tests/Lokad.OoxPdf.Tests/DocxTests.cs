@@ -13801,6 +13801,57 @@ internal static class DocxTests
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Endnote body"), "Endnote runs should participate in DOCX font planning.");
     }
 
+    public static void DocxRelatedStoryLayoutOwnsInlineImages()
+    {
+        DocxTextRun bodyRun = new("Body", 12d, "000000", Bold: false, Italic: false, Underline: false, UnderlineValue: null, FontFamily: null);
+        DocxParagraph bodyParagraph = new(
+            [bodyRun],
+            [],
+            StyleId: null,
+            DocxTextAlignment.Left,
+            AlignmentValue: null,
+            SpacingBeforePoints: 0d,
+            SpacingAfterPoints: 0d,
+            LineSpacingFactor: 1d,
+            LineSpacingPoints: null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            ListLabel: null);
+        DocxInlineImage storyImage = new(48d, 24d, "image/png", [1, 2, 3], "/word/media/comment.png");
+        DocxParagraph imageParagraph = new(
+            [],
+            [storyImage],
+            StyleId: null,
+            DocxTextAlignment.Center,
+            AlignmentValue: "center",
+            SpacingBeforePoints: 0d,
+            SpacingAfterPoints: 0d,
+            LineSpacingFactor: 1d,
+            LineSpacingPoints: null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            ListLabel: null);
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "9",
+            [new DocxParagraphElement(imageParagraph)],
+            [imageParagraph],
+            []);
+        DocxDocument document = new DocxDocument(612d, 792d)
+        {
+            BodyElements = [new DocxParagraphElement(bodyParagraph)],
+            Paragraphs = [bodyParagraph],
+            RelatedStories = [commentStory]
+        };
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxRelatedStoryLayoutSnapshot storySnapshot = snapshot.RelatedStories.Single();
+
+        TestAssert.True(storySnapshot.Kind == "Comment" && storySnapshot.PartName == "/word/comments.xml" && storySnapshot.Id == "9", "Related-story layout snapshots should preserve the owning story identity.");
+        TestAssert.True(storySnapshot.TextLineCount == 0 && storySnapshot.InlineImageCount == 1 && storySnapshot.ContentHeight >= 24d, "Related-story inline images should be owned by story layout instead of only contributing anonymous height.");
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

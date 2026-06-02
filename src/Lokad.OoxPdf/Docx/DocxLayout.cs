@@ -16,6 +16,7 @@ internal sealed record DocxRelatedStoryLayout(
     DocxRelatedStory Story,
     int StoryIndex,
     IReadOnlyList<DocxTextLineLayout> TextLines,
+    IReadOnlyList<DocxInlineImageLayout> InlineImages,
     IReadOnlyList<DocxTableRowLayout> TableRows,
     double ContentHeight);
 
@@ -128,7 +129,7 @@ internal sealed record DocxLayoutSnapshot(
             .Select(story =>
             {
                 int tableCellTextLineCount = CountTableCellTextLines(story.TableRows);
-                int inlineImageCount = CountTableCellInlineImages(story.TableRows);
+                int inlineImageCount = story.InlineImages.Count + CountTableCellInlineImages(story.TableRows);
                 return new DocxRelatedStoryLayoutSnapshot(
                     story.StoryIndex,
                     story.Story.Kind,
@@ -1823,7 +1824,7 @@ internal sealed class DocxLayoutEngine
         if (textMeasurer is null || stories.Count == 0)
         {
             return stories
-                .Select((story, index) => new DocxRelatedStoryLayout(story, index, [], [], 0d))
+                .Select((story, index) => new DocxRelatedStoryLayout(story, index, [], [], [], 0d))
                 .ToArray();
         }
 
@@ -1840,6 +1841,7 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints)
     {
         var textLines = new List<DocxTextLineLayout>();
+        var inlineImages = new List<DocxInlineImageLayout>();
         var tableRows = new List<DocxTableRowLayout>();
         double cursorY = 0d;
         double pendingSpacingAfter = 0d;
@@ -1921,6 +1923,21 @@ internal sealed class DocxLayoutEngine
             {
                 double imageWidth = Math.Min(bodyWidth, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                double imageX = paragraph.Alignment switch
+                {
+                    DocxTextAlignment.Center => Math.Max(0, bodyWidth - imageWidth) / 2d,
+                    DocxTextAlignment.Right => Math.Max(0, bodyWidth - imageWidth),
+                    _ => 0d
+                };
+                inlineImages.Add(new DocxInlineImageLayout(
+                    image,
+                    imageX,
+                    cursorY - imageHeight,
+                    imageWidth,
+                    imageHeight,
+                    PageIndex: 0,
+                    SourceBlockIndex: elementIndex,
+                    SourceParagraphIndex: paragraphIndex));
                 cursorY -= imageHeight + 6d;
             }
 
@@ -1930,7 +1947,7 @@ internal sealed class DocxLayoutEngine
         }
 
         cursorY -= pendingSpacingAfter;
-        return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), tableRows.ToArray(), Math.Abs(cursorY));
+        return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), tableRows.ToArray(), Math.Abs(cursorY));
     }
 
     private static IReadOnlyList<DocxTextLineLayout> LayoutRelatedStoryParagraphTextLines(
