@@ -11568,6 +11568,36 @@ internal static class DocxTests
         TestAssert.Equal(1, cell.SpaceCharacterCount);
         TestAssert.Equal(3, cell.DigitCharacterCount);
         TestAssert.Equal(5, cell.LongestBreakableTokenLength);
+        TestAssert.Equal(1, cell.BodyElementCount);
+        TestAssert.Equal(0, cell.ManualBreakElementCount);
+        TestAssert.Equal(0, cell.PageBreakElementCount);
+        TestAssert.Equal(0, cell.NestedTableElementCount);
+    }
+
+    public static void DocxLayoutSnapshotReportsTableCellBodyFlowCounts()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Flow", 10d, 10d);
+        DocxTable nestedTable = CreateSingleCellTable("Nested", 12d);
+        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(paragraph),
+                new DocxManualBreakElement("runBreak", "column"),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxTableElement(nestedTable)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, nestedTable]);
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+
+        DocxTableCellSnapshot cellSnapshot = snapshot.Pages[0].TableRows.Single().Cells.Single();
+        TestAssert.Equal(4, cellSnapshot.BodyElementCount);
+        TestAssert.Equal(1, cellSnapshot.ManualBreakElementCount);
+        TestAssert.Equal(1, cellSnapshot.PageBreakElementCount);
+        TestAssert.Equal(1, cellSnapshot.NestedTableElementCount);
     }
 
     public static void DocxLayoutSnapshotReportsOfficeTableCellBaselineFixture()

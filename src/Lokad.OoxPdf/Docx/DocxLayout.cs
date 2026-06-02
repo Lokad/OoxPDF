@@ -518,6 +518,7 @@ internal sealed record DocxLayoutSnapshot(
         DocxTableCell visualCell = cellLayout.VisualCell;
         DocxTextLineLayout? firstLine = cellLayout.TextLines.FirstOrDefault();
         DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
+        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         IReadOnlyList<DocxParagraph> visualParagraphs = DocxTableCellContent.GetParagraphs(visualCell);
         IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.SpacingBeforePoints).ToArray();
@@ -577,7 +578,11 @@ internal sealed record DocxLayoutSnapshot(
             textProfile.DigitCharacterCount,
             textProfile.UppercaseCharacterCount,
             textProfile.LowercaseCharacterCount,
-            textProfile.LongestBreakableTokenLength);
+            textProfile.LongestBreakableTokenLength,
+            bodyElements.Count,
+            bodyElements.OfType<DocxManualBreakElement>().Count(),
+            bodyElements.OfType<DocxPageBreakElement>().Count(),
+            bodyElements.OfType<DocxTableElement>().Count());
     }
 
     private static TextProfile BuildTextProfile(string text)
@@ -923,7 +928,11 @@ internal sealed record DocxTableCellSnapshot(
     int DigitCharacterCount,
     int UppercaseCharacterCount,
     int LowercaseCharacterCount,
-    int LongestBreakableTokenLength);
+    int LongestBreakableTokenLength,
+    int BodyElementCount = 0,
+    int ManualBreakElementCount = 0,
+    int PageBreakElementCount = 0,
+    int NestedTableElementCount = 0);
 
 internal sealed record DocxTextEmissionSnapshot(
     int LineCount,

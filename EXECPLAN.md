@@ -7296,6 +7296,13 @@ Current validation baseline:
   paragraph, nested table, paragraph keeps the first paragraph above the child table and the second paragraph below it.
   Validation passed `docx-tables --skip-slow` (`107`). Keep nested table pagination inside split parent cells,
   Office-exact nested-table spacing/baseline behavior, and non-paragraph table-cell break semantics open.
+  2026-06-02 architecture follow-up: layout snapshots now expose table-cell body-flow counts, matching the structural
+  surface already available before layout. `DocxTableCellSnapshot` carries private-safe authored body-element,
+  manual-break, page-break, and nested-table counts, including the normalized one-paragraph fallback for legacy plain
+  cells. Bottom-up coverage verifies a cell authored as paragraph/manual-break/page-break/nested-table reports all
+  four flow nodes in layout snapshots. Validation passed `docx-tables --skip-slow` (`108`) and `docx-core --skip-slow`
+  (`53`; serial rerun after a parallel compiler output lock). Keep actual table-local page/column break pagination
+  behavior open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
