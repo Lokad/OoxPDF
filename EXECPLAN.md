@@ -725,6 +725,15 @@ High-priority actions:
   continuation snapshot reporting; validation passed `docx-tables --skip-slow` (`98`) and `docx-core
   --skip-slow` (`51`) after rerunning serially around a transient parallel compiler output lock. Keep the
   actual text carry-over and continuation-internal border rules open until Office-PDF evidence pins them.
+  2026-06-02 architecture follow-up: anchored DOCX drawings now preserve their embedded image relationship and
+  image payload in `DocxFloatingDrawing`, using the same relationship/part resolution helper as inline
+  drawings. Structure snapshots expose private-safe anchored-image facts (relationship id, part name, content
+  type, and point dimensions). This does not render floating drawings yet, but it removes the prior dead-end
+  where anchors were only unsupported geometry tokens with no image content available to a future layout stage.
+  Bottom-up coverage locks anchor wrap/position tokens plus image payload and snapshot reporting; validation
+  passed `docx-core --skip-slow` (`51`) and `docx-tables --skip-slow` (`98`). Keep the open rendering branch on
+  deriving Office anchor coordinates/wrap effects structurally rather than placing anchored images as inline
+  fallbacks.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

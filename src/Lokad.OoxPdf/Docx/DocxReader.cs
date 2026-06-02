@@ -68,7 +68,7 @@ internal sealed class DocxReader
         IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
         IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
         IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering);
-        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document);
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships);
 
         if (pageSize is null)
         {
@@ -160,15 +160,21 @@ internal sealed class DocxReader
             compatSettings);
     }
 
-    private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(XDocument document)
+    private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
+        XDocument document,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         return document
             .Descendants(WordprocessingDrawingNamespace + "anchor")
-            .Select(ReadFloatingDrawing)
+            .Select(anchor => ReadFloatingDrawing(anchor, package, relationships))
             .ToArray();
     }
 
-    private static DocxFloatingDrawing ReadFloatingDrawing(XElement anchor)
+    private static DocxFloatingDrawing ReadFloatingDrawing(
+        XElement anchor,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
         XElement? positionH = anchor.Element(WordprocessingDrawingNamespace + "positionH");
@@ -176,8 +182,10 @@ internal sealed class DocxReader
         XElement? wrap = anchor
             .Elements()
             .FirstOrDefault(element =>
-                element.Name.Namespace == WordprocessingDrawingNamespace &&
-                element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
+            element.Name.Namespace == WordprocessingDrawingNamespace &&
+            element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
+        string? relationshipId = ReadDrawingImageRelationshipId(anchor);
+        DocxInlineImage? image = ReadDrawingImage(anchor, package, relationships);
 
         return new DocxFloatingDrawing(
             (string?)anchor.Attribute("distT"),
@@ -199,7 +207,9 @@ internal sealed class DocxReader
             (string?)positionV?.Element(WordprocessingDrawingNamespace + "align"),
             (string?)positionV?.Element(WordprocessingDrawingNamespace + "posOffset"),
             wrap?.Name.LocalName,
-            (string?)wrap?.Attribute("wrapText"));
+            (string?)wrap?.Attribute("wrapText"),
+            relationshipId,
+            image);
     }
 
     private static DocxPageSettings ReadPageSettings(
@@ -2234,31 +2244,47 @@ internal sealed class DocxReader
         var images = new List<DocxInlineImage>();
         foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
         {
-            XElement? extent = inline.Element(WordprocessingDrawingNamespace + "extent");
-            string? relationshipId = (string?)inline
-                .Descendants(DrawingNamespace + "blip")
-                .FirstOrDefault()
-                ?.Attribute(RelationshipsNamespace + "embed");
-            if (extent is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+            DocxInlineImage? image = ReadDrawingImage(inline, package, relationships);
+            if (image is null)
             {
                 continue;
             }
 
-            OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
-            if (imagePart is null)
-            {
-                continue;
-            }
-
-            images.Add(new DocxInlineImage(
-                OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cx")),
-                OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cy")),
-                imagePart.ContentType,
-                imagePart.Bytes,
-                imagePart.Name));
+            images.Add(image);
         }
 
         return images;
+    }
+
+    private static DocxInlineImage? ReadDrawingImage(XElement drawing, OoxPackage package, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        XElement? extent = drawing.Element(WordprocessingDrawingNamespace + "extent");
+        string? relationshipId = ReadDrawingImageRelationshipId(drawing);
+        if (extent is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        {
+            return null;
+        }
+
+        OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+        if (imagePart is null)
+        {
+            return null;
+        }
+
+        return new DocxInlineImage(
+            OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cx")),
+            OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cy")),
+            imagePart.ContentType,
+            imagePart.Bytes,
+            imagePart.Name);
+    }
+
+    private static string? ReadDrawingImageRelationshipId(XElement drawing)
+    {
+        return (string?)drawing
+            .Descendants(DrawingNamespace + "blip")
+            .FirstOrDefault()
+            ?.Attribute(RelationshipsNamespace + "embed");
     }
 
     private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)

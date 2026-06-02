@@ -6223,26 +6223,36 @@ internal static class DocxTests
 
     public static void DocxReaderPreservesFloatingDrawingWrapTokens()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
         {
-            ["[Content_Types].xml"] = """
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
                   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
                   <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
                   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
                 </Types>
-                """,
-            ["_rels/.rels"] = """
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
                 </Relationships>
-                """,
-            ["word/document.xml"] = """
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:body>
                     <w:p>
                       <w:r>
@@ -6254,6 +6264,11 @@ internal static class DocxTests
                             <wp:positionH relativeFrom="column"><wp:align>center</wp:align></wp:positionH>
                             <wp:positionV relativeFrom="paragraph"><wp:posOffset>63500</wp:posOffset></wp:positionV>
                             <wp:wrapSquare wrapText="bothSides"/>
+                            <a:graphic>
+                              <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic>
+                              </a:graphicData>
+                            </a:graphic>
                           </wp:anchor>
                         </w:drawing>
                       </w:r>
@@ -6261,7 +6276,8 @@ internal static class DocxTests
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
-                """
+                """),
+            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
 
         using FileStream stream = File.OpenRead(input);
@@ -6287,6 +6303,18 @@ internal static class DocxTests
         TestAssert.Equal("63500", drawing.VerticalOffsetValue ?? string.Empty);
         TestAssert.Equal("wrapSquare", drawing.WrapKind ?? string.Empty);
         TestAssert.Equal("bothSides", drawing.WrapTextValue ?? string.Empty);
+        TestAssert.Equal("rIdImage1", drawing.ImageRelationshipId ?? string.Empty);
+        TestAssert.Equal("/word/media/image1.png", drawing.Image?.PartName ?? string.Empty);
+        TestAssert.Equal("image/png", drawing.Image?.ContentType ?? string.Empty);
+        TestAssert.Equal(144d, drawing.Image?.WidthPoints ?? 0d);
+        TestAssert.Equal(72d, drawing.Image?.HeightPoints ?? 0d);
+
+        DocxStructureFloatingDrawingSnapshot snapshot = new DocxRenderer().InspectStructure(document).FloatingDrawings.Single();
+        TestAssert.Equal("rIdImage1", snapshot.ImageRelationshipId ?? string.Empty);
+        TestAssert.Equal("/word/media/image1.png", snapshot.ImagePartName ?? string.Empty);
+        TestAssert.Equal("image/png", snapshot.ImageContentType ?? string.Empty);
+        TestAssert.Equal(144d, snapshot.ImageWidthPoints ?? 0d);
+        TestAssert.Equal(72d, snapshot.ImageHeightPoints ?? 0d);
     }
 
     public static void DocxSyntheticTableRendersCellsAndText()

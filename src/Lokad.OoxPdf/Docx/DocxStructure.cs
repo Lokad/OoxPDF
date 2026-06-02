@@ -468,7 +468,12 @@ internal sealed record DocxStructureSnapshot(
             drawing.DistanceRightValue,
             drawing.SimplePositionValue,
             drawing.RelativeHeightValue,
-            drawing.LockedValue);
+            drawing.LockedValue,
+            drawing.ImageRelationshipId,
+            drawing.Image?.PartName,
+            drawing.Image?.ContentType,
+            drawing.Image?.WidthPoints,
+            drawing.Image?.HeightPoints);
     }
 
     private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
@@ -826,7 +831,12 @@ internal sealed record DocxStructureFloatingDrawingSnapshot(
     string? DistanceRightValue,
     string? SimplePositionValue,
     string? RelativeHeightValue,
-    string? LockedValue);
+    string? LockedValue,
+    string? ImageRelationshipId,
+    string? ImagePartName,
+    string? ImageContentType,
+    double? ImageWidthPoints,
+    double? ImageHeightPoints);
 
 internal sealed record DocxStructureStyleUsageSnapshot(
     string Kind,
