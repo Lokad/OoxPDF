@@ -12,6 +12,9 @@ internal sealed record DocxLayout(IReadOnlyList<DocxLayoutPage> Pages);
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
     double? SingleLineHeight,
+    double? ListLabelSingleLineHeight,
+    double? BodyWindowsLineHeight,
+    double? ListLabelWindowsLineHeight,
     double? EffectiveLineSpacingFactor,
     bool LineSpacingFactorFloorApplied);
 
@@ -182,6 +185,9 @@ internal sealed record DocxLayoutSnapshot(
                 text.LineHeight,
                 text.AppliedBeforeSpacing,
                 text.SingleLineHeight,
+                text.ListLabelSingleLineHeight,
+                text.BodyWindowsLineHeight,
+                text.ListLabelWindowsLineHeight,
                 text.EffectiveLineSpacingFactor,
                 text.LineSpacingFactorFloorApplied,
                 text.IsFirstParagraphLine),
@@ -198,6 +204,9 @@ internal sealed record DocxLayoutSnapshot(
                 LineHeightPoints: null,
                 AppliedBeforeSpacingPoints: null,
                 SingleLineHeightPoints: null,
+                ListLabelSingleLineHeightPoints: null,
+                BodyWindowsLineHeightPoints: null,
+                ListLabelWindowsLineHeightPoints: null,
                 EffectiveLineSpacingFactor: null,
                 LineSpacingFactorFloorApplied: null,
                 IsFirstParagraphLine: null),
@@ -214,10 +223,13 @@ internal sealed record DocxLayoutSnapshot(
                 LineHeightPoints: null,
                 AppliedBeforeSpacingPoints: null,
                 SingleLineHeightPoints: null,
+                ListLabelSingleLineHeightPoints: null,
+                BodyWindowsLineHeightPoints: null,
+                ListLabelWindowsLineHeightPoints: null,
                 EffectiveLineSpacingFactor: null,
                 LineSpacingFactorFloorApplied: null,
                 IsFirstParagraphLine: null),
-            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null)
+            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null)
         };
     }
 
@@ -476,6 +488,9 @@ internal sealed record DocxLayoutItemSnapshot(
     double? LineHeightPoints,
     double? AppliedBeforeSpacingPoints,
     double? SingleLineHeightPoints,
+    double? ListLabelSingleLineHeightPoints,
+    double? BodyWindowsLineHeightPoints,
+    double? ListLabelWindowsLineHeightPoints,
     double? EffectiveLineSpacingFactor,
     bool? LineSpacingFactorFloorApplied,
     bool? IsFirstParagraphLine);
@@ -671,6 +686,9 @@ internal sealed record DocxTextLineLayout(
     bool? IsFirstParagraphLine = null,
     bool EndsWithIntraTokenBreak = false,
     double? SingleLineHeight = null,
+    double? ListLabelSingleLineHeight = null,
+    double? BodyWindowsLineHeight = null,
+    double? ListLabelWindowsLineHeight = null,
     double? EffectiveLineSpacingFactor = null,
     bool? LineSpacingFactorFloorApplied = null) : DocxLayoutItem;
 
@@ -1144,6 +1162,9 @@ internal sealed class DocxLayoutEngine
                         firstLine,
                         line.EndsWithIntraTokenBreak,
                         lineHeightProfile.SingleLineHeight,
+                        lineHeightProfile.ListLabelSingleLineHeight,
+                        lineHeightProfile.BodyWindowsLineHeight,
+                        lineHeightProfile.ListLabelWindowsLineHeight,
                         lineHeightProfile.EffectiveLineSpacingFactor,
                         lineHeightProfile.LineSpacingFactorFloorApplied));
                     firstLine = false;
@@ -1655,16 +1676,41 @@ internal sealed class DocxLayoutEngine
     {
         if (paragraph.LineSpacingPoints is { } exactLineHeight)
         {
-            return new DocxLineHeightProfile(exactLineHeight, SingleLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: false);
+            return new DocxLineHeightProfile(
+                exactLineHeight,
+                SingleLineHeight: null,
+                ListLabelSingleLineHeight: null,
+                BodyWindowsLineHeight: null,
+                ListLabelWindowsLineHeight: null,
+                EffectiveLineSpacingFactor: null,
+                LineSpacingFactorFloorApplied: false);
         }
 
-        double singleLineHeight = textMeasurer is IDocxLineMetricsProvider metricsProvider
-            ? metricsProvider.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), fontSize)
+        DocxTextRun? bodyRun = paragraph.Runs.FirstOrDefault();
+        DocxTextRun? listLabelRun = paragraph.ListLabel is null
+            ? null
+            : CreateListLabelRun(paragraph.ListLabel, bodyRun, fontSize);
+        IDocxLineMetricsProvider? metricsProvider = textMeasurer as IDocxLineMetricsProvider;
+        IDocxStaticTextMetricsProvider? staticMetrics = textMeasurer as IDocxStaticTextMetricsProvider;
+        double singleLineHeight = metricsProvider is not null
+            ? metricsProvider.MeasureSingleLineHeight(bodyRun, fontSize)
             : fontSize;
+        double? listLabelSingleLineHeight = metricsProvider is not null && listLabelRun is not null
+            ? metricsProvider.MeasureSingleLineHeight(listLabelRun, listLabelRun.FontSize)
+            : null;
+        double? bodyWindowsLineHeight = staticMetrics is not null
+            ? staticMetrics.MeasureWindowsAscender(bodyRun, fontSize) + staticMetrics.MeasureWindowsDescender(bodyRun, fontSize)
+            : null;
+        double? listLabelWindowsLineHeight = staticMetrics is not null && listLabelRun is not null
+            ? staticMetrics.MeasureWindowsAscender(listLabelRun, listLabelRun.FontSize) + staticMetrics.MeasureWindowsDescender(listLabelRun, listLabelRun.FontSize)
+            : null;
         double effectiveLineSpacingFactor = ResolveAutoLineSpacingFactor(paragraph, out bool floorApplied);
         return new DocxLineHeightProfile(
             singleLineHeight * effectiveLineSpacingFactor,
             singleLineHeight,
+            listLabelSingleLineHeight,
+            bodyWindowsLineHeight,
+            listLabelWindowsLineHeight,
             effectiveLineSpacingFactor,
             floorApplied);
     }
@@ -2734,6 +2780,9 @@ internal sealed class DocxLayoutEngine
                         IsFirstParagraphLine: firstLine,
                         EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
                         SingleLineHeight: lineHeightProfile.SingleLineHeight,
+                        ListLabelSingleLineHeight: lineHeightProfile.ListLabelSingleLineHeight,
+                        BodyWindowsLineHeight: lineHeightProfile.BodyWindowsLineHeight,
+                        ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                         EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                         LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied));
                     firstLine = false;

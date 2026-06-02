@@ -9547,6 +9547,53 @@ internal static class DocxTests
         TestAssert.True(textLines[2].LineSpacingFactorFloorApplied == false, "Non-list paragraphs should not report the list floor.");
     }
 
+    public static void DocxLayoutSnapshotReportsListLabelLineHeightMetricCandidates()
+    {
+        var label = new DocxListLabel(
+            "*",
+            "bullet",
+            "*",
+            "tab",
+            "1",
+            0,
+            DocxNumberingIndent.Empty,
+            new DocxTextRunStyle(
+                10d,
+                null,
+                false,
+                false,
+                false,
+                null,
+                "Label Metrics",
+                new DocxRunFonts("Label Metrics", null, null, null, null, null, null, null)));
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Body", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.15d,
+            null,
+            new DocxParagraphSpacing(null, null, null, null, null, null, "276", "auto", null),
+            DocxParagraphKeepRules.Empty,
+            label);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        DocxLayoutItemSnapshot line = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()))
+            .Pages[0]
+            .Items
+            .Single(item => item.Kind == "TextLine");
+
+        TestAssert.Equal(10d, line.SingleLineHeightPoints ?? 0d);
+        TestAssert.Equal(10d, line.ListLabelSingleLineHeightPoints ?? 0d);
+        TestAssert.Equal(12d, line.BodyWindowsLineHeightPoints ?? 0d);
+        TestAssert.Equal(14d, line.ListLabelWindowsLineHeightPoints ?? 0d);
+        TestAssert.Equal(11.9d, Math.Round(line.LineHeightPoints ?? 0d, 2));
+        TestAssert.True((line.ListLabelWindowsLineHeightPoints ?? 0d) > (line.BodyWindowsLineHeightPoints ?? 0d), "Snapshot should expose when list-label Windows extents exceed body extents.");
+    }
+
     public static void DocxTextEmissionSnapshotReportsPrivateSafePdfTextState()
     {
         (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
@@ -11220,7 +11267,7 @@ internal static class DocxTests
         }
     }
 
-    private sealed class FamilyWidthTextMeasurer : IDocxTextMeasurer, IDocxStaticTextMetricsProvider
+    private sealed class FamilyWidthTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize)
         {
@@ -11228,14 +11275,19 @@ internal static class DocxTests
             return text.Length * width;
         }
 
-        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
         {
             return fontSize;
         }
 
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+        {
+            return run?.FontFamily == "Label Metrics" ? fontSize * 1.1d : fontSize;
+        }
+
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
         {
-            return fontSize * 0.2d;
+            return run?.FontFamily == "Label Metrics" ? fontSize * 0.3d : fontSize * 0.2d;
         }
     }
 

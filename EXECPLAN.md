@@ -446,15 +446,27 @@ High-priority actions:
   metric values in each metric bucket (`UnitsPerEm`, typographic ascender/descender/line-gap, Windows
   ascender/descender, and derived point metrics) while still hashing resolved family names. Bottom-up coverage
   verifies these fields against an installed OpenType face without exposing the family. Regenerating
-  `docx-ladder-03-compact-bullet-alt-line115` inspection showed the dominant list-label font-table-alternate
+  `docx-ladder-03-compact-bullet-alt-line115` inspection showed the dominant body/title font-table-alternate
   bucket at 10 pt has single-line height `12.20703125` pt, and the current accepted `1.19` floor therefore
   produces candidate repeated pitch `12.20703125 * 1.19 + 1.8 = 16.3263671875` pt. Office's repeated-row mean
-  excluding the largest paragraph-boundary gap is `16.3735` pt. The nearby body-run Windows ascent+descent
-  bucket is about `12.2509765625` pt, so the next implementation branch should explicitly investigate line-box
-  metric ownership between paragraph body runs and list-label runs. Do not special-case the resolved family,
+  excluding the largest paragraph-boundary gap is `16.3735` pt. The nearby numbering-label Windows
+  ascent+descent bucket is about `12.2509765625` pt, so the next implementation branch should explicitly
+  investigate line-box metric ownership between paragraph body runs and list-label runs. Do not special-case
+  the resolved family,
   the bullet character, or this numeric residual; the rule must follow Word's structural treatment of list
   labels versus paragraph content and be validated against both compact-list public fixtures plus private
   aggregate flow.
+  2026-06-02 follow-up: body-vs-list-label metric candidates are now carried directly on text-line layout
+  snapshots and through `tools/CompareDocxLayoutPdfFlow.ps1` (`ListLabelSingleLineHeightPoints`,
+  `BodyWindowsLineHeightPoints`, `ListLabelWindowsLineHeightPoints`, plus aggregate body/label Windows
+  buckets). Public `docx-ladder-03-compact-bullet-alt-line115` confirms body/title rows at
+  `BodyWindowsLineHeightPoints=12.207031` and list labels at
+  `ListLabelWindowsLineHeightPoints=12.250977`. A structural trial that selected
+  `max(body single-line, distinct list-label Windows extent)` for auto list line boxes was rejected: it kept
+  the case passing but worsened page-1 MAE to `13.533560`, and after reverting behavior the diagnostic-only
+  run `20260602-023605` remained passing at page-1 `MAE=15.195190`, page-2 `MAE=0.253264`. Keep the evidence,
+  but do not promote label Windows extents directly into line height until another Office-PDF probe explains
+  the row-rhythm alternation and first list boundary gap together.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table

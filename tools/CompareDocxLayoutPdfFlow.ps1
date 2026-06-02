@@ -214,6 +214,9 @@ function Get-LayoutLines($Layout) {
                 LineHeightPoints = if ($null -eq $item.LineHeightPoints) { $null } else { [Math]::Round([double]$item.LineHeightPoints, 6) }
                 AppliedBeforeSpacingPoints = if ($null -eq $item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.AppliedBeforeSpacingPoints, 6) }
                 SingleLineHeightPoints = if ($null -eq $item.SingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.SingleLineHeightPoints, 6) }
+                ListLabelSingleLineHeightPoints = if ($null -eq $item.ListLabelSingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelSingleLineHeightPoints, 6) }
+                BodyWindowsLineHeightPoints = if ($null -eq $item.BodyWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.BodyWindowsLineHeightPoints, 6) }
+                ListLabelWindowsLineHeightPoints = if ($null -eq $item.ListLabelWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelWindowsLineHeightPoints, 6) }
                 EffectiveLineSpacingFactor = if ($null -eq $item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$item.EffectiveLineSpacingFactor, 6) }
                 LineSpacingFactorFloorApplied = $item.LineSpacingFactorFloorApplied
                 IsFirstParagraphLine = $item.IsFirstParagraphLine
@@ -323,6 +326,9 @@ foreach ($line in $layoutLines) {
             LineHeightPoints = $line.LineHeightPoints
             AppliedBeforeSpacingPoints = $line.AppliedBeforeSpacingPoints
             SingleLineHeightPoints = $line.SingleLineHeightPoints
+            ListLabelSingleLineHeightPoints = $line.ListLabelSingleLineHeightPoints
+            BodyWindowsLineHeightPoints = $line.BodyWindowsLineHeightPoints
+            ListLabelWindowsLineHeightPoints = $line.ListLabelWindowsLineHeightPoints
             EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
             LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
             IsFirstParagraphLine = $line.IsFirstParagraphLine
@@ -356,6 +362,9 @@ foreach ($line in $layoutLines) {
         LineHeightPoints = $line.LineHeightPoints
         AppliedBeforeSpacingPoints = $line.AppliedBeforeSpacingPoints
         SingleLineHeightPoints = $line.SingleLineHeightPoints
+        ListLabelSingleLineHeightPoints = $line.ListLabelSingleLineHeightPoints
+        BodyWindowsLineHeightPoints = $line.BodyWindowsLineHeightPoints
+        ListLabelWindowsLineHeightPoints = $line.ListLabelWindowsLineHeightPoints
         EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
         LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
         IsFirstParagraphLine = $line.IsFirstParagraphLine
@@ -420,6 +429,36 @@ $summary = [pscustomobject]@{
             ForEach-Object {
                 [pscustomobject]@{
                     LineSpacingFactorFloorApplied = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+    CandidateListLabelWindowsLineHeightBuckets = @(
+        $layoutLines |
+            Where-Object { $null -ne $_.ListLabelWindowsLineHeightPoints } |
+            Group-Object {
+                ([double]$_.ListLabelWindowsLineHeightPoints).ToString("0.000000", [Globalization.CultureInfo]::InvariantCulture)
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    ListLabelWindowsLineHeightPoints = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+    CandidateBodyWindowsLineHeightBuckets = @(
+        $layoutLines |
+            Where-Object { $null -ne $_.BodyWindowsLineHeightPoints } |
+            Group-Object {
+                ([double]$_.BodyWindowsLineHeightPoints).ToString("0.000000", [Globalization.CultureInfo]::InvariantCulture)
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    BodyWindowsLineHeightPoints = $_.Name
                     Count = $_.Count
                 }
             }
