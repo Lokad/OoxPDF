@@ -44,7 +44,12 @@ internal sealed class DocxReader
         OoxPart documentPart = FindDocumentPart(package);
         using Stream stream = documentPart.OpenRead();
         XDocument document = SafeXml.Load(stream);
-        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, diagnosticSink);
+        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
+            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, diagnosticSink);
 
         XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr").LastOrDefault();
         XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
@@ -55,11 +60,6 @@ internal sealed class DocxReader
         DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog);
         XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _);
         DocxDocumentSettings documentSettings = ReadDocumentSettings(settings);
-        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
-            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
         DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
             ? null
             : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings);
@@ -369,7 +369,12 @@ internal sealed class DocxReader
         return (width, height);
     }
 
-    private static void EmitUnsupportedFeatureDiagnostics(OoxPackage package, XDocument document, string partName, Action<OoxPdfDiagnostic>? diagnosticSink)
+    private static void EmitUnsupportedFeatureDiagnostics(
+        OoxPackage package,
+        XDocument document,
+        string partName,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        Action<OoxPdfDiagnostic>? diagnosticSink)
     {
         if (diagnosticSink is null)
         {
@@ -423,7 +428,7 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object");
         }
 
-        if (document.Descendants(WordprocessingDrawingNamespace + "anchor").Any())
+        if (document.Descendants(WordprocessingDrawingNamespace + "anchor").Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, relationships)))
         {
             Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing");
         }
@@ -514,6 +519,97 @@ internal sealed class DocxReader
         {
             Emit("DOCX_UNSUPPORTED_MACRO", "macro");
         }
+    }
+
+    private static bool IsUnsupportedFloatingDrawingAnchor(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
+        if (!HasPositiveEmuAttribute(extent, "cx") || !HasPositiveEmuAttribute(extent, "cy"))
+        {
+            return true;
+        }
+
+        string? relationshipId = ReadDrawingImageRelationshipId(anchor);
+        if (relationshipId is null ||
+            !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) ||
+            relationship.IsExternal ||
+            relationship.ResolvedTarget is null)
+        {
+            return true;
+        }
+
+        return !IsSupportedHorizontalAnchorPosition(anchor.Element(WordprocessingDrawingNamespace + "positionH")) ||
+            !IsSupportedVerticalAnchorPosition(anchor.Element(WordprocessingDrawingNamespace + "positionV")) ||
+            !IsSupportedFloatingWrap(anchor);
+    }
+
+    private static bool IsSupportedHorizontalAnchorPosition(XElement? position)
+    {
+        return IsSupportedAnchorPosition(
+            position,
+            static relativeFrom => relativeFrom is "page" or "margin" or "column",
+            static align => align is "left" or "center" or "right");
+    }
+
+    private static bool IsSupportedVerticalAnchorPosition(XElement? position)
+    {
+        return IsSupportedAnchorPosition(
+            position,
+            static relativeFrom => relativeFrom is "page" or "margin" or "paragraph",
+            static align => align is "top" or "center" or "bottom");
+    }
+
+    private static bool IsSupportedAnchorPosition(
+        XElement? position,
+        Func<string, bool> supportsRelativeFrom,
+        Func<string, bool> supportsAlign)
+    {
+        if (position is null)
+        {
+            return false;
+        }
+
+        string? relativeFrom = ((string?)position.Attribute("relativeFrom"))?.ToLowerInvariant();
+        if (relativeFrom is null || !supportsRelativeFrom(relativeFrom))
+        {
+            return false;
+        }
+
+        string? align = ((string?)position.Element(WordprocessingDrawingNamespace + "align"))?.ToLowerInvariant();
+        if (align is not null)
+        {
+            return supportsAlign(align);
+        }
+
+        return long.TryParse(
+            (string?)position.Element(WordprocessingDrawingNamespace + "posOffset"),
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out _);
+    }
+
+    private static bool IsSupportedFloatingWrap(XElement anchor)
+    {
+        XElement? wrap = anchor.Elements()
+            .FirstOrDefault(element =>
+                element.Name.Namespace == WordprocessingDrawingNamespace &&
+                element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
+        return wrap?.Name.LocalName is null ||
+            wrap.Name.LocalName.Equals("wrapNone", StringComparison.OrdinalIgnoreCase) ||
+            wrap.Name.LocalName.Equals("wrapSquare", StringComparison.OrdinalIgnoreCase) ||
+            wrap.Name.LocalName.Equals("wrapTight", StringComparison.OrdinalIgnoreCase) ||
+            wrap.Name.LocalName.Equals("wrapThrough", StringComparison.OrdinalIgnoreCase) ||
+            wrap.Name.LocalName.Equals("wrapTopAndBottom", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasPositiveEmuAttribute(XElement? element, string attributeName)
+    {
+        return long.TryParse(
+            (string?)element?.Attribute(attributeName),
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out long value) &&
+            value > 0;
     }
 
     private static bool IsUnsupportedParagraphSectionBreak(XElement sectionProperties)

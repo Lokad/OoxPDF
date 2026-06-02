@@ -900,6 +900,14 @@ High-priority actions:
     wrap exclusion work can consume the resolved coordinate source instead of inferring it from raw XML tokens
     or a nullable placed coordinate. Validation passed `docx-core --skip-slow` (`56`), `docx-page --skip-slow`
     (`42`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
+    2026-06-02 diagnostic-contract follow-up: `DOCX_UNSUPPORTED_FLOATING_DRAWING` is no longer a blanket
+    `wp:anchor` presence warning. The reader now checks the same structural support shape consumed by the
+    floating layout/render path: positive EMU extent, internal embedded image relationship, supported
+    horizontal/vertical reference families, align or `posOffset` placement, and known wrap tokens. Malformed or
+    unresolved anchors still warn. Bottom-up coverage verifies the public rendered floating PNG fixture emits an
+    image without the stale unsupported-floating diagnostic while the broad malformed unsupported fixture still
+    triggers the warning. Validation passed `docx-core --skip-slow` (`56`), `docx-page --skip-slow` (`42`), and
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

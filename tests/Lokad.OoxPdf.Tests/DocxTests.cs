@@ -7137,7 +7137,11 @@ internal static class DocxTests
         TestAssert.Equal((layoutSnapshot.ExtentHeightPoints ?? 0d) + (layoutSnapshot.DistanceTopPoints ?? 0d) + (layoutSnapshot.DistanceBottomPoints ?? 0d), layoutSnapshot.WrapExclusionHeight ?? 0d);
 
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        TestAssert.True(
+            !diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_FLOATING_DRAWING"),
+            "Structurally supported rendered floating image anchors should not emit stale unsupported-floating diagnostics.");
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Image", pdf);
         TestAssert.Contains("/Im1 Do", pdf);
