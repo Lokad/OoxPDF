@@ -7449,6 +7449,13 @@ Current validation baseline:
   --skip-slow` (`23`), `docx-core --skip-slow` (`20`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
   -v minimal`. Private DOCX run `20260601-100716` stayed neutral at `16/16` pages, zero dimension mismatches,
   no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+  2026-06-02 architecture follow-up: page layout snapshots now group selected static header/footer text
+  lines into private-safe `StaticStories` summaries, including story kind, source paragraph/line counts,
+  first/last source line indexes, text length, vertical bounds, and the owned static line snapshots. This
+  aligns selected header/footer diagnostics with body and related-story layout ownership instead of leaving
+  only a flat `StaticItems` list. Bottom-up coverage verifies default header/footer grouping and wrapped
+  header continuation-line ownership. Validation passed `docx-page --skip-slow` (`37`). Keep first/even
+  variant story summaries, non-text static drawings, and selected header/footer PDF row matching open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

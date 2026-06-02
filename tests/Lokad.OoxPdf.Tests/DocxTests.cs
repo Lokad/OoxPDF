@@ -12740,6 +12740,11 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.Pages[0].StaticItems.Count);
         TestAssert.Equal("StaticHeaderTextLine", snapshot.Pages[0].StaticItems[0].Kind);
         TestAssert.Equal("StaticFooterTextLine", snapshot.Pages[0].StaticItems[1].Kind);
+        TestAssert.Equal(2, snapshot.Pages[0].StaticStories.Count);
+        DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single(story => story.Kind == "Header");
+        DocxStaticStoryLayoutSnapshot footerStory = snapshot.Pages[0].StaticStories.Single(story => story.Kind == "Footer");
+        TestAssert.True(headerStory.TextLineCount == 1 && headerStory.ParagraphCount == 1 && headerStory.TextLength == 2 && headerStory.Items.Single().Kind == "StaticHeaderTextLine", "Static header story snapshots should group private-safe selected header line geometry.");
+        TestAssert.True(footerStory.TextLineCount == 1 && footerStory.ParagraphCount == 1 && footerStory.TextLength == 1 && footerStory.Items.Single().Kind == "StaticFooterTextLine", "Static footer story snapshots should group private-safe selected footer line geometry.");
         TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
     }
 
@@ -12822,6 +12827,10 @@ internal static class DocxTests
         TestAssert.True(snapshot.Pages[0].StaticItems[0].IsFirstParagraphLine == true, "The static snapshot should preserve first-line ownership.");
         TestAssert.Equal(1, snapshot.Pages[0].StaticItems[1].SourceLineIndex ?? -1);
         TestAssert.True(snapshot.Pages[0].StaticItems[1].IsFirstParagraphLine == false, "The static snapshot should preserve continuation-line ownership.");
+        DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single();
+        TestAssert.True(headerStory.Kind == "Header" && headerStory.TextLineCount == 2 && headerStory.ParagraphCount == 1 && headerStory.SourceLineCount == 2 && headerStory.FirstParagraphLineCount == 1 && headerStory.Items.Count == 2, "Static story snapshots should summarize wrapped selected header line ownership without exposing text.");
+        TestAssert.Equal(0, headerStory.FirstSourceLineIndex ?? -1);
+        TestAssert.Equal(1, headerStory.LastSourceLineIndex ?? -1);
     }
 
     public static void DocxLayoutStageAppliesStaticHeaderParagraphSpacing()

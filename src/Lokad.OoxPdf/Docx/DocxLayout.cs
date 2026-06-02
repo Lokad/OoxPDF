@@ -480,9 +480,61 @@ internal sealed record DocxLayoutSnapshot(
             items.Where(item => item.Kind == "TextLine").Sum(item => item.Height),
             items.Where(item => item.Kind == "InlineImage").Sum(item => item.Height),
             items.Where(item => item.Kind == "TableRow").Sum(item => item.Height),
+            ToStaticStorySnapshots(staticItems),
             staticItems,
             items,
             tableRows);
+    }
+
+    private static IReadOnlyList<DocxStaticStoryLayoutSnapshot> ToStaticStorySnapshots(
+        IReadOnlyList<DocxLayoutItemSnapshot> staticItems)
+    {
+        return staticItems
+            .GroupBy(item => StaticStoryKind(item.Kind), StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group =>
+            {
+                DocxLayoutItemSnapshot[] storyItems = group.ToArray();
+                int[] paragraphIndexes = storyItems
+                    .Select(item => item.SourceParagraphIndex)
+                    .Where(index => index is not null)
+                    .Select(index => index!.Value)
+                    .Distinct()
+                    .OrderBy(index => index)
+                    .ToArray();
+                int[] lineIndexes = storyItems
+                    .Select(item => item.SourceLineIndex)
+                    .Where(index => index is not null)
+                    .Select(index => index!.Value)
+                    .Distinct()
+                    .OrderBy(index => index)
+                    .ToArray();
+                return new DocxStaticStoryLayoutSnapshot(
+                    group.Key,
+                    storyItems.Length,
+                    paragraphIndexes.Length,
+                    lineIndexes.Length,
+                    storyItems.Sum(item => item.TextLength),
+                    storyItems.Count(item => item.IsFirstParagraphLine == true),
+                    storyItems.Min(item => item.Y),
+                    storyItems.Max(item => item.Y + item.Height),
+                    paragraphIndexes.Length == 0 ? null : paragraphIndexes.First(),
+                    paragraphIndexes.Length == 0 ? null : paragraphIndexes.Last(),
+                    lineIndexes.Length == 0 ? null : lineIndexes.First(),
+                    lineIndexes.Length == 0 ? null : lineIndexes.Last(),
+                    storyItems);
+            })
+            .ToArray();
+    }
+
+    private static string StaticStoryKind(string itemKind)
+    {
+        return itemKind switch
+        {
+            "StaticHeaderTextLine" => "Header",
+            "StaticFooterTextLine" => "Footer",
+            _ => "Static"
+        };
     }
 
     private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTextLineLayout text)
@@ -867,6 +919,7 @@ internal sealed record DocxLayoutPageSnapshot(
     double TextLineHeightSum,
     double InlineImageHeightSum,
     double TableRowHeightSum,
+    IReadOnlyList<DocxStaticStoryLayoutSnapshot> StaticStories,
     IReadOnlyList<DocxLayoutItemSnapshot> StaticItems,
     IReadOnlyList<DocxLayoutItemSnapshot> Items,
     IReadOnlyList<DocxTableRowSnapshot> TableRows);
@@ -914,6 +967,21 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     string? ImageContentType,
     double? ImageWidthPoints,
     double? ImageHeightPoints);
+
+internal sealed record DocxStaticStoryLayoutSnapshot(
+    string Kind,
+    int TextLineCount,
+    int ParagraphCount,
+    int SourceLineCount,
+    int TextLength,
+    int FirstParagraphLineCount,
+    double VerticalTop,
+    double VerticalBottom,
+    int? FirstSourceParagraphIndex,
+    int? LastSourceParagraphIndex,
+    int? FirstSourceLineIndex,
+    int? LastSourceLineIndex,
+    IReadOnlyList<DocxLayoutItemSnapshot> Items);
 
 internal sealed record DocxRelatedStoryLayoutSnapshot(
     int StoryIndex,
