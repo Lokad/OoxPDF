@@ -168,9 +168,20 @@ internal sealed class DocxReader
         XElement[] paragraphs = document
             .Descendants(WordprocessingNamespace + "p")
             .ToArray();
+        XElement[] bodyBlocks = document
+            .Root?
+            .Element(WordprocessingNamespace + "body")?
+            .Elements()
+            .Where(IsBodyBlockElement)
+            .ToArray() ?? [];
         return document
             .Descendants(WordprocessingDrawingNamespace + "anchor")
-            .Select(anchor => ReadFloatingDrawing(anchor, package, relationships, FindSourceParagraphIndex(anchor, paragraphs)))
+            .Select(anchor => ReadFloatingDrawing(
+                anchor,
+                package,
+                relationships,
+                FindSourceParagraphIndex(anchor, paragraphs),
+                FindSourceBlockIndex(anchor, bodyBlocks)))
             .ToArray();
     }
 
@@ -178,7 +189,8 @@ internal sealed class DocxReader
         XElement anchor,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        int? sourceParagraphIndex)
+        int? sourceParagraphIndex,
+        int? sourceBlockIndex)
     {
         XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
         XElement? positionH = anchor.Element(WordprocessingDrawingNamespace + "positionH");
@@ -214,7 +226,15 @@ internal sealed class DocxReader
             (string?)wrap?.Attribute("wrapText"),
             relationshipId,
             image,
-            sourceParagraphIndex);
+            sourceParagraphIndex,
+            sourceBlockIndex);
+    }
+
+    private static bool IsBodyBlockElement(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "p" ||
+            element.Name == WordprocessingNamespace + "tbl" ||
+            element.Name == WordprocessingNamespace + "sectPr";
     }
 
     private static int? FindSourceParagraphIndex(XElement element, IReadOnlyList<XElement> paragraphs)
@@ -228,6 +248,27 @@ internal sealed class DocxReader
         for (int index = 0; index < paragraphs.Count; index++)
         {
             if (ReferenceEquals(paragraphs[index], paragraph))
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    private static int? FindSourceBlockIndex(XElement element, IReadOnlyList<XElement> bodyBlocks)
+    {
+        XElement? bodyChild = element
+            .Ancestors()
+            .FirstOrDefault(ancestor => ancestor.Parent?.Name == WordprocessingNamespace + "body");
+        if (bodyChild is null)
+        {
+            return null;
+        }
+
+        for (int index = 0; index < bodyBlocks.Count; index++)
+        {
+            if (ReferenceEquals(bodyBlocks[index], bodyChild))
             {
                 return index;
             }

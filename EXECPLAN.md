@@ -739,6 +739,11 @@ High-priority actions:
   rather than a document-global drawing inventory item, which is necessary for Office-style `relativeFrom`
   positioning and wrap calculations. Bottom-up coverage asserts reader and snapshot paragraph ownership;
   validation passed `docx-core --skip-slow` (`51`).
+  2026-06-02 architecture follow-up: anchored DOCX drawings now also carry `SourceBlockIndex`, derived from the
+  owning child in the Word body stream. This aligns floating drawings with the existing layout/source-index
+  contract used by paragraphs, tables, and text-emission snapshots, and avoids a future layout stage having to
+  guess which body item an anchor belongs to. Bottom-up coverage asserts reader and snapshot block ownership;
+  validation passed `docx-core --skip-slow` (`51`).
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

@@ -187,7 +187,8 @@ internal sealed record DocxFloatingDrawing(
     string? WrapTextValue,
     string? ImageRelationshipId = null,
     DocxInlineImage? Image = null,
-    int? SourceParagraphIndex = null);
+    int? SourceParagraphIndex = null,
+    int? SourceBlockIndex = null);
 
 internal abstract record DocxBodyElement;
 
