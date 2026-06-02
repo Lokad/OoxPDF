@@ -10818,6 +10818,37 @@ internal static class DocxTests
         TestAssert.True(secondImage.Image == afterImage, "The second row fragment should keep the image after the authored page break.");
     }
 
+    public static void DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak()
+    {
+        DocxTable beforeNestedTable = CreateSingleCellTable("Before", 12d);
+        DocxTable afterNestedTable = CreateSingleCellTable("After", 12d);
+        var cell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxTableElement(beforeNestedTable),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxTableElement(afterNestedTable)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, beforeNestedTable, afterNestedTable]);
+
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .ToArray();
+
+        TestAssert.Equal(2, rowFragments.Length);
+        DocxTableRowLayout firstNestedRow = rowFragments[0].Cells.Single().NestedRows.Single();
+        DocxTableRowLayout secondNestedRow = rowFragments[1].Cells.Single().NestedRows.Single();
+        TestAssert.Equal(0, firstNestedRow.Table.TableIndex);
+        TestAssert.Equal(1, secondNestedRow.Table.TableIndex);
+        TestAssert.Equal("Before", firstNestedRow.Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("After", secondNestedRow.Cells.Single().TextLines.Single().Text);
+    }
+
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

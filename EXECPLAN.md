@@ -7319,6 +7319,13 @@ Current validation baseline:
   the corresponding row fragments. Validation passed `docx-tables --skip-slow` (`110`), `docx-core --skip-slow`
   (`53`), and full solution build. Keep nested-table break-side filtering, multiple competing cell page breaks,
   table-cell column breaks, and Office-exact repeated-header/merged-cell interactions open.
+  2026-06-02 architecture follow-up: nested table rows inside table cells now use the authored nested-table index
+  around explicit cell page breaks, so child rows before the break stay in the first row fragment and child rows after
+  the break stay in the continuation fragment. This reuses the same row-fragment provenance model as text and images,
+  while preserving geometric filtering for ordinary page-boundary row splits. Bottom-up coverage verifies nested tables
+  before and after an explicit cell page break are separated into the corresponding row fragments. Validation passed
+  `docx-tables --skip-slow` (`111`), `docx-core --skip-slow` (`53`), and full solution build. Keep multiple competing
+  cell page breaks, table-cell column breaks, and Office-exact repeated-header/merged-cell interactions open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

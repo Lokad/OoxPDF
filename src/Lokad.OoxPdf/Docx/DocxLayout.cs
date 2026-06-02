@@ -3541,7 +3541,8 @@ internal sealed class DocxLayoutEngine
             IReadOnlyList<DocxTableRowLayout> nestedTableRows = isVerticalMergeContinuation
                 ? []
                 : LayoutTableCellNestedTables(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
-                    .Where(rowLayout => VerticalOverlap(rowLayout.Y, rowLayout.Height, visualY, visualHeight) > 0.001d)
+                    .Where(rowLayout => IsNestedTableRowOnVisibleSideOfCellPageBreak(cell, rowLayout, FragmentIndex, FragmentCount))
+                    .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(cell, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
             cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, verticalMergeOwner, visualOwnership, nestedTableRows));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
@@ -3616,6 +3617,19 @@ internal sealed class DocxLayoutEngine
             : VerticalOverlap(image.Y, image.Height, cellY, cellHeight) > 0.001d;
     }
 
+    private static bool IsNestedTableRowVisibleInCellFragmentGeometry(
+        DocxTableCell cell,
+        DocxTableRowLayout row,
+        double cellY,
+        double cellHeight,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        return fragmentCount > 1 && TryGetFirstTableCellPageBreakParagraphIndex(cell, out _)
+            ? true
+            : VerticalOverlap(row.Y, row.Height, cellY, cellHeight) > 0.001d;
+    }
+
     private static bool IsTextLineOnVisibleSideOfCellPageBreak(
         DocxTableCell cell,
         DocxTextLineLayout line,
@@ -3658,6 +3672,27 @@ internal sealed class DocxLayoutEngine
             : paragraphIndex >= splitParagraphIndex;
     }
 
+    private static bool IsNestedTableRowOnVisibleSideOfCellPageBreak(
+        DocxTableCell cell,
+        DocxTableRowLayout row,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        if (fragmentCount <= 1)
+        {
+            return true;
+        }
+
+        if (!TryGetFirstTableCellPageBreakNestedTableIndex(cell, out int splitTableIndex))
+        {
+            return true;
+        }
+
+        return fragmentIndex == 0
+            ? row.Table.TableIndex < splitTableIndex
+            : row.Table.TableIndex >= splitTableIndex;
+    }
+
     private static bool TryGetFirstTableCellPageBreakParagraphIndex(DocxTableCell cell, out int splitParagraphIndex)
     {
         splitParagraphIndex = 0;
@@ -3671,6 +3706,25 @@ internal sealed class DocxLayoutEngine
             if (bodyElement is DocxParagraphElement)
             {
                 splitParagraphIndex++;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetFirstTableCellPageBreakNestedTableIndex(DocxTableCell cell, out int splitTableIndex)
+    {
+        splitTableIndex = 0;
+        foreach (DocxBodyElement bodyElement in DocxTableCellContent.GetBodyElements(cell))
+        {
+            if (bodyElement is DocxPageBreakElement)
+            {
+                return true;
+            }
+
+            if (bodyElement is DocxTableElement)
+            {
+                splitTableIndex++;
             }
         }
 
