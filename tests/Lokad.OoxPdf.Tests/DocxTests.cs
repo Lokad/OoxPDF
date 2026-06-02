@@ -4675,6 +4675,64 @@ internal static class DocxTests
         TestAssert.Equal("Beta", layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().Text);
     }
 
+    public static void DocxReaderPromotesInlineRunColumnBreakInsideParagraph()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Left</w:t><w:br w:type="column"/><w:t>Right</w:t></w:r></w:p>
+                    <w:sectPr>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                      <w:cols w:num="2"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Visible inline column breaks should lower to typed manual-break blocks, not stale unsupported diagnostics.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MULTI_COLUMN"), "Explicit final-section column flow with authored column breaks should remain in the supported multi-column shape.");
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxBodyElement[] elements = document.BodyElements.ToArray();
+        TestAssert.Equal(3, elements.Length);
+        TestAssert.Equal("Left", ((DocxParagraphElement)elements[0]).Paragraph.Runs.Single().Text);
+        TestAssert.True(elements[1] is DocxManualBreakElement, "The inline column break should become a body manual break.");
+        TestAssert.Equal("Right", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        TestAssert.Equal(1, snapshot.Pages.Count);
+        TestAssert.Equal(2, snapshot.Pages[0].ColumnFrameCount);
+        DocxLayoutItemSnapshot[] lines = snapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").ToArray();
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(0, lines[0].ColumnIndex ?? -1);
+        TestAssert.Equal(1, lines[1].ColumnIndex ?? -1);
+    }
+
     public static void DocxReaderPromotesHyperlinkRunPageBreakInsideParagraph()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -12349,6 +12407,7 @@ internal static class DocxTests
                             <w:pPr><w:keepNext/></w:pPr>
                             <w:r><w:t>Table keep rule</w:t></w:r>
                           </w:p>
+                          <w:p><w:r><w:br w:type="column"/></w:r></w:p>
                         </w:tc>
                       </w:tr>
                     </w:tbl>

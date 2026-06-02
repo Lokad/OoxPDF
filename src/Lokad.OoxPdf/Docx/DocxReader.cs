@@ -60,6 +60,9 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
+            ? null
+            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings);
         IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings);
         IReadOnlyList<DocxParagraph> paragraphs = bodyElements.OfType<DocxParagraphElement>().Select(e => e.Paragraph).ToArray();
         IReadOnlyList<DocxTable> tables = bodyElements.OfType<DocxTableElement>().Select(e => e.Table).ToArray();
@@ -91,7 +94,8 @@ internal sealed class DocxReader
                 HeaderParagraphsByType = headersByType,
                 FooterParagraphsByType = footersByType,
                 RelatedStories = relatedStories,
-                Settings = documentSettings
+                Settings = documentSettings,
+                FinalSectionBreak = finalSectionBreak
             };
         }
 
@@ -127,7 +131,8 @@ internal sealed class DocxReader
             HeaderParagraphsByType = headersByType,
             FooterParagraphsByType = footersByType,
             RelatedStories = relatedStories,
-            Settings = documentSettings
+            Settings = documentSettings,
+            FinalSectionBreak = finalSectionBreak
         };
     }
 
@@ -428,7 +433,7 @@ internal sealed class DocxReader
 
         if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
         {
-            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "inline manual column break", fallback: "Break-only column paragraphs are supported");
+            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "unsupported manual column break container", fallback: "Visible body column breaks are supported");
         }
 
         if (document.Descendants().Any(IsUnsupportedParagraphKeepRule))
@@ -546,7 +551,8 @@ internal sealed class DocxReader
         int columnCount = int.Parse(finalColumns.Attribute(WordprocessingNamespace + "num")!.Value, CultureInfo.InvariantCulture);
         int supportedColumnBreaks = body
             .Elements(WordprocessingNamespace + "p")
-            .Count(IsRunColumnBreakOnlyParagraph);
+            .SelectMany(paragraph => paragraph.Descendants(WordprocessingNamespace + "br"))
+            .Count(breakElement => IsColumnBreak(breakElement) && !IsUnsupportedColumnBreak(breakElement));
         return supportedColumnBreaks == columnCount - 1;
     }
 
@@ -558,7 +564,21 @@ internal sealed class DocxReader
         }
 
         XElement? paragraph = breakElement.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
-        return paragraph is null || !IsRunColumnBreakOnlyParagraph(paragraph);
+        if (paragraph is null)
+        {
+            return true;
+        }
+
+        if (paragraph.Parent?.Name != WordprocessingNamespace + "body")
+        {
+            return true;
+        }
+
+        XElement? visibleOwner = breakElement
+            .AncestorsAndSelf()
+            .TakeWhile(element => element != paragraph)
+            .FirstOrDefault(element => element.Name == WordprocessingNamespace + "r" || IsVisibleRunContainer(element));
+        return visibleOwner is null;
     }
 
     private static bool IsUnsupportedParagraphKeepRule(XElement element)
@@ -1424,13 +1444,21 @@ internal sealed class DocxReader
                     continue;
                 }
 
-                if (HasRunPageBreak(element))
+                if (HasRunPageOrColumnBreak(element))
                 {
-                    foreach (ParagraphPageBreakPart part in SplitParagraphAtRunPageBreaks(element))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element))
                     {
                         if (part.BreakValue is not null)
                         {
-                            elements.Add(new DocxPageBreakElement("runBreak", part.BreakValue));
+                            if (string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase))
+                            {
+                                elements.Add(new DocxManualBreakElement("runBreak", "column"));
+                            }
+                            else
+                            {
+                                elements.Add(new DocxPageBreakElement("runBreak", part.BreakValue));
+                            }
+
                             continue;
                         }
 
@@ -1442,7 +1470,7 @@ internal sealed class DocxReader
                         DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships);
                         if (splitParagraph is not null)
                         {
-                            elements.Add(new DocxParagraphElement(AdjustPageBreakParagraphFragment(splitParagraph, part)));
+                            elements.Add(new DocxParagraphElement(AdjustBreakParagraphFragment(splitParagraph, part)));
                         }
                     }
 
@@ -1480,14 +1508,14 @@ internal sealed class DocxReader
         return elements;
     }
 
-    private static bool HasRunPageBreak(XElement paragraph)
+    private static bool HasRunPageOrColumnBreak(XElement paragraph)
     {
         return paragraph
             .Elements()
-            .Any(HasVisibleRunPageBreak);
+            .Any(HasVisibleRunPageOrColumnBreak);
     }
 
-    private static DocxParagraph AdjustPageBreakParagraphFragment(DocxParagraph paragraph, ParagraphPageBreakPart part)
+    private static DocxParagraph AdjustBreakParagraphFragment(DocxParagraph paragraph, ParagraphBreakPart part)
     {
         return paragraph with
         {
@@ -1497,9 +1525,9 @@ internal sealed class DocxReader
         };
     }
 
-    private static IReadOnlyList<ParagraphPageBreakPart> SplitParagraphAtRunPageBreaks(XElement paragraph)
+    private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph)
     {
-        var parts = new List<ParagraphPageBreakPart>();
+        var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         bool startsAfterBreak = false;
@@ -1518,7 +1546,7 @@ internal sealed class DocxReader
             }
 
             splitParagraph.Add(currentChildren.Select(child => new XElement(child)));
-            parts.Add(new ParagraphPageBreakPart(splitParagraph, null, startsAfterBreak, endsBeforeBreak));
+            parts.Add(new ParagraphBreakPart(splitParagraph, null, startsAfterBreak, endsBeforeBreak));
             currentChildren.Clear();
             startsAfterBreak = false;
         }
@@ -1530,7 +1558,7 @@ internal sealed class DocxReader
                 continue;
             }
 
-            if (TrySplitRunPageBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak))
+            if (TrySplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak))
             {
                 continue;
             }
@@ -1555,11 +1583,11 @@ internal sealed class DocxReader
                     continue;
                 }
 
-                if (runChild.Name == WordprocessingNamespace + "br" && IsPageBreak(runChild))
+                if (runChild.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(runChild))
                 {
                     AddRunPart(currentChildren, runProperties, runChildren);
                     AddParagraphPart(endsBeforeBreak: true);
-                    parts.Add(new ParagraphPageBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
+                    parts.Add(new ParagraphBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
                     startsAfterBreak = true;
                     runChildren.Clear();
                     if (runProperties is not null)
@@ -1580,14 +1608,14 @@ internal sealed class DocxReader
         return parts;
     }
 
-    private static bool TrySplitRunPageBreakContainer(
+    private static bool TrySplitRunBreakContainer(
         XElement child,
         List<XElement> paragraphChildren,
         Action<bool> addParagraphPart,
-        List<ParagraphPageBreakPart> parts,
+        List<ParagraphBreakPart> parts,
         ref bool startsAfterBreak)
     {
-        if (!IsVisibleRunContainer(child) || !HasVisibleRunPageBreak(child))
+        if (!IsVisibleRunContainer(child) || !HasVisibleRunPageOrColumnBreak(child))
         {
             return false;
         }
@@ -1615,12 +1643,12 @@ internal sealed class DocxReader
                     continue;
                 }
 
-                if (runChild.Name == WordprocessingNamespace + "br" && IsPageBreak(runChild))
+                if (runChild.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(runChild))
                 {
                     AddRunPart(containerChildren, runProperties, runChildren);
                     AddContainerPart(paragraphChildren, child, containerChildren);
                     addParagraphPart(true);
-                    parts.Add(new ParagraphPageBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
+                    parts.Add(new ParagraphBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
                     startsAfterBreak = true;
                     runChildren.Clear();
                     if (runProperties is not null)
@@ -1714,15 +1742,20 @@ internal sealed class DocxReader
             element.Name == WordprocessingNamespace + "r");
     }
 
-    private static bool HasVisibleRunPageBreak(XElement element)
+    private static bool HasVisibleRunPageOrColumnBreak(XElement element)
     {
         if (element.Name == WordprocessingNamespace + "r")
         {
-            return element.Elements(WordprocessingNamespace + "br").Any(IsPageBreak);
+            return element.Elements(WordprocessingNamespace + "br").Any(IsPageOrColumnBreak);
         }
 
         return IsVisibleRunContainer(element) &&
-            element.Elements(WordprocessingNamespace + "r").Any(HasVisibleRunPageBreak);
+            element.Elements(WordprocessingNamespace + "r").Any(HasVisibleRunPageOrColumnBreak);
+    }
+
+    private static bool IsPageOrColumnBreak(XElement breakElement)
+    {
+        return IsPageBreak(breakElement) || IsColumnBreak(breakElement);
     }
 
     private static bool IsVisibleRunContainer(XElement element)
@@ -3037,7 +3070,7 @@ internal sealed class DocxReader
 
     private sealed record DocxStyle(string? BasedOnStyleId, DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
 
-    private sealed record ParagraphPageBreakPart(
+    private sealed record ParagraphBreakPart(
         XElement? Paragraph,
         string? BreakValue,
         bool StartsAfterBreak,

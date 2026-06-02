@@ -7196,6 +7196,16 @@ Current validation baseline:
   continuation semantics, and wrap-exclusion cases that still need Office-observed behavior. Validation passed
   `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`), `docx-text --skip-slow` (`47`), and full
   solution build.
+  2026-06-02 architecture follow-up: visible body inline column breaks now share the same paragraph-fragment
+  lowering path as visible inline page breaks. The reader splits text-bearing body paragraphs around
+  `w:br w:type="column"`, emits a typed `DocxManualBreakElement`, and lets the existing active column cursor own
+  the transition instead of warning on a handled OOXML shape. Final-section `sectPr` column declarations are also
+  preserved as a parsed `DocxSectionBreakElement` and reused by layout, so final-section column frames no longer
+  live only in diagnostics/page settings while layout silently falls back to a single body frame. Table-cell column
+  breaks remain explicitly unsupported because they require row fragmentation/continuation semantics; Word-style
+  automatic balancing, continuous in-flow section column changes, and column-aware wrap exclusion also remain open.
+  Validation passed `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`), `docx-text --skip-slow`
+  (`48`), and full solution build.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

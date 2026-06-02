@@ -22,6 +22,7 @@ internal sealed record DocxDocument(
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyList<DocxRelatedStory> RelatedStories { get; init; } = [];
     public DocxDocumentSettings Settings { get; init; } = DocxDocumentSettings.Empty;
+    public DocxSectionBreakElement? FinalSectionBreak { get; init; }
 
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
         : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])

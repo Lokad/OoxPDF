@@ -2204,7 +2204,9 @@ internal sealed class DocxLayoutEngine
                 BuildFinalSectionSettings(document),
                 inheritedHeadersByType,
                 inheritedFootersByType),
-            new DocxSectionLayoutProperties(null, null, null, null, null, null, []));
+            document.FinalSectionBreak is null
+                ? new DocxSectionLayoutProperties(null, null, null, null, null, null, [])
+                : CreateSectionLayoutProperties(document.FinalSectionBreak));
         return sectionSettingsByElementIndex;
     }
 
