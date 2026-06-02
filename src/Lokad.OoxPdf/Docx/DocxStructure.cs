@@ -9,6 +9,10 @@ internal sealed record DocxStructureSnapshot(
     int PageBreakBlockCount,
     int ManualBreakBlockCount,
     int SectionBreakBlockCount,
+    int ContinuousSectionBreakBlockCount,
+    int PageStartingSectionBreakBlockCount,
+    int DefaultSectionBreakBlockCount,
+    int ColumnSectionBreakBlockCount,
     int BodyTextLength,
     int InlineImageCount,
     int InlineReferenceCount,
@@ -78,6 +82,10 @@ internal sealed record DocxStructureSnapshot(
             blocks.Count(block => block.Kind == "PageBreak"),
             blocks.Count(block => block.Kind == "ManualBreak"),
             blocks.Count(block => block.Kind == "SectionBreak"),
+            blocks.Count(block => block.Kind == "SectionBreak" && IsContinuousSectionBreak(block.SectionBreakTypeValue)),
+            blocks.Count(block => block.Kind == "SectionBreak" && StartsNewPageSectionBreak(block.SectionBreakTypeValue)),
+            blocks.Count(block => block.Kind == "SectionBreak" && block.SectionBreakTypeValue is null),
+            blocks.Count(block => block.Kind == "SectionBreak" && HasSectionColumns(block)),
             blocks.Sum(block => block.TextLength),
             blocks.Sum(block => block.InlineImageCount),
             blocks.Sum(block => block.InlineReferenceCount),
@@ -101,6 +109,27 @@ internal sealed record DocxStructureSnapshot(
             ToListUsages(document),
             tables,
             adjacency);
+    }
+
+    private static bool IsContinuousSectionBreak(string? typeValue)
+    {
+        return string.Equals(typeValue, "continuous", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool StartsNewPageSectionBreak(string? typeValue)
+    {
+        return typeValue is null
+            || string.Equals(typeValue, "nextPage", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(typeValue, "oddPage", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(typeValue, "evenPage", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasSectionColumns(DocxStructureBlockSnapshot block)
+    {
+        return block.SectionColumnCountValue is not null
+            || block.SectionColumnEqualWidthValue is not null
+            || block.SectionColumnSpaceValue is not null
+            || (block.SectionColumnDefinitionCount ?? 0) > 0;
     }
 
     private static IReadOnlyList<DocxStructureStorySnapshot> ToStorySnapshots(

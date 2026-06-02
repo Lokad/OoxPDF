@@ -4828,7 +4828,14 @@ internal static class DocxTests
         TestAssert.True(document.BodyElements[0] is DocxParagraphElement, "Paragraph section break should remain anchored after its paragraph.");
         TestAssert.True(document.BodyElements[1] is DocxSectionBreakElement, "Section break should be part of body flow.");
 
-        DocxStructureBlockSnapshot structureSnapshot = DocxStructureSnapshot.FromDocument(document).Blocks[1];
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
+        TestAssert.Equal(1, structure.SectionBreakBlockCount);
+        TestAssert.Equal(1, structure.ContinuousSectionBreakBlockCount);
+        TestAssert.Equal(0, structure.PageStartingSectionBreakBlockCount);
+        TestAssert.Equal(0, structure.DefaultSectionBreakBlockCount);
+        TestAssert.Equal(1, structure.ColumnSectionBreakBlockCount);
+
+        DocxStructureBlockSnapshot structureSnapshot = structure.Blocks[1];
         TestAssert.Equal(2, structureSnapshot.SectionColumnDefinitionCount ?? 0);
         TestAssert.Equal(2, structureSnapshot.SectionColumnDefinitionWidthTokenCount ?? 0);
         TestAssert.Equal(1, structureSnapshot.SectionColumnDefinitionSpaceTokenCount ?? 0);
@@ -4969,6 +4976,74 @@ internal static class DocxTests
         TestAssert.Equal(128d, firstPageSnapshot.ColumnFrameWidthSum);
         TestAssert.Equal(36d, firstPageSnapshot.ColumnGutterWidthSum);
         TestAssert.Equal(118d, firstPageSnapshot.ColumnFrames[1].X);
+    }
+
+    public static void DocxContinuousSectionBreakOnEmptyPageAppliesFollowingSectionGeometry()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
+        DocxParagraph second = CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
+        var firstSectionSettings = new DocxPageSettings(
+            "4000",
+            "4000",
+            null,
+            "360",
+            "360",
+            "360",
+            "360",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        var finalSectionSettings = new DocxPageSettings(
+            "6000",
+            "6000",
+            null,
+            "1440",
+            "1440",
+            "1440",
+            "1440",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            72d,
+            72d,
+            72d,
+            72d,
+            finalSectionSettings,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxSectionBreakElement(firstSectionSettings, "continuous", null, null, null, []),
+                new DocxParagraphElement(second)
+            ],
+            [first, second],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(200d, layout.Pages[0].Width);
+        TestAssert.Equal(18d, layout.Pages[0].MarginLeft);
+        TestAssert.Equal("continuous", layout.Pages[0].SectionProperties.BreakTypeValue ?? string.Empty);
+        TestAssert.Equal(300d, layout.Pages[1].Width);
+        TestAssert.Equal(72d, layout.Pages[1].MarginLeft);
+        TestAssert.True(layout.Pages[1].SectionProperties.BreakTypeValue is null, "Following final section geometry should replace the continuous break on an empty page.");
+        TestAssert.Equal(72d, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().X);
     }
 
     public static void DocxSectionBreakCustomColumnsCreatePageOwnedFrames()

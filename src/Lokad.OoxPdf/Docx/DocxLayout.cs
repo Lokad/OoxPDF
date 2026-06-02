@@ -1440,7 +1440,7 @@ internal sealed class DocxLayoutEngine
                     FinishPage();
                 }
 
-                if (startsNewPage)
+                if (startsNewPage || (IsContinuousSectionBreak(sectionBreak) && !HasPageContent()))
                 {
                     ApplySectionAfterBreak(elementIndex);
                 }
@@ -2432,6 +2432,11 @@ internal sealed class DocxLayoutEngine
             sectionBreak.TypeValue.Equals("nextPage", StringComparison.OrdinalIgnoreCase) ||
             sectionBreak.TypeValue.Equals("oddPage", StringComparison.OrdinalIgnoreCase) ||
             sectionBreak.TypeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsContinuousSectionBreak(DocxSectionBreakElement sectionBreak)
+    {
+        return sectionBreak.TypeValue?.Equals("continuous", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)

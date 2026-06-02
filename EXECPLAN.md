@@ -7086,10 +7086,10 @@ Current validation baseline:
   `DocxLayoutPage` carries `DocxSectionLayoutProperties`, layout snapshots expose raw `w:cols` `num`,
   `equalWidth`, and `space` tokens plus parsed count/spacing points, and the structure snapshot no longer drops
   `equalWidth`. A bottom-up page test asserts that a `nextPage` section break owns the preceding page's
-  two-column metadata while the final-section page does not inherit it. Rendering remains single-column:
-  actual multi-column line flow, column balancing, continuous-section geometry changes, column breaks, and
-  floating anchor `column` frames in true multi-column sections remain open. Validation passed `docx-page
-  --skip-slow` (`31`) and `docx-core --skip-slow` (`52`).
+  two-column metadata while the final-section page does not inherit it. At that point rendering still remained
+  single-column: actual multi-column line flow, column balancing, continuous-section geometry changes, column
+  breaks, and floating anchor `column` frames in true multi-column sections were still open. Validation passed
+  `docx-page --skip-slow` (`31`) and `docx-core --skip-slow` (`52`).
   2026-06-02 architecture follow-up: section-owned equal-width column declarations now lower into explicit
   `DocxLayoutColumnFrame` rectangles on each `DocxLayoutPage`, and layout snapshots expose frame count,
   width/gutter sums, and per-frame x/width facts. Floating drawing `relativeFrom="column"` anchor frames now
@@ -7100,25 +7100,27 @@ Current validation baseline:
   2026-06-02 architecture follow-up: custom-width section columns now parse `w:cols/w:col` width/space child
   definitions into typed section records, expose private-safe child-column counts in structure snapshots, lower
   parsed widths/spaces into `DocxSectionColumnLayoutProperties`, and derive page-owned `DocxLayoutColumnFrame`
-  rectangles for `w:cols equalWidth="0"`. The remaining multi-column gap is now active flow ownership: paragraph
-  lines still render in the single body frame, column breaks do not advance an active column, and floating
-  `relativeFrom="column"` anchors in true multi-column sections still cannot resolve to a specific occupied
-  column. Validation passed `docx-page --skip-slow` (`32`) and `docx-core --skip-slow` (`52`).
+  rectangles for `w:cols equalWidth="0"`. At that point the remaining multi-column gap was active flow
+  ownership: paragraph lines still rendered in the single body frame, column breaks did not advance an active
+  column, and floating `relativeFrom="column"` anchors in true multi-column sections still could not resolve to
+  a specific occupied column. Validation passed `docx-page --skip-slow` (`32`) and `docx-core --skip-slow`
+  (`52`).
   2026-06-02 architecture follow-up: `DocxLayout` now owns an active column cursor for body pagination.
   Paragraph text, inline images, and tables consume the active `DocxLayoutColumnFrame`; manual column breaks
   advance to the next column in multi-column sections and to the next page in single-column sections. This closes
   the old "unsupported boundary" behavior for body-level column breaks without adding per-document positioning
-  shortcuts. Remaining gaps: Word-style column balancing, table/header continuation semantics inside true
-  multi-column sections, column-aware wrap exclusion, and continuous-section geometry changes. Validation passed
-  `docx-page --skip-slow` (`33`), `docx-core --skip-slow` (`52`), and `docx-tables --skip-slow` (`98`).
+  shortcuts. At that point remaining gaps were Word-style column balancing, table/header continuation semantics
+  inside true multi-column sections, column-aware wrap exclusion, and continuous-section geometry changes.
+  Validation passed `docx-page --skip-slow` (`33`), `docx-core --skip-slow` (`52`), and `docx-tables
+  --skip-slow` (`98`).
   2026-06-02 architecture follow-up: layout source-block snapshots now expose first/last occupied column indexes,
   and floating drawing layout snapshots expose the anchor column index. `relativeFrom="column"` horizontal frames
   now resolve from the source block's active column in true multi-column sections instead of returning `null` or
   falling back to margins. Bottom-up coverage anchors a floating drawing to a paragraph after a manual column break
-  and verifies the second-column reference frame. Remaining gaps are now narrower: column balancing, multi-column
-  table continuation semantics, and wrap exclusion still need Office-observed behavior before rendering anchored
-  drawings. Validation passed `docx-page --skip-slow` (`33`), `docx-core --skip-slow` (`52`), and
-  `docx-tables --skip-slow` (`98`).
+  and verifies the second-column reference frame. At that point remaining gaps were narrower: column balancing,
+  multi-column table continuation semantics, and wrap exclusion still needed Office-observed behavior before
+  rendering anchored drawings. Validation passed `docx-page --skip-slow` (`33`), `docx-core --skip-slow` (`52`),
+  and `docx-tables --skip-slow` (`98`).
   2026-06-02 architecture follow-up: body item layout snapshots now carry their resolved page-column index
   directly, and source-block snapshots consume that structural ownership instead of recomputing it from exported
   coordinates. This gives future multi-column table continuation and floating wrap-exclusion work a shared
@@ -7139,6 +7141,13 @@ Current validation baseline:
   table complete. Bottom-up coverage verifies that a two-row table in a two-column section places the second row
   in the second column with matching item column ownership. Validation passed `docx-tables --skip-slow` (`99`),
   `docx-page --skip-slow` (`33`), and `docx-core --skip-slow` (`52`).
+  2026-06-02 architecture follow-up: `DocxStructureSnapshot` now classifies section breaks at the aggregate
+  level, separating continuous, page-starting, default, and column-bearing section-break blocks while retaining
+  the existing per-block raw OOXML tokens. Layout also applies the following section geometry when a continuous
+  section break is encountered on an empty current page, which prevents a page opened by an explicit page break
+  from retaining stale preceding-section margins and columns. Mid-page continuous-section geometry/column changes
+  remain open because they require Word-compatible in-flow section semantics, not a page-boundary shortcut.
+  Validation passed `docx-page --skip-slow` (`34`), `docx-core --skip-slow` (`52`), and full solution build.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
