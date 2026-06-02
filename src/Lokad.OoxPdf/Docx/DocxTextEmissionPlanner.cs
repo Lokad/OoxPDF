@@ -20,6 +20,14 @@ internal readonly record struct DocxTextEmissionCharacterProfile(
     int SymbolCount,
     int OtherCount);
 
+internal readonly record struct DocxTextEmissionAdvanceProfile(
+    int GlyphCount,
+    int GlyphGapCount,
+    double NaturalPdfWidth,
+    double LayoutWidth,
+    double LayoutToNaturalResidual,
+    double? UniformResidualPerGap);
+
 internal static class DocxTextEmissionPlanner
 {
     public static DocxTextEmissionPlan Create(
@@ -96,6 +104,20 @@ internal static class DocxTextEmissionPlanner
         return new(digitCount, letterCount, whitespaceCount, punctuationCount, symbolCount, otherCount);
     }
 
+    public static DocxTextEmissionAdvanceProfile MeasureAdvanceProfile(
+        string text,
+        PdfEmbeddedFont embedded,
+        double layoutWidth,
+        DocxTextEmissionPlan plan)
+    {
+        int glyphCount = CountMappedGlyphs(text, embedded);
+        int glyphGapCount = Math.Max(0, glyphCount - 1);
+        double naturalPdfWidth = embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: true);
+        double residual = layoutWidth - naturalPdfWidth;
+        double? residualPerGap = glyphGapCount == 0 ? null : residual / glyphGapCount;
+        return new(glyphCount, glyphGapCount, naturalPdfWidth, layoutWidth, residual, residualPerGap);
+    }
+
     public static IReadOnlyList<DocxTextEmissionPart> SplitOfficeTextOperationParts(
         DocxTextSegmentLayout segment,
         double fontSize,
@@ -151,5 +173,19 @@ internal static class DocxTextEmissionPlanner
     private static bool IsOfficeTextOperationBoundaryPunctuation(char value)
     {
         return CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
+    }
+
+    private static int CountMappedGlyphs(string text, PdfEmbeddedFont embedded)
+    {
+        int count = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            if (embedded.Font.MapCodePoint(rune.Value) != 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 }

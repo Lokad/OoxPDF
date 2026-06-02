@@ -72,6 +72,7 @@ File.WriteAllText(
         textEmission.NonzeroPdfCharacterSpacingSegmentCount,
         textEmission.CompensatedCharacterSpacingSegmentCount,
         CharacterProfile = SumCharacterProfiles(textEmission.Lines.SelectMany(line => line.Segments)),
+        AdvanceProfile = SumAdvanceProfiles(textEmission.Lines.SelectMany(line => line.Segments)),
         LinesByPage = textEmission.Lines
             .GroupBy(line => line.PageIndex)
             .OrderBy(group => group.Key)
@@ -85,6 +86,7 @@ File.WriteAllText(
                 TerminalSpaceSegmentCount = group.Sum(line => line.TerminalSpaceSegmentCount),
                 NonzeroPdfCharacterSpacingSegmentCount = group.Sum(line => line.NonzeroPdfCharacterSpacingSegmentCount),
                 CharacterProfile = SumCharacterProfiles(group.SelectMany(line => line.Segments)),
+                AdvanceProfile = SumAdvanceProfiles(group.SelectMany(line => line.Segments)),
                 SourceBlockCount = group
                     .Select(line => line.SourceBlockIndex)
                     .Where(index => index is not null)
@@ -127,4 +129,31 @@ static DocxTextEmissionCharacterProfile SumCharacterProfiles(IEnumerable<DocxTex
     }
 
     return new(digitCount, letterCount, whitespaceCount, punctuationCount, symbolCount, otherCount);
+}
+
+static object SumAdvanceProfiles(IEnumerable<DocxTextEmissionSegmentSnapshot> segments)
+{
+    int glyphCount = 0;
+    int glyphGapCount = 0;
+    double naturalPdfWidth = 0d;
+    double layoutWidth = 0d;
+    double residual = 0d;
+    foreach (DocxTextEmissionSegmentSnapshot segment in segments)
+    {
+        glyphCount += segment.AdvanceProfile.GlyphCount;
+        glyphGapCount += segment.AdvanceProfile.GlyphGapCount;
+        naturalPdfWidth += segment.AdvanceProfile.NaturalPdfWidth;
+        layoutWidth += segment.AdvanceProfile.LayoutWidth;
+        residual += segment.AdvanceProfile.LayoutToNaturalResidual;
+    }
+
+    return new
+    {
+        GlyphCount = glyphCount,
+        GlyphGapCount = glyphGapCount,
+        NaturalPdfWidth = Math.Round(naturalPdfWidth, 6),
+        LayoutWidth = Math.Round(layoutWidth, 6),
+        LayoutToNaturalResidual = Math.Round(residual, 6),
+        UniformResidualPerGap = glyphGapCount == 0 ? (double?)null : Math.Round(residual / glyphGapCount, 6)
+    };
 }

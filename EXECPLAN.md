@@ -6545,6 +6545,16 @@ Current validation baseline:
   with generated `comparison/docx-inspect` shows `CandidatePlannerPresent=true`, planner `SegmentCount=35`,
   planner `DigitCount=14`, candidate PDF `NonzeroTcCount=0`, and reference PDF `NonzeroTcCount=6`; full
   solution build passed.
+  2026-06-02 advance-profile progress: candidate DOCX text-emission snapshots now include per-operation
+  advance profiles measured from the actual embedded PDF font at Office-grid `/Tf`: mapped glyph count,
+  glyph-gap count, natural PDF width, layout width, layout-to-natural residual, and residual per glyph gap.
+  `DocxInspect` aggregates the same facts at document/page scope. This gives the future uniform `Tc`
+  decomposition a structural input instead of token/font/table predicates. Public
+  `docx-ladder-03-table-text-state` inspect output now reports `GlyphCount=141`, `GlyphGapCount=106`,
+  `NaturalPdfWidth=850.266563`, `LayoutWidth=793.433105`, aggregate residual `-56.833457`, and
+  `UniformResidualPerGap=-0.536165`; this aggregate is diagnostic only, not a rule. Validation passed
+  `docx-core --skip-slow` (`43`), public `InspectDocx` on `docx-ladder-03-table-text-state`, and full solution
+  build.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
