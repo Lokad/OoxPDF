@@ -10260,6 +10260,89 @@ internal static class DocxTests
         TestAssert.Equal(1, continuationSnapshot.VisualParagraphCount);
     }
 
+    public static void DocxTableLayoutStageCarriesVerticalMergeOwnerAfterRepeatedHeader()
+    {
+        var header = new DocxTableRow(
+            [new DocxTableCell("Header", [CreateDocxLayoutParagraph("Header", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty)],
+            10d,
+            IsHeader: true);
+        var filler = new DocxTableRow(
+            [new DocxTableCell("Filler", [CreateDocxLayoutParagraph("Filler", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty)],
+            50d);
+        var restart = new DocxTableCell(
+            "Merged",
+            [CreateDocxLayoutParagraph("Merged", 10d, 10d)],
+            "D9EAD3",
+            "clear",
+            "auto",
+            null,
+            [new DocxTableCellBorder("left", "single", "000000", "8")],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true,
+            VerticalMergeValue: "restart");
+        var continuation = new DocxTableCell(
+            "Continuation",
+            [],
+            null,
+            null,
+            null,
+            null,
+            [],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true);
+        var table = new DocxTable(
+            null,
+            [60d],
+            [
+                header,
+                filler,
+                new DocxTableRow([restart], 20d),
+                new DocxTableRow([continuation], 30d)
+            ]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableCellLayout continuationCell = secondPageRows.Single(row => row.RowIndex == 3).Cells.Single();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(2, secondPageRows.Length);
+        TestAssert.Equal(0, secondPageRows[0].RowIndex);
+        TestAssert.True(secondPageRows[0].IsHeader, "The second page should repeat the table header before the merge continuation.");
+        TestAssert.Equal(3, secondPageRows[1].RowIndex);
+        TestAssert.True(continuationCell.IsVerticalMergeContinuation, "The row after the repeated header should remain a merge continuation.");
+        TestAssert.Equal(DocxTableCellVisualOwnership.VerticalMergeOwner, continuationCell.VisualOwnership);
+        TestAssert.Equal(2, continuationCell.VerticalMergeOwner?.RowIndex ?? -1);
+        TestAssert.Equal(0, continuationCell.VerticalMergeOwner?.GridColumnIndex ?? -1);
+        TestAssert.True(ReferenceEquals(restart, continuationCell.VisualCell), "The repeated header must not become the visual owner of the merge continuation.");
+        TestAssert.Equal("D9EAD3", continuationCell.VisualCell.FillHex ?? string.Empty);
+        TestAssert.Equal(50d, continuationCell.Y);
+        TestAssert.Equal(30d, continuationCell.Height);
+
+        DocxTableCellSnapshot continuationSnapshot = DocxLayoutSnapshot.FromLayout(layout)
+            .Pages[1]
+            .TableRows
+            .Single(row => row.RowIndex == 3)
+            .Cells
+            .Single();
+        TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
+        TestAssert.Equal(2, continuationSnapshot.VerticalMergeOwnerRowIndex ?? -1);
+        TestAssert.Equal(6, continuationSnapshot.VisualTextLength);
+    }
+
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()
     {
         var table = new DocxTable(

@@ -7380,6 +7380,14 @@ Current validation baseline:
   full logical row height, split reason, and per-fragment text ownership in layout snapshots. Validation passed
   `docx-tables --skip-slow` (`116`). Keep Office-exact repeated-header/merged-cell interactions and nested-row internal
   fragmentation inside explicit cell-break fragments open.
+  2026-06-02 architecture follow-up: repeated table headers no longer remain an untested physical-row
+  interference risk for vertical-merge continuations. Bottom-up coverage now places a `w:vMerge` continuation
+  immediately after a repeated header on the next page and asserts that the continuation still resolves its
+  visual owner to the authored restart row, not to the inserted header row; the layout and private-safe snapshot
+  both carry the restart owner coordinates and visual text/fill provenance. Validation passed
+  `docx-tables --skip-slow` (`117`). Keep the broader Office-derived merged-cell branch open for continuation
+  border/text emission rules, especially cases where the owner content itself must be clipped or re-emitted
+  across continuation-page fragments, plus nested-row internal fragmentation inside explicit cell-break fragments.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
