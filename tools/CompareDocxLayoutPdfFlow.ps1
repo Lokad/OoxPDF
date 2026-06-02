@@ -57,7 +57,14 @@ function Normalize-Text([string] $Text) {
         return ""
     }
 
-    $normalized = $Text.Replace([char]0x00A0, ' ').Replace("`r", " ").Replace("`n", " ").Replace("`t", " ")
+    $normalized = $Text.
+        Replace([char]0x00A0, ' ').
+        Replace([char]0xF0B7, [char]0x2022).
+        Replace("<>", " ").
+        Replace("`r", " ").
+        Replace("`n", " ").
+        Replace("`t", " ")
+    $normalized = [regex]::Replace($normalized, '^([•])\s*', '$1 ')
     return ([regex]::Replace($normalized, '\s+', ' ')).Trim()
 }
 
@@ -123,7 +130,7 @@ function New-LineRows($Operations) {
     return $result.ToArray()
 }
 
-function New-RowAdvanceBuckets($Rows) {
+function New-RowAdvances($Rows) {
     $advances = New-Object System.Collections.Generic.List[double]
     foreach ($pageGroup in ($Rows | Where-Object { [int]$_.TextLength -gt 0 } | Group-Object Page | Sort-Object { [int]$_.Name })) {
         $orderedRows = @($pageGroup.Group | Sort-Object -Property @{ Expression = { [int]$_.PageIndex }; Descending = $false })
@@ -135,6 +142,11 @@ function New-RowAdvanceBuckets($Rows) {
         }
     }
 
+    return $advances.ToArray()
+}
+
+function New-RowAdvanceBuckets($Rows) {
+    $advances = @(New-RowAdvances $Rows)
     return @(
         $advances |
             Group-Object {
@@ -149,6 +161,32 @@ function New-RowAdvanceBuckets($Rows) {
                 }
             }
     )
+}
+
+function New-RowAdvanceStats($Rows) {
+    $advances = @(New-RowAdvances $Rows)
+    if ($advances.Count -eq 0) {
+        return [pscustomobject]@{
+            Count = 0
+            MeanAdvancePoints = $null
+            MinAdvancePoints = $null
+            MaxAdvancePoints = $null
+            CountWithoutMax = 0
+            MeanWithoutMaxAdvancePoints = $null
+        }
+    }
+
+    $measure = $advances | Measure-Object -Average -Minimum -Maximum
+    $withoutMax = @($advances | Where-Object { [double]$_ -lt [double]$measure.Maximum })
+    $withoutMaxMeasure = if ($withoutMax.Count -eq 0) { $null } else { $withoutMax | Measure-Object -Average }
+    return [pscustomobject]@{
+        Count = $advances.Count
+        MeanAdvancePoints = [Math]::Round([double]$measure.Average, 6)
+        MinAdvancePoints = [Math]::Round([double]$measure.Minimum, 6)
+        MaxAdvancePoints = [Math]::Round([double]$measure.Maximum, 6)
+        CountWithoutMax = $withoutMax.Count
+        MeanWithoutMaxAdvancePoints = if ($null -eq $withoutMaxMeasure) { $null } else { [Math]::Round([double]$withoutMaxMeasure.Average, 6) }
+    }
 }
 
 function Get-LayoutLines($Layout) {
@@ -354,6 +392,8 @@ $summary = [pscustomobject]@{
     )
     ReferencePdfRowAdvanceBuckets = @(New-RowAdvanceBuckets $referenceRows)
     CandidatePdfRowAdvanceBuckets = @(New-RowAdvanceBuckets $candidateRows)
+    ReferencePdfRowAdvanceStats = New-RowAdvanceStats $referenceRows
+    CandidatePdfRowAdvanceStats = New-RowAdvanceStats $candidateRows
     CandidateEffectiveLineSpacingFactorBuckets = @(
         $layoutLines |
             Where-Object { $null -ne $_.EffectiveLineSpacingFactor } |

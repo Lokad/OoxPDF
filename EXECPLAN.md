@@ -430,6 +430,18 @@ High-priority actions:
   floor is therefore necessary but not sufficient: the remaining compact-list discrepancy appears to be an
   Office row-rhythm/line-box alternation that is observable in PDF structure, not a page-bottom reserve or a
   new global line-height constant. Find the OOXML/font/layout discriminator before changing rendering.
+  2026-06-02 evidence update: the flow summary now reports row-advance means as well as buckets. On the same
+  public run, the title-to-first-list-row gap is `22.68` pt in Office vs `21.259` pt in the candidate, while
+  the repeated list rhythm after excluding that largest boundary gap averages `16.3735` pt in Office vs
+  `16.32635` pt in the candidate. The fixture's OOXML is intentionally uniform across list paragraphs, so the
+  next probe should isolate paragraph-boundary spacing after a non-list paragraph separately from repeated
+  same-style list rhythm before changing either default paragraph after-spacing or the auto-line metric.
+  2026-06-02 tooling follow-up: `CompareDocxLayoutPdfFlow.ps1` now normalizes equivalent extracted bullet
+  encodings (`w:lvlText` private-use Symbol bullets vs Office `•`, and diagnostic spacer tokens) when hashing
+  rows. This is comparer-only text canonicalization, not renderer logic. On the same public compact-list run,
+  source-indexed mapping improved from `1/43` rows matched to `43/43`; the worst matched deltas now show
+  accumulated source-block drift reaching about `3.41` pt by list items 40-41. Use this per-source mapping to
+  validate any future compact-list rhythm rule.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table
