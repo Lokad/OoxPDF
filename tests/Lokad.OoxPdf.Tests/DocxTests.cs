@@ -474,6 +474,36 @@ internal static class DocxTests
         TestAssert.True(plan.CompensatePdfCharacterSpacing, "Terminal spaces should stay eligible for authored positioning while emitting neutral PDF Tc.");
     }
 
+    public static void DocxTextEmissionPlannerSplitsDashPunctuationIntoOperationParts()
+    {
+        var run = new DocxTextRun("Alpha-Beta", 10d, null, false, false, false, null, null);
+        var segment = new DocxTextSegmentLayout("Alpha-Beta", run, 20d, 100d);
+
+        IReadOnlyList<DocxTextEmissionPart> parts = DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, 10d, new FontSizeWidthTextMeasurer());
+
+        TestAssert.Equal(3, parts.Count);
+        TestAssert.Equal("Alpha", parts[0].Text);
+        TestAssert.Equal("-", parts[1].Text);
+        TestAssert.Equal("Beta", parts[2].Text);
+        TestAssert.Equal(20d, parts[0].X);
+        TestAssert.Equal(70d, parts[1].X);
+        TestAssert.Equal(80d, parts[2].X);
+        TestAssert.Equal(40d, parts[2].Width);
+    }
+
+    public static void DocxTextEmissionPlannerKeepsWholeOperationWithoutMeasurer()
+    {
+        var run = new DocxTextRun("Alpha-Beta", 10d, null, false, false, false, null, null);
+        var segment = new DocxTextSegmentLayout("Alpha-Beta", run, 20d, 50d);
+
+        IReadOnlyList<DocxTextEmissionPart> parts = DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, 10d, null);
+
+        TestAssert.Equal(1, parts.Count);
+        TestAssert.Equal("Alpha-Beta", parts[0].Text);
+        TestAssert.Equal(20d, parts[0].X);
+        TestAssert.Equal(50d, parts[0].Width);
+    }
+
     public static void DocxReaderPreservesParagraphAlignmentTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

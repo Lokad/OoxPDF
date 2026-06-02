@@ -6517,6 +6517,15 @@ Current validation baseline:
   (`40`), public `docx-numbering` run `20260602-035348` stayed at `MAE=0.019271`, public
   `docx-ladder-03-table-text-state` run `20260602-035358` stayed at the known open-gap raster
   (`MAE=0.632046`, changed16 `0.006503`), and full solution build passed.
+  2026-06-02 planner operation-splitting progress: moved DOCX Office text-operation part splitting out of
+  `DocxRenderer` and into `DocxTextEmissionPlanner`, next to the text-state plan. The planner now owns the
+  dash-punctuation operation boundary rule plus the no-measurer fallback, so future short-run `Tc`
+  decomposition can reason over operation parts before PDF drawing. This remains behavior-neutral and does not
+  add any token/font/table shortcut. Bottom-up coverage checks dash punctuation splitting with measured part
+  coordinates and whole-operation fallback without a measurer. Validation: `docx-core --skip-slow` passed
+  (`42`), public `docx-ladder-02-long-token-wrapping` run `20260602-035625` stayed valid at `MAE=1.121729`,
+  changed16 `0.017126`, public `docx-ladder-03-table-text-state` run `20260602-035636` stayed at
+  `MAE=0.632046`, changed16 `0.006503`, and full solution build passed.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored

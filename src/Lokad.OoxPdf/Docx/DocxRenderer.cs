@@ -435,7 +435,7 @@ internal sealed class DocxRenderer
 
             double fontSize = GetSegmentFontSize(segment, line.FontSize);
             double baselineY = GetSegmentBaselineY(segment, line.BaselineY);
-            foreach (TextEmissionPart part in SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
+            foreach (DocxTextEmissionPart part in DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
             {
                 emissionSegments.Add(new DocxTextEmissionSegment(
                     ResolveStaticFieldPlaceholders(part.Text, pageNumber, pageCount),
@@ -501,63 +501,6 @@ internal sealed class DocxRenderer
         }
 
         return emissionSegments;
-    }
-
-    private static IReadOnlyList<TextEmissionPart> SplitOfficeTextOperationParts(
-        DocxTextSegmentLayout segment,
-        double fontSize,
-        IDocxTextMeasurer? textMeasurer)
-    {
-        if (textMeasurer is null ||
-            segment.Text.Length == 0 ||
-            !segment.Text.Any(IsOfficeTextOperationBoundaryPunctuation))
-        {
-            return [new TextEmissionPart(segment.Text, segment.X, segment.Width)];
-        }
-
-        var parts = new List<TextEmissionPart>();
-        int partStart = 0;
-        for (int i = 0; i < segment.Text.Length; i++)
-        {
-            if (!IsOfficeTextOperationBoundaryPunctuation(segment.Text[i]))
-            {
-                continue;
-            }
-
-            AddTextEmissionPart(segment, fontSize, textMeasurer, partStart, i - partStart, parts);
-            AddTextEmissionPart(segment, fontSize, textMeasurer, i, 1, parts);
-            partStart = i + 1;
-        }
-
-        AddTextEmissionPart(segment, fontSize, textMeasurer, partStart, segment.Text.Length - partStart, parts);
-        return parts.Count == 0 ? [new TextEmissionPart(segment.Text, segment.X, segment.Width)] : parts;
-    }
-
-    private static void AddTextEmissionPart(
-        DocxTextSegmentLayout segment,
-        double fontSize,
-        IDocxTextMeasurer textMeasurer,
-        int start,
-        int length,
-        List<TextEmissionPart> parts)
-    {
-        if (length <= 0)
-        {
-            return;
-        }
-
-        string prefix = start == 0 ? string.Empty : segment.Text[..start];
-        string text = segment.Text.Substring(start, length);
-        double x = segment.X + textMeasurer.MeasureText(segment.StyleRun, prefix, fontSize);
-        double width = start + length == segment.Text.Length
-            ? Math.Max(0d, segment.X + segment.Width - x)
-            : textMeasurer.MeasureText(segment.StyleRun, text, fontSize);
-        parts.Add(new TextEmissionPart(text, x, width));
-    }
-
-    private static bool IsOfficeTextOperationBoundaryPunctuation(char value)
-    {
-        return CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateBodyTextLines(DocxLayoutPage page)
@@ -1131,5 +1074,4 @@ internal sealed class DocxRenderer
             Fallback: "Ignored"));
     }
 
-    private readonly record struct TextEmissionPart(string Text, double X, double Width);
 }
