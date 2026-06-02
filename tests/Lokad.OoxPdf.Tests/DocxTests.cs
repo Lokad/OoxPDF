@@ -10713,6 +10713,49 @@ internal static class DocxTests
         TestAssert.True(emissionLines.Single().TextLength >= "Nested".Length, "Nested table-cell text should participate in renderer text-emission enumeration.");
     }
 
+    public static void DocxTableLayoutStagePreservesMixedCellBodyOrderAroundNestedTables()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        DocxParagraph before = CreateDocxLayoutParagraph("Before", 10d, 10d);
+        DocxParagraph nestedParagraph = CreateDocxLayoutParagraph("Nested", 10d, 10d);
+        DocxParagraph after = CreateDocxLayoutParagraph("After", 10d, 10d);
+        var nestedCell = new DocxTableCell("Nested", [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var nestedTable = new DocxTable(null, [50d], [new DocxTableRow([nestedCell], null)]);
+        var outerCell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxParagraphElement(before), new DocxTableElement(nestedTable), new DocxParagraphElement(after)]
+        };
+        var outerTable = new DocxTable(null, [90d], [new DocxTableRow([outerCell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable, nestedTable]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "BeforeNestedAfter".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTableCellLayout outerCellLayout = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+        DocxTextLineLayout[] outerLines = outerCellLayout.TextLines.ToArray();
+        DocxTableRowLayout nestedRow = outerCellLayout.NestedRows.Single();
+
+        TestAssert.Equal(2, outerLines.Length);
+        TestAssert.Equal("Before", outerLines[0].Text);
+        TestAssert.Equal("After", outerLines[1].Text);
+        TestAssert.True(
+            outerLines[0].BaselineY >= nestedRow.Y + nestedRow.Height,
+            $"Paragraph before the nested table should remain above the nested table block. BeforeBaseline={outerLines[0].BaselineY}, NestedTop={nestedRow.Y + nestedRow.Height}, NestedBottom={nestedRow.Y}.");
+        TestAssert.True(
+            outerLines[1].BaselineY < nestedRow.Y,
+            $"Paragraph after the nested table should be laid out below the nested table block. AfterBaseline={outerLines[1].BaselineY}, NestedTop={nestedRow.Y + nestedRow.Height}, NestedBottom={nestedRow.Y}.");
+    }
+
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

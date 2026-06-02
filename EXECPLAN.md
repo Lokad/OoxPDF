@@ -7289,8 +7289,13 @@ Current validation baseline:
   table in a cell, verifies parent row height includes child rows, child rows stay inside the parent fragment, and
   renderer text-emission enumeration sees the nested text. Validation passed `docx-tables --skip-slow` (`106`),
   `docx-core --skip-slow` (`53`), full solution build, and `git diff --check` with line-ending warnings only.
-  Keep mixed paragraph/table/image body ordering, nested table pagination inside split parent cells, and Office-exact
-  nested-table spacing/baseline behavior open.
+  2026-06-02 architecture follow-up: mixed paragraph/nested-table cell body ordering is now layout-owned instead
+  of being flattened through the legacy paragraph projection. Table-cell text and inline-image placement walk
+  `DocxTableCell.BodyElements` in source order and charge intervening nested table heights to their cursors, while
+  nested table row placement also advances past preceding paragraphs. Bottom-up coverage verifies a cell authored as
+  paragraph, nested table, paragraph keeps the first paragraph above the child table and the second paragraph below it.
+  Validation passed `docx-tables --skip-slow` (`107`). Keep nested table pagination inside split parent cells,
+  Office-exact nested-table spacing/baseline behavior, and non-paragraph table-cell break semantics open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

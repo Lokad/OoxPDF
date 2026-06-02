@@ -3655,6 +3655,7 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
+        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         if (paragraphs.Count == 0)
         {
@@ -3672,9 +3673,24 @@ internal sealed class DocxLayoutEngine
         var lines = new List<DocxTextLineLayout>();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
-        for (int paragraphIndex = 0; paragraphIndex < paragraphs.Count; paragraphIndex++)
+        int paragraphIndex = 0;
+        foreach (DocxBodyElement bodyElement in bodyElements)
         {
-            DocxParagraph paragraph = paragraphs[paragraphIndex];
+            if (bodyElement is DocxTableElement tableElement)
+            {
+                cursorY -= pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                cursorY -= MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints);
+                continue;
+            }
+
+            if (bodyElement is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -3760,6 +3776,7 @@ internal sealed class DocxLayoutEngine
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
+            paragraphIndex++;
         }
 
         cursorY -= pendingSpacingAfter;
@@ -3790,6 +3807,7 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints,
         int pageIndex)
     {
+        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         if (paragraphs.Count == 0 || !paragraphs.Any(paragraph => paragraph.Images.Count != 0))
         {
@@ -3807,8 +3825,27 @@ internal sealed class DocxLayoutEngine
         var images = new List<DocxInlineImageLayout>();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
-        foreach (DocxParagraph paragraph in paragraphs)
+        foreach (DocxBodyElement bodyElement in bodyElements)
         {
+            if (bodyElement is DocxTableElement tableElement)
+            {
+                cursorY -= pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                if (textMeasurer is not null)
+                {
+                    cursorY -= MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints);
+                }
+
+                continue;
+            }
+
+            if (bodyElement is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
