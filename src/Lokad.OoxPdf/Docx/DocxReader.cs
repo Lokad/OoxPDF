@@ -429,10 +429,9 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column section");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "br").Any(br =>
-            string.Equals((string?)br.Attribute(WordprocessingNamespace + "type"), "column", StringComparison.OrdinalIgnoreCase)))
+        if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
         {
-            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual column break");
+            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "inline manual column break", fallback: "Break-only column paragraphs are supported");
         }
 
         if (document.Descendants(WordprocessingNamespace + "keepNext").Any() ||
@@ -508,6 +507,17 @@ internal sealed class DocxReader
             !typeValue.Equals("nextPage", StringComparison.OrdinalIgnoreCase) &&
             !typeValue.Equals("oddPage", StringComparison.OrdinalIgnoreCase) &&
             !typeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsUnsupportedColumnBreak(XElement breakElement)
+    {
+        if (!IsColumnBreak(breakElement))
+        {
+            return false;
+        }
+
+        XElement? paragraph = breakElement.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
+        return paragraph is null || !IsRunColumnBreakOnlyParagraph(paragraph);
     }
 
     private static bool HasUnsupportedTableBorderStyle(XDocument document)

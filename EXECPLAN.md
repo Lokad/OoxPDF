@@ -7162,6 +7162,15 @@ Current validation baseline:
   emit the stale unsupported-section warning, while the broad unsupported-feature fixture still exercises a
   continuous section warning. Validation passed `docx-page --skip-slow` (`36`), `docx-core --skip-slow` (`52`),
   and full solution build.
+  2026-06-02 architecture follow-up: `DOCX_UNSUPPORTED_MANUAL_BREAK` is no longer emitted for break-only
+  column paragraphs, because the reader already promotes those OOXML paragraphs into typed
+  `DocxManualBreakElement` blocks and layout advances the active column/page from that structural node.
+  The diagnostic remains for inline/text-bearing column breaks, where Word-compatible inline flow semantics
+  are still missing. Coverage verifies both the absence of the stale warning and the presence of the typed
+  manual-break block. Validation passed `docx-core --skip-slow` (`52`), `docx-page --skip-slow` (`36`),
+  `docx-text --skip-slow` (`47`), and full solution build. Keep the broader multi-column branch open for
+  Word-style column balancing, inline column-break flow, table/header continuation semantics inside true
+  multi-column sections, and column-aware wrap exclusion.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
