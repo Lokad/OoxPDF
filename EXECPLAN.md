@@ -7276,6 +7276,12 @@ Current validation baseline:
   coverage verifies nested table paragraph traversal, recursive table enumeration, and font-plan inclusion.
   Validation passed `docx-tables --skip-slow` (`104`), `docx-core --skip-slow` (`53`; serial rerun after a
   parallel compiler output lock), and full solution build. Keep actual nested-table layout/rendering open.
+  2026-06-02 architecture follow-up: `DocxReader` now derives `DocxDocument.Tables` and related-story `Tables`
+  through `DocxBlockTraversal.EnumerateBodyTables`, so the legacy table inventory includes nested table-cell bodies
+  without flattening the authored top-level `BodyElements` stream or changing `DocxDocument.Paragraphs` semantics.
+  Bottom-up reader coverage verifies one top-level table block plus a recursive two-table inventory for a nested-table
+  cell. Validation passed `docx-tables --skip-slow` (`105`) and `docx-core --skip-slow` (`53`; serial rerun after a
+  parallel compiler output lock). Keep actual nested-table layout/rendering open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

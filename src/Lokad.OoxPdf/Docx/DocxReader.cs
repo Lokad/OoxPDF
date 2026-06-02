@@ -65,7 +65,7 @@ internal sealed class DocxReader
             : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings);
         IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings);
         IReadOnlyList<DocxParagraph> paragraphs = bodyElements.OfType<DocxParagraphElement>().Select(e => e.Paragraph).ToArray();
-        IReadOnlyList<DocxTable> tables = bodyElements.OfType<DocxTableElement>().Select(e => e.Table).ToArray();
+        IReadOnlyList<DocxTable> tables = DocxBlockTraversal.EnumerateBodyTables(bodyElements).ToArray();
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference");
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference");
         IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
@@ -1929,7 +1929,7 @@ internal sealed class DocxReader
             (string?)story.Attribute(WordprocessingNamespace + "id"),
             bodyElements,
             bodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
-            bodyElements.OfType<DocxTableElement>().Select(element => element.Table).ToArray());
+            DocxBlockTraversal.EnumerateBodyTables(bodyElements).ToArray());
     }
 
     private static IReadOnlyList<DocxBodyElement> ReadRelatedStoryBodyElements(

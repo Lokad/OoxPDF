@@ -9271,6 +9271,55 @@ internal static class DocxTests
         TestAssert.Equal(0, cellSnapshot.PageBreakElementCount);
     }
 
+    public static void DocxReaderTableInventoryIncludesNestedTableCellBodies()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+                      <w:tr><w:tc>
+                        <w:p><w:r><w:t>Outer</w:t></w:r></w:p>
+                        <w:tbl>
+                          <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                          <w:tr><w:tc><w:p><w:r><w:t>Nested</w:t></w:r></w:p></w:tc></w:tr>
+                        </w:tbl>
+                      </w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        TestAssert.Equal(1, document.BodyElements.OfType<DocxTableElement>().Count());
+        TestAssert.Equal(2, document.Tables.Count);
+        TestAssert.Equal("Outer", document.Tables[0].Rows[0].Cells[0].Paragraphs[0].Runs.Single().Text);
+        TestAssert.Equal("Nested", document.Tables[1].Rows[0].Cells[0].Paragraphs[0].Runs.Single().Text);
+        TestAssert.True(document.Tables[0].Rows[0].Cells[0].BodyElements[1] is DocxTableElement, "The top-level body stream should not flatten nested table structure.");
+    }
+
     public static void DocxReaderTableCellPreservesNumberedParagraphs()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
