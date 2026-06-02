@@ -456,23 +456,41 @@ internal sealed class DocxReader
     {
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "p"))
         {
-            if (HasUnsupportedComplexFieldInParagraph(paragraph))
+            if (HasUnsupportedComplexFieldInInlineContainer(paragraph))
             {
                 return true;
             }
+
+            foreach (XElement container in paragraph.Descendants().Where(IsVisibleInlineContainer))
+            {
+                if (HasUnsupportedComplexFieldInInlineContainer(container))
+                {
+                    return true;
+                }
+            }
         }
 
-        return document.Descendants(WordprocessingNamespace + "fldChar").Any(fieldChar => !IsDirectParagraphRunChild(fieldChar)) ||
-            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !IsDirectParagraphRunChild(instruction));
+        return document.Descendants(WordprocessingNamespace + "fldChar").Any(fieldChar => !IsSupportedInlineRunChild(fieldChar)) ||
+            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !IsSupportedInlineRunChild(instruction));
     }
 
-    private static bool IsDirectParagraphRunChild(XElement element)
+    private static bool IsVisibleInlineContainer(XElement? element)
     {
-        return element.Parent?.Name == WordprocessingNamespace + "r" &&
-            element.Parent.Parent?.Name == WordprocessingNamespace + "p";
+        return element is not null &&
+            (element.Name == WordprocessingNamespace + "hyperlink" ||
+            element.Name == WordprocessingNamespace + "fldSimple" ||
+            element.Name == WordprocessingNamespace + "ins");
     }
 
-    private static bool HasUnsupportedComplexFieldInParagraph(XElement paragraph)
+    private static bool IsSupportedInlineRunChild(XElement element)
+    {
+        XElement? run = element.Parent;
+        XElement? container = run?.Parent;
+        return run?.Name == WordprocessingNamespace + "r" &&
+            (container?.Name == WordprocessingNamespace + "p" || IsVisibleInlineContainer(container));
+    }
+
+    private static bool HasUnsupportedComplexFieldInInlineContainer(XElement container)
     {
         bool inField = false;
         bool inResult = false;
@@ -480,7 +498,7 @@ internal sealed class DocxReader
         bool hasCachedResult = false;
         var instruction = new StringBuilder();
 
-        foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
+        foreach (XElement run in container.Elements(WordprocessingNamespace + "r"))
         {
             foreach (XElement child in run.Elements())
             {

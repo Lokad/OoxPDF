@@ -6761,6 +6761,13 @@ Current validation baseline:
   `docx-text --skip-slow` (`33`), `docx-core --skip-slow` (`20`), and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-095525` stayed
   neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+  2026-06-02 inline-container follow-up: complex-field diagnostics now validate cached result ranges inside
+  the same visible inline containers consumed by the paragraph reader (`w:hyperlink`, `w:fldSimple`, and
+  inserted runs), instead of treating non-direct paragraph-run `w:fldChar`/`w:instrText` as unsupported by
+  parent shape alone. Bottom-up coverage locks a hyperlink-owned cached result field as rendered text plus
+  hyperlink span metadata without `DOCX_UNSUPPORTED_COMPLEX_FIELD`, while the malformed-field diagnostic guard
+  still fires. Keep first-class field ownership open for dynamic evaluation, nested fields, and field-specific
+  PDF/link semantics.
 - DOCX non-positioning tab-stop validation:
   authored `w:tabs` records with `w:val="bar"` or `w:val="clear"` remain preserved in the paragraph model,
   but no longer act as text-positioning stops during layout tab advance. This keeps non-positioning tab

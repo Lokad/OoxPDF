@@ -3343,6 +3343,68 @@ internal static class DocxTests
         TestAssert.Equal(" After", runs[2].Text);
     }
 
+    public static void DocxComplexFieldCachedResultInsideHyperlinkDoesNotEmitUnsupportedDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/field" TargetMode="External"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:hyperlink r:id="rIdLink">
+                        <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                        <w:r><w:instrText> DATE \@ &quot;yyyy&quot; </w:instrText></w:r>
+                        <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                        <w:r><w:t>2026</w:t></w:r>
+                        <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                      </w:hyperlink>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs[0];
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Equal("Before ", paragraph.Runs[0].Text);
+        TestAssert.Equal("2026", paragraph.Runs[1].Text);
+        TestAssert.Equal(" After", paragraph.Runs[2].Text);
+        TestAssert.Equal(1, paragraph.Hyperlinks.Count);
+        TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunStartIndex);
+        TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunCount);
+    }
+
     public static void DocxReaderUsesFinalViewForSimpleTrackedParagraphRuns()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
