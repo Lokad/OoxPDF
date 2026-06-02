@@ -7244,6 +7244,13 @@ Current validation baseline:
   `docx-core --skip-slow` (`19`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
   Private DOCX run `20260601-094513` stayed neutral at `16/16` pages, zero dimension mismatches, no diagnostics,
   `MAE=13.388935`, changed16 `0.124264`.
+  2026-06-02 architecture follow-up: the run-break splitter now recurses through nested visible inline
+  containers before emitting `DocxPageBreakElement`/`DocxManualBreakElement` body nodes. A hyperlink wrapping
+  an inserted run with an authored page break now becomes paragraph-fragment, explicit break, paragraph-fragment
+  while preserving hyperlink metadata on both sides; the splitter no longer depends on break runs being direct
+  children of the first visible container. Validation passed `docx-page --skip-slow` (`41`),
+  `docx-core --skip-slow` (`55`), and full solution build. Keep true Word column balancing, complex-field
+  dynamic evaluation, and non-final-view revision structures open.
   2026-06-02 follow-up: run-only column-break paragraphs are now preserved as `DocxManualBreakElement`
   body-flow blocks and surfaced in structure snapshots without turning them into page breaks. Layout clears
   paragraph adjacency across the boundary but remains single-column, so `DOCX_UNSUPPORTED_MANUAL_BREAK` remains

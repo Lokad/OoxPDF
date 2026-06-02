@@ -1681,12 +1681,38 @@ internal sealed class DocxReader
             return false;
         }
 
+        SplitRunBreakContainer(child, paragraphChildren, addParagraphPart, parts, ref startsAfterBreak);
+        return true;
+    }
+
+    private static void SplitRunBreakContainer(
+        XElement sourceContainer,
+        List<XElement> ownerChildren,
+        Action<bool> flushOwnerAndParagraph,
+        List<ParagraphBreakPart> parts,
+        ref bool startsAfterBreak)
+    {
         var containerChildren = new List<XElement>();
-        foreach (XElement containerChild in child.Elements())
+
+        void FlushThisContainerAndParagraph(bool endsBeforeBreak)
+        {
+            AddContainerPart(ownerChildren, sourceContainer, containerChildren);
+            flushOwnerAndParagraph(endsBeforeBreak);
+        }
+
+        foreach (XElement containerChild in sourceContainer.Elements())
         {
             if (containerChild.Name != WordprocessingNamespace + "r")
             {
-                containerChildren.Add(new XElement(containerChild));
+                if (IsVisibleRunContainer(containerChild) && HasVisibleRunPageOrColumnBreak(containerChild))
+                {
+                    SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak);
+                }
+                else
+                {
+                    containerChildren.Add(new XElement(containerChild));
+                }
+
                 continue;
             }
 
@@ -1707,8 +1733,7 @@ internal sealed class DocxReader
                 if (runChild.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(runChild))
                 {
                     AddRunPart(containerChildren, runProperties, runChildren);
-                    AddContainerPart(paragraphChildren, child, containerChildren);
-                    addParagraphPart(true);
+                    FlushThisContainerAndParagraph(true);
                     parts.Add(new ParagraphBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
                     startsAfterBreak = true;
                     runChildren.Clear();
@@ -1726,8 +1751,7 @@ internal sealed class DocxReader
             AddRunPart(containerChildren, runProperties, runChildren);
         }
 
-        AddContainerPart(paragraphChildren, child, containerChildren);
-        return true;
+        AddContainerPart(ownerChildren, sourceContainer, containerChildren);
     }
 
     private static void AddContainerPart(List<XElement> paragraphChildren, XElement sourceContainer, List<XElement> containerChildren)
@@ -1811,7 +1835,7 @@ internal sealed class DocxReader
         }
 
         return IsVisibleRunContainer(element) &&
-            element.Elements(WordprocessingNamespace + "r").Any(HasVisibleRunPageOrColumnBreak);
+            element.Elements().Any(HasVisibleRunPageOrColumnBreak);
     }
 
     private static bool IsPageOrColumnBreak(XElement breakElement)
