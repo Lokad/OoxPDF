@@ -7124,6 +7124,8 @@ internal static class DocxTests
         TestAssert.Equal(layoutPage.Width - layoutPage.MarginLeft - layoutPage.MarginRight, layoutSnapshot.HorizontalReferenceWidth ?? 0d);
         TestAssert.Equal(layoutSnapshot.AnchorBlockVerticalTop ?? 0d, layoutSnapshot.VerticalReferenceTop ?? 0d);
         TestAssert.Equal(layoutSnapshot.AnchorBlockVerticalBottom ?? 0d, layoutSnapshot.VerticalReferenceBottom ?? 0d);
+        TestAssert.Equal("Align", layoutSnapshot.HorizontalPlacementSource ?? string.Empty);
+        TestAssert.Equal("Offset", layoutSnapshot.VerticalPlacementSource ?? string.Empty);
         TestAssert.Equal("rIdImage1", layoutSnapshot.ImageRelationshipId ?? string.Empty);
         TestAssert.Equal("/word/media/image1.png", layoutSnapshot.ImagePartName ?? string.Empty);
         TestAssert.Equal("image/png", layoutSnapshot.ImageContentType ?? string.Empty);
@@ -13375,6 +13377,8 @@ internal static class DocxTests
         TestAssert.Equal(0, layoutDrawing.AnchorPageIndex ?? -1);
         TestAssert.Equal(72d, layoutDrawing.PlacedX ?? 0d);
         TestAssert.Equal(756d, layoutDrawing.PlacedTop ?? 0d);
+        TestAssert.Equal("Offset", layoutDrawing.HorizontalPlacementSource ?? string.Empty);
+        TestAssert.Equal("Offset", layoutDrawing.VerticalPlacementSource ?? string.Empty);
         TestAssert.Equal(72d, layoutDrawing.ExtentWidthPoints ?? 0d);
         TestAssert.Equal(36d, layoutDrawing.ExtentHeightPoints ?? 0d);
 

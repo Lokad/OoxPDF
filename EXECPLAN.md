@@ -894,6 +894,12 @@ High-priority actions:
     Office probes define their behavior. The initial implementation caught and fixed a coordinate-frame bug
     where a reference width was mistakenly treated as an endpoint, reinforcing that this branch should proceed
     through explicit frame records before any drawing emission. Validation passed `docx-core --skip-slow` (`52`).
+    2026-06-02 architecture follow-up: floating drawing layout records now carry typed anchor placement
+    provenance (`Align`, `Offset`, `Unsupported`, or `MissingReferenceOrExtent`) through layout snapshots. Body
+    and static-story tests pin both align-based and `posOffset`-based anchors, so future drawing emission and
+    wrap exclusion work can consume the resolved coordinate source instead of inferring it from raw XML tokens
+    or a nullable placed coordinate. Validation passed `docx-core --skip-slow` (`56`), `docx-page --skip-slow`
+    (`42`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
