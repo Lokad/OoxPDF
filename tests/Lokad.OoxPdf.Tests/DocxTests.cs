@@ -8843,6 +8843,71 @@ internal static class DocxTests
         TestAssert.True(cells[1].ShadingValue is null, "Expected missing cell shading to keep a null source token.");
     }
 
+    public static void DocxSyntheticTableCellPatternShadingUsesPdfTilingPattern()
+    {
+        string[] shadingValues =
+        [
+            "horzStripe",
+            "thinHorzStripe",
+            "vertStripe",
+            "thinVertStripe",
+            "diagStripe",
+            "thinDiagStripe",
+            "reverseDiagStripe",
+            "thinReverseDiagStripe"
+        ];
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid>
+                        <w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/>
+                        <w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/>
+                      </w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:shd w:val="horzStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>1</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:shd w:val="thinHorzStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>2</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:shd w:val="vertStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>3</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:shd w:val="thinVertStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>4</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:shd w:val="diagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>5</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:shd w:val="thinDiagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>6</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:shd w:val="reverseDiagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>7</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:shd w:val="thinReverseDiagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>8</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/PatternType 1", pdf);
+        TestAssert.Contains("/Pattern cs", pdf);
+        TestAssert.Contains("/ImPattern", pdf);
+        TestAssert.True(CountOccurrences(pdf, "/PatternType 1") >= shadingValues.Length, "Each supported DOCX stripe family should have a distinct tiling pattern resource.");
+    }
+
     public static void DocxReaderTableCellPreservesParagraphModel()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

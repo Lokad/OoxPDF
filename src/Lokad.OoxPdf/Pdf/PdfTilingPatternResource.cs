@@ -173,6 +173,55 @@ internal sealed class PdfTilingPattern
             [new PdfImageResource(imageName, image)]);
     }
 
+    public static PdfTilingPattern OfficeBitmapStripeLines(
+        PdfStripePatternKind kind,
+        bool thin,
+        byte foregroundRed,
+        byte foregroundGreen,
+        byte foregroundBlue,
+        byte backgroundRed,
+        byte backgroundGreen,
+        byte backgroundBlue)
+    {
+        const int cellSize = 16;
+        const double matrixScale = 0.375d;
+        const string imageName = "ImPattern";
+        int stripeWidth = thin ? 1 : 2;
+
+        byte[] rgb = new byte[cellSize * cellSize * 3];
+        for (int y = 0; y < cellSize; y++)
+        {
+            for (int x = 0; x < cellSize; x++)
+            {
+                int diagonalOffset = 2 * (y / 2);
+                int position = kind switch
+                {
+                    PdfStripePatternKind.Horizontal => PositiveModulo(y, 8),
+                    PdfStripePatternKind.Vertical => PositiveModulo(x, 8),
+                    PdfStripePatternKind.UpDiagonal => PositiveModulo(x + diagonalOffset, 8),
+                    PdfStripePatternKind.DownDiagonal => PositiveModulo(x - diagonalOffset, 8),
+                    _ => 0
+                };
+                bool foreground = position >= 8 - stripeWidth;
+                int index = (y * cellSize + x) * 3;
+                rgb[index] = foreground ? foregroundRed : backgroundRed;
+                rgb[index + 1] = foreground ? foregroundGreen : backgroundGreen;
+                rgb[index + 2] = foreground ? foregroundBlue : backgroundBlue;
+            }
+        }
+
+        var image = PdfImageXObject.RgbPng(cellSize, cellSize, rgb, alpha: null);
+        return new PdfTilingPattern(
+            cellSize,
+            cellSize,
+            cellSize,
+            cellSize,
+            new PdfPatternMatrix(matrixScale, 0d, 0d, matrixScale, 0d, 0d),
+            tilingType: 2,
+            "q 16 0 0 16 0 0 cm /" + imageName + " Do Q\n",
+            [new PdfImageResource(imageName, image)]);
+    }
+
     private string BuildResourceKey()
     {
         string imageKeys = string.Join("|", Images.Select(image => $"{image.ResourceName}:{image.Image.ResourceKey}"));
@@ -202,4 +251,12 @@ internal readonly record struct PdfPatternMatrix(double A, double B, double C, d
     {
         return string.Create(CultureInfo.InvariantCulture, $"{A:0.###}:{B:0.###}:{C:0.###}:{D:0.###}:{E:0.###}:{F:0.###}");
     }
+}
+
+internal enum PdfStripePatternKind
+{
+    Horizontal,
+    Vertical,
+    UpDiagonal,
+    DownDiagonal
 }

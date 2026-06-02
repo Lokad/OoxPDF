@@ -5220,6 +5220,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     `0.127419`, confirming this was a structural table-styling gap rather than the current private-driver
     mismatch. Keep non-percent pattern families, `auto` foreground/background resolution, and table-style
     conditional shading precedence open under this parent.
+  - [x] 2026-06-02: Added DOCX patterned shading output for explicit-color horizontal, vertical, diagonal,
+    reverse-diagonal, and thin stripe `w:shd/@w:val` tokens through the existing PDF tiling-pattern resource
+    path instead of flattening them to a solid color. This also fixed a DOCX PDF resource propagation bug:
+    `DocxRenderer` now carries `PdfGraphicsBuilder` ExtGState, shading, and pattern resources into `PdfPage`.
+    Public synthetic coverage verifies each supported stripe token emits a distinct tiling pattern resource.
+    Validation passed `docx-tables --skip-slow` (`102`). Keep `auto` foreground/background resolution and non-stripe
+    pattern families open until Office-backed evidence justifies their exact PDF structure.
 - [ ] Implement structural table features: horizontal merges (`gridSpan`), vertical merges (`vMerge`),
   repeating header rows across page breaks, and page-break behavior inside rows.
   - [x] 2026-06-01: Consumed preserved `w:vMerge` tokens in DOCX table layout/rendering for same-page

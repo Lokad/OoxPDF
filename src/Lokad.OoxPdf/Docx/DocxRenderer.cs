@@ -120,7 +120,16 @@ internal sealed class DocxRenderer
                 ref imageIndex);
 
             IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, fontResources, pageNumber, layout.Pages.Count, bookmarkDestinations);
-            pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray(), [], [], [], annotations));
+            pages.Add(new PdfPage(
+                layoutPage.Width,
+                layoutPage.Height,
+                graphics.ToString(),
+                fontResources.Resources,
+                pageImages.ToArray(),
+                graphics.ExtGStates,
+                graphics.Shadings,
+                graphics.Patterns,
+                annotations));
         }
 
         return pages;
@@ -533,11 +542,7 @@ internal sealed class DocxRenderer
             }
 
             DocxTableCell cell = cellLayout.VisualCell;
-            if (TryResolveShadingColor(cell.FillHex, cell.ShadingValue, cell.ShadingColor, out RgbColor fill))
-            {
-                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                graphics.FillRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
-            }
+            RenderShadingFill(cell.FillHex, cell.ShadingValue, cell.ShadingColor, graphics, cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
         }
 
         RenderTableRowBorders(row, previousRow, nextRow, graphics);
@@ -780,25 +785,23 @@ internal sealed class DocxRenderer
         double baselineY,
         PdfGraphicsBuilder graphics)
     {
-        if (width <= 0d || !TryResolveRunBackgroundColor(style, out RgbColor color))
+        if (width <= 0d)
         {
             return;
         }
 
         double ascender = DocxLineMetrics.MeasureWindowsAscender(font, fontSize);
         double descender = DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
-        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-        graphics.FillRectangle(x, baselineY - descender, width, ascender + descender);
-    }
-
-    private static bool TryResolveRunBackgroundColor(DocxTextRun style, out RgbColor color)
-    {
-        if (TryResolveHighlightColor(style.HighlightValue, out color))
+        double fillY = baselineY - descender;
+        double fillHeight = ascender + descender;
+        if (TryResolveHighlightColor(style.HighlightValue, out RgbColor highlight))
         {
-            return true;
+            graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+            graphics.FillRectangle(x, fillY, width, fillHeight);
+            return;
         }
 
-        return TryResolveShadingColor(style.ShadingFillHex, style.ShadingValue, style.ShadingColor, out color);
+        RenderShadingFill(style.ShadingFillHex, style.ShadingValue, style.ShadingColor, graphics, x, fillY, width, fillHeight);
     }
 
     private static bool TryResolveShadingColor(string? fillHex, string? value, string? foregroundHex, out RgbColor color)
@@ -815,6 +818,104 @@ internal sealed class DocxRenderer
 
         color = default;
         return false;
+    }
+
+    private static void RenderShadingFill(
+        string? fillHex,
+        string? value,
+        string? foregroundHex,
+        PdfGraphicsBuilder graphics,
+        double x,
+        double y,
+        double width,
+        double height)
+    {
+        if (width <= 0d || height <= 0d)
+        {
+            return;
+        }
+
+        if (TryResolveShadingColor(fillHex, value, foregroundHex, out RgbColor solid))
+        {
+            graphics.SetFillRgb(solid.Red, solid.Green, solid.Blue);
+            graphics.FillRectangle(x, y, width, height);
+            return;
+        }
+
+        if (TryResolveShadingPattern(fillHex, value, foregroundHex, out PdfTilingPattern? pattern) && pattern is not null)
+        {
+            graphics.FillRectangleWithTilingPattern(x, y, width, height, pattern);
+        }
+    }
+
+    private static bool TryResolveShadingPattern(string? fillHex, string? value, string? foregroundHex, out PdfTilingPattern? pattern)
+    {
+        pattern = null;
+        if (value is null ||
+            !RgbColor.TryParse(fillHex, out RgbColor background) ||
+            !RgbColor.TryParse(foregroundHex, out RgbColor foreground))
+        {
+            return false;
+        }
+
+        if (!TryResolveShadingStripeKind(value, out PdfStripePatternKind kind, out bool thin))
+        {
+            return false;
+        }
+
+        pattern = PdfTilingPattern.OfficeBitmapStripeLines(
+            kind,
+            thin,
+            foreground.Red,
+            foreground.Green,
+            foreground.Blue,
+            background.Red,
+            background.Green,
+            background.Blue);
+        return true;
+    }
+
+    private static bool TryResolveShadingStripeKind(string value, out PdfStripePatternKind kind, out bool thin)
+    {
+        switch (value)
+        {
+            case "horzStripe":
+                kind = PdfStripePatternKind.Horizontal;
+                thin = false;
+                return true;
+            case "thinHorzStripe":
+                kind = PdfStripePatternKind.Horizontal;
+                thin = true;
+                return true;
+            case "vertStripe":
+                kind = PdfStripePatternKind.Vertical;
+                thin = false;
+                return true;
+            case "thinVertStripe":
+                kind = PdfStripePatternKind.Vertical;
+                thin = true;
+                return true;
+            case "diagStripe":
+                kind = PdfStripePatternKind.DownDiagonal;
+                thin = false;
+                return true;
+            case "thinDiagStripe":
+                kind = PdfStripePatternKind.DownDiagonal;
+                thin = true;
+                return true;
+            case "reverseDiagStripe":
+                kind = PdfStripePatternKind.UpDiagonal;
+                thin = false;
+                return true;
+            case "thinReverseDiagStripe":
+                kind = PdfStripePatternKind.UpDiagonal;
+                thin = true;
+                return true;
+            default:
+                kind = PdfStripePatternKind.Horizontal;
+                thin = false;
+                return false;
+        }
     }
 
     private static bool TryResolvePercentageShadingColor(string? fillHex, string? value, string? foregroundHex, out RgbColor color)
