@@ -28,6 +28,13 @@ internal readonly record struct DocxTextEmissionAdvanceProfile(
     double LayoutToNaturalResidual,
     double? UniformResidualPerGap);
 
+internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
+    int GlyphCount,
+    int GlyphPairCount,
+    int AdvanceUnits,
+    int KerningUnits,
+    string Hash);
+
 internal static class DocxTextEmissionPlanner
 {
     public static DocxTextEmissionPlan Create(
@@ -118,6 +125,44 @@ internal static class DocxTextEmissionPlanner
         return new(glyphCount, glyphGapCount, naturalPdfWidth, layoutWidth, residual, residualPerGap);
     }
 
+    public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(string text, PdfEmbeddedFont embedded)
+    {
+        const ulong fnvOffset = 14695981039346656037UL;
+        const ulong fnvPrime = 1099511628211UL;
+
+        ulong hash = fnvOffset;
+        int glyphCount = 0;
+        int glyphPairCount = 0;
+        int advanceUnits = 0;
+        int kerningUnits = 0;
+        ushort previousGlyph = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            ushort glyph = embedded.Font.MapCodePoint(rune.Value);
+            if (glyph == 0)
+            {
+                continue;
+            }
+
+            ushort advance = embedded.Font.GetAdvanceWidth(glyph);
+            short kerning = previousGlyph == 0 ? (short)0 : embedded.Font.GetKerning(previousGlyph, glyph);
+            if (previousGlyph != 0)
+            {
+                glyphPairCount++;
+                kerningUnits += kerning;
+            }
+
+            advanceUnits += advance;
+            hash = AppendHash(hash, glyph, fnvPrime);
+            hash = AppendHash(hash, advance, fnvPrime);
+            hash = AppendHash(hash, unchecked((ushort)kerning), fnvPrime);
+            previousGlyph = glyph;
+            glyphCount++;
+        }
+
+        return new(glyphCount, glyphPairCount, advanceUnits, kerningUnits, hash.ToString("X16", CultureInfo.InvariantCulture));
+    }
+
     public static IReadOnlyList<DocxTextEmissionPart> SplitOfficeTextOperationParts(
         DocxTextSegmentLayout segment,
         double fontSize,
@@ -187,5 +232,14 @@ internal static class DocxTextEmissionPlanner
         }
 
         return count;
+    }
+
+    private static ulong AppendHash(ulong hash, ushort value, ulong fnvPrime)
+    {
+        hash ^= (byte)(value & 0xFF);
+        hash *= fnvPrime;
+        hash ^= (byte)(value >> 8);
+        hash *= fnvPrime;
+        return hash;
     }
 }

@@ -347,6 +347,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|gaps=" + (RoundedKey $segment.AdvanceProfile.GlyphGapCount 0)
         })
+        TextClassByGlyphSignature = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|glyphSig=" + $segment.GlyphAdvanceSignature.Hash
+        })
         TextClassByResidualPerGap = @(Group-Count $segments {
             param($segment)
             (PlannerTextClass $segment) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
@@ -368,6 +372,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
         AdvanceByTextClassAndGlyphGap = @(Group-PlannerAdvance $segments {
             param($segment)
             (PlannerTextClass $segment) + "|gaps=" + (RoundedKey $segment.AdvanceProfile.GlyphGapCount 0)
+        })
+        AdvanceByGlyphSignature = @(Group-PlannerAdvance $segments {
+            param($segment)
+            "glyphSig=" + $segment.GlyphAdvanceSignature.Hash
         })
     }
 }
@@ -400,6 +408,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerPdfFontSize = $segment.PdfFontSize
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
             PlannerResidualPerGap = $segment.AdvanceProfile.UniformResidualPerGap
+            PlannerGlyphAdvanceSignature = $segment.GlyphAdvanceSignature.Hash
             PlannerTerminalSpace = [bool]$segment.IsTerminalLineSpace
         })
     }
@@ -422,6 +431,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             param($pair)
             "resGap=" + (RoundedKey $pair.PlannerResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
+        ReferenceTcByPlannerGlyphSignature = @(Group-Count $pairs {
+            param($pair)
+            "glyphSig=" + $pair.PlannerGlyphAdvanceSignature + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
         ReferenceTcByPlannerFontSize = @(Group-Count $pairs {
             param($pair)
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
@@ -437,6 +450,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceNonzeroTcByPlannerResidualPerGap = @(Group-Count $nonzeroReferencePairs {
             param($pair)
             "resGap=" + (RoundedKey $pair.PlannerResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceNonzeroTcByPlannerGlyphSignature = @(Group-Count $nonzeroReferencePairs {
+            param($pair)
+            "glyphSig=" + $pair.PlannerGlyphAdvanceSignature + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
     }
 }

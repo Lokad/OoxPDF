@@ -38,9 +38,9 @@ keep diagnostics honest when a feature is still missing.
   counts. It must not emit private text content.
 - `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
   from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, positioned-glyph
-  residual buckets, candidate planner segment/advance-profile buckets when `DocxInspect` output is present, and
-  sequence-paired Office-operation/planner-segment buckets when the inspected operation counts match. It must
-  not emit decoded document text.
+  residual buckets, candidate planner segment/advance-profile/glyph-advance-signature buckets when `DocxInspect`
+  output is present, and sequence-paired Office-operation/planner-segment buckets when the inspected operation
+  counts match. It must not emit decoded document text.
 - `tools/SummarizeDocxRowBoundary.ps1`: private-safe DOCX table-row boundary summary for visual run directories.
   It combines layout-snapshot row bands and PDF text rows near the page bottom, emitting row indices, geometry,
   baseline diagnostics, lengths, and hashes without decoded document text.
@@ -6592,6 +6592,32 @@ Current validation baseline:
   (`2388` Office operations vs `2323` candidate planner segments), so the tool records `CountsMatched=false`
   and leaves pairing for public or fixed-decomposition cases. Validation passed `docx-core --skip-slow` (`43`),
   public/private-safe `SummarizeDocxTextState`, and full solution build.
+  2026-06-02 fresh paired-evidence update: reran current public `docx-tables` and
+  `docx-ladder-03-text-state-context` before using the new pair buckets, because older candidate artifacts
+  still reflected a rejected residual experiment. Current `docx-tables` run `20260602-041314` stays at
+  `MAE=0.455760`, changed16 `0.003840`, matches `21/21` candidate/reference PDF operations, and pairs Office
+  nonzero `Tc` to `alphanumeric|gaps=1|refTc=0.0509` (`2`) and `digits|gaps=1|refTc=-0.0182` (`4`). The paired
+  residual buckets are `resGap=-0.053359|refTc=0.0509` (`2`) and `resGap=-0.044492|refTc=-0.0182` (`4`), so
+  positive Office `Tc` can arise from a negative candidate residual. Current
+  `docx-ladder-03-text-state-context` run `20260602-041314` stays at `MAE=0.493604`, changed16 `0.004763`,
+  matches `35/35` candidate/reference PDF operations, and shows Office nonzero `Tc` across
+  `alphanumeric|gaps=1` (`-0.0437`, `-0.0509`, `0.0509`), `digits|gaps=1/2` (`-0.0182`), and
+  `letters|gaps=1` (`-0.0437`, `-0.0509`), while current candidate emits all `Tc=0`. The same candidate
+  residual bucket `resGap=-0.053359` pairs to both `refTc=-0.0437` and `refTc=0.0509`, so even paired
+  residual-per-gap is insufficient. The next bottom-up step should expose a private-safe glyph-advance
+  signature or public-only glyph-pair oracle for short runs before any renderer `Tc` selection is changed.
+  2026-06-02 glyph-signature follow-up: candidate DOCX text-emission snapshots now expose a private-safe
+  glyph-advance signature per segment: mapped glyph count, glyph-pair count, summed advance units, summed
+  kerning units, and a fixed-width hash over glyph/advance/kerning structure. `SummarizeDocxTextState.ps1`
+  carries those signatures into planner buckets and sequence-paired Office `Tc` buckets. On current public
+  `docx-tables` run `20260602-041314`, the six nonzero Office `Tc` pairs split into six structural signatures:
+  two alphanumeric signatures map to `refTc=0.0509`, and four digit signatures map to `refTc=-0.0182`. On
+  current public `docx-ladder-03-text-state-context` run `20260602-041314`, repeated signatures stay stable in
+  the public probe (`glyphSig=99A58E54284E5D99` maps three times to `refTc=0.0509`, and
+  `glyphSig=4579009E93D630E7` maps three times to `refTc=-0.0182`), while the remaining nonzero pairs separate
+  by signature into `-0.0437`, `-0.0509`, and `-0.0182` buckets. This is diagnostic evidence only, not a
+  renderer rule: the next renderer change still needs an Office-like decomposition model, but it should use
+  glyph-advance structure rather than text class, font name, table context, or residual-per-gap alone.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
