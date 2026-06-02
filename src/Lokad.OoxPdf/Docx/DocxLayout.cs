@@ -690,7 +690,8 @@ internal sealed record DocxTextLineLayout(
     double? BodyWindowsLineHeight = null,
     double? ListLabelWindowsLineHeight = null,
     double? EffectiveLineSpacingFactor = null,
-    bool? LineSpacingFactorFloorApplied = null) : DocxLayoutItem;
+    bool? LineSpacingFactorFloorApplied = null,
+    DocxParagraph? SourceParagraph = null) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
@@ -1170,7 +1171,8 @@ internal sealed class DocxLayoutEngine
                         lineHeightProfile.BodyWindowsLineHeight,
                         lineHeightProfile.ListLabelWindowsLineHeight,
                         lineHeightProfile.EffectiveLineSpacingFactor,
-                        lineHeightProfile.LineSpacingFactorFloorApplied));
+                        lineHeightProfile.LineSpacingFactorFloorApplied,
+                        SourceParagraph: paragraph));
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
@@ -2819,7 +2821,8 @@ internal sealed class DocxLayoutEngine
                         BodyWindowsLineHeight: lineHeightProfile.BodyWindowsLineHeight,
                         ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                         EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
-                        LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied));
+                        LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                        SourceParagraph: paragraph));
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));

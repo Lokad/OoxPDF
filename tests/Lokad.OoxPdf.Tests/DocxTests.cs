@@ -1623,6 +1623,46 @@ internal static class DocxTests
         TestAssert.Equal(0, page.Annotations.Count);
     }
 
+    public static void DocxRendererEmitsTableCellExternalHyperlinkAnnotations()
+    {
+        var runs = new[]
+        {
+            new DocxTextRun("Cell ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdCell", null, null, null, "https://example.invalid/cell", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        var table = new DocxTable(
+            null,
+            [100d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/cell", annotation.Uri);
+        TestAssert.True(annotation.X > document.MarginLeftPoints, "The annotation should be anchored to the placed table-cell hyperlink run.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover table-cell hyperlink text.");
+    }
+
     public static void DocxStructureSnapshotUsesBodyElementInventoryAsCanonicalSource()
     {
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell", fontSize: 9d, lineSpacingPoints: 10d) with

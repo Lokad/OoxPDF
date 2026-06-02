@@ -304,9 +304,9 @@ High-priority actions:
   only parser/structure metadata. The PDF writer has a first-class `PdfLinkAnnotation` primitive with stable
   object numbering, `/Annots` page wiring, rectangle emission, URI actions, and PDF-string escaping. DOCX
   layout now carries source text-run indexes through span slicing, wrapping, justification, and text-operation
-  splitting so body hyperlink annotations are anchored to placed rendered segments. Keep table-cell hyperlinks
-  open until `DocxTableCellLayout` carries paragraph ownership/source indexes; table annotations should be
-  driven by the same placed-inline structure, not by scanning cell text or guessing coordinates.
+  splitting so body hyperlink annotations are anchored to placed rendered segments. Table-cell text lines now
+  also carry source paragraph ownership and use the same annotation path. Keep header/footer/static-story URI
+  annotations and internal PDF destinations open for a later story-owned annotation model.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
@@ -6496,8 +6496,9 @@ Current validation baseline:
   line-space synthesis without text scanning. Added PDF-writer coverage for link annotation object emission and
   DOCX renderer coverage for external body links plus internal/bookmark links staying out of URI annotations.
   Validation passed `pdf --skip-slow` (`17`), `docx-core --skip-slow` (`34`), `docx-text --skip-slow` (`45`),
-  and full solution build. Keep table-cell/header/footer link annotations open until those stories expose the
-  same placed paragraph/run ownership through layout.
+  and full solution build. Follow-up in the next slice extended `DocxTextLineLayout` with source paragraph
+  ownership and covered table-cell external hyperlinks through the same placed-segment annotation path;
+  `docx-tables --skip-slow` passed (`95`). Keep header/footer link annotations and internal destinations open.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

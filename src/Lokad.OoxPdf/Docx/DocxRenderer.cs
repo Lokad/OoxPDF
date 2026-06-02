@@ -100,15 +100,14 @@ internal sealed class DocxRenderer
                 RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
             }
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateBodyHyperlinkAnnotations(document, layoutPage, fontResources, pageNumber, layout.Pages.Count);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, fontResources, pageNumber, layout.Pages.Count);
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray(), [], [], [], annotations));
         }
 
         return pages;
     }
 
-    private static IReadOnlyList<PdfLinkAnnotation> CreateBodyHyperlinkAnnotations(
-        DocxDocument document,
+    private static IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(
         DocxLayoutPage page,
         DocxFontResources fontResources,
         int pageNumber,
@@ -117,16 +116,13 @@ internal sealed class DocxRenderer
         var annotations = new List<PdfLinkAnnotation>();
         foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
         {
-            if (line.SourceBlockIndex is not { } blockIndex ||
-                blockIndex < 0 ||
-                blockIndex >= document.BodyElements.Count ||
-                document.BodyElements[blockIndex] is not DocxParagraphElement paragraphElement ||
-                paragraphElement.Paragraph.Hyperlinks.Count == 0)
+            if (line.SourceParagraph is not { } paragraph ||
+                paragraph.Hyperlinks.Count == 0)
             {
                 continue;
             }
 
-            IReadOnlyList<DocxHyperlinkSpan> links = paragraphElement.Paragraph.Hyperlinks;
+            IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
             foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount))
             {
                 if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex < 0 || segment.Width <= 0d)
