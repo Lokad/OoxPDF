@@ -7343,6 +7343,15 @@ Current validation baseline:
   (`112`), `docx-core --skip-slow` (`53`), and full solution build. Keep multiple competing cell page breaks,
   table-cell column breaks, Office-exact repeated-header/merged-cell interactions, and first fragments taller than a
   fresh frame open.
+  2026-06-02 architecture follow-up: explicit table-cell page breaks are now row-level boundary sets instead of a
+  single earliest scalar. `DocxLayout` collects distinct measured cell break heights, emits one row fragment per
+  authored boundary, and partitions table-cell text/images by the fragment's paragraph-index range before PDF
+  emission. This prevents a later break in another cell from either duplicating pre-boundary content or dropping the
+  paragraph between the row-level break and the later cell-local break. Bottom-up coverage verifies a two-cell row
+  with competing cell page breaks splits into three fragments with each paragraph on the authored side of the row
+  boundaries. Validation passed `docx-tables --skip-slow` (`113`), `docx-core --skip-slow` (`53`), and full solution
+  build. Keep table-cell column breaks, competing nested-table cell breaks, Office-exact repeated-header/merged-cell
+  interactions, and fragments taller than a fresh frame open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

@@ -10848,6 +10848,50 @@ internal static class DocxTests
         TestAssert.Equal("CellPageBreak", thirdPageRows[0].FragmentReason);
     }
 
+    public static void DocxTableLayoutStageUsesEarliestCellPageBreakAsRowBoundary()
+    {
+        DocxParagraph earlyBefore = CreateDocxLayoutParagraph("EarlyBefore", 10d, 10d);
+        DocxParagraph earlyAfter = CreateDocxLayoutParagraph("EarlyAfter", 10d, 10d);
+        DocxParagraph laterFirst = CreateDocxLayoutParagraph("LaterFirst", 10d, 10d);
+        DocxParagraph laterMiddle = CreateDocxLayoutParagraph("LaterMiddle", 10d, 10d);
+        DocxParagraph laterAfter = CreateDocxLayoutParagraph("LaterAfter", 10d, 10d);
+        var earlyCell = new DocxTableCell(string.Empty, [earlyBefore, earlyAfter], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(earlyBefore),
+                new DocxPageBreakElement("earlyBreak", "page"),
+                new DocxParagraphElement(earlyAfter)
+            ]
+        };
+        var laterCell = new DocxTableCell(string.Empty, [laterFirst, laterMiddle, laterAfter], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(laterFirst),
+                new DocxParagraphElement(laterMiddle),
+                new DocxPageBreakElement("laterBreak", "page"),
+                new DocxParagraphElement(laterAfter)
+            ]
+        };
+        DocxTable table = new(null, [60d, 60d], [new DocxTableRow([earlyCell, laterCell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .ToArray();
+
+        TestAssert.Equal(3, rowFragments.Length);
+        TestAssert.Equal("EarlyBefore", rowFragments[0].Cells[0].TextLines.Single().Text);
+        TestAssert.Equal("EarlyAfter", rowFragments[1].Cells[0].TextLines.Single().Text);
+        TestAssert.Equal("LaterFirst", rowFragments[0].Cells[1].TextLines.Single().Text);
+        TestAssert.Equal("LaterMiddle", rowFragments[1].Cells[1].TextLines.Single().Text);
+        TestAssert.Equal(0, rowFragments[2].Cells[0].TextLines.Count);
+        TestAssert.Equal("LaterAfter", rowFragments[2].Cells[1].TextLines.Single().Text);
+    }
+
     public static void DocxTableLayoutStageKeepsCellImagesOnAuthoredSideOfPageBreak()
     {
         var beforeImage = new DocxInlineImage(12d, 8d, "image/png", [1, 2, 3], "/word/media/before.png");
