@@ -6347,6 +6347,89 @@ internal static class DocxTests
         TestAssert.Equal("6.", document.Paragraphs[1].ListLabel?.Text ?? string.Empty);
     }
 
+    public static void DocxReaderNumberingLevelOverrideReplacesAbstractLevel()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdDoc" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                </Relationships>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="7">
+                    <w:lvl w:ilvl="0">
+                      <w:start w:val="1"/>
+                      <w:numFmt w:val="decimal"/>
+                      <w:lvlText w:val="%1."/>
+                      <w:suff w:val="tab"/>
+                      <w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
+                    </w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="3">
+                    <w:abstractNumId w:val="7"/>
+                    <w:lvlOverride w:ilvl="0">
+                      <w:startOverride w:val="9"/>
+                      <w:lvl w:ilvl="0">
+                        <w:start w:val="4"/>
+                        <w:numFmt w:val="decimal"/>
+                        <w:lvlText w:val="Item %1)"/>
+                        <w:suff w:val="space"/>
+                        <w:pPr><w:ind w:left="1440" w:hanging="720"/></w:pPr>
+                        <w:rPr><w:rFonts w:ascii="Override Sans" w:hAnsi="Override Sans"/><w:color w:val="AA0000"/><w:b/></w:rPr>
+                      </w:lvl>
+                    </w:lvlOverride>
+                  </w:num>
+                </w:numbering>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr><w:r><w:t>Nine</w:t></w:r></w:p>
+                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr><w:r><w:t>Ten</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        IReadOnlyList<DocxParagraph> paragraphs = document.Paragraphs;
+
+        TestAssert.Equal("Item 9)", paragraphs[0].ListLabel?.Text ?? string.Empty);
+        TestAssert.Equal("Item 10)", paragraphs[1].ListLabel?.Text ?? string.Empty);
+        TestAssert.Equal("Item %1)", paragraphs[0].ListLabel?.LevelTextValue ?? string.Empty);
+        TestAssert.Equal("space", paragraphs[0].ListLabel?.SuffixValue ?? string.Empty);
+        TestAssert.Equal("1440", paragraphs[0].ListLabel?.Indent.LeftValue ?? string.Empty);
+        TestAssert.Equal("720", paragraphs[0].ListLabel?.Indent.HangingValue ?? string.Empty);
+        TestAssert.Equal(72d, paragraphs[0].ListLabel?.Indent.LeftPoints ?? 0d);
+        TestAssert.Equal(36d, paragraphs[0].ListLabel?.Indent.HangingPoints ?? 0d);
+        TestAssert.Equal("Override Sans", paragraphs[0].ListLabel?.Style.Fonts.Ascii ?? string.Empty);
+        TestAssert.Equal("AA0000", paragraphs[0].ListLabel?.Style.ColorHex ?? string.Empty);
+        TestAssert.True(paragraphs[0].ListLabel?.Style.Bold == true, "Concrete num-level override marker style should replace the abstract numbering level.");
+    }
+
     public static void DocxReaderNumberingResolvesMultilevelLabels()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

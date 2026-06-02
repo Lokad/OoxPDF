@@ -5045,6 +5045,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   and Office's small nominally-zero spacing residuals.
 - [ ] Improve numbering layout: render labels in their own hanging-indent area, support level text expansion
   beyond the current simple label prefix, and honor restart/start rules.
+  2026-06-02 architecture follow-up: DOCX numbering now parses concrete `w:num/w:lvlOverride/w:lvl`
+  overrides into the numbering model instead of keeping only `startOverride`. The reader prefers the
+  concrete num-level override for label text, suffix, indent, and marker run style while still honoring
+  `startOverride` for the live counter, matching Word's abstract-numbering plus num-instance structure.
+  Bottom-up coverage verifies an overridden level replacing the abstract label template, space suffix,
+  hanging indent, color, and bold marker style. Validation passed `docx-numbering --skip-slow` (`13`)
+  and full solution build. Keep this item open for Office-compatible numbering format conversion
+  beyond current numeric token expansion and for further PDF-level list-label visual probes.
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from
   content, cell vertical alignment, cell margins, and repeating header rows.
   - [ ] 2026-05-31: Replace the remaining DOCX table-cell first-baseline heuristic only with Office-backed
