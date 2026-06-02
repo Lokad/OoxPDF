@@ -6,6 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$RepoRoot = Split-Path -Parent $PSScriptRoot
 
 function Expand-PathList([string[]] $Values) {
     $expanded = New-Object System.Collections.Generic.List[string]
@@ -169,6 +170,74 @@ function Ensure-TextOperations([string] $Run, [string] $Side) {
     }
 
     return $json
+}
+
+function Get-RunCaseId([string] $Run) {
+    return Split-Path -Leaf (Split-Path -Parent $Run)
+}
+
+function Resolve-PublicCaseInput([string] $CaseId) {
+    $manifestPath = Join-Path $RepoRoot ("visual-cases\cases\" + $CaseId + "\case.json")
+    if (-not (Test-Path -LiteralPath $manifestPath)) {
+        return $null
+    }
+
+    $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+    if ($null -eq $manifest.input -or [string]::IsNullOrWhiteSpace([string]$manifest.input)) {
+        return $null
+    }
+
+    $input = Join-Path (Split-Path -Parent $manifestPath) ([string]$manifest.input)
+    if (Test-Path -LiteralPath $input) {
+        return (Resolve-Path -LiteralPath $input).Path
+    }
+
+    return $null
+}
+
+function Test-DocxInspectSnapshotFresh([string] $SnapshotPath) {
+    if (-not (Test-Path -LiteralPath $SnapshotPath)) {
+        return $false
+    }
+
+    $snapshot = Get-Content -Raw -LiteralPath $SnapshotPath | ConvertFrom-Json
+    if ($null -eq $snapshot -or $null -eq $snapshot.Lines) {
+        return $false
+    }
+
+    foreach ($line in $snapshot.Lines) {
+        if ($null -eq $line.Segments) {
+            continue
+        }
+
+        foreach ($segment in $line.Segments) {
+            if ($null -ne $segment.AdvanceProfile -and $null -ne $segment.AdvanceProfile.PlannedEmittedAdvance) {
+                return $true
+            }
+        }
+    }
+
+    return $false
+}
+
+function Ensure-CandidateDocxInspect([string] $Run) {
+    $output = Join-Path $Run "comparison\docx-inspect"
+    $snapshot = Join-Path $output "text-emission-snapshot.json"
+    $summary = Join-Path $output "text-emission-summary.json"
+    if ((Test-Path -LiteralPath $summary) -and (Test-DocxInspectSnapshotFresh $snapshot)) {
+        return
+    }
+
+    $caseId = Get-RunCaseId $Run
+    $input = Resolve-PublicCaseInput $caseId
+    if ($null -eq $input) {
+        return
+    }
+
+    & pwsh (Join-Path $RepoRoot "tools\InspectDocx.ps1") -InputDocx $input -OutputDirectory $output | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "InspectDocx failed for public case '$caseId' with exit code $LASTEXITCODE."
+    }
 }
 
 function Summarize-Operations($Operations) {
@@ -666,6 +735,7 @@ $summaries = foreach ($run in $runs) {
     $resolvedRun = (Resolve-Path -LiteralPath $run).Path
     $referenceOps = Read-JsonArray (Ensure-TextOperations $resolvedRun "reference")
     $candidateOps = Read-JsonArray (Ensure-TextOperations $resolvedRun "candidate")
+    Ensure-CandidateDocxInspect $resolvedRun
     $candidatePlannerSummary = Read-CandidatePlannerSummary $resolvedRun
     $candidatePlannerSnapshot = Read-CandidatePlannerSnapshot $resolvedRun
     $metricsPath = Join-Path $resolvedRun "comparison\metrics.json"

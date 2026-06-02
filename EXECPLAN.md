@@ -542,6 +542,11 @@ High-priority actions:
   target-agnostic: it gives future Word-target logic a structural home without deciding the target from
   private data, fonts, or observed constants. `docx-core --skip-slow` passed `50` tests after a serial rerun
   following one transient parallel compiler output lock.
+  2026-06-02 tooling follow-up: `tools/SummarizeDocxTextState.ps1` now auto-runs `InspectDocx.ps1` for public
+  visual runs when `comparison/docx-inspect` is missing or when an existing `text-emission-snapshot.json` is
+  stale and lacks `PlannedEmittedAdvance`. Private/local runs remain opt-in via existing sidecars. A refresh
+  test on older public run `docx-ladder-03-text-state-font-matrix/20260602-091115` regenerated the sidecar and
+  produced `65` planner/reference pairs with no unexpected missing emitted-delta fields.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first
