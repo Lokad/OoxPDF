@@ -762,7 +762,8 @@ internal sealed record DocxTableCellLayout(
     double Height,
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
-    bool IsVerticalMergeContinuation = false);
+    bool IsVerticalMergeContinuation = false,
+    DocxTableCell? VerticalMergeOwnerCell = null);
 
 internal sealed record DocxRunFontResource(string Name, PdfEmbeddedFont Embedded, FontResolution Resolution);
 
@@ -2497,6 +2498,9 @@ internal sealed class DocxLayoutEngine
             double cellWidth = cellWidths[columnIndex];
             DocxTableCell cell = row.Cells[columnIndex];
             bool isVerticalMergeContinuation = IsVerticalMergeContinuation(cell);
+            DocxTableCell? verticalMergeOwnerCell = isVerticalMergeContinuation
+                ? FindVerticalMergeRestartCell(table, rowIndex, gridColumnIndex)
+                : null;
             double visualHeight = rowHeight;
             double visualY = cellY;
             double fullVisualHeight = fullRowHeight;
@@ -2520,7 +2524,7 @@ internal sealed class DocxLayoutEngine
                 : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
                     .Where(image => VerticalOverlap(image.Y, image.Height, visualY, visualHeight) > 0.001d)
                     .ToArray();
-            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation));
+            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
@@ -2557,6 +2561,33 @@ internal sealed class DocxLayoutEngine
     private static bool IsVerticalMergeContinuation(DocxTableCell cell)
     {
         return cell.HasVerticalMerge && !IsVerticalMergeRestart(cell);
+    }
+
+    private static DocxTableCell? FindVerticalMergeRestartCell(
+        DocxTable table,
+        int rowIndex,
+        int gridColumnIndex)
+    {
+        for (int previousRowIndex = rowIndex - 1; previousRowIndex >= 0; previousRowIndex--)
+        {
+            if (!TryGetCellAtGridColumn(table.Rows[previousRowIndex], gridColumnIndex, out DocxTableCell? previousCell) ||
+                previousCell is null)
+            {
+                return null;
+            }
+
+            if (IsVerticalMergeRestart(previousCell))
+            {
+                return previousCell;
+            }
+
+            if (!IsVerticalMergeContinuation(previousCell))
+            {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private static double GetVerticalMergeSpanHeight(

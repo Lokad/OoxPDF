@@ -8238,6 +8238,67 @@ internal static class DocxTests
         TestAssert.True(Math.Abs(rows[1].Cells[0].Height - 30.96d) < 0.001d, $"Expected merge continuation height near 30.96pt, got {rows[1].Cells[0].Height.ToString("0.###", CultureInfo.InvariantCulture)}.");
     }
 
+    public static void DocxTableLayoutStageCarriesVerticalMergeOwnerAcrossPages()
+    {
+        var filler = new DocxTableCell("Filler", [], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var restart = new DocxTableCell(
+            "Merged",
+            [],
+            "D9EAD3",
+            "clear",
+            "auto",
+            null,
+            [new DocxTableCellBorder("left", "single", "000000", "8")],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true,
+            VerticalMergeValue: "restart");
+        var continuation = new DocxTableCell(
+            "Continuation",
+            [],
+            null,
+            null,
+            null,
+            null,
+            [],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true);
+        var table = new DocxTable(
+            null,
+            [60d],
+            [
+                new DocxTableRow([filler], 60d),
+                new DocxTableRow([restart], 20d),
+                new DocxTableRow([continuation], 30d)
+            ]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxTableRowLayout restartRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single(row => row.RowIndex == 1);
+        DocxTableRowLayout continuationRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single(row => row.RowIndex == 2);
+        DocxTableCellLayout continuationCell = continuationRow.Cells.Single();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.True(restartRow.Cells[0].Height > restartRow.Height, "The restart row should own the full merged span, even when it crosses the page boundary.");
+        TestAssert.True(continuationCell.IsVerticalMergeContinuation, "The second-page row should remain marked as a merge continuation.");
+        TestAssert.True(ReferenceEquals(restart, continuationCell.VerticalMergeOwnerCell), "Continuation fragments should retain the restart cell as visual owner across pages.");
+        TestAssert.Equal("D9EAD3", continuationCell.VerticalMergeOwnerCell?.FillHex ?? string.Empty);
+        TestAssert.Equal(60d, continuationCell.Y);
+        TestAssert.Equal(30d, continuationCell.Height);
+    }
+
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()
     {
         var table = new DocxTable(

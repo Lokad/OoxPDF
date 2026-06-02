@@ -523,12 +523,11 @@ High-priority actions:
   slack shortcut. `DocxLayout` now only splits non-`w:cantSplit` rows when the cell line boxes prove that text
   exists on both sides of the page boundary, records one `DocxTableRowLayout` per fragment, keeps full-row text
   coordinates for clipping, and suppresses same-logical-row continuation borders in the renderer. Bottom-up
-  tests cover default multi-page row splitting and `w:cantSplit` preservation. Public
-  `docx-ladder-03-table-row-fragment-threshold` run `20260602-004240` stayed unchanged, and `DocxInspect`
-  found `65` table-row layouts with `0` fragments for that fixture, so the fixture remains an open
-  row-allocation/page-break problem rather than evidence against the new fragment path. Keep follow-up work on
-  Office's row boundary allocation, header-row repetition on split continuations, vertical-merge fragments, and
-  inline-image clipping inside split rows.
+  tests cover default multi-page row splitting and `w:cantSplit` preservation. This closes the earlier
+  contract-only phase: split rows are now first-class layout/render/snapshot objects, not an inferred
+  page-bottom slack behavior. Keep the rejected-trial evidence above because it still explains why the split
+  predicate must stay tied to observed line boxes and why text-bearing top fragments with empty continuations
+  remain risky.
   2026-06-02 follow-up: split-row continuation pages now use the same repeated-header-row path as ordinary
   row page breaks, and fragment heights reserve that repeated header height on continuation pages. This keeps
   the table layout model structural: headers remain explicit `DocxTableRowLayout` records, while the carried
@@ -548,6 +547,23 @@ High-priority actions:
   coverage for a split merged restart row followed by a continuation row; validation passed
   `docx-tables --skip-slow` (`87`). Keep the broader cross-page vertical-merge branch open for continuations
   whose own logical rows cross page boundaries, because that needs an explicit merged-cell fragment model.
+  2026-06-02 validation update: the row-fragment architecture is now covered by `docx-tables --skip-slow`
+  (`92` passing tests), including default row splits, repeated headers before continuations, inline images
+  clipped by row fragments, vertical-merge restart clipping, and `w:cantSplit` preservation. Public
+  `docx-ladder-03-table-row-fragment-threshold` run `20260602-024328` passes strict page-count, dimension, and
+  empty-diagnostic gates with seven pages, but still has high content-page raster residuals (pages 1/2/4/6
+  around `6.93..7.77` MAE). Treat this as solved structural pagination parity, not pixel fidelity: the next
+  long-view work is Office-aligned row-boundary selection and fragment-internal text/border geometry, plus an
+  explicit merged-cell fragment model for continuations whose logical rows cross pages. Do not replace this
+  with a scalar bottom-margin slack, post-table heading gap, or private row-coordinate rule.
+  2026-06-02 architecture follow-up: cross-page vertical merges now carry explicit visual ownership. A
+  `DocxTableCellLayout` continuation can retain its restart cell as `VerticalMergeOwnerCell`, so renderer
+  decisions are no longer based on a single "skip continuation" flag. Same-page continuations remain suppressed
+  under the restart span, while page-leading continuation fragments can inherit the restart cell's fill/border
+  properties. Bottom-up coverage locks a merged restart at the bottom of page 1 with its continuation on page 2;
+  `docx-tables --skip-slow` passes `93`. Keep the broader merged-cell branch open for public Office-PDF
+  evidence on continuation-internal border suppression and text carry-over when the merged cell's own content
+  crosses pages.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

@@ -322,12 +322,12 @@ internal sealed class DocxRenderer
     {
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
-            if (cellLayout.IsVerticalMergeContinuation)
+            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
             {
                 continue;
             }
 
-            DocxTableCell cell = cellLayout.Cell;
+            DocxTableCell cell = ResolveVisualCell(cellLayout);
             if (TryResolveShadingColor(cell.FillHex, cell.ShadingValue, cell.ShadingColor, out RgbColor fill))
             {
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
@@ -339,7 +339,7 @@ internal sealed class DocxRenderer
 
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
-            if (cellLayout.IsVerticalMergeContinuation)
+            if (!ShouldRenderTableCellContentFragment(cellLayout))
             {
                 continue;
             }
@@ -789,7 +789,7 @@ internal sealed class DocxRenderer
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
-            if (cellLayout.IsVerticalMergeContinuation)
+            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
             {
                 continue;
             }
@@ -804,13 +804,14 @@ internal sealed class DocxRenderer
                 RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
             }
 
-            DocxTableCellBorder? left = DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "left") ?? DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "start");
+            DocxTableCell visualCell = ResolveVisualCell(cellLayout);
+            DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "start");
             if (cellIndex == 0)
             {
                 RenderVerticalTableCellBorder(cellLayout.X, cellLayout.Y, cellLayout.Height, left, graphics);
             }
 
-            DocxTableCellBorder? right = DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "right") ?? DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "end");
+            DocxTableCellBorder? right = DocxTableBorderGeometry.Find(visualCell.Borders, "right") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "end");
             if (cellIndex == row.Cells.Count - 1)
             {
                 RenderVerticalTableCellBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, graphics);
@@ -818,7 +819,8 @@ internal sealed class DocxRenderer
             }
 
             DocxTableCellLayout nextCell = row.Cells[cellIndex + 1];
-            DocxTableCellBorder? nextLeft = DocxTableBorderGeometry.Find(nextCell.Cell.Borders, "left") ?? DocxTableBorderGeometry.Find(nextCell.Cell.Borders, "start");
+            DocxTableCell nextVisualCell = ResolveVisualCell(nextCell);
+            DocxTableCellBorder? nextLeft = DocxTableBorderGeometry.Find(nextVisualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(nextVisualCell.Borders, "start");
             RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
         }
 
@@ -835,13 +837,13 @@ internal sealed class DocxRenderer
     {
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
-            if (cellLayout.IsVerticalMergeContinuation)
+            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow: null))
             {
                 continue;
             }
 
             DocxTableCellLayout[] overlappingNextCells = nextRow.Cells
-                .Where(nextCell => !nextCell.IsVerticalMergeContinuation && HorizontalOverlap(cellLayout, nextCell) > 0d)
+                .Where(nextCell => ShouldRenderTableCellVisualFragment(nextCell, row) && HorizontalOverlap(cellLayout, nextCell) > 0d)
                 .ToArray();
             if (overlappingNextCells.Length == 0)
             {
@@ -861,8 +863,10 @@ internal sealed class DocxRenderer
         DocxTableCellLayout nextRowCell,
         PdfGraphicsBuilder graphics)
     {
-        DocxTableCellBorder? bottom = DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "bottom");
-        DocxTableCellBorder? nextTop = DocxTableBorderGeometry.Find(nextRowCell.Cell.Borders, "top");
+        DocxTableCell cell = ResolveVisualCell(cellLayout);
+        DocxTableCell nextCell = ResolveVisualCell(nextRowCell);
+        DocxTableCellBorder? bottom = DocxTableBorderGeometry.Find(cell.Borders, "bottom");
+        DocxTableCellBorder? nextTop = DocxTableBorderGeometry.Find(nextCell.Borders, "top");
         if (DocxTableBorderGeometry.IsSuppressed(bottom) || DocxTableBorderGeometry.IsSuppressed(nextTop))
         {
             return;
@@ -901,7 +905,8 @@ internal sealed class DocxRenderer
 
     private static void RenderHorizontalTableCellBorder(DocxTableCellLayout cellLayout, string edge, PdfGraphicsBuilder graphics)
     {
-        DocxTableCellBorder? border = DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, edge);
+        DocxTableCell visualCell = ResolveVisualCell(cellLayout);
+        DocxTableCellBorder? border = DocxTableBorderGeometry.Find(visualCell.Borders, edge);
         if (border is null || DocxTableBorderGeometry.IsSuppressed(border))
         {
             return;
@@ -933,8 +938,9 @@ internal sealed class DocxRenderer
 
     private static double ResolveLeftVerticalBorderWidth(DocxTableCellLayout cellLayout)
     {
-        DocxTableCellBorder? left = DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "left") ??
-            DocxTableBorderGeometry.Find(cellLayout.Cell.Borders, "start");
+        DocxTableCell visualCell = ResolveVisualCell(cellLayout);
+        DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ??
+            DocxTableBorderGeometry.Find(visualCell.Borders, "start");
         return DocxTableBorderGeometry.IsSuppressed(left)
             ? 0d
             : DocxTableBorderGeometry.ResolveVisibleWidth(left);
@@ -981,6 +987,37 @@ internal sealed class DocxRenderer
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         double width = DocxTableBorderGeometry.ResolveVisibleWidth(border);
         graphics.FillRectangle(boundaryX, y, width, height);
+    }
+
+    private static bool ShouldRenderTableCellContentFragment(DocxTableCellLayout cellLayout)
+    {
+        return !cellLayout.IsVerticalMergeContinuation;
+    }
+
+    private static bool ShouldRenderTableCellVisualFragment(
+        DocxTableCellLayout cellLayout,
+        DocxTableRowLayout? previousRow)
+    {
+        if (!cellLayout.IsVerticalMergeContinuation)
+        {
+            return true;
+        }
+
+        if (cellLayout.VerticalMergeOwnerCell is null)
+        {
+            return false;
+        }
+
+        return previousRow is null || !previousRow.Cells.Any(previousCell =>
+            !previousCell.IsVerticalMergeContinuation &&
+            HorizontalOverlap(previousCell, cellLayout) > 0d &&
+            previousCell.Y <= cellLayout.Y + 0.001d &&
+            previousCell.Y + previousCell.Height >= cellLayout.Y + cellLayout.Height - 0.001d);
+    }
+
+    private static DocxTableCell ResolveVisualCell(DocxTableCellLayout cellLayout)
+    {
+        return cellLayout.VerticalMergeOwnerCell ?? cellLayout.Cell;
     }
 
     private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)
