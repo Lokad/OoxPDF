@@ -3439,7 +3439,7 @@ internal sealed class DocxLayoutEngine
         out double heightBeforeBreak)
     {
         heightBeforeBreak = 0d;
-        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -3753,7 +3753,7 @@ internal sealed class DocxLayoutEngine
         out int paragraphBoundaryIndex)
     {
         paragraphBoundaryIndex = 0;
-        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -3814,7 +3814,7 @@ internal sealed class DocxLayoutEngine
         out int nestedTableBoundaryIndex)
     {
         nestedTableBoundaryIndex = 0;
-        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -4020,6 +4020,59 @@ internal sealed class DocxLayoutEngine
         return widths;
     }
 
+    private static IReadOnlyList<DocxBodyElement> GetTableCellLayoutBodyElements(DocxTableCell cell)
+    {
+        IReadOnlyList<DocxBodyElement> authoredElements = DocxTableCellContent.GetBodyElements(cell);
+        if (!authoredElements.Any(IsTableCellColumnBreakElement))
+        {
+            return authoredElements;
+        }
+
+        var layoutElements = new List<DocxBodyElement>(authoredElements.Count);
+        for (int index = 0; index < authoredElements.Count; index++)
+        {
+            if (authoredElements[index] is not DocxParagraphElement paragraphElement)
+            {
+                if (!IsTableCellColumnBreakElement(authoredElements[index]))
+                {
+                    layoutElements.Add(authoredElements[index]);
+                }
+
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+            while (index + 2 < authoredElements.Count &&
+                IsTableCellColumnBreakElement(authoredElements[index + 1]) &&
+                authoredElements[index + 2] is DocxParagraphElement continuationElement)
+            {
+                paragraph = MergeTableCellColumnBreakParagraphs(paragraph, continuationElement.Paragraph);
+                index += 2;
+            }
+
+            layoutElements.Add(new DocxParagraphElement(paragraph));
+        }
+
+        return layoutElements;
+    }
+
+    private static bool IsTableCellColumnBreakElement(DocxBodyElement element)
+    {
+        return element is DocxManualBreakElement manualBreak &&
+            manualBreak.Value?.Equals("column", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private static DocxParagraph MergeTableCellColumnBreakParagraphs(DocxParagraph first, DocxParagraph second)
+    {
+        return first with
+        {
+            Runs = first.Runs.Concat(second.Runs).ToArray(),
+            Images = first.Images.Concat(second.Images).ToArray(),
+            SpacingAfterPoints = second.SpacingAfterPoints,
+            Spacing = second.Spacing
+        };
+    }
+
     private static double MeasureTableCellContentHeight(
         DocxTableCell cell,
         double cellWidth,
@@ -4027,7 +4080,7 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints,
         double? rowTopPadding = null)
     {
-        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return 0d;
@@ -4126,7 +4179,7 @@ internal sealed class DocxLayoutEngine
             return [];
         }
 
-        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         if (paragraphs.Count == 0)
         {
@@ -4278,7 +4331,7 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints,
         int pageIndex)
     {
-        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
         if (paragraphs.Count == 0 || !paragraphs.Any(paragraph => paragraph.Images.Count != 0))
         {
@@ -4390,7 +4443,7 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints,
         int pageIndex)
     {
-        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (textMeasurer is null || !bodyElements.OfType<DocxTableElement>().Any())
         {
             return [];

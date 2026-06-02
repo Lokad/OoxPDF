@@ -569,7 +569,9 @@ internal sealed class DocxReader
             return true;
         }
 
-        if (paragraph.Parent?.Name != WordprocessingNamespace + "body")
+        bool isBodyParagraph = paragraph.Parent?.Name == WordprocessingNamespace + "body";
+        bool isTableCellParagraph = paragraph.Ancestors(WordprocessingNamespace + "tc").Any();
+        if (!isBodyParagraph && !isTableCellParagraph)
         {
             return true;
         }

@@ -9255,7 +9255,7 @@ internal static class DocxTests
         OoxPackage package = OoxPackage.Open(stream);
         DocxDocument document = new DocxReader().Read(package, diagnostics.Add);
 
-        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Table-cell column breaks should stay diagnostic until row/cell fragmentation owns the semantics.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Visible table-cell column breaks should be preserved structurally without a stale unsupported diagnostic.");
 
         DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
         TestAssert.Equal("Left Right", cell.Text);
@@ -10954,6 +10954,34 @@ internal static class DocxTests
         TestAssert.Equal(1, secondNestedRow.Table.TableIndex);
         TestAssert.Equal("Before", firstNestedRow.Cells.Single().TextLines.Single().Text);
         TestAssert.Equal("After", secondNestedRow.Cells.Single().TextLines.Single().Text);
+    }
+
+    public static void DocxTableLayoutStageKeepsTableCellColumnBreakInline()
+    {
+        DocxParagraph before = CreateDocxLayoutParagraph("Left", 10d, 10d);
+        DocxParagraph after = CreateDocxLayoutParagraph("Right", 10d, 10d);
+        var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(before),
+                new DocxManualBreakElement("runBreak", "column"),
+                new DocxParagraphElement(after)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.Equal(1, cellLayout.TextLines.Count);
+        TestAssert.Equal("LeftRight", cellLayout.TextLines.Single().Text);
     }
 
     public static void DocxTableLayoutStagePartitionsNestedTablesAcrossCompetingCellPageBreaks()
@@ -13278,8 +13306,6 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_FLOATING_DRAWING", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_FOOTNOTE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_MACRO", ids);
-        TestAssert.Contains("DOCX_UNSUPPORTED_MANUAL_BREAK", ids);
-        TestAssert.Contains("DOCX_UNSUPPORTED_MULTI_COLUMN", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_OLE_OBJECT", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_SECTION_BREAK", ids);

@@ -7362,6 +7362,18 @@ Current validation baseline:
   `docx-tables --skip-slow` (`114`). Keep table-cell column breaks, Office-exact repeated-header/merged-cell
   interactions, nested-row internal fragmentation inside explicit cell-break fragments, and fragments taller than a
   fresh frame open.
+  2026-06-02 architecture follow-up: table-cell column breaks are no longer treated as row/cell fragmentation
+  triggers. A temporary Office PDF probe with a one-cell table showed `w:br w:type="column"` inside a table cell keeps
+  the post-break run on the same baseline immediately after the pre-break run; it does not advance to a page column,
+  page, or row fragment. `DocxReader` now treats visible table-cell column breaks as supported structural tokens, and
+  `DocxLayout` normalizes table-cell body flow by merging paragraph fragments separated only by a manual column break
+  for measurement, text layout, inline-image layout, and nested-table flow. Structure/layout snapshots still report the
+  authored manual-break node, so private-safe diagnostics do not lose evidence. Bottom-up coverage verifies the
+  preserved cell body stream, absence of stale unsupported diagnostics, and same-line table-cell layout; a temporary
+  candidate PDF probe emitted no diagnostics and placed the pre/post break text on the same baseline. Validation passed
+  `docx-tables --skip-slow` (`115`), `docx-core --skip-slow` (`53`), and full solution build. Keep Office-exact
+  repeated-header/merged-cell interactions, nested-row internal fragmentation inside explicit cell-break fragments, and
+  fragments taller than a fresh frame open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
