@@ -5113,6 +5113,8 @@ internal static class DocxTests
         TestAssert.Equal(1, anchorSnapshot.AnchorColumnIndex ?? -1);
         TestAssert.Equal(109d, anchorSnapshot.HorizontalReferenceX ?? 0d);
         TestAssert.Equal(73d, anchorSnapshot.HorizontalReferenceWidth ?? 0d);
+        TestAssert.Equal(109d, anchorSnapshot.PlacedX ?? 0d);
+        TestAssert.Equal(anchorSnapshot.VerticalReferenceTop ?? 0d, anchorSnapshot.PlacedTop ?? -1d);
     }
 
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()

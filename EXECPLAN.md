@@ -7125,6 +7125,13 @@ Current validation baseline:
   ownership surface at the item, source-block, and anchor levels. Bottom-up coverage now verifies first- and
   second-column item ownership in the manual-column-break fixture. Validation passed `docx-page --skip-slow`
   (`33`), `docx-core --skip-slow` (`52`), and `docx-tables --skip-slow` (`98`).
+  2026-06-02 architecture follow-up: floating drawing layouts now derive private-safe placed anchor coordinates
+  from resolved page/margin/column/paragraph reference frames, OOXML `align` tokens, and `posOffset` tokens.
+  The resolver intentionally covers explicit left/center/right and top/center/bottom alignment plus direct
+  offsets only; unsupported modes stay unresolved rather than falling back to guessed geometry. Bottom-up
+  coverage now verifies that a second-column `relativeFrom="column"` anchor exposes both its reference frame and
+  placed x/top coordinates. Rendering anchored drawings and applying column-aware wrap exclusion remain open.
+  Validation passed `docx-page --skip-slow` (`33`) and `docx-core --skip-slow` (`52`).
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

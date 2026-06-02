@@ -30,7 +30,9 @@ internal sealed record DocxFloatingDrawingLayout(
     double? HorizontalReferenceX,
     double? HorizontalReferenceWidth,
     double? VerticalReferenceTop,
-    double? VerticalReferenceBottom);
+    double? VerticalReferenceBottom,
+    double? PlacedX,
+    double? PlacedTop);
 
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
@@ -137,6 +139,8 @@ internal sealed record DocxLayoutSnapshot(
                     drawing.HorizontalReferenceWidth,
                     drawing.VerticalReferenceTop,
                     drawing.VerticalReferenceBottom,
+                    drawing.PlacedX,
+                    drawing.PlacedTop,
                     drawing.Drawing.WrapKind,
                     drawing.Drawing.WrapTextValue,
                     drawing.Drawing.HorizontalRelativeFromValue,
@@ -702,6 +706,8 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     double? HorizontalReferenceWidth,
     double? VerticalReferenceTop,
     double? VerticalReferenceBottom,
+    double? PlacedX,
+    double? PlacedTop,
     string? WrapKind,
     string? WrapTextValue,
     string? HorizontalRelativeFromValue,
@@ -1620,6 +1626,10 @@ internal sealed class DocxLayoutEngine
                     : pages[sourceBlock.FirstPageIndex];
                 DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
                 DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
+                double? extentWidth = ReadEmuPoints(drawing.ExtentCxValue);
+                double? extentHeight = ReadEmuPoints(drawing.ExtentCyValue);
+                double? horizontalOffset = ReadEmuPoints(drawing.HorizontalOffsetValue);
+                double? verticalOffset = ReadEmuPoints(drawing.VerticalOffsetValue);
                 return new DocxFloatingDrawingLayout(
                     drawing,
                     sourceBlock?.FirstPageIndex,
@@ -1628,10 +1638,10 @@ internal sealed class DocxLayoutEngine
                     sourceBlock?.FirstColumnIndex,
                     sourceBlock?.VerticalTop,
                     sourceBlock?.VerticalBottom,
-                    ReadEmuPoints(drawing.ExtentCxValue),
-                    ReadEmuPoints(drawing.ExtentCyValue),
-                    ReadEmuPoints(drawing.HorizontalOffsetValue),
-                    ReadEmuPoints(drawing.VerticalOffsetValue),
+                    extentWidth,
+                    extentHeight,
+                    horizontalOffset,
+                    verticalOffset,
                     ReadEmuPoints(drawing.DistanceTopValue),
                     ReadEmuPoints(drawing.DistanceBottomValue),
                     ReadEmuPoints(drawing.DistanceLeftValue),
@@ -1639,9 +1649,55 @@ internal sealed class DocxLayoutEngine
                     horizontalReference?.Start,
                     horizontalReference?.Size,
                     verticalReference?.Start,
-                    verticalReference?.End);
+                    verticalReference?.End,
+                    ResolveHorizontalPlacement(horizontalReference, extentWidth, drawing.HorizontalAlignValue, horizontalOffset),
+                    ResolveVerticalPlacement(verticalReference, extentHeight, drawing.VerticalAlignValue, verticalOffset));
             })
             .ToArray();
+    }
+
+    private static double? ResolveHorizontalPlacement(
+        DocxAnchorReferenceFrame? reference,
+        double? extentWidth,
+        string? alignValue,
+        double? offset)
+    {
+        if (reference is null || extentWidth is null)
+        {
+            return null;
+        }
+
+        return alignValue?.ToLowerInvariant() switch
+        {
+            "left" => reference.Start,
+            "center" => reference.Start + Math.Max(0d, reference.Size - extentWidth.Value) / 2d,
+            "right" => reference.End - extentWidth.Value,
+            null when offset is not null => reference.Start + offset.Value,
+            "" when offset is not null => reference.Start + offset.Value,
+            _ => null
+        };
+    }
+
+    private static double? ResolveVerticalPlacement(
+        DocxAnchorReferenceFrame? reference,
+        double? extentHeight,
+        string? alignValue,
+        double? offset)
+    {
+        if (reference is null || extentHeight is null)
+        {
+            return null;
+        }
+
+        return alignValue?.ToLowerInvariant() switch
+        {
+            "top" => reference.Start,
+            "center" => reference.End + (reference.Size + extentHeight.Value) / 2d,
+            "bottom" => reference.End + extentHeight.Value,
+            null when offset is not null => reference.Start - offset.Value,
+            "" when offset is not null => reference.Start - offset.Value,
+            _ => null
+        };
     }
 
     private static DocxAnchorReferenceFrame? ResolveHorizontalReferenceFrame(
