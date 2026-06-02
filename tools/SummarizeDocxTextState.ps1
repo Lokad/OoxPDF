@@ -372,6 +372,75 @@ function Summarize-PlannerSnapshot($Snapshot) {
     }
 }
 
+function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
+    if ($null -eq $Snapshot) {
+        return $null
+    }
+
+    $segments = Flatten-PlannerSegments $Snapshot
+    if ($ReferenceOperations.Count -ne $segments.Count) {
+        return [pscustomobject]@{
+            PairCount = 0
+            ReferenceOperationCount = $ReferenceOperations.Count
+            PlannerSegmentCount = $segments.Count
+            CountsMatched = $false
+        }
+    }
+
+    $pairs = New-Object System.Collections.Generic.List[object]
+    for ($i = 0; $i -lt $ReferenceOperations.Count; $i++) {
+        $reference = $ReferenceOperations[$i]
+        $segment = $segments[$i]
+        $pairs.Add([pscustomobject]@{
+            ReferenceTc = $reference.CharacterSpacing
+            ReferenceNetAverageCharacterSpacing = $reference.NetAverageCharacterSpacing
+            ReferenceFontSize = $reference.FontSize
+            PlannerTextClass = PlannerTextClass $segment
+            PlannerTextLength = $segment.TextLength
+            PlannerPdfFontSize = $segment.PdfFontSize
+            PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
+            PlannerResidualPerGap = $segment.AdvanceProfile.UniformResidualPerGap
+            PlannerTerminalSpace = [bool]$segment.IsTerminalLineSpace
+        })
+    }
+
+    $nonzeroReferencePairs = @($pairs | Where-Object { [Math]::Abs([double]$_.ReferenceTc) -gt 0.001d })
+    return [pscustomobject]@{
+        PairCount = $pairs.Count
+        ReferenceOperationCount = $ReferenceOperations.Count
+        PlannerSegmentCount = $segments.Count
+        CountsMatched = $true
+        ReferenceTcByPlannerTextClass = @(Group-Count $pairs {
+            param($pair)
+            $pair.PlannerTextClass + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerGlyphGap = @(Group-Count $pairs {
+            param($pair)
+            "gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerResidualPerGap = @(Group-Count $pairs {
+            param($pair)
+            "resGap=" + (RoundedKey $pair.PlannerResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerFontSize = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceNetByPlannerResidualPerGap = @(Group-Count $pairs {
+            param($pair)
+            "resGap=" + (RoundedKey $pair.PlannerResidualPerGap 6) + "|refNet=" + (RoundedKey $pair.ReferenceNetAverageCharacterSpacing 6)
+        })
+        ReferenceNonzeroTcByPlannerClassGlyphGap = @(Group-Count $nonzeroReferencePairs {
+            param($pair)
+            $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceNonzeroTcByPlannerResidualPerGap = @(Group-Count $nonzeroReferencePairs {
+            param($pair)
+            "resGap=" + (RoundedKey $pair.PlannerResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+    }
+}
+
 $runs = Expand-PathList $RunDirectory
 if ($runs.Count -eq 0) {
     throw "No run directories were provided."
@@ -381,6 +450,8 @@ $summaries = foreach ($run in $runs) {
     $resolvedRun = (Resolve-Path -LiteralPath $run).Path
     $referenceOps = Read-JsonArray (Ensure-TextOperations $resolvedRun "reference")
     $candidateOps = Read-JsonArray (Ensure-TextOperations $resolvedRun "candidate")
+    $candidatePlannerSummary = Read-CandidatePlannerSummary $resolvedRun
+    $candidatePlannerSnapshot = Read-CandidatePlannerSnapshot $resolvedRun
     $metricsPath = Join-Path $resolvedRun "comparison\metrics.json"
     $metrics = if (Test-Path -LiteralPath $metricsPath) {
         $pages = Read-JsonArray $metricsPath
@@ -402,8 +473,9 @@ $summaries = foreach ($run in $runs) {
         Metrics = $metrics
         Reference = Summarize-Operations $referenceOps
         Candidate = Summarize-Operations $candidateOps
-        CandidatePlanner = Read-CandidatePlannerSummary $resolvedRun
-        CandidatePlannerSegments = Summarize-PlannerSnapshot (Read-CandidatePlannerSnapshot $resolvedRun)
+        CandidatePlanner = $candidatePlannerSummary
+        CandidatePlannerSegments = Summarize-PlannerSnapshot $candidatePlannerSnapshot
+        CandidatePlannerReferencePairs = Summarize-PlannerReferencePairs $referenceOps $candidatePlannerSnapshot
     }
 }
 

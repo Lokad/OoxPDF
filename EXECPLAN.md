@@ -38,8 +38,9 @@ keep diagnostics honest when a feature is still missing.
   counts. It must not emit private text content.
 - `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
   from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, positioned-glyph
-  residual buckets, and candidate planner segment/advance-profile buckets when `DocxInspect` output is present.
-  It must not emit decoded document text.
+  residual buckets, candidate planner segment/advance-profile buckets when `DocxInspect` output is present, and
+  sequence-paired Office-operation/planner-segment buckets when the inspected operation counts match. It must
+  not emit decoded document text.
 - `tools/SummarizeDocxRowBoundary.ps1`: private-safe DOCX table-row boundary summary for visual run directories.
   It combines layout-snapshot row bands and PDF text rows near the page bottom, emitting row indices, geometry,
   baseline diagnostics, lengths, and hashes without decoded document text.
@@ -6580,6 +6581,17 @@ Current validation baseline:
   decomposition and residual `TJ` split from public probes, not key on digit/table/font/style names or apply an
   aggregate residual as a global rule. Validation passed `docx-core --skip-slow` (`43`), refreshed public
   `InspectDocx`, public/private-safe `SummarizeDocxTextState`, and full solution build.
+  2026-06-02 sequence-pair progress: the same summary tool now pairs Office PDF text operations with candidate
+  planner segments by operation sequence when counts match exactly, and refuses to fuzzy-match when they do not.
+  On public `docx-ladder-03-table-text-state`, `35/35` operations pair cleanly; the six Office nonzero `Tc`
+  operations pair to four `digits|gaps=1|refTc=-0.0182` segments and two
+  `digits|gaps=2|refTc=-0.0182` segments, with paired residual buckets
+  `resGap=-0.044492|refTc=-0.0182` (`4`) and `resGap=-0.033369|refTc=-0.0182` (`2`). This gives a direct
+  public structural oracle for the next planner experiment while preserving the negative finding that candidate
+  residual-per-gap is not itself Word's `Tc`. On the private DOCX acceptance run, operation counts do not match
+  (`2388` Office operations vs `2323` candidate planner segments), so the tool records `CountsMatched=false`
+  and leaves pairing for public or fixed-decomposition cases. Validation passed `docx-core --skip-slow` (`43`),
+  public/private-safe `SummarizeDocxTextState`, and full solution build.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
