@@ -4625,6 +4625,14 @@ block models and richer section/pagination layout before adding more Word pagina
     diagnostics, `MAE=13.388935`, changed16 `0.124264`, worst page 9 `17.162084`. Keep actual PDF link
     annotations, internal anchors, visited/unvisited style behavior, and relationship-target modeling open
     under this parent.
+  - [x] 2026-06-02: DOCX hyperlink wrappers now have a paragraph-owned structural span instead of being only
+    styled text. `DocxHyperlinkSpan` carries `r:id`, anchor, tooltip, history token, authored target,
+    target mode, resolved internal target when applicable, source-run range, text-run range, and text length.
+    The main document reader now keeps an all-relationships view for hyperlink targets while retaining the
+    internal-only relationship view for package parts. Structure snapshots expose hyperlink counts split into
+    external and internal link inventories. Validation passed `docx-text --skip-slow` (`45`),
+    `docx-core --skip-slow` (`32`), and full solution build. Keep actual PDF annotations, internal anchor
+    destinations, visited/unvisited style behavior, and side-story/table hyperlink span coverage open.
 
 ### DOCX Synthetic Fidelity Ladder
 

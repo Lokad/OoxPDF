@@ -3075,13 +3075,33 @@ internal static class DocxTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream);
         DocxDocument document = new DocxReader().Read(package);
-        DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
+        DocxParagraph paragraph = document.Paragraphs[0];
+        DocxTextRun[] runs = paragraph.Runs.ToArray();
 
         TestAssert.Equal("Before ", runs[0].Text);
         TestAssert.Equal("Link", runs[1].Text);
         TestAssert.Equal("0563C1", runs[1].ColorHex ?? string.Empty);
         TestAssert.True(runs[1].Underline, "Expected hyperlink character style underline to survive.");
         TestAssert.Equal(" After", runs[2].Text);
+        DocxHyperlinkSpan link = paragraph.Hyperlinks.Single();
+        TestAssert.Equal("rId2", link.RelationshipId ?? string.Empty);
+        TestAssert.Equal("https://example.invalid/", link.Target ?? string.Empty);
+        TestAssert.Equal("External", link.TargetMode ?? string.Empty);
+        TestAssert.True(link.ResolvedTarget is null, "External hyperlinks should keep their target without pretending to be package-local parts.");
+        TestAssert.Equal(1, link.SourceRunStartIndex);
+        TestAssert.Equal(1, link.SourceRunCount);
+        TestAssert.Equal(1, link.TextRunStartIndex);
+        TestAssert.Equal(1, link.TextRunCount);
+        TestAssert.Equal(4, link.TextLength);
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
+        TestAssert.Equal(1, snapshot.HyperlinkCount);
+        TestAssert.Equal(1, snapshot.ExternalHyperlinkCount);
+        TestAssert.Equal(0, snapshot.InternalHyperlinkCount);
+        TestAssert.Equal(1, block.HyperlinkCount);
+        TestAssert.Equal(1, block.ExternalHyperlinkCount);
+        TestAssert.Equal(0, block.InternalHyperlinkCount);
     }
 
     public static void DocxParagraphLayoutPreservesSoftLineBreaks()

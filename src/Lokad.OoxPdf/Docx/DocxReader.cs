@@ -52,13 +52,15 @@ internal sealed class DocxReader
         XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _);
         DocxDocumentSettings documentSettings = ReadDocumentSettings(settings);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings);
         IReadOnlyList<DocxParagraph> paragraphs = bodyElements.OfType<DocxParagraphElement>().Select(e => e.Paragraph).ToArray();
         IReadOnlyList<DocxTable> tables = bodyElements.OfType<DocxTableElement>().Select(e => e.Table).ToArray();
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, relationships, styles, numbering, HeaderRelationshipType, "headerReference");
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, relationships, styles, numbering, FooterRelationshipType, "footerReference");
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference");
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference");
         IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
         IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
         IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering);
@@ -73,7 +75,7 @@ internal sealed class DocxReader
                 72d,
                 72d,
                 72d,
-                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, relationships, styles, numbering),
+                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering),
                 floatingDrawings,
                 headers,
                 footers,
@@ -109,7 +111,7 @@ internal sealed class DocxReader
             right,
             top,
             bottom,
-            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, relationships, styles, numbering),
+            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering),
             floatingDrawings,
             headers,
             footers,
@@ -695,6 +697,7 @@ internal sealed class DocxReader
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
         var inlineReferences = new List<DocxInlineReference>();
+        var hyperlinkSpans = new List<DocxHyperlinkSpan>();
         bool pageInstructionSeen = false;
         int sourceRunIndex = 0;
         foreach (XElement child in paragraph.Elements())
@@ -716,10 +719,15 @@ internal sealed class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
+                int sourceRunStartIndex = sourceRunIndex;
+                int textRunStartIndex = runs.Count;
+                int textLengthStart = runs.Sum(run => run.Text.Length);
                 foreach (XElement hyperlinkRun in child.Elements(WordprocessingNamespace + "r"))
                 {
                     AddParagraphRun(hyperlinkRun, ref pageInstructionSeen);
                 }
+
+                AddHyperlinkSpan(child, sourceRunStartIndex, sourceRunIndex - sourceRunStartIndex, textRunStartIndex, runs.Count - textRunStartIndex, runs.Sum(run => run.Text.Length) - textLengthStart);
             }
         }
 
@@ -755,8 +763,34 @@ internal sealed class DocxReader
             TabStops = resolvedParagraph.TabStops,
             SnapToGrid = resolvedParagraph.SnapToGrid,
             SnapToGridValue = resolvedParagraph.SnapToGridValue,
-            InlineReferences = inlineReferences
+            InlineReferences = inlineReferences,
+            Hyperlinks = hyperlinkSpans
         };
+
+        void AddHyperlinkSpan(
+            XElement hyperlink,
+            int sourceRunStartIndex,
+            int sourceRunCount,
+            int textRunStartIndex,
+            int textRunCount,
+            int textLength)
+        {
+            string? relationshipId = (string?)hyperlink.Attribute(RelationshipsNamespace + "id");
+            relationships.TryGetValue(relationshipId ?? string.Empty, out OoxRelationship? relationship);
+            hyperlinkSpans.Add(new DocxHyperlinkSpan(
+                relationshipId,
+                (string?)hyperlink.Attribute(WordprocessingNamespace + "anchor"),
+                (string?)hyperlink.Attribute(WordprocessingNamespace + "tooltip"),
+                (string?)hyperlink.Attribute(WordprocessingNamespace + "history"),
+                relationship?.Target,
+                relationship?.TargetMode,
+                relationship?.ResolvedTarget,
+                sourceRunStartIndex,
+                sourceRunCount,
+                textRunStartIndex,
+                textRunCount,
+                textLength));
+        }
 
         void AddSimpleField(XElement field)
         {

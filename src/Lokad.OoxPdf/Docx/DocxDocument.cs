@@ -222,6 +222,7 @@ internal sealed record DocxParagraph(
     public bool? SnapToGrid { get; init; }
     public string? SnapToGridValue { get; init; }
     public IReadOnlyList<DocxInlineReference> InlineReferences { get; init; } = [];
+    public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
 }
 
 internal sealed record DocxInlineReference(
@@ -231,6 +232,20 @@ internal sealed record DocxInlineReference(
     int SourceRunIndex = -1,
     int RunChildIndex = -1,
     int TextOffsetInRun = 0);
+
+internal sealed record DocxHyperlinkSpan(
+    string? RelationshipId,
+    string? Anchor,
+    string? Tooltip,
+    string? HistoryValue,
+    string? Target,
+    string? TargetMode,
+    string? ResolvedTarget,
+    int SourceRunStartIndex,
+    int SourceRunCount,
+    int TextRunStartIndex,
+    int TextRunCount,
+    int TextLength);
 
 internal sealed record DocxTabStop(
     double? PositionPoints,
