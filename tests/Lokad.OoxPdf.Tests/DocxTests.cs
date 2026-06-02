@@ -4556,6 +4556,74 @@ internal static class DocxTests
 
         TestAssert.Equal(2, lines.Length);
         TestAssert.Equal(10d, Math.Round(lines[0].BaselineY - lines[1].BaselineY, 3));
+        TestAssert.Equal(0d, lines[0].PendingAfterSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[0].ParagraphBeforeSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[0].ParagraphAfterSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[0].AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(lines[0].ContextualSpacingSuppressed == false, "The first same-style paragraph should expose that contextual spacing did not suppress its boundary.");
+        TestAssert.Equal(10d, lines[1].PendingAfterSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[1].ParagraphBeforeSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[1].ParagraphAfterSpacing ?? -1d);
+        TestAssert.Equal(0d, lines[1].AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(lines[1].ContextualSpacingSuppressed == true, "The second same-style paragraph should expose the contextual spacing suppression decision.");
+    }
+
+    public static void DocxSyntheticContextualSpacingKeepsDifferentStyleGap()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        var spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, null, true);
+        var first = new DocxParagraph(
+            [new DocxTextRun("First", 10d, null, false, false, false, null, null)],
+            [],
+            "BodyA",
+            DocxTextAlignment.Left,
+            null,
+            10d,
+            10d,
+            1d,
+            10d,
+            spacing,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var second = first with
+        {
+            Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, null)],
+            StyleId = "BodyB"
+        };
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
+            [first, second],
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(20d, Math.Round(lines[0].BaselineY - lines[1].BaselineY, 3));
+        TestAssert.Equal(10d, lines[1].PendingAfterSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[1].ParagraphBeforeSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[1].AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(lines[1].ContextualSpacingSuppressed == false, "Different styles should keep the authored boundary gap even when contextual spacing is enabled.");
     }
 
     public static void DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage()

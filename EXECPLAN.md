@@ -517,6 +517,11 @@ High-priority actions:
   maps those fields and emits paragraph spacing profile buckets. This is diagnostic groundwork for separating
   the first list-boundary gap from repeated compact-list row rhythm; do not turn it into a new spacing rule
   until the Office PDF row deltas point to a structural discriminator.
+  2026-06-02 coverage follow-up: bottom-up DOCX tests now assert the paragraph spacing profile directly on
+  contextual-spacing boundaries. Same-style adjacent paragraphs expose nonzero pending/author before-after
+  values but zero applied before-spacing with `ContextualSpacingSuppressed=true`; different-style adjacent
+  paragraphs keep the authored gap with suppression false. This locks the intended Word-style boundary
+  structure before using those fields in any compact-list rule.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table
