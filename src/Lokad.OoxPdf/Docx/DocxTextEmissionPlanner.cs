@@ -38,11 +38,23 @@ internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
     int AdvanceUnits,
     int KerningUnits,
     int PairAdvanceUnits,
+    int PairLeftAdvanceUnits,
+    int PairRightAdvanceUnits,
     int PairAdvanceMinUnits,
     int PairAdvanceMaxUnits,
+    int PairLeftAdvanceMinUnits,
+    int PairLeftAdvanceMaxUnits,
+    int PairRightAdvanceMinUnits,
+    int PairRightAdvanceMaxUnits,
     double PairAdvanceEm,
+    double PairLeftAdvanceEm,
+    double PairRightAdvanceEm,
     double PairAdvanceMinEm,
     double PairAdvanceMaxEm,
+    double PairLeftAdvanceMinEm,
+    double PairLeftAdvanceMaxEm,
+    double PairRightAdvanceMinEm,
+    double PairRightAdvanceMaxEm,
     string PairHash,
     string Hash);
 
@@ -159,8 +171,14 @@ internal static class DocxTextEmissionPlanner
         int advanceUnits = 0;
         int kerningUnits = 0;
         int pairAdvanceUnits = 0;
+        int pairLeftAdvanceUnits = 0;
+        int pairRightAdvanceUnits = 0;
         int pairAdvanceMinUnits = 0;
         int pairAdvanceMaxUnits = 0;
+        int pairLeftAdvanceMinUnits = 0;
+        int pairLeftAdvanceMaxUnits = 0;
+        int pairRightAdvanceMinUnits = 0;
+        int pairRightAdvanceMaxUnits = 0;
         ulong pairHash = fnvOffset;
         int unitsPerEm = Math.Max(1, (int)embedded.Font.UnitsPerEm);
         ushort previousGlyph = 0;
@@ -181,8 +199,14 @@ internal static class DocxTextEmissionPlanner
                 kerningUnits += kerning;
                 int pairAdvance = previousAdvance + advance + kerning;
                 pairAdvanceUnits += pairAdvance;
+                pairLeftAdvanceUnits += previousAdvance;
+                pairRightAdvanceUnits += advance;
                 pairAdvanceMinUnits = glyphPairCount == 1 ? pairAdvance : Math.Min(pairAdvanceMinUnits, pairAdvance);
                 pairAdvanceMaxUnits = glyphPairCount == 1 ? pairAdvance : Math.Max(pairAdvanceMaxUnits, pairAdvance);
+                pairLeftAdvanceMinUnits = glyphPairCount == 1 ? previousAdvance : Math.Min(pairLeftAdvanceMinUnits, previousAdvance);
+                pairLeftAdvanceMaxUnits = glyphPairCount == 1 ? previousAdvance : Math.Max(pairLeftAdvanceMaxUnits, previousAdvance);
+                pairRightAdvanceMinUnits = glyphPairCount == 1 ? advance : Math.Min(pairRightAdvanceMinUnits, advance);
+                pairRightAdvanceMaxUnits = glyphPairCount == 1 ? advance : Math.Max(pairRightAdvanceMaxUnits, advance);
                 pairHash = AppendHash(pairHash, previousGlyph, fnvPrime);
                 pairHash = AppendHash(pairHash, glyph, fnvPrime);
                 pairHash = AppendHash(pairHash, unchecked((ushort)pairAdvance), fnvPrime);
@@ -204,11 +228,23 @@ internal static class DocxTextEmissionPlanner
             advanceUnits,
             kerningUnits,
             pairAdvanceUnits,
+            pairLeftAdvanceUnits,
+            pairRightAdvanceUnits,
             pairAdvanceMinUnits,
             pairAdvanceMaxUnits,
+            pairLeftAdvanceMinUnits,
+            pairLeftAdvanceMaxUnits,
+            pairRightAdvanceMinUnits,
+            pairRightAdvanceMaxUnits,
             (double)pairAdvanceUnits / unitsPerEm,
+            (double)pairLeftAdvanceUnits / unitsPerEm,
+            (double)pairRightAdvanceUnits / unitsPerEm,
             (double)pairAdvanceMinUnits / unitsPerEm,
             (double)pairAdvanceMaxUnits / unitsPerEm,
+            (double)pairLeftAdvanceMinUnits / unitsPerEm,
+            (double)pairLeftAdvanceMaxUnits / unitsPerEm,
+            (double)pairRightAdvanceMinUnits / unitsPerEm,
+            (double)pairRightAdvanceMaxUnits / unitsPerEm,
             pairHash.ToString("X16", CultureInfo.InvariantCulture),
             hash.ToString("X16", CultureInfo.InvariantCulture));
     }

@@ -6723,6 +6723,17 @@ Current validation baseline:
   is still insufficient because `roundResGap=-0.053532` maps to both `refTc=-0.0437` and `refTc=0.0509`.
   Keep this as PDF-level structural evidence; do not turn rounded residuals, pair ranges, text classes, or
   public bucket values into renderer conditions without a deeper Office-like shaping/decomposition model.
+  2026-06-02 pair-side advance follow-up: candidate glyph-pair signatures now expose the aggregate and min/max
+  left-side and right-side glyph advances for each adjacent pair, with normalized em-unit counterparts, and
+  `SummarizeDocxTextState.ps1` pairs Office `Tc` against those side ranges with and without PDF font size.
+  Refreshed public runs `docx-ladder-03-text-state-size-matrix` (`20260602-090220`), `docx-ladder-03-table-text-state`
+  (`20260602-090232`), and `docx-ladder-03-text-state-context` (`20260602-090241`) show why this matters:
+  the previous ambiguous `pairMin=2732|pairMax=2732` context bucket splits structurally into
+  `1366+1366 -> refTc=-0.0437` and `1593+1139 -> refTc=0.0509`. A mechanical check over those three public
+  cases found zero ambiguous `PdfFontSize + pair-side advance range -> Office Tc` keys. Treat this as stronger
+  shaping/decomposition evidence, not as permission to encode a bucket table; the next renderer branch should
+  derive a uniform text-state component from Office-like font-size and glyph-pair structure, with public guards
+  against token strings, font names, table roles, text classes, and observed constants.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored

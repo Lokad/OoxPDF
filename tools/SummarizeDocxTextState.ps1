@@ -453,11 +453,23 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerGlyphAdvanceSignature = $segment.GlyphAdvanceSignature.Hash
             PlannerGlyphPairAdvanceSignature = $segment.GlyphAdvanceSignature.PairHash
             PlannerGlyphPairAdvanceUnits = $segment.GlyphAdvanceSignature.PairAdvanceUnits
+            PlannerGlyphPairLeftAdvanceUnits = $segment.GlyphAdvanceSignature.PairLeftAdvanceUnits
+            PlannerGlyphPairRightAdvanceUnits = $segment.GlyphAdvanceSignature.PairRightAdvanceUnits
             PlannerGlyphPairAdvanceMinUnits = $segment.GlyphAdvanceSignature.PairAdvanceMinUnits
             PlannerGlyphPairAdvanceMaxUnits = $segment.GlyphAdvanceSignature.PairAdvanceMaxUnits
+            PlannerGlyphPairLeftAdvanceMinUnits = $segment.GlyphAdvanceSignature.PairLeftAdvanceMinUnits
+            PlannerGlyphPairLeftAdvanceMaxUnits = $segment.GlyphAdvanceSignature.PairLeftAdvanceMaxUnits
+            PlannerGlyphPairRightAdvanceMinUnits = $segment.GlyphAdvanceSignature.PairRightAdvanceMinUnits
+            PlannerGlyphPairRightAdvanceMaxUnits = $segment.GlyphAdvanceSignature.PairRightAdvanceMaxUnits
             PlannerGlyphPairAdvanceEm = $segment.GlyphAdvanceSignature.PairAdvanceEm
+            PlannerGlyphPairLeftAdvanceEm = $segment.GlyphAdvanceSignature.PairLeftAdvanceEm
+            PlannerGlyphPairRightAdvanceEm = $segment.GlyphAdvanceSignature.PairRightAdvanceEm
             PlannerGlyphPairAdvanceMinEm = $segment.GlyphAdvanceSignature.PairAdvanceMinEm
             PlannerGlyphPairAdvanceMaxEm = $segment.GlyphAdvanceSignature.PairAdvanceMaxEm
+            PlannerGlyphPairLeftAdvanceMinEm = $segment.GlyphAdvanceSignature.PairLeftAdvanceMinEm
+            PlannerGlyphPairLeftAdvanceMaxEm = $segment.GlyphAdvanceSignature.PairLeftAdvanceMaxEm
+            PlannerGlyphPairRightAdvanceMinEm = $segment.GlyphAdvanceSignature.PairRightAdvanceMinEm
+            PlannerGlyphPairRightAdvanceMaxEm = $segment.GlyphAdvanceSignature.PairRightAdvanceMaxEm
             PlannerTerminalSpace = [bool]$segment.IsTerminalLineSpace
         })
     }
@@ -499,6 +511,22 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerGlyphPairAdvanceEmRange = @(Group-Count $pairs {
             param($pair)
             "pairMinEm=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinEm 6) + "|pairMaxEm=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxEm 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerGlyphPairSideAdvanceRange = @(Group-Count $pairs {
+            param($pair)
+            "leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerGlyphPairSideAdvanceEmRange = @(Group-Count $pairs {
+            param($pair)
+            "leftMinEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinEm 6) + "|leftMaxEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxEm 6) + "|rightMinEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinEm 6) + "|rightMaxEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxEm 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerFontSizeAndGlyphPairSideAdvanceRange = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerFontSizeAndGlyphPairSideAdvanceEmRange = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMinEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinEm 6) + "|leftMaxEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxEm 6) + "|rightMinEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinEm 6) + "|rightMaxEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxEm 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceTcByPlannerFontSize = @(Group-Count $pairs {
             param($pair)
