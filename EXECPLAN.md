@@ -587,6 +587,16 @@ High-priority actions:
   counts now match Office for the probe: page 1 `104` junction squares, `96` vertical strips, `75` horizontal
   strips; page 2 `40`/`32`/`27`. Keep the visual residual open for row text/baseline and row-boundary geometry,
   not for missing collapsed-border junction primitives.
+  2026-06-03 follow-up: row-boundary evidence on the same public probe showed the first table's two-line
+  9pt Arial cells advancing by `11.98875pt` in the candidate while Office's PDF rows advance on a `12.0pt`
+  inter-line grid. A blanket auto-line-height twip rounding trial improved this public page but regressed the
+  private aggregate to `MAE=9.288089`, so it was rejected. The landed slice rounds only wrapped multi-line
+  table-cell line advances to the nearest twip, leaving one-line table rows and body paragraphs on the prior
+  metric path. Public `docx-ladder-03-table-continuation-adjacency` run `20260603-003604` improved page 1 to
+  `MAE=2.726277`, changed16 `0.037500`, SSIM `0.871254`, with page 2 unchanged at `MAE=1.426858`,
+  changed16 `0.013480`; private DOCX run `20260603-003619` stayed page-stable at `16/16`, zero dimension
+  mismatches, no diagnostics, aggregate `MAE=8.924355`, changed16 `0.095330`. Keep the branch open for the
+  remaining row-boundary and table-cell text-state gaps rather than broadening line-height rounding again.
   2026-06-02 architecture follow-up: DOCX text emission snapshots now carry a private-safe segment role
   (`ListLabel`, `ListSeparator`, or `Text`) from layout through PDF emission, and
   `tools/SummarizeDocxTextState.ps1` buckets planner/reference pairs by that role. This removes the need to
@@ -2966,6 +2976,14 @@ High-priority actions:
     buckets on both pages. Validation passed `docx-tables --skip-slow` (`119`). The slight raster delta
     increase is only about `+0.000395` MAE per page because these are sub-point overpaint nodes; this closes
     a PDF-structure mismatch while leaving row-baseline/fragment-origin work open.
+    2026-06-03 follow-up: wrapped table-cell auto line advances now quantize to the twip grid before row
+    height accumulation. This is intentionally narrower than the rejected blanket body/table rounding trial:
+    it applies only when a table-cell paragraph actually wraps to multiple lines. Public continuation run
+    `20260603-003604` improved page 1 from `MAE=5.948664`, changed16 `0.060323`, SSIM `0.681777` to
+    `MAE=2.726277`, changed16 `0.037500`, SSIM `0.871254`, while page 2 stayed unchanged. Private run
+    `20260603-003619` stayed accepted (`16/16`, zero dimension mismatches, no diagnostics) with aggregate
+    `MAE=8.924355`, changed16 `0.095330`. Keep this parent open for exact Word row-boundary selection,
+    table-cell text-state decomposition, and remaining one-line row placement.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
@@ -6628,6 +6646,14 @@ Current validation baseline:
   junction/vertical/horizontal fills). `docx-tables --skip-slow` passed `119`. Keep non-`single` border
   styles, full Word border conflict ranking, RTL ownership, and row-fragment text/border continuation rules
   open.
+- DOCX wrapped table-cell line-height validation:
+  after quantizing only wrapped multi-line table-cell auto line advances to whole twips, `docx-tables
+  --skip-slow` passed `120`, `docx-text --skip-slow` passed `49`, and full solution build passed. Public
+  `docx-ladder-03-table-continuation-adjacency` run `20260603-003604` improved page 1 to `MAE=2.726277`,
+  changed16 `0.037500`, SSIM `0.871254`; page 2 remained `MAE=1.426858`, changed16 `0.013480`. Private DOCX
+  run `20260603-003619` stayed page-stable at `16/16`, zero dimension mismatches, no diagnostics, aggregate
+  `MAE=8.924355`, changed16 `0.095330`. The rejected blanket auto-line-height twip rounding trial is recorded
+  in Progress; do not reintroduce it without public body-paragraph evidence.
 - DOCX shared vertical table-border validation:
   after emitting each shared vertical border once and honoring adjacent `nil`/`none` suppression,
   `docx-tables --skip-slow` passed `59`, `docx-page --skip-slow` passed `17`, and

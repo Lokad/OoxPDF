@@ -3248,6 +3248,16 @@ internal sealed class DocxLayoutEngine
         return paragraph.LineSpacingFactor;
     }
 
+    private static double RoundToTwips(double points)
+    {
+        return Math.Round(points * 20d, MidpointRounding.AwayFromZero) / 20d;
+    }
+
+    private static double QuantizeTableCellWrappedLineHeight(double lineHeight, int wrappedLineCount)
+    {
+        return wrappedLineCount > 1 ? RoundToTwips(lineHeight) : lineHeight;
+    }
+
     private static bool ShouldMoveParagraphForWidowControl(
         DocxParagraph paragraph,
         int lineCount,
@@ -4815,6 +4825,7 @@ internal sealed class DocxLayoutEngine
                 double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
                 double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
                 int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true).Count();
+                lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
                 contentHeight += lineCount * lineHeight;
             }
             else if (paragraph.Images.Count == 0)
@@ -4931,6 +4942,7 @@ internal sealed class DocxLayoutEngine
                 double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                 bool firstLine = true;
                 DocxWrappedTextLine[] wrappedLines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true).ToArray();
+                lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, wrappedLines.Length);
                 for (int lineIndex = 0; lineIndex < wrappedLines.Length; lineIndex++)
                 {
                     DocxWrappedTextLine line = wrappedLines[lineIndex];

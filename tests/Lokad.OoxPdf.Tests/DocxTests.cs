@@ -11425,6 +11425,40 @@ internal static class DocxTests
         TestAssert.Equal(10d, row.Height);
     }
 
+    public static void DocxTableLayoutStageQuantizesAutoLineHeightToTwips()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Alpha Beta", 9d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("Alpha Beta", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [30d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FractionalLineHeightTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single()
+            .TextLines
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(12d, Math.Round(lines[0].BaselineY - lines[1].BaselineY, 6));
+    }
+
     public static void DocxTableLayoutStageIncludesCollapsedHorizontalBorderAdvanceForContentRows()
     {
         var paragraph = new DocxParagraph(
@@ -14717,6 +14751,29 @@ internal static class DocxTests
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
         {
             return run?.FontFamily == "Label Metrics" ? fontSize * 0.3d : fontSize * 0.2d;
+        }
+    }
+
+    private sealed class FractionalLineHeightTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize)
+        {
+            return text.Length * 5d;
+        }
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
+        {
+            return 11.98875d;
+        }
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+        {
+            return fontSize;
+        }
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+        {
+            return fontSize * 0.2d;
         }
     }
 
