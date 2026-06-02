@@ -5046,6 +5046,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     and test call sites. This is a no-behavior-change architectural step so future Office-derived calibration
     has one structural home. Validation passed `docx-tables --skip-slow` (`87`) and `docx-core --skip-slow`
     (`25`). Keep this item open for the actual Word-backed first-baseline fixture and metric replacement.
+    2026-06-02 follow-up: `DocxLayoutSnapshot` table-cell records now expose the resolved first-baseline inset
+    separately from the placed first/last baseline y-coordinates. This is still a no-behavior-change trace step,
+    but it gives private-safe and public fixture comparisons the exact metric input that currently comes from
+    `DocxLineMetrics.ResolveTableCellFirstBaselineInset`, so future Office-backed replacement can distinguish
+    row/cell geometry drift from baseline metric drift. Validation passed `docx-core --skip-slow` (`53`),
+    `docx-tables --skip-slow` (`100`), and full solution build.
 - [ ] Revisit keep rules only after layout tracing exists: support style-derived `keepNext`, `keepLines`, and
   widow/orphan control with synthetic tests and private page-count checks.
   2026-06-02 follow-up: keep-block preflight now returns a typed `DocxKeepBlockEstimate` with measured
