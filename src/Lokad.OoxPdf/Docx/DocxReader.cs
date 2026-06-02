@@ -628,7 +628,6 @@ internal sealed class DocxReader
         XName[] unsupportedTrackChangeContainers =
         [
             WordprocessingNamespace + "moveFrom",
-            WordprocessingNamespace + "moveTo",
             WordprocessingNamespace + "moveFromRangeStart",
             WordprocessingNamespace + "moveFromRangeEnd",
             WordprocessingNamespace + "moveToRangeStart",
@@ -639,9 +638,15 @@ internal sealed class DocxReader
             return true;
         }
 
-        return document.Descendants(WordprocessingNamespace + "ins").Any(insertion =>
-            !IsSupportedInlineContainerParent(insertion.Parent) ||
-            insertion.Elements().Any(child => !IsSupportedVisibleInlineContainerChild(child)));
+        XName[] visibleTrackedChangeContainers =
+        [
+            WordprocessingNamespace + "ins",
+            WordprocessingNamespace + "moveTo"
+        ];
+        return visibleTrackedChangeContainers.Any(containerName =>
+            document.Descendants(containerName).Any(container =>
+                !IsSupportedInlineContainerParent(container.Parent) ||
+                container.Elements().Any(child => !IsSupportedVisibleInlineContainerChild(child))));
     }
 
     private static bool HasUnsupportedComplexFields(XDocument document)
@@ -671,7 +676,8 @@ internal sealed class DocxReader
         return element is not null &&
             (element.Name == WordprocessingNamespace + "hyperlink" ||
             element.Name == WordprocessingNamespace + "fldSimple" ||
-            element.Name == WordprocessingNamespace + "ins");
+            element.Name == WordprocessingNamespace + "ins" ||
+            element.Name == WordprocessingNamespace + "moveTo");
     }
 
     private static bool IsSupportedInlineContainerParent(XElement? element)
@@ -938,10 +944,11 @@ internal sealed class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "ins")
             {
-                foreach (XElement insertedChild in child.Elements())
-                {
-                    AddInlineContainerChild(insertedChild);
-                }
+                AddVisibleRunContainer(child);
+            }
+            else if (child.Name == WordprocessingNamespace + "moveTo")
+            {
+                AddVisibleRunContainer(child);
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
@@ -969,14 +976,23 @@ internal sealed class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "ins")
             {
-                foreach (XElement insertedChild in child.Elements())
-                {
-                    AddInlineContainerChild(insertedChild);
-                }
+                AddVisibleRunContainer(child);
+            }
+            else if (child.Name == WordprocessingNamespace + "moveTo")
+            {
+                AddVisibleRunContainer(child);
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
                 AddHyperlinkContainer(child);
+            }
+        }
+
+        void AddVisibleRunContainer(XElement container)
+        {
+            foreach (XElement containerChild in container.Elements())
+            {
+                AddInlineContainerChild(containerChild);
             }
         }
 
@@ -1847,7 +1863,8 @@ internal sealed class DocxReader
     {
         return element.Name == WordprocessingNamespace + "fldSimple" ||
             element.Name == WordprocessingNamespace + "hyperlink" ||
-            element.Name == WordprocessingNamespace + "ins";
+            element.Name == WordprocessingNamespace + "ins" ||
+            element.Name == WordprocessingNamespace + "moveTo";
     }
 
     private static bool IsPageBreak(XElement breakElement)

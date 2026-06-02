@@ -7201,10 +7201,15 @@ Current validation baseline:
 - DOCX simple tracked-change final-view validation:
   simple paragraph-child `w:ins` runs are already rendered and direct `w:del` content is hidden, matching the
   final document view instead of exposing revision markup. The `DOCX_UNSUPPORTED_TRACKED_CHANGES` diagnostic is
-  now limited to unsupported move/range revision structures and insertions whose content is not direct runs.
+  now limited to unsupported moved-from/range revision structures and visible revision containers whose content
+  is outside the supported inline subtree. Visible final-view `w:moveTo` content now shares the same recursive
+  inline-container path as `w:ins`, including page-break splitting, so moved-to runs are emitted while moved-from
+  content remains hidden.
   Validation passed `docx-text --skip-slow` (`33`), `docx-core --skip-slow` (`19`), and
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`. Private DOCX run `20260601-095044` stayed
   neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.388935`, changed16 `0.124264`.
+  Follow-up validation passed `docx-core --skip-slow` (`56`), `docx-page --skip-slow` (`42`), and
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
 - DOCX complex-field cached-result validation:
   complex-field diagnostics now distinguish malformed/evaluation-only fields from closed fields that can be
   rendered from cached result runs. PAGE/NUMPAGES placeholders remain supported, and closed fields with an
