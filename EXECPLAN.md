@@ -7388,6 +7388,14 @@ Current validation baseline:
   `docx-tables --skip-slow` (`117`). Keep the broader Office-derived merged-cell branch open for continuation
   border/text emission rules, especially cases where the owner content itself must be clipped or re-emitted
   across continuation-page fragments, plus nested-row internal fragmentation inside explicit cell-break fragments.
+  2026-06-02 architecture follow-up: nested tables inside explicit cell-break row fragments now have an
+  inside-block boundary model instead of only a table-index partition. When a competing cell page break lands
+  inside a nested table block, both outer row fragments can retain the same child table identity while child
+  rows are filtered by fragment geometry; when the break lands cleanly between nested table blocks, the older
+  block-index partition still applies. Bottom-up coverage now verifies both the block-aligned competing-break
+  case and a multi-row nested table split across competing cell-page-break fragments. Validation passed
+  `docx-tables --skip-slow` (`118`). Keep the broader Office-derived merged-cell border/text continuation
+  branch open; this closes only the nested-row internal fragmentation gap for explicit cell-break row fragments.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

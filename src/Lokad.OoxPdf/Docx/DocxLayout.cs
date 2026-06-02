@@ -3610,6 +3610,8 @@ internal sealed class DocxLayoutEngine
             int? cellPageBreakUpperParagraphBoundaryIndex = null;
             int cellPageBreakLowerNestedTableBoundaryIndex = 0;
             int? cellPageBreakUpperNestedTableBoundaryIndex = null;
+            bool cellPageBreakLowerBoundaryInsideNestedTable = false;
+            bool cellPageBreakUpperBoundaryInsideNestedTable = false;
             if (useCellPageBreakBoundaryPartition)
             {
                 if (fragmentOffsetFromRowTop > 0.001d &&
@@ -3619,9 +3621,10 @@ internal sealed class DocxLayoutEngine
                 }
 
                 if (fragmentOffsetFromRowTop > 0.001d &&
-                    TryResolveTableCellNestedTableBoundaryIndex(cell, cellWidth, rowTopPadding, fragmentOffsetFromRowTop, textMeasurer!, defaultTabStopPoints, out int lowerNestedTableBoundaryIndex))
+                    TryResolveTableCellNestedTableBoundary(cell, cellWidth, rowTopPadding, fragmentOffsetFromRowTop, textMeasurer!, defaultTabStopPoints, out DocxNestedTableBoundary lowerNestedTableBoundary))
                 {
-                    cellPageBreakLowerNestedTableBoundaryIndex = lowerNestedTableBoundaryIndex;
+                    cellPageBreakLowerNestedTableBoundaryIndex = lowerNestedTableBoundary.BoundaryIndex;
+                    cellPageBreakLowerBoundaryInsideNestedTable = lowerNestedTableBoundary.IsInsideNestedTable;
                 }
 
                 double fragmentEndFromRowTop = fragmentOffsetFromRowTop + rowHeight;
@@ -3632,11 +3635,19 @@ internal sealed class DocxLayoutEngine
                 }
 
                 if (fragmentEndFromRowTop < fullRowHeight - 0.001d &&
-                    TryResolveTableCellNestedTableBoundaryIndex(cell, cellWidth, rowTopPadding, fragmentEndFromRowTop, textMeasurer!, defaultTabStopPoints, out int upperNestedTableBoundaryIndex))
+                    TryResolveTableCellNestedTableBoundary(cell, cellWidth, rowTopPadding, fragmentEndFromRowTop, textMeasurer!, defaultTabStopPoints, out DocxNestedTableBoundary upperNestedTableBoundary))
                 {
-                    cellPageBreakUpperNestedTableBoundaryIndex = upperNestedTableBoundaryIndex;
+                    cellPageBreakUpperNestedTableBoundaryIndex = upperNestedTableBoundary.BoundaryIndex + (upperNestedTableBoundary.IsInsideNestedTable ? 1 : 0);
+                    cellPageBreakUpperBoundaryInsideNestedTable = upperNestedTableBoundary.IsInsideNestedTable;
                 }
             }
+
+            bool cellPageBreakBoundaryInsideNestedTable =
+                cellPageBreakLowerBoundaryInsideNestedTable ||
+                cellPageBreakUpperBoundaryInsideNestedTable;
+            bool cellPageBreakAlignsWithNestedTableBlock =
+                useCellPageBreakBoundaryPartition &&
+                !cellPageBreakBoundaryInsideNestedTable;
 
             IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
                 ? []
@@ -3654,7 +3665,7 @@ internal sealed class DocxLayoutEngine
                 ? []
                 : LayoutTableCellNestedTables(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
                     .Where(rowLayout => IsNestedTableRowOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerNestedTableBoundaryIndex, cellPageBreakUpperNestedTableBoundaryIndex, rowLayout, FragmentCount))
-                    .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
+                    .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(cellPageBreakAlignsWithNestedTableBlock, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
             cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, verticalMergeOwner, visualOwnership, nestedTableRows));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
@@ -3804,16 +3815,18 @@ internal sealed class DocxLayoutEngine
         return paragraphBoundaryIndex > 0;
     }
 
-    private static bool TryResolveTableCellNestedTableBoundaryIndex(
+    private sealed record DocxNestedTableBoundary(int BoundaryIndex, bool IsInsideNestedTable);
+
+    private static bool TryResolveTableCellNestedTableBoundary(
         DocxTableCell cell,
         double cellWidth,
         double rowTopPadding,
         double fragmentBoundaryFromRowTop,
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
-        out int nestedTableBoundaryIndex)
+        out DocxNestedTableBoundary boundary)
     {
-        nestedTableBoundaryIndex = 0;
+        boundary = new DocxNestedTableBoundary(0, IsInsideNestedTable: false);
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
@@ -3826,6 +3839,7 @@ internal sealed class DocxLayoutEngine
         double consumedHeight = rowTopPadding;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        int nestedTableIndex = 0;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
             if (bodyElement is DocxTableElement tableElement)
@@ -3833,13 +3847,21 @@ internal sealed class DocxLayoutEngine
                 consumedHeight += pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                consumedHeight += MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints);
-                nestedTableBoundaryIndex++;
+                double tableTop = consumedHeight;
+                double tableHeight = MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints);
+                consumedHeight += tableHeight;
                 if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
                 {
+                    bool boundaryInsideTable =
+                        fragmentBoundaryFromRowTop > tableTop + 0.001d &&
+                        fragmentBoundaryFromRowTop < consumedHeight - 0.001d;
+                    boundary = new DocxNestedTableBoundary(
+                        boundaryInsideTable ? nestedTableIndex : nestedTableIndex + 1,
+                        boundaryInsideTable);
                     return true;
                 }
 
+                nestedTableIndex++;
                 continue;
             }
 
@@ -3855,6 +3877,7 @@ internal sealed class DocxLayoutEngine
             consumedHeight += MeasureTableCellParagraphContentHeight(paragraph, textWidth, textMeasurer, defaultTabStopPoints);
             if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
             {
+                boundary = new DocxNestedTableBoundary(nestedTableIndex, IsInsideNestedTable: false);
                 return true;
             }
 
@@ -3862,7 +3885,8 @@ internal sealed class DocxLayoutEngine
             previousParagraph = paragraph;
         }
 
-        return nestedTableBoundaryIndex > 0;
+        boundary = new DocxNestedTableBoundary(nestedTableIndex, IsInsideNestedTable: false);
+        return nestedTableIndex > 0;
     }
 
     private static bool IsTextLineOnVisibleSideOfCellPageBreak(

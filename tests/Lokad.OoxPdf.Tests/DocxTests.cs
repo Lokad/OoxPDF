@@ -11131,9 +11131,9 @@ internal static class DocxTests
 
     public static void DocxTableLayoutStagePartitionsNestedTablesAcrossCompetingCellPageBreaks()
     {
-        DocxParagraph earlyBefore = CreateDocxLayoutParagraph("EarlyBefore", 8d, 8d);
-        DocxParagraph earlyAfter = CreateDocxLayoutParagraph("EarlyAfter", 8d, 8d);
-        DocxTable beforeNestedTable = CreateSingleCellTable("Before", 8d);
+        DocxParagraph earlyBefore = CreateDocxLayoutParagraph("EarlyBefore", 8d, 12d);
+        DocxParagraph earlyAfter = CreateDocxLayoutParagraph("EarlyAfter", 8d, 12d);
+        DocxTable beforeNestedTable = CreateSingleCellTable("Before", 12d);
         DocxTable middleNestedTable = CreateSingleCellTable("Middle", 12d);
         DocxTable afterNestedTable = CreateSingleCellTable("After", 10d);
         var earlyCell = new DocxTableCell(string.Empty, [earlyBefore, earlyAfter], null, null, null, null, [], DocxTableCellMargins.Empty)
@@ -11171,6 +11171,56 @@ internal static class DocxTests
         TestAssert.Equal(0, rowFragments[0].Cells[1].NestedRows.Single().Table.TableIndex);
         TestAssert.Equal(1, rowFragments[1].Cells[1].NestedRows.Single().Table.TableIndex);
         TestAssert.Equal(2, rowFragments[2].Cells[1].NestedRows.Single().Table.TableIndex);
+    }
+
+    public static void DocxTableLayoutStageSplitsNestedTableRowsAcrossCompetingCellPageBreak()
+    {
+        DocxParagraph earlyBefore = CreateDocxLayoutParagraph("EarlyBefore", 10d, 20d);
+        DocxParagraph earlyAfter = CreateDocxLayoutParagraph("EarlyAfter", 10d, 10d);
+        DocxTableRow[] nestedRows = Enumerable.Range(1, 6)
+            .Select(index => new DocxTableRow(
+                [new DocxTableCell("Nested" + index.ToString(CultureInfo.InvariantCulture), [CreateDocxLayoutParagraph("Nested" + index.ToString(CultureInfo.InvariantCulture), 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty)],
+                10d))
+            .ToArray();
+        DocxTable nestedTable = new(null, [60d], nestedRows);
+        var earlyCell = new DocxTableCell(string.Empty, [earlyBefore, earlyAfter], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(earlyBefore),
+                new DocxPageBreakElement("earlyBreak", "page"),
+                new DocxParagraphElement(earlyAfter)
+            ]
+        };
+        var nestedCell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxTableElement(nestedTable)]
+        };
+        DocxTable table = new(null, [60d, 90d], [new DocxTableRow([earlyCell, nestedCell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, nestedTable]);
+
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .ToArray();
+
+        TestAssert.Equal(2, rowFragments.Length);
+        TestAssert.Equal(0, rowFragments[0].FragmentIndex);
+        TestAssert.Equal(1, rowFragments[1].FragmentIndex);
+        TestAssert.Equal("CellPageBreak", rowFragments[0].FragmentReason);
+        TestAssert.Equal("CellPageBreak", rowFragments[1].FragmentReason);
+
+        DocxTableRowLayout[] firstFragmentNestedRows = rowFragments[0].Cells[1].NestedRows.ToArray();
+        DocxTableRowLayout[] secondFragmentNestedRows = rowFragments[1].Cells[1].NestedRows.ToArray();
+        TestAssert.Equal(2, firstFragmentNestedRows.Length);
+        TestAssert.Equal(4, secondFragmentNestedRows.Length);
+        TestAssert.Equal("Nested1", firstFragmentNestedRows[0].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Nested2", firstFragmentNestedRows[1].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Nested3", secondFragmentNestedRows[0].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Nested6", secondFragmentNestedRows[3].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal(0, firstFragmentNestedRows[0].Table.TableIndex);
+        TestAssert.Equal(0, secondFragmentNestedRows[0].Table.TableIndex);
     }
 
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
