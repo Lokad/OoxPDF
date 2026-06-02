@@ -441,9 +441,15 @@ internal static class DocxTests
     {
         var decimalLabel = new DocxListLabel("1", "decimal", "%1.", "tab", "7", 0, DocxNumberingIndent.Empty, DocxTextRunStyle.Empty);
         var bulletLabel = new DocxListLabel("*", "bullet", "\uF0B7", "tab", "7", 0, DocxNumberingIndent.Empty, DocxTextRunStyle.Empty);
+        DocxTextStateCharacterSpacingTarget decimalTarget = DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(decimalLabel, 12d);
+        DocxTextStateCharacterSpacingTarget bulletTarget = DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(bulletLabel, 12d);
 
         TestAssert.Equal(0.048d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(decimalLabel, 12d));
         TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(bulletLabel, 12d));
+        TestAssert.Equal(0.048d, decimalTarget.CharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.ListLabel, decimalTarget.Source);
+        TestAssert.Equal(0d, bulletTarget.CharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.ListLabel, bulletTarget.Source);
     }
 
     public static void DocxTextEmissionPlannerOwnsPdfTextStateAndPositioningSpacing()
@@ -455,6 +461,7 @@ internal static class DocxTests
         TestAssert.Equal(11.04d, plan.PdfFontSize);
         TestAssert.Equal(0.05d, plan.PdfCharacterSpacing);
         TestAssert.Equal(0.20d, plan.PositioningCharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.Explicit, plan.PdfCharacterSpacingSource);
         TestAssert.True(plan.CompensatePdfCharacterSpacing, "Planner should record that positioned glyph advances compensate PDF Tc.");
     }
 
@@ -468,6 +475,7 @@ internal static class DocxTests
         TestAssert.Equal(12d, plan.PdfFontSize);
         TestAssert.Equal(numberedTc, plan.PdfCharacterSpacing);
         TestAssert.Equal(0d, plan.PositioningCharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.Explicit, plan.PdfCharacterSpacingSource);
         TestAssert.True(!plan.CompensatePdfCharacterSpacing, "Numbered labels use PDF Tc as emitted text state, not as a compensated layout offset.");
     }
 
@@ -480,6 +488,7 @@ internal static class DocxTests
         TestAssert.Equal(11.04d, plan.PdfFontSize);
         TestAssert.Equal(0d, plan.PdfCharacterSpacing);
         TestAssert.Equal(0.25d, plan.PositioningCharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.TerminalLineSpace, plan.PdfCharacterSpacingSource);
         TestAssert.True(plan.CompensatePdfCharacterSpacing, "Terminal spaces should stay eligible for authored positioning while emitting neutral PDF Tc.");
     }
 
@@ -508,8 +517,10 @@ internal static class DocxTests
 
         TestAssert.True(Math.Abs(tc - 0.06d) < 0.0001d, "Tc should be the emitted-advance delta distributed over glyph gaps.");
         TestAssert.True(Math.Abs(emittedPlan.PdfCharacterSpacing - 0.06d) < 0.0001d, "Uncompensated plans should carry the derived Tc.");
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, emittedPlan.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(emittedPlan.PositioningCharacterSpacing - 0.12d) < 0.0001d, "Uncompensated plans should leave positioning spacing unchanged.");
         TestAssert.True(Math.Abs(compensatedPlan.PdfCharacterSpacing - 0.06d) < 0.0001d, "Compensated plans should carry the same derived Tc.");
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, compensatedPlan.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(compensatedPlan.PositioningCharacterSpacing - 0.06d) < 0.0001d, "Compensated plans should subtract derived Tc from positioning spacing.");
         TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingForAdvanceTarget(0, 24d, 24.18d));
     }
@@ -10716,6 +10727,7 @@ internal static class DocxTests
         TestAssert.True(spacedSegment.AdvanceProfile.PlannedEmittedResidualPerGap is not null, "Multi-glyph operations should expose planned emitted residual per glyph gap.");
         TestAssert.True(Math.Abs(spacedSegment.LayoutCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should preserve authored run character spacing.");
         TestAssert.True(Math.Abs(spacedSegment.PdfCharacterSpacing) < 0.0001d, "Normal DOCX run spacing should stay in positioned glyph advances.");
+        TestAssert.Equal("None", spacedSegment.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(spacedSegment.PositioningCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should expose the resulting glyph-positioning spacing.");
         TestAssert.True(spacedSegment.CompensatePdfCharacterSpacing, "Run spacing should be marked as compensated when positioned glyph advances carry the spacing.");
         TestAssert.Equal(1, spacedLine.TerminalSpaceSegmentCount);
@@ -10752,6 +10764,7 @@ internal static class DocxTests
         TestAssert.True(labelSegment.AdvanceProfile.UniformResidualPerGap is null, "Single-glyph operations should not report a per-gap residual.");
         TestAssert.True(labelSegment.AdvanceProfile.RoundedResidualPerGap is null, "Single-glyph operations should not report a rounded-PDF per-gap residual.");
         TestAssert.True(Math.Abs(labelSegment.PdfCharacterSpacing - 0.04d) < 0.0001d, "Numbering labels should expose their PDF text-state character spacing.");
+        TestAssert.Equal("ListLabel", labelSegment.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(labelSegment.PositioningCharacterSpacing) < 0.0001d, "Numbering PDF text-state spacing should not be double-counted in glyph positioning.");
         TestAssert.True(!labelSegment.CompensatePdfCharacterSpacing, "Numbering label spacing is intentionally emitted through PDF text state.");
         TestAssert.True(labelSegment.FontResourceName is not null, "Snapshot should identify the resolved PDF font resource without exposing text.");

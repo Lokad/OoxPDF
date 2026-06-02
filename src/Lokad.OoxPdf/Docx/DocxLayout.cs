@@ -688,6 +688,7 @@ internal sealed record DocxTextEmissionSegmentSnapshot(
     double PdfFontSize,
     double LayoutCharacterSpacing,
     double PdfCharacterSpacing,
+    string PdfCharacterSpacingSource,
     double PositioningCharacterSpacing,
     bool CompensatePdfCharacterSpacing,
     DocxTextEmissionCharacterProfile CharacterProfile,
@@ -756,6 +757,7 @@ internal sealed record DocxTextSegmentLayout(
     double? FontSize = null,
     double BaselineOffsetY = 0d,
     double PdfCharacterSpacing = 0d,
+    DocxTextStateCharacterSpacingSource PdfCharacterSpacingSource = DocxTextStateCharacterSpacingSource.None,
     bool CompensatePdfCharacterSpacing = true,
     int SourceTextRunIndex = -1,
     DocxTextSegmentRole Role = DocxTextSegmentRole.Text);
@@ -850,6 +852,7 @@ internal sealed record DocxTextEmissionSegment(
     double Width,
     double FontSize,
     double PdfCharacterSpacing,
+    DocxTextStateCharacterSpacingSource PdfCharacterSpacingSource,
     bool CompensatePdfCharacterSpacing,
     bool SyntheticBold,
     bool SyntheticItalic,
@@ -2070,7 +2073,8 @@ internal sealed class DocxLayoutEngine
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
-        double pdfCharacterSpacing = DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(label, fontSize);
+        DocxTextStateCharacterSpacingTarget textStateTarget =
+            DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(label, fontSize);
         var segments = new List<DocxTextSegmentLayout>
         {
             new(
@@ -2079,7 +2083,8 @@ internal sealed class DocxLayoutEngine
                 labelX,
                 labelWidth,
                 labelRun.FontSize,
-                PdfCharacterSpacing: pdfCharacterSpacing,
+                PdfCharacterSpacing: textStateTarget.CharacterSpacing,
+                PdfCharacterSpacingSource: textStateTarget.Source,
                 CompensatePdfCharacterSpacing: false,
                 SourceTextRunIndex: -1,
                 Role: DocxTextSegmentRole.ListLabel)

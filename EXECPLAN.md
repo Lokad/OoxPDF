@@ -566,6 +566,14 @@ High-priority actions:
   pipeline dependency and gives future Word-target logic a planner-owned entry point, but the existing
   numbered-list profile itself remains an open model to replace with public, structural evidence rather than
   a fixed observed scalar.
+  2026-06-02 provenance follow-up: `DocxTextEmissionPlan` now carries a typed
+  `PdfCharacterSpacingSource` (`None`, `Explicit`, `ListLabel`, `TerminalLineSpace`, or `AdvanceTarget`) from
+  planner through layout, renderer, and text-emission snapshots. `tools/SummarizeDocxTextState.ps1` carries
+  the source into private-safe planner buckets and paired Office/candidate rows, and it refreshes stale public
+  `DocxInspect` sidecars that predate the field. The public context smoke regenerated its sidecar and showed
+  `None` plus `TerminalLineSpace` source buckets; `Tf+TcSource+gaps` remains ambiguous for nonzero Office
+  `Tc`, which is the intended negative evidence that provenance clarifies ownership but cannot be used as a
+  Word target rule by itself.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

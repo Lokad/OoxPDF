@@ -517,6 +517,7 @@ internal sealed class DocxRenderer
                     part.Width,
                     fontSize,
                     segment.PdfCharacterSpacing,
+                    segment.PdfCharacterSpacingSource,
                     segment.CompensatePdfCharacterSpacing,
                     ShouldApplySyntheticBold(segment.StyleRun, resource),
                     segment.StyleRun.Italic && !resource.Resolution.Italic,
@@ -563,6 +564,7 @@ internal sealed class DocxRenderer
                 0d,
                 fontSize,
                 PdfCharacterSpacing: 0d,
+                PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
                 CompensatePdfCharacterSpacing: true,
                 SyntheticBold: false,
                 SyntheticItalic: segment.StyleRun.Italic && !resource.Resolution.Italic,
@@ -630,7 +632,8 @@ internal sealed class DocxRenderer
                 segment.StyleRun,
                 segment.FontSize,
                 segment.PdfCharacterSpacing,
-                segment.CompensatePdfCharacterSpacing);
+                segment.CompensatePdfCharacterSpacing,
+                segment.PdfCharacterSpacingSource);
         return new DocxTextEmissionSegmentSnapshot(
             segment.Text.Length,
             line.SourceBlockIndex,
@@ -644,6 +647,7 @@ internal sealed class DocxRenderer
             plan.PdfFontSize,
             segment.StyleRun.CharacterSpacingPoints,
             plan.PdfCharacterSpacing,
+            plan.PdfCharacterSpacingSource.ToString(),
             plan.PositioningCharacterSpacing,
             plan.CompensatePdfCharacterSpacing,
             DocxTextEmissionPlanner.ClassifyText(segment.Text),

@@ -8,7 +8,21 @@ internal readonly record struct DocxTextEmissionPlan(
     double PdfFontSize,
     double PdfCharacterSpacing,
     double PositioningCharacterSpacing,
-    bool CompensatePdfCharacterSpacing);
+    bool CompensatePdfCharacterSpacing,
+    DocxTextStateCharacterSpacingSource PdfCharacterSpacingSource);
+
+internal enum DocxTextStateCharacterSpacingSource
+{
+    None,
+    Explicit,
+    ListLabel,
+    TerminalLineSpace,
+    AdvanceTarget
+}
+
+internal readonly record struct DocxTextStateCharacterSpacingTarget(
+    double CharacterSpacing,
+    DocxTextStateCharacterSpacingSource Source);
 
 internal readonly record struct DocxTextEmissionPart(string Text, double X, double Width);
 
@@ -71,28 +85,45 @@ internal static class DocxTextEmissionPlanner
         DocxTextRun style,
         double layoutFontSize,
         double pdfCharacterSpacing,
-        bool compensatePdfCharacterSpacing)
+        bool compensatePdfCharacterSpacing,
+        DocxTextStateCharacterSpacingSource source = DocxTextStateCharacterSpacingSource.None)
     {
         double positioningCharacterSpacing = compensatePdfCharacterSpacing
             ? style.CharacterSpacingPoints - pdfCharacterSpacing
             : style.CharacterSpacingPoints;
+        DocxTextStateCharacterSpacingSource resolvedSource = source == DocxTextStateCharacterSpacingSource.None &&
+            Math.Abs(pdfCharacterSpacing) > 0.0000001d
+            ? DocxTextStateCharacterSpacingSource.Explicit
+            : source;
         return new(
             OfficePdfTextEmissionProfile.FontSize(layoutFontSize),
             pdfCharacterSpacing,
             positioningCharacterSpacing,
-            compensatePdfCharacterSpacing);
+            compensatePdfCharacterSpacing,
+            resolvedSource);
     }
 
     public static DocxTextEmissionPlan CreateTerminalLineSpace(DocxTextRun style, double layoutFontSize)
     {
-        return Create(style, layoutFontSize, pdfCharacterSpacing: 0d, compensatePdfCharacterSpacing: true);
+        return Create(
+            style,
+            layoutFontSize,
+            pdfCharacterSpacing: 0d,
+            compensatePdfCharacterSpacing: true,
+            DocxTextStateCharacterSpacingSource.TerminalLineSpace);
     }
 
     public static double TextStateCharacterSpacingForListLabel(DocxListLabel label, double layoutFontSize)
     {
-        return string.Equals(label.FormatValue, "bullet", StringComparison.OrdinalIgnoreCase)
+        return TextStateCharacterSpacingTargetForListLabel(label, layoutFontSize).CharacterSpacing;
+    }
+
+    public static DocxTextStateCharacterSpacingTarget TextStateCharacterSpacingTargetForListLabel(DocxListLabel label, double layoutFontSize)
+    {
+        double characterSpacing = string.Equals(label.FormatValue, "bullet", StringComparison.OrdinalIgnoreCase)
             ? 0d
             : OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(layoutFontSize);
+        return new(characterSpacing, DocxTextStateCharacterSpacingSource.ListLabel);
     }
 
     public static double TextStateCharacterSpacingForAdvanceTarget(
@@ -117,7 +148,12 @@ internal static class DocxTextEmissionPlanner
             glyphGapCount,
             currentEmittedAdvance,
             targetEmittedAdvance);
-        return Create(style, layoutFontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing);
+        return Create(
+            style,
+            layoutFontSize,
+            pdfCharacterSpacing,
+            compensatePdfCharacterSpacing,
+            DocxTextStateCharacterSpacingSource.AdvanceTarget);
     }
 
     public static DocxTextEmissionCharacterProfile ClassifyText(string text)

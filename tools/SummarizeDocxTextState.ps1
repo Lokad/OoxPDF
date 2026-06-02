@@ -258,7 +258,9 @@ function Test-DocxInspectSnapshotFresh([string] $SnapshotPath) {
         }
 
         foreach ($segment in $line.Segments) {
-            if ($null -ne $segment.AdvanceProfile -and $null -ne $segment.AdvanceProfile.PlannedEmittedAdvance) {
+            if ($null -ne $segment.AdvanceProfile -and
+                $null -ne $segment.AdvanceProfile.PlannedEmittedAdvance -and
+                $null -ne $segment.PdfCharacterSpacingSource) {
                 return $true
             }
         }
@@ -543,6 +545,14 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|role=" + $segment.Role
         })
+        TextClassByPdfCharacterSpacingSource = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|tcSource=" + $segment.PdfCharacterSpacingSource
+        })
+        PdfCharacterSpacingSourceBuckets = @(Group-Count $segments {
+            param($segment)
+            "tcSource=" + $segment.PdfCharacterSpacingSource + "|pdfTc=" + (RoundedKey $segment.PdfCharacterSpacing 6)
+        })
         TextClassByGlyphSignature = @(Group-Count $segments {
             param($segment)
             (PlannerTextClass $segment) + "|glyphSig=" + $segment.GlyphAdvanceSignature.Hash
@@ -633,6 +643,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerPdfFontSize = $segment.PdfFontSize
             PlannerSourceParagraphIndex = $segment.SourceParagraphIndex
             PlannerRole = $segment.Role
+            PlannerPdfCharacterSpacingSource = $segment.PdfCharacterSpacingSource
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
             PlannerNaturalWidth = $segment.AdvanceProfile.NaturalPdfWidth
             PlannerUnkernedWidth = $segment.AdvanceProfile.UnkernedPdfWidth
@@ -690,6 +701,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             New-TcAmbiguityReport "tf+role+class+gaps" $pairs {
                 param($pair)
                 "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|role=" + $pair.PlannerRole + "|class=" + $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+            } $true
+            New-TcAmbiguityReport "tf+tc-source+gaps" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|tcSource=" + $pair.PlannerPdfCharacterSpacingSource + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
             } $true
             New-TcAmbiguityReport "tf+gaps+pair-range" $pairs {
                 param($pair)
