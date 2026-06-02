@@ -7171,6 +7171,14 @@ Current validation baseline:
   `docx-text --skip-slow` (`47`), and full solution build. Keep the broader multi-column branch open for
   Word-style column balancing, inline column-break flow, table/header continuation semantics inside true
   multi-column sections, and column-aware wrap exclusion.
+  2026-06-02 architecture follow-up: `DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE` is no longer emitted for body
+  paragraph `keepNext`/`keepLines`/`widowControl` tokens, because those tokens are parsed through the paragraph
+  cascade, exposed in structure snapshots, and consumed by page layout. The diagnostic is now reserved for
+  table-cell paragraph keep/widow rules, where Word-compatible row fragmentation, continuation, and table-cell
+  pagination semantics are still open. Coverage verifies that body keep rules do not emit the stale warning,
+  while the broad unsupported-feature fixture still triggers the diagnostic through a table-cell keep rule.
+  Validation passed `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36`),
+  `docx-text --skip-slow` (`47`), and full solution build.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

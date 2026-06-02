@@ -434,11 +434,9 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "inline manual column break", fallback: "Break-only column paragraphs are supported");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "keepNext").Any() ||
-            document.Descendants(WordprocessingNamespace + "keepLines").Any() ||
-            document.Descendants(WordprocessingNamespace + "widowControl").Any())
+        if (document.Descendants().Any(IsUnsupportedParagraphKeepRule))
         {
-            Emit("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", "paragraph keep/widow-orphan rule");
+            Emit("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", "table-cell paragraph keep/widow-orphan rule", fallback: "Body paragraph keep rules are supported");
         }
 
         if (document.Descendants(WordprocessingNamespace + "pPr")
@@ -518,6 +516,19 @@ internal sealed class DocxReader
 
         XElement? paragraph = breakElement.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
         return paragraph is null || !IsRunColumnBreakOnlyParagraph(paragraph);
+    }
+
+    private static bool IsUnsupportedParagraphKeepRule(XElement element)
+    {
+        if (element.Name != WordprocessingNamespace + "keepNext" &&
+            element.Name != WordprocessingNamespace + "keepLines" &&
+            element.Name != WordprocessingNamespace + "widowControl")
+        {
+            return false;
+        }
+
+        XElement? paragraph = element.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
+        return paragraph is null || paragraph.Ancestors(WordprocessingNamespace + "tc").Any();
     }
 
     private static bool HasUnsupportedTableBorderStyle(XDocument document)
