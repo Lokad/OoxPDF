@@ -7329,6 +7329,12 @@ Current validation baseline:
   still non-reflowing groundwork: keep Office-derived paragraph/table text wrapping around float exclusions open.
   Validation passed `docx-core --skip-slow` (`53`), `docx-images --skip-slow` (`4`; serial rerun after a parallel
   compiler output lock), `docx-page --skip-slow` (`40`), and full solution build.
+  2026-06-02 tooling follow-up: `DocxInspect` now writes `floating-drawing-summary.json`, combining body and
+  selected static floating drawings with page/story ownership, resolved anchor frames, placement, distances,
+  image facts, and wrap-exclusion rectangles without document text. This gives future private-safe wrap-exclusion
+  comparisons a focused sidecar instead of requiring callers to mine the full layout snapshot. Validation built
+  `Lokad.OoxPdf.DocxInspect` and smoked the sidecar on public `docx-images.docx` (empty floating-drawing array,
+  as expected for that fixture).
   2026-06-02 architecture follow-up: table layout now resolves a current table frame at each row boundary
   instead of capturing the initial column x/width for the whole table. Multi-column table rows and repeated
   header rows now consume the active `DocxLayoutColumnFrame` after a column/page advance, and the table loop

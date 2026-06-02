@@ -64,6 +64,11 @@ File.WriteAllText(
     Path.Combine(outputDirectory, "source-block-summary.json"),
     JsonSerializer.Serialize(layout.SourceBlocks, options));
 File.WriteAllText(
+    Path.Combine(outputDirectory, "floating-drawing-summary.json"),
+    JsonSerializer.Serialize(layout.FloatingDrawings
+        .Select(drawing => ToFloatingDrawingSummary("Body", drawing))
+        .Concat(layout.StaticFloatingDrawings.Select(drawing => ToFloatingDrawingSummary("Static", drawing))), options));
+File.WriteAllText(
     Path.Combine(outputDirectory, "static-story-summary.json"),
     JsonSerializer.Serialize(layout.Pages.SelectMany((page, pageIndex) => page.StaticStories.Select(story => new
     {
@@ -227,6 +232,46 @@ File.WriteAllText(
 File.WriteAllText(
     Path.Combine(outputDirectory, "table-adjacency-summary.json"),
     JsonSerializer.Serialize(structure.TableAdjacency, options));
+
+static object ToFloatingDrawingSummary(string streamKind, DocxFloatingDrawingLayoutSnapshot drawing)
+{
+    return new
+    {
+        StreamKind = streamKind,
+        Page = drawing.AnchorPageIndex is null ? (int?)null : drawing.AnchorPageIndex.Value + 1,
+        drawing.SourceBlockIndex,
+        drawing.SourceParagraphIndex,
+        drawing.AnchorColumnIndex,
+        drawing.StoryKind,
+        drawing.StoryVariantType,
+        drawing.WrapKind,
+        drawing.WrapTextValue,
+        drawing.HorizontalRelativeFromValue,
+        drawing.HorizontalAlignValue,
+        drawing.VerticalRelativeFromValue,
+        drawing.VerticalAlignValue,
+        drawing.ExtentWidthPoints,
+        drawing.ExtentHeightPoints,
+        drawing.DistanceTopPoints,
+        drawing.DistanceBottomPoints,
+        drawing.DistanceLeftPoints,
+        drawing.DistanceRightPoints,
+        drawing.HorizontalReferenceX,
+        drawing.HorizontalReferenceWidth,
+        drawing.VerticalReferenceTop,
+        drawing.VerticalReferenceBottom,
+        drawing.PlacedX,
+        drawing.PlacedTop,
+        drawing.WrapExclusionX,
+        drawing.WrapExclusionTop,
+        drawing.WrapExclusionWidth,
+        drawing.WrapExclusionHeight,
+        HasImage = drawing.ImageRelationshipId is not null,
+        drawing.ImageContentType,
+        drawing.ImageWidthPoints,
+        drawing.ImageHeightPoints
+    };
+}
 
 static DocxTextEmissionCharacterProfile SumCharacterProfiles(IEnumerable<DocxTextEmissionSegmentSnapshot> segments)
 {
