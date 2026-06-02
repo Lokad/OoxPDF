@@ -1476,6 +1476,31 @@ internal static class DocxTests
         TestAssert.Equal("Body|Cell", plannedTexts);
     }
 
+    public static void DocxBlockTraversalAndFontPlanIncludeNestedTableCellBody()
+    {
+        DocxParagraph nestedParagraph = CreateDocxLayoutParagraph("Nested cell", 12d, 12d);
+        var nestedTable = new DocxTable(
+            null,
+            [40d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxTableCell outerCell = new(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxTableElement(nestedTable)]
+        };
+        var outerTable = new DocxTable(null, [60d], [new DocxTableRow([outerCell], 30d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable]);
+        var resolver = new MapFontResolver(["Arial"], "Resolver Fallback");
+
+        DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(document).ToArray();
+        DocxTable[] tables = DocxBlockTraversal.EnumerateBodyTables(document).ToArray();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver);
+
+        TestAssert.Equal(1, paragraphs.Length);
+        TestAssert.Equal("Nested cell", paragraphs[0].Runs.Single().Text);
+        TestAssert.Equal(2, tables.Length);
+        TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Nested cell"), "Nested table-cell body text should participate in DOCX font planning.");
+    }
+
     public static void DocxFontPlanIncludesNumberingMarkerTypeface()
     {
         var bodyRun = new DocxTextRun("Body", 11d, null, false, false, false, null, "Body Sans")

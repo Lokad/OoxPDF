@@ -85,6 +85,10 @@ internal static class DocxBlockTraversal
         foreach (DocxTableElement table in bodyElements.OfType<DocxTableElement>())
         {
             yield return table.Table;
+            foreach (DocxTable nestedTable in EnumerateTableTables(table.Table))
+            {
+                yield return nestedTable;
+            }
         }
     }
 
@@ -92,7 +96,14 @@ internal static class DocxBlockTraversal
     {
         return table.Rows
             .SelectMany(row => row.Cells)
-            .SelectMany(DocxTableCellContent.GetParagraphs);
+            .SelectMany(cell => EnumerateBodyParagraphs(DocxTableCellContent.GetBodyElements(cell)));
+    }
+
+    private static IEnumerable<DocxTable> EnumerateTableTables(DocxTable table)
+    {
+        return table.Rows
+            .SelectMany(row => row.Cells)
+            .SelectMany(cell => EnumerateBodyTables(DocxTableCellContent.GetBodyElements(cell)));
     }
 }
 

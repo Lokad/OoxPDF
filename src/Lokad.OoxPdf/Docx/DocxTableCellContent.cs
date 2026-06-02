@@ -4,6 +4,16 @@ internal static class DocxTableCellContent
 {
     private const double PlainTextDefaultFontSize = 11d;
 
+    public static IReadOnlyList<DocxBodyElement> GetBodyElements(DocxTableCell cell)
+    {
+        return cell.BodyElements.Count != 0
+            ? cell.BodyElements
+            : GetParagraphs(cell)
+                .Select(paragraph => new DocxParagraphElement(paragraph))
+                .Cast<DocxBodyElement>()
+                .ToArray();
+    }
+
     public static IReadOnlyList<DocxParagraph> GetParagraphs(DocxTableCell cell)
     {
         if (cell.BodyElements.Count != 0)

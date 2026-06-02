@@ -7269,6 +7269,13 @@ Current validation baseline:
   a cell whose authored image paragraph lives only in `BodyElements` still produces a `DocxInlineImageLayout`.
   Validation passed `docx-tables --skip-slow` (`103`) and full solution build. Keep nested tables, table-local
   page/column breaks, and richer non-paragraph cell body layout open.
+  2026-06-02 architecture follow-up: `DocxBlockTraversal` now descends recursively through normalized
+  table-cell body streams, so paragraphs and tables nested inside table cells participate in canonical body
+  paragraph/table enumeration instead of being visible only as raw `DocxTableCell.BodyElements`. This also
+  brings nested table-cell text into the DOCX font plan without a separate font-planning special case. Bottom-up
+  coverage verifies nested table paragraph traversal, recursive table enumeration, and font-plan inclusion.
+  Validation passed `docx-tables --skip-slow` (`104`), `docx-core --skip-slow` (`53`; serial rerun after a
+  parallel compiler output lock), and full solution build. Keep actual nested-table layout/rendering open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
