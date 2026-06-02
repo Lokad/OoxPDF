@@ -172,6 +172,8 @@ internal sealed record DocxLayoutSnapshot(
                     .GroupBy(row => row.RowIndex)
                     .Select(rowGroup => rowGroup.First())
                     .ToArray();
+                DocxTableCellSnapshot[] authoredCells = distinctRows.SelectMany(row => row.Cells).ToArray();
+                DocxTableCellSnapshot[] laidOutCells = group.SelectMany(entry => entry.row.Cells).ToArray();
                 return new DocxTableSnapshot(
                     group.Key,
                     first.SourceBlockIndex,
@@ -200,7 +202,12 @@ internal sealed record DocxLayoutSnapshot(
                     distinctRows.Count(row => row.FragmentCount > 1),
                     group.Count(entry => entry.row.FragmentCount > 1),
                     group.Max(entry => entry.row.FragmentCount),
-                    group.Any(entry => entry.row.Cells.Any(cell => cell.HasVerticalMerge)));
+                    authoredCells.Any(cell => cell.HasVerticalMerge),
+                    authoredCells.Count(cell => cell.HasVerticalMerge),
+                    authoredCells.Count(cell => string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase)),
+                    authoredCells.Count(cell => cell.IsVerticalMergeContinuation),
+                    laidOutCells.Count(cell => cell.IsVerticalMergeContinuation),
+                    laidOutCells.Count(cell => string.Equals(cell.VisualOwnership, DocxTableCellVisualOwnership.MissingVerticalMergeOwner.ToString(), StringComparison.Ordinal)));
             })
             .ToArray();
     }
@@ -837,7 +844,12 @@ internal sealed record DocxTableSnapshot(
     int FragmentedRowCount,
     int FragmentedRowLayoutCount,
     int MaxRowFragmentCount,
-    bool HasVerticalMerge);
+    bool HasVerticalMerge,
+    int AuthoredVerticalMergeCellCount,
+    int AuthoredVerticalMergeRestartCellCount,
+    int AuthoredVerticalMergeContinuationCellCount,
+    int LaidOutVerticalMergeContinuationCellCount,
+    int MissingVerticalMergeOwnerCellCount);
 
 internal sealed record DocxTableCellSnapshot(
     int CellIndex,

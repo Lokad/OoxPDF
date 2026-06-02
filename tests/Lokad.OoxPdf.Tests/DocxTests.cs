@@ -9884,7 +9884,16 @@ internal static class DocxTests
         TestAssert.Equal(60d, continuationCell.Y);
         TestAssert.Equal(30d, continuationCell.Height);
 
-        DocxTableCellSnapshot continuationSnapshot = DocxLayoutSnapshot.FromLayout(layout).Pages[1].TableRows.Single(row => row.RowIndex == 2).Cells.Single();
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        DocxTableSnapshot tableSnapshot = snapshot.Tables.Single();
+        TestAssert.True(tableSnapshot.HasVerticalMerge, "Table-level snapshots should expose vertical-merge presence.");
+        TestAssert.Equal(2, tableSnapshot.AuthoredVerticalMergeCellCount);
+        TestAssert.Equal(1, tableSnapshot.AuthoredVerticalMergeRestartCellCount);
+        TestAssert.Equal(1, tableSnapshot.AuthoredVerticalMergeContinuationCellCount);
+        TestAssert.Equal(1, tableSnapshot.LaidOutVerticalMergeContinuationCellCount);
+        TestAssert.Equal(0, tableSnapshot.MissingVerticalMergeOwnerCellCount);
+
+        DocxTableCellSnapshot continuationSnapshot = snapshot.Pages[1].TableRows.Single(row => row.RowIndex == 2).Cells.Single();
         TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
         TestAssert.Equal(1, continuationSnapshot.VerticalMergeOwnerRowIndex ?? -1);
         TestAssert.Equal(0, continuationSnapshot.VerticalMergeOwnerGridColumnIndex ?? -1);
@@ -11007,6 +11016,11 @@ internal static class DocxTests
         TestAssert.Equal(0, tableSnapshot.FragmentedRowLayoutCount);
         TestAssert.Equal(1, tableSnapshot.MaxRowFragmentCount);
         TestAssert.True(tableSnapshot.HasVerticalMerge, "Snapshot should expose vertical-merge presence without cell text.");
+        TestAssert.Equal(1, tableSnapshot.AuthoredVerticalMergeCellCount);
+        TestAssert.Equal(1, tableSnapshot.AuthoredVerticalMergeRestartCellCount);
+        TestAssert.Equal(0, tableSnapshot.AuthoredVerticalMergeContinuationCellCount);
+        TestAssert.Equal(0, tableSnapshot.LaidOutVerticalMergeContinuationCellCount);
+        TestAssert.Equal(0, tableSnapshot.MissingVerticalMergeOwnerCellCount);
         TestAssert.Equal(1, snapshot.Pages.Count);
         TestAssert.Equal(1, snapshot.Pages[0].ItemCount);
         TestAssert.Equal(1, snapshot.Pages[0].TableRowCount);

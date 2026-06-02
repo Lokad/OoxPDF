@@ -5110,6 +5110,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     geometry but makes split-row/table pagination drift visible at table scope for private-safe inspection.
     Public coverage checks both the non-fragmented baseline and a tall row split across two pages. Validation
     passed `docx-tables --skip-slow` (`92`).
+  - [x] 2026-06-02: Added table-level vertical-merge ownership counts to `DocxTableSnapshot`: authored
+    merge cell count, restart count, continuation count, laid-out continuation count, and missing-owner count.
+    This keeps the existing cross-page cell-level owner geometry but makes merge ownership visible at table
+    scope for private-safe inspection. Public coverage includes a restart-only snapshot and a continuation
+    whose visual owner crosses a page boundary. Validation passed `docx-tables --skip-slow` (`101`).
   - [x] 2026-06-01: Added stable table ordinals and document-level table snapshots derived from layout rows.
     The trace now reports page index range, source row count, laid-out row count, repeated header-row layout
     count, grid column count, grid-column width sum, resolved table width, table X, preferred table width
