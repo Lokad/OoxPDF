@@ -578,6 +578,15 @@ High-priority actions:
   and the remaining visual gap belongs to table continuation row/border/text rendering, not to paragraph
   spacing. Keep the table-continuation branch open, but do not change paragraph-before spacing from this
   private observation alone.
+  2026-06-03 follow-up: Office PDF inspection of the same public continuation probe showed collapsed DOCX
+  table borders are not only horizontal/vertical filled strips; Office also emits filled junction nodes at
+  grid intersections and overpaints the two outer-corner nodes on page-fragment top/bottom boundaries.
+  `DocxRenderer` now emits those collapsed-border junction rectangles through the same visible-width and
+  shared-edge conflict helpers as the strips. Public run `20260603-002439` remains dimension-stable at page 1
+  `MAE=5.948664`, changed16 `0.060323`, page 2 `MAE=1.426858`, changed16 `0.013480`, and PDF operation
+  counts now match Office for the probe: page 1 `104` junction squares, `96` vertical strips, `75` horizontal
+  strips; page 2 `40`/`32`/`27`. Keep the visual residual open for row text/baseline and row-boundary geometry,
+  not for missing collapsed-border junction primitives.
   2026-06-02 architecture follow-up: DOCX text emission snapshots now carry a private-safe segment role
   (`ListLabel`, `ListSeparator`, or `Text`) from layout through PDF emission, and
   `tools/SummarizeDocxTextState.ps1` buckets planner/reference pairs by that role. This removes the need to
@@ -2950,6 +2959,13 @@ High-priority actions:
     neutral at `16/16` pages, zero dimension mismatches, no diagnostics, `MAE=13.838763`, changed16
     `0.126851`. Keep this parent open for row clipping, header repetition, and remaining row-origin/text
     operation decomposition.
+    2026-06-03 follow-up: collapsed table-border junction nodes are now first-class PDF rectangles. The public
+    `docx-ladder-03-table-continuation-adjacency` probe originally matched strip counts but had zero candidate
+    junction squares versus Office's `104`/`40` page counts. After the renderer change and duplicate outer
+    page-fragment corner overpaint, PDF inspection of run `20260603-002439` matches Office strip and junction
+    buckets on both pages. Validation passed `docx-tables --skip-slow` (`119`). The slight raster delta
+    increase is only about `+0.000395` MAE per page because these are sub-point overpaint nodes; this closes
+    a PDF-structure mismatch while leaving row-baseline/fragment-origin work open.
   - [x] 2026-05-31: Applied DOCX `w:contextualSpacing` for adjacent body paragraphs with the same resolved
     paragraph style. The layout stage now suppresses inter-paragraph spacing in that structural case instead
     of treating contextual spacing as diagnostics-only metadata. Private impact was neutral for the current
@@ -6605,6 +6621,13 @@ Current validation baseline:
   changed16 `0.011461`, and page 2 `MAE=0.210261`, changed16 `0.003116`; candidate PDF inspection shows the
   table graphics as fill operations rather than strokes. Private DOCX run `20260601-023645` stayed at `16/16`
   pages, zero dimension mismatches, no diagnostics, `MAE=12.503007`, changed16 `0.116841`.
+  2026-06-03 follow-up: DOCX collapsed-border junctions now render as filled rectangles at visible
+  horizontal/vertical grid intersections, including Office-like duplicate overpaint at the two outer
+  page-fragment corners. Public `docx-ladder-03-table-continuation-adjacency` run `20260603-002439` matches
+  Office PDF thin-border primitive buckets on both pages (`104/96/75` and `40/32/27` for
+  junction/vertical/horizontal fills). `docx-tables --skip-slow` passed `119`. Keep non-`single` border
+  styles, full Word border conflict ranking, RTL ownership, and row-fragment text/border continuation rules
+  open.
 - DOCX shared vertical table-border validation:
   after emitting each shared vertical border once and honoring adjacent `nil`/`none` suppression,
   `docx-tables --skip-slow` passed `59`, `docx-page --skip-slow` passed `17`, and

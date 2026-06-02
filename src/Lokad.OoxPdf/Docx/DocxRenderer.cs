@@ -562,6 +562,7 @@ internal sealed class DocxRenderer
         }
 
         RenderTableRowBorders(row, previousRow, nextRow, graphics);
+        RenderTableBorderJunctions(row, previousRow, nextRow, graphics);
 
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
@@ -605,6 +606,238 @@ internal sealed class DocxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static void RenderTableBorderJunctions(
+        DocxTableRowLayout row,
+        DocxTableRowLayout? previousRow,
+        DocxTableRowLayout? nextRow,
+        PdfGraphicsBuilder graphics)
+    {
+        DocxTableBorderBoundary[] rowBoundaries = ResolveVisibleVerticalBoundaries(row, previousRow);
+        if (rowBoundaries.Length == 0)
+        {
+            return;
+        }
+
+        var emittedJunctions = new HashSet<(double X, double Y)>();
+        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        {
+            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
+            {
+                continue;
+            }
+
+            if (previousRow is null)
+            {
+                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height, cellLayout.VisualCell, "top", rowBoundaries, graphics, emittedJunctions);
+            }
+
+            if (nextRow is null)
+            {
+                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaries, graphics, emittedJunctions);
+            }
+        }
+
+        if (previousRow is null)
+        {
+            RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "top", graphics);
+        }
+
+        if (nextRow is null)
+        {
+            RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "bottom", graphics);
+        }
+
+        if (nextRow is not null && nextRow.RowIndex != row.RowIndex)
+        {
+            RenderSharedHorizontalBorderJunctions(row, nextRow, rowBoundaries, graphics, emittedJunctions);
+        }
+    }
+
+    private static void RenderOuterHorizontalFragmentCornerJunctions(
+        DocxTableRowLayout row,
+        DocxTableRowLayout? previousRow,
+        IReadOnlyList<DocxTableBorderBoundary> boundaries,
+        string edge,
+        PdfGraphicsBuilder graphics)
+    {
+        DocxTableCellLayout? firstCell = row.Cells.FirstOrDefault(cell => ShouldRenderTableCellVisualFragment(cell, previousRow));
+        DocxTableCellLayout? lastCell = row.Cells.LastOrDefault(cell => ShouldRenderTableCellVisualFragment(cell, previousRow));
+        if (firstCell is null || lastCell is null)
+        {
+            return;
+        }
+
+        DocxTableCellBorder? firstHorizontal = DocxTableBorderGeometry.Find(firstCell.VisualCell.Borders, edge);
+        DocxTableCellBorder? lastHorizontal = DocxTableBorderGeometry.Find(lastCell.VisualCell.Borders, edge);
+        DocxTableBorderBoundary? firstBoundary = boundaries.OrderBy(boundary => boundary.X).FirstOrDefault();
+        DocxTableBorderBoundary? lastBoundary = boundaries.OrderByDescending(boundary => boundary.X).FirstOrDefault();
+        double y = string.Equals(edge, "top", StringComparison.Ordinal)
+            ? firstCell.Y + firstCell.Height
+            : firstCell.Y;
+
+        if (firstBoundary is not null && firstHorizontal is not null && !DocxTableBorderGeometry.IsSuppressed(firstHorizontal))
+        {
+            RenderBorderJunctions([firstBoundary], y, firstHorizontal, graphics, []);
+        }
+
+        if (lastBoundary is not null && lastHorizontal is not null && !DocxTableBorderGeometry.IsSuppressed(lastHorizontal))
+        {
+            RenderBorderJunctions([lastBoundary], y, lastHorizontal, graphics, []);
+        }
+    }
+
+    private static void RenderSharedHorizontalBorderJunctions(
+        DocxTableRowLayout row,
+        DocxTableRowLayout nextRow,
+        IReadOnlyList<DocxTableBorderBoundary> rowBoundaries,
+        PdfGraphicsBuilder graphics,
+        HashSet<(double X, double Y)> emittedJunctions)
+    {
+        DocxTableBorderBoundary[] nextRowBoundaries = ResolveVisibleVerticalBoundaries(nextRow, row);
+        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        {
+            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow: null))
+            {
+                continue;
+            }
+
+            DocxTableCellLayout[] overlappingNextCells = nextRow.Cells
+                .Where(nextCell => ShouldRenderTableCellVisualFragment(nextCell, row) && HorizontalOverlap(cellLayout, nextCell) > 0d)
+                .ToArray();
+            if (overlappingNextCells.Length == 0)
+            {
+                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaries, graphics, emittedJunctions);
+                continue;
+            }
+
+            foreach (DocxTableCellLayout nextRowCell in overlappingNextCells)
+            {
+                DocxTableCellBorder? horizontal = ResolveSharedHorizontalBorder(cellLayout, nextRowCell);
+                if (horizontal is null)
+                {
+                    continue;
+                }
+
+                double x = Math.Max(cellLayout.X, nextRowCell.X);
+                double right = Math.Min(cellLayout.X + cellLayout.Width, nextRowCell.X + nextRowCell.Width);
+                if (right <= x)
+                {
+                    continue;
+                }
+
+                DocxTableBorderBoundary[] boundaries = rowBoundaries
+                    .Concat(nextRowBoundaries)
+                    .Where(boundary => boundary.X >= x - 0.001d && boundary.X <= right + 0.001d)
+                    .GroupBy(boundary => Math.Round(boundary.X, 3))
+                    .Select(group => group.OrderByDescending(boundary => boundary.Width).First())
+                    .ToArray();
+                RenderBorderJunctions(boundaries, cellLayout.Y - DocxTableBorderGeometry.ResolveVisibleWidth(horizontal) / 2d, horizontal, graphics, emittedJunctions);
+            }
+        }
+    }
+
+    private static void RenderHorizontalBorderJunctions(
+        double x,
+        double right,
+        double y,
+        DocxTableCell cell,
+        string edge,
+        IReadOnlyList<DocxTableBorderBoundary> boundaries,
+        PdfGraphicsBuilder graphics,
+        HashSet<(double X, double Y)> emittedJunctions)
+    {
+        DocxTableCellBorder? horizontal = DocxTableBorderGeometry.Find(cell.Borders, edge);
+        if (horizontal is null || DocxTableBorderGeometry.IsSuppressed(horizontal))
+        {
+            return;
+        }
+
+        DocxTableBorderBoundary[] crossingBoundaries = boundaries
+            .Where(boundary => boundary.X >= x - 0.001d && boundary.X <= right + 0.001d)
+            .ToArray();
+        RenderBorderJunctions(crossingBoundaries, y, horizontal, graphics, emittedJunctions);
+    }
+
+    private static void RenderBorderJunctions(
+        IReadOnlyList<DocxTableBorderBoundary> boundaries,
+        double y,
+        DocxTableCellBorder horizontal,
+        PdfGraphicsBuilder graphics,
+        HashSet<(double X, double Y)> emittedJunctions)
+    {
+        double horizontalWidth = DocxTableBorderGeometry.ResolveVisibleWidth(horizontal);
+        if (horizontalWidth <= 0d)
+        {
+            return;
+        }
+
+        foreach (DocxTableBorderBoundary boundary in boundaries)
+        {
+            if (!emittedJunctions.Add((Math.Round(boundary.X, 3), Math.Round(y, 3))))
+            {
+                continue;
+            }
+
+            DocxTableCellBorder? border = DocxTableBorderGeometry.SelectStronger(horizontal, boundary.Border);
+            if (border is null)
+            {
+                continue;
+            }
+
+            RgbColor color = ReadColor(border.Color);
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            graphics.FillRectangle(boundary.X, y, boundary.Width, horizontalWidth);
+        }
+    }
+
+    private static DocxTableBorderBoundary[] ResolveVisibleVerticalBoundaries(DocxTableRowLayout row, DocxTableRowLayout? previousRow)
+    {
+        var boundaries = new List<DocxTableBorderBoundary>();
+        for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+        {
+            DocxTableCellLayout cellLayout = row.Cells[cellIndex];
+            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
+            {
+                continue;
+            }
+
+            DocxTableCell visualCell = cellLayout.VisualCell;
+            DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "start");
+            if (cellIndex == 0)
+            {
+                AddVerticalBoundary(boundaries, cellLayout.X, left);
+            }
+
+            DocxTableCellBorder? right = DocxTableBorderGeometry.Find(visualCell.Borders, "right") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "end");
+            if (cellIndex == row.Cells.Count - 1)
+            {
+                AddVerticalBoundary(boundaries, cellLayout.X + cellLayout.Width, right);
+                continue;
+            }
+
+            DocxTableCellLayout nextCell = row.Cells[cellIndex + 1];
+            DocxTableCell nextVisualCell = nextCell.VisualCell;
+            DocxTableCellBorder? nextLeft = DocxTableBorderGeometry.Find(nextVisualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(nextVisualCell.Borders, "start");
+            if (!DocxTableBorderGeometry.IsSuppressed(right) && !DocxTableBorderGeometry.IsSuppressed(nextLeft))
+            {
+                AddVerticalBoundary(boundaries, cellLayout.X + cellLayout.Width, DocxTableBorderGeometry.SelectStronger(right, nextLeft));
+            }
+        }
+
+        return boundaries.ToArray();
+    }
+
+    private static void AddVerticalBoundary(List<DocxTableBorderBoundary> boundaries, double x, DocxTableCellBorder? border)
+    {
+        double width = DocxTableBorderGeometry.ResolveVisibleWidth(border);
+        if (width <= 0d || border is null)
+        {
+            return;
+        }
+
+        boundaries.Add(new DocxTableBorderBoundary(x, width, border));
     }
 
     private static IReadOnlyList<DocxTextEmissionSegment> CreateTextEmissionSegments(
@@ -1197,14 +1430,7 @@ internal sealed class DocxRenderer
     {
         DocxTableCell cell = cellLayout.VisualCell;
         DocxTableCell nextCell = nextRowCell.VisualCell;
-        DocxTableCellBorder? bottom = DocxTableBorderGeometry.Find(cell.Borders, "bottom");
-        DocxTableCellBorder? nextTop = DocxTableBorderGeometry.Find(nextCell.Borders, "top");
-        if (DocxTableBorderGeometry.IsSuppressed(bottom) || DocxTableBorderGeometry.IsSuppressed(nextTop))
-        {
-            return;
-        }
-
-        DocxTableCellBorder? border = DocxTableBorderGeometry.SelectStronger(bottom, nextTop);
+        DocxTableCellBorder? border = ResolveSharedHorizontalBorder(cellLayout, nextRowCell);
         if (border is null)
         {
             return;
@@ -1228,6 +1454,15 @@ internal sealed class DocxRenderer
         }
 
         graphics.FillRectangle(segmentX, cellLayout.Y - width / 2d, right - segmentX, width);
+    }
+
+    private static DocxTableCellBorder? ResolveSharedHorizontalBorder(DocxTableCellLayout cellLayout, DocxTableCellLayout nextRowCell)
+    {
+        DocxTableCellBorder? bottom = DocxTableBorderGeometry.Find(cellLayout.VisualCell.Borders, "bottom");
+        DocxTableCellBorder? nextTop = DocxTableBorderGeometry.Find(nextRowCell.VisualCell.Borders, "top");
+        return DocxTableBorderGeometry.IsSuppressed(bottom) || DocxTableBorderGeometry.IsSuppressed(nextTop)
+            ? null
+            : DocxTableBorderGeometry.SelectStronger(bottom, nextTop);
     }
 
     private static double HorizontalOverlap(DocxTableCellLayout first, DocxTableCellLayout second)
@@ -1346,6 +1581,8 @@ internal sealed class DocxRenderer
             previousCell.Y <= cellLayout.Y + 0.001d &&
             previousCell.Y + previousCell.Height >= cellLayout.Y + cellLayout.Height - 0.001d);
     }
+
+    private sealed record DocxTableBorderBoundary(double X, double Width, DocxTableCellBorder Border);
 
     private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)
     {
