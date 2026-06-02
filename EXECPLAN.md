@@ -316,6 +316,13 @@ High-priority actions:
   `docx-core --skip-slow` (`52`) and `docx-page --skip-slow` (`31`). Keep only non-rendered related-story
   annotations open: comment/endnote/footnote stories are preserved structurally, but they are not yet placed
   page stories and therefore cannot honestly emit PDF link rectangles without a story-owned layout model.
+  2026-06-02 architecture follow-up: inline comment/footnote/endnote markers now have a private-safe
+  structure reference map. `DocxStructureSnapshot.InlineReferences` records each marker's source block,
+  source paragraph, run child, text offset, custom-mark token, and resolved target story kind/part/id plus
+  target block/text sizes when the related story can be joined. This removes the prior aggregate-only
+  resolution surface and gives future note/comment layout a structural join point. Keep rendering open for
+  story-owned page placement, note separator behavior, comment/endnote/footnote link rectangles, and any
+  Office-derived marker formatting. Validation passed `docx-core --skip-slow` (`52`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring

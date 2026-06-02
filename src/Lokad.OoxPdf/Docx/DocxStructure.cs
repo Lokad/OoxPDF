@@ -26,6 +26,7 @@ internal sealed record DocxStructureSnapshot(
     int FloatingDrawingCount,
     IReadOnlyList<DocxStructureBlockSnapshot> Blocks,
     IReadOnlyList<DocxStructureStorySnapshot> Stories,
+    IReadOnlyList<DocxStructureInlineReferenceSnapshot> InlineReferences,
     IReadOnlyList<DocxStructureFloatingDrawingSnapshot> FloatingDrawings,
     IReadOnlyList<DocxStructureStyleUsageSnapshot> StyleUsages,
     IReadOnlyList<DocxStructureListUsageSnapshot> ListUsages,
@@ -94,6 +95,7 @@ internal sealed record DocxStructureSnapshot(
             document.FloatingDrawings.Count,
             blocks,
             ToStorySnapshots(document, blocks),
+            ToInlineReferenceSnapshots(document),
             document.FloatingDrawings.Select((drawing, index) => ToFloatingDrawingSnapshot(drawing, index)).ToArray(),
             ToStyleUsages(document),
             ToListUsages(document),
@@ -202,6 +204,84 @@ internal sealed record DocxStructureSnapshot(
                 paragraphs.Sum(ParagraphExternalHyperlinkCount),
                 paragraphs.Sum(ParagraphInternalHyperlinkCount)));
         }
+    }
+
+    private static IReadOnlyList<DocxStructureInlineReferenceSnapshot> ToInlineReferenceSnapshots(DocxDocument document)
+    {
+        DocxRelatedStory[] relatedStories = document.RelatedStories
+            .OrderBy(story => story.Kind, StringComparer.Ordinal)
+            .ThenBy(story => story.PartName, StringComparer.Ordinal)
+            .ThenBy(story => story.Id, StringComparer.Ordinal)
+            .ToArray();
+        var references = new List<DocxStructureInlineReferenceSnapshot>();
+        foreach ((int blockIndex, string blockKind, int paragraphIndex, DocxParagraph paragraph) in EnumerateBodyReferenceParagraphs(document.BodyElements))
+        {
+            foreach (DocxInlineReference reference in paragraph.InlineReferences)
+            {
+                (int? storyIndex, DocxRelatedStory? story) = ResolveInlineReferenceStory(reference, relatedStories);
+                references.Add(new DocxStructureInlineReferenceSnapshot(
+                    blockIndex,
+                    blockKind,
+                    paragraphIndex,
+                    reference.Kind,
+                    reference.Id,
+                    reference.CustomMarkFollowsValue,
+                    reference.SourceRunIndex,
+                    reference.RunChildIndex,
+                    reference.TextOffsetInRun,
+                    storyIndex,
+                    story?.Kind,
+                    story?.PartName,
+                    story?.Id,
+                    story?.BodyElements.Count,
+                    story is null ? null : DocxBlockTraversal.EnumerateBodyParagraphs(story).Sum(TextLength)));
+            }
+        }
+
+        return references;
+    }
+
+    private static IEnumerable<(int BlockIndex, string BlockKind, int ParagraphIndex, DocxParagraph Paragraph)> EnumerateBodyReferenceParagraphs(IReadOnlyList<DocxBodyElement> elements)
+    {
+        for (int blockIndex = 0; blockIndex < elements.Count; blockIndex++)
+        {
+            switch (elements[blockIndex])
+            {
+                case DocxParagraphElement paragraph:
+                    yield return (blockIndex, "Paragraph", 0, paragraph.Paragraph);
+                    break;
+                case DocxTableElement table:
+                    int paragraphIndex = 0;
+                    foreach (DocxParagraph cellParagraph in DocxBlockTraversal.EnumerateTableParagraphs(table.Table))
+                    {
+                        yield return (blockIndex, "Table", paragraphIndex++, cellParagraph);
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    private static (int? Index, DocxRelatedStory? Story) ResolveInlineReferenceStory(
+        DocxInlineReference reference,
+        IReadOnlyList<DocxRelatedStory> relatedStories)
+    {
+        if (reference.Id is null)
+        {
+            return (null, null);
+        }
+
+        for (int index = 0; index < relatedStories.Count; index++)
+        {
+            DocxRelatedStory story = relatedStories[index];
+            if (string.Equals(story.Kind, reference.Kind, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(story.Id, reference.Id, StringComparison.Ordinal))
+            {
+                return (index, story);
+            }
+        }
+
+        return (null, null);
     }
 
     private static DocxStructureBlockSnapshot FromParagraph(
@@ -862,6 +942,23 @@ internal sealed record DocxStructureStorySnapshot(
     int HyperlinkCount,
     int ExternalHyperlinkCount,
     int InternalHyperlinkCount);
+
+internal sealed record DocxStructureInlineReferenceSnapshot(
+    int SourceBlockIndex,
+    string SourceBlockKind,
+    int SourceParagraphIndex,
+    string Kind,
+    string? Id,
+    string? CustomMarkFollowsValue,
+    int SourceRunIndex,
+    int RunChildIndex,
+    int TextOffsetInRun,
+    int? ResolvedStoryIndex,
+    string? ResolvedStoryKind,
+    string? ResolvedStoryPartName,
+    string? ResolvedStoryId,
+    int? ResolvedStoryBlockCount,
+    int? ResolvedStoryTextLength);
 
 internal sealed record DocxStructureFloatingDrawingSnapshot(
     int Index,
