@@ -6414,6 +6414,12 @@ Current validation baseline:
   cells, `-0.0182` on four body value cells). Keep table/body `Tc` open and add public probes before changing
   rendering; the next rule must come from table structure and graphics/text-state lifetime, not from text
   length, column number, per-cell constants, or the obsolete unstacked summary.
+  2026-06-02 bullet-label correction: public `docx-ladder-03-compact-bullet-alt-line115` showed the decimal
+  numbering `Tc` branch must not apply to bullet-format list labels. Office and the corrected candidate both
+  emit `170/170` text operations with `NonzeroTcCount=0` and a single `Tc=0` bucket in run `20260602-031750`;
+  raster metrics stayed unchanged (`MAE=7.724227`, changed16 `0.076554`), as expected for a PDF text-state
+  structural alignment step. Keep decimal/numbered label `Tc` guarded by the existing public numbering case,
+  and keep the broader short-run/table `Tc` item open.
   2026-06-01 table-text-state probe: added Office-authored public fixture
   `docx-ladder-03-table-text-state` to vary table header/body text classes without using private content. Run
   `20260601-133647` matches operation count (`35/35`) but confirms the remaining structural table text-state

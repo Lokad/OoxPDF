@@ -1980,7 +1980,9 @@ internal sealed class DocxLayoutEngine
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
-        double pdfCharacterSpacing = OfficeNumberedTextStateCharacterSpacing(fontSize);
+        double pdfCharacterSpacing = ShouldEmitNumberedLabelTextStateSpacing(label)
+            ? OfficeNumberedTextStateCharacterSpacing(fontSize)
+            : 0d;
         var segments = new List<DocxTextSegmentLayout>
         {
             new(
@@ -2010,6 +2012,11 @@ internal sealed class DocxLayoutEngine
     {
         const double docxNumberedTextStateSpacingEm = 0.004d;
         return fontSize * docxNumberedTextStateSpacingEm;
+    }
+
+    private static bool ShouldEmitNumberedLabelTextStateSpacing(DocxListLabel label)
+    {
+        return !string.Equals(label.FormatValue, "bullet", StringComparison.OrdinalIgnoreCase);
     }
 
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)

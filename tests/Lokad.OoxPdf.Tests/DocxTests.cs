@@ -9954,6 +9954,64 @@ internal static class DocxTests
         TestAssert.True(labelSegment.FontResourceName is not null, "Snapshot should identify the resolved PDF font resource without exposing text.");
     }
 
+    public static void DocxTextEmissionDoesNotApplyNumberedTcToBulletListMarkers()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        var label = new DocxListLabel(
+            "\uF0B7",
+            "bullet",
+            "\uF0B7",
+            "tab",
+            "1",
+            0,
+            DocxNumberingIndent.Empty,
+            new DocxTextRunStyle(10d, null, false, false, false, null, familyName, new DocxRunFonts(familyName, null, null, null, null, null, null, null)));
+        var run = new DocxTextRun("Item", 10d, null, false, false, false, null, familyName)
+        {
+            Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            label);
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [paragraph],
+            []);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines.Single();
+
+        TestAssert.True(
+            line.Segments.All(segment => Math.Abs(segment.PdfCharacterSpacing) < 0.0001d),
+            "Bullet-format list markers should keep PDF Tc at zero; decimal numbering labels remain the separate Tc branch.");
+    }
+
     public static void DocxLayoutSnapshotReportsTableSourceBlockIndexes()
     {
         DocxParagraph before = CreateDocxLayoutParagraph("Before", 10d, 12d);
