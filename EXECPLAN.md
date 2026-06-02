@@ -7352,6 +7352,16 @@ Current validation baseline:
   boundaries. Validation passed `docx-tables --skip-slow` (`113`), `docx-core --skip-slow` (`53`), and full solution
   build. Keep table-cell column breaks, competing nested-table cell breaks, Office-exact repeated-header/merged-cell
   interactions, and fragments taller than a fresh frame open.
+  2026-06-02 architecture follow-up: nested tables inside table cells now use the same explicit row-boundary partition
+  model as table-cell text and images. `DocxLayout` resolves lower/upper nested-table block indexes from the measured
+  row-top fragment boundaries, so competing cell page breaks can split a row into multiple fragments without forcing
+  every nested table after the first cell-local break into the same continuation. Nested tables remain atomic blocks in
+  this path: if a row-level boundary lands inside a nested table block, the whole nested table stays on the earlier
+  fragment until nested-row internal fragmentation is generalized. Bottom-up coverage verifies three nested tables
+  across two competing cell page breaks land on the three authored row fragments. Validation passed
+  `docx-tables --skip-slow` (`114`). Keep table-cell column breaks, Office-exact repeated-header/merged-cell
+  interactions, nested-row internal fragmentation inside explicit cell-break fragments, and fragments taller than a
+  fresh frame open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

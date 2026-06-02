@@ -10956,6 +10956,50 @@ internal static class DocxTests
         TestAssert.Equal("After", secondNestedRow.Cells.Single().TextLines.Single().Text);
     }
 
+    public static void DocxTableLayoutStagePartitionsNestedTablesAcrossCompetingCellPageBreaks()
+    {
+        DocxParagraph earlyBefore = CreateDocxLayoutParagraph("EarlyBefore", 8d, 8d);
+        DocxParagraph earlyAfter = CreateDocxLayoutParagraph("EarlyAfter", 8d, 8d);
+        DocxTable beforeNestedTable = CreateSingleCellTable("Before", 8d);
+        DocxTable middleNestedTable = CreateSingleCellTable("Middle", 12d);
+        DocxTable afterNestedTable = CreateSingleCellTable("After", 10d);
+        var earlyCell = new DocxTableCell(string.Empty, [earlyBefore, earlyAfter], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(earlyBefore),
+                new DocxPageBreakElement("earlyBreak", "page"),
+                new DocxParagraphElement(earlyAfter)
+            ]
+        };
+        var nestedCell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxTableElement(beforeNestedTable),
+                new DocxTableElement(middleNestedTable),
+                new DocxPageBreakElement("laterBreak", "page"),
+                new DocxTableElement(afterNestedTable)
+            ]
+        };
+        DocxTable table = new(null, [60d, 90d], [new DocxTableRow([earlyCell, nestedCell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, beforeNestedTable, middleNestedTable, afterNestedTable]);
+
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .ToArray();
+
+        TestAssert.Equal(3, rowFragments.Length);
+        TestAssert.Equal("Before", rowFragments[0].Cells[1].NestedRows.Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Middle", rowFragments[1].Cells[1].NestedRows.Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("After", rowFragments[2].Cells[1].NestedRows.Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal(0, rowFragments[0].Cells[1].NestedRows.Single().Table.TableIndex);
+        TestAssert.Equal(1, rowFragments[1].Cells[1].NestedRows.Single().Table.TableIndex);
+        TestAssert.Equal(2, rowFragments[2].Cells[1].NestedRows.Single().Table.TableIndex);
+    }
+
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
