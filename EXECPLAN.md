@@ -536,6 +536,12 @@ High-priority actions:
   keys, zero mismatches). Keep this as the structural target for the next renderer branch; do not turn it into
   an oracle lookup, because production still needs to derive Word's emitted-advance target from document/font
   state available before PDF emission.
+  2026-06-02 planner follow-up: `DocxTextEmissionPlanner` now has a target-advance primitive that derives the
+  PDF text-state character spacing needed to bridge a current emitted advance to a caller-supplied target over
+  the operation's glyph gaps, with separate compensated and uncompensated plan paths. This is intentionally
+  target-agnostic: it gives future Word-target logic a structural home without deciding the target from
+  private data, fonts, or observed constants. `docx-core --skip-slow` passed `50` tests after a serial rerun
+  following one transient parallel compiler output lock.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

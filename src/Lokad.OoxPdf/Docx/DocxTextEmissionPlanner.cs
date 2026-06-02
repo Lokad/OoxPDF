@@ -88,6 +88,31 @@ internal static class DocxTextEmissionPlanner
         return Create(style, layoutFontSize, pdfCharacterSpacing: 0d, compensatePdfCharacterSpacing: true);
     }
 
+    public static double TextStateCharacterSpacingForAdvanceTarget(
+        int glyphGapCount,
+        double currentEmittedAdvance,
+        double targetEmittedAdvance)
+    {
+        return glyphGapCount <= 0
+            ? 0d
+            : (targetEmittedAdvance - currentEmittedAdvance) / glyphGapCount;
+    }
+
+    public static DocxTextEmissionPlan CreateForAdvanceTarget(
+        DocxTextRun style,
+        double layoutFontSize,
+        int glyphGapCount,
+        double currentEmittedAdvance,
+        double targetEmittedAdvance,
+        bool compensatePdfCharacterSpacing)
+    {
+        double pdfCharacterSpacing = TextStateCharacterSpacingForAdvanceTarget(
+            glyphGapCount,
+            currentEmittedAdvance,
+            targetEmittedAdvance);
+        return Create(style, layoutFontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing);
+    }
+
     public static DocxTextEmissionCharacterProfile ClassifyText(string text)
     {
         int digitCount = 0;

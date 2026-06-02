@@ -474,6 +474,37 @@ internal static class DocxTests
         TestAssert.True(plan.CompensatePdfCharacterSpacing, "Terminal spaces should stay eligible for authored positioning while emitting neutral PDF Tc.");
     }
 
+    public static void DocxTextEmissionPlannerDerivesTcFromAdvanceTarget()
+    {
+        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.12d);
+
+        double tc = DocxTextEmissionPlanner.TextStateCharacterSpacingForAdvanceTarget(
+            glyphGapCount: 3,
+            currentEmittedAdvance: 24d,
+            targetEmittedAdvance: 24.18d);
+        DocxTextEmissionPlan emittedPlan = DocxTextEmissionPlanner.CreateForAdvanceTarget(
+            run,
+            11d,
+            glyphGapCount: 3,
+            currentEmittedAdvance: 24d,
+            targetEmittedAdvance: 24.18d,
+            compensatePdfCharacterSpacing: false);
+        DocxTextEmissionPlan compensatedPlan = DocxTextEmissionPlanner.CreateForAdvanceTarget(
+            run,
+            11d,
+            glyphGapCount: 3,
+            currentEmittedAdvance: 24d,
+            targetEmittedAdvance: 24.18d,
+            compensatePdfCharacterSpacing: true);
+
+        TestAssert.True(Math.Abs(tc - 0.06d) < 0.0001d, "Tc should be the emitted-advance delta distributed over glyph gaps.");
+        TestAssert.True(Math.Abs(emittedPlan.PdfCharacterSpacing - 0.06d) < 0.0001d, "Uncompensated plans should carry the derived Tc.");
+        TestAssert.True(Math.Abs(emittedPlan.PositioningCharacterSpacing - 0.12d) < 0.0001d, "Uncompensated plans should leave positioning spacing unchanged.");
+        TestAssert.True(Math.Abs(compensatedPlan.PdfCharacterSpacing - 0.06d) < 0.0001d, "Compensated plans should carry the same derived Tc.");
+        TestAssert.True(Math.Abs(compensatedPlan.PositioningCharacterSpacing - 0.06d) < 0.0001d, "Compensated plans should subtract derived Tc from positioning spacing.");
+        TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingForAdvanceTarget(0, 24d, 24.18d));
+    }
+
     public static void DocxTextEmissionPlannerSplitsDashPunctuationIntoOperationParts()
     {
         var run = new DocxTextRun("Alpha-Beta", 10d, null, false, false, false, null, null);
