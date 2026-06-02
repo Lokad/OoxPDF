@@ -7321,6 +7321,14 @@ Current validation baseline:
   modes, and true Office text-flow interaction open. Validation passed `docx-images --skip-slow` (`3`),
   `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36` after rerun; one parallel run hit a transient
   build-file lock), and full solution build.
+  2026-06-02 architecture follow-up: floating drawing layouts now expose a typed wrap-exclusion rectangle for
+  resolved `wrapSquare`, `wrapTight`, `wrapThrough`, and `wrapTopAndBottom` anchors, derived from placed anchor
+  coordinates, extents, and authored `distT/distB/distL/distR` distances. `wrapNone` and unresolved anchors keep
+  the exclusion fields null instead of falling back to guessed text-flow geometry. Bottom-up coverage extends the
+  anchored PNG fixture to assert the private-safe exclusion rectangle from layout-owned placement facts. This is
+  still non-reflowing groundwork: keep Office-derived paragraph/table text wrapping around float exclusions open.
+  Validation passed `docx-core --skip-slow` (`53`), `docx-images --skip-slow` (`4`; serial rerun after a parallel
+  compiler output lock), `docx-page --skip-slow` (`40`), and full solution build.
   2026-06-02 architecture follow-up: table layout now resolves a current table frame at each row boundary
   instead of capturing the initial column x/width for the whole table. Multi-column table rows and repeated
   header rows now consume the active `DocxLayoutColumnFrame` after a column/page advance, and the table loop

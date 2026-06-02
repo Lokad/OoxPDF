@@ -7101,6 +7101,10 @@ internal static class DocxTests
         TestAssert.Equal("image/png", layoutSnapshot.ImageContentType ?? string.Empty);
         TestAssert.Equal(144d, layoutSnapshot.ImageWidthPoints ?? 0d);
         TestAssert.Equal(72d, layoutSnapshot.ImageHeightPoints ?? 0d);
+        TestAssert.Equal((layoutSnapshot.PlacedX ?? 0d) - (layoutSnapshot.DistanceLeftPoints ?? 0d), layoutSnapshot.WrapExclusionX ?? 0d);
+        TestAssert.Equal((layoutSnapshot.PlacedTop ?? 0d) + (layoutSnapshot.DistanceTopPoints ?? 0d), layoutSnapshot.WrapExclusionTop ?? 0d);
+        TestAssert.Equal((layoutSnapshot.ExtentWidthPoints ?? 0d) + (layoutSnapshot.DistanceLeftPoints ?? 0d) + (layoutSnapshot.DistanceRightPoints ?? 0d), layoutSnapshot.WrapExclusionWidth ?? 0d);
+        TestAssert.Equal((layoutSnapshot.ExtentHeightPoints ?? 0d) + (layoutSnapshot.DistanceTopPoints ?? 0d) + (layoutSnapshot.DistanceBottomPoints ?? 0d), layoutSnapshot.WrapExclusionHeight ?? 0d);
 
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output);

@@ -43,8 +43,18 @@ internal sealed record DocxFloatingDrawingLayout(
     double? VerticalReferenceBottom,
     double? PlacedX,
     double? PlacedTop,
+    double? WrapExclusionX,
+    double? WrapExclusionTop,
+    double? WrapExclusionWidth,
+    double? WrapExclusionHeight,
     string? StoryKind = null,
     string? StoryVariantType = null);
+
+internal sealed record DocxWrapExclusionFrame(
+    double X,
+    double Top,
+    double Width,
+    double Height);
 
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
@@ -306,6 +316,10 @@ internal sealed record DocxLayoutSnapshot(
                     drawing.VerticalReferenceBottom,
                     drawing.PlacedX,
                     drawing.PlacedTop,
+                    drawing.WrapExclusionX,
+                    drawing.WrapExclusionTop,
+                    drawing.WrapExclusionWidth,
+                    drawing.WrapExclusionHeight,
                     drawing.Drawing.WrapKind,
                     drawing.Drawing.WrapTextValue,
                     drawing.Drawing.HorizontalRelativeFromValue,
@@ -988,6 +1002,10 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     double? VerticalReferenceBottom,
     double? PlacedX,
     double? PlacedTop,
+    double? WrapExclusionX,
+    double? WrapExclusionTop,
+    double? WrapExclusionWidth,
+    double? WrapExclusionHeight,
     string? WrapKind,
     string? WrapTextValue,
     string? HorizontalRelativeFromValue,
@@ -2323,6 +2341,13 @@ internal sealed class DocxLayoutEngine
         double? extentHeight = ReadEmuPoints(drawing.ExtentCyValue);
         double? horizontalOffset = ReadEmuPoints(drawing.HorizontalOffsetValue);
         double? verticalOffset = ReadEmuPoints(drawing.VerticalOffsetValue);
+        double? distanceTop = ReadEmuPoints(drawing.DistanceTopValue);
+        double? distanceBottom = ReadEmuPoints(drawing.DistanceBottomValue);
+        double? distanceLeft = ReadEmuPoints(drawing.DistanceLeftValue);
+        double? distanceRight = ReadEmuPoints(drawing.DistanceRightValue);
+        double? placedX = ResolveHorizontalPlacement(horizontalReference, extentWidth, drawing.HorizontalAlignValue, horizontalOffset);
+        double? placedTop = ResolveVerticalPlacement(verticalReference, extentHeight, drawing.VerticalAlignValue, verticalOffset);
+        DocxWrapExclusionFrame? wrapExclusion = CreateWrapExclusionFrame(drawing, placedX, placedTop, extentWidth, extentHeight, distanceTop, distanceBottom, distanceLeft, distanceRight);
         return new DocxFloatingDrawingLayout(
             drawing,
             pageStartIndex,
@@ -2335,18 +2360,62 @@ internal sealed class DocxLayoutEngine
             extentHeight,
             horizontalOffset,
             verticalOffset,
-            ReadEmuPoints(drawing.DistanceTopValue),
-            ReadEmuPoints(drawing.DistanceBottomValue),
-            ReadEmuPoints(drawing.DistanceLeftValue),
-            ReadEmuPoints(drawing.DistanceRightValue),
+            distanceTop,
+            distanceBottom,
+            distanceLeft,
+            distanceRight,
             horizontalReference?.Start,
             horizontalReference?.Size,
             verticalReference?.Start,
             verticalReference?.End,
-            ResolveHorizontalPlacement(horizontalReference, extentWidth, drawing.HorizontalAlignValue, horizontalOffset),
-            ResolveVerticalPlacement(verticalReference, extentHeight, drawing.VerticalAlignValue, verticalOffset),
+            placedX,
+            placedTop,
+            wrapExclusion?.X,
+            wrapExclusion?.Top,
+            wrapExclusion?.Width,
+            wrapExclusion?.Height,
             storyKind,
             storyVariantType);
+    }
+
+    private static DocxWrapExclusionFrame? CreateWrapExclusionFrame(
+        DocxFloatingDrawing drawing,
+        double? placedX,
+        double? placedTop,
+        double? extentWidth,
+        double? extentHeight,
+        double? distanceTop,
+        double? distanceBottom,
+        double? distanceLeft,
+        double? distanceRight)
+    {
+        if (!IsWrapExclusionKind(drawing.WrapKind) ||
+            placedX is not { } x ||
+            placedTop is not { } top ||
+            extentWidth is not { } width ||
+            extentHeight is not { } height)
+        {
+            return null;
+        }
+
+        double leftDistance = distanceLeft ?? 0d;
+        double rightDistance = distanceRight ?? 0d;
+        double topDistance = distanceTop ?? 0d;
+        double bottomDistance = distanceBottom ?? 0d;
+        return new DocxWrapExclusionFrame(
+            x - leftDistance,
+            top + topDistance,
+            width + leftDistance + rightDistance,
+            height + topDistance + bottomDistance);
+    }
+
+    private static bool IsWrapExclusionKind(string? wrapKind)
+    {
+        return wrapKind is not null &&
+            (wrapKind.Equals("wrapSquare", StringComparison.OrdinalIgnoreCase) ||
+            wrapKind.Equals("wrapTight", StringComparison.OrdinalIgnoreCase) ||
+            wrapKind.Equals("wrapThrough", StringComparison.OrdinalIgnoreCase) ||
+            wrapKind.Equals("wrapTopAndBottom", StringComparison.OrdinalIgnoreCase));
     }
 
     private static double? ResolveHorizontalPlacement(
