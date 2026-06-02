@@ -744,6 +744,13 @@ High-priority actions:
   contract used by paragraphs, tables, and text-emission snapshots, and avoids a future layout stage having to
   guess which body item an anchor belongs to. Bottom-up coverage asserts reader and snapshot block ownership;
   validation passed `docx-core --skip-slow` (`51`).
+  2026-06-02 architecture follow-up: `DocxLayout` now preserves the floating drawing inventory, and
+  `DocxLayoutSnapshot` exposes `DocxFloatingDrawingLayoutSnapshot` entries mapped to source block page spans.
+  Anchors therefore survive from reader to structure snapshot to layout snapshot with body block, paragraph,
+  wrap/position, image relationship, part, content type, and dimensions. This is still non-rendering groundwork,
+  but it makes the future floating layout/render stage comparable to the established DOCX text/table pipeline
+  instead of forcing it to rediscover anchors from the original XML. Validation passed `docx-core --skip-slow`
+  (`51`) and `docx-tables --skip-slow` (`98`).
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

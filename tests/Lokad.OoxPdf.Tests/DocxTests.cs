@@ -6319,6 +6319,17 @@ internal static class DocxTests
         TestAssert.Equal(72d, snapshot.ImageHeightPoints ?? 0d);
         TestAssert.Equal(0, snapshot.SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, snapshot.SourceBlockIndex ?? -1);
+
+        DocxFloatingDrawingLayoutSnapshot layoutSnapshot = new DocxRenderer().InspectLayout(document).FloatingDrawings.Single();
+        TestAssert.Equal(0, layoutSnapshot.SourceBlockIndex ?? -1);
+        TestAssert.Equal(0, layoutSnapshot.SourceParagraphIndex ?? -1);
+        TestAssert.Equal(0, layoutSnapshot.PageStartIndex ?? -1);
+        TestAssert.Equal(0, layoutSnapshot.PageEndIndex ?? -1);
+        TestAssert.Equal("rIdImage1", layoutSnapshot.ImageRelationshipId ?? string.Empty);
+        TestAssert.Equal("/word/media/image1.png", layoutSnapshot.ImagePartName ?? string.Empty);
+        TestAssert.Equal("image/png", layoutSnapshot.ImageContentType ?? string.Empty);
+        TestAssert.Equal(144d, layoutSnapshot.ImageWidthPoints ?? 0d);
+        TestAssert.Equal(72d, layoutSnapshot.ImageHeightPoints ?? 0d);
     }
 
     public static void DocxSyntheticTableRendersCellsAndText()

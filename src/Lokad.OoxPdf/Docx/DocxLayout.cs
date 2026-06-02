@@ -7,7 +7,9 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Docx;
 
-internal sealed record DocxLayout(IReadOnlyList<DocxLayoutPage> Pages);
+internal sealed record DocxLayout(
+    IReadOnlyList<DocxLayoutPage> Pages,
+    IReadOnlyList<DocxFloatingDrawing> FloatingDrawings);
 
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
@@ -28,12 +30,51 @@ internal sealed record DocxParagraphSpacingProfile(
 internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxLayoutPageSnapshot> Pages,
     IReadOnlyList<DocxTableSnapshot> Tables,
-    IReadOnlyList<DocxLayoutSourceBlockSnapshot> SourceBlocks)
+    IReadOnlyList<DocxLayoutSourceBlockSnapshot> SourceBlocks,
+    IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> FloatingDrawings)
 {
     public static DocxLayoutSnapshot FromLayout(DocxLayout layout)
     {
         DocxLayoutPageSnapshot[] pages = layout.Pages.Select(ToSnapshot).ToArray();
-        return new DocxLayoutSnapshot(pages, ToTableSnapshots(pages), ToSourceBlockSnapshots(pages));
+        IReadOnlyList<DocxLayoutSourceBlockSnapshot> sourceBlocks = ToSourceBlockSnapshots(pages);
+        return new DocxLayoutSnapshot(
+            pages,
+            ToTableSnapshots(pages),
+            sourceBlocks,
+            ToFloatingDrawingSnapshots(layout.FloatingDrawings, sourceBlocks));
+    }
+
+    private static IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> ToFloatingDrawingSnapshots(
+        IReadOnlyList<DocxFloatingDrawing> drawings,
+        IReadOnlyList<DocxLayoutSourceBlockSnapshot> sourceBlocks)
+    {
+        return drawings
+            .Select((drawing, index) =>
+            {
+                DocxLayoutSourceBlockSnapshot? sourceBlock = drawing.SourceBlockIndex is null
+                    ? null
+                    : sourceBlocks.FirstOrDefault(block => block.SourceBlockIndex == drawing.SourceBlockIndex.Value);
+                return new DocxFloatingDrawingLayoutSnapshot(
+                    index,
+                    drawing.SourceBlockIndex,
+                    drawing.SourceParagraphIndex,
+                    sourceBlock?.FirstPageIndex,
+                    sourceBlock?.LastPageIndex,
+                    drawing.WrapKind,
+                    drawing.WrapTextValue,
+                    drawing.HorizontalRelativeFromValue,
+                    drawing.HorizontalAlignValue,
+                    drawing.HorizontalOffsetValue,
+                    drawing.VerticalRelativeFromValue,
+                    drawing.VerticalAlignValue,
+                    drawing.VerticalOffsetValue,
+                    drawing.ImageRelationshipId,
+                    drawing.Image?.PartName,
+                    drawing.Image?.ContentType,
+                    drawing.Image?.WidthPoints,
+                    drawing.Image?.HeightPoints);
+            })
+            .ToArray();
     }
 
     private static IReadOnlyList<DocxTableSnapshot> ToTableSnapshots(IReadOnlyList<DocxLayoutPageSnapshot> pages)
@@ -498,6 +539,26 @@ internal sealed record DocxLayoutPageSnapshot(
     IReadOnlyList<DocxLayoutItemSnapshot> StaticItems,
     IReadOnlyList<DocxLayoutItemSnapshot> Items,
     IReadOnlyList<DocxTableRowSnapshot> TableRows);
+
+internal sealed record DocxFloatingDrawingLayoutSnapshot(
+    int Index,
+    int? SourceBlockIndex,
+    int? SourceParagraphIndex,
+    int? PageStartIndex,
+    int? PageEndIndex,
+    string? WrapKind,
+    string? WrapTextValue,
+    string? HorizontalRelativeFromValue,
+    string? HorizontalAlignValue,
+    string? HorizontalOffsetValue,
+    string? VerticalRelativeFromValue,
+    string? VerticalAlignValue,
+    string? VerticalOffsetValue,
+    string? ImageRelationshipId,
+    string? ImagePartName,
+    string? ImageContentType,
+    double? ImageWidthPoints,
+    double? ImageHeightPoints);
 
 internal sealed record DocxLayoutSourceBlockSnapshot(
     int SourceBlockIndex,
@@ -1316,7 +1377,7 @@ internal sealed class DocxLayoutEngine
             FinishPage();
         }
 
-        return new DocxLayout(AddStaticTextLines(pages, textMeasurer).ToArray());
+        return new DocxLayout(AddStaticTextLines(pages, textMeasurer).ToArray(), document.FloatingDrawings);
     }
 
     private static IReadOnlyList<DocxLayoutPage> AddStaticTextLines(IReadOnlyList<DocxLayoutPage> pages, IDocxTextMeasurer? textMeasurer)
