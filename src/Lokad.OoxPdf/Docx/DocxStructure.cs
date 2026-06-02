@@ -12,6 +12,8 @@ internal sealed record DocxStructureSnapshot(
     int BodyTextLength,
     int InlineImageCount,
     int InlineReferenceCount,
+    int AnchoredInlineReferenceCount,
+    int MaxInlineReferenceTextOffsetInRun,
     int FloatingDrawingCount,
     IReadOnlyList<DocxStructureBlockSnapshot> Blocks,
     IReadOnlyList<DocxStructureStorySnapshot> Stories,
@@ -68,6 +70,8 @@ internal sealed record DocxStructureSnapshot(
             blocks.Sum(block => block.TextLength),
             blocks.Sum(block => block.InlineImageCount),
             blocks.Sum(block => block.InlineReferenceCount),
+            blocks.Sum(block => block.AnchoredInlineReferenceCount),
+            blocks.Select(block => block.MaxInlineReferenceTextOffsetInRun).DefaultIfEmpty(0).Max(),
             document.FloatingDrawings.Count,
             blocks,
             ToStorySnapshots(document, blocks),
@@ -176,6 +180,8 @@ internal sealed record DocxStructureSnapshot(
             ListFormatValue: paragraph.ListLabel?.FormatValue,
             InlineImageCount: paragraph.Images.Count,
             InlineReferenceCount: paragraph.InlineReferences.Count,
+            AnchoredInlineReferenceCount: paragraph.InlineReferences.Count(HasInlineReferenceAnchor),
+            MaxInlineReferenceTextOffsetInRun: paragraph.InlineReferences.Select(reference => reference.TextOffsetInRun).DefaultIfEmpty(0).Max(),
             CommentReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Comment"),
             FootnoteReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Footnote"),
             EndnoteReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Endnote"),
@@ -487,6 +493,11 @@ internal sealed record DocxStructureSnapshot(
         return paragraph.InlineReferences.Count;
     }
 
+    private static bool HasInlineReferenceAnchor(DocxInlineReference reference)
+    {
+        return reference.SourceRunIndex >= 0 && reference.RunChildIndex >= 0;
+    }
+
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(
         IReadOnlyList<DocxBodyElement> elements,
         DocxTable table,
@@ -628,6 +639,8 @@ internal sealed record DocxStructureBlockSnapshot(
     string? ListFormatValue = null,
     int InlineImageCount = 0,
     int InlineReferenceCount = 0,
+    int AnchoredInlineReferenceCount = 0,
+    int MaxInlineReferenceTextOffsetInRun = 0,
     int CommentReferenceCount = 0,
     int FootnoteReferenceCount = 0,
     int EndnoteReferenceCount = 0,

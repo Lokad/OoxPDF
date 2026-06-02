@@ -696,6 +696,7 @@ internal sealed class DocxReader
         var images = new List<DocxInlineImage>();
         var inlineReferences = new List<DocxInlineReference>();
         bool pageInstructionSeen = false;
+        int sourceRunIndex = 0;
         foreach (XElement child in paragraph.Elements())
         {
             if (child.Name == WordprocessingNamespace + "r")
@@ -794,7 +795,8 @@ internal sealed class DocxReader
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
         {
-            AddInlineReferences(run);
+            int currentSourceRunIndex = sourceRunIndex++;
+            AddInlineReferences(run, currentSourceRunIndex);
             string text = ReadRunText(run);
             string? placeholder = run
                 .Elements(WordprocessingNamespace + "instrText")
@@ -826,30 +828,45 @@ internal sealed class DocxReader
             images.AddRange(ReadInlineImages(run, package, relationships));
         }
 
-        void AddInlineReferences(XElement run)
+        void AddInlineReferences(XElement run, int currentSourceRunIndex)
         {
-            foreach (XElement reference in run.Elements(WordprocessingNamespace + "commentReference"))
+            int childIndex = 0;
+            int textOffset = 0;
+            foreach (XElement child in run.Elements())
             {
-                inlineReferences.Add(new DocxInlineReference(
-                    "Comment",
-                    (string?)reference.Attribute(WordprocessingNamespace + "id"),
-                    null));
-            }
+                if (child.Name == WordprocessingNamespace + "commentReference")
+                {
+                    inlineReferences.Add(new DocxInlineReference(
+                        "Comment",
+                        (string?)child.Attribute(WordprocessingNamespace + "id"),
+                        null,
+                        currentSourceRunIndex,
+                        childIndex,
+                        textOffset));
+                }
+                else if (child.Name == WordprocessingNamespace + "footnoteReference")
+                {
+                    inlineReferences.Add(new DocxInlineReference(
+                        "Footnote",
+                        (string?)child.Attribute(WordprocessingNamespace + "id"),
+                        (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows"),
+                        currentSourceRunIndex,
+                        childIndex,
+                        textOffset));
+                }
+                else if (child.Name == WordprocessingNamespace + "endnoteReference")
+                {
+                    inlineReferences.Add(new DocxInlineReference(
+                        "Endnote",
+                        (string?)child.Attribute(WordprocessingNamespace + "id"),
+                        (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows"),
+                        currentSourceRunIndex,
+                        childIndex,
+                        textOffset));
+                }
 
-            foreach (XElement reference in run.Elements(WordprocessingNamespace + "footnoteReference"))
-            {
-                inlineReferences.Add(new DocxInlineReference(
-                    "Footnote",
-                    (string?)reference.Attribute(WordprocessingNamespace + "id"),
-                    (string?)reference.Attribute(WordprocessingNamespace + "customMarkFollows")));
-            }
-
-            foreach (XElement reference in run.Elements(WordprocessingNamespace + "endnoteReference"))
-            {
-                inlineReferences.Add(new DocxInlineReference(
-                    "Endnote",
-                    (string?)reference.Attribute(WordprocessingNamespace + "id"),
-                    (string?)reference.Attribute(WordprocessingNamespace + "customMarkFollows")));
+                textOffset += ReadRunTextChild(child).Length;
+                childIndex++;
             }
         }
     }
@@ -999,34 +1016,46 @@ internal sealed class DocxReader
         var text = new System.Text.StringBuilder();
         foreach (XElement child in run.Elements())
         {
-            if (child.Name == WordprocessingNamespace + "t")
-            {
-                text.Append((string?)child ?? string.Empty);
-            }
-            else if (child.Name == WordprocessingNamespace + "tab")
-            {
-                text.Append('\t');
-            }
-            else if (child.Name == WordprocessingNamespace + "noBreakHyphen")
-            {
-                text.Append('\u2011');
-            }
-            else if (child.Name == WordprocessingNamespace + "softHyphen")
-            {
-                text.Append('\u00AD');
-            }
-            else if (child.Name == WordprocessingNamespace + "cr")
-            {
-                text.Append('\n');
-            }
-            else if (child.Name == WordprocessingNamespace + "br" &&
-                string.IsNullOrEmpty((string?)child.Attribute(WordprocessingNamespace + "type")))
-            {
-                text.Append('\n');
-            }
+            text.Append(ReadRunTextChild(child));
         }
 
         return text.ToString();
+    }
+
+    private static string ReadRunTextChild(XElement child)
+    {
+        if (child.Name == WordprocessingNamespace + "t")
+        {
+            return (string?)child ?? string.Empty;
+        }
+
+        if (child.Name == WordprocessingNamespace + "tab")
+        {
+            return "\t";
+        }
+
+        if (child.Name == WordprocessingNamespace + "noBreakHyphen")
+        {
+            return "\u2011";
+        }
+
+        if (child.Name == WordprocessingNamespace + "softHyphen")
+        {
+            return "\u00AD";
+        }
+
+        if (child.Name == WordprocessingNamespace + "cr")
+        {
+            return "\n";
+        }
+
+        if (child.Name == WordprocessingNamespace + "br" &&
+            string.IsNullOrEmpty((string?)child.Attribute(WordprocessingNamespace + "type")))
+        {
+            return "\n";
+        }
+
+        return string.Empty;
     }
 
     private static IReadOnlyList<DocxBodyElement> ReadBodyElements(

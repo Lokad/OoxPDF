@@ -227,7 +227,10 @@ internal sealed record DocxParagraph(
 internal sealed record DocxInlineReference(
     string Kind,
     string? Id,
-    string? CustomMarkFollowsValue);
+    string? CustomMarkFollowsValue,
+    int SourceRunIndex = -1,
+    int RunChildIndex = -1,
+    int TextOffsetInRun = 0);
 
 internal sealed record DocxTabStop(
     double? PositionPoints,

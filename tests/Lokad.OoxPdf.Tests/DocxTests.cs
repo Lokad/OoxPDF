@@ -10705,7 +10705,7 @@ internal static class DocxTests
                       <w:commentRangeStart w:id="1"/>
                       <w:r><w:t>Referenced story bodies</w:t></w:r>
                       <w:r><w:commentReference w:id="1"/></w:r>
-                      <w:r><w:footnoteReference w:id="2" w:customMarkFollows="1"/></w:r>
+                      <w:r><w:t>Before</w:t><w:footnoteReference w:id="2" w:customMarkFollows="1"/><w:t>After</w:t></w:r>
                       <w:r><w:endnoteReference w:id="3"/></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
@@ -10750,9 +10750,21 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
         DocxParagraph referenceParagraph = document.Paragraphs.Single();
         TestAssert.Equal(3, referenceParagraph.InlineReferences.Count);
-        TestAssert.True(referenceParagraph.InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1" && reference.CustomMarkFollowsValue is null), "Comment reference markers should be preserved as inline DOCX structure.");
-        TestAssert.True(referenceParagraph.InlineReferences.Any(reference => reference.Kind == "Footnote" && reference.Id == "2" && reference.CustomMarkFollowsValue == "1"), "Footnote reference markers should preserve custom mark flags.");
-        TestAssert.True(referenceParagraph.InlineReferences.Any(reference => reference.Kind == "Endnote" && reference.Id == "3" && reference.CustomMarkFollowsValue is null), "Endnote reference markers should be preserved as inline DOCX structure.");
+        DocxInlineReference commentReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == "Comment");
+        DocxInlineReference footnoteReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == "Footnote");
+        DocxInlineReference endnoteReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == "Endnote");
+        TestAssert.True(commentReference.Id == "1" && commentReference.CustomMarkFollowsValue is null, "Comment reference markers should be preserved as inline DOCX structure.");
+        TestAssert.True(footnoteReference.Id == "2" && footnoteReference.CustomMarkFollowsValue == "1", "Footnote reference markers should preserve custom mark flags.");
+        TestAssert.True(endnoteReference.Id == "3" && endnoteReference.CustomMarkFollowsValue is null, "Endnote reference markers should be preserved as inline DOCX structure.");
+        TestAssert.Equal(1, commentReference.SourceRunIndex);
+        TestAssert.Equal(0, commentReference.RunChildIndex);
+        TestAssert.Equal(0, commentReference.TextOffsetInRun);
+        TestAssert.Equal(2, footnoteReference.SourceRunIndex);
+        TestAssert.Equal(1, footnoteReference.RunChildIndex);
+        TestAssert.Equal(6, footnoteReference.TextOffsetInRun);
+        TestAssert.Equal(3, endnoteReference.SourceRunIndex);
+        TestAssert.Equal(0, endnoteReference.RunChildIndex);
+        TestAssert.Equal(0, endnoteReference.TextOffsetInRun);
         TestAssert.Equal(3, document.RelatedStories.Count);
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Comment" && story.PartName == "/word/comments.xml" && story.Id == "1" && story.BodyElements.Count == 2 && story.Paragraphs.Count == 1 && story.Tables.Count == 1), "Comment bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
@@ -10761,7 +10773,11 @@ internal static class DocxTests
         DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
         DocxStructureBlockSnapshot referenceBlock = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(3, snapshot.InlineReferenceCount);
+        TestAssert.Equal(3, snapshot.AnchoredInlineReferenceCount);
+        TestAssert.Equal(6, snapshot.MaxInlineReferenceTextOffsetInRun);
         TestAssert.Equal(3, referenceBlock.InlineReferenceCount);
+        TestAssert.Equal(3, referenceBlock.AnchoredInlineReferenceCount);
+        TestAssert.Equal(6, referenceBlock.MaxInlineReferenceTextOffsetInRun);
         TestAssert.Equal(1, referenceBlock.CommentReferenceCount);
         TestAssert.Equal(1, referenceBlock.FootnoteReferenceCount);
         TestAssert.Equal(1, referenceBlock.EndnoteReferenceCount);

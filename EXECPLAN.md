@@ -4598,6 +4598,16 @@ block models and richer section/pagination layout before adding more Word pagina
     structural alignment slice: renderer glyph choice, numbering display, separator footnotes, and body
     placement remain open until Office PDF inspection supplies the observable rules. Validation passed
     `docx-core --skip-slow` (`26`).
+  - [x] 2026-06-02: inline reference markers now carry private-safe source anchors instead of only aggregate
+    counts. `DocxInlineReference` records the source run index, child index, and visible in-run text offset
+    before the marker, using the same run-child text contribution logic that extracts tabs, soft/no-break
+    hyphens, carriage returns, and soft line breaks. `DocxStructureSnapshot` exposes anchored-reference counts
+    and maximum in-run marker offset at document and paragraph-block level. Bottom-up coverage includes a mixed
+    text/footnote-reference/text run so future marker rendering can consume model-owned insertion points
+    instead of guessing placement from flattened text. Validation passed `docx-core --skip-slow` (`32`) and
+    `docx-text --skip-slow` (`45`; a first parallel run hit a transient compiler output lock and passed on
+    serial rerun). Keep renderer glyph choice, automatic footnote/endnote numbering display, separator
+    footnotes, side-story placement, and PDF link/annotation structure open.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent
