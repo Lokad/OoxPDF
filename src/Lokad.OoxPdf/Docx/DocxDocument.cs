@@ -223,7 +223,15 @@ internal sealed record DocxParagraph(
     public string? SnapToGridValue { get; init; }
     public IReadOnlyList<DocxInlineReference> InlineReferences { get; init; } = [];
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
+    public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
 }
+
+internal sealed record DocxBookmarkAnchor(
+    string? Id,
+    string? Name,
+    int SourceRunIndex,
+    int TextRunIndex,
+    int TextOffset);
 
 internal sealed record DocxInlineReference(
     string Kind,

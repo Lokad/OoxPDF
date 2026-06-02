@@ -6725,7 +6725,12 @@ Current validation baseline:
   target or a structural page destination, and `PdfDocumentWriter` emits internal `/Dest [... /XYZ ...]`
   annotations with bottom-up PDF coverage while preserving external `/URI` output. Keep DOCX internal
   destinations open for bookmark inventory and story-owned destination mapping; non-rendered related-story
-  links also remain open.
+  links also remain open. 2026-06-02 DOCX bookmark inventory: `DocxReader` now preserves
+  `w:bookmarkStart` anchors as paragraph-owned private-safe source/text positions, and `DocxStructureSnapshot`
+  exposes bookmark-anchor counts across body, static, table-cell, and related-story paragraph traversal.
+  Bottom-up coverage pairs a bookmark anchor with an internal hyperlink target. Keep rendering open until
+  bookmark anchors are mapped to placed layout coordinates and emitted through the structural PDF destination
+  target.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

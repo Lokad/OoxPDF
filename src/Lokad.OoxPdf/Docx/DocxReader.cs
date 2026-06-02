@@ -702,6 +702,7 @@ internal sealed class DocxReader
         var images = new List<DocxInlineImage>();
         var inlineReferences = new List<DocxInlineReference>();
         var hyperlinkSpans = new List<DocxHyperlinkSpan>();
+        var bookmarkAnchors = new List<DocxBookmarkAnchor>();
         bool pageInstructionSeen = false;
         int sourceRunIndex = 0;
         foreach (XElement child in paragraph.Elements())
@@ -732,6 +733,10 @@ internal sealed class DocxReader
                 }
 
                 AddHyperlinkSpan(child, sourceRunStartIndex, sourceRunIndex - sourceRunStartIndex, textRunStartIndex, runs.Count - textRunStartIndex, runs.Sum(run => run.Text.Length) - textLengthStart);
+            }
+            else if (child.Name == WordprocessingNamespace + "bookmarkStart")
+            {
+                AddBookmarkAnchor(child);
             }
         }
 
@@ -769,8 +774,19 @@ internal sealed class DocxReader
             SnapToGrid = resolvedParagraph.SnapToGrid,
             SnapToGridValue = resolvedParagraph.SnapToGridValue,
             InlineReferences = inlineReferences,
-            Hyperlinks = hyperlinkSpans
+            Hyperlinks = hyperlinkSpans,
+            BookmarkAnchors = bookmarkAnchors
         };
+
+        void AddBookmarkAnchor(XElement bookmarkStart)
+        {
+            bookmarkAnchors.Add(new DocxBookmarkAnchor(
+                (string?)bookmarkStart.Attribute(WordprocessingNamespace + "id"),
+                (string?)bookmarkStart.Attribute(WordprocessingNamespace + "name"),
+                sourceRunIndex,
+                runs.Count,
+                runs.Sum(run => run.Text.Length)));
+        }
 
         void AddHyperlinkSpan(
             XElement hyperlink,
