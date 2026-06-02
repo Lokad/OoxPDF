@@ -192,6 +192,21 @@ function Summarize-Operations($Operations) {
     }
 }
 
+function Read-CandidatePlannerSummary([string] $Run) {
+    $candidates = @(
+        (Join-Path $Run "comparison\docx-inspect\text-emission-summary.json"),
+        (Join-Path $Run "docx-inspect\text-emission-summary.json")
+    )
+
+    foreach ($path in $candidates) {
+        if (Test-Path -LiteralPath $path) {
+            return Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+        }
+    }
+
+    return $null
+}
+
 $runs = Expand-PathList $RunDirectory
 if ($runs.Count -eq 0) {
     throw "No run directories were provided."
@@ -222,6 +237,7 @@ $summaries = foreach ($run in $runs) {
         Metrics = $metrics
         Reference = Summarize-Operations $referenceOps
         Candidate = Summarize-Operations $candidateOps
+        CandidatePlanner = Read-CandidatePlannerSummary $resolvedRun
     }
 }
 

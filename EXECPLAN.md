@@ -6537,6 +6537,14 @@ Current validation baseline:
   `docx-ladder-03-table-text-state`, and full solution build. The next `Tc` implementation should compare
   these private-safe candidate classes against Office PDF classes before selecting any uniform text-state
   component.
+  2026-06-02 text-state summary integration: `tools/SummarizeDocxTextState.ps1` now attaches candidate planner
+  text-emission summaries when a run contains `comparison/docx-inspect/text-emission-summary.json` (or
+  `docx-inspect/text-emission-summary.json`). This keeps the existing PDF-only summary behavior for ordinary
+  visual runs, while allowing public/private-safe joined evidence between Office PDF `Tc` buckets and candidate
+  planner character profiles. Validation on public `docx-ladder-03-table-text-state` run `20260602-035636`
+  with generated `comparison/docx-inspect` shows `CandidatePlannerPresent=true`, planner `SegmentCount=35`,
+  planner `DigitCount=14`, candidate PDF `NonzeroTcCount=0`, and reference PDF `NonzeroTcCount=6`; full
+  solution build passed.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
