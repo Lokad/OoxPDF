@@ -436,10 +436,17 @@ internal sealed class DocxRenderer
             RenderRunBackground(style, segment.Resource.Embedded.Font, segment.X, segment.Width, segment.FontSize, segment.BaselineY, graphics);
         }
 
-        DrawRunGlyphText(graphics, segment.Resource, style, segment.Text, segment.FontSize, segment.X, segment.BaselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(
+            style,
+            segment.FontSize,
+            segment.PdfCharacterSpacing,
+            segment.PdfCharacterSpacingSource,
+            segment.CompensatePdfCharacterSpacing,
+            segment.IsTerminalLineSpace);
+        DrawRunGlyphText(graphics, segment.Resource, segment.Text, segment.X, segment.BaselineY, color, plan, segment.SyntheticItalic);
         if (!segment.IsTerminalLineSpace && segment.SyntheticBold)
         {
-            DrawRunGlyphText(graphics, segment.Resource, style, segment.Text, segment.FontSize, segment.X + 0.35d, segment.BaselineY, color, segment.PdfCharacterSpacing, segment.CompensatePdfCharacterSpacing);
+            DrawRunGlyphText(graphics, segment.Resource, segment.Text, segment.X + 0.35d, segment.BaselineY, color, plan, segment.SyntheticItalic);
         }
 
         if (!segment.IsTerminalLineSpace)
@@ -1013,14 +1020,13 @@ internal sealed class DocxRenderer
         DocxTextEmissionSegment segment,
         DocxTextLineLayout line)
     {
-        DocxTextEmissionPlan plan = segment.IsTerminalLineSpace
-            ? DocxTextEmissionPlanner.CreateTerminalLineSpace(segment.StyleRun, segment.FontSize)
-            : DocxTextEmissionPlanner.Create(
-                segment.StyleRun,
-                segment.FontSize,
-                segment.PdfCharacterSpacing,
-                segment.CompensatePdfCharacterSpacing,
-                segment.PdfCharacterSpacingSource);
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(
+            segment.StyleRun,
+            segment.FontSize,
+            segment.PdfCharacterSpacing,
+            segment.PdfCharacterSpacingSource,
+            segment.CompensatePdfCharacterSpacing,
+            segment.IsTerminalLineSpace);
         return new DocxTextEmissionSegmentSnapshot(
             segment.Text.Length,
             line.SourceBlockIndex,
@@ -1049,17 +1055,13 @@ internal sealed class DocxRenderer
     private static void DrawRunGlyphText(
         PdfGraphicsBuilder graphics,
         DocxRunFontResource resource,
-        DocxTextRun style,
         string text,
-        double fontSize,
         double x,
         double baselineY,
         RgbColor color,
-        double pdfCharacterSpacing = 0d,
-        bool compensatePdfCharacterSpacing = true)
+        DocxTextEmissionPlan plan,
+        bool syntheticItalic)
     {
-        bool syntheticItalic = style.Italic && !resource.Resolution.Italic;
-        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(style, fontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing);
         string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true);
         if (positioningArray is not null)
         {

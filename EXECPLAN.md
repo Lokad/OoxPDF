@@ -6944,6 +6944,12 @@ Current validation baseline:
   (`40`), public `docx-numbering` run `20260602-035348` stayed at `MAE=0.019271`, public
   `docx-ladder-03-table-text-state` run `20260602-035358` stayed at the known open-gap raster
   (`MAE=0.632046`, changed16 `0.006503`), and full solution build passed.
+  2026-06-02 planner emission-segment boundary follow-up: `DocxTextEmissionPlanner` now owns the
+  emitted-segment plan selection, including the terminal-line-space override, so rendering and inspection use
+  the same `DocxTextEmissionPlan` object instead of reconstructing PDF text state separately in
+  `DocxRenderer`. This keeps the future short-run `Tc` branch centralized in the planner and avoids another
+  renderer-local exception path. The change is behavior-neutral: validation passed `docx-core --skip-slow`
+  (`54`) after a serial rerun of a transient compiler output lock, and full solution build passed.
   2026-06-02 planner operation-splitting progress: moved DOCX Office text-operation part splitting out of
   `DocxRenderer` and into `DocxTextEmissionPlanner`, next to the text-state plan. The planner now owns the
   dash-punctuation operation boundary rule plus the no-measurer fallback, so future short-run `Tc`

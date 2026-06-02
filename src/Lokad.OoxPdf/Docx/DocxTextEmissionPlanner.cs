@@ -113,6 +113,19 @@ internal static class DocxTextEmissionPlanner
             DocxTextStateCharacterSpacingSource.TerminalLineSpace);
     }
 
+    public static DocxTextEmissionPlan CreateForEmissionSegment(
+        DocxTextRun style,
+        double layoutFontSize,
+        double pdfCharacterSpacing,
+        DocxTextStateCharacterSpacingSource source,
+        bool compensatePdfCharacterSpacing,
+        bool isTerminalLineSpace)
+    {
+        return isTerminalLineSpace
+            ? CreateTerminalLineSpace(style, layoutFontSize)
+            : Create(style, layoutFontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing, source);
+    }
+
     public static double TextStateCharacterSpacingForListLabel(DocxListLabel label, double layoutFontSize)
     {
         return TextStateCharacterSpacingTargetForListLabel(label, layoutFontSize).CharacterSpacing;

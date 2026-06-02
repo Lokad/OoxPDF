@@ -501,6 +501,34 @@ internal static class DocxTests
         TestAssert.True(plan.CompensatePdfCharacterSpacing, "Terminal spaces should stay eligible for authored positioning while emitting neutral PDF Tc.");
     }
 
+    public static void DocxTextEmissionPlannerOwnsTerminalSegmentPlanOverride()
+    {
+        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.25d);
+
+        DocxTextEmissionPlan textPlan = DocxTextEmissionPlanner.CreateForEmissionSegment(
+            run,
+            11d,
+            pdfCharacterSpacing: 0.05d,
+            DocxTextStateCharacterSpacingSource.AdvanceTarget,
+            compensatePdfCharacterSpacing: false,
+            isTerminalLineSpace: false);
+        DocxTextEmissionPlan terminalPlan = DocxTextEmissionPlanner.CreateForEmissionSegment(
+            run,
+            11d,
+            pdfCharacterSpacing: 0.05d,
+            DocxTextStateCharacterSpacingSource.AdvanceTarget,
+            compensatePdfCharacterSpacing: false,
+            isTerminalLineSpace: true);
+
+        TestAssert.Equal(0.05d, textPlan.PdfCharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, textPlan.PdfCharacterSpacingSource);
+        TestAssert.True(!textPlan.CompensatePdfCharacterSpacing, "Non-terminal segments should preserve the caller's compensation mode.");
+        TestAssert.Equal(0d, terminalPlan.PdfCharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.TerminalLineSpace, terminalPlan.PdfCharacterSpacingSource);
+        TestAssert.True(terminalPlan.CompensatePdfCharacterSpacing, "Terminal spaces should always be planned through the neutral terminal-space path.");
+        TestAssert.Equal(0.25d, terminalPlan.PositioningCharacterSpacing);
+    }
+
     public static void DocxTextEmissionPlannerDerivesTcFromAdvanceTarget()
     {
         var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.12d);
