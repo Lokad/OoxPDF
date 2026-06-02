@@ -165,16 +165,20 @@ internal sealed class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
+        XElement[] paragraphs = document
+            .Descendants(WordprocessingNamespace + "p")
+            .ToArray();
         return document
             .Descendants(WordprocessingDrawingNamespace + "anchor")
-            .Select(anchor => ReadFloatingDrawing(anchor, package, relationships))
+            .Select(anchor => ReadFloatingDrawing(anchor, package, relationships, FindSourceParagraphIndex(anchor, paragraphs)))
             .ToArray();
     }
 
     private static DocxFloatingDrawing ReadFloatingDrawing(
         XElement anchor,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        int? sourceParagraphIndex)
     {
         XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
         XElement? positionH = anchor.Element(WordprocessingDrawingNamespace + "positionH");
@@ -209,7 +213,27 @@ internal sealed class DocxReader
             wrap?.Name.LocalName,
             (string?)wrap?.Attribute("wrapText"),
             relationshipId,
-            image);
+            image,
+            sourceParagraphIndex);
+    }
+
+    private static int? FindSourceParagraphIndex(XElement element, IReadOnlyList<XElement> paragraphs)
+    {
+        XElement? paragraph = element.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
+        if (paragraph is null)
+        {
+            return null;
+        }
+
+        for (int index = 0; index < paragraphs.Count; index++)
+        {
+            if (ReferenceEquals(paragraphs[index], paragraph))
+            {
+                return index;
+            }
+        }
+
+        return null;
     }
 
     private static DocxPageSettings ReadPageSettings(

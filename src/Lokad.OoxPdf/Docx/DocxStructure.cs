@@ -473,7 +473,8 @@ internal sealed record DocxStructureSnapshot(
             drawing.Image?.PartName,
             drawing.Image?.ContentType,
             drawing.Image?.WidthPoints,
-            drawing.Image?.HeightPoints);
+            drawing.Image?.HeightPoints,
+            drawing.SourceParagraphIndex);
     }
 
     private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
@@ -836,7 +837,8 @@ internal sealed record DocxStructureFloatingDrawingSnapshot(
     string? ImagePartName,
     string? ImageContentType,
     double? ImageWidthPoints,
-    double? ImageHeightPoints);
+    double? ImageHeightPoints,
+    int? SourceParagraphIndex);
 
 internal sealed record DocxStructureStyleUsageSnapshot(
     string Kind,

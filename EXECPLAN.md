@@ -734,6 +734,11 @@ High-priority actions:
   passed `docx-core --skip-slow` (`51`) and `docx-tables --skip-slow` (`98`). Keep the open rendering branch on
   deriving Office anchor coordinates/wrap effects structurally rather than placing anchored images as inline
   fallbacks.
+  2026-06-02 architecture follow-up: anchored DOCX drawings now carry `SourceParagraphIndex` through the
+  model and structure snapshots. This gives the future floating layout stage a structural anchor paragraph
+  rather than a document-global drawing inventory item, which is necessary for Office-style `relativeFrom`
+  positioning and wrap calculations. Bottom-up coverage asserts reader and snapshot paragraph ownership;
+  validation passed `docx-core --skip-slow` (`51`).
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
