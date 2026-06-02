@@ -138,7 +138,7 @@ internal sealed class DocxRenderer
 
                 double ascender = segment.Resource.Embedded.Font.Os2.WindowsAscender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
                 double descender = segment.Resource.Embedded.Font.Os2.WindowsDescender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
-                annotations.Add(new PdfLinkAnnotation(
+                annotations.Add(PdfLinkAnnotation.ToUri(
                     segment.X,
                     segment.BaselineY - descender,
                     segment.Width,

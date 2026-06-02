@@ -69,4 +69,23 @@ internal readonly record struct PdfPage
     public IReadOnlyList<PdfLinkAnnotation> Annotations { get; }
 }
 
-internal readonly record struct PdfLinkAnnotation(double X, double Y, double Width, double Height, string Uri);
+internal readonly record struct PdfLinkDestination(int PageIndex, double? Left, double? Top, double? Zoom);
+
+internal readonly record struct PdfLinkAnnotation(
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    string? Uri,
+    PdfLinkDestination? Destination = null)
+{
+    internal static PdfLinkAnnotation ToUri(double x, double y, double width, double height, string uri)
+    {
+        return new PdfLinkAnnotation(x, y, width, height, uri, null);
+    }
+
+    internal static PdfLinkAnnotation ToDestination(double x, double y, double width, double height, PdfLinkDestination destination)
+    {
+        return new PdfLinkAnnotation(x, y, width, height, null, destination);
+    }
+}

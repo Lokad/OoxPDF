@@ -207,6 +207,29 @@ internal static class PdfWriterTests
         TestAssert.Contains(@"/A << /S /URI /URI (https://example.invalid/a?b=\(c\)\\d) >>", pdf);
     }
 
+    public static void WritesInternalLinkDestinations()
+    {
+        var firstPage = new PdfPage(
+            200,
+            200,
+            string.Empty,
+            [],
+            [],
+            [],
+            [],
+            [],
+            [PdfLinkAnnotation.ToDestination(10, 20, 30, 40, new PdfLinkDestination(1, null, 180, null))]);
+        var secondPage = new PdfPage(200, 200);
+
+        string pdf = WritePdfText([firstPage, secondPage]);
+
+        TestAssert.Contains("/Annots [7 0 R]", pdf);
+        TestAssert.Contains("/Type /Annot /Subtype /Link", pdf);
+        TestAssert.Contains("/Rect [10 20 40 60]", pdf);
+        TestAssert.Contains("/Dest [5 0 R /XYZ null 180 null]", pdf);
+        TestAssert.DoesNotContain("/S /URI", pdf);
+    }
+
     public static void WritesImageBackedTilingPatternResources()
     {
         var graphics = new PdfGraphicsBuilder();

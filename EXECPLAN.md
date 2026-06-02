@@ -6721,7 +6721,11 @@ Current validation baseline:
   ownership and covered table-cell external hyperlinks through the same placed-segment annotation path;
   `docx-tables --skip-slow` passed (`95`). Static header/footer text spans now also preserve source run indexes
   and source paragraph ownership, and the shared annotation pass includes static text lines; `docx-page
-  --skip-slow` passed (`30`). Keep internal destinations and non-rendered related-story links open.
+  --skip-slow` passed (`30`). 2026-06-02 PDF-target groundwork: `PdfLinkAnnotation` now carries either a URI
+  target or a structural page destination, and `PdfDocumentWriter` emits internal `/Dest [... /XYZ ...]`
+  annotations with bottom-up PDF coverage while preserving external `/URI` output. Keep DOCX internal
+  destinations open for bookmark inventory and story-owned destination mapping; non-rendered related-story
+  links also remain open.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

@@ -149,7 +149,7 @@ internal sealed class PdfDocumentWriter
             IReadOnlyList<PdfLinkAnnotation> annotations = pages[pageIndex].Annotations;
             for (int annotationIndex = 0; annotationIndex < annotations.Count; annotationIndex++)
             {
-                WriteLinkAnnotationObject(writer, annotations[annotationIndex], annotationObjects[annotationIndex]);
+                WriteLinkAnnotationObject(writer, annotations[annotationIndex], annotationObjects[annotationIndex], pages.Count);
             }
         }
 
@@ -358,14 +358,43 @@ internal sealed class PdfDocumentWriter
             $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources {resources} /Length {contentBytes.Length} >>\nstream\n{pattern.Content}endstream\n"));
     }
 
-    private static void WriteLinkAnnotationObject(PdfObjectWriter writer, PdfLinkAnnotation annotation, int objectNumber)
+    private static void WriteLinkAnnotationObject(
+        PdfObjectWriter writer,
+        PdfLinkAnnotation annotation,
+        int objectNumber,
+        int pageCount)
     {
         double x1 = annotation.X;
         double y1 = annotation.Y;
         double x2 = annotation.X + annotation.Width;
         double y2 = annotation.Y + annotation.Height;
         writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /Type /Annot /Subtype /Link /Rect [{FormatNumber(x1)} {FormatNumber(y1)} {FormatNumber(x2)} {FormatNumber(y2)}] /Border [0 0 0] /A << /S /URI /URI ({EscapePdfString(annotation.Uri)}) >> >>\n"));
+            $"<< /Type /Annot /Subtype /Link /Rect [{FormatNumber(x1)} {FormatNumber(y1)} {FormatNumber(x2)} {FormatNumber(y2)}] /Border [0 0 0]{BuildLinkTarget(annotation, pageCount)} >>\n"));
+    }
+
+    private static string BuildLinkTarget(PdfLinkAnnotation annotation, int pageCount)
+    {
+        if (!string.IsNullOrEmpty(annotation.Uri))
+        {
+            return $" /A << /S /URI /URI ({EscapePdfString(annotation.Uri)}) >>";
+        }
+
+        if (annotation.Destination is { } destination)
+        {
+            if (destination.PageIndex < 0 || destination.PageIndex >= pageCount)
+            {
+                throw new InvalidOperationException(
+                    FormattableString.Invariant($"PDF link destination page index {destination.PageIndex} is outside the document page range 0..{pageCount - 1}."));
+            }
+
+            int pageObjectNumber = 3 + destination.PageIndex * 2;
+            string left = destination.Left is { } x ? FormatNumber(x) : "null";
+            string top = destination.Top is { } y ? FormatNumber(y) : "null";
+            string zoom = destination.Zoom is { } z ? FormatNumber(z) : "null";
+            return FormattableString.Invariant($" /Dest [{pageObjectNumber} 0 R /XYZ {left} {top} {zoom}]");
+        }
+
+        throw new InvalidOperationException("PDF link annotations must have either a URI target or an internal destination target.");
     }
 
     private static string BuildPatternResources(PdfTilingPattern pattern, IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
