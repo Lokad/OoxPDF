@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
@@ -10,6 +11,14 @@ internal readonly record struct DocxTextEmissionPlan(
     bool CompensatePdfCharacterSpacing);
 
 internal readonly record struct DocxTextEmissionPart(string Text, double X, double Width);
+
+internal readonly record struct DocxTextEmissionCharacterProfile(
+    int DigitCount,
+    int LetterCount,
+    int WhitespaceCount,
+    int PunctuationCount,
+    int SymbolCount,
+    int OtherCount);
 
 internal static class DocxTextEmissionPlanner
 {
@@ -32,6 +41,59 @@ internal static class DocxTextEmissionPlanner
     public static DocxTextEmissionPlan CreateTerminalLineSpace(DocxTextRun style, double layoutFontSize)
     {
         return Create(style, layoutFontSize, pdfCharacterSpacing: 0d, compensatePdfCharacterSpacing: true);
+    }
+
+    public static DocxTextEmissionCharacterProfile ClassifyText(string text)
+    {
+        int digitCount = 0;
+        int letterCount = 0;
+        int whitespaceCount = 0;
+        int punctuationCount = 0;
+        int symbolCount = 0;
+        int otherCount = 0;
+
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            if (Rune.IsWhiteSpace(rune))
+            {
+                whitespaceCount++;
+                continue;
+            }
+
+            switch (Rune.GetUnicodeCategory(rune))
+            {
+                case UnicodeCategory.DecimalDigitNumber:
+                    digitCount++;
+                    break;
+                case UnicodeCategory.UppercaseLetter:
+                case UnicodeCategory.LowercaseLetter:
+                case UnicodeCategory.TitlecaseLetter:
+                case UnicodeCategory.ModifierLetter:
+                case UnicodeCategory.OtherLetter:
+                    letterCount++;
+                    break;
+                case UnicodeCategory.ConnectorPunctuation:
+                case UnicodeCategory.DashPunctuation:
+                case UnicodeCategory.OpenPunctuation:
+                case UnicodeCategory.ClosePunctuation:
+                case UnicodeCategory.InitialQuotePunctuation:
+                case UnicodeCategory.FinalQuotePunctuation:
+                case UnicodeCategory.OtherPunctuation:
+                    punctuationCount++;
+                    break;
+                case UnicodeCategory.MathSymbol:
+                case UnicodeCategory.CurrencySymbol:
+                case UnicodeCategory.ModifierSymbol:
+                case UnicodeCategory.OtherSymbol:
+                    symbolCount++;
+                    break;
+                default:
+                    otherCount++;
+                    break;
+            }
+        }
+
+        return new(digitCount, letterCount, whitespaceCount, punctuationCount, symbolCount, otherCount);
     }
 
     public static IReadOnlyList<DocxTextEmissionPart> SplitOfficeTextOperationParts(

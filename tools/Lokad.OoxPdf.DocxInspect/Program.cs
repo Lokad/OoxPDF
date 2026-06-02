@@ -71,6 +71,7 @@ File.WriteAllText(
         textEmission.TerminalSpaceSegmentCount,
         textEmission.NonzeroPdfCharacterSpacingSegmentCount,
         textEmission.CompensatedCharacterSpacingSegmentCount,
+        CharacterProfile = SumCharacterProfiles(textEmission.Lines.SelectMany(line => line.Segments)),
         LinesByPage = textEmission.Lines
             .GroupBy(line => line.PageIndex)
             .OrderBy(group => group.Key)
@@ -83,6 +84,7 @@ File.WriteAllText(
                 SegmentCount = group.Sum(line => line.SegmentCount),
                 TerminalSpaceSegmentCount = group.Sum(line => line.TerminalSpaceSegmentCount),
                 NonzeroPdfCharacterSpacingSegmentCount = group.Sum(line => line.NonzeroPdfCharacterSpacingSegmentCount),
+                CharacterProfile = SumCharacterProfiles(group.SelectMany(line => line.Segments)),
                 SourceBlockCount = group
                     .Select(line => line.SourceBlockIndex)
                     .Where(index => index is not null)
@@ -105,3 +107,24 @@ File.WriteAllText(
 File.WriteAllText(
     Path.Combine(outputDirectory, "table-adjacency-summary.json"),
     JsonSerializer.Serialize(structure.TableAdjacency, options));
+
+static DocxTextEmissionCharacterProfile SumCharacterProfiles(IEnumerable<DocxTextEmissionSegmentSnapshot> segments)
+{
+    int digitCount = 0;
+    int letterCount = 0;
+    int whitespaceCount = 0;
+    int punctuationCount = 0;
+    int symbolCount = 0;
+    int otherCount = 0;
+    foreach (DocxTextEmissionSegmentSnapshot segment in segments)
+    {
+        digitCount += segment.CharacterProfile.DigitCount;
+        letterCount += segment.CharacterProfile.LetterCount;
+        whitespaceCount += segment.CharacterProfile.WhitespaceCount;
+        punctuationCount += segment.CharacterProfile.PunctuationCount;
+        symbolCount += segment.CharacterProfile.SymbolCount;
+        otherCount += segment.CharacterProfile.OtherCount;
+    }
+
+    return new(digitCount, letterCount, whitespaceCount, punctuationCount, symbolCount, otherCount);
+}

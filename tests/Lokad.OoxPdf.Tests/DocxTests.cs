@@ -504,6 +504,18 @@ internal static class DocxTests
         TestAssert.Equal(50d, parts[0].Width);
     }
 
+    public static void DocxTextEmissionPlannerClassifiesTextWithoutExposingIt()
+    {
+        DocxTextEmissionCharacterProfile profile = DocxTextEmissionPlanner.ClassifyText("A9 -+");
+
+        TestAssert.Equal(1, profile.LetterCount);
+        TestAssert.Equal(1, profile.DigitCount);
+        TestAssert.Equal(1, profile.WhitespaceCount);
+        TestAssert.Equal(1, profile.PunctuationCount);
+        TestAssert.Equal(1, profile.SymbolCount);
+        TestAssert.Equal(0, profile.OtherCount);
+    }
+
     public static void DocxReaderPreservesParagraphAlignmentTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -10071,6 +10083,8 @@ internal static class DocxTests
         DocxTextEmissionLineSnapshot spacedLine = snapshot.Lines.Single(line => line.SourceBlockIndex == 0 && line.SourceLineIndex == 0);
         DocxTextEmissionSegmentSnapshot spacedSegment = spacedLine.Segments.First(segment => !segment.IsTerminalLineSpace);
         TestAssert.Equal(4, spacedSegment.TextLength);
+        TestAssert.Equal(4, spacedSegment.CharacterProfile.LetterCount);
+        TestAssert.Equal(0, spacedSegment.CharacterProfile.DigitCount);
         TestAssert.True(Math.Abs(spacedSegment.LayoutCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should preserve authored run character spacing.");
         TestAssert.True(Math.Abs(spacedSegment.PdfCharacterSpacing) < 0.0001d, "Normal DOCX run spacing should stay in positioned glyph advances.");
         TestAssert.True(Math.Abs(spacedSegment.PositioningCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should expose the resulting glyph-positioning spacing.");
@@ -10080,6 +10094,8 @@ internal static class DocxTests
         DocxTextEmissionLineSnapshot numberedLine = snapshot.Lines.First(line => line.SourceBlockIndex == 1);
         DocxTextEmissionSegmentSnapshot labelSegment = numberedLine.Segments.First(segment => Math.Abs(segment.PdfCharacterSpacing) > 0.0001d);
         TestAssert.Equal(1, labelSegment.TextLength);
+        TestAssert.Equal(1, labelSegment.CharacterProfile.DigitCount);
+        TestAssert.Equal(0, labelSegment.CharacterProfile.LetterCount);
         TestAssert.True(Math.Abs(labelSegment.PdfCharacterSpacing - 0.04d) < 0.0001d, "Numbering labels should expose their PDF text-state character spacing.");
         TestAssert.True(Math.Abs(labelSegment.PositioningCharacterSpacing) < 0.0001d, "Numbering PDF text-state spacing should not be double-counted in glyph positioning.");
         TestAssert.True(!labelSegment.CompensatePdfCharacterSpacing, "Numbering label spacing is intentionally emitted through PDF text state.");

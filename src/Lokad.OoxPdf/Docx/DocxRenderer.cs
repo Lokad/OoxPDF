@@ -567,6 +567,7 @@ internal sealed class DocxRenderer
             plan.PdfCharacterSpacing,
             plan.PositioningCharacterSpacing,
             plan.CompensatePdfCharacterSpacing,
+            DocxTextEmissionPlanner.ClassifyText(segment.Text),
             segment.IsTerminalLineSpace,
             segment.Resource.Name,
             segment.SyntheticBold,

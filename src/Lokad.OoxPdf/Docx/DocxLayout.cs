@@ -644,6 +644,7 @@ internal sealed record DocxTextEmissionSegmentSnapshot(
     double PdfCharacterSpacing,
     double PositioningCharacterSpacing,
     bool CompensatePdfCharacterSpacing,
+    DocxTextEmissionCharacterProfile CharacterProfile,
     bool IsTerminalLineSpace,
     string? FontResourceName,
     bool SyntheticBold,

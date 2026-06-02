@@ -6526,6 +6526,17 @@ Current validation baseline:
   (`42`), public `docx-ladder-02-long-token-wrapping` run `20260602-035625` stayed valid at `MAE=1.121729`,
   changed16 `0.017126`, public `docx-ladder-03-table-text-state` run `20260602-035636` stayed at
   `MAE=0.632046`, changed16 `0.006503`, and full solution build passed.
+  2026-06-02 private-safe emission-profile progress: `DocxTextEmissionPlanner` now classifies emitted text
+  operations into Unicode digit/letter/whitespace/punctuation/symbol/other counts, and
+  `DocxTextEmissionSegmentSnapshot` carries that profile without exposing decoded text. `DocxInspect`
+  aggregates the same profile at document and page scope in `text-emission-summary.json`, aligning candidate
+  DOCX diagnostics with the PDF `TextClassByTc` evidence used for the open short-run `Tc` branch. Public
+  `docx-ladder-03-table-text-state` inspect output now shows `35` candidate operations with aggregate
+  `DigitCount=14`, `LetterCount=100`, `WhitespaceCount=27`, and `NonzeroPdfCharacterSpacingSegmentCount=0`.
+  Validation passed `docx-core --skip-slow` (`43`), public `InspectDocx` on
+  `docx-ladder-03-table-text-state`, and full solution build. The next `Tc` implementation should compare
+  these private-safe candidate classes against Office PDF classes before selecting any uniform text-state
+  component.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
