@@ -593,6 +593,7 @@ internal sealed record DocxTextEmissionLineSnapshot(
     bool IsStaticStory,
     int? SourceBlockIndex,
     int? SourceLineIndex,
+    bool EndsWithIntraTokenBreak,
     int SegmentCount,
     int TextLength,
     int TerminalSpaceSegmentCount,
@@ -649,7 +650,8 @@ internal sealed record DocxTextLineLayout(
     int? SourceLineIndex = null,
     double? LineHeight = null,
     double? AppliedBeforeSpacing = null,
-    bool? IsFirstParagraphLine = null) : DocxLayoutItem;
+    bool? IsFirstParagraphLine = null,
+    bool EndsWithIntraTokenBreak = false) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
@@ -667,7 +669,8 @@ internal sealed record DocxTextSpan(
 
 internal sealed record DocxWrappedTextLine(
     string Text,
-    IReadOnlyList<DocxTextSpan> Spans);
+    IReadOnlyList<DocxTextSpan> Spans,
+    bool EndsWithIntraTokenBreak = false);
 
 internal sealed record DocxInlineImageLayout(
     DocxInlineImage Image,
@@ -1116,7 +1119,8 @@ internal sealed class DocxLayoutEngine
                         lineIndex,
                         lineHeight,
                         firstLine ? appliedBeforeSpacing : 0d,
-                        firstLine));
+                        firstLine,
+                        line.EndsWithIntraTokenBreak));
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
@@ -2687,7 +2691,8 @@ internal sealed class DocxLayoutEngine
                         SourceLineIndex: lineIndex,
                         LineHeight: lineHeight,
                         AppliedBeforeSpacing: firstLine ? appliedBeforeSpacing : 0d,
-                        IsFirstParagraphLine: firstLine));
+                        IsFirstParagraphLine: firstLine,
+                        EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak));
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
@@ -3285,7 +3290,7 @@ internal sealed class DocxLayoutEngine
                 !token.IsBreakableWhitespace &&
                 TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, out int breakLength))
             {
-                yield return CreateWrappedTextLine(text, spans, token.Start, breakLength);
+                yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true);
                 lineIndex++;
                 lineStart = token.Start + breakLength;
                 lineLength = 0;
@@ -3392,9 +3397,10 @@ internal sealed class DocxLayoutEngine
         string text,
         IReadOnlyList<DocxTextSpan> spans,
         int start,
-        int length)
+        int length,
+        bool endsWithIntraTokenBreak = false)
     {
-        return new DocxWrappedTextLine(text.Substring(start, length), SliceTextSpans(spans, start, length));
+        return new DocxWrappedTextLine(text.Substring(start, length), SliceTextSpans(spans, start, length), endsWithIntraTokenBreak);
     }
 
     private static IReadOnlyList<DocxTextSpan> SliceTextSpans(

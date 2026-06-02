@@ -399,6 +399,11 @@ internal sealed class DocxRenderer
                 IsTerminalLineSpace: false));
         }
 
+        if (line.EndsWithIntraTokenBreak)
+        {
+            return emissionSegments;
+        }
+
         for (int i = segments.Count - 1; i >= 0; i--)
         {
             DocxTextSegmentLayout segment = segments[i];
@@ -477,6 +482,7 @@ internal sealed class DocxRenderer
             isStaticStory,
             line.SourceBlockIndex,
             line.SourceLineIndex,
+            line.EndsWithIntraTokenBreak,
             segments.Length,
             segments.Sum(segment => segment.TextLength),
             segments.Count(segment => segment.IsTerminalLineSpace),

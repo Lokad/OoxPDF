@@ -282,9 +282,16 @@ High-priority actions:
   falls back to a general Unicode-safe character boundary only when a non-whitespace token itself exceeds the
   available table-cell line width. This improved the public visual run `20260602-003527` to `MAE=1.188618`,
   changed16 `0.017627`, SSIM `0.723631` from the previous `MAE=1.282270`, changed16 `0.018130`, SSIM
-  `0.682413`. Keep the residual open: candidate now matches the table-token split prefixes but still emits an
-  extra standalone space operation after each split prefix, and body hyphenated words remain a PDF text
-  operation decomposition issue rather than a visible wrapping failure.
+  `0.682413`.
+  2026-06-02 follow-up: `DocxWrappedTextLine` and `DocxTextLineLayout` now preserve whether a line ended at
+  an intra-token emergency break, and `DocxRenderer` uses that structural flag to avoid synthesizing
+  Office-like terminal line-space operations after split token prefixes. Public-safe bottom-up coverage checks
+  both the layout break reason and the text-emission snapshot without exposing document text. Public visual
+  run `20260602-020006` stayed raster-neutral (`MAE=1.188618`, changed16 `0.017627`, SSIM `0.723631`), while
+  parsed PDF inspection confirmed the candidate sequence now emits `CellAlphaPlanningTok` directly followed by
+  `en21...`, and `BoundaryMarkerOme` directly followed by `ga34...`, with no standalone space operation between
+  split fragments. Keep the residual open for body hyphenated words: that is still a PDF text-operation
+  decomposition issue rather than a visible wrapping failure.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring

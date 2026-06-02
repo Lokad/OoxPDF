@@ -9005,7 +9005,55 @@ internal static class DocxTests
         TestAssert.Equal("ABC", cellLayout.TextLines[0].Text);
         TestAssert.Equal("DEF", cellLayout.TextLines[1].Text);
         TestAssert.Equal("GHI", cellLayout.TextLines[2].Text);
+        TestAssert.True(cellLayout.TextLines[0].EndsWithIntraTokenBreak, "The layout model should preserve that this line ended inside an overwide token.");
+        TestAssert.True(cellLayout.TextLines[1].EndsWithIntraTokenBreak, "Subsequent split fragments should keep their intra-token break reason.");
+        TestAssert.True(cellLayout.TextLines[2].EndsWithIntraTokenBreak, "Every non-final split fragment should keep its intra-token break reason.");
+        TestAssert.True(!cellLayout.TextLines.Last().EndsWithIntraTokenBreak, "The final token fragment should not be marked as a line-end intra-token break.");
         TestAssert.True(cellLayout.TextLines.All(line => line.Width <= cellLayout.Width + 0.001d), "Split token fragments should stay inside the cell frame.");
+    }
+
+    public static void DocxTextEmissionOmitsTerminalSpacesAfterIntraTokenBreaks()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        var run = new DocxTextRun("ABCDEFGHIJ", 10d, null, false, false, false, null, familyName)
+        {
+            Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("ABCDEFGHIJ", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            null,
+            [16d],
+            [new DocxTableRow([cell], 10d)],
+            PreferredWidthPoints: 16d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
+        DocxTextEmissionLineSnapshot[] splitLines = snapshot.Lines
+            .Where(line => !line.IsStaticStory && line.EndsWithIntraTokenBreak)
+            .ToArray();
+
+        TestAssert.True(splitLines.Length >= 1, "Expected at least one private-safe emission line marked as an intra-token split.");
+        TestAssert.True(splitLines.All(line => line.TerminalSpaceSegmentCount == 0), "Intra-token split prefixes should not synthesize standalone terminal-space PDF operations.");
     }
 
     public static void DocxTableLayoutDoesNotKeepWholeTableTogetherByDefault()
