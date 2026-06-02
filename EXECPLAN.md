@@ -7374,6 +7374,12 @@ Current validation baseline:
   `docx-tables --skip-slow` (`115`), `docx-core --skip-slow` (`53`), and full solution build. Keep Office-exact
   repeated-header/merged-cell interactions, nested-row internal fragmentation inside explicit cell-break fragments, and
   fragments taller than a fresh frame open.
+  2026-06-02 architecture follow-up: oversized explicit table-cell page-break fragments now have bottom-up coverage on
+  the existing row-fragment model. A row whose pre-break segment is taller than the fresh page content frame splits that
+  segment into fresh-frame fragments before emitting the authored post-break continuation, preserving fragment offsets,
+  full logical row height, split reason, and per-fragment text ownership in layout snapshots. Validation passed
+  `docx-tables --skip-slow` (`116`). Keep Office-exact repeated-header/merged-cell interactions and nested-row internal
+  fragmentation inside explicit cell-break fragments open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

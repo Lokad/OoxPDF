@@ -10848,6 +10848,68 @@ internal static class DocxTests
         TestAssert.Equal("CellPageBreak", thirdPageRows[0].FragmentReason);
     }
 
+    public static void DocxTableLayoutStageSplitsOversizedCellPageBreakFragmentAcrossFreshPages()
+    {
+        DocxParagraph[] beforeParagraphs = Enumerable.Range(1, 10)
+            .Select(index => CreateDocxLayoutParagraph("Before" + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        DocxParagraph after = CreateDocxLayoutParagraph("After", 10d, 10d);
+        var splitCell = new DocxTableCell(string.Empty, beforeParagraphs.Append(after).ToArray(), null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = beforeParagraphs
+                .Select<DocxParagraph, DocxBodyElement>(paragraph => new DocxParagraphElement(paragraph))
+                .Append(new DocxPageBreakElement("runBreak", "page"))
+                .Append(new DocxParagraphElement(after))
+                .ToArray()
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([splitCell], null)]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
+
+        TestAssert.Equal(3, layout.Pages.Count);
+        TestAssert.Equal(3, rowFragments.Length);
+        for (int fragmentIndex = 0; fragmentIndex < rowFragments.Length; fragmentIndex++)
+        {
+            TestAssert.Equal(fragmentIndex, rowFragments[fragmentIndex].FragmentIndex);
+            TestAssert.Equal(3, rowFragments[fragmentIndex].FragmentCount);
+            TestAssert.Equal("CellPageBreak", rowFragments[fragmentIndex].FragmentReason);
+        }
+
+        TestAssert.Equal(80d, rowFragments[0].Height);
+        TestAssert.Equal(20d, rowFragments[1].Height);
+        TestAssert.Equal(10d, rowFragments[2].Height);
+        TestAssert.Equal(8, rowFragments[0].Cells.Single().TextLines.Count);
+        TestAssert.Equal("Before1|Before2|Before3|Before4|Before5|Before6|Before7|Before8", string.Join("|", rowFragments[0].Cells.Single().TextLines.Select(line => line.Text)));
+        TestAssert.Equal("Before9|Before10", string.Join("|", rowFragments[1].Cells.Single().TextLines.Select(line => line.Text)));
+        TestAssert.Equal("After", rowFragments[2].Cells.Single().TextLines.Single().Text);
+
+        DocxTableRowSnapshot[] rowSnapshots = DocxLayoutSnapshot.FromLayout(layout).Pages
+            .SelectMany(page => page.TableRows)
+            .OrderBy(row => row.FragmentIndex)
+            .ToArray();
+        TestAssert.Equal(0d, rowSnapshots[0].FragmentOffsetFromRowTop);
+        TestAssert.Equal(80d, rowSnapshots[1].FragmentOffsetFromRowTop);
+        TestAssert.Equal(100d, rowSnapshots[2].FragmentOffsetFromRowTop);
+        TestAssert.Equal(110d, rowSnapshots[0].FullRowHeight);
+        TestAssert.Equal(110d, rowSnapshots[1].FullRowHeight);
+        TestAssert.Equal(110d, rowSnapshots[2].FullRowHeight);
+    }
+
     public static void DocxTableLayoutStageUsesEarliestCellPageBreakAsRowBoundary()
     {
         DocxParagraph earlyBefore = CreateDocxLayoutParagraph("EarlyBefore", 10d, 10d);
