@@ -9056,6 +9056,52 @@ internal static class DocxTests
         TestAssert.True(splitLines.All(line => line.TerminalSpaceSegmentCount == 0), "Intra-token split prefixes should not synthesize standalone terminal-space PDF operations.");
     }
 
+    public static void DocxTextEmissionSplitsDashPunctuationIntoOfficeLikeOperations()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        var run = new DocxTextRun("word-break", 10d, null, false, false, false, null, familyName)
+        {
+            Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines.Single(line => !line.IsStaticStory);
+        int[] visibleLengths = line.Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .Select(segment => segment.TextLength)
+            .ToArray();
+        double[] visibleStarts = line.Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .Select(segment => segment.X)
+            .ToArray();
+
+        TestAssert.Equal(3, visibleLengths.Length);
+        TestAssert.Equal(4, visibleLengths[0]);
+        TestAssert.Equal(1, visibleLengths[1]);
+        TestAssert.Equal(5, visibleLengths[2]);
+        TestAssert.True(visibleStarts[0] < visibleStarts[1] && visibleStarts[1] < visibleStarts[2], "Dash-punctuation text operations should keep increasing layout origins.");
+    }
+
     public static void DocxTableLayoutDoesNotKeepWholeTableTogetherByDefault()
     {
         var intro = new DocxParagraph(

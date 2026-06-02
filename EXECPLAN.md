@@ -290,8 +290,16 @@ High-priority actions:
   run `20260602-020006` stayed raster-neutral (`MAE=1.188618`, changed16 `0.017627`, SSIM `0.723631`), while
   parsed PDF inspection confirmed the candidate sequence now emits `CellAlphaPlanningTok` directly followed by
   `en21...`, and `BoundaryMarkerOme` directly followed by `ga34...`, with no standalone space operation between
-  split fragments. Keep the residual open for body hyphenated words: that is still a PDF text-operation
-  decomposition issue rather than a visible wrapping failure.
+  split fragments. This still left body hyphenated words as a PDF text-operation decomposition issue rather
+  than a visible wrapping failure.
+  2026-06-02 follow-up: DOCX text emission now splits Unicode dash punctuation into separate Office-like PDF
+  text operations, using the same resolved text measurer that owns layout origins so wrapping and visual
+  placement stay unchanged. Public-safe coverage asserts `word-break` emits visible operation lengths
+  `4/1/5`, and public run `20260602-020347` improved the long-token case to `MAE=1.121729`, changed16
+  `0.017126`, SSIM `0.745218`. Parsed Office/candidate text-operation order now matches through the body
+  hyphenated words and overwide table token fragments. Treat this long-token operation-order branch as closed;
+  any remaining raster gap on this case belongs to broader glyph metrics/positioning, not wrapping, terminal
+  spaces, or dash decomposition.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
