@@ -7148,6 +7148,13 @@ Current validation baseline:
   from retaining stale preceding-section margins and columns. Mid-page continuous-section geometry/column changes
   remain open because they require Word-compatible in-flow section semantics, not a page-boundary shortcut.
   Validation passed `docx-page --skip-slow` (`34`), `docx-core --skip-slow` (`52`), and full solution build.
+  2026-06-02 architecture follow-up: `oddPage` and `evenPage` section breaks now insert a blank layout page
+  when the next page number would otherwise have the wrong parity, then apply the following section geometry to
+  the requested odd/even page. The inserted blank page keeps the preceding section geometry, matching the section
+  ownership direction already used for page-starting breaks. Bottom-up coverage verifies an `oddPage` break after
+  page 1 producing an empty page 2 and following-section content on page 3. Remaining section-break gaps are
+  mid-page continuous-section geometry/columns and true per-section header/footer relationship selection.
+  Validation passed `docx-page --skip-slow` (`35`), `docx-core --skip-slow` (`52`), and full solution build.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

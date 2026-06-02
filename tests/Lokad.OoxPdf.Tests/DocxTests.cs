@@ -5046,6 +5046,73 @@ internal static class DocxTests
         TestAssert.Equal(72d, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().X);
     }
 
+    public static void DocxOddPageSectionBreakInsertsBlankParityPage()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
+        DocxParagraph second = CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
+        var firstSectionSettings = new DocxPageSettings(
+            "4000",
+            "4000",
+            null,
+            "360",
+            "360",
+            "360",
+            "360",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        var finalSectionSettings = new DocxPageSettings(
+            "6000",
+            "6000",
+            null,
+            "1440",
+            "1440",
+            "1440",
+            "1440",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            72d,
+            72d,
+            72d,
+            72d,
+            finalSectionSettings,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxSectionBreakElement(firstSectionSettings, "oddPage", null, null, null, []),
+                new DocxParagraphElement(second)
+            ],
+            [first, second],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(3, layout.Pages.Count);
+        TestAssert.Equal("First", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal(0, layout.Pages[1].Items.Count);
+        TestAssert.Equal(200d, layout.Pages[1].Width);
+        TestAssert.Equal("oddPage", layout.Pages[1].SectionProperties.BreakTypeValue ?? string.Empty);
+        TestAssert.Equal("Second", layout.Pages[2].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal(300d, layout.Pages[2].Width);
+        TestAssert.True(layout.Pages[2].SectionProperties.BreakTypeValue is null, "Following section should start after the inserted parity page.");
+    }
+
     public static void DocxSectionBreakCustomColumnsCreatePageOwnedFrames()
     {
         DocxParagraph first = CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 12d);

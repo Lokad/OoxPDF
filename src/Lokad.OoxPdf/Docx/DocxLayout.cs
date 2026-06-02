@@ -1440,6 +1440,11 @@ internal sealed class DocxLayoutEngine
                     FinishPage();
                 }
 
+                if (ShouldInsertParityBlankPage(sectionBreak, pages.Count + 1))
+                {
+                    FinishPage();
+                }
+
                 if (startsNewPage || (IsContinuousSectionBreak(sectionBreak) && !HasPageContent()))
                 {
                     ApplySectionAfterBreak(elementIndex);
@@ -2437,6 +2442,21 @@ internal sealed class DocxLayoutEngine
     private static bool IsContinuousSectionBreak(DocxSectionBreakElement sectionBreak)
     {
         return sectionBreak.TypeValue?.Equals("continuous", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private static bool ShouldInsertParityBlankPage(DocxSectionBreakElement sectionBreak, int nextPageNumber)
+    {
+        if (sectionBreak.TypeValue?.Equals("oddPage", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return nextPageNumber % 2 == 0;
+        }
+
+        if (sectionBreak.TypeValue?.Equals("evenPage", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return nextPageNumber % 2 != 0;
+        }
+
+        return false;
     }
 
     private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)
