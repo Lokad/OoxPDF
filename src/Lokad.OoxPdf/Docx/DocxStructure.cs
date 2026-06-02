@@ -154,11 +154,12 @@ internal sealed record DocxStructureSnapshot(
                 DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(ParagraphBookmarkAnchorCount),
                 bodyBlocks.Sum(block => block.HyperlinkCount),
                 bodyBlocks.Sum(block => block.ExternalHyperlinkCount),
-                bodyBlocks.Sum(block => block.InternalHyperlinkCount))
+                bodyBlocks.Sum(block => block.InternalHyperlinkCount),
+                document.FloatingDrawings.Count)
         };
 
-        AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType, document.RelatedStories);
-        AddStaticStories(stories, "Footer", "document", null, document.FooterParagraphsByType, document.RelatedStories);
+        AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, document.RelatedStories);
+        AddStaticStories(stories, "Footer", "document", null, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, document.RelatedStories);
         AddRelatedStories(stories, document.RelatedStories);
         for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
         {
@@ -168,8 +169,8 @@ internal sealed record DocxStructureSnapshot(
             }
 
             string scope = "section@" + blockIndex.ToString(CultureInfo.InvariantCulture);
-            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderParagraphsByType, document.RelatedStories);
-            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterParagraphsByType, document.RelatedStories);
+            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, document.RelatedStories);
+            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, document.RelatedStories);
         }
 
         return stories;
@@ -181,27 +182,40 @@ internal sealed record DocxStructureSnapshot(
         string scope,
         int? sectionBreakBlockIndex,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,
         IReadOnlyList<DocxRelatedStory> relatedStories)
     {
-        foreach (KeyValuePair<string, IReadOnlyList<DocxParagraph>> entry in paragraphsByType.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
+        string[] variantTypes = paragraphsByType.Keys
+            .Concat(drawingsByType.Keys)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(type => type, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        foreach (string variantType in variantTypes)
         {
+            IReadOnlyList<DocxParagraph> paragraphs = paragraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphList)
+                ? paragraphList
+                : [];
+            IReadOnlyList<DocxFloatingDrawing> drawings = drawingsByType.TryGetValue(variantType, out IReadOnlyList<DocxFloatingDrawing>? drawingList)
+                ? drawingList
+                : [];
             stories.Add(new DocxStructureStorySnapshot(
                 kind,
                 scope,
                 sectionBreakBlockIndex,
-                entry.Key,
+                variantType,
                 0,
-                entry.Value.Count,
+                paragraphs.Count,
                 0,
-                entry.Value.Sum(TextLength),
-                entry.Value.Sum(paragraph => paragraph.Images.Count),
-                entry.Value.Sum(ParagraphInlineReferenceCount),
-                entry.Value.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
-                entry.Value.Sum(ParagraphFieldReferenceCount),
-                entry.Value.Sum(ParagraphBookmarkAnchorCount),
-                entry.Value.Sum(ParagraphHyperlinkCount),
-                entry.Value.Sum(ParagraphExternalHyperlinkCount),
-                entry.Value.Sum(ParagraphInternalHyperlinkCount)));
+                paragraphs.Sum(TextLength),
+                paragraphs.Sum(paragraph => paragraph.Images.Count),
+                paragraphs.Sum(ParagraphInlineReferenceCount),
+                paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
+                paragraphs.Sum(ParagraphFieldReferenceCount),
+                paragraphs.Sum(ParagraphBookmarkAnchorCount),
+                paragraphs.Sum(ParagraphHyperlinkCount),
+                paragraphs.Sum(ParagraphExternalHyperlinkCount),
+                paragraphs.Sum(ParagraphInternalHyperlinkCount),
+                drawings.Count));
         }
     }
 
@@ -231,7 +245,8 @@ internal sealed record DocxStructureSnapshot(
                 paragraphs.Sum(ParagraphBookmarkAnchorCount),
                 paragraphs.Sum(ParagraphHyperlinkCount),
                 paragraphs.Sum(ParagraphExternalHyperlinkCount),
-                paragraphs.Sum(ParagraphInternalHyperlinkCount)));
+                paragraphs.Sum(ParagraphInternalHyperlinkCount),
+                0));
         }
     }
 
@@ -980,7 +995,8 @@ internal sealed record DocxStructureStorySnapshot(
     int BookmarkAnchorCount,
     int HyperlinkCount,
     int ExternalHyperlinkCount,
-    int InternalHyperlinkCount);
+    int InternalHyperlinkCount,
+    int FloatingDrawingCount);
 
 internal sealed record DocxStructureInlineReferenceSnapshot(
     int SourceBlockIndex,

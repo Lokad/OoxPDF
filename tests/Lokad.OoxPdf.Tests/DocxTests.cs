@@ -13152,6 +13152,95 @@ internal static class DocxTests
         TestAssert.Equal(4, CountPdfTextShows(pdf));
     }
 
+    public static void DocxReaderPreservesHeaderFloatingDrawingsByVariant()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/header1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeaderImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/header.png"/>
+                </Relationships>
+                """),
+            ["word/header1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                       xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:p>
+                    <w:r>
+                      <w:drawing>
+                        <wp:anchor distT="0" distB="0" distL="0" distR="0" behindDoc="1">
+                          <wp:extent cx="914400" cy="457200"/>
+                          <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                          <wp:positionV relativeFrom="page"><wp:posOffset>457200</wp:posOffset></wp:positionV>
+                          <wp:wrapNone/>
+                          <a:graphic>
+                            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                              <pic:pic><pic:blipFill><a:blip r:embed="rIdHeaderImage1"/></pic:blipFill></pic:pic>
+                            </a:graphicData>
+                          </a:graphic>
+                        </wp:anchor>
+                      </w:drawing>
+                    </w:r>
+                  </w:p>
+                </w:hdr>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p><w:r><w:t>Body text</w:t></w:r></w:p>
+                    <w:sectPr>
+                      <w:headerReference w:type="default" r:id="rIdHeader1"/>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """),
+            ["word/media/header.png"] = TestFixtures.CreateRgbPng(1, 1, [32, 64, 96])
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxFloatingDrawing drawing = document.HeaderFloatingDrawingsByType["default"].Single();
+        TestAssert.Equal(1, document.PageSettings.HeaderFloatingDrawingsByType["default"].Count);
+        TestAssert.Equal("rIdHeaderImage1", drawing.ImageRelationshipId ?? string.Empty);
+        TestAssert.Equal("/word/media/header.png", drawing.Image?.PartName ?? string.Empty);
+        TestAssert.Equal(0, drawing.SourceParagraphIndex ?? -1);
+        TestAssert.True(drawing.SourceBlockIndex is null, "Header floating drawings should not pretend to belong to a body block.");
+
+        DocxStructureStorySnapshot story = new DocxRenderer().InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
+        TestAssert.True(story.FloatingDrawingCount == 1 && story.ParagraphCount == 1, "Static header story snapshots should expose anchored drawing ownership without rendering it yet.");
+    }
+
     public static void DocxSyntheticHeaderFooterDistancesUsePageMarginTokens()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

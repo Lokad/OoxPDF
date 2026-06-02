@@ -7482,6 +7482,14 @@ Current validation baseline:
   Validation passed `docx-page --skip-slow` (`39`) and `docx-images --skip-slow` (`4`). Keep non-inline
   header/footer drawings, floating/anchored static story shapes, and Office-derived static header/footer row
   acceptance gates open.
+  2026-06-02 architecture follow-up: static header/footer anchored drawings now have typed ownership before
+  rendering. `DocxReader` inventories `wp:anchor` drawings from referenced header/footer parts by selected
+  variant type, stores them on document/page settings next to the paragraph maps, and structure snapshots
+  expose per-story `FloatingDrawingCount` without private text or raster output. Bottom-up coverage verifies a
+  header-owned anchored image relationship, paragraph index, null body-block ownership, and static story
+  floating-drawing count. Validation passed `docx-page --skip-slow` (`40`) and `docx-core --skip-slow` (`53`).
+  Keep Office-derived placement/rendering for static anchored drawings and selected header/footer row
+  acceptance gates open; this slice only closes the invisible-in-model gap.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
