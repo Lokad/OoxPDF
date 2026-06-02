@@ -3025,6 +3025,14 @@ High-priority actions:
       `docx-headers-footers` run `20260602-043616` stayed at `MAE=0.073352`, changed16 `0.002110`, SSIM
       `0.982572`. Keep the parent open for exact footer stacking direction, contextual-spacing edge cases,
       true field evaluation, and selected-part snapshots beyond counts and source-line ownership.
+      2026-06-02 follow-up: layout snapshots now expose selected static text through `StaticItems`, using the
+      same private-safe `DocxLayoutItemSnapshot` shape as body items. Static item `Kind` distinguishes
+      `StaticHeaderTextLine` from `StaticFooterTextLine`, so header/footer paragraph and line indexes no
+      longer collide in `layout-snapshot.json`. Public `docx-headers-footers` inspection regenerated for run
+      `20260602-043616` and reports header/footer static items with `SourceParagraphIndex=0`,
+      `SourceLineIndex=0`, first-line flags, and text lengths only. Validation passed `docx-page --skip-slow`
+      (`30`). Keep the parent open for exact footer stacking direction, contextual-spacing edge cases, and
+      true field evaluation; selected static line snapshots now exist beyond aggregate counts.
     - [x] 2026-06-01: Close the fallback-free DOCX table-cell text emission gap without a private regression.
       Body text already renders through run-level resources, but table-cell text is still gated by the
       document fallback resource. Removing that gate rendered additional private table text and regressed the

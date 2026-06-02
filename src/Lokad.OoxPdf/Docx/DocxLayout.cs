@@ -135,6 +135,7 @@ internal sealed record DocxLayoutSnapshot(
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
     {
         IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(ToSnapshot).ToArray();
+        IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines.Select(ToStaticSnapshot).ToArray();
         int?[] sourceBlockIndexes = items
             .Select(item => item.SourceBlockIndex)
             .Where(index => index is not null)
@@ -164,8 +165,20 @@ internal sealed record DocxLayoutSnapshot(
             items.Where(item => item.Kind == "TextLine").Sum(item => item.Height),
             items.Where(item => item.Kind == "InlineImage").Sum(item => item.Height),
             items.Where(item => item.Kind == "TableRow").Sum(item => item.Height),
+            staticItems,
             items,
             tableRows);
+    }
+
+    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTextLineLayout text)
+    {
+        string kind = text.StoryKind switch
+        {
+            "Header" => "StaticHeaderTextLine",
+            "Footer" => "StaticFooterTextLine",
+            _ => "StaticTextLine"
+        };
+        return ToSnapshot(text) with { Kind = kind };
     }
 
     private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item)
@@ -460,6 +473,7 @@ internal sealed record DocxLayoutPageSnapshot(
     double TextLineHeightSum,
     double InlineImageHeightSum,
     double TableRowHeightSum,
+    IReadOnlyList<DocxLayoutItemSnapshot> StaticItems,
     IReadOnlyList<DocxLayoutItemSnapshot> Items,
     IReadOnlyList<DocxTableRowSnapshot> TableRows);
 
@@ -693,6 +707,7 @@ internal sealed record DocxTextLineLayout(
     int? SourceBlockIndex = null,
     int? SourceParagraphIndex = null,
     int? SourceLineIndex = null,
+    string? StoryKind = null,
     double? LineHeight = null,
     double? AppliedBeforeSpacing = null,
     bool? IsFirstParagraphLine = null,
@@ -1185,7 +1200,8 @@ internal sealed class DocxLayoutEngine
                         ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                         EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                         LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
-                        SourceParagraph: paragraph));
+                        SourceParagraph: paragraph,
+                        StoryKind: "Body"));
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
@@ -1342,7 +1358,8 @@ internal sealed class DocxLayoutEngine
                     IsFirstParagraphLine: sourceLineIndex == 0,
                     SourceLineIndex: sourceLineIndex,
                     SourceParagraph: paragraph,
-                    SourceParagraphIndex: paragraphIndex));
+                    SourceParagraphIndex: paragraphIndex,
+                    StoryKind: isHeader ? "Header" : "Footer"));
                 appliedBeforeSpacing = 0d;
                 sourceLineIndex++;
                 cursorY -= ascender + descender;
@@ -2860,6 +2877,7 @@ internal sealed class DocxLayoutEngine
                         SourceBlockIndex: null,
                         SourceParagraphIndex: paragraphIndex,
                         SourceLineIndex: lineIndex,
+                        StoryKind: "TableCell",
                         LineHeight: lineHeight,
                         AppliedBeforeSpacing: firstLine ? appliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: firstLine,

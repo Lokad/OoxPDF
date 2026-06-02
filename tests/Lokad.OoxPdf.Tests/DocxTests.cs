@@ -10404,6 +10404,9 @@ internal static class DocxTests
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         TestAssert.Equal(2, snapshot.Pages[0].StaticTextLineCount);
+        TestAssert.Equal(2, snapshot.Pages[0].StaticItems.Count);
+        TestAssert.Equal("StaticHeaderTextLine", snapshot.Pages[0].StaticItems[0].Kind);
+        TestAssert.Equal("StaticFooterTextLine", snapshot.Pages[0].StaticItems[1].Kind);
         TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
     }
 
@@ -10479,6 +10482,13 @@ internal static class DocxTests
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         TestAssert.Equal(2, snapshot.Pages[0].StaticTextLineCount);
+        TestAssert.Equal(2, snapshot.Pages[0].StaticItems.Count);
+        TestAssert.Equal("StaticHeaderTextLine", snapshot.Pages[0].StaticItems[0].Kind);
+        TestAssert.Equal(0, snapshot.Pages[0].StaticItems[0].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(0, snapshot.Pages[0].StaticItems[0].SourceLineIndex ?? -1);
+        TestAssert.True(snapshot.Pages[0].StaticItems[0].IsFirstParagraphLine == true, "The static snapshot should preserve first-line ownership.");
+        TestAssert.Equal(1, snapshot.Pages[0].StaticItems[1].SourceLineIndex ?? -1);
+        TestAssert.True(snapshot.Pages[0].StaticItems[1].IsFirstParagraphLine == false, "The static snapshot should preserve continuation-line ownership.");
     }
 
     public static void DocxLayoutStageAppliesStaticHeaderParagraphSpacing()
