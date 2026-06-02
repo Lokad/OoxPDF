@@ -2925,6 +2925,18 @@ internal sealed class DocxLayoutEngine
             if (!row.CantSplit &&
                 TryResolveExplicitTableCellPageBreakFragmentHeight(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, out double explicitBreakFragmentHeight))
             {
+                if (explicitBreakFragmentHeight > remainingPageHeight && hasPageContent())
+                {
+                    finishPage();
+                    if (!row.IsHeader)
+                    {
+                        frame = resolveFrame();
+                        rowHeights = frame.RowHeights;
+                        AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, frame.TableX);
+                        markBoundaryContent();
+                    }
+                }
+
                 AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, resolveFrame, explicitBreakFragmentHeight, "CellPageBreak", finishPage);
                 markBoundaryContent();
                 continue;

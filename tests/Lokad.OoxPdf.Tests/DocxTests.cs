@@ -10797,6 +10797,57 @@ internal static class DocxTests
         TestAssert.Equal("CellPageBreak", rowSnapshots[1].FragmentReason);
     }
 
+    public static void DocxTableLayoutStageMovesCellPageBreakSplitToNextPageWhenFirstFragmentDoesNotFit()
+    {
+        DocxParagraph before = CreateDocxLayoutParagraph("Before", 10d, 20d);
+        DocxParagraph after = CreateDocxLayoutParagraph("After", 10d, 10d);
+        var fillerCell = new DocxTableCell("Filler", [CreateDocxLayoutParagraph("Filler", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var splitCell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(before),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(after)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([fillerCell], 70d), new DocxTableRow([splitCell], null)]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
+        DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableRowLayout[] thirdPageRows = layout.Pages[2].Items.OfType<DocxTableRowLayout>().ToArray();
+
+        TestAssert.Equal(3, layout.Pages.Count);
+        TestAssert.Equal(3, rowFragments.Length);
+        TestAssert.Equal(1, firstPageRows.Length);
+        TestAssert.Equal(1, secondPageRows.Length);
+        TestAssert.Equal(1, thirdPageRows.Length);
+        TestAssert.Equal(0, firstPageRows[0].RowIndex);
+        TestAssert.Equal(1, secondPageRows[0].RowIndex);
+        TestAssert.Equal(0, secondPageRows[0].FragmentIndex);
+        TestAssert.Equal("CellPageBreak", secondPageRows[0].FragmentReason);
+        TestAssert.True(secondPageRows[0].Y - secondPageRows[0].Height >= 10d, "The first cell-page-break fragment must fit inside the new page content frame.");
+        TestAssert.Equal(1, thirdPageRows[0].RowIndex);
+        TestAssert.Equal(1, thirdPageRows[0].FragmentIndex);
+        TestAssert.Equal("CellPageBreak", thirdPageRows[0].FragmentReason);
+    }
+
     public static void DocxTableLayoutStageKeepsCellImagesOnAuthoredSideOfPageBreak()
     {
         var beforeImage = new DocxInlineImage(12d, 8d, "image/png", [1, 2, 3], "/word/media/before.png");
