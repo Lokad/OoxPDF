@@ -1324,7 +1324,8 @@ internal sealed class DocxLayoutEngine
                     segments,
                     LineHeight: ascender + descender,
                     AppliedBeforeSpacing: appliedBeforeSpacing,
-                    IsFirstParagraphLine: true));
+                    IsFirstParagraphLine: true,
+                    SourceParagraph: paragraph));
                 appliedBeforeSpacing = 0d;
                 cursorY -= ascender + descender;
             }
@@ -1340,13 +1341,21 @@ internal sealed class DocxLayoutEngine
     {
         if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.Hidden))
         {
-            DocxTextRun? paragraphMark = runs.FirstOrDefault(run => !run.Hidden);
-            return paragraphMark is null ? [] : [new DocxTextSpan(" ", paragraphMark, -1)];
+            for (int i = 0; i < runs.Count; i++)
+            {
+                if (!runs[i].Hidden)
+                {
+                    return [new DocxTextSpan(" ", runs[i], i)];
+                }
+            }
+
+            return [];
         }
 
         return runs
-            .Where(run => !run.Hidden)
-            .Select(run => new DocxTextSpan(ResolveStaticFieldPlaceholders(run.Text, pageNumber, pageCount), run, -1))
+            .Select((run, index) => (run, index))
+            .Where(item => !item.run.Hidden)
+            .Select(item => new DocxTextSpan(ResolveStaticFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
             .Where(span => span.Text.Length != 0)
             .ToArray();
     }
@@ -1438,7 +1447,7 @@ internal sealed class DocxLayoutEngine
             double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
             double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
             double width = textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
-            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width, layoutFontSize, baselineOffset));
+            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width, layoutFontSize, baselineOffset, SourceTextRunIndex: span.SourceTextRunIndex));
             segmentX += width;
             if (i + 1 < spans.Count)
             {

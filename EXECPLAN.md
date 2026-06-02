@@ -6498,7 +6498,9 @@ Current validation baseline:
   Validation passed `pdf --skip-slow` (`17`), `docx-core --skip-slow` (`34`), `docx-text --skip-slow` (`45`),
   and full solution build. Follow-up in the next slice extended `DocxTextLineLayout` with source paragraph
   ownership and covered table-cell external hyperlinks through the same placed-segment annotation path;
-  `docx-tables --skip-slow` passed (`95`). Keep header/footer link annotations and internal destinations open.
+  `docx-tables --skip-slow` passed (`95`). Static header/footer text spans now also preserve source run indexes
+  and source paragraph ownership, and the shared annotation pass includes static text lines; `docx-page
+  --skip-slow` passed (`30`). Keep internal destinations and non-rendered related-story links open.
 - DOCX carriage-return break validation:
   `w:cr` is now preserved as the same soft line-break token as plain `w:br`, instead of being dropped during
   run text extraction. Focused `docx-text --skip-slow` passed `31`, `dotnet build Lokad.OoxPdf.slnx --tl:off

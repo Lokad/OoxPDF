@@ -114,7 +114,7 @@ internal sealed class DocxRenderer
         int pageCount)
     {
         var annotations = new List<PdfLinkAnnotation>();
-        foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
+        foreach (DocxTextLineLayout line in page.StaticTextLines.Concat(EnumerateBodyTextLines(page)))
         {
             if (line.SourceParagraph is not { } paragraph ||
                 paragraph.Hyperlinks.Count == 0)

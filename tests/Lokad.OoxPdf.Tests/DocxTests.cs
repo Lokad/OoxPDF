@@ -1663,6 +1663,63 @@ internal static class DocxTests
         TestAssert.True(annotation.Width > 0d, "The annotation should cover table-cell hyperlink text.");
     }
 
+    public static void DocxHeaderRendererEmitsExternalHyperlinkAnnotations()
+    {
+        var runs = new[]
+        {
+            new DocxTextRun("Header ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var header = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdHeader", null, null, null, "https://example.invalid/header", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [header]
+            }
+        };
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 12d);
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            pageSettings,
+            [],
+            [header],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/header", annotation.Uri);
+        TestAssert.True(annotation.Y > 150d, "Header annotation should be anchored near the page top static story.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover header hyperlink text.");
+    }
+
     public static void DocxStructureSnapshotUsesBodyElementInventoryAsCanonicalSource()
     {
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell", fontSize: 9d, lineSpacingPoints: 10d) with
