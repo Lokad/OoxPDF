@@ -367,6 +367,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|pairMin=" + (RoundedKey $segment.GlyphAdvanceSignature.PairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $segment.GlyphAdvanceSignature.PairAdvanceMaxUnits 0)
         })
+        TextClassByGlyphPairAdvanceEmRange = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|pairMinEm=" + (RoundedKey $segment.GlyphAdvanceSignature.PairAdvanceMinEm 6) + "|pairMaxEm=" + (RoundedKey $segment.GlyphAdvanceSignature.PairAdvanceMaxEm 6)
+        })
         TextClassByResidualPerGap = @(Group-Count $segments {
             param($segment)
             (PlannerTextClass $segment) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
@@ -435,6 +439,9 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerGlyphPairAdvanceUnits = $segment.GlyphAdvanceSignature.PairAdvanceUnits
             PlannerGlyphPairAdvanceMinUnits = $segment.GlyphAdvanceSignature.PairAdvanceMinUnits
             PlannerGlyphPairAdvanceMaxUnits = $segment.GlyphAdvanceSignature.PairAdvanceMaxUnits
+            PlannerGlyphPairAdvanceEm = $segment.GlyphAdvanceSignature.PairAdvanceEm
+            PlannerGlyphPairAdvanceMinEm = $segment.GlyphAdvanceSignature.PairAdvanceMinEm
+            PlannerGlyphPairAdvanceMaxEm = $segment.GlyphAdvanceSignature.PairAdvanceMaxEm
             PlannerTerminalSpace = [bool]$segment.IsTerminalLineSpace
         })
     }
@@ -468,6 +475,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerGlyphPairAdvanceRange = @(Group-Count $pairs {
             param($pair)
             "pairMin=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxUnits 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerGlyphPairAdvanceEmRange = @(Group-Count $pairs {
+            param($pair)
+            "pairMinEm=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinEm 6) + "|pairMaxEm=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxEm 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceTcByPlannerFontSize = @(Group-Count $pairs {
             param($pair)

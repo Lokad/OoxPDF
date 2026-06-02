@@ -6696,6 +6696,24 @@ Current validation baseline:
   from glyph advance/shaping structure rather than text strings, font names, table roles, or observed bucket
   constants. Validation passed `docx-core --skip-slow` (`49`) and full solution build; an initial parallel
   test/build attempt hit a transient output DLL lock and passed on serial rerun.
+  2026-06-02 refreshed evidence: reran public `docx-ladder-03-table-text-state` (`20260602-085036`) and
+  `docx-ladder-03-text-state-context` (`20260602-085135`) with current candidate DOCX inspect snapshots and
+  paired summaries. The table case remains at `MAE=0.632046`, changed16 `0.006503`; all six Office nonzero
+  operations are digit segments at `refTc=-0.0182` and pair range `pairMin=2278|pairMax=2278`, with six
+  distinct pair signatures. The context case remains at `MAE=0.493604`, changed16 `0.004763`; Office nonzero
+  operations span alphanumeric (`5`), digits (`4`), and letters (`2`). Pair advance range separates some
+  buckets (`2278 -> -0.0182`, `2618 -> -0.0509`, `2505/2732 -> -0.0437`, `2732 -> 0.0509`), but the same
+  `pairMin=2732|pairMax=2732` range maps to both positive and negative Office `Tc` depending on pair
+  signature. This confirms pair range is useful evidence but still not a renderer rule; the next discriminator
+  must preserve pair-signature/shaping structure and avoid text-class, table-role, font-name, or observed-range
+  shortcuts.
+  2026-06-02 normalized-pair follow-up: glyph-pair signatures now carry `UnitsPerEm` plus pair advance totals
+  and min/max normalized to em units, and `SummarizeDocxTextState.ps1` emits paired Office `Tc` buckets by
+  normalized pair-advance range. The context rerun exposes the same structural split in portable units
+  (`1.112305em -> -0.0182`, `1.223145em -> -0.0437`, etc.), while still preserving the negative evidence that
+  pair range alone cannot choose the sign. Validation passed `docx-core --skip-slow` (`49`), full solution
+  build, refreshed `InspectDocx`, and text-state summary on `docx-ladder-03-text-state-context` run
+  `20260602-085135`.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored

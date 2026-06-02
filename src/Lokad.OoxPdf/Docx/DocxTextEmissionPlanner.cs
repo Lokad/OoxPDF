@@ -31,11 +31,15 @@ internal readonly record struct DocxTextEmissionAdvanceProfile(
 internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
     int GlyphCount,
     int GlyphPairCount,
+    int UnitsPerEm,
     int AdvanceUnits,
     int KerningUnits,
     int PairAdvanceUnits,
     int PairAdvanceMinUnits,
     int PairAdvanceMaxUnits,
+    double PairAdvanceEm,
+    double PairAdvanceMinEm,
+    double PairAdvanceMaxEm,
     string PairHash,
     string Hash);
 
@@ -143,6 +147,7 @@ internal static class DocxTextEmissionPlanner
         int pairAdvanceMinUnits = 0;
         int pairAdvanceMaxUnits = 0;
         ulong pairHash = fnvOffset;
+        int unitsPerEm = Math.Max(1, (int)embedded.Font.UnitsPerEm);
         ushort previousGlyph = 0;
         ushort previousAdvance = 0;
         foreach (Rune rune in text.EnumerateRunes())
@@ -180,11 +185,15 @@ internal static class DocxTextEmissionPlanner
         return new(
             glyphCount,
             glyphPairCount,
+            unitsPerEm,
             advanceUnits,
             kerningUnits,
             pairAdvanceUnits,
             pairAdvanceMinUnits,
             pairAdvanceMaxUnits,
+            (double)pairAdvanceUnits / unitsPerEm,
+            (double)pairAdvanceMinUnits / unitsPerEm,
+            (double)pairAdvanceMaxUnits / unitsPerEm,
             pairHash.ToString("X16", CultureInfo.InvariantCulture),
             hash.ToString("X16", CultureInfo.InvariantCulture));
     }
