@@ -7090,6 +7090,14 @@ Current validation baseline:
   actual multi-column line flow, column balancing, continuous-section geometry changes, column breaks, and
   floating anchor `column` frames in true multi-column sections remain open. Validation passed `docx-page
   --skip-slow` (`31`) and `docx-core --skip-slow` (`52`).
+  2026-06-02 architecture follow-up: section-owned equal-width column declarations now lower into explicit
+  `DocxLayoutColumnFrame` rectangles on each `DocxLayoutPage`, and layout snapshots expose frame count,
+  width/gutter sums, and per-frame x/width facts. Floating drawing `relativeFrom="column"` anchor frames now
+  resolve only when the page has one unambiguous column frame; true multi-column anchors remain unresolved until
+  layout owns the active column for each anchor paragraph. Custom-width `w:cols equalWidth="0"` declarations also
+  remain open because individual `w:col` widths are not parsed yet. Validation passed `docx-core --skip-slow`
+  (`52`) and `docx-page --skip-slow` (`31`); an initial parallel page/core run hit a transient compiler output
+  lock and the page group passed on serial rerun.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

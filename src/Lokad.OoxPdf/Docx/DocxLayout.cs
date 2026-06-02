@@ -55,6 +55,12 @@ internal sealed record DocxSectionLayoutProperties(
     int? ColumnCount,
     double? ColumnSpacePoints);
 
+internal sealed record DocxLayoutColumnFrame(
+    int Index,
+    double X,
+    double Width,
+    double? GutterAfterPoints);
+
 internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxLayoutPageSnapshot> Pages,
     IReadOnlyList<DocxTableSnapshot> Tables,
@@ -246,6 +252,14 @@ internal sealed record DocxLayoutSnapshot(
             page.SectionProperties.ColumnSpaceValue,
             page.SectionProperties.ColumnCount,
             page.SectionProperties.ColumnSpacePoints,
+            page.ColumnFrames.Count,
+            page.ColumnFrames.Sum(frame => frame.Width),
+            page.ColumnFrames.Sum(frame => frame.GutterAfterPoints ?? 0d),
+            page.ColumnFrames.Select(frame => new DocxLayoutColumnFrameSnapshot(
+                frame.Index,
+                frame.X,
+                frame.Width,
+                frame.GutterAfterPoints)).ToArray(),
             items.Count,
             page.StaticTextLines.Count,
             items.Count(item => item.Kind == "TextLine"),
@@ -583,6 +597,10 @@ internal sealed record DocxLayoutPageSnapshot(
     string? SectionColumnSpaceValue,
     int? SectionColumnCount,
     double? SectionColumnSpacePoints,
+    int ColumnFrameCount,
+    double ColumnFrameWidthSum,
+    double ColumnGutterWidthSum,
+    IReadOnlyList<DocxLayoutColumnFrameSnapshot> ColumnFrames,
     int ItemCount,
     int StaticTextLineCount,
     int TextLineCount,
@@ -598,6 +616,12 @@ internal sealed record DocxLayoutPageSnapshot(
     IReadOnlyList<DocxLayoutItemSnapshot> StaticItems,
     IReadOnlyList<DocxLayoutItemSnapshot> Items,
     IReadOnlyList<DocxTableRowSnapshot> TableRows);
+
+internal sealed record DocxLayoutColumnFrameSnapshot(
+    int Index,
+    double X,
+    double Width,
+    double? GutterAfterPoints);
 
 internal sealed record DocxFloatingDrawingLayoutSnapshot(
     int Index,
@@ -863,6 +887,7 @@ internal sealed record DocxLayoutPage(
     double MarginBottom,
     DocxPageSettings PageSettings,
     DocxSectionLayoutProperties SectionProperties,
+    IReadOnlyList<DocxLayoutColumnFrame> ColumnFrames,
     IReadOnlyList<DocxTextLineLayout> StaticTextLines,
     IReadOnlyList<DocxLayoutItem> Items);
 
@@ -1196,7 +1221,8 @@ internal sealed class DocxLayoutEngine
         double MarginTop,
         double MarginBottom,
         DocxPageSettings PageSettings,
-        DocxSectionLayoutProperties SectionProperties)
+        DocxSectionLayoutProperties SectionProperties,
+        IReadOnlyList<DocxLayoutColumnFrame> ColumnFrames)
     {
         public double BodyWidth => Math.Max(1d, Width - MarginLeft - MarginRight);
     }
@@ -1236,6 +1262,7 @@ internal sealed class DocxLayoutEngine
                 page.MarginBottom,
                 page.PageSettings,
                 page.SectionProperties,
+                page.ColumnFrames,
                 [],
                 currentItems.ToArray()));
             currentItems = [];
@@ -1519,7 +1546,8 @@ internal sealed class DocxLayoutEngine
         return drawing.HorizontalRelativeFromValue?.ToLowerInvariant() switch
         {
             "page" => new DocxAnchorReferenceFrame(0d, page.Width),
-            "margin" or "column" => new DocxAnchorReferenceFrame(page.MarginLeft, page.Width - page.MarginRight),
+            "margin" => new DocxAnchorReferenceFrame(page.MarginLeft, page.Width - page.MarginRight),
+            "column" when page.ColumnFrames.Count == 1 => new DocxAnchorReferenceFrame(page.ColumnFrames[0].X, page.ColumnFrames[0].X + page.ColumnFrames[0].Width),
             _ => null
         };
     }
@@ -2048,15 +2076,54 @@ internal sealed class DocxLayoutEngine
             (width, height) = (height, width);
         }
 
+        double marginLeft = ReadTwipsValue(effectiveSettings.MarginLeftValue, document.MarginLeftPoints);
+        double marginRight = ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints);
+        double marginTop = ReadTwipsValue(effectiveSettings.MarginTopValue, document.MarginTopPoints);
+        double marginBottom = ReadTwipsValue(effectiveSettings.MarginBottomValue, document.MarginBottomPoints);
+
         return new DocxPageGeometry(
             width,
             height,
-            ReadTwipsValue(effectiveSettings.MarginLeftValue, document.MarginLeftPoints),
-            ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints),
-            ReadTwipsValue(effectiveSettings.MarginTopValue, document.MarginTopPoints),
-            ReadTwipsValue(effectiveSettings.MarginBottomValue, document.MarginBottomPoints),
+            marginLeft,
+            marginRight,
+            marginTop,
+            marginBottom,
             effectiveSettings,
-            section.SectionProperties);
+            section.SectionProperties,
+            CreateColumnFrames(
+                width,
+                marginLeft,
+                marginRight,
+                section.SectionProperties));
+    }
+
+    private static IReadOnlyList<DocxLayoutColumnFrame> CreateColumnFrames(
+        double pageWidth,
+        double marginLeft,
+        double marginRight,
+        DocxSectionLayoutProperties section)
+    {
+        double bodyWidth = Math.Max(1d, pageWidth - marginLeft - marginRight);
+        int columnCount = Math.Max(1, section.ColumnCount ?? 1);
+        if (columnCount == 1)
+        {
+            return [new DocxLayoutColumnFrame(0, marginLeft, bodyWidth, null)];
+        }
+
+        if (string.Equals(section.ColumnEqualWidthValue, "0", StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        double gutter = Math.Max(0d, section.ColumnSpacePoints ?? 0d);
+        double columnWidth = Math.Max(1d, (bodyWidth - gutter * (columnCount - 1)) / columnCount);
+        return Enumerable.Range(0, columnCount)
+            .Select(index => new DocxLayoutColumnFrame(
+                index,
+                marginLeft + index * (columnWidth + gutter),
+                columnWidth,
+                index + 1 < columnCount ? gutter : null))
+            .ToArray();
     }
 
     private static double ReadTwipsValue(string? value, double fallback)
