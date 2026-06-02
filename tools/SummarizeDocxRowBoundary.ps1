@@ -136,6 +136,30 @@ function Select-RowsForLayoutRow($PdfRows, $LayoutRow) {
     } | Sort-Object -Property @{ Expression = { [double]$_.Y }; Descending = $true })
 }
 
+function New-CellVisualOwnershipBuckets($Cells) {
+    @(
+        @($Cells) |
+            Group-Object {
+                if ($_.PSObject.Properties.Name -contains "VisualOwnership" -and $null -ne $_.VisualOwnership) {
+                    [string]$_.VisualOwnership
+                }
+                elseif ($_.PSObject.Properties.Name -contains "IsVerticalMergeContinuation" -and [bool]$_.IsVerticalMergeContinuation) {
+                    "LegacyVerticalMergeContinuation"
+                }
+                else {
+                    "LegacyOwnCell"
+                }
+            } |
+            Sort-Object Name |
+            ForEach-Object {
+                [pscustomobject]@{
+                    VisualOwnership = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+}
+
 $resolvedRun = (Resolve-Path -LiteralPath $RunDirectory).Path
 $layout = Read-JsonObject $LayoutSnapshot
 $referenceRows = @(New-PdfRows (Read-JsonArray (Resolve-TextPath $resolvedRun "reference")))
@@ -157,6 +181,8 @@ for ($pageIndex = 0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
             continue
         }
 
+        $cells = @($row.Cells)
+        $visualOwnershipBuckets = @(New-CellVisualOwnershipBuckets $cells)
         $layoutRows.Add([pscustomobject]@{
             Page = $pageNumber
             TableIndex = [int]$row.TableIndex
@@ -172,6 +198,10 @@ for ($pageIndex = 0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
             TextLineCount = [int]$row.TextLineCount
             TextLength = [int]$row.TextLength
             CellCount = [int]$row.CellCount
+            VerticalMergeContinuationCellCount = @($cells | Where-Object {
+                $_.PSObject.Properties.Name -contains "IsVerticalMergeContinuation" -and [bool]$_.IsVerticalMergeContinuation
+            }).Count
+            VisualOwnershipBuckets = $visualOwnershipBuckets
             CantSplit = [bool]$row.CantSplit
             CandidatePdfRows = @(Select-RowsForLayoutRow $candidateRows ([pscustomobject]@{
                 Page = $pageNumber

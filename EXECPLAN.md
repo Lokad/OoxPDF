@@ -704,6 +704,13 @@ High-priority actions:
   reporting; validation passed `docx-tables --skip-slow` (`98`). Keep the merged-cell branch open for actual
   Office-derived continuation border/text fragment rules; this slice only removes an ambiguous architecture
   predicate.
+  2026-06-02 tooling follow-up: `tools/SummarizeDocxRowBoundary.ps1` now carries per-row
+  `VerticalMergeContinuationCellCount` and `VisualOwnershipBuckets` from layout snapshots, with legacy buckets
+  for older sidecars. This keeps row-boundary diagnostics aligned with the typed merged-cell ownership model
+  and avoids reconstructing continuation state from raw text or cell contents. Smoke validation used an ignored
+  minimal run under `artifacts/tmp-docx-row-boundary-smoke` and produced `OwnCell=1,VerticalMergeOwner=1`.
+  Keep the next production branch on Office-derived merged-cell fragment rules, not on diagnostic-only
+  ownership labels.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
