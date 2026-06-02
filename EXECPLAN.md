@@ -6734,6 +6734,15 @@ Current validation baseline:
   shaping/decomposition evidence, not as permission to encode a bucket table; the next renderer branch should
   derive a uniform text-state component from Office-like font-size and glyph-pair structure, with public guards
   against token strings, font names, table roles, text classes, and observed constants.
+  2026-06-02 PDF text-operation decomposition follow-up: `PdfInspect` now exposes decoded rune count,
+  character-spacing gap count, total `Tc` gap contribution, total `TJ` adjustment contribution, and the net
+  gap-spacing total for every text operation. `SummarizeDocxTextState.ps1` carries those totals into PDF-only
+  and planner-paired buckets. Regenerated inspections for the three public text-state runs show the short
+  two-rune nonzero Office operations in `docx-ladder-03-text-state-size-matrix` express the whole spacing
+  through `Tc` (`AdjustmentTotalPoints=0`), including the 9pt and 12pt rows where the candidate rounded-width
+  residual is near zero. This closes another diagnostic blind spot: the remaining renderer work is to decide
+  Office's uniform text-state component from font-size and glyph-pair/shaping structure, not merely to move an
+  existing `TJ` adjustment into `Tc` or to replay candidate layout residuals.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored

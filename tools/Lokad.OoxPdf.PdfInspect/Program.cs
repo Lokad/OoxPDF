@@ -439,6 +439,11 @@ internal sealed record PdfTextOperation(
     double AdjustmentMin,
     double AdjustmentMax,
     double AverageAdjustmentPoints,
+    int DecodedRuneCount,
+    int CharacterSpacingGapCount,
+    double CharacterSpacingGapTotalPoints,
+    double AdjustmentTotalPoints,
+    double NetSpacingGapTotalPoints,
     double NetAverageCharacterSpacing,
     string DecodedText)
 {
@@ -545,6 +550,10 @@ internal sealed record PdfTextOperation(
                 double averageAdjustmentPoints = payloadProfile.AdjustmentCount == 0
                     ? 0d
                     : -payloadProfile.AdjustmentSum / payloadProfile.AdjustmentCount * fontSize / 1000d;
+                int decodedRuneCount = decodedText.EnumerateRunes().Count();
+                int characterSpacingGapCount = Math.Max(0, decodedRuneCount - 1);
+                double characterSpacingGapTotalPoints = characterSpacing * characterSpacingGapCount;
+                double adjustmentTotalPoints = -payloadProfile.AdjustmentSum * fontSize / 1000d;
                 operations.Add(new PdfTextOperation(
                     pageNumber,
                     objectNumber,
@@ -572,6 +581,11 @@ internal sealed record PdfTextOperation(
                     payloadProfile.AdjustmentMin,
                     payloadProfile.AdjustmentMax,
                     averageAdjustmentPoints,
+                    decodedRuneCount,
+                    characterSpacingGapCount,
+                    characterSpacingGapTotalPoints,
+                    adjustmentTotalPoints,
+                    characterSpacingGapTotalPoints + adjustmentTotalPoints,
                     characterSpacing + averageAdjustmentPoints,
                     decodedText));
             }
