@@ -488,6 +488,16 @@ High-priority actions:
   run `20260602-023605` remained passing at page-1 `MAE=15.195190`, page-2 `MAE=0.253264`. Keep the evidence,
   but do not promote label Windows extents directly into line height until another Office-PDF probe explains
   the row-rhythm alternation and first list boundary gap together.
+  2026-06-02 accepted default-model update: missing paragraph spacing now follows the public Office-observed
+  Word defaults (`1.2` auto-line factor and implicit `8pt` after spacing), replacing the earlier split between
+  untokened and spacing-token paragraphs. Public compact-list probes improved or stayed guarded
+  (`docx-ladder-03-compact-bullet-alt-bottom` page 1 `MAE=11.188275`, page 2 `MAE=0.253264`;
+  `docx-ladder-03-compact-bullet-alt-line115` page 1 `MAE=12.164815`, page 2 `MAE=0.253264`;
+  `docx-ladder-03-compact-bullet-spacing` `MAE=0.626532`). Private DOCX acceptance run `20260602-033549`
+  stayed valid at `16/16` pages, zero dimension mismatches, no diagnostics, and improved aggregate
+  `MAE=8.927687 -> 8.908377` with changed16 `0.095249`. Keep the active residual on row-advance/baseline
+  quantization and Office PDF text-state decomposition; do not reintroduce list-label font ownership, a
+  page-bottom reserve, or a new residual constant.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table
@@ -6479,6 +6489,24 @@ Current validation baseline:
   The remaining gap is the actual uniform `Tc` selection and residual split; long strings still differ in
   Office/candidate chunk buckets because Office sometimes introduces intra-run `TJ` segmentation where candidate
   has no measured residual yet.
+  2026-06-02 text-state architecture follow-up: the proven decimal-numbered-list `Tc` branch now lives in the
+  shared `OfficePdfTextEmissionProfile` instead of as a DOCX-layout-local numeric expression, and terminal
+  line-space emissions are forced back to neutral `Tc=0` so future nonzero text-state branches cannot leak into
+  synthetic trailing spaces. Public `docx-numbering` run `20260602-034714` stayed at `MAE=0.019271`,
+  changed16 `0.000744`, dimensions matched. A trial table-cell digit-only branch was also evaluated against
+  public `docx-ladder-03-table-text-state`: run `20260602-034629` matched Word's structural buckets
+  (`35/35` operations, both with six nonzero value operations; reference `Tc=-0.0182`, candidate `Tc=-0.018`)
+  with unchanged raster metrics, but this was rejected and removed because the public context and size-matrix
+  probes already show Word's short-run `Tc` behavior crosses paragraph/table boundaries, includes positive
+  alphanumeric buckets, varies by glyph/size, and is not a digit-only or table-role rule. The accepted state is
+  the honest open gap in rerun `20260602-034924`: reference `35` operations with six `Tc=-0.0182`, candidate
+  `35` operations all at `Tc=0`, raster `MAE=0.632046`, changed16 `0.006503`. Validation after removal passed
+  `docx-tables --skip-slow` (`95`), `docx-core --skip-slow` (`37`), `docx-text --skip-slow` (`45`), and full
+  solution build. Private DOCX acceptance rerun `20260602-035051` stayed valid at `16/16` pages, zero dimension
+  mismatches, no diagnostics, aggregate `MAE=8.908377`, changed16 `0.095249`. Next implementation must be a
+  generic Office text-emission planner that decomposes measured short runs into uniform `Tc` plus residual
+  positioning where public evidence supports it; do not key on token strings, digit-only text,
+  table/body/header role, font names, or a single observed bucket.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored

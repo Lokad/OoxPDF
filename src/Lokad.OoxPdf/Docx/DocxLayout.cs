@@ -1981,7 +1981,7 @@ internal sealed class DocxLayoutEngine
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
         double pdfCharacterSpacing = ShouldEmitNumberedLabelTextStateSpacing(label)
-            ? OfficeNumberedTextStateCharacterSpacing(fontSize)
+            ? OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(fontSize)
             : 0d;
         var segments = new List<DocxTextSegmentLayout>
         {
@@ -2006,12 +2006,6 @@ internal sealed class DocxLayoutEngine
 
         segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));
         return segments;
-    }
-
-    private static double OfficeNumberedTextStateCharacterSpacing(double fontSize)
-    {
-        const double docxNumberedTextStateSpacingEm = 0.004d;
-        return fontSize * docxNumberedTextStateSpacingEm;
     }
 
     private static bool ShouldEmitNumberedLabelTextStateSpacing(DocxListLabel label)

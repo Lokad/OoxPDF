@@ -431,6 +431,12 @@ internal static class DocxTests
         TestAssert.Contains("-166.667", pdf);
     }
 
+    public static void OfficePdfTextProfileExposesWordNumberedListCharacterSpacing()
+    {
+        TestAssert.Equal(0.048d, OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(12d));
+        TestAssert.Equal(0.044d, OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(11d));
+    }
+
     public static void DocxReaderPreservesParagraphAlignmentTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
