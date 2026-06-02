@@ -183,6 +183,23 @@ for ($pageIndex = 0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
 
         $cells = @($row.Cells)
         $visualOwnershipBuckets = @(New-CellVisualOwnershipBuckets $cells)
+        $visualTextLength = 0
+        $visualInlineImageCount = 0
+        foreach ($cell in $cells) {
+            if ($cell.PSObject.Properties.Name -contains "VisualTextLength") {
+                $visualTextLength += [int]$cell.VisualTextLength
+            }
+            else {
+                $visualTextLength += [int]$cell.TextLength
+            }
+
+            if ($cell.PSObject.Properties.Name -contains "VisualInlineImageCount") {
+                $visualInlineImageCount += [int]$cell.VisualInlineImageCount
+            }
+            else {
+                $visualInlineImageCount += [int]$cell.InlineImageCount
+            }
+        }
         $layoutRows.Add([pscustomobject]@{
             Page = $pageNumber
             TableIndex = [int]$row.TableIndex
@@ -197,6 +214,8 @@ for ($pageIndex = 0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
             LastBaselineY = $row.LastBaselineY
             TextLineCount = [int]$row.TextLineCount
             TextLength = [int]$row.TextLength
+            VisualTextLength = $visualTextLength
+            VisualInlineImageCount = $visualInlineImageCount
             CellCount = [int]$row.CellCount
             VerticalMergeContinuationCellCount = @($cells | Where-Object {
                 $_.PSObject.Properties.Name -contains "IsVerticalMergeContinuation" -and [bool]$_.IsVerticalMergeContinuation

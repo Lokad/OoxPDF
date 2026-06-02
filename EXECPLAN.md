@@ -736,6 +736,13 @@ High-priority actions:
   continuation snapshot reporting; validation passed `docx-tables --skip-slow` (`98`) and `docx-core
   --skip-slow` (`51`) after rerunning serially around a transient parallel compiler output lock. Keep the
   actual text carry-over and continuation-internal border rules open until Office-PDF evidence pins them.
+  2026-06-02 architecture follow-up: table-cell layout snapshots now distinguish emitted fragment content
+  from visual-owner content. `DocxTableCellSnapshot` carries `VisualParagraphCount`, `VisualTextLength`, and
+  `VisualInlineImageCount`, and `tools/SummarizeDocxRowBoundary.ps1` aggregates visual-owner text/image counts
+  with legacy fallbacks. Cross-page vertical-merge coverage now proves a continuation can have zero emitted
+  text while its restart owner has private-safe visual text length. Validation passed `docx-tables --skip-slow`
+  (`98`). Keep rendering unchanged: these fields are evidence plumbing for the future Office-derived decision
+  on whether/how owner content is re-emitted or clipped in continuation fragments.
   2026-06-02 architecture follow-up: anchored DOCX drawings now preserve their embedded image relationship and
   image payload in `DocxFloatingDrawing`, using the same relationship/part resolution helper as inline
   drawings. Structure snapshots expose private-safe anchored-image facts (relationship id, part name, content

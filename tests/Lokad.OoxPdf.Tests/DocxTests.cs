@@ -9362,6 +9362,9 @@ internal static class DocxTests
         TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
         TestAssert.Equal(1, continuationSnapshot.VerticalMergeOwnerRowIndex ?? -1);
         TestAssert.Equal(0, continuationSnapshot.VerticalMergeOwnerGridColumnIndex ?? -1);
+        TestAssert.Equal(0, continuationSnapshot.TextLength);
+        TestAssert.Equal(6, continuationSnapshot.VisualTextLength);
+        TestAssert.Equal(1, continuationSnapshot.VisualParagraphCount);
     }
 
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()

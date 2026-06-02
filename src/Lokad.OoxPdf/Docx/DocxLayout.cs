@@ -369,12 +369,15 @@ internal sealed record DocxLayoutSnapshot(
     private static DocxTableCellSnapshot ToTableCellSnapshot(DocxTableCellLayout cellLayout, int cellIndex)
     {
         DocxTableCell cell = cellLayout.Cell;
+        DocxTableCell visualCell = cellLayout.VisualCell;
         DocxTextLineLayout? firstLine = cellLayout.TextLines.FirstOrDefault();
         DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
         IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
+        IReadOnlyList<DocxParagraph> visualParagraphs = DocxTableCellContent.GetParagraphs(visualCell);
         IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.SpacingBeforePoints).ToArray();
         IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.SpacingAfterPoints).ToArray();
         string cellText = string.Concat(paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
+        string visualCellText = string.Concat(visualParagraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
         TextProfile textProfile = BuildTextProfile(cellText);
         return new DocxTableCellSnapshot(
             cellIndex,
@@ -418,6 +421,9 @@ internal sealed record DocxLayoutSnapshot(
             cellLayout.VisualOwnership.ToString(),
             cellLayout.VerticalMergeOwner?.RowIndex,
             cellLayout.VerticalMergeOwner?.GridColumnIndex,
+            visualParagraphs.Count,
+            visualCellText.Length,
+            visualParagraphs.Sum(paragraph => paragraph.Images.Count),
             textProfile.SpaceCharacterCount,
             textProfile.NonAsciiCharacterCount,
             textProfile.PunctuationCharacterCount,
@@ -713,6 +719,9 @@ internal sealed record DocxTableCellSnapshot(
     string VisualOwnership,
     int? VerticalMergeOwnerRowIndex,
     int? VerticalMergeOwnerGridColumnIndex,
+    int VisualParagraphCount,
+    int VisualTextLength,
+    int VisualInlineImageCount,
     int SpaceCharacterCount,
     int NonAsciiCharacterCount,
     int PunctuationCharacterCount,
