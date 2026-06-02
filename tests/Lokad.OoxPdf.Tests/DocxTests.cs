@@ -10676,6 +10676,43 @@ internal static class DocxTests
         TestAssert.Equal(12d, cellLayout.InlineImages[0].Height);
     }
 
+    public static void DocxTableLayoutStageLaysOutNestedTableCellBodies()
+    {
+        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        DocxParagraph nestedParagraph = CreateDocxLayoutParagraph("Nested", 10d, 10d);
+        var nestedCell = new DocxTableCell("Nested", [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var nestedTable = new DocxTable(null, [50d], [new DocxTableRow([nestedCell], null)]);
+        var outerCell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxTableElement(nestedTable)]
+        };
+        var outerTable = new DocxTable(null, [80d], [new DocxTableRow([outerCell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable, nestedTable]);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "Nested".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxTableRowLayout outerRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        DocxTableCellLayout outerCellLayout = outerRow.Cells.Single();
+        DocxTableRowLayout nestedRow = outerCellLayout.NestedRows.Single();
+        DocxTextLineLayout nestedLine = nestedRow.Cells.Single().TextLines.Single();
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        DocxTextEmissionLineSnapshot[] emissionLines = renderer.InspectTextEmission(document).Lines
+            .Where(line => !line.IsStaticStory)
+            .ToArray();
+
+        TestAssert.Equal("Nested", nestedLine.Text);
+        TestAssert.True(outerRow.Height >= nestedRow.Height, "Outer table row height should include nested table content height.");
+        TestAssert.True(nestedRow.Y >= outerCellLayout.Y && nestedRow.Y + nestedRow.Height <= outerCellLayout.Y + outerCellLayout.Height + 0.001d, "Nested table row should be placed inside the parent cell fragment.");
+        TestAssert.Equal("Nested".Length, snapshot.Pages.Single().TableRows.Single().TextLength);
+        TestAssert.True(emissionLines.Single().TextLength >= "Nested".Length, "Nested table-cell text should participate in renderer text-emission enumeration.");
+    }
+
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -554,7 +554,7 @@ internal sealed class DocxRenderer
                 continue;
             }
 
-            if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0)
+            if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0 || cellLayout.NestedRows.Count != 0)
             {
                 graphics.SaveState();
                 graphics.ClipRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
@@ -566,6 +566,24 @@ internal sealed class DocxRenderer
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
                 {
                     RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
+                }
+
+                for (int nestedRowIndex = 0; nestedRowIndex < cellLayout.NestedRows.Count; nestedRowIndex++)
+                {
+                    DocxTableRowLayout nestedRow = cellLayout.NestedRows[nestedRowIndex];
+                    DocxTableRowLayout? previousNestedRow = nestedRowIndex > 0 ? cellLayout.NestedRows[nestedRowIndex - 1] : null;
+                    DocxTableRowLayout? nextNestedRow = nestedRowIndex + 1 < cellLayout.NestedRows.Count ? cellLayout.NestedRows[nestedRowIndex + 1] : null;
+                    RenderTableRow(
+                        nestedRow,
+                        IsAdjacentTableRow(previousNestedRow, nestedRow) ? previousNestedRow : null,
+                        IsAdjacentTableRow(nestedRow, nextNestedRow) ? nextNestedRow : null,
+                        graphics,
+                        pageImages,
+                        fontResources,
+                        diagnosticSink,
+                        pageNumber,
+                        pageCount,
+                        ref imageIndex);
                 }
 
                 graphics.RestoreState();
@@ -675,12 +693,31 @@ internal sealed class DocxRenderer
                     yield return line;
                     break;
                 case DocxTableRowLayout row:
-                    foreach (DocxTextLineLayout cellLine in row.Cells.SelectMany(cell => cell.TextLines))
+                    foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
                     {
                         yield return cellLine;
                     }
 
                     break;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateTableRowTextLines(DocxTableRowLayout row)
+    {
+        foreach (DocxTableCellLayout cell in row.Cells)
+        {
+            foreach (DocxTextLineLayout line in cell.TextLines)
+            {
+                yield return line;
+            }
+
+            foreach (DocxTableRowLayout nestedRow in cell.NestedRows)
+            {
+                foreach (DocxTextLineLayout nestedLine in EnumerateTableRowTextLines(nestedRow))
+                {
+                    yield return nestedLine;
+                }
             }
         }
     }

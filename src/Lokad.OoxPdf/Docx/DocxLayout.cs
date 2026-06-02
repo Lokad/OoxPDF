@@ -399,7 +399,7 @@ internal sealed record DocxLayoutSnapshot(
                 row.Y,
                 row.Cells.Sum(cell => cell.Width),
                 row.Height,
-                TextLength: row.Cells.Sum(cell => cell.TextLines.Sum(line => line.Text.Length)),
+                TextLength: SumTableRowTextLength(row),
                 CellCount: row.Cells.Count,
                 columnIndex,
                 SourceBlockIndex: row.Table.SourceBlockIndex,
@@ -481,8 +481,8 @@ internal sealed record DocxLayoutSnapshot(
             firstBaselineY,
             lastBaselineY,
             cells.Count,
-            cells.Sum(cell => cell.TextLineCount),
-            cells.Sum(cell => cell.TextLength),
+            SumTableRowTextLineCount(row),
+            SumTableRowTextLength(row),
             cells.Select(cell => cell.MaxFontSize).DefaultIfEmpty(0d).Max(),
             row.IsHeader,
             row.HeaderValue,
@@ -490,6 +490,26 @@ internal sealed record DocxLayoutSnapshot(
             row.CantSplit,
             row.CantSplitValue,
             cells);
+    }
+
+    private static int SumTableRowTextLineCount(DocxTableRowLayout row)
+    {
+        return row.Cells.Sum(SumTableCellTextLineCount);
+    }
+
+    private static int SumTableRowTextLength(DocxTableRowLayout row)
+    {
+        return row.Cells.Sum(SumTableCellTextLength);
+    }
+
+    private static int SumTableCellTextLineCount(DocxTableCellLayout cell)
+    {
+        return cell.TextLines.Count + cell.NestedRows.Sum(SumTableRowTextLineCount);
+    }
+
+    private static int SumTableCellTextLength(DocxTableCellLayout cell)
+    {
+        return cell.TextLines.Sum(line => line.Text.Length) + cell.NestedRows.Sum(SumTableRowTextLength);
     }
 
     private static DocxTableCellSnapshot ToTableCellSnapshot(DocxTableCellLayout cellLayout, int cellIndex)
@@ -511,8 +531,8 @@ internal sealed record DocxLayoutSnapshot(
             cellLayout.Y,
             cellLayout.Width,
             cellLayout.Height,
-            cellLayout.TextLines.Count,
-            cellLayout.TextLines.Sum(line => line.Text.Length),
+            SumTableCellTextLineCount(cellLayout),
+            SumTableCellTextLength(cellLayout),
             cellLayout.TextLines.Count == 0 ? 0d : cellLayout.TextLines.Max(line => line.FontSize),
             firstLine?.X,
             firstLine?.BaselineY,
@@ -1088,8 +1108,11 @@ internal sealed record DocxTableCellLayout(
     bool IsVerticalMergeContinuation = false,
     DocxTableCell? VerticalMergeOwnerCell = null,
     DocxVerticalMergeOwner? VerticalMergeOwner = null,
-    DocxTableCellVisualOwnership VisualOwnership = DocxTableCellVisualOwnership.OwnCell)
+    DocxTableCellVisualOwnership VisualOwnership = DocxTableCellVisualOwnership.OwnCell,
+    IReadOnlyList<DocxTableRowLayout>? NestedTableRows = null)
 {
+    public IReadOnlyList<DocxTableRowLayout> NestedRows => NestedTableRows ?? [];
+
     public DocxTableCell VisualCell =>
         VisualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner && VerticalMergeOwner is not null
             ? VerticalMergeOwner.Cell
@@ -3375,7 +3398,12 @@ internal sealed class DocxLayoutEngine
                 : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
                     .Where(image => VerticalOverlap(image.Y, image.Height, visualY, visualHeight) > 0.001d)
                     .ToArray();
-            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, verticalMergeOwner, visualOwnership));
+            IReadOnlyList<DocxTableRowLayout> nestedTableRows = isVerticalMergeContinuation
+                ? []
+                : LayoutTableCellNestedTables(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
+                    .Where(rowLayout => VerticalOverlap(rowLayout.Y, rowLayout.Height, visualY, visualHeight) > 0.001d)
+                    .ToArray();
+            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, verticalMergeOwner, visualOwnership, nestedTableRows));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
@@ -3528,8 +3556,8 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints,
         double? rowTopPadding = null)
     {
-        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
-        if (paragraphs.Count == 0)
+        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        if (bodyElements.Count == 0)
         {
             return 0d;
         }
@@ -3542,8 +3570,23 @@ internal sealed class DocxLayoutEngine
         double contentHeight = paddingTop + paddingBottom;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
-        foreach (DocxParagraph paragraph in paragraphs)
+        foreach (DocxBodyElement bodyElement in bodyElements)
         {
+            if (bodyElement is DocxTableElement tableElement)
+            {
+                contentHeight += pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                contentHeight += MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints);
+                continue;
+            }
+
+            if (bodyElement is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
             contentHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -3577,6 +3620,24 @@ internal sealed class DocxLayoutEngine
 
         contentHeight += pendingSpacingAfter;
         return contentHeight;
+    }
+
+    private static double MeasureNestedTableHeight(
+        DocxTable table,
+        double availableWidth,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints)
+    {
+        DocxTableLayoutFrame frame = CreateTableLayoutFrame(
+            table,
+            tableIndex: -1,
+            sourceBlockIndex: -1,
+            x: 0d,
+            availableWidth: availableWidth,
+            pageContentHeight: double.MaxValue / 4d,
+            textMeasurer,
+            defaultTabStopPoints);
+        return frame.RowHeights.Sum();
     }
 
     private static IReadOnlyList<DocxTextLineLayout> LayoutTableCellTextLines(
@@ -3806,6 +3867,122 @@ internal sealed class DocxLayoutEngine
         return verticalOffset == 0d
             ? images
             : images.Select(image => image with { Y = image.Y - verticalOffset }).ToArray();
+    }
+
+    private static IReadOnlyList<DocxTableRowLayout> LayoutTableCellNestedTables(
+        DocxTableCell cell,
+        double cellX,
+        double cellY,
+        double cellWidth,
+        double cellHeight,
+        double rowTopPadding,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        int pageIndex)
+    {
+        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
+        if (textMeasurer is null || !bodyElements.OfType<DocxTableElement>().Any())
+        {
+            return [];
+        }
+
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
+        double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
+        double cursorY = cellY + cellHeight - rowTopPadding;
+        var nestedRows = new List<DocxTableRowLayout>();
+        double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
+        int nestedTableIndex = 0;
+        foreach (DocxBodyElement bodyElement in bodyElements)
+        {
+            if (bodyElement is DocxTableElement tableElement)
+            {
+                cursorY -= pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                DocxTableLayoutFrame frame = CreateTableLayoutFrame(
+                    tableElement.Table,
+                    nestedTableIndex,
+                    sourceBlockIndex: -1,
+                    cellX + paddingLeft,
+                    textWidth,
+                    cellHeight,
+                    textMeasurer,
+                    defaultTabStopPoints);
+                for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
+                {
+                    double rowHeight = frame.RowHeights[rowIndex];
+                    nestedRows.Add(CreateTableRowLayout(
+                        tableElement.Table,
+                        frame.Context,
+                        tableElement.Table.Rows[rowIndex],
+                        rowIndex,
+                        frame.RowHeights,
+                        frame.EffectiveColumns,
+                        frame.Scale,
+                        textMeasurer,
+                        defaultTabStopPoints,
+                        () => pageIndex,
+                        cursorY,
+                        rowHeight,
+                        cursorY,
+                        FragmentIndex: 0,
+                        FragmentCount: 1));
+                    cursorY -= rowHeight;
+                }
+
+                nestedTableIndex++;
+                continue;
+            }
+
+            if (bodyElement is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            cursorY -= spacingProfile.AppliedBeforeSpacing;
+            pendingSpacingAfter = 0d;
+            cursorY -= MeasureTableCellParagraphContentHeight(paragraph, textWidth, textMeasurer, defaultTabStopPoints);
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+            previousParagraph = paragraph;
+        }
+
+        return nestedRows;
+    }
+
+    private static double MeasureTableCellParagraphContentHeight(
+        DocxParagraph paragraph,
+        double textWidth,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints)
+    {
+        double height = 0d;
+        double fontSize = GetParagraphFontSize(paragraph);
+        double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
+        IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
+        if (textSpans.Count != 0)
+        {
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
+            double firstParagraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
+            double continuationParagraphWidth = Math.Max(1d, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true).Count() * lineHeight;
+        }
+        else if (paragraph.Images.Count == 0)
+        {
+            height += lineHeight;
+        }
+
+        foreach (DocxInlineImage image in paragraph.Images)
+        {
+            double imageWidth = Math.Min(textWidth, image.WidthPoints);
+            double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+            height += imageHeight + 6d;
+        }
+
+        return height;
     }
 
     private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY)

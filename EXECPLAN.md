@@ -7282,6 +7282,15 @@ Current validation baseline:
   Bottom-up reader coverage verifies one top-level table block plus a recursive two-table inventory for a nested-table
   cell. Validation passed `docx-tables --skip-slow` (`105`) and `docx-core --skip-slow` (`53`; serial rerun after a
   parallel compiler output lock). Keep actual nested-table layout/rendering open.
+  2026-06-02 architecture follow-up: table-cell layout now has a typed child-row inventory for nested table bodies.
+  `DocxTableCellLayout` carries `NestedRows`, parent row-height measurement charges nested table row heights against
+  the owning cell content box, the renderer recurses through those nested rows under the existing cell clip, and
+  text-emission/layout snapshots enumerate nested table text recursively. Bottom-up coverage builds a typed nested
+  table in a cell, verifies parent row height includes child rows, child rows stay inside the parent fragment, and
+  renderer text-emission enumeration sees the nested text. Validation passed `docx-tables --skip-slow` (`106`),
+  `docx-core --skip-slow` (`53`), full solution build, and `git diff --check` with line-ending warnings only.
+  Keep mixed paragraph/table/image body ordering, nested table pagination inside split parent cells, and Office-exact
+  nested-table spacing/baseline behavior open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
