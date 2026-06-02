@@ -4993,6 +4993,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   naive recursive paragraph/character merge changed the private candidate from 16 pages to 14 pages in run
   `20260531-161731`; this must be tackled with fixture coverage for inherited spacing, font size, and page
   breaks rather than a blind cascade merge.
+  - [x] 2026-06-02: Removed the raw-direct-only `pageBreakBefore` shortcut from DOCX body-element
+    construction. The body stream now resolves `w:pageBreakBefore` through the same paragraph style cascade as
+    layout properties, including `w:basedOn` inheritance and direct `w:val="0"` override. Public synthetic
+    coverage verifies a child paragraph style inheriting `pageBreakBefore` emits a typed `DocxPageBreakElement`
+    while the direct false override suppresses it. Validation passed `docx-page --skip-slow` (`37`) and
+    `docx-core --skip-slow` (`53`; serial rerun after a parallel compiler output lock). Keep the parent open
+    for Office-backed spacing and font-size inheritance fixtures before claiming the full style graph closed.
 - [x] 2026-06-01: Promote DOCX run character spacing (`w:rPr/w:spacing`) through the typed run model,
   resolved style cascade, text measurement, wrapping/segment placement, static header/footer placement, and
   PDF glyph emission. The parser treats the token as signed twentieths of a point, not as a font-family

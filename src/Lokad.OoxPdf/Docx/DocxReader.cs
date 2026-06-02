@@ -880,9 +880,7 @@ internal sealed class DocxReader
         DocxTableCellStyle? tableCellStyle = null)
     {
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
-        string? paragraphStyleId = (string?)paragraphProperties?
-            .Element(WordprocessingNamespace + "pStyle")
-            ?.Attribute(WordprocessingNamespace + "val");
+        string? paragraphStyleId = ReadParagraphStyleId(paragraphProperties);
         DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
             paragraphProperties,
             paragraphStyleId,
@@ -1393,6 +1391,13 @@ internal sealed class DocxReader
         return string.Empty;
     }
 
+    private static string? ReadParagraphStyleId(XElement? paragraphProperties)
+    {
+        return (string?)paragraphProperties?
+            .Element(WordprocessingNamespace + "pStyle")
+            ?.Attribute(WordprocessingNamespace + "val");
+    }
+
     private static IReadOnlyList<DocxBodyElement> ReadBodyElements(
         XDocument document,
         DocxStyleSet styles,
@@ -1408,10 +1413,13 @@ internal sealed class DocxReader
             if (element.Name == WordprocessingNamespace + "p")
             {
                 XElement? paragraphProperties = element.Element(WordprocessingNamespace + "pPr");
-                XElement? pageBreakBefore = paragraphProperties?.Element(WordprocessingNamespace + "pageBreakBefore");
-                if (ReadOnOff(pageBreakBefore) == true)
+                DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
+                    paragraphProperties,
+                    ReadParagraphStyleId(paragraphProperties),
+                    styles);
+                if (resolvedParagraph.PageBreakBefore == true)
                 {
-                    elements.Add(new DocxPageBreakElement("pageBreakBefore", (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val")));
+                    elements.Add(new DocxPageBreakElement("pageBreakBefore", resolvedParagraph.PageBreakBeforeValue));
                 }
 
                 if (IsRunPageBreakOnlyParagraph(element))
@@ -2880,6 +2888,7 @@ internal sealed class DocxReader
         DocxParagraphIndent indent = ReadParagraphIndent(properties);
         IReadOnlyList<DocxTabStop> tabStops = ReadParagraphTabStops(properties);
         XElement? snapToGrid = properties?.Element(WordprocessingNamespace + "snapToGrid");
+        XElement? pageBreakBefore = properties?.Element(WordprocessingNamespace + "pageBreakBefore");
 
         return new DocxResolvedParagraphProperties(
             alignment,
@@ -2893,7 +2902,9 @@ internal sealed class DocxReader
             indent,
             tabStops,
             ReadOnOff(snapToGrid),
-            (string?)snapToGrid?.Attribute(WordprocessingNamespace + "val"));
+            (string?)snapToGrid?.Attribute(WordprocessingNamespace + "val"),
+            ReadOnOff(pageBreakBefore),
+            (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val"));
     }
 
     private static IReadOnlyList<DocxTabStop> ReadParagraphTabStops(XElement? properties)
@@ -3132,7 +3143,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxTableStyle>(),
@@ -3586,9 +3597,11 @@ internal sealed class DocxReader
         DocxParagraphIndent Indent,
         IReadOnlyList<DocxTabStop> TabStops,
         bool? SnapToGrid,
-        string? SnapToGridValue)
+        string? SnapToGridValue,
+        bool? PageBreakBefore,
+        string? PageBreakBeforeValue)
     {
-        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null);
+        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null);
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -3606,7 +3619,9 @@ internal sealed class DocxReader
                 MergeIndent(Indent, other.Indent),
                 other.TabStops.Count != 0 ? other.TabStops : TabStops,
                 other.SnapToGrid ?? SnapToGrid,
-                other.SnapToGridValue ?? SnapToGridValue);
+                other.SnapToGridValue ?? SnapToGridValue,
+                other.PageBreakBefore ?? PageBreakBefore,
+                other.PageBreakBeforeValue ?? PageBreakBeforeValue);
         }
     }
 

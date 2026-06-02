@@ -4531,6 +4531,66 @@ internal static class DocxTests
         TestAssert.True(breaks[1].Value is null, "Expected implicit pageBreakBefore to keep a null source token.");
     }
 
+    public static void DocxReaderPageBreakBeforeUsesResolvedParagraphStyleCascade()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="BreakBase">
+                    <w:pPr><w:pageBreakBefore w:val="on"/></w:pPr>
+                  </w:style>
+                  <w:style w:type="paragraph" w:styleId="BreakChild">
+                    <w:basedOn w:val="BreakBase"/>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>First</w:t></w:r></w:p>
+                    <w:p><w:pPr><w:pStyle w:val="BreakChild"/></w:pPr><w:r><w:t>Inherited break</w:t></w:r></w:p>
+                    <w:p><w:pPr><w:pStyle w:val="BreakChild"/><w:pageBreakBefore w:val="0"/></w:pPr><w:r><w:t>Override no break</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxPageBreakElement[] breaks = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
+
+        TestAssert.Equal(1, breaks.Length);
+        TestAssert.Equal("pageBreakBefore", breaks[0].SourceKind);
+        TestAssert.Equal("on", breaks[0].Value ?? string.Empty);
+        TestAssert.Equal(3, document.BodyElements.OfType<DocxParagraphElement>().Count());
+    }
+
     public static void DocxReaderPromotesRunPageBreakOnlyParagraph()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
