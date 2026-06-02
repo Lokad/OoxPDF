@@ -88,6 +88,13 @@ internal static class DocxTextEmissionPlanner
         return Create(style, layoutFontSize, pdfCharacterSpacing: 0d, compensatePdfCharacterSpacing: true);
     }
 
+    public static double TextStateCharacterSpacingForListLabel(DocxListLabel label, double layoutFontSize)
+    {
+        return string.Equals(label.FormatValue, "bullet", StringComparison.OrdinalIgnoreCase)
+            ? 0d
+            : OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(layoutFontSize);
+    }
+
     public static double TextStateCharacterSpacingForAdvanceTarget(
         int glyphGapCount,
         double currentEmittedAdvance,

@@ -437,6 +437,15 @@ internal static class DocxTests
         TestAssert.Equal(0.044d, OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(11d));
     }
 
+    public static void DocxTextEmissionPlannerOwnsListLabelTextStateTarget()
+    {
+        var decimalLabel = new DocxListLabel("1", "decimal", "%1.", "tab", "7", 0, DocxNumberingIndent.Empty, DocxTextRunStyle.Empty);
+        var bulletLabel = new DocxListLabel("*", "bullet", "\uF0B7", "tab", "7", 0, DocxNumberingIndent.Empty, DocxTextRunStyle.Empty);
+
+        TestAssert.Equal(0.048d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(decimalLabel, 12d));
+        TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(bulletLabel, 12d));
+    }
+
     public static void DocxTextEmissionPlannerOwnsPdfTextStateAndPositioningSpacing()
     {
         var run = new DocxTextRun("Tracked", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.25d);

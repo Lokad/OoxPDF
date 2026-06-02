@@ -558,6 +558,14 @@ High-priority actions:
   evidence for a glyph-side/shaping decomposition model, not as a renderer lookup; the next production branch
   still must explain the side-advance discriminator from Word-compatible font/PDF structure and must not key
   behavior on text strings, font names, roles, classes, or observed bucket constants.
+  2026-06-02 architecture follow-up: DOCX text segment roles are now typed internally
+  (`DocxTextSegmentRole.Text/ListLabel/ListSeparator`) and converted back to private-safe strings only at the
+  snapshot boundary. The numbered-list-label text-state decision also moved out of `DocxLayout` into
+  `DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel`, with bottom-up coverage proving decimal
+  labels get the current nonzero Office profile while bullet labels stay neutral. This removes one raw-string
+  pipeline dependency and gives future Word-target logic a planner-owned entry point, but the existing
+  numbered-list profile itself remains an open model to replace with public, structural evidence rather than
+  a fixed observed scalar.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

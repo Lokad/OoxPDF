@@ -636,7 +636,7 @@ internal sealed class DocxRenderer
             line.SourceBlockIndex,
             line.SourceParagraphIndex,
             line.SourceLineIndex,
-            segment.Role,
+            segment.Role.ToString(),
             segment.X,
             segment.BaselineY,
             segment.Width,

@@ -758,7 +758,14 @@ internal sealed record DocxTextSegmentLayout(
     double PdfCharacterSpacing = 0d,
     bool CompensatePdfCharacterSpacing = true,
     int SourceTextRunIndex = -1,
-    string Role = "Text");
+    DocxTextSegmentRole Role = DocxTextSegmentRole.Text);
+
+internal enum DocxTextSegmentRole
+{
+    Text,
+    ListLabel,
+    ListSeparator
+}
 
 internal sealed record DocxTextSpan(
     string Text,
@@ -848,7 +855,7 @@ internal sealed record DocxTextEmissionSegment(
     bool SyntheticItalic,
     bool IsTerminalLineSpace,
     int SourceTextRunIndex = -1,
-    string Role = "Text");
+    DocxTextSegmentRole Role = DocxTextSegmentRole.Text);
 
 internal readonly record struct DocxKeepBlockEstimate(
     double Height,
@@ -2063,9 +2070,7 @@ internal sealed class DocxLayoutEngine
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
-        double pdfCharacterSpacing = ShouldEmitNumberedLabelTextStateSpacing(label)
-            ? OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(fontSize)
-            : 0d;
+        double pdfCharacterSpacing = DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(label, fontSize);
         var segments = new List<DocxTextSegmentLayout>
         {
             new(
@@ -2077,7 +2082,7 @@ internal sealed class DocxLayoutEngine
                 PdfCharacterSpacing: pdfCharacterSpacing,
                 CompensatePdfCharacterSpacing: false,
                 SourceTextRunIndex: -1,
-                Role: "ListLabel")
+                Role: DocxTextSegmentRole.ListLabel)
         };
 
         string separator = GetListLabelPdfSeparator(label);
@@ -2085,16 +2090,11 @@ internal sealed class DocxLayoutEngine
         {
             double separatorX = labelX + labelWidth;
             double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelRun.FontSize);
-            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelRun.FontSize, SourceTextRunIndex: -1, Role: "ListSeparator"));
+            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelRun.FontSize, SourceTextRunIndex: -1, Role: DocxTextSegmentRole.ListSeparator));
         }
 
         segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));
         return segments;
-    }
-
-    private static bool ShouldEmitNumberedLabelTextStateSpacing(DocxListLabel label)
-    {
-        return !string.Equals(label.FormatValue, "bullet", StringComparison.OrdinalIgnoreCase);
     }
 
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
