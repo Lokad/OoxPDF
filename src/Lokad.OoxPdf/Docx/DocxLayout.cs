@@ -16,6 +16,7 @@ internal sealed record DocxFloatingDrawingLayout(
     int? PageStartIndex,
     int? PageEndIndex,
     int? AnchorPageIndex,
+    int? AnchorColumnIndex,
     double? AnchorBlockVerticalTop,
     double? AnchorBlockVerticalBottom,
     double? ExtentWidthPoints,
@@ -98,6 +99,7 @@ internal sealed record DocxLayoutSnapshot(
                     drawing.PageStartIndex,
                     drawing.PageEndIndex,
                     drawing.AnchorPageIndex,
+                    drawing.AnchorColumnIndex,
                     drawing.AnchorBlockVerticalTop,
                     drawing.AnchorBlockVerticalBottom,
                     drawing.ExtentWidthPoints,
@@ -189,6 +191,8 @@ internal sealed record DocxLayoutSnapshot(
                 ResolveSourceBlockKind(group.Select(entry => entry.item)),
                 group.Min(entry => entry.pageIndex),
                 group.Max(entry => entry.pageIndex),
+                group.Select(entry => ResolveItemColumnIndex(pages[entry.pageIndex], entry.item)).Where(index => index is not null).DefaultIfEmpty().Min(),
+                group.Select(entry => ResolveItemColumnIndex(pages[entry.pageIndex], entry.item)).Where(index => index is not null).DefaultIfEmpty().Max(),
                 group.Max(entry => entry.item.Y + entry.item.Height),
                 group.Min(entry => entry.item.Y),
                 group.Count(),
@@ -230,6 +234,26 @@ internal sealed record DocxLayoutSnapshot(
         }
 
         return hasInlineImage ? "InlineImage" : "Unknown";
+    }
+
+    private static int? ResolveItemColumnIndex(DocxLayoutPageSnapshot page, DocxLayoutItemSnapshot item)
+    {
+        if (page.ColumnFrames.Count == 0)
+        {
+            return null;
+        }
+
+        double center = item.X + Math.Max(0d, item.Width) / 2d;
+        DocxLayoutColumnFrameSnapshot? containingFrame = page.ColumnFrames.FirstOrDefault(frame => center >= frame.X && center <= frame.X + frame.Width);
+        if (containingFrame is not null)
+        {
+            return containingFrame.Index;
+        }
+
+        return page.ColumnFrames
+            .OrderBy(frame => Math.Abs(center - (frame.X + frame.Width / 2d)))
+            .First()
+            .Index;
     }
 
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
@@ -643,6 +667,7 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     int? PageStartIndex,
     int? PageEndIndex,
     int? AnchorPageIndex,
+    int? AnchorColumnIndex,
     double? AnchorBlockVerticalTop,
     double? AnchorBlockVerticalBottom,
     double? ExtentWidthPoints,
@@ -676,6 +701,8 @@ internal sealed record DocxLayoutSourceBlockSnapshot(
     string Kind,
     int FirstPageIndex,
     int LastPageIndex,
+    int? FirstColumnIndex,
+    int? LastColumnIndex,
     double VerticalTop,
     double VerticalBottom,
     int ItemCount,
@@ -1570,13 +1597,14 @@ internal sealed class DocxLayoutEngine
                 DocxLayoutPage? anchorPage = sourceBlock is null
                     ? pages.FirstOrDefault()
                     : pages[sourceBlock.FirstPageIndex];
-                DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage);
+                DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
                 DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
                 return new DocxFloatingDrawingLayout(
                     drawing,
                     sourceBlock?.FirstPageIndex,
                     sourceBlock?.LastPageIndex,
                     sourceBlock?.FirstPageIndex,
+                    sourceBlock?.FirstColumnIndex,
                     sourceBlock?.VerticalTop,
                     sourceBlock?.VerticalBottom,
                     ReadEmuPoints(drawing.ExtentCxValue),
@@ -1597,7 +1625,8 @@ internal sealed class DocxLayoutEngine
 
     private static DocxAnchorReferenceFrame? ResolveHorizontalReferenceFrame(
         DocxFloatingDrawing drawing,
-        DocxLayoutPage? page)
+        DocxLayoutPage? page,
+        DocxLayoutSourceBlockBounds? sourceBlock)
     {
         if (page is null)
         {
@@ -1609,6 +1638,8 @@ internal sealed class DocxLayoutEngine
             "page" => new DocxAnchorReferenceFrame(0d, page.Width),
             "margin" => new DocxAnchorReferenceFrame(page.MarginLeft, page.Width - page.MarginRight),
             "column" when page.ColumnFrames.Count == 1 => new DocxAnchorReferenceFrame(page.ColumnFrames[0].X, page.ColumnFrames[0].X + page.ColumnFrames[0].Width),
+            "column" when sourceBlock?.FirstColumnIndex is { } columnIndex && columnIndex >= 0 && columnIndex < page.ColumnFrames.Count =>
+                new DocxAnchorReferenceFrame(page.ColumnFrames[columnIndex].X, page.ColumnFrames[columnIndex].X + page.ColumnFrames[columnIndex].Width),
             _ => null
         };
     }
@@ -1643,10 +1674,13 @@ internal sealed class DocxLayoutEngine
     {
         int? firstPageIndex = null;
         int? lastPageIndex = null;
+        int? firstColumnIndex = null;
+        int? lastColumnIndex = null;
         double verticalTop = double.NegativeInfinity;
         double verticalBottom = double.PositiveInfinity;
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
+            DocxLayoutPage page = pages[pageIndex];
             foreach (DocxLayoutItem item in pages[pageIndex].Items)
             {
                 if (GetSourceBlockIndex(item) != sourceBlockIndex)
@@ -1656,6 +1690,12 @@ internal sealed class DocxLayoutEngine
 
                 firstPageIndex ??= pageIndex;
                 lastPageIndex = pageIndex;
+                if (ResolveItemColumnIndex(page, item) is { } columnIndex)
+                {
+                    firstColumnIndex = firstColumnIndex is null ? columnIndex : Math.Min(firstColumnIndex.Value, columnIndex);
+                    lastColumnIndex = lastColumnIndex is null ? columnIndex : Math.Max(lastColumnIndex.Value, columnIndex);
+                }
+
                 (double y, double height) = GetVerticalBounds(item);
                 verticalTop = Math.Max(verticalTop, y + height);
                 verticalBottom = Math.Min(verticalBottom, y);
@@ -1664,7 +1704,7 @@ internal sealed class DocxLayoutEngine
 
         return firstPageIndex is null || lastPageIndex is null
             ? null
-            : new DocxLayoutSourceBlockBounds(firstPageIndex.Value, lastPageIndex.Value, verticalTop, verticalBottom);
+            : new DocxLayoutSourceBlockBounds(firstPageIndex.Value, lastPageIndex.Value, firstColumnIndex, lastColumnIndex, verticalTop, verticalBottom);
     }
 
     private static int? GetSourceBlockIndex(DocxLayoutItem item)
@@ -1689,9 +1729,43 @@ internal sealed class DocxLayoutEngine
         };
     }
 
+    private static int? ResolveItemColumnIndex(DocxLayoutPage page, DocxLayoutItem item)
+    {
+        (double x, double width) = item switch
+        {
+            DocxTextLineLayout text => (text.X, text.Width),
+            DocxInlineImageLayout image => (image.X, image.Width),
+            DocxTableRowLayout row => (row.Table.TableX, row.Table.ResolvedTableWidth),
+            _ => (0d, 0d)
+        };
+        return ResolveColumnIndex(page.ColumnFrames, x, width);
+    }
+
+    private static int? ResolveColumnIndex(IReadOnlyList<DocxLayoutColumnFrame> frames, double x, double width)
+    {
+        if (frames.Count == 0)
+        {
+            return null;
+        }
+
+        double center = x + Math.Max(0d, width) / 2d;
+        DocxLayoutColumnFrame? containingFrame = frames.FirstOrDefault(frame => center >= frame.X && center <= frame.X + frame.Width);
+        if (containingFrame is not null)
+        {
+            return containingFrame.Index;
+        }
+
+        return frames
+            .OrderBy(frame => Math.Abs(center - (frame.X + frame.Width / 2d)))
+            .First()
+            .Index;
+    }
+
     private sealed record DocxLayoutSourceBlockBounds(
         int FirstPageIndex,
         int LastPageIndex,
+        int? FirstColumnIndex,
+        int? LastColumnIndex,
         double VerticalTop,
         double VerticalBottom);
 

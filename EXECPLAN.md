@@ -7112,6 +7112,14 @@ Current validation baseline:
   multi-column sections, and `relativeFrom="column"` floating anchors still require source-block-to-active-column
   ownership in layout snapshots. Validation passed `docx-page --skip-slow` (`33`), `docx-core --skip-slow`
   (`52`), and `docx-tables --skip-slow` (`98`).
+  2026-06-02 architecture follow-up: layout source-block snapshots now expose first/last occupied column indexes,
+  and floating drawing layout snapshots expose the anchor column index. `relativeFrom="column"` horizontal frames
+  now resolve from the source block's active column in true multi-column sections instead of returning `null` or
+  falling back to margins. Bottom-up coverage anchors a floating drawing to a paragraph after a manual column break
+  and verifies the second-column reference frame. Remaining gaps are now narrower: column balancing, multi-column
+  table continuation semantics, and wrap exclusion still need Office-observed behavior before rendering anchored
+  drawings. Validation passed `docx-page --skip-slow` (`33`), `docx-core --skip-slow` (`52`), and
+  `docx-tables --skip-slow` (`98`).
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource

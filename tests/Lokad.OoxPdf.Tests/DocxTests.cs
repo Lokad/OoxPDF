@@ -5052,6 +5052,29 @@ internal static class DocxTests
             MarginTopValue = "360",
             MarginBottomValue = "360"
         };
+        var anchoredDrawing = new DocxFloatingDrawing(
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "1",
+            "1",
+            "914400",
+            "457200",
+            "column",
+            "left",
+            null,
+            "paragraph",
+            null,
+            "0",
+            "square",
+            "bothSides",
+            SourceParagraphIndex: 0,
+            SourceBlockIndex: 2);
         var document = new DocxDocument(
             300d,
             300d,
@@ -5060,7 +5083,7 @@ internal static class DocxTests
             72d,
             72d,
             DocxPageSettings.Empty,
-            [],
+            [anchoredDrawing],
             [],
             [],
             [
@@ -5080,6 +5103,14 @@ internal static class DocxTests
         TestAssert.Equal(18d, lines[0].X);
         TestAssert.Equal(109d, lines[1].X);
         TestAssert.Equal(2, lines[1].SourceBlockIndex ?? -1);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        TestAssert.Equal(0, snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 0).FirstColumnIndex ?? -1);
+        TestAssert.Equal(1, snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 2).FirstColumnIndex ?? -1);
+        DocxFloatingDrawingLayoutSnapshot anchorSnapshot = snapshot.FloatingDrawings.Single();
+        TestAssert.Equal(1, anchorSnapshot.AnchorColumnIndex ?? -1);
+        TestAssert.Equal(109d, anchorSnapshot.HorizontalReferenceX ?? 0d);
+        TestAssert.Equal(73d, anchorSnapshot.HorizontalReferenceWidth ?? 0d);
     }
 
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()
