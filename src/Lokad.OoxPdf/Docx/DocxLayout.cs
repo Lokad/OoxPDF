@@ -53,7 +53,14 @@ internal sealed record DocxSectionLayoutProperties(
     string? ColumnEqualWidthValue,
     string? ColumnSpaceValue,
     int? ColumnCount,
-    double? ColumnSpacePoints);
+    double? ColumnSpacePoints,
+    IReadOnlyList<DocxSectionColumnLayoutProperties> ColumnDefinitions);
+
+internal sealed record DocxSectionColumnLayoutProperties(
+    string? WidthValue,
+    string? SpaceValue,
+    double? WidthPoints,
+    double? SpacePoints);
 
 internal sealed record DocxLayoutColumnFrame(
     int Index,
@@ -252,6 +259,9 @@ internal sealed record DocxLayoutSnapshot(
             page.SectionProperties.ColumnSpaceValue,
             page.SectionProperties.ColumnCount,
             page.SectionProperties.ColumnSpacePoints,
+            page.SectionProperties.ColumnDefinitions.Count,
+            page.SectionProperties.ColumnDefinitions.Sum(column => column.WidthPoints ?? 0d),
+            page.SectionProperties.ColumnDefinitions.Sum(column => column.SpacePoints ?? 0d),
             page.ColumnFrames.Count,
             page.ColumnFrames.Sum(frame => frame.Width),
             page.ColumnFrames.Sum(frame => frame.GutterAfterPoints ?? 0d),
@@ -597,6 +607,9 @@ internal sealed record DocxLayoutPageSnapshot(
     string? SectionColumnSpaceValue,
     int? SectionColumnCount,
     double? SectionColumnSpacePoints,
+    int SectionColumnDefinitionCount,
+    double SectionColumnDefinitionWidthSum,
+    double SectionColumnDefinitionSpaceSum,
     int ColumnFrameCount,
     double ColumnFrameWidthSum,
     double ColumnGutterWidthSum,
@@ -1966,7 +1979,7 @@ internal sealed class DocxLayoutEngine
                 BuildFinalSectionSettings(document),
                 inheritedHeadersByType,
                 inheritedFootersByType),
-            new DocxSectionLayoutProperties(null, null, null, null, null, null));
+            new DocxSectionLayoutProperties(null, null, null, null, null, null, []));
         return sectionSettingsByElementIndex;
     }
 
@@ -1978,7 +1991,14 @@ internal sealed class DocxLayoutEngine
             sectionBreak.ColumnEqualWidthValue,
             sectionBreak.ColumnSpaceValue,
             ReadOptionalInt32Value(sectionBreak.ColumnCountValue),
-            ReadOptionalTwipsValue(sectionBreak.ColumnSpaceValue));
+            ReadOptionalTwipsValue(sectionBreak.ColumnSpaceValue),
+            sectionBreak.ColumnDefinitions
+                .Select(column => new DocxSectionColumnLayoutProperties(
+                    column.WidthValue,
+                    column.SpaceValue,
+                    ReadOptionalTwipsValue(column.WidthValue),
+                    ReadOptionalTwipsValue(column.SpaceValue)))
+                .ToArray());
     }
 
     private static DocxPageSettings BuildFinalSectionSettings(DocxDocument document)
@@ -2112,7 +2132,25 @@ internal sealed class DocxLayoutEngine
 
         if (string.Equals(section.ColumnEqualWidthValue, "0", StringComparison.OrdinalIgnoreCase))
         {
-            return [];
+            if (section.ColumnDefinitions.Count == 0)
+            {
+                return [];
+            }
+
+            double x = marginLeft;
+            var frames = new List<DocxLayoutColumnFrame>();
+            for (int index = 0; index < section.ColumnDefinitions.Count; index++)
+            {
+                DocxSectionColumnLayoutProperties column = section.ColumnDefinitions[index];
+                double customColumnWidth = Math.Max(1d, column.WidthPoints ?? 0d);
+                double? customGutter = index + 1 < section.ColumnDefinitions.Count
+                    ? Math.Max(0d, column.SpacePoints ?? 0d)
+                    : null;
+                frames.Add(new DocxLayoutColumnFrame(index, x, customColumnWidth, customGutter));
+                x += customColumnWidth + (customGutter ?? 0d);
+            }
+
+            return frames;
         }
 
         double gutter = Math.Max(0d, section.ColumnSpacePoints ?? 0d);

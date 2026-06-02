@@ -200,12 +200,17 @@ internal sealed record DocxPageBreakElement(string SourceKind, string? Value, Do
 
 internal sealed record DocxManualBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph = null) : DocxBodyElement;
 
+internal sealed record DocxSectionColumn(
+    string? WidthValue,
+    string? SpaceValue);
+
 internal sealed record DocxSectionBreakElement(
     DocxPageSettings PageSettings,
     string? TypeValue,
     string? ColumnCountValue,
     string? ColumnEqualWidthValue,
-    string? ColumnSpaceValue) : DocxBodyElement;
+    string? ColumnSpaceValue,
+    IReadOnlyList<DocxSectionColumn> ColumnDefinitions) : DocxBodyElement;
 
 internal sealed record DocxParagraph(
     IReadOnlyList<DocxTextRun> Runs,

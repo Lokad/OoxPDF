@@ -1580,7 +1580,7 @@ internal static class DocxTests
                 ["first"] = [sectionHeader]
             }
         };
-        var sectionBreak = new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "720");
+        var sectionBreak = new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "720", []);
         var floatingDrawing = new DocxFloatingDrawing(
             "0",
             "0",
@@ -2205,7 +2205,7 @@ internal static class DocxTests
             [],
             [defaultHeader],
             [],
-            [new DocxSectionBreakElement(sectionSettings, "nextPage", null, null, null)],
+            [new DocxSectionBreakElement(sectionSettings, "nextPage", null, null, null, [])],
             [],
             [])
         {
@@ -4790,7 +4790,10 @@ internal static class DocxTests
                           <w:type w:val="continuous"/>
                           <w:pgSz w:w="10080" w:h="12240" w:orient="portrait"/>
                           <w:pgMar w:top="360" w:right="720" w:bottom="1080" w:left="1440"/>
-                          <w:cols w:num="2" w:equalWidth="0" w:space="720"/>
+                          <w:cols w:num="2" w:equalWidth="0" w:space="720">
+                            <w:col w:w="3000" w:space="360"/>
+                            <w:col w:w="4200"/>
+                          </w:cols>
                         </w:sectPr>
                       </w:pPr>
                       <w:r><w:t>Section end</w:t></w:r>
@@ -4817,8 +4820,18 @@ internal static class DocxTests
         TestAssert.Equal("2", sectionBreak.ColumnCountValue ?? string.Empty);
         TestAssert.Equal("0", sectionBreak.ColumnEqualWidthValue ?? string.Empty);
         TestAssert.Equal("720", sectionBreak.ColumnSpaceValue ?? string.Empty);
+        TestAssert.Equal(2, sectionBreak.ColumnDefinitions.Count);
+        TestAssert.Equal("3000", sectionBreak.ColumnDefinitions[0].WidthValue ?? string.Empty);
+        TestAssert.Equal("360", sectionBreak.ColumnDefinitions[0].SpaceValue ?? string.Empty);
+        TestAssert.Equal("4200", sectionBreak.ColumnDefinitions[1].WidthValue ?? string.Empty);
+        TestAssert.True(sectionBreak.ColumnDefinitions[1].SpaceValue is null, "The final custom column should not invent a trailing gutter token.");
         TestAssert.True(document.BodyElements[0] is DocxParagraphElement, "Paragraph section break should remain anchored after its paragraph.");
         TestAssert.True(document.BodyElements[1] is DocxSectionBreakElement, "Section break should be part of body flow.");
+
+        DocxStructureBlockSnapshot structureSnapshot = DocxStructureSnapshot.FromDocument(document).Blocks[1];
+        TestAssert.Equal(2, structureSnapshot.SectionColumnDefinitionCount ?? 0);
+        TestAssert.Equal(2, structureSnapshot.SectionColumnDefinitionWidthTokenCount ?? 0);
+        TestAssert.Equal(1, structureSnapshot.SectionColumnDefinitionSpaceTokenCount ?? 0);
     }
 
     public static void DocxSectionBreakNextPageStartsNewLayoutPage()
@@ -4853,7 +4866,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxSectionBreakElement(DocxPageSettings.Empty, "nextPage", null, null, null),
+                new DocxSectionBreakElement(DocxPageSettings.Empty, "nextPage", null, null, null, []),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -4915,7 +4928,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxSectionBreakElement(firstSectionSettings, "nextPage", "2", "1", "720"),
+                new DocxSectionBreakElement(firstSectionSettings, "nextPage", "2", "1", "720", []),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -4956,6 +4969,71 @@ internal static class DocxTests
         TestAssert.Equal(128d, firstPageSnapshot.ColumnFrameWidthSum);
         TestAssert.Equal(36d, firstPageSnapshot.ColumnGutterWidthSum);
         TestAssert.Equal(118d, firstPageSnapshot.ColumnFrames[1].X);
+    }
+
+    public static void DocxSectionBreakCustomColumnsCreatePageOwnedFrames()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 12d);
+        DocxParagraph second = first with
+        {
+            Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, null)]
+        };
+        DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "6000",
+            HeightValue = "6000",
+            MarginLeftValue = "360",
+            MarginRightValue = "360",
+            MarginTopValue = "360",
+            MarginBottomValue = "360"
+        };
+        var document = new DocxDocument(
+            300d,
+            300d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxSectionBreakElement(
+                    firstSectionSettings,
+                    "nextPage",
+                    "2",
+                    "0",
+                    "720",
+                    [
+                        new DocxSectionColumn("2000", "240"),
+                        new DocxSectionColumn("2400", null)
+                    ]),
+                new DocxParagraphElement(second)
+            ],
+            [first, second],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(2, layout.Pages[0].SectionProperties.ColumnDefinitions.Count);
+        TestAssert.Equal(100d, layout.Pages[0].SectionProperties.ColumnDefinitions[0].WidthPoints ?? 0d);
+        TestAssert.Equal(12d, layout.Pages[0].SectionProperties.ColumnDefinitions[0].SpacePoints ?? 0d);
+        TestAssert.Equal(2, layout.Pages[0].ColumnFrames.Count);
+        TestAssert.Equal(18d, layout.Pages[0].ColumnFrames[0].X);
+        TestAssert.Equal(100d, layout.Pages[0].ColumnFrames[0].Width);
+        TestAssert.Equal(12d, layout.Pages[0].ColumnFrames[0].GutterAfterPoints ?? 0d);
+        TestAssert.Equal(130d, layout.Pages[0].ColumnFrames[1].X);
+        TestAssert.Equal(120d, layout.Pages[0].ColumnFrames[1].Width);
+
+        DocxLayoutPageSnapshot firstPageSnapshot = DocxLayoutSnapshot.FromLayout(layout).Pages[0];
+        TestAssert.Equal(2, firstPageSnapshot.SectionColumnDefinitionCount);
+        TestAssert.Equal(220d, firstPageSnapshot.SectionColumnDefinitionWidthSum);
+        TestAssert.Equal(12d, firstPageSnapshot.SectionColumnDefinitionSpaceSum);
+        TestAssert.Equal(220d, firstPageSnapshot.ColumnFrameWidthSum);
+        TestAssert.Equal(12d, firstPageSnapshot.ColumnGutterWidthSum);
     }
 
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()

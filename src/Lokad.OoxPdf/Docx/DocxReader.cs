@@ -1689,7 +1689,18 @@ internal sealed class DocxReader
                 ?.Attribute(WordprocessingNamespace + "val"),
             (string?)columns?.Attribute(WordprocessingNamespace + "num"),
             (string?)columns?.Attribute(WordprocessingNamespace + "equalWidth"),
-            (string?)columns?.Attribute(WordprocessingNamespace + "space"));
+            (string?)columns?.Attribute(WordprocessingNamespace + "space"),
+            ReadSectionColumns(columns));
+    }
+
+    private static IReadOnlyList<DocxSectionColumn> ReadSectionColumns(XElement? columns)
+    {
+        return columns
+            ?.Elements(WordprocessingNamespace + "col")
+            .Select(column => new DocxSectionColumn(
+                (string?)column.Attribute(WordprocessingNamespace + "w"),
+                (string?)column.Attribute(WordprocessingNamespace + "space")))
+            .ToArray() ?? [];
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> ReadReferencedHeaderFooterParagraphsByType(

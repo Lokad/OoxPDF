@@ -421,7 +421,10 @@ internal sealed record DocxStructureSnapshot(
             SectionBreakTypeValue: sectionBreak.TypeValue,
             SectionColumnCountValue: sectionBreak.ColumnCountValue,
             SectionColumnEqualWidthValue: sectionBreak.ColumnEqualWidthValue,
-            SectionColumnSpaceValue: sectionBreak.ColumnSpaceValue);
+            SectionColumnSpaceValue: sectionBreak.ColumnSpaceValue,
+            SectionColumnDefinitionCount: sectionBreak.ColumnDefinitions.Count,
+            SectionColumnDefinitionWidthTokenCount: sectionBreak.ColumnDefinitions.Count(column => column.WidthValue is not null),
+            SectionColumnDefinitionSpaceTokenCount: sectionBreak.ColumnDefinitions.Count(column => column.SpaceValue is not null));
     }
 
     private static DocxStructureTableSnapshot ToTableSnapshot(DocxTable table, int tableIndex, int blockIndex)
@@ -903,6 +906,9 @@ internal sealed record DocxStructureBlockSnapshot(
     string? SectionColumnCountValue = null,
     string? SectionColumnEqualWidthValue = null,
     string? SectionColumnSpaceValue = null,
+    int? SectionColumnDefinitionCount = null,
+    int? SectionColumnDefinitionWidthTokenCount = null,
+    int? SectionColumnDefinitionSpaceTokenCount = null,
     double? ParagraphIndentLeftPoints = null,
     double? ParagraphIndentRightPoints = null,
     double? ParagraphIndentFirstLinePoints = null,
