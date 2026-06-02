@@ -1535,6 +1535,40 @@ internal static class DocxTests
         TestAssert.True(snapshot.StyleUsages.Any(usage => usage.Kind == "Paragraph" && usage.StyleId is null && usage.ParagraphCount == 1 && usage.TextLength == 9), "Plain table-cell text should contribute to paragraph style usage through the shared cell content stream.");
     }
 
+    public static void DocxStructureSnapshotReportsTableCellHyperlinkInventory()
+    {
+        DocxParagraph cellParagraph = CreateDocxLayoutParagraph("External Internal", fontSize: 10d, lineSpacingPoints: 12d) with
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdExt", null, null, null, "https://example.invalid/", "External", null, 0, 1, 0, 1, 8),
+                new DocxHyperlinkSpan(null, "Bookmark", null, null, null, null, null, 1, 1, 1, 1, 8)
+            ]
+        };
+        var table = new DocxTable(
+            null,
+            [80d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxStructureTableSnapshot tableSnapshot = new DocxRenderer()
+            .InspectStructure(document)
+            .Tables
+            .Single();
+        DocxStructureTableRowSnapshot rowSnapshot = tableSnapshot.Rows.Single();
+        DocxStructureTableCellSnapshot cellSnapshot = rowSnapshot.Cells.Single();
+
+        TestAssert.Equal(2, tableSnapshot.HyperlinkCount);
+        TestAssert.Equal(1, tableSnapshot.ExternalHyperlinkCount);
+        TestAssert.Equal(1, tableSnapshot.InternalHyperlinkCount);
+        TestAssert.Equal(2, rowSnapshot.HyperlinkCount);
+        TestAssert.Equal(1, rowSnapshot.ExternalHyperlinkCount);
+        TestAssert.Equal(1, rowSnapshot.InternalHyperlinkCount);
+        TestAssert.Equal(2, cellSnapshot.HyperlinkCount);
+        TestAssert.Equal(1, cellSnapshot.ExternalHyperlinkCount);
+        TestAssert.Equal(1, cellSnapshot.InternalHyperlinkCount);
+    }
+
     public static void DocxStructureSnapshotUsesBodyElementInventoryAsCanonicalSource()
     {
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell", fontSize: 9d, lineSpacingPoints: 10d) with

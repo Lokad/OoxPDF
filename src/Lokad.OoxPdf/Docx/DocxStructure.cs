@@ -322,6 +322,9 @@ internal sealed record DocxStructureSnapshot(
             table.Rows.SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs).Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(paragraph => paragraph.Images.Count))),
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphInlineReferenceCount))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphHyperlinkCount))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphExternalHyperlinkCount))),
+            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphInternalHyperlinkCount))),
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.ListLabel is not null))),
             table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true))),
             table.Look?.FirstRow,
@@ -360,6 +363,9 @@ internal sealed record DocxStructureSnapshot(
             cells.Select(cell => cell.LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             cells.Sum(cell => cell.InlineImageCount),
             cells.Sum(cell => cell.InlineReferenceCount),
+            cells.Sum(cell => cell.HyperlinkCount),
+            cells.Sum(cell => cell.ExternalHyperlinkCount),
+            cells.Sum(cell => cell.InternalHyperlinkCount),
             cells.Sum(cell => cell.NumberedParagraphCount),
             cells.Sum(cell => cell.KeepRuleParagraphCount),
             cells.Sum(cell => cell.BeforeSpacingTokenParagraphCount),
@@ -392,6 +398,9 @@ internal sealed record DocxStructureSnapshot(
             paragraphs.Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             paragraphs.Sum(paragraph => paragraph.Images.Count),
             paragraphs.Sum(ParagraphInlineReferenceCount),
+            paragraphs.Sum(ParagraphHyperlinkCount),
+            paragraphs.Sum(ParagraphExternalHyperlinkCount),
+            paragraphs.Sum(ParagraphInternalHyperlinkCount),
             paragraphs.Count(paragraph => paragraph.ListLabel is not null),
             paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
             paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
@@ -500,6 +509,21 @@ internal sealed record DocxStructureSnapshot(
     private static int ParagraphInlineReferenceCount(DocxParagraph paragraph)
     {
         return paragraph.InlineReferences.Count;
+    }
+
+    private static int ParagraphHyperlinkCount(DocxParagraph paragraph)
+    {
+        return paragraph.Hyperlinks.Count;
+    }
+
+    private static int ParagraphExternalHyperlinkCount(DocxParagraph paragraph)
+    {
+        return paragraph.Hyperlinks.Count(link => string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static int ParagraphInternalHyperlinkCount(DocxParagraph paragraph)
+    {
+        return paragraph.Hyperlinks.Count(link => link.Anchor is not null || link.ResolvedTarget is not null);
     }
 
     private static bool HasInlineReferenceAnchor(DocxInlineReference reference)
@@ -794,6 +818,9 @@ internal sealed record DocxStructureTableSnapshot(
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
     int InlineReferenceCount,
+    int HyperlinkCount,
+    int ExternalHyperlinkCount,
+    int InternalHyperlinkCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
     bool? LookFirstRow,
@@ -828,6 +855,9 @@ internal sealed record DocxStructureTableRowSnapshot(
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
     int InlineReferenceCount,
+    int HyperlinkCount,
+    int ExternalHyperlinkCount,
+    int InternalHyperlinkCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
     int BeforeSpacingTokenParagraphCount,
@@ -856,6 +886,9 @@ internal sealed record DocxStructureTableCellSnapshot(
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
     int InlineReferenceCount,
+    int HyperlinkCount,
+    int ExternalHyperlinkCount,
+    int InternalHyperlinkCount,
     int NumberedParagraphCount,
     int KeepRuleParagraphCount,
     int BeforeSpacingTokenParagraphCount,

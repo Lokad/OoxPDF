@@ -4630,9 +4630,11 @@ block models and richer section/pagination layout before adding more Word pagina
     target mode, resolved internal target when applicable, source-run range, text-run range, and text length.
     The main document reader now keeps an all-relationships view for hyperlink targets while retaining the
     internal-only relationship view for package parts. Structure snapshots expose hyperlink counts split into
-    external and internal link inventories. Validation passed `docx-text --skip-slow` (`45`),
-    `docx-core --skip-slow` (`32`), and full solution build. Keep actual PDF annotations, internal anchor
-    destinations, visited/unvisited style behavior, and side-story/table hyperlink span coverage open.
+    external and internal link inventories; table, row, and cell snapshots now carry the same hyperlink
+    inventory for table-cell paragraphs. Validation passed `docx-text --skip-slow` (`45`),
+    `docx-core --skip-slow` (`32`), `docx-tables --skip-slow` (`94`), and full solution build. Keep actual PDF
+    annotations, internal anchor destinations, visited/unvisited style behavior, and side-story hyperlink span
+    coverage open.
 
 ### DOCX Synthetic Fidelity Ladder
 
