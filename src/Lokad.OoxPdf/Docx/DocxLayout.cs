@@ -9,7 +9,15 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxLayout(
     IReadOnlyList<DocxLayoutPage> Pages,
-    IReadOnlyList<DocxFloatingDrawing> FloatingDrawings);
+    IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings);
+
+internal sealed record DocxFloatingDrawingLayout(
+    DocxFloatingDrawing Drawing,
+    int? PageStartIndex,
+    int? PageEndIndex,
+    int? AnchorPageIndex,
+    double? AnchorBlockVerticalTop,
+    double? AnchorBlockVerticalBottom);
 
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
@@ -41,38 +49,37 @@ internal sealed record DocxLayoutSnapshot(
             pages,
             ToTableSnapshots(pages),
             sourceBlocks,
-            ToFloatingDrawingSnapshots(layout.FloatingDrawings, sourceBlocks));
+            ToFloatingDrawingSnapshots(layout.FloatingDrawings));
     }
 
     private static IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> ToFloatingDrawingSnapshots(
-        IReadOnlyList<DocxFloatingDrawing> drawings,
-        IReadOnlyList<DocxLayoutSourceBlockSnapshot> sourceBlocks)
+        IReadOnlyList<DocxFloatingDrawingLayout> drawings)
     {
         return drawings
             .Select((drawing, index) =>
             {
-                DocxLayoutSourceBlockSnapshot? sourceBlock = drawing.SourceBlockIndex is null
-                    ? null
-                    : sourceBlocks.FirstOrDefault(block => block.SourceBlockIndex == drawing.SourceBlockIndex.Value);
                 return new DocxFloatingDrawingLayoutSnapshot(
                     index,
-                    drawing.SourceBlockIndex,
-                    drawing.SourceParagraphIndex,
-                    sourceBlock?.FirstPageIndex,
-                    sourceBlock?.LastPageIndex,
-                    drawing.WrapKind,
-                    drawing.WrapTextValue,
-                    drawing.HorizontalRelativeFromValue,
-                    drawing.HorizontalAlignValue,
-                    drawing.HorizontalOffsetValue,
-                    drawing.VerticalRelativeFromValue,
-                    drawing.VerticalAlignValue,
-                    drawing.VerticalOffsetValue,
-                    drawing.ImageRelationshipId,
-                    drawing.Image?.PartName,
-                    drawing.Image?.ContentType,
-                    drawing.Image?.WidthPoints,
-                    drawing.Image?.HeightPoints);
+                    drawing.Drawing.SourceBlockIndex,
+                    drawing.Drawing.SourceParagraphIndex,
+                    drawing.PageStartIndex,
+                    drawing.PageEndIndex,
+                    drawing.AnchorPageIndex,
+                    drawing.AnchorBlockVerticalTop,
+                    drawing.AnchorBlockVerticalBottom,
+                    drawing.Drawing.WrapKind,
+                    drawing.Drawing.WrapTextValue,
+                    drawing.Drawing.HorizontalRelativeFromValue,
+                    drawing.Drawing.HorizontalAlignValue,
+                    drawing.Drawing.HorizontalOffsetValue,
+                    drawing.Drawing.VerticalRelativeFromValue,
+                    drawing.Drawing.VerticalAlignValue,
+                    drawing.Drawing.VerticalOffsetValue,
+                    drawing.Drawing.ImageRelationshipId,
+                    drawing.Drawing.Image?.PartName,
+                    drawing.Drawing.Image?.ContentType,
+                    drawing.Drawing.Image?.WidthPoints,
+                    drawing.Drawing.Image?.HeightPoints);
             })
             .ToArray();
     }
@@ -552,6 +559,9 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     int? SourceParagraphIndex,
     int? PageStartIndex,
     int? PageEndIndex,
+    int? AnchorPageIndex,
+    double? AnchorBlockVerticalTop,
+    double? AnchorBlockVerticalBottom,
     string? WrapKind,
     string? WrapTextValue,
     string? HorizontalRelativeFromValue,
@@ -1386,8 +1396,86 @@ internal sealed class DocxLayoutEngine
             FinishPage();
         }
 
-        return new DocxLayout(AddStaticTextLines(pages, textMeasurer).ToArray(), document.FloatingDrawings);
+        DocxLayoutPage[] pagesWithStaticText = AddStaticTextLines(pages, textMeasurer).ToArray();
+        return new DocxLayout(pagesWithStaticText, CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText));
     }
+
+    private static IReadOnlyList<DocxFloatingDrawingLayout> CreateFloatingDrawingLayouts(
+        IReadOnlyList<DocxFloatingDrawing> drawings,
+        IReadOnlyList<DocxLayoutPage> pages)
+    {
+        return drawings
+            .Select(drawing =>
+            {
+                DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is null
+                    ? null
+                    : FindSourceBlockBounds(pages, drawing.SourceBlockIndex.Value);
+                return new DocxFloatingDrawingLayout(
+                    drawing,
+                    sourceBlock?.FirstPageIndex,
+                    sourceBlock?.LastPageIndex,
+                    sourceBlock?.FirstPageIndex,
+                    sourceBlock?.VerticalTop,
+                    sourceBlock?.VerticalBottom);
+            })
+            .ToArray();
+    }
+
+    private static DocxLayoutSourceBlockBounds? FindSourceBlockBounds(IReadOnlyList<DocxLayoutPage> pages, int sourceBlockIndex)
+    {
+        int? firstPageIndex = null;
+        int? lastPageIndex = null;
+        double verticalTop = double.NegativeInfinity;
+        double verticalBottom = double.PositiveInfinity;
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            foreach (DocxLayoutItem item in pages[pageIndex].Items)
+            {
+                if (GetSourceBlockIndex(item) != sourceBlockIndex)
+                {
+                    continue;
+                }
+
+                firstPageIndex ??= pageIndex;
+                lastPageIndex = pageIndex;
+                (double y, double height) = GetVerticalBounds(item);
+                verticalTop = Math.Max(verticalTop, y + height);
+                verticalBottom = Math.Min(verticalBottom, y);
+            }
+        }
+
+        return firstPageIndex is null || lastPageIndex is null
+            ? null
+            : new DocxLayoutSourceBlockBounds(firstPageIndex.Value, lastPageIndex.Value, verticalTop, verticalBottom);
+    }
+
+    private static int? GetSourceBlockIndex(DocxLayoutItem item)
+    {
+        return item switch
+        {
+            DocxTextLineLayout text => text.SourceBlockIndex,
+            DocxInlineImageLayout image => image.SourceBlockIndex,
+            DocxTableRowLayout row => row.Table.SourceBlockIndex,
+            _ => null
+        };
+    }
+
+    private static (double Y, double Height) GetVerticalBounds(DocxLayoutItem item)
+    {
+        return item switch
+        {
+            DocxTextLineLayout text => (text.BaselineY, text.FontSize),
+            DocxInlineImageLayout image => (image.Y, image.Height),
+            DocxTableRowLayout row => (row.Y, row.Height),
+            _ => (0d, 0d)
+        };
+    }
+
+    private sealed record DocxLayoutSourceBlockBounds(
+        int FirstPageIndex,
+        int LastPageIndex,
+        double VerticalTop,
+        double VerticalBottom);
 
     private static IReadOnlyList<DocxLayoutPage> AddStaticTextLines(IReadOnlyList<DocxLayoutPage> pages, IDocxTextMeasurer? textMeasurer)
     {

@@ -6454,6 +6454,10 @@ internal static class DocxTests
         TestAssert.Equal(0, layoutSnapshot.SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, layoutSnapshot.PageStartIndex ?? -1);
         TestAssert.Equal(0, layoutSnapshot.PageEndIndex ?? -1);
+        TestAssert.Equal(0, layoutSnapshot.AnchorPageIndex ?? -1);
+        TestAssert.True(layoutSnapshot.AnchorBlockVerticalTop is not null, "Floating drawing layout should resolve its source block top before rendering.");
+        TestAssert.True(layoutSnapshot.AnchorBlockVerticalBottom is not null, "Floating drawing layout should resolve its source block bottom before rendering.");
+        TestAssert.True(layoutSnapshot.AnchorBlockVerticalTop > layoutSnapshot.AnchorBlockVerticalBottom, "Floating drawing anchor block should carry placed vertical bounds.");
         TestAssert.Equal("rIdImage1", layoutSnapshot.ImageRelationshipId ?? string.Empty);
         TestAssert.Equal("/word/media/image1.png", layoutSnapshot.ImagePartName ?? string.Empty);
         TestAssert.Equal("image/png", layoutSnapshot.ImageContentType ?? string.Empty);

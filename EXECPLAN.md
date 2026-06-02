@@ -763,12 +763,20 @@ High-priority actions:
   guess which body item an anchor belongs to. Bottom-up coverage asserts reader and snapshot block ownership;
   validation passed `docx-core --skip-slow` (`51`).
   2026-06-02 architecture follow-up: `DocxLayout` now preserves the floating drawing inventory, and
-  `DocxLayoutSnapshot` exposes `DocxFloatingDrawingLayoutSnapshot` entries mapped to source block page spans.
-  Anchors therefore survive from reader to structure snapshot to layout snapshot with body block, paragraph,
-  wrap/position, image relationship, part, content type, and dimensions. This is still non-rendering groundwork,
-  but it makes the future floating layout/render stage comparable to the established DOCX text/table pipeline
-  instead of forcing it to rediscover anchors from the original XML. Validation passed `docx-core --skip-slow`
-  (`51`) and `docx-tables --skip-slow` (`98`).
+    `DocxLayoutSnapshot` exposes `DocxFloatingDrawingLayoutSnapshot` entries mapped to source block page spans.
+    Anchors therefore survive from reader to structure snapshot to layout snapshot with body block, paragraph,
+    wrap/position, image relationship, part, content type, and dimensions. This is still non-rendering groundwork,
+    but it makes the future floating layout/render stage comparable to the established DOCX text/table pipeline
+    instead of forcing it to rediscover anchors from the original XML. Validation passed `docx-core --skip-slow`
+    (`51`) and `docx-tables --skip-slow` (`98`).
+    2026-06-02 architecture follow-up: floating drawings now lower into a layout-owned
+    `DocxFloatingDrawingLayout` record instead of remaining raw document metadata inside `DocxLayout`. The record
+    keeps the original anchor tokens but also resolves the source block page span, anchor page, and placed
+    source-block vertical bounds from the body layout. Rendering remains open: the next acceptable step is to
+    derive Word-compatible `wp:anchor` horizontal/vertical coordinate frames and wrap effects from those structural
+    layout inputs, not to place anchored images as inline fallbacks or tune per-document coordinates. Focused
+    coverage asserts anchor block geometry is available before rendering; validation passed `docx-core
+    --skip-slow` (`52`).
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
