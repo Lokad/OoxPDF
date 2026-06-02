@@ -6733,8 +6733,11 @@ Current validation baseline:
   target. 2026-06-02 rendering follow-up: the DOCX annotation pass now builds a bookmark destination map from
   placed text-emission geometry and emits internal hyperlink annotations as PDF page destinations instead of
   URI actions when the anchor resolves. Bottom-up coverage locks the URI-vs-destination split and clickable
-  rectangle geometry. Keep non-rendered related-story links open, and keep deeper bookmark mapping open for
-  offsets within a wrapped text run. 2026-06-02 inline-container follow-up: `DocxReader` now uses a shared
+  rectangle geometry. 2026-06-02 table-cell coverage: internal bookmark hyperlinks inside table cells now
+  have bottom-up renderer coverage through the same placed table-cell text-emission geometry, proving the
+  destination path is story-agnostic for rendered body/table text instead of a body-paragraph special case.
+  Keep non-rendered related-story links open, and keep deeper bookmark mapping open for offsets within a
+  wrapped text run. 2026-06-02 inline-container follow-up: `DocxReader` now uses a shared
   inline-child dispatcher for hyperlink and inserted-run containers, so `w:bookmarkStart` anchors inside those
   containers are preserved in source/text order instead of being skipped by run-only traversal. Focused
   coverage locks bookmark anchors inside `w:hyperlink`.

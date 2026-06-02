@@ -1837,6 +1837,57 @@ internal static class DocxTests
         TestAssert.True(annotation.Width > 0d, "The annotation should cover table-cell hyperlink text.");
     }
 
+    public static void DocxRendererEmitsTableCellInternalHyperlinkDestinations()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Cell ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "CellBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+            ]
+        };
+        DocxParagraph targetParagraph = CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("7", "CellBookmarkTarget", 0, 0, 0)
+            ]
+        };
+        var table = new DocxTable(
+            null,
+            [120d],
+            [
+                new DocxTableRow(
+                    [new DocxTableCell(string.Empty, [linkParagraph, targetParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)],
+                    36d)
+            ]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Uri is null, "Internal table-cell links should not be emitted as URI actions.");
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal table-cell links should resolve to a PDF page destination.");
+        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed table-cell bookmark coordinates.");
+        TestAssert.True(annotation.Destination?.Top > 0d, "The destination should point to a concrete table-cell bookmark line top.");
+        TestAssert.True(annotation.Width > 0d, "The clickable rectangle should cover the rendered table-cell internal-link text.");
+    }
+
     public static void DocxHeaderRendererEmitsExternalHyperlinkAnnotations()
     {
         var runs = new[]
