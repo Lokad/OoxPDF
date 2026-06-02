@@ -63,6 +63,79 @@ File.WriteAllText(
     Path.Combine(outputDirectory, "source-block-summary.json"),
     JsonSerializer.Serialize(layout.SourceBlocks, options));
 File.WriteAllText(
+    Path.Combine(outputDirectory, "related-story-summary.json"),
+    JsonSerializer.Serialize(layout.RelatedStories.Select(story => new
+    {
+        story.StoryIndex,
+        story.Kind,
+        story.PartName,
+        story.Id,
+        story.BlockCount,
+        story.ParagraphCount,
+        story.TableCount,
+        story.TextLineCount,
+        story.TableCellTextLineCount,
+        story.TableRowCount,
+        story.InlineImageCount,
+        story.TextLength,
+        story.ContentHeight,
+        ItemCount = story.Items.Count,
+        SourceBlockCount = story.SourceBlocks.Count
+    }), options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "related-story-source-block-summary.json"),
+    JsonSerializer.Serialize(layout.RelatedStories.SelectMany(story => story.SourceBlocks.Select(block => new
+    {
+        story.StoryIndex,
+        story.Kind,
+        story.PartName,
+        story.Id,
+        block.SourceBlockIndex,
+        SourceBlockKind = block.Kind,
+        block.ItemCount,
+        block.TextLineCount,
+        block.InlineImageCount,
+        block.TableRowCount,
+        block.TextLength,
+        block.VerticalTop,
+        block.VerticalBottom,
+        block.ConsumedHeight,
+        block.AppliedBeforeSpacingSum
+    })), options));
+File.WriteAllText(
+    Path.Combine(outputDirectory, "related-story-item-summary.json"),
+    JsonSerializer.Serialize(layout.RelatedStories.SelectMany(story => story.Items.Select(item => new
+    {
+        story.StoryIndex,
+        story.Kind,
+        story.PartName,
+        story.Id,
+        ItemKind = item.Kind,
+        item.ColumnIndex,
+        item.SourceBlockIndex,
+        item.SourceParagraphIndex,
+        item.SourceLineIndex,
+        item.X,
+        item.Y,
+        item.Width,
+        item.Height,
+        item.TextLength,
+        item.CellCount,
+        item.LineHeightPoints,
+        item.AppliedBeforeSpacingPoints,
+        item.SingleLineHeightPoints,
+        item.ListLabelSingleLineHeightPoints,
+        item.BodyWindowsLineHeightPoints,
+        item.ListLabelWindowsLineHeightPoints,
+        item.EffectiveLineSpacingFactor,
+        item.LineSpacingFactorFloorApplied,
+        item.IsFirstParagraphLine,
+        item.PendingAfterSpacingPoints,
+        item.ParagraphBeforeSpacingPoints,
+        item.ParagraphAfterSpacingPoints,
+        item.ContextualSpacingSuppressed
+    })), options));
+File.WriteAllText(
     Path.Combine(outputDirectory, "text-emission-summary.json"),
     JsonSerializer.Serialize(new
     {

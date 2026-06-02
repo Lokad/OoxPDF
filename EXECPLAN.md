@@ -354,6 +354,14 @@ High-priority actions:
   page/column ownership before Office-derived placement is known. Bottom-up coverage now checks paragraph,
   table, and image-only story blocks. Validation passed `docx-core --skip-slow` (`53`) and `docx-images
   --skip-slow` (`4`).
+  2026-06-02 architecture follow-up: `DocxInspect` now writes focused `related-story-summary.json`,
+  `related-story-source-block-summary.json`, and `related-story-item-summary.json` files in addition to the
+  full layout snapshot. These files keep related comment/footnote/endnote story counts, unpaged source-block
+  geometry, item geometry, provenance, and spacing diagnostics directly accessible to private-safe tools,
+  without requiring callers to mine the whole snapshot or invent page ownership before Office-derived story
+  placement is known. A public `docx-headers-footers.docx` inspector run verified that footnote/endnote
+  separator stories are also surfaced through this path. Keep actual note/comment placement, separators,
+  marker formatting, and related-story PDF link rectangles open.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
