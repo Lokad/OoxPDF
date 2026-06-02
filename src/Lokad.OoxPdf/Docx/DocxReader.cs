@@ -442,9 +442,11 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", "paragraph keep/widow-orphan rule");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "pPr").Elements(WordprocessingNamespace + "sectPr").Any())
+        if (document.Descendants(WordprocessingNamespace + "pPr")
+            .Elements(WordprocessingNamespace + "sectPr")
+            .Any(IsUnsupportedParagraphSectionBreak))
         {
-            Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "paragraph section break");
+            Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "continuous or unknown paragraph section break", fallback: "Partially supported");
         }
 
         XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, StylesContentType, out string? stylesPartName);
@@ -495,6 +497,17 @@ internal sealed class DocxReader
         {
             Emit("DOCX_UNSUPPORTED_MACRO", "macro");
         }
+    }
+
+    private static bool IsUnsupportedParagraphSectionBreak(XElement sectionProperties)
+    {
+        string? typeValue = (string?)sectionProperties
+            .Element(WordprocessingNamespace + "type")
+            ?.Attribute(WordprocessingNamespace + "val");
+        return typeValue is not null &&
+            !typeValue.Equals("nextPage", StringComparison.OrdinalIgnoreCase) &&
+            !typeValue.Equals("oddPage", StringComparison.OrdinalIgnoreCase) &&
+            !typeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasUnsupportedTableBorderStyle(XDocument document)

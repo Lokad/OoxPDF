@@ -12317,7 +12317,7 @@ internal static class DocxTests
                         <w:pageBreakBefore/>
                         <w:spacing w:line="240" w:lineRule="exact"/>
                         <w:ind w:startChars="200" w:hangingChars="100"/>
-                        <w:sectPr/>
+                        <w:sectPr><w:type w:val="continuous"/></w:sectPr>
                       </w:pPr>
                       <w:commentRangeStart w:id="1"/>
                       <w:ins><w:r><w:t>Inserted</w:t></w:r></w:ins>
@@ -12359,6 +12359,52 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_SECTION_BREAK", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_TRACKED_CHANGES", ids);
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.PartName == "/word/document.xml"), "Unsupported DOCX diagnostics should be document-scoped warnings.");
+    }
+
+    public static void DocxSupportedPageSectionBreaksDoNotEmitUnsupportedSectionDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>First section</w:t></w:r></w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:sectPr>
+                          <w:pgSz w:w="4000" w:h="4000"/>
+                          <w:pgMar w:top="360" w:right="360" w:bottom="360" w:left="360"/>
+                          <w:type w:val="oddPage"/>
+                        </w:sectPr>
+                      </w:pPr>
+                    </w:p>
+                    <w:p><w:r><w:t>Second section</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="6000" w:h="6000"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_SECTION_BREAK"), "Supported page-starting paragraph section breaks should not emit a stale unsupported-section diagnostic.");
     }
 
     public static void DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames()

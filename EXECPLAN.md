@@ -7155,6 +7155,13 @@ Current validation baseline:
   page 1 producing an empty page 2 and following-section content on page 3. Remaining section-break gaps are
   mid-page continuous-section geometry/columns and true per-section header/footer relationship selection.
   Validation passed `docx-page --skip-slow` (`35`), `docx-core --skip-slow` (`52`), and full solution build.
+  2026-06-02 architecture follow-up: `DOCX_UNSUPPORTED_SECTION_BREAK` is no longer emitted for supported
+  page-starting paragraph section breaks. The diagnostic is now reserved for continuous or unknown paragraph
+  section-break types, matching the remaining in-flow section semantics gap instead of warning on handled
+  `nextPage`/`oddPage`/`evenPage` cases. Coverage verifies that an `oddPage` paragraph section break does not
+  emit the stale unsupported-section warning, while the broad unsupported-feature fixture still exercises a
+  continuous section warning. Validation passed `docx-page --skip-slow` (`36`), `docx-core --skip-slow` (`52`),
+  and full solution build.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
