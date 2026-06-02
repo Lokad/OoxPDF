@@ -510,6 +510,17 @@ High-priority actions:
   Bottom-up numbering coverage also now asserts the accepted Office-observed numbering-tab structure:
   marker geometry stays at `left - hanging`, while the following paragraph text advances to the
   numbering-tab/left target. Keep this distinction explicit in future compact-list and text-state work.
+  2026-06-02 PDF-oracle follow-up: `PdfInspect` now expands Office `/ObjStm` object streams, reads Type0
+  descendant `/W` and simple `/Widths` font width maps, and emits `NaturalWidthPoints` plus
+  `EmittedAdvancePoints` for text operations. `tools/SummarizeDocxTextState.ps1` now prefers run-local
+  `comparison/pdf-text` inspections and buckets Office natural/emitted widths against candidate planner
+  font-size and glyph-pair side-advance ranges. Public text-state probes
+  `docx-ladder-03-text-state-size-matrix`, `docx-ladder-03-table-text-state`,
+  `docx-ladder-03-text-state-context`, and `docx-ladder-03-text-state-font-matrix` all pair cleanly with zero
+  missing Office width buckets after refreshed inspection (`65`, `35`, `35`, and `65` planner/reference pairs).
+  This strengthens the next DOCX `Tc` branch: compare Office emitted advance decomposition against the
+  renderer's planned natural width and spacing state, rather than deriving a lookup from text content, font
+  names, table roles, or observed bucket constants.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

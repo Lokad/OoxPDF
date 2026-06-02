@@ -117,6 +117,11 @@ function TextClass($Operation) {
 }
 
 function Ensure-TextOperations([string] $Run, [string] $Side) {
+    $runLocal = Join-Path $Run ("comparison\pdf-text\" + $Side + "\text-operations.json")
+    if (Test-Path -LiteralPath $runLocal) {
+        return $runLocal
+    }
+
     $pdf = if ($Side -eq "reference") {
         Join-Path $Run "reference\reference.pdf"
     }
@@ -200,6 +205,14 @@ function Summarize-Operations($Operations) {
         NetSpacingGapTotalByTc = @(Group-Count $Operations {
             param($op)
             "netGapTotal=" + (RoundedKey $op.NetSpacingGapTotalPoints 6) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
+        })
+        NaturalWidthByTc = @(Group-Count $Operations {
+            param($op)
+            "natural=" + (RoundedKey $op.NaturalWidthPoints 6) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
+        })
+        EmittedAdvanceByTc = @(Group-Count $Operations {
+            param($op)
+            "emitted=" + (RoundedKey $op.EmittedAdvancePoints 6) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
         })
     }
 }
@@ -456,6 +469,8 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             ReferenceCharacterSpacingGapTotal = $reference.CharacterSpacingGapTotalPoints
             ReferenceAdjustmentTotal = $reference.AdjustmentTotalPoints
             ReferenceNetSpacingGapTotal = $reference.NetSpacingGapTotalPoints
+            ReferenceNaturalWidth = $reference.NaturalWidthPoints
+            ReferenceEmittedAdvance = $reference.EmittedAdvancePoints
             ReferenceFontSize = $reference.FontSize
             PlannerTextClass = PlannerTextClass $segment
             PlannerTextLength = $segment.TextLength
@@ -562,6 +577,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceSpacingTotalsByPlannerFontSizeAndGlyphPairSideAdvanceRange = @(Group-Count $pairs {
             param($pair)
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) + "|refTcGapTotal=" + (RoundedKey $pair.ReferenceCharacterSpacingGapTotal 6) + "|refAdjTotal=" + (RoundedKey $pair.ReferenceAdjustmentTotal 6) + "|refNetGapTotal=" + (RoundedKey $pair.ReferenceNetSpacingGapTotal 6)
+        })
+        ReferenceWidthsByPlannerFontSizeAndGlyphPairSideAdvanceRange = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) + "|refNatural=" + (RoundedKey $pair.ReferenceNaturalWidth 6) + "|refEmitted=" + (RoundedKey $pair.ReferenceEmittedAdvance 6)
         })
         ReferenceNonzeroTcByPlannerClassGlyphGap = @(Group-Count $nonzeroReferencePairs {
             param($pair)

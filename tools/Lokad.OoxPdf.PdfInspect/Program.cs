@@ -26,6 +26,7 @@ string pdf = Encoding.Latin1.GetString(bytes);
 var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
 Dictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
+Dictionary<string, PdfFontWidthMap> fontWidthMaps = BuildFontWidthMaps(objects);
 HashSet<int>? filteredContentObjects = pageFilter is null
     ? null
     : contentPageNumbers
@@ -74,7 +75,7 @@ foreach (PdfObject item in objects)
         }
 
         int? pageNumber = contentPageNumbers.TryGetValue(item.Number, out int page) ? page : null;
-        textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text, fontUnicodeMaps));
+        textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text, fontUnicodeMaps, fontWidthMaps));
         graphicsOperations.AddRange(PdfGraphicsOperation.Extract(pageNumber, item.Number, item.Generation, text));
     }
     else if (!textOnly)
@@ -266,6 +267,123 @@ static Dictionary<string, IReadOnlyDictionary<int, string>> BuildFontUnicodeMaps
     return maps;
 }
 
+static Dictionary<string, PdfFontWidthMap> BuildFontWidthMaps(IReadOnlyList<PdfObject> objects)
+{
+    var objectByNumber = objects.ToDictionary(item => item.Number);
+    var maps = new Dictionary<string, PdfFontWidthMap>(StringComparer.Ordinal);
+    foreach (PdfObject page in objects.Where(item => IsPageObject(item.Body)))
+    {
+        foreach ((string fontName, int fontObjectNumber) in ReadPageFontResources(page.Body))
+        {
+            if (!objectByNumber.TryGetValue(fontObjectNumber, out PdfObject? fontObject))
+            {
+                continue;
+            }
+
+            PdfFontWidthMap? widthMap = ReadType0WidthMap(fontObject, objectByNumber) ??
+                ReadSimpleWidthMap(fontObject, objectByNumber);
+            if (widthMap is not null)
+            {
+                maps[fontName] = widthMap;
+            }
+        }
+    }
+
+    return maps;
+}
+
+static PdfFontWidthMap? ReadType0WidthMap(PdfObject fontObject, IReadOnlyDictionary<int, PdfObject> objectByNumber)
+{
+    Match descendantFonts = Regex.Match(fontObject.Body, @"/DescendantFonts\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant);
+    if (!descendantFonts.Success ||
+        !objectByNumber.TryGetValue(int.Parse(descendantFonts.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? descendantArray))
+    {
+        return null;
+    }
+
+    Match descendantRef = Regex.Match(descendantArray.Body, @"\[\s*(?<number>\d+)\s+\d+\s+R\s*\]", RegexOptions.CultureInvariant);
+    if (!descendantRef.Success ||
+        !objectByNumber.TryGetValue(int.Parse(descendantRef.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? descendant))
+    {
+        return null;
+    }
+
+    int defaultWidth = ReadDictionaryInt(descendant.Body, "DW");
+    if (defaultWidth <= 0)
+    {
+        defaultWidth = 1000;
+    }
+
+    string widths = ReadReferencedArray(descendant.Body, "W", objectByNumber);
+    return new PdfFontWidthMap(defaultWidth, ParseCidWidths(widths));
+}
+
+static PdfFontWidthMap? ReadSimpleWidthMap(PdfObject fontObject, IReadOnlyDictionary<int, PdfObject> objectByNumber)
+{
+    int firstChar = ReadDictionaryInt(fontObject.Body, "FirstChar");
+    string widths = ReadReferencedArray(fontObject.Body, "Widths", objectByNumber);
+    if (string.IsNullOrWhiteSpace(widths))
+    {
+        return null;
+    }
+
+    int code = firstChar;
+    var map = new Dictionary<int, int>();
+    foreach (Match match in Regex.Matches(widths, @"-?\d+", RegexOptions.CultureInvariant))
+    {
+        map[code++] = int.Parse(match.Value, CultureInfo.InvariantCulture);
+    }
+
+    return new PdfFontWidthMap(0, map);
+}
+
+static string ReadReferencedArray(string body, string key, IReadOnlyDictionary<int, PdfObject> objectByNumber)
+{
+    Match reference = Regex.Match(body, @"/" + Regex.Escape(key) + @"\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant);
+    if (reference.Success &&
+        objectByNumber.TryGetValue(int.Parse(reference.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? referenced))
+    {
+        return referenced.Body;
+    }
+
+    Match inline = Regex.Match(body, @"/" + Regex.Escape(key) + @"\s*(?<array>\[(?:[^\[\]]|\[(?:[^\[\]]|\[[^\[\]]*\])*\])*\])", RegexOptions.CultureInvariant);
+    return inline.Success ? inline.Groups["array"].Value : string.Empty;
+}
+
+static IReadOnlyDictionary<int, int> ParseCidWidths(string widths)
+{
+    var map = new Dictionary<int, int>();
+    foreach (Match match in Regex.Matches(widths, @"(?<start>\d+)\s*\[(?<values>[^\]]*)\]|(?<startRange>\d+)\s+(?<endRange>\d+)\s+(?<width>\d+)", RegexOptions.CultureInvariant))
+    {
+        if (match.Groups["values"].Success)
+        {
+            int code = int.Parse(match.Groups["start"].Value, CultureInfo.InvariantCulture);
+            foreach (Match width in Regex.Matches(match.Groups["values"].Value, @"-?\d+", RegexOptions.CultureInvariant))
+            {
+                map[code++] = int.Parse(width.Value, CultureInfo.InvariantCulture);
+            }
+        }
+        else
+        {
+            int start = int.Parse(match.Groups["startRange"].Value, CultureInfo.InvariantCulture);
+            int end = int.Parse(match.Groups["endRange"].Value, CultureInfo.InvariantCulture);
+            int width = int.Parse(match.Groups["width"].Value, CultureInfo.InvariantCulture);
+            for (int code = start; code <= end; code++)
+            {
+                map[code] = width;
+            }
+        }
+    }
+
+    return map;
+}
+
+static int ReadDictionaryInt(string dictionary, string key)
+{
+    Match match = Regex.Match(dictionary, @"/" + Regex.Escape(key) + @"\s+(?<value>\d+)", RegexOptions.CultureInvariant);
+    return match.Success ? int.Parse(match.Groups["value"].Value, CultureInfo.InvariantCulture) : 0;
+}
+
 static IReadOnlyList<(string FontName, int ObjectNumber)> ReadPageFontResources(string pageBody)
 {
     Match fonts = Regex.Match(pageBody, @"(?s)/Font\s*<<(?<fonts>.*?)>>", RegexOptions.CultureInvariant);
@@ -320,7 +438,69 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
             objects.Add(new PdfObject(number, generation, body, dictionary, stream));
         }
 
+        objects.AddRange(ParseObjectStreams(objects));
         return objects;
+    }
+
+    private static IReadOnlyList<PdfObject> ParseObjectStreams(IReadOnlyList<PdfObject> objects)
+    {
+        var existing = objects.Select(item => item.Number).ToHashSet();
+        var embeddedObjects = new List<PdfObject>();
+        foreach (PdfObject objectStream in objects)
+        {
+            if (objectStream.Stream is null ||
+                !objectStream.Dictionary.Contains("/Type/ObjStm", StringComparison.Ordinal) &&
+                !objectStream.Dictionary.Contains("/Type /ObjStm", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int count = ReadDictionaryInt(objectStream.Dictionary, "N");
+            int first = ReadDictionaryInt(objectStream.Dictionary, "First");
+            if (count <= 0 || first <= 0 || first >= objectStream.Stream.Decoded.Length)
+            {
+                continue;
+            }
+
+            string decoded = Encoding.Latin1.GetString(objectStream.Stream.Decoded);
+            string header = decoded[..first];
+            MatchCollection pairs = Regex.Matches(header, @"(?<number>\d+)\s+(?<offset>\d+)", RegexOptions.CultureInvariant);
+            var entries = pairs
+                .Take(count)
+                .Select(match => (
+                    Number: int.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture),
+                    Offset: int.Parse(match.Groups["offset"].Value, CultureInfo.InvariantCulture)))
+                .ToArray();
+
+            for (int i = 0; i < entries.Length; i++)
+            {
+                int number = entries[i].Number;
+                if (existing.Contains(number))
+                {
+                    continue;
+                }
+
+                int start = first + entries[i].Offset;
+                int end = i + 1 < entries.Length ? first + entries[i + 1].Offset : decoded.Length;
+                if (start < first || end <= start || end > decoded.Length)
+                {
+                    continue;
+                }
+
+                string body = decoded[start..end].Trim();
+                string dictionary = ReadDictionary(body);
+                embeddedObjects.Add(new PdfObject(number, 0, body, dictionary, null));
+                existing.Add(number);
+            }
+        }
+
+        return embeddedObjects;
+    }
+
+    private static int ReadDictionaryInt(string dictionary, string key)
+    {
+        Match match = Regex.Match(dictionary, @"/" + Regex.Escape(key) + @"\s+(?<value>\d+)", RegexOptions.CultureInvariant);
+        return match.Success ? int.Parse(match.Groups["value"].Value, CultureInfo.InvariantCulture) : 0;
     }
 
     private static string ReadDictionary(string body)
@@ -444,6 +624,8 @@ internal sealed record PdfTextOperation(
     double CharacterSpacingGapTotalPoints,
     double AdjustmentTotalPoints,
     double NetSpacingGapTotalPoints,
+    double? NaturalWidthPoints,
+    double? EmittedAdvancePoints,
     double NetAverageCharacterSpacing,
     string DecodedText)
 {
@@ -484,7 +666,8 @@ internal sealed record PdfTextOperation(
         int objectNumber,
         int generation,
         string stream,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps,
+        IReadOnlyDictionary<string, PdfFontWidthMap> fontWidthMaps)
     {
         var operations = new List<PdfTextOperation>();
         string font = string.Empty;
@@ -554,6 +737,9 @@ internal sealed record PdfTextOperation(
                 int characterSpacingGapCount = Math.Max(0, decodedRuneCount - 1);
                 double characterSpacingGapTotalPoints = characterSpacing * characterSpacingGapCount;
                 double adjustmentTotalPoints = -payloadProfile.AdjustmentSum * fontSize / 1000d;
+                double? naturalWidthPoints = fontWidthMaps.TryGetValue(font, out PdfFontWidthMap? widthMap)
+                    ? MeasurePayloadWidth(payload, fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMapForCodes) ? unicodeMapForCodes : null, widthMap, fontSize)
+                    : null;
                 operations.Add(new PdfTextOperation(
                     pageNumber,
                     objectNumber,
@@ -586,6 +772,8 @@ internal sealed record PdfTextOperation(
                     characterSpacingGapTotalPoints,
                     adjustmentTotalPoints,
                     characterSpacingGapTotalPoints + adjustmentTotalPoints,
+                    naturalWidthPoints,
+                    naturalWidthPoints + characterSpacingGapTotalPoints + adjustmentTotalPoints,
                     characterSpacing + averageAdjustmentPoints,
                     decodedText));
             }
@@ -661,6 +849,64 @@ internal sealed record PdfTextOperation(
             adjustmentCount == 0 ? 0d : adjustmentMax);
     }
 
+    private static double MeasurePayloadWidth(
+        string payload,
+        IReadOnlyDictionary<int, string>? unicodeMap,
+        PdfFontWidthMap widthMap,
+        double fontSize)
+    {
+        int widthUnits = 0;
+        foreach (int code in ReadPayloadTextCodes(payload, unicodeMap))
+        {
+            widthUnits += widthMap.Widths.TryGetValue(code, out int width)
+                ? width
+                : widthMap.DefaultWidth;
+        }
+
+        return widthUnits * fontSize / 1000d;
+    }
+
+    private static IReadOnlyList<int> ReadPayloadTextCodes(string payload, IReadOnlyDictionary<int, string>? unicodeMap)
+    {
+        var codes = new List<int>();
+        foreach (Match match in Regex.Matches(payload, @"\((?<literal>(?:\\.|[^\\)])*)\)|<(?<hex>[0-9A-Fa-f\s]+)>", RegexOptions.CultureInvariant))
+        {
+            if (match.Groups["literal"].Success)
+            {
+                foreach (char value in DecodeLiteralString(match.Groups["literal"].Value))
+                {
+                    codes.Add(value);
+                }
+            }
+            else if (match.Groups["hex"].Success)
+            {
+                ReadHexCodes(match.Groups["hex"].Value, unicodeMap, codes);
+            }
+        }
+
+        return codes;
+    }
+
+    private static void ReadHexCodes(string value, IReadOnlyDictionary<int, string>? unicodeMap, List<int> codes)
+    {
+        string hex = Regex.Replace(value, @"\s+", string.Empty);
+        int codeHexLength = GetHexCodeLength(hex, unicodeMap);
+        if (unicodeMap is null && hex.Length % codeHexLength != 0)
+        {
+            foreach (byte valueByte in Convert.FromHexString(hex))
+            {
+                codes.Add(valueByte);
+            }
+
+            return;
+        }
+
+        for (int index = 0; index + codeHexLength - 1 < hex.Length; index += codeHexLength)
+        {
+            codes.Add(int.Parse(hex.Substring(index, codeHexLength), NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+        }
+    }
+
     private static string DecodePayload(string payload, IReadOnlyDictionary<int, string>? unicodeMap)
     {
         var builder = new StringBuilder();
@@ -713,19 +959,7 @@ internal sealed record PdfTextOperation(
     {
         string hex = Regex.Replace(value, @"\s+", string.Empty);
         var builder = new StringBuilder();
-        int codeHexLength = 4;
-        if (unicodeMap is not null && hex.Length >= 4)
-        {
-            int firstTwoByteCode = int.Parse(hex.Substring(0, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            if (!unicodeMap.ContainsKey(firstTwoByteCode) && hex.Length >= 2)
-            {
-                int firstOneByteCode = int.Parse(hex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-                if (unicodeMap.ContainsKey(firstOneByteCode))
-                {
-                    codeHexLength = 2;
-                }
-            }
-        }
+        int codeHexLength = GetHexCodeLength(hex, unicodeMap);
 
         if (unicodeMap is null && hex.Length % codeHexLength != 0)
         {
@@ -747,6 +981,25 @@ internal sealed record PdfTextOperation(
 
         return builder.ToString();
     }
+
+    private static int GetHexCodeLength(string hex, IReadOnlyDictionary<int, string>? unicodeMap)
+    {
+        int codeHexLength = 4;
+        if (unicodeMap is not null && hex.Length >= 4)
+        {
+            int firstTwoByteCode = int.Parse(hex.Substring(0, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            if (!unicodeMap.ContainsKey(firstTwoByteCode) && hex.Length >= 2)
+            {
+                int firstOneByteCode = int.Parse(hex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                if (unicodeMap.ContainsKey(firstOneByteCode))
+                {
+                    codeHexLength = 2;
+                }
+            }
+        }
+
+        return codeHexLength;
+    }
 }
 
 internal sealed record PdfTextPayloadProfile(
@@ -755,6 +1008,8 @@ internal sealed record PdfTextPayloadProfile(
     double AdjustmentSum,
     double AdjustmentMin,
     double AdjustmentMax);
+
+internal sealed record PdfFontWidthMap(int DefaultWidth, IReadOnlyDictionary<int, int> Widths);
 
 internal sealed record PdfPathCommand(string Operator, IReadOnlyList<double> Values);
 
