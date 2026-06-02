@@ -449,7 +449,7 @@ internal sealed class DocxRenderer
                 continue;
             }
 
-            DocxTableCell cell = ResolveVisualCell(cellLayout);
+            DocxTableCell cell = cellLayout.VisualCell;
             if (TryResolveShadingColor(cell.FillHex, cell.ShadingValue, cell.ShadingColor, out RgbColor fill))
             {
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
@@ -886,7 +886,7 @@ internal sealed class DocxRenderer
                 RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
             }
 
-            DocxTableCell visualCell = ResolveVisualCell(cellLayout);
+            DocxTableCell visualCell = cellLayout.VisualCell;
             DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "start");
             if (cellIndex == 0)
             {
@@ -901,7 +901,7 @@ internal sealed class DocxRenderer
             }
 
             DocxTableCellLayout nextCell = row.Cells[cellIndex + 1];
-            DocxTableCell nextVisualCell = ResolveVisualCell(nextCell);
+            DocxTableCell nextVisualCell = nextCell.VisualCell;
             DocxTableCellBorder? nextLeft = DocxTableBorderGeometry.Find(nextVisualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(nextVisualCell.Borders, "start");
             RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
         }
@@ -945,8 +945,8 @@ internal sealed class DocxRenderer
         DocxTableCellLayout nextRowCell,
         PdfGraphicsBuilder graphics)
     {
-        DocxTableCell cell = ResolveVisualCell(cellLayout);
-        DocxTableCell nextCell = ResolveVisualCell(nextRowCell);
+        DocxTableCell cell = cellLayout.VisualCell;
+        DocxTableCell nextCell = nextRowCell.VisualCell;
         DocxTableCellBorder? bottom = DocxTableBorderGeometry.Find(cell.Borders, "bottom");
         DocxTableCellBorder? nextTop = DocxTableBorderGeometry.Find(nextCell.Borders, "top");
         if (DocxTableBorderGeometry.IsSuppressed(bottom) || DocxTableBorderGeometry.IsSuppressed(nextTop))
@@ -987,7 +987,7 @@ internal sealed class DocxRenderer
 
     private static void RenderHorizontalTableCellBorder(DocxTableCellLayout cellLayout, string edge, PdfGraphicsBuilder graphics)
     {
-        DocxTableCell visualCell = ResolveVisualCell(cellLayout);
+        DocxTableCell visualCell = cellLayout.VisualCell;
         DocxTableCellBorder? border = DocxTableBorderGeometry.Find(visualCell.Borders, edge);
         if (border is null || DocxTableBorderGeometry.IsSuppressed(border))
         {
@@ -1020,7 +1020,7 @@ internal sealed class DocxRenderer
 
     private static double ResolveLeftVerticalBorderWidth(DocxTableCellLayout cellLayout)
     {
-        DocxTableCell visualCell = ResolveVisualCell(cellLayout);
+        DocxTableCell visualCell = cellLayout.VisualCell;
         DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ??
             DocxTableBorderGeometry.Find(visualCell.Borders, "start");
         return DocxTableBorderGeometry.IsSuppressed(left)
@@ -1095,11 +1095,6 @@ internal sealed class DocxRenderer
             HorizontalOverlap(previousCell, cellLayout) > 0d &&
             previousCell.Y <= cellLayout.Y + 0.001d &&
             previousCell.Y + previousCell.Height >= cellLayout.Y + cellLayout.Height - 0.001d);
-    }
-
-    private static DocxTableCell ResolveVisualCell(DocxTableCellLayout cellLayout)
-    {
-        return cellLayout.VerticalMergeOwnerCell ?? cellLayout.Cell;
     }
 
     private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)

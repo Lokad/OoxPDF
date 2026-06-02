@@ -711,6 +711,12 @@ High-priority actions:
   minimal run under `artifacts/tmp-docx-row-boundary-smoke` and produced `OwnCell=1,VerticalMergeOwner=1`.
   Keep the next production branch on Office-derived merged-cell fragment rules, not on diagnostic-only
   ownership labels.
+  2026-06-02 architecture follow-up: `DocxTableCellLayout` now exposes `VisualCell`, so fill and border
+  rendering consume the layout-owned visual source directly instead of using a renderer-side nullable-owner
+  resolver. Bottom-up vertical-merge tests assert that restart cells resolve to themselves and continuation
+  cells resolve to the restart cell; validation passed `docx-tables --skip-slow` (`98`). This keeps the
+  merged-cell pipeline moving toward explicit fragment ownership, while the open Office-derived border/text
+  continuation rules remain unresolved.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it

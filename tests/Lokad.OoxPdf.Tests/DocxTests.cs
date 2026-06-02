@@ -9111,8 +9111,10 @@ internal static class DocxTests
         TestAssert.True(Math.Abs(rows[0].Cells[0].Y - 38.08d) < 0.001d, $"Expected merged restart y near 38.08pt, got {rows[0].Cells[0].Y.ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.True(Math.Abs(rows[0].Cells[0].Height - 51.92d) < 0.001d, $"Expected merged restart height near 51.92pt, got {rows[0].Cells[0].Height.ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.Equal(DocxTableCellVisualOwnership.OwnCell, rows[0].Cells[0].VisualOwnership);
+        TestAssert.True(ReferenceEquals(restart, rows[0].Cells[0].VisualCell), "Restart cells should keep themselves as visual cells.");
         TestAssert.True(rows[1].Cells[0].IsVerticalMergeContinuation, "Continuation cell should be layout-visible but skipped by rendering.");
         TestAssert.Equal(DocxTableCellVisualOwnership.VerticalMergeOwner, rows[1].Cells[0].VisualOwnership);
+        TestAssert.True(ReferenceEquals(restart, rows[1].Cells[0].VisualCell), "Continuation cells should expose the restart cell as their visual source.");
         TestAssert.True(Math.Abs(rows[1].Cells[0].Y - 38.08d) < 0.001d, $"Expected merge continuation y near 38.08pt, got {rows[1].Cells[0].Y.ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.True(Math.Abs(rows[1].Cells[0].Height - 30.96d) < 0.001d, $"Expected merge continuation height near 30.96pt, got {rows[1].Cells[0].Height.ToString("0.###", CultureInfo.InvariantCulture)}.");
     }
@@ -9175,6 +9177,7 @@ internal static class DocxTests
         TestAssert.True(continuationCell.IsVerticalMergeContinuation, "The second-page row should remain marked as a merge continuation.");
         TestAssert.Equal(DocxTableCellVisualOwnership.VerticalMergeOwner, continuationCell.VisualOwnership);
         TestAssert.True(ReferenceEquals(restart, continuationCell.VerticalMergeOwnerCell), "Continuation fragments should retain the restart cell as visual owner across pages.");
+        TestAssert.True(ReferenceEquals(restart, continuationCell.VisualCell), "Continuation fragments should resolve their visual cell through layout ownership.");
         TestAssert.Equal("D9EAD3", continuationCell.VerticalMergeOwnerCell?.FillHex ?? string.Empty);
         TestAssert.Equal(60d, continuationCell.Y);
         TestAssert.Equal(30d, continuationCell.Height);

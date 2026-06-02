@@ -834,7 +834,13 @@ internal sealed record DocxTableCellLayout(
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
     bool IsVerticalMergeContinuation = false,
     DocxTableCell? VerticalMergeOwnerCell = null,
-    DocxTableCellVisualOwnership VisualOwnership = DocxTableCellVisualOwnership.OwnCell);
+    DocxTableCellVisualOwnership VisualOwnership = DocxTableCellVisualOwnership.OwnCell)
+{
+    public DocxTableCell VisualCell =>
+        VisualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner && VerticalMergeOwnerCell is not null
+            ? VerticalMergeOwnerCell
+            : Cell;
+}
 
 internal enum DocxTableCellVisualOwnership
 {
