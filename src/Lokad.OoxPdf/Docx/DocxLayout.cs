@@ -9,7 +9,15 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxLayout(
     IReadOnlyList<DocxLayoutPage> Pages,
-    IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings);
+    IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings,
+    IReadOnlyList<DocxRelatedStoryLayout> RelatedStories);
+
+internal sealed record DocxRelatedStoryLayout(
+    DocxRelatedStory Story,
+    int StoryIndex,
+    IReadOnlyList<DocxTextLineLayout> TextLines,
+    IReadOnlyList<DocxTableRowLayout> TableRows,
+    double ContentHeight);
 
 internal sealed record DocxFloatingDrawingLayout(
     DocxFloatingDrawing Drawing,
@@ -98,7 +106,8 @@ internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxLayoutPageSnapshot> Pages,
     IReadOnlyList<DocxTableSnapshot> Tables,
     IReadOnlyList<DocxLayoutSourceBlockSnapshot> SourceBlocks,
-    IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> FloatingDrawings)
+    IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> FloatingDrawings,
+    IReadOnlyList<DocxRelatedStoryLayoutSnapshot> RelatedStories)
 {
     public static DocxLayoutSnapshot FromLayout(DocxLayout layout)
     {
@@ -108,7 +117,90 @@ internal sealed record DocxLayoutSnapshot(
             pages,
             ToTableSnapshots(pages),
             sourceBlocks,
-            ToFloatingDrawingSnapshots(layout.FloatingDrawings));
+            ToFloatingDrawingSnapshots(layout.FloatingDrawings),
+            ToRelatedStorySnapshots(layout.RelatedStories));
+    }
+
+    private static IReadOnlyList<DocxRelatedStoryLayoutSnapshot> ToRelatedStorySnapshots(
+        IReadOnlyList<DocxRelatedStoryLayout> stories)
+    {
+        return stories
+            .Select(story =>
+            {
+                int tableCellTextLineCount = CountTableCellTextLines(story.TableRows);
+                int inlineImageCount = CountTableCellInlineImages(story.TableRows);
+                return new DocxRelatedStoryLayoutSnapshot(
+                    story.StoryIndex,
+                    story.Story.Kind,
+                    story.Story.PartName,
+                    story.Story.Id,
+                    story.Story.BodyElements.Count,
+                    story.Story.Paragraphs.Count,
+                    story.Story.Tables.Count,
+                    story.TextLines.Count,
+                    tableCellTextLineCount,
+                    story.TableRows.Count,
+                    inlineImageCount,
+                    CountBodyTextLength(story.Story.BodyElements),
+                    story.ContentHeight);
+            })
+            .ToArray();
+    }
+
+    private static int CountBodyTextLength(IReadOnlyList<DocxBodyElement> elements)
+    {
+        int length = 0;
+        foreach (DocxBodyElement element in elements)
+        {
+            if (element is DocxParagraphElement paragraphElement)
+            {
+                length += paragraphElement.Paragraph.Runs.Sum(run => run.Text.Length);
+                continue;
+            }
+
+            if (element is DocxTableElement tableElement)
+            {
+                foreach (DocxTableRow row in tableElement.Table.Rows)
+                {
+                    foreach (DocxTableCell cell in row.Cells)
+                    {
+                        length += CountBodyTextLength(DocxTableCellContent.GetBodyElements(cell));
+                    }
+                }
+            }
+        }
+
+        return length;
+    }
+
+    private static int CountTableCellTextLines(IReadOnlyList<DocxTableRowLayout> rows)
+    {
+        int count = 0;
+        foreach (DocxTableRowLayout row in rows)
+        {
+            foreach (DocxTableCellLayout cell in row.Cells)
+            {
+                count += cell.TextLines.Count;
+                count += CountTableCellTextLines(cell.NestedRows);
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountTableCellInlineImages(IReadOnlyList<DocxTableRowLayout> rows)
+    {
+        int count = 0;
+        foreach (DocxTableRowLayout row in rows)
+        {
+            foreach (DocxTableCellLayout cell in row.Cells)
+            {
+                count += cell.InlineImages.Count;
+                count += CountTableCellInlineImages(cell.NestedRows);
+            }
+        }
+
+        return count;
     }
 
     private static IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> ToFloatingDrawingSnapshots(
@@ -756,6 +848,21 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     double? ImageWidthPoints,
     double? ImageHeightPoints);
 
+internal sealed record DocxRelatedStoryLayoutSnapshot(
+    int StoryIndex,
+    string Kind,
+    string PartName,
+    string? Id,
+    int BlockCount,
+    int ParagraphCount,
+    int TableCount,
+    int TextLineCount,
+    int TableCellTextLineCount,
+    int TableRowCount,
+    int InlineImageCount,
+    int TextLength,
+    double ContentHeight);
+
 internal sealed record DocxLayoutSourceBlockSnapshot(
     int SourceBlockIndex,
     string Kind,
@@ -1329,6 +1436,7 @@ internal sealed class DocxLayoutEngine
 {
     private const double WordDefaultTabStopPoints = 36d;
     private const double WordListMinimumAutoLineSpacingFactor = 1.19d;
+    private const double UnpagedRelatedStoryCanvasHeightPoints = 100000d;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -1700,7 +1808,220 @@ internal sealed class DocxLayoutEngine
         }
 
         DocxLayoutPage[] pagesWithStaticText = AddStaticTextLines(pages, textMeasurer).ToArray();
-        return new DocxLayout(pagesWithStaticText, CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText));
+        return new DocxLayout(
+            pagesWithStaticText,
+            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText),
+            CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints));
+    }
+
+    private static IReadOnlyList<DocxRelatedStoryLayout> CreateRelatedStoryLayouts(
+        IReadOnlyList<DocxRelatedStory> stories,
+        double bodyWidth,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints)
+    {
+        if (textMeasurer is null || stories.Count == 0)
+        {
+            return stories
+                .Select((story, index) => new DocxRelatedStoryLayout(story, index, [], [], 0d))
+                .ToArray();
+        }
+
+        return stories
+            .Select((story, index) => CreateRelatedStoryLayout(story, index, bodyWidth, textMeasurer, defaultTabStopPoints))
+            .ToArray();
+    }
+
+    private static DocxRelatedStoryLayout CreateRelatedStoryLayout(
+        DocxRelatedStory story,
+        int storyIndex,
+        double bodyWidth,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints)
+    {
+        var textLines = new List<DocxTextLineLayout>();
+        var tableRows = new List<DocxTableRowLayout>();
+        double cursorY = 0d;
+        double pendingSpacingAfter = 0d;
+        DocxParagraph? previousParagraph = null;
+        int paragraphIndex = 0;
+        int tableIndex = 0;
+
+        for (int elementIndex = 0; elementIndex < story.BodyElements.Count; elementIndex++)
+        {
+            DocxBodyElement element = story.BodyElements[elementIndex];
+            if (element is DocxTableElement tableElement)
+            {
+                cursorY -= pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                DocxTableLayoutFrame frame = CreateTableLayoutFrame(
+                    tableElement.Table,
+                    tableIndex++,
+                    elementIndex,
+                    0d,
+                    bodyWidth,
+                    UnpagedRelatedStoryCanvasHeightPoints,
+                    textMeasurer,
+                    defaultTabStopPoints);
+                for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
+                {
+                    double rowHeight = frame.RowHeights[rowIndex];
+                    tableRows.Add(CreateTableRowLayout(
+                        tableElement.Table,
+                        frame.Context,
+                        tableElement.Table.Rows[rowIndex],
+                        rowIndex,
+                        frame.RowHeights,
+                        frame.EffectiveColumns,
+                        frame.Scale,
+                        textMeasurer,
+                        defaultTabStopPoints,
+                        () => 0,
+                        cursorY,
+                        rowHeight,
+                        cursorY,
+                        FragmentIndex: 0,
+                        FragmentCount: 1,
+                        FragmentReason: "None"));
+                    cursorY -= rowHeight;
+                }
+
+                continue;
+            }
+
+            if (element is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
+            cursorY -= spacingProfile.AppliedBeforeSpacing;
+            pendingSpacingAfter = 0d;
+            IReadOnlyList<DocxTextLineLayout> paragraphLines = LayoutRelatedStoryParagraphTextLines(
+                paragraph,
+                elementIndex,
+                paragraphIndex,
+                story.Kind,
+                bodyWidth,
+                cursorY,
+                spacingProfile,
+                textMeasurer,
+                defaultTabStopPoints);
+            textLines.AddRange(paragraphLines);
+            cursorY -= paragraphLines.Sum(line => line.LineHeight ?? 0d);
+            if (paragraphLines.Count == 0 && paragraph.Images.Count == 0)
+            {
+                double fontSize = GetParagraphFontSize(paragraph);
+                cursorY -= ResolveLineHeight(paragraph, fontSize, textMeasurer);
+            }
+
+            foreach (DocxInlineImage image in paragraph.Images)
+            {
+                double imageWidth = Math.Min(bodyWidth, image.WidthPoints);
+                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                cursorY -= imageHeight + 6d;
+            }
+
+            pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+            previousParagraph = paragraph;
+            paragraphIndex++;
+        }
+
+        cursorY -= pendingSpacingAfter;
+        return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), tableRows.ToArray(), Math.Abs(cursorY));
+    }
+
+    private static IReadOnlyList<DocxTextLineLayout> LayoutRelatedStoryParagraphTextLines(
+        DocxParagraph paragraph,
+        int sourceBlockIndex,
+        int sourceParagraphIndex,
+        string storyKind,
+        double bodyWidth,
+        double cursorY,
+        DocxParagraphSpacingProfile spacingProfile,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints)
+    {
+        IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
+        if (textSpans.Count == 0)
+        {
+            return [];
+        }
+
+        double fontSize = GetParagraphFontSize(paragraph);
+        DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+        double lineHeight = lineHeightProfile.LineHeight;
+        double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
+        double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
+        double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
+        double paragraphX = textStartOffset;
+        double paragraphWidth = Math.Max(1d, bodyWidth - textStartOffset - GetParagraphRightInset(paragraph));
+        double continuationParagraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+        DocxTextRun firstRun = paragraph.Runs[0];
+        DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: false).ToArray();
+        var layouts = new List<DocxTextLineLayout>(lines.Length);
+        bool firstLine = true;
+        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            DocxWrappedTextLine line = lines[lineIndex];
+            double lineWidth = MeasureTextSpans(line.Spans, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints);
+            double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints);
+            double lineX = paragraph.Alignment switch
+            {
+                DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
+                DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
+                _ => paragraphX
+            };
+            double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, paragraph.LineSpacingPoints is not null);
+            bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
+                ShouldJustifyTextLine(paragraph.Alignment, lineIndex == lines.Length - 1, drawableLineWidth, paragraphWidth, line.Spans);
+            IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
+                ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, labelStartOffset, lineX, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints)
+                : justifyLine
+                    ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints)
+                    : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, paragraph.TabStops, defaultTabStopPoints);
+            double effectiveX = firstLine && paragraph.ListLabel is not null ? labelStartOffset : lineX;
+            double effectiveWidth = firstLine && paragraph.ListLabel is not null
+                ? Math.Max(lineX + lineWidth, labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - labelStartOffset
+                : justifyLine
+                    ? paragraphWidth
+                    : lineWidth;
+            layouts.Add(new DocxTextLineLayout(
+                firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,
+                firstRun,
+                fontSize,
+                effectiveX,
+                cursorY - baselineOffset,
+                effectiveWidth,
+                segments,
+                SourceBlockIndex: sourceBlockIndex,
+                SourceParagraphIndex: sourceParagraphIndex,
+                SourceLineIndex: lineIndex,
+                StoryKind: storyKind,
+                LineHeight: lineHeight,
+                AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
+                IsFirstParagraphLine: firstLine,
+                EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
+                SingleLineHeight: lineHeightProfile.SingleLineHeight,
+                ListLabelSingleLineHeight: lineHeightProfile.ListLabelSingleLineHeight,
+                BodyWindowsLineHeight: lineHeightProfile.BodyWindowsLineHeight,
+                ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
+                EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
+                LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
+                ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
+                ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
+                ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
+                SourceParagraph: paragraph));
+            firstLine = false;
+            paragraphX = continuationTextStartOffset;
+            paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+            cursorY -= lineHeight;
+        }
+
+        return layouts;
     }
 
     private static IReadOnlyList<DocxFloatingDrawingLayout> CreateFloatingDrawingLayouts(

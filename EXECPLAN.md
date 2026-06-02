@@ -323,6 +323,17 @@ High-priority actions:
   resolution surface and gives future note/comment layout a structural join point. Keep rendering open for
   story-owned page placement, note separator behavior, comment/endnote/footnote link rectangles, and any
   Office-derived marker formatting. Validation passed `docx-core --skip-slow` (`52`).
+  2026-06-02 architecture follow-up: related comment/footnote/endnote stories now have non-rendering
+  `DocxRelatedStoryLayout` ownership in the layout pipeline. The layout stage measures top-level story
+  paragraphs through normal wrapping/segment construction and story tables through the existing table-row
+  layout factory, then exposes only private-safe story counts, table-cell line counts, row counts, image
+  counts, text length, and consumed height through `DocxLayoutSnapshot.RelatedStories`. This gives future
+  note/comment rendering a measured story surface instead of raw XML or hard-coded diagnostics, while still
+  deliberately avoiding fake PDF rectangles before Office-derived story placement is understood. Keep open:
+  page-owned footnote/endnote placement, separator/continuation separator behavior, comment display model,
+  marker formatting, and related-story hyperlink rectangles once their story pages/regions are real.
+  Validation passed `docx-core --skip-slow` (`53`), `docx-tables --skip-slow` (`118`), and full solution
+  build.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring

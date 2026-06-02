@@ -13785,6 +13785,14 @@ internal static class DocxTests
         TestAssert.True(endnoteReferenceSnapshot.SourceRunIndex == 3 && endnoteReferenceSnapshot.TextOffsetInRun == 0, "Endnote reference snapshot should preserve source marker offsets.");
         TestAssert.True(endnoteReferenceSnapshot.ResolvedStoryKind == "Endnote" && endnoteReferenceSnapshot.ResolvedStoryPartName == "/word/endnotes.xml" && endnoteReferenceSnapshot.ResolvedStoryId == "3" && endnoteReferenceSnapshot.ResolvedStoryTextLength == 12, "Endnote reference snapshot should resolve to the endnote story body.");
 
+        DocxLayoutSnapshot layoutSnapshot = new DocxRenderer().InspectLayout(document);
+        TestAssert.Equal(3, layoutSnapshot.RelatedStories.Count);
+        DocxRelatedStoryLayoutSnapshot commentLayout = layoutSnapshot.RelatedStories.Single(story => story.Kind == "Comment");
+        TestAssert.True(commentLayout.PartName == "/word/comments.xml" && commentLayout.Id == "1" && commentLayout.BlockCount == 3 && commentLayout.ParagraphCount == 2 && commentLayout.TableCount == 1, "Related-story layout snapshots should preserve comment story ownership without flattening it into body layout.");
+        TestAssert.True(commentLayout.TextLineCount >= 2 && commentLayout.TableCellTextLineCount >= 1 && commentLayout.TableRowCount == 1 && commentLayout.TextLength == 37 && commentLayout.ContentHeight > 0d, "Comment story layout should measure paragraph text and table rows without rendering them as page content.");
+        TestAssert.True(layoutSnapshot.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.TextLineCount >= 1 && story.TableRowCount == 0 && story.ContentHeight > 0d), "Footnote story layout should be measured as related-story content.");
+        TestAssert.True(layoutSnapshot.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.TextLineCount >= 1 && story.TableRowCount == 0 && story.ContentHeight > 0d), "Endnote story layout should be measured as related-story content.");
+
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"));
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment body"), "Related story runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment link"), "Related story hyperlink runs should participate in DOCX font planning.");
