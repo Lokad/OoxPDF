@@ -4326,21 +4326,26 @@ internal sealed class DocxLayoutEngine
                 useCellPageBreakBoundaryPartition &&
                 !cellPageBreakBoundaryInsideNestedTable;
 
-            IReadOnlyList<DocxTextLineLayout> textLines = isVerticalMergeContinuation
+            DocxTableCell contentCell = visualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner && verticalMergeOwnerCell is not null
+                ? verticalMergeOwnerCell
+                : cell;
+            double contentY = isVerticalMergeContinuation ? visualY : fullVisualY;
+            double contentHeight = isVerticalMergeContinuation ? visualHeight : fullVisualHeight;
+            IReadOnlyList<DocxTextLineLayout> textLines = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
-                : LayoutTableCellTextLines(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints)
+                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints)
                     .Where(line => IsTextLineOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, line, FragmentIndex, FragmentCount))
                     .Where(line => IsTextLineVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, line, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
-            IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
+            IReadOnlyList<DocxInlineImageLayout> inlineImages = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
-                : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
+                : LayoutTableCellInlineImages(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
                     .Where(image => IsInlineImageOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, image, FragmentIndex, FragmentCount))
                     .Where(image => IsInlineImageVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, image, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
-            IReadOnlyList<DocxTableRowLayout> nestedTableRows = isVerticalMergeContinuation
+            IReadOnlyList<DocxTableRowLayout> nestedTableRows = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
-                : LayoutTableCellNestedTables(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
+                : LayoutTableCellNestedTables(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
                     .Where(rowLayout => IsNestedTableRowOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerNestedTableBoundaryIndex, cellPageBreakUpperNestedTableBoundaryIndex, rowLayout, FragmentCount))
                     .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(cellPageBreakAlignsWithNestedTableBlock, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();

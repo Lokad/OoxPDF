@@ -839,6 +839,15 @@ High-priority actions:
   text while its restart owner has private-safe visual text length. Validation passed `docx-tables --skip-slow`
   (`98`). Keep rendering unchanged: these fields are evidence plumbing for the future Office-derived decision
   on whether/how owner content is re-emitted or clipped in continuation fragments.
+  2026-06-02 architecture follow-up: page-crossing vertical-merge continuations now build their layout-owned
+  text, image, and nested-table content from the typed owner cell when the continuation fragment itself is the
+  page-visible owner fragment. The renderer uses the existing visual-fragment gate for continuation content,
+  preserving same-page suppression while allowing page-leading owner fragments to emit owner text through the
+  normal clipped cell content path instead of rediscovering the restart row at render time. Bottom-up coverage
+  asserts owner text lines on a cross-page continuation and on the repeated-header interference case. Validation
+  passed `docx-tables --skip-slow` (`120`), `docx-page --skip-slow` (`40`), and full solution build. Keep the
+  broader Office-derived merged-cell branch open for border-edge suppression, multi-page owner-content clipping
+  acceptance, and nested-table interactions inside merged cells.
   2026-06-02 architecture follow-up: anchored DOCX drawings now preserve their embedded image relationship and
   image payload in `DocxFloatingDrawing`, using the same relationship/part resolution helper as inline
   drawings. Structure snapshots expose private-safe anchored-image facts (relationship id, part name, content

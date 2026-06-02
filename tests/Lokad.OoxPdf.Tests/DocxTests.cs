@@ -10233,7 +10233,7 @@ internal static class DocxTests
         var filler = new DocxTableCell("Filler", [], null, null, null, null, [], DocxTableCellMargins.Empty);
         var restart = new DocxTableCell(
             "Merged",
-            [],
+            [CreateDocxLayoutParagraph("Merged", 10d, 10d)],
             "D9EAD3",
             "clear",
             "auto",
@@ -10275,7 +10275,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
         DocxTableRowLayout restartRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single(row => row.RowIndex == 1);
         DocxTableRowLayout continuationRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single(row => row.RowIndex == 2);
         DocxTableCellLayout continuationCell = continuationRow.Cells.Single();
@@ -10306,9 +10306,10 @@ internal static class DocxTests
         TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
         TestAssert.Equal(1, continuationSnapshot.VerticalMergeOwnerRowIndex ?? -1);
         TestAssert.Equal(0, continuationSnapshot.VerticalMergeOwnerGridColumnIndex ?? -1);
-        TestAssert.Equal(0, continuationSnapshot.TextLength);
+        TestAssert.Equal(6, continuationSnapshot.TextLength);
         TestAssert.Equal(6, continuationSnapshot.VisualTextLength);
         TestAssert.Equal(1, continuationSnapshot.VisualParagraphCount);
+        TestAssert.True(continuationCell.TextLines.Count != 0, "A page-crossing merge continuation should carry owner text lines for page-local clipped PDF emission.");
     }
 
     public static void DocxTableLayoutStageCarriesVerticalMergeOwnerAfterRepeatedHeader()
@@ -10391,7 +10392,9 @@ internal static class DocxTests
             .Single();
         TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
         TestAssert.Equal(2, continuationSnapshot.VerticalMergeOwnerRowIndex ?? -1);
+        TestAssert.Equal(6, continuationSnapshot.TextLength);
         TestAssert.Equal(6, continuationSnapshot.VisualTextLength);
+        TestAssert.True(continuationCell.TextLines.Count != 0, "A merge continuation after a repeated header should carry owner text lines for page-local clipped PDF emission.");
     }
 
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()

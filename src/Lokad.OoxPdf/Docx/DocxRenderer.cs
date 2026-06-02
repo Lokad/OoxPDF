@@ -566,7 +566,7 @@ internal sealed class DocxRenderer
 
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
-            if (!ShouldRenderTableCellContentFragment(cellLayout))
+            if (!ShouldRenderTableCellContentFragment(cellLayout, previousRow))
             {
                 continue;
             }
@@ -1556,9 +1556,13 @@ internal sealed class DocxRenderer
         graphics.FillRectangle(boundaryX, y, width, height);
     }
 
-    private static bool ShouldRenderTableCellContentFragment(DocxTableCellLayout cellLayout)
+    private static bool ShouldRenderTableCellContentFragment(
+        DocxTableCellLayout cellLayout,
+        DocxTableRowLayout? previousRow)
     {
-        return cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell;
+        return cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell ||
+            cellLayout.VisualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner &&
+            ShouldRenderTableCellVisualFragment(cellLayout, previousRow);
     }
 
     private static bool ShouldRenderTableCellVisualFragment(
