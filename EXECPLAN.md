@@ -706,6 +706,12 @@ High-priority actions:
   `docx-core --skip-slow` (`43`), and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
   Keep the row-boundary branch open for the actual Word decision model; this slice only makes fragment
   ownership and downstream diagnostics trustworthy.
+  2026-06-02 architecture follow-up: split row fragments now expose their full logical row height and
+  fragment offset from the logical row top on both `DocxTableRowLayout` and layout snapshots. This keeps
+  continuation fragments tied to the row coordinate system instead of forcing later diagnostics/rendering to
+  infer offsets from page-local rectangles and repeated headers. Bottom-up coverage asserts a `20pt/60pt`
+  split of an `80pt` row reports offsets `0pt` and `20pt`; validation passed `docx-tables --skip-slow`
+  (`98`). Keep the actual Word row-boundary and merged-cell continuation rules open.
   2026-06-02 architecture follow-up: cross-page vertical merges now carry explicit visual ownership. A
   `DocxTableCellLayout` continuation can retain its restart cell as `VerticalMergeOwnerCell`, so renderer
   decisions are no longer based on a single "skip continuation" flag. Same-page continuations remain suppressed

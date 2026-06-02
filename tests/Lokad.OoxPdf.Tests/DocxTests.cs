@@ -8967,10 +8967,14 @@ internal static class DocxTests
         TestAssert.Equal(1, firstPageRows[1].RowIndex);
         TestAssert.Equal(0, firstPageRows[1].FragmentIndex);
         TestAssert.Equal(2, firstPageRows[1].FragmentCount);
+        TestAssert.Equal(80d, firstPageRows[1].FullRowHeight);
+        TestAssert.Equal(0d, firstPageRows[1].FragmentOffsetFromRowTop);
         TestAssert.Equal(20d, firstPageRows[1].Height);
         TestAssert.Equal(1, secondPageRows[0].RowIndex);
         TestAssert.Equal(1, secondPageRows[0].FragmentIndex);
         TestAssert.Equal(2, secondPageRows[0].FragmentCount);
+        TestAssert.Equal(80d, secondPageRows[0].FullRowHeight);
+        TestAssert.Equal(20d, secondPageRows[0].FragmentOffsetFromRowTop);
         TestAssert.Equal(60d, secondPageRows[0].Height);
         TestAssert.True(firstPageRows[1].Cells[0].TextLines.Count > 0, "The first split fragment should own its visible row text.");
         TestAssert.True(secondPageRows[0].Cells[0].TextLines.Count > 0, "The continuation split fragment should own its visible row text.");
@@ -8980,6 +8984,15 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.FragmentedRowCount);
         TestAssert.Equal(2, snapshot.FragmentedRowLayoutCount);
         TestAssert.Equal(2, snapshot.MaxRowFragmentCount);
+        DocxTableRowSnapshot[] splitRowSnapshots = DocxLayoutSnapshot.FromLayout(layout).Pages
+            .SelectMany(page => page.TableRows)
+            .Where(row => row.RowIndex == 1)
+            .OrderBy(row => row.FragmentIndex)
+            .ToArray();
+        TestAssert.Equal(80d, splitRowSnapshots[0].FullRowHeight);
+        TestAssert.Equal(0d, splitRowSnapshots[0].FragmentOffsetFromRowTop);
+        TestAssert.Equal(80d, splitRowSnapshots[1].FullRowHeight);
+        TestAssert.Equal(20d, splitRowSnapshots[1].FragmentOffsetFromRowTop);
     }
 
     public static void DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations()
