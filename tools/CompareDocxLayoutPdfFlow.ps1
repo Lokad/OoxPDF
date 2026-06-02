@@ -123,6 +123,34 @@ function New-LineRows($Operations) {
     return $result.ToArray()
 }
 
+function New-RowAdvanceBuckets($Rows) {
+    $advances = New-Object System.Collections.Generic.List[double]
+    foreach ($pageGroup in ($Rows | Where-Object { [int]$_.TextLength -gt 0 } | Group-Object Page | Sort-Object { [int]$_.Name })) {
+        $orderedRows = @($pageGroup.Group | Sort-Object -Property @{ Expression = { [int]$_.PageIndex }; Descending = $false })
+        for ($index = 1; $index -lt $orderedRows.Count; $index++) {
+            $advance = [double]$orderedRows[$index - 1].Y - [double]$orderedRows[$index].Y
+            if ($advance -gt 0d) {
+                $advances.Add($advance)
+            }
+        }
+    }
+
+    return @(
+        $advances |
+            Group-Object {
+                [Math]::Round([double]$_, 3).ToString("0.000", [Globalization.CultureInfo]::InvariantCulture)
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    AdvancePoints = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+}
+
 function Get-LayoutLines($Layout) {
     $lines = New-Object System.Collections.Generic.List[object]
     for ($pageIndex = 0; $pageIndex -lt $Layout.Pages.Count; $pageIndex++) {
@@ -324,6 +352,8 @@ $summary = [pscustomobject]@{
                 }
             }
     )
+    ReferencePdfRowAdvanceBuckets = @(New-RowAdvanceBuckets $referenceRows)
+    CandidatePdfRowAdvanceBuckets = @(New-RowAdvanceBuckets $candidateRows)
     CandidateEffectiveLineSpacingFactorBuckets = @(
         $layoutLines |
             Where-Object { $null -ne $_.EffectiveLineSpacingFactor } |

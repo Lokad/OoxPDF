@@ -423,6 +423,13 @@ High-priority actions:
   at `1.250000` without the floor. This makes the accepted list-floor decision visible in the public
   layout/PDF flow map; continue by comparing those candidate pitches to Office row deltas before touching
   metrics or pagination rules.
+  2026-06-02 evidence update: the same flow summary now emits PDF row-advance buckets for reference and
+  candidate rows. On public `docx-ladder-03-compact-bullet-alt-line115` run `20260602-021217`, candidate
+  layout/PDF advances are dominated by `16.326` pt, while Office reference PDF rows split between `16.320`
+  (`23` rows) and `16.440..16.470` (`17` rows), plus one larger paragraph-boundary gap. The accepted `1.19`
+  floor is therefore necessary but not sufficient: the remaining compact-list discrepancy appears to be an
+  Office row-rhythm/line-box alternation that is observable in PDF structure, not a page-bottom reserve or a
+  new global line-height constant. Find the OOXML/font/layout discriminator before changing rendering.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table
