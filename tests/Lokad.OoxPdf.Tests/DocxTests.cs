@@ -9804,12 +9804,14 @@ internal static class DocxTests
         TestAssert.Equal(1, firstPageRows[1].RowIndex);
         TestAssert.Equal(0, firstPageRows[1].FragmentIndex);
         TestAssert.Equal(2, firstPageRows[1].FragmentCount);
+        TestAssert.Equal("PageBoundary", firstPageRows[1].FragmentReason);
         TestAssert.Equal(80d, firstPageRows[1].FullRowHeight);
         TestAssert.Equal(0d, firstPageRows[1].FragmentOffsetFromRowTop);
         TestAssert.Equal(20d, firstPageRows[1].Height);
         TestAssert.Equal(1, secondPageRows[0].RowIndex);
         TestAssert.Equal(1, secondPageRows[0].FragmentIndex);
         TestAssert.Equal(2, secondPageRows[0].FragmentCount);
+        TestAssert.Equal("PageBoundary", secondPageRows[0].FragmentReason);
         TestAssert.Equal(80d, secondPageRows[0].FullRowHeight);
         TestAssert.Equal(20d, secondPageRows[0].FragmentOffsetFromRowTop);
         TestAssert.Equal(60d, secondPageRows[0].Height);
@@ -9827,8 +9829,10 @@ internal static class DocxTests
             .OrderBy(row => row.FragmentIndex)
             .ToArray();
         TestAssert.Equal(80d, splitRowSnapshots[0].FullRowHeight);
+        TestAssert.Equal("PageBoundary", splitRowSnapshots[0].FragmentReason);
         TestAssert.Equal(0d, splitRowSnapshots[0].FragmentOffsetFromRowTop);
         TestAssert.Equal(80d, splitRowSnapshots[1].FullRowHeight);
+        TestAssert.Equal("PageBoundary", splitRowSnapshots[1].FragmentReason);
         TestAssert.Equal(20d, splitRowSnapshots[1].FragmentOffsetFromRowTop);
     }
 
@@ -10781,8 +10785,16 @@ internal static class DocxTests
         TestAssert.Equal(1, rowFragments[1].FragmentIndex);
         TestAssert.Equal(2, rowFragments[0].FragmentCount);
         TestAssert.Equal(2, rowFragments[1].FragmentCount);
+        TestAssert.Equal("CellPageBreak", rowFragments[0].FragmentReason);
+        TestAssert.Equal("CellPageBreak", rowFragments[1].FragmentReason);
         TestAssert.Equal("Before", rowFragments[0].Cells.Single().TextLines.Single().Text);
         TestAssert.Equal("After", rowFragments[1].Cells.Single().TextLines.Single().Text);
+        DocxTableRowSnapshot[] rowSnapshots = DocxLayoutSnapshot.FromLayout(layout).Pages
+            .SelectMany(page => page.TableRows)
+            .OrderBy(row => row.FragmentIndex)
+            .ToArray();
+        TestAssert.Equal("CellPageBreak", rowSnapshots[0].FragmentReason);
+        TestAssert.Equal("CellPageBreak", rowSnapshots[1].FragmentReason);
     }
 
     public static void DocxTableLayoutStageKeepsCellImagesOnAuthoredSideOfPageBreak()
@@ -11604,6 +11616,7 @@ internal static class DocxTests
         TestAssert.Equal(0, tableRow.PageRowIndex);
         TestAssert.Equal(0, tableRow.RowIndex);
         TestAssert.Equal(1, tableRow.TableRowCount);
+        TestAssert.Equal("None", tableRow.FragmentReason);
         TestAssert.Equal(2, tableRow.GridColumnCount);
         TestAssert.Equal(80d, tableRow.GridColumnsWidthSum);
         TestAssert.True(tableRow.HasExplicitGrid, "Row snapshot should carry the table grid provenance.");

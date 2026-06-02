@@ -471,6 +471,7 @@ internal sealed record DocxLayoutSnapshot(
             row.DeclaredHeightPoints,
             row.FragmentIndex,
             row.FragmentCount,
+            row.FragmentReason,
             row.FullRowHeight,
             row.FragmentOffsetFromRowTop,
             row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
@@ -821,6 +822,7 @@ internal sealed record DocxTableRowSnapshot(
     double? DeclaredHeightPoints,
     int FragmentIndex,
     int FragmentCount,
+    string FragmentReason,
     double FullRowHeight,
     double FragmentOffsetFromRowTop,
     double X,
@@ -1076,6 +1078,7 @@ internal sealed record DocxTableRowLayout(
     int RowIndex,
     int FragmentIndex,
     int FragmentCount,
+    string FragmentReason,
     double FullRowHeight,
     double FragmentOffsetFromRowTop,
     IReadOnlyList<DocxTableCellLayout> Cells,
@@ -2922,7 +2925,7 @@ internal sealed class DocxLayoutEngine
             if (!row.CantSplit &&
                 TryResolveExplicitTableCellPageBreakFragmentHeight(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, out double explicitBreakFragmentHeight))
             {
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, resolveFrame, explicitBreakFragmentHeight, finishPage);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, resolveFrame, explicitBreakFragmentHeight, "CellPageBreak", finishPage);
                 markBoundaryContent();
                 continue;
             }
@@ -2932,7 +2935,7 @@ internal sealed class DocxLayoutEngine
                 remainingPageHeight > 0.001d &&
                 CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, textMeasurer, defaultTabStopPoints))
             {
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, resolveFrame, remainingPageHeight, finishPage);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageIndex, ref currentItems, ref cursorY, resolveFrame, remainingPageHeight, "PageBoundary", finishPage);
                 markBoundaryContent();
                 continue;
             }
@@ -3202,7 +3205,8 @@ internal sealed class DocxLayoutEngine
             rowHeight,
             logicalRowTopY: cursorY,
             FragmentIndex: 0,
-            FragmentCount: 1));
+            FragmentCount: 1,
+            FragmentReason: "None"));
         cursorY -= rowHeight;
     }
 
@@ -3218,6 +3222,7 @@ internal sealed class DocxLayoutEngine
         ref double cursorY,
         Func<DocxTableLayoutFrame> resolveFrame,
         double firstFragmentHeight,
+        string fragmentReason,
         Action finishPage)
     {
         DocxTableLayoutFrame initialFrame = resolveFrame();
@@ -3247,7 +3252,8 @@ internal sealed class DocxLayoutEngine
                 fragmentHeight,
                 logicalRowTopY: cursorY + consumedHeight,
                 FragmentIndex: fragmentIndex,
-                FragmentCount: fragmentHeights.Count));
+                FragmentCount: fragmentHeights.Count,
+                FragmentReason: fragmentReason));
             cursorY -= fragmentHeight;
             consumedHeight += fragmentHeight;
 
@@ -3487,7 +3493,8 @@ internal sealed class DocxLayoutEngine
         double rowHeight,
         double logicalRowTopY,
         int FragmentIndex,
-        int FragmentCount)
+        int FragmentCount,
+        string FragmentReason)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row);
@@ -3554,6 +3561,7 @@ internal sealed class DocxLayoutEngine
             rowIndex,
             FragmentIndex,
             FragmentCount,
+            FragmentReason,
             fullRowHeight,
             logicalRowTopY - cursorY,
             cells.ToArray(),
@@ -4248,7 +4256,8 @@ internal sealed class DocxLayoutEngine
                         rowHeight,
                         cursorY,
                         FragmentIndex: 0,
-                        FragmentCount: 1));
+                        FragmentCount: 1,
+                        FragmentReason: "None"));
                     cursorY -= rowHeight;
                 }
 

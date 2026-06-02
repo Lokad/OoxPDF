@@ -7326,6 +7326,14 @@ Current validation baseline:
   before and after an explicit cell page break are separated into the corresponding row fragments. Validation passed
   `docx-tables --skip-slow` (`111`), `docx-core --skip-slow` (`53`), and full solution build. Keep multiple competing
   cell page breaks, table-cell column breaks, and Office-exact repeated-header/merged-cell interactions open.
+  2026-06-02 architecture follow-up: table row fragments now expose their split cause as private-safe layout/snapshot
+  metadata. `DocxTableRowLayout` and `DocxTableRowSnapshot` carry `FragmentReason` values `None`, `PageBoundary`, or
+  `CellPageBreak`, so validation and future PDF-structure matching can distinguish ordinary overflow pagination from
+  authored table-cell page breaks without re-inferring intent from geometry. Bottom-up coverage verifies ordinary rows,
+  page-boundary split rows, and explicit cell page-break split rows. Validation passed `docx-tables --skip-slow`
+  (`111`), `docx-core --skip-slow` (`53`), and full solution build. Keep multiple competing cell page breaks,
+  table-cell column breaks, Office-exact repeated-header/merged-cell interactions, and oversized explicit-break
+  fragments near page bottoms open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
