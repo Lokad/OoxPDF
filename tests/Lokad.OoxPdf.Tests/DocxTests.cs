@@ -9114,6 +9114,8 @@ internal static class DocxTests
         TestAssert.True(ReferenceEquals(restart, rows[0].Cells[0].VisualCell), "Restart cells should keep themselves as visual cells.");
         TestAssert.True(rows[1].Cells[0].IsVerticalMergeContinuation, "Continuation cell should be layout-visible but skipped by rendering.");
         TestAssert.Equal(DocxTableCellVisualOwnership.VerticalMergeOwner, rows[1].Cells[0].VisualOwnership);
+        TestAssert.Equal(0, rows[1].Cells[0].VerticalMergeOwner?.RowIndex ?? -1);
+        TestAssert.Equal(0, rows[1].Cells[0].VerticalMergeOwner?.GridColumnIndex ?? -1);
         TestAssert.True(ReferenceEquals(restart, rows[1].Cells[0].VisualCell), "Continuation cells should expose the restart cell as their visual source.");
         TestAssert.True(Math.Abs(rows[1].Cells[0].Y - 38.08d) < 0.001d, $"Expected merge continuation y near 38.08pt, got {rows[1].Cells[0].Y.ToString("0.###", CultureInfo.InvariantCulture)}.");
         TestAssert.True(Math.Abs(rows[1].Cells[0].Height - 30.96d) < 0.001d, $"Expected merge continuation height near 30.96pt, got {rows[1].Cells[0].Height.ToString("0.###", CultureInfo.InvariantCulture)}.");
@@ -9176,11 +9178,18 @@ internal static class DocxTests
         TestAssert.Equal(DocxTableCellVisualOwnership.OwnCell, restartRow.Cells[0].VisualOwnership);
         TestAssert.True(continuationCell.IsVerticalMergeContinuation, "The second-page row should remain marked as a merge continuation.");
         TestAssert.Equal(DocxTableCellVisualOwnership.VerticalMergeOwner, continuationCell.VisualOwnership);
+        TestAssert.Equal(1, continuationCell.VerticalMergeOwner?.RowIndex ?? -1);
+        TestAssert.Equal(0, continuationCell.VerticalMergeOwner?.GridColumnIndex ?? -1);
         TestAssert.True(ReferenceEquals(restart, continuationCell.VerticalMergeOwnerCell), "Continuation fragments should retain the restart cell as visual owner across pages.");
         TestAssert.True(ReferenceEquals(restart, continuationCell.VisualCell), "Continuation fragments should resolve their visual cell through layout ownership.");
         TestAssert.Equal("D9EAD3", continuationCell.VerticalMergeOwnerCell?.FillHex ?? string.Empty);
         TestAssert.Equal(60d, continuationCell.Y);
         TestAssert.Equal(30d, continuationCell.Height);
+
+        DocxTableCellSnapshot continuationSnapshot = DocxLayoutSnapshot.FromLayout(layout).Pages[1].TableRows.Single(row => row.RowIndex == 2).Cells.Single();
+        TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
+        TestAssert.Equal(1, continuationSnapshot.VerticalMergeOwnerRowIndex ?? -1);
+        TestAssert.Equal(0, continuationSnapshot.VerticalMergeOwnerGridColumnIndex ?? -1);
     }
 
     public static void DocxTableLayoutStagePlacesCellsBeforePdfEmission()
@@ -10353,6 +10362,8 @@ internal static class DocxTests
         TestAssert.True(tableCell.HasVerticalMerge, "Snapshot should expose vertical-merge presence without document text.");
         TestAssert.Equal("restart", tableCell.VerticalMergeValue ?? string.Empty);
         TestAssert.Equal("OwnCell", tableCell.VisualOwnership);
+        TestAssert.True(tableCell.VerticalMergeOwnerRowIndex is null, "Restart cells should not report an owner row.");
+        TestAssert.True(tableCell.VerticalMergeOwnerGridColumnIndex is null, "Restart cells should not report an owner grid column.");
     }
 
     public static void DocxLayoutSnapshotNormalizesPlainTableCellText()

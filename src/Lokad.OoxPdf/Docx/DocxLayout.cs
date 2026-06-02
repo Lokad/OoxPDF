@@ -375,6 +375,8 @@ internal sealed record DocxLayoutSnapshot(
             cell.VerticalMergeValue,
             cellLayout.IsVerticalMergeContinuation,
             cellLayout.VisualOwnership.ToString(),
+            cellLayout.VerticalMergeOwner?.RowIndex,
+            cellLayout.VerticalMergeOwner?.GridColumnIndex,
             textProfile.SpaceCharacterCount,
             textProfile.NonAsciiCharacterCount,
             textProfile.PunctuationCharacterCount,
@@ -648,6 +650,8 @@ internal sealed record DocxTableCellSnapshot(
     string? VerticalMergeValue,
     bool IsVerticalMergeContinuation,
     string VisualOwnership,
+    int? VerticalMergeOwnerRowIndex,
+    int? VerticalMergeOwnerGridColumnIndex,
     int SpaceCharacterCount,
     int NonAsciiCharacterCount,
     int PunctuationCharacterCount,
@@ -834,13 +838,16 @@ internal sealed record DocxTableCellLayout(
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
     bool IsVerticalMergeContinuation = false,
     DocxTableCell? VerticalMergeOwnerCell = null,
+    DocxVerticalMergeOwner? VerticalMergeOwner = null,
     DocxTableCellVisualOwnership VisualOwnership = DocxTableCellVisualOwnership.OwnCell)
 {
     public DocxTableCell VisualCell =>
-        VisualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner && VerticalMergeOwnerCell is not null
-            ? VerticalMergeOwnerCell
+        VisualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner && VerticalMergeOwner is not null
+            ? VerticalMergeOwner.Cell
             : Cell;
 }
+
+internal sealed record DocxVerticalMergeOwner(DocxTableCell Cell, int RowIndex, int GridColumnIndex);
 
 internal enum DocxTableCellVisualOwnership
 {
@@ -2619,9 +2626,10 @@ internal sealed class DocxLayoutEngine
             double cellWidth = cellWidths[columnIndex];
             DocxTableCell cell = row.Cells[columnIndex];
             bool isVerticalMergeContinuation = IsVerticalMergeContinuation(cell);
-            DocxTableCell? verticalMergeOwnerCell = isVerticalMergeContinuation
-                ? FindVerticalMergeRestartCell(table, rowIndex, gridColumnIndex)
+            DocxVerticalMergeOwner? verticalMergeOwner = isVerticalMergeContinuation
+                ? FindVerticalMergeRestartOwner(table, rowIndex, gridColumnIndex)
                 : null;
+            DocxTableCell? verticalMergeOwnerCell = verticalMergeOwner?.Cell;
             DocxTableCellVisualOwnership visualOwnership = isVerticalMergeContinuation
                 ? verticalMergeOwnerCell is null
                     ? DocxTableCellVisualOwnership.MissingVerticalMergeOwner
@@ -2652,7 +2660,7 @@ internal sealed class DocxLayoutEngine
                 : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
                     .Where(image => VerticalOverlap(image.Y, image.Height, visualY, visualHeight) > 0.001d)
                     .ToArray();
-            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, visualOwnership));
+            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, verticalMergeOwner, visualOwnership));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
@@ -2707,7 +2715,7 @@ internal sealed class DocxLayoutEngine
         return cell.HasVerticalMerge && !IsVerticalMergeRestart(cell);
     }
 
-    private static DocxTableCell? FindVerticalMergeRestartCell(
+    private static DocxVerticalMergeOwner? FindVerticalMergeRestartOwner(
         DocxTable table,
         int rowIndex,
         int gridColumnIndex)
@@ -2722,7 +2730,7 @@ internal sealed class DocxLayoutEngine
 
             if (IsVerticalMergeRestart(previousCell))
             {
-                return previousCell;
+                return new DocxVerticalMergeOwner(previousCell, previousRowIndex, gridColumnIndex);
             }
 
             if (!IsVerticalMergeContinuation(previousCell))

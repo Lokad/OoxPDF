@@ -717,6 +717,14 @@ High-priority actions:
   cells resolve to the restart cell; validation passed `docx-tables --skip-slow` (`98`). This keeps the
   merged-cell pipeline moving toward explicit fragment ownership, while the open Office-derived border/text
   continuation rules remain unresolved.
+  2026-06-02 architecture follow-up: vertical-merge continuations now carry a typed `DocxVerticalMergeOwner`
+  with the owner cell, owner row index, and owner grid column index; layout snapshots expose the two
+  private-safe coordinates. This is the missing provenance for a future merged-cell fragment model where owner
+  content can be clipped/emitted on continuation pages without rediscovering the restart cell from table
+  structure at render time. Bottom-up coverage asserts same-page and cross-page owner coordinates, plus
+  continuation snapshot reporting; validation passed `docx-tables --skip-slow` (`98`) and `docx-core
+  --skip-slow` (`51`) after rerunning serially around a transient parallel compiler output lock. Keep the
+  actual text carry-over and continuation-internal border rules open until Office-PDF evidence pins them.
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
