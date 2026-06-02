@@ -351,6 +351,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|srcPara=" + (RoundedKey $segment.SourceParagraphIndex 0)
         })
+        TextClassByRole = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|role=" + $segment.Role
+        })
         TextClassByGlyphSignature = @(Group-Count $segments {
             param($segment)
             (PlannerTextClass $segment) + "|glyphSig=" + $segment.GlyphAdvanceSignature.Hash
@@ -411,6 +415,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerTextLength = $segment.TextLength
             PlannerPdfFontSize = $segment.PdfFontSize
             PlannerSourceParagraphIndex = $segment.SourceParagraphIndex
+            PlannerRole = $segment.Role
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
             PlannerResidualPerGap = $segment.AdvanceProfile.UniformResidualPerGap
             PlannerGlyphAdvanceSignature = $segment.GlyphAdvanceSignature.Hash
@@ -447,6 +452,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerSourceParagraphIndex = @(Group-Count $pairs {
             param($pair)
             "srcPara=" + (RoundedKey $pair.PlannerSourceParagraphIndex 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerRole = @(Group-Count $pairs {
+            param($pair)
+            "role=" + $pair.PlannerRole + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceNetByPlannerResidualPerGap = @(Group-Count $pairs {
             param($pair)

@@ -39,7 +39,7 @@ keep diagnostics honest when a feature is still missing.
 - `tools/SummarizeDocxTextState.ps1`: private-safe aggregate summary of Office/candidate DOCX text operations
   from visual run directories, including operation counts, `Tc` buckets, `/Tf` sizes, positioned-glyph
   residual buckets, candidate planner segment/advance-profile/glyph-advance-signature buckets when `DocxInspect`
-  output is present, source paragraph-index buckets, and sequence-paired Office-operation/planner-segment
+  output is present, source paragraph-index and planner-role buckets, and sequence-paired Office-operation/planner-segment
   buckets when the inspected operation counts match. It must not emit decoded document text.
 - `tools/SummarizeDocxRowBoundary.ps1`: private-safe DOCX table-row boundary summary for visual run directories.
   It combines layout-snapshot row bands and PDF text rows near the page bottom, emitting row indices, geometry,
@@ -500,6 +500,13 @@ High-priority actions:
   `MAE=8.927687 -> 8.908377` with changed16 `0.095249`. Keep the active residual on row-advance/baseline
   quantization and Office PDF text-state decomposition; do not reintroduce list-label font ownership, a
   page-bottom reserve, or a new residual constant.
+  2026-06-02 architecture follow-up: DOCX text emission snapshots now carry a private-safe segment role
+  (`ListLabel`, `ListSeparator`, or `Text`) from layout through PDF emission, and
+  `tools/SummarizeDocxTextState.ps1` buckets planner/reference pairs by that role. This removes the need to
+  infer list-marker behavior from digits, punctuation, or nonzero `Tc` when comparing Office PDF text state.
+  Bottom-up numbering coverage also now asserts the accepted Office-observed numbering-tab structure:
+  marker geometry stays at `left - hanging`, while the following paragraph text advances to the
+  numbering-tab/left target. Keep this distinction explicit in future compact-list and text-state work.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table

@@ -657,6 +657,7 @@ internal sealed record DocxTextEmissionSegmentSnapshot(
     int? SourceBlockIndex,
     int? SourceParagraphIndex,
     int? SourceLineIndex,
+    string Role,
     double X,
     double BaselineY,
     double Width,
@@ -729,7 +730,8 @@ internal sealed record DocxTextSegmentLayout(
     double BaselineOffsetY = 0d,
     double PdfCharacterSpacing = 0d,
     bool CompensatePdfCharacterSpacing = true,
-    int SourceTextRunIndex = -1);
+    int SourceTextRunIndex = -1,
+    string Role = "Text");
 
 internal sealed record DocxTextSpan(
     string Text,
@@ -818,7 +820,8 @@ internal sealed record DocxTextEmissionSegment(
     bool SyntheticBold,
     bool SyntheticItalic,
     bool IsTerminalLineSpace,
-    int SourceTextRunIndex = -1);
+    int SourceTextRunIndex = -1,
+    string Role = "Text");
 
 internal readonly record struct DocxKeepBlockEstimate(
     double Height,
@@ -2028,7 +2031,8 @@ internal sealed class DocxLayoutEngine
                 labelRun.FontSize,
                 PdfCharacterSpacing: pdfCharacterSpacing,
                 CompensatePdfCharacterSpacing: false,
-                SourceTextRunIndex: -1)
+                SourceTextRunIndex: -1,
+                Role: "ListLabel")
         };
 
         string separator = GetListLabelPdfSeparator(label);
@@ -2036,7 +2040,7 @@ internal sealed class DocxLayoutEngine
         {
             double separatorX = labelX + labelWidth;
             double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelRun.FontSize);
-            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelRun.FontSize, SourceTextRunIndex: -1));
+            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelRun.FontSize, SourceTextRunIndex: -1, Role: "ListSeparator"));
         }
 
         segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));

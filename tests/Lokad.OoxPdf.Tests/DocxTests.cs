@@ -5298,7 +5298,7 @@ internal static class DocxTests
         TestAssert.Equal(108d, line.Segments[2].X);
     }
 
-    public static void DocxSyntheticNumberingTabPositionMovesMarkerOnly()
+    public static void DocxSyntheticNumberingTabPositionMovesTextOnly()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -5361,10 +5361,10 @@ internal static class DocxTests
             .OfType<DocxTextLineLayout>()
             .Single();
 
-        TestAssert.Equal(84d, line.X);
+        TestAssert.Equal(90d, line.X);
         TestAssert.Equal(3, line.Segments.Count);
         TestAssert.Equal("1.", line.Segments[0].Text);
-        TestAssert.Equal(84d, line.Segments[0].X);
+        TestAssert.Equal(90d, line.Segments[0].X);
         TestAssert.Equal(" ", line.Segments[1].Text);
         TestAssert.Equal("Indented", line.Segments[2].Text);
         TestAssert.Equal(108d, line.Segments[2].X);
@@ -10158,6 +10158,7 @@ internal static class DocxTests
 
         DocxTextEmissionLineSnapshot numberedLine = snapshot.Lines.First(line => line.SourceBlockIndex == 1);
         DocxTextEmissionSegmentSnapshot labelSegment = numberedLine.Segments.First(segment => Math.Abs(segment.PdfCharacterSpacing) > 0.0001d);
+        TestAssert.Equal("ListLabel", labelSegment.Role);
         TestAssert.Equal(1, labelSegment.TextLength);
         TestAssert.Equal(1, labelSegment.CharacterProfile.DigitCount);
         TestAssert.Equal(0, labelSegment.CharacterProfile.LetterCount);
@@ -10171,6 +10172,8 @@ internal static class DocxTests
         TestAssert.True(Math.Abs(labelSegment.PositioningCharacterSpacing) < 0.0001d, "Numbering PDF text-state spacing should not be double-counted in glyph positioning.");
         TestAssert.True(!labelSegment.CompensatePdfCharacterSpacing, "Numbering label spacing is intentionally emitted through PDF text state.");
         TestAssert.True(labelSegment.FontResourceName is not null, "Snapshot should identify the resolved PDF font resource without exposing text.");
+        TestAssert.True(numberedLine.Segments.Any(segment => segment.Role == "ListSeparator"), "Numbered lines should distinguish the marker separator from body text.");
+        TestAssert.True(numberedLine.Segments.Any(segment => segment.Role == "Text"), "Numbered lines should preserve paragraph text as ordinary text segments.");
     }
 
     public static void DocxTextEmissionDoesNotApplyNumberedTcToBulletListMarkers()

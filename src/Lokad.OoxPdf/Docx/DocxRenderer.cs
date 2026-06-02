@@ -451,7 +451,8 @@ internal sealed class DocxRenderer
                     ShouldApplySyntheticBold(segment.StyleRun, resource),
                     segment.StyleRun.Italic && !resource.Resolution.Italic,
                     IsTerminalLineSpace: false,
-                    segment.SourceTextRunIndex));
+                    segment.SourceTextRunIndex,
+                    segment.Role));
             }
         }
 
@@ -496,7 +497,8 @@ internal sealed class DocxRenderer
                 SyntheticBold: false,
                 SyntheticItalic: segment.StyleRun.Italic && !resource.Resolution.Italic,
                 IsTerminalLineSpace: true,
-                segment.SourceTextRunIndex));
+                segment.SourceTextRunIndex,
+                segment.Role));
             break;
         }
 
@@ -564,6 +566,7 @@ internal sealed class DocxRenderer
             line.SourceBlockIndex,
             line.SourceParagraphIndex,
             line.SourceLineIndex,
+            segment.Role,
             segment.X,
             segment.BaselineY,
             segment.Width,
