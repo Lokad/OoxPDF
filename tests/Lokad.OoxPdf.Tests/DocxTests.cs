@@ -10785,6 +10785,39 @@ internal static class DocxTests
         TestAssert.Equal("After", rowFragments[1].Cells.Single().TextLines.Single().Text);
     }
 
+    public static void DocxTableLayoutStageKeepsCellImagesOnAuthoredSideOfPageBreak()
+    {
+        var beforeImage = new DocxInlineImage(12d, 8d, "image/png", [1, 2, 3], "/word/media/before.png");
+        var afterImage = new DocxInlineImage(10d, 6d, "image/png", [4, 5, 6], "/word/media/after.png");
+        DocxParagraph before = CreateDocxLayoutParagraph(string.Empty, 10d, 10d) with { Images = [beforeImage] };
+        DocxParagraph after = CreateDocxLayoutParagraph(string.Empty, 10d, 10d) with { Images = [afterImage] };
+        var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(before),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(after)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .ToArray();
+
+        TestAssert.Equal(2, rowFragments.Length);
+        DocxInlineImageLayout firstImage = rowFragments[0].Cells.Single().InlineImages.Single();
+        DocxInlineImageLayout secondImage = rowFragments[1].Cells.Single().InlineImages.Single();
+        TestAssert.Equal(0, firstImage.SourceParagraphIndex ?? -1);
+        TestAssert.Equal(1, secondImage.SourceParagraphIndex ?? -1);
+        TestAssert.True(firstImage.Image == beforeImage, "The first row fragment should keep the image before the authored page break.");
+        TestAssert.True(secondImage.Image == afterImage, "The second row fragment should keep the image after the authored page break.");
+    }
+
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

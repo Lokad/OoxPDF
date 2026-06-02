@@ -378,7 +378,7 @@ internal sealed record DocxLayoutSnapshot(
                 CellCount: 0,
                 columnIndex,
                 image.SourceBlockIndex,
-                SourceParagraphIndex: null,
+                image.SourceParagraphIndex,
                 SourceLineIndex: null,
                 LineHeightPoints: null,
                 AppliedBeforeSpacingPoints: null,
@@ -1068,7 +1068,8 @@ internal sealed record DocxInlineImageLayout(
     double Width,
     double Height,
     int PageIndex,
-    int? SourceBlockIndex = null) : DocxLayoutItem;
+    int? SourceBlockIndex = null,
+    int? SourceParagraphIndex = null) : DocxLayoutItem;
 
 internal sealed record DocxTableRowLayout(
     DocxTableLayoutContext Table,
@@ -1680,7 +1681,8 @@ internal sealed class DocxLayoutEngine
                     imageWidth,
                     imageHeight,
                     pages.Count + 1,
-                    SourceBlockIndex: elementIndex));
+                    SourceBlockIndex: elementIndex,
+                    SourceParagraphIndex: 0));
                 activeColumnHasContent = true;
                 cursorY -= imageHeight + 6d;
             }
@@ -3533,7 +3535,8 @@ internal sealed class DocxLayoutEngine
             IReadOnlyList<DocxInlineImageLayout> inlineImages = isVerticalMergeContinuation
                 ? []
                 : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
-                    .Where(image => VerticalOverlap(image.Y, image.Height, visualY, visualHeight) > 0.001d)
+                    .Where(image => IsInlineImageOnVisibleSideOfCellPageBreak(cell, image, FragmentIndex, FragmentCount))
+                    .Where(image => IsInlineImageVisibleInCellFragmentGeometry(cell, image, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
             IReadOnlyList<DocxTableRowLayout> nestedTableRows = isVerticalMergeContinuation
                 ? []
@@ -3600,6 +3603,19 @@ internal sealed class DocxLayoutEngine
             : IsTextLineVisibleInCellFragment(line, cellY, cellHeight, fragmentIndex, fragmentCount);
     }
 
+    private static bool IsInlineImageVisibleInCellFragmentGeometry(
+        DocxTableCell cell,
+        DocxInlineImageLayout image,
+        double cellY,
+        double cellHeight,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        return fragmentCount > 1 && TryGetFirstTableCellPageBreakParagraphIndex(cell, out _)
+            ? true
+            : VerticalOverlap(image.Y, image.Height, cellY, cellHeight) > 0.001d;
+    }
+
     private static bool IsTextLineOnVisibleSideOfCellPageBreak(
         DocxTableCell cell,
         DocxTextLineLayout line,
@@ -3607,6 +3623,27 @@ internal sealed class DocxLayoutEngine
         int fragmentCount)
     {
         if (fragmentCount <= 1 || line.SourceParagraphIndex is not { } paragraphIndex)
+        {
+            return true;
+        }
+
+        if (!TryGetFirstTableCellPageBreakParagraphIndex(cell, out int splitParagraphIndex))
+        {
+            return true;
+        }
+
+        return fragmentIndex == 0
+            ? paragraphIndex < splitParagraphIndex
+            : paragraphIndex >= splitParagraphIndex;
+    }
+
+    private static bool IsInlineImageOnVisibleSideOfCellPageBreak(
+        DocxTableCell cell,
+        DocxInlineImageLayout image,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        if (fragmentCount <= 1 || image.SourceParagraphIndex is not { } paragraphIndex)
         {
             return true;
         }
@@ -4015,6 +4052,7 @@ internal sealed class DocxLayoutEngine
         var images = new List<DocxInlineImageLayout>();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        int paragraphIndex = 0;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
             if (bodyElement is DocxTableElement tableElement)
@@ -4069,12 +4107,13 @@ internal sealed class DocxLayoutEngine
                     DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - imageWidth),
                     _ => paragraphX
                 };
-                images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex));
+                images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex, SourceParagraphIndex: paragraphIndex));
                 cursorY -= imageHeight + 6d;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
+            paragraphIndex++;
         }
 
         cursorY -= pendingSpacingAfter;

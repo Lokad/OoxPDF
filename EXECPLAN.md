@@ -7312,6 +7312,13 @@ Current validation baseline:
   `docx-core --skip-slow` (`53`), and full solution build. Keep table-cell column breaks, multiple competing cell
   page breaks, inline images/nested tables around explicit breaks, and Office-exact repeated-header/merged-cell
   interactions open.
+  2026-06-02 architecture follow-up: inline images now carry optional source paragraph provenance in
+  `DocxInlineImageLayout` and layout snapshots, and table-cell row fragments use that provenance to keep images on
+  the authored side of explicit cell page breaks. This matches the text-line provenance split instead of relying on
+  page-reset geometry. Bottom-up coverage verifies image-only paragraphs before and after a cell page break stay in
+  the corresponding row fragments. Validation passed `docx-tables --skip-slow` (`110`), `docx-core --skip-slow`
+  (`53`), and full solution build. Keep nested-table break-side filtering, multiple competing cell page breaks,
+  table-cell column breaks, and Office-exact repeated-header/merged-cell interactions open.
 - DOCX header/footer font-plan validation:
   the DOCX font plan now includes every referenced header/footer variant, not only the default-selected
   paragraph lists. This prevents first/even static header/footer runs from falling back to a font resource
