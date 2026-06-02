@@ -1073,19 +1073,19 @@ internal sealed class DocxRenderer
 
     private static bool ShouldRenderTableCellContentFragment(DocxTableCellLayout cellLayout)
     {
-        return !cellLayout.IsVerticalMergeContinuation;
+        return cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell;
     }
 
     private static bool ShouldRenderTableCellVisualFragment(
         DocxTableCellLayout cellLayout,
         DocxTableRowLayout? previousRow)
     {
-        if (!cellLayout.IsVerticalMergeContinuation)
+        if (cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell)
         {
             return true;
         }
 
-        if (cellLayout.VerticalMergeOwnerCell is null)
+        if (cellLayout.VisualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner)
         {
             return false;
         }

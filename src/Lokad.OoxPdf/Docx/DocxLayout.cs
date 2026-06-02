@@ -374,6 +374,7 @@ internal sealed record DocxLayoutSnapshot(
             cell.HasVerticalMerge,
             cell.VerticalMergeValue,
             cellLayout.IsVerticalMergeContinuation,
+            cellLayout.VisualOwnership.ToString(),
             textProfile.SpaceCharacterCount,
             textProfile.NonAsciiCharacterCount,
             textProfile.PunctuationCharacterCount,
@@ -646,6 +647,7 @@ internal sealed record DocxTableCellSnapshot(
     bool HasVerticalMerge,
     string? VerticalMergeValue,
     bool IsVerticalMergeContinuation,
+    string VisualOwnership,
     int SpaceCharacterCount,
     int NonAsciiCharacterCount,
     int PunctuationCharacterCount,
@@ -831,7 +833,15 @@ internal sealed record DocxTableCellLayout(
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
     bool IsVerticalMergeContinuation = false,
-    DocxTableCell? VerticalMergeOwnerCell = null);
+    DocxTableCell? VerticalMergeOwnerCell = null,
+    DocxTableCellVisualOwnership VisualOwnership = DocxTableCellVisualOwnership.OwnCell);
+
+internal enum DocxTableCellVisualOwnership
+{
+    OwnCell,
+    VerticalMergeOwner,
+    MissingVerticalMergeOwner
+}
 
 internal sealed record DocxRunFontResource(string Name, PdfEmbeddedFont Embedded, FontResolution Resolution);
 
@@ -2606,6 +2616,11 @@ internal sealed class DocxLayoutEngine
             DocxTableCell? verticalMergeOwnerCell = isVerticalMergeContinuation
                 ? FindVerticalMergeRestartCell(table, rowIndex, gridColumnIndex)
                 : null;
+            DocxTableCellVisualOwnership visualOwnership = isVerticalMergeContinuation
+                ? verticalMergeOwnerCell is null
+                    ? DocxTableCellVisualOwnership.MissingVerticalMergeOwner
+                    : DocxTableCellVisualOwnership.VerticalMergeOwner
+                : DocxTableCellVisualOwnership.OwnCell;
             double visualHeight = rowHeight;
             double visualY = cellY;
             double fullVisualHeight = fullRowHeight;
@@ -2631,7 +2646,7 @@ internal sealed class DocxLayoutEngine
                 : LayoutTableCellInlineImages(cell, cellX, fullVisualY, cellWidth, fullVisualHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, getPageIndex())
                     .Where(image => VerticalOverlap(image.Y, image.Height, visualY, visualHeight) > 0.001d)
                     .ToArray();
-            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell));
+            cells.Add(new DocxTableCellLayout(cell, cellX, visualY, cellWidth, visualHeight, textLines, inlineImages, isVerticalMergeContinuation, verticalMergeOwnerCell, visualOwnership));
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
