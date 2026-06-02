@@ -409,10 +409,16 @@ function Group-PlannerAdvance($Segments, [scriptblock] $KeySelector) {
                 GlyphCount = 0
                 GlyphGapCount = 0
                 NaturalPdfWidth = 0d
+                UnkernedPdfWidth = 0d
                 RoundedPdfWidth = 0d
+                KerningAdjustmentTotal = 0d
+                PositioningCharacterSpacingGapTotal = 0d
+                TextStateCharacterSpacingGapTotal = 0d
+                PlannedEmittedAdvance = 0d
                 LayoutWidth = 0d
                 LayoutToNaturalResidual = 0d
                 LayoutToRoundedResidual = 0d
+                PlannedEmittedToLayoutResidual = 0d
             }
         }
 
@@ -422,10 +428,16 @@ function Group-PlannerAdvance($Segments, [scriptblock] $KeySelector) {
             $group.GlyphCount += [int]$segment.AdvanceProfile.GlyphCount
             $group.GlyphGapCount += [int]$segment.AdvanceProfile.GlyphGapCount
             $group.NaturalPdfWidth += [double]$segment.AdvanceProfile.NaturalPdfWidth
+            $group.UnkernedPdfWidth += [double]$segment.AdvanceProfile.UnkernedPdfWidth
             $group.RoundedPdfWidth += [double]$segment.AdvanceProfile.RoundedPdfWidth
+            $group.KerningAdjustmentTotal += [double]$segment.AdvanceProfile.KerningAdjustmentTotal
+            $group.PositioningCharacterSpacingGapTotal += [double]$segment.AdvanceProfile.PositioningCharacterSpacingGapTotal
+            $group.TextStateCharacterSpacingGapTotal += [double]$segment.AdvanceProfile.TextStateCharacterSpacingGapTotal
+            $group.PlannedEmittedAdvance += [double]$segment.AdvanceProfile.PlannedEmittedAdvance
             $group.LayoutWidth += [double]$segment.AdvanceProfile.LayoutWidth
             $group.LayoutToNaturalResidual += [double]$segment.AdvanceProfile.LayoutToNaturalResidual
             $group.LayoutToRoundedResidual += [double]$segment.AdvanceProfile.LayoutToRoundedResidual
+            $group.PlannedEmittedToLayoutResidual += [double]$segment.AdvanceProfile.PlannedEmittedToLayoutResidual
         }
     }
 
@@ -438,12 +450,19 @@ function Group-PlannerAdvance($Segments, [scriptblock] $KeySelector) {
                 GlyphCount = $group.GlyphCount
                 GlyphGapCount = $group.GlyphGapCount
                 NaturalPdfWidth = [Math]::Round($group.NaturalPdfWidth, 6)
+                UnkernedPdfWidth = [Math]::Round($group.UnkernedPdfWidth, 6)
                 RoundedPdfWidth = [Math]::Round($group.RoundedPdfWidth, 6)
+                KerningAdjustmentTotal = [Math]::Round($group.KerningAdjustmentTotal, 6)
+                PositioningCharacterSpacingGapTotal = [Math]::Round($group.PositioningCharacterSpacingGapTotal, 6)
+                TextStateCharacterSpacingGapTotal = [Math]::Round($group.TextStateCharacterSpacingGapTotal, 6)
+                PlannedEmittedAdvance = [Math]::Round($group.PlannedEmittedAdvance, 6)
                 LayoutWidth = [Math]::Round($group.LayoutWidth, 6)
                 LayoutToNaturalResidual = [Math]::Round($group.LayoutToNaturalResidual, 6)
                 LayoutToRoundedResidual = [Math]::Round($group.LayoutToRoundedResidual, 6)
+                PlannedEmittedToLayoutResidual = [Math]::Round($group.PlannedEmittedToLayoutResidual, 6)
                 UniformResidualPerGap = if ($group.GlyphGapCount -eq 0) { $null } else { [Math]::Round($group.LayoutToNaturalResidual / $group.GlyphGapCount, 6) }
                 RoundedResidualPerGap = if ($group.GlyphGapCount -eq 0) { $null } else { [Math]::Round($group.LayoutToRoundedResidual / $group.GlyphGapCount, 6) }
+                PlannedEmittedResidualPerGap = if ($group.GlyphGapCount -eq 0) { $null } else { [Math]::Round($group.PlannedEmittedToLayoutResidual / $group.GlyphGapCount, 6) }
             }
         }
     )

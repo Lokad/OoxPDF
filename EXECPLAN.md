@@ -547,6 +547,9 @@ High-priority actions:
   stale and lacks `PlannedEmittedAdvance`. Private/local runs remain opt-in via existing sidecars. A refresh
   test on older public run `docx-ladder-03-text-state-font-matrix/20260602-091115` regenerated the sidecar and
   produced `65` planner/reference pairs with no unexpected missing emitted-delta fields.
+  2026-06-02 summary follow-up: planner segment aggregate buckets now include the same planned emitted-advance
+  decomposition as the paired Office-reference buckets, including unkerned width, kerning adjustment,
+  positioning gap total, `Tc` gap total, planned emitted advance, and planned emitted residual per gap.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first
