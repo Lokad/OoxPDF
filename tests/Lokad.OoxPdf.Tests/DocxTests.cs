@@ -10661,9 +10661,19 @@ internal static class DocxTests
         TestAssert.True(spacedSegment.GlyphAdvanceSignature.Hash.Length == 16, "Snapshot should expose a fixed-width glyph advance signature hash.");
         TestAssert.True(spacedSegment.GlyphAdvanceSignature.PairHash.Length == 16, "Snapshot should expose a fixed-width glyph-pair advance signature hash.");
         TestAssert.True(spacedSegment.AdvanceProfile.NaturalPdfWidth > 0d, "Snapshot should expose natural PDF font advance.");
+        TestAssert.True(spacedSegment.AdvanceProfile.UnkernedPdfWidth > 0d, "Snapshot should expose unkerned PDF font advance.");
         TestAssert.True(spacedSegment.AdvanceProfile.RoundedPdfWidth > 0d, "Snapshot should expose rounded PDF width-array advance.");
+        TestAssert.True(spacedSegment.AdvanceProfile.PositioningCharacterSpacingGapTotal > 0d, "Snapshot should expose positioned-spacing contribution to the emitted PDF advance.");
+        TestAssert.True(Math.Abs(spacedSegment.AdvanceProfile.TextStateCharacterSpacingGapTotal) < 0.0001d, "Authored DOCX run spacing should not become PDF Tc in this guard.");
+        TestAssert.True(spacedSegment.AdvanceProfile.PlannedEmittedAdvance > spacedSegment.AdvanceProfile.RoundedPdfWidth, "Snapshot should expose candidate emitted advance after positioning adjustments.");
+        TestAssert.True(Math.Abs(spacedSegment.AdvanceProfile.PlannedEmittedAdvance - (
+            spacedSegment.AdvanceProfile.RoundedPdfWidth +
+            spacedSegment.AdvanceProfile.KerningAdjustmentTotal +
+            spacedSegment.AdvanceProfile.PositioningCharacterSpacingGapTotal +
+            spacedSegment.AdvanceProfile.TextStateCharacterSpacingGapTotal)) < 0.0001d, "Planned emitted advance should be decomposed into width-array, kerning, positioning, and Tc terms.");
         TestAssert.True(spacedSegment.AdvanceProfile.UniformResidualPerGap is not null, "Multi-glyph operations should expose residual per glyph gap.");
         TestAssert.True(spacedSegment.AdvanceProfile.RoundedResidualPerGap is not null, "Multi-glyph operations should expose rounded-PDF residual per glyph gap.");
+        TestAssert.True(spacedSegment.AdvanceProfile.PlannedEmittedResidualPerGap is not null, "Multi-glyph operations should expose planned emitted residual per glyph gap.");
         TestAssert.True(Math.Abs(spacedSegment.LayoutCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should preserve authored run character spacing.");
         TestAssert.True(Math.Abs(spacedSegment.PdfCharacterSpacing) < 0.0001d, "Normal DOCX run spacing should stay in positioned glyph advances.");
         TestAssert.True(Math.Abs(spacedSegment.PositioningCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should expose the resulting glyph-positioning spacing.");

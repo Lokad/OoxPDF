@@ -527,6 +527,15 @@ High-priority actions:
   (`19`, `2`, `7`, and `17` nonzero per-gap keys respectively, zero mismatches). This is not yet a production
   rule because the renderer does not know Office's emitted advance target; it is the invariant the next
   architecture slice must explain from OOXML/font/PDF state instead of from private data or font names.
+  2026-06-02 architecture follow-up: `DocxTextEmissionAdvanceProfile` now decomposes the candidate's planned
+  PDF emitted advance into rounded width-array advance, kerning `TJ` adjustment, positioned-spacing `TJ`
+  adjustment, and `Tc` gap total. Regenerated public text-state runs
+  `20260602-092913`/`092917`/`092921`/`092925` plus fresh `DocxInspect` sidecars show the same invariant against
+  the candidate plan directly: for gap-positive nonzero Office `Tc` keys, `(ReferenceEmittedAdvance -
+  PlannerEmittedAdvance) / GlyphGapCount == ReferenceTc` across all four probes (`19`, `2`, `5`, and `16`
+  keys, zero mismatches). Keep this as the structural target for the next renderer branch; do not turn it into
+  an oracle lookup, because production still needs to derive Word's emitted-advance target from document/font
+  state available before PDF emission.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

@@ -500,14 +500,22 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerRole = $segment.Role
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
             PlannerNaturalWidth = $segment.AdvanceProfile.NaturalPdfWidth
+            PlannerUnkernedWidth = $segment.AdvanceProfile.UnkernedPdfWidth
             PlannerRoundedWidth = $segment.AdvanceProfile.RoundedPdfWidth
+            PlannerKerningAdjustmentTotal = $segment.AdvanceProfile.KerningAdjustmentTotal
+            PlannerPositioningCharacterSpacingGapTotal = $segment.AdvanceProfile.PositioningCharacterSpacingGapTotal
+            PlannerTextStateCharacterSpacingGapTotal = $segment.AdvanceProfile.TextStateCharacterSpacingGapTotal
+            PlannerEmittedAdvance = $segment.AdvanceProfile.PlannedEmittedAdvance
             PlannerLayoutWidth = $segment.AdvanceProfile.LayoutWidth
             ReferenceNaturalMinusPlannerNatural = (SubtractOrNull $reference.NaturalWidthPoints $segment.AdvanceProfile.NaturalPdfWidth)
             ReferenceEmittedMinusPlannerLayout = (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.LayoutWidth)
             ReferenceEmittedMinusPlannerRounded = (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.RoundedPdfWidth)
+            ReferenceEmittedMinusPlannerEmitted = (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.PlannedEmittedAdvance)
             ReferenceEmittedMinusPlannerRoundedPerGap = (DivideOrNull (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.RoundedPdfWidth) $segment.AdvanceProfile.GlyphGapCount)
+            ReferenceEmittedMinusPlannerEmittedPerGap = (DivideOrNull (SubtractOrNull $reference.EmittedAdvancePoints $segment.AdvanceProfile.PlannedEmittedAdvance) $segment.AdvanceProfile.GlyphGapCount)
             PlannerResidualPerGap = $segment.AdvanceProfile.UniformResidualPerGap
             PlannerRoundedResidualPerGap = $segment.AdvanceProfile.RoundedResidualPerGap
+            PlannerEmittedResidualPerGap = $segment.AdvanceProfile.PlannedEmittedResidualPerGap
             PlannerGlyphAdvanceSignature = $segment.GlyphAdvanceSignature.Hash
             PlannerGlyphPairAdvanceSignature = $segment.GlyphAdvanceSignature.PairHash
             PlannerGlyphPairAdvanceUnits = $segment.GlyphAdvanceSignature.PairAdvanceUnits
@@ -621,6 +629,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerPerGapWidthDeltas = @(Group-Count $pairs {
             param($pair)
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|refEmittedMinusPlannerRoundedPerGap=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerRoundedPerGap 6) + "|plannerRoundedResidualPerGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceVsPlannerEmittedAdvanceDeltas = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|refEmittedMinusPlannerEmitted=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerEmitted 6) + "|refEmittedMinusPlannerEmittedPerGap=" + (RoundedKey $pair.ReferenceEmittedMinusPlannerEmittedPerGap 6) + "|plannerTextStateGapTotal=" + (RoundedKey $pair.PlannerTextStateCharacterSpacingGapTotal 6) + "|plannerPositioningGapTotal=" + (RoundedKey $pair.PlannerPositioningCharacterSpacingGapTotal 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceNonzeroTcByPlannerClassGlyphGap = @(Group-Count $nonzeroReferencePairs {
             param($pair)

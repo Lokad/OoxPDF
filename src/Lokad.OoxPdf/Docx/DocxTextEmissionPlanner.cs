@@ -24,12 +24,19 @@ internal readonly record struct DocxTextEmissionAdvanceProfile(
     int GlyphCount,
     int GlyphGapCount,
     double NaturalPdfWidth,
+    double UnkernedPdfWidth,
     double RoundedPdfWidth,
+    double KerningAdjustmentTotal,
+    double PositioningCharacterSpacingGapTotal,
+    double TextStateCharacterSpacingGapTotal,
+    double PlannedEmittedAdvance,
     double LayoutWidth,
     double LayoutToNaturalResidual,
     double LayoutToRoundedResidual,
+    double PlannedEmittedToLayoutResidual,
     double? UniformResidualPerGap,
-    double? RoundedResidualPerGap);
+    double? RoundedResidualPerGap,
+    double? PlannedEmittedResidualPerGap);
 
 internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
     int GlyphCount,
@@ -143,21 +150,38 @@ internal static class DocxTextEmissionPlanner
         int glyphCount = CountMappedGlyphs(text, embedded);
         int glyphGapCount = Math.Max(0, glyphCount - 1);
         double naturalPdfWidth = embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: true);
+        double unkernedPdfWidth = embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: false);
         double roundedPdfWidth = MeasureRoundedPdfWidth(text, embedded, plan.PdfFontSize);
+        double kerningAdjustmentTotal = naturalPdfWidth - unkernedPdfWidth;
+        double positioningCharacterSpacingGapTotal = plan.PositioningCharacterSpacing * glyphGapCount;
+        double textStateCharacterSpacingGapTotal = plan.PdfCharacterSpacing * glyphGapCount;
+        double plannedEmittedAdvance = roundedPdfWidth +
+            kerningAdjustmentTotal +
+            positioningCharacterSpacingGapTotal +
+            textStateCharacterSpacingGapTotal;
         double naturalResidual = layoutWidth - naturalPdfWidth;
         double roundedResidual = layoutWidth - roundedPdfWidth;
+        double plannedEmittedResidual = layoutWidth - plannedEmittedAdvance;
         double? naturalResidualPerGap = glyphGapCount == 0 ? null : naturalResidual / glyphGapCount;
         double? roundedResidualPerGap = glyphGapCount == 0 ? null : roundedResidual / glyphGapCount;
+        double? plannedEmittedResidualPerGap = glyphGapCount == 0 ? null : plannedEmittedResidual / glyphGapCount;
         return new(
             glyphCount,
             glyphGapCount,
             naturalPdfWidth,
+            unkernedPdfWidth,
             roundedPdfWidth,
+            kerningAdjustmentTotal,
+            positioningCharacterSpacingGapTotal,
+            textStateCharacterSpacingGapTotal,
+            plannedEmittedAdvance,
             layoutWidth,
             naturalResidual,
             roundedResidual,
+            plannedEmittedResidual,
             naturalResidualPerGap,
-            roundedResidualPerGap);
+            roundedResidualPerGap,
+            plannedEmittedResidualPerGap);
     }
 
     public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(string text, PdfEmbeddedFont embedded)
