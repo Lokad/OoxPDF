@@ -359,6 +359,14 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|glyphSig=" + $segment.GlyphAdvanceSignature.Hash
         })
+        TextClassByGlyphPairSignature = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|pairSig=" + $segment.GlyphAdvanceSignature.PairHash
+        })
+        TextClassByGlyphPairAdvanceRange = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|pairMin=" + (RoundedKey $segment.GlyphAdvanceSignature.PairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $segment.GlyphAdvanceSignature.PairAdvanceMaxUnits 0)
+        })
         TextClassByResidualPerGap = @(Group-Count $segments {
             param($segment)
             (PlannerTextClass $segment) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
@@ -384,6 +392,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
         AdvanceByGlyphSignature = @(Group-PlannerAdvance $segments {
             param($segment)
             "glyphSig=" + $segment.GlyphAdvanceSignature.Hash
+        })
+        AdvanceByGlyphPairSignature = @(Group-PlannerAdvance $segments {
+            param($segment)
+            "pairSig=" + $segment.GlyphAdvanceSignature.PairHash
         })
     }
 }
@@ -419,6 +431,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
             PlannerResidualPerGap = $segment.AdvanceProfile.UniformResidualPerGap
             PlannerGlyphAdvanceSignature = $segment.GlyphAdvanceSignature.Hash
+            PlannerGlyphPairAdvanceSignature = $segment.GlyphAdvanceSignature.PairHash
+            PlannerGlyphPairAdvanceUnits = $segment.GlyphAdvanceSignature.PairAdvanceUnits
+            PlannerGlyphPairAdvanceMinUnits = $segment.GlyphAdvanceSignature.PairAdvanceMinUnits
+            PlannerGlyphPairAdvanceMaxUnits = $segment.GlyphAdvanceSignature.PairAdvanceMaxUnits
             PlannerTerminalSpace = [bool]$segment.IsTerminalLineSpace
         })
     }
@@ -444,6 +460,14 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerGlyphSignature = @(Group-Count $pairs {
             param($pair)
             "glyphSig=" + $pair.PlannerGlyphAdvanceSignature + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerGlyphPairSignature = @(Group-Count $pairs {
+            param($pair)
+            "pairSig=" + $pair.PlannerGlyphPairAdvanceSignature + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerGlyphPairAdvanceRange = @(Group-Count $pairs {
+            param($pair)
+            "pairMin=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxUnits 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceTcByPlannerFontSize = @(Group-Count $pairs {
             param($pair)
@@ -472,6 +496,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceNonzeroTcByPlannerGlyphSignature = @(Group-Count $nonzeroReferencePairs {
             param($pair)
             "glyphSig=" + $pair.PlannerGlyphAdvanceSignature + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceNonzeroTcByPlannerGlyphPairSignature = @(Group-Count $nonzeroReferencePairs {
+            param($pair)
+            "pairSig=" + $pair.PlannerGlyphPairAdvanceSignature + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
     }
 }

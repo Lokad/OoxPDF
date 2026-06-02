@@ -10642,7 +10642,11 @@ internal static class DocxTests
         TestAssert.Equal(4, spacedSegment.GlyphAdvanceSignature.GlyphCount);
         TestAssert.Equal(3, spacedSegment.GlyphAdvanceSignature.GlyphPairCount);
         TestAssert.True(spacedSegment.GlyphAdvanceSignature.AdvanceUnits > 0, "Snapshot should expose private-safe glyph advance totals.");
+        TestAssert.True(spacedSegment.GlyphAdvanceSignature.PairAdvanceUnits > 0, "Snapshot should expose private-safe glyph-pair advance totals.");
+        TestAssert.True(spacedSegment.GlyphAdvanceSignature.PairAdvanceMinUnits > 0, "Snapshot should expose the minimum glyph-pair advance.");
+        TestAssert.True(spacedSegment.GlyphAdvanceSignature.PairAdvanceMaxUnits >= spacedSegment.GlyphAdvanceSignature.PairAdvanceMinUnits, "Snapshot should expose a stable glyph-pair advance range.");
         TestAssert.True(spacedSegment.GlyphAdvanceSignature.Hash.Length == 16, "Snapshot should expose a fixed-width glyph advance signature hash.");
+        TestAssert.True(spacedSegment.GlyphAdvanceSignature.PairHash.Length == 16, "Snapshot should expose a fixed-width glyph-pair advance signature hash.");
         TestAssert.True(spacedSegment.AdvanceProfile.NaturalPdfWidth > 0d, "Snapshot should expose natural PDF font advance.");
         TestAssert.True(spacedSegment.AdvanceProfile.UniformResidualPerGap is not null, "Multi-glyph operations should expose residual per glyph gap.");
         TestAssert.True(Math.Abs(spacedSegment.LayoutCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should preserve authored run character spacing.");
@@ -10662,6 +10666,9 @@ internal static class DocxTests
         TestAssert.Equal(1, labelSegment.GlyphAdvanceSignature.GlyphCount);
         TestAssert.Equal(0, labelSegment.GlyphAdvanceSignature.GlyphPairCount);
         TestAssert.True(labelSegment.GlyphAdvanceSignature.AdvanceUnits > 0, "Single-glyph labels should still expose an advance signature.");
+        TestAssert.Equal(0, labelSegment.GlyphAdvanceSignature.PairAdvanceUnits);
+        TestAssert.Equal(0, labelSegment.GlyphAdvanceSignature.PairAdvanceMinUnits);
+        TestAssert.Equal(0, labelSegment.GlyphAdvanceSignature.PairAdvanceMaxUnits);
         TestAssert.True(labelSegment.AdvanceProfile.UniformResidualPerGap is null, "Single-glyph operations should not report a per-gap residual.");
         TestAssert.True(Math.Abs(labelSegment.PdfCharacterSpacing - 0.04d) < 0.0001d, "Numbering labels should expose their PDF text-state character spacing.");
         TestAssert.True(Math.Abs(labelSegment.PositioningCharacterSpacing) < 0.0001d, "Numbering PDF text-state spacing should not be double-counted in glyph positioning.");

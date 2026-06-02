@@ -33,6 +33,10 @@ internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
     int GlyphPairCount,
     int AdvanceUnits,
     int KerningUnits,
+    int PairAdvanceUnits,
+    int PairAdvanceMinUnits,
+    int PairAdvanceMaxUnits,
+    string PairHash,
     string Hash);
 
 internal static class DocxTextEmissionPlanner
@@ -135,7 +139,12 @@ internal static class DocxTextEmissionPlanner
         int glyphPairCount = 0;
         int advanceUnits = 0;
         int kerningUnits = 0;
+        int pairAdvanceUnits = 0;
+        int pairAdvanceMinUnits = 0;
+        int pairAdvanceMaxUnits = 0;
+        ulong pairHash = fnvOffset;
         ushort previousGlyph = 0;
+        ushort previousAdvance = 0;
         foreach (Rune rune in text.EnumerateRunes())
         {
             ushort glyph = embedded.Font.MapCodePoint(rune.Value);
@@ -150,6 +159,13 @@ internal static class DocxTextEmissionPlanner
             {
                 glyphPairCount++;
                 kerningUnits += kerning;
+                int pairAdvance = previousAdvance + advance + kerning;
+                pairAdvanceUnits += pairAdvance;
+                pairAdvanceMinUnits = glyphPairCount == 1 ? pairAdvance : Math.Min(pairAdvanceMinUnits, pairAdvance);
+                pairAdvanceMaxUnits = glyphPairCount == 1 ? pairAdvance : Math.Max(pairAdvanceMaxUnits, pairAdvance);
+                pairHash = AppendHash(pairHash, previousGlyph, fnvPrime);
+                pairHash = AppendHash(pairHash, glyph, fnvPrime);
+                pairHash = AppendHash(pairHash, unchecked((ushort)pairAdvance), fnvPrime);
             }
 
             advanceUnits += advance;
@@ -157,10 +173,20 @@ internal static class DocxTextEmissionPlanner
             hash = AppendHash(hash, advance, fnvPrime);
             hash = AppendHash(hash, unchecked((ushort)kerning), fnvPrime);
             previousGlyph = glyph;
+            previousAdvance = advance;
             glyphCount++;
         }
 
-        return new(glyphCount, glyphPairCount, advanceUnits, kerningUnits, hash.ToString("X16", CultureInfo.InvariantCulture));
+        return new(
+            glyphCount,
+            glyphPairCount,
+            advanceUnits,
+            kerningUnits,
+            pairAdvanceUnits,
+            pairAdvanceMinUnits,
+            pairAdvanceMaxUnits,
+            pairHash.ToString("X16", CultureInfo.InvariantCulture),
+            hash.ToString("X16", CultureInfo.InvariantCulture));
     }
 
     public static IReadOnlyList<DocxTextEmissionPart> SplitOfficeTextOperationParts(

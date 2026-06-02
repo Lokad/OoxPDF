@@ -6687,6 +6687,15 @@ Current validation baseline:
   by signature into `-0.0437`, `-0.0509`, and `-0.0182` buckets. This is diagnostic evidence only, not a
   renderer rule: the next renderer change still needs an Office-like decomposition model, but it should use
   glyph-advance structure rather than text class, font name, table context, or residual-per-gap alone.
+  2026-06-02 pair-signature follow-up: candidate DOCX text-emission snapshots now expose private-safe
+  glyph-pair advance structure in addition to whole-operation glyph signatures: pair advance sum, min/max pair
+  advance, and a separate fixed-width pair hash. `SummarizeDocxTextState.ps1` carries those fields into planner
+  buckets and sequence-paired Office `Tc` buckets, giving the next public probe a lower-level oracle when whole
+  residuals or whole-segment signatures are not enough. This remains diagnostic-only and deliberately does not
+  select a renderer `Tc`; keep the implementation branch open for an Office-like decomposition model derived
+  from glyph advance/shaping structure rather than text strings, font names, table roles, or observed bucket
+  constants. Validation passed `docx-core --skip-slow` (`49`) and full solution build; an initial parallel
+  test/build attempt hit a transient output DLL lock and passed on serial rerun.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
