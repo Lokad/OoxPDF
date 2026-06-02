@@ -6458,6 +6458,14 @@ internal static class DocxTests
         TestAssert.True(layoutSnapshot.AnchorBlockVerticalTop is not null, "Floating drawing layout should resolve its source block top before rendering.");
         TestAssert.True(layoutSnapshot.AnchorBlockVerticalBottom is not null, "Floating drawing layout should resolve its source block bottom before rendering.");
         TestAssert.True(layoutSnapshot.AnchorBlockVerticalTop > layoutSnapshot.AnchorBlockVerticalBottom, "Floating drawing anchor block should carry placed vertical bounds.");
+        TestAssert.Equal(144d, layoutSnapshot.ExtentWidthPoints ?? 0d);
+        TestAssert.Equal(72d, layoutSnapshot.ExtentHeightPoints ?? 0d);
+        TestAssert.True(layoutSnapshot.HorizontalOffsetPoints is null, "Aligned horizontal anchors should not invent a numeric offset.");
+        TestAssert.Equal(5d, layoutSnapshot.VerticalOffsetPoints ?? 0d);
+        TestAssert.Equal(9d, layoutSnapshot.DistanceTopPoints ?? 0d);
+        TestAssert.Equal(18d, layoutSnapshot.DistanceBottomPoints ?? 0d);
+        TestAssert.Equal(27d, layoutSnapshot.DistanceLeftPoints ?? 0d);
+        TestAssert.Equal(36d, layoutSnapshot.DistanceRightPoints ?? 0d);
         TestAssert.Equal("rIdImage1", layoutSnapshot.ImageRelationshipId ?? string.Empty);
         TestAssert.Equal("/word/media/image1.png", layoutSnapshot.ImagePartName ?? string.Empty);
         TestAssert.Equal("image/png", layoutSnapshot.ImageContentType ?? string.Empty);

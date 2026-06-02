@@ -17,7 +17,15 @@ internal sealed record DocxFloatingDrawingLayout(
     int? PageEndIndex,
     int? AnchorPageIndex,
     double? AnchorBlockVerticalTop,
-    double? AnchorBlockVerticalBottom);
+    double? AnchorBlockVerticalBottom,
+    double? ExtentWidthPoints,
+    double? ExtentHeightPoints,
+    double? HorizontalOffsetPoints,
+    double? VerticalOffsetPoints,
+    double? DistanceTopPoints,
+    double? DistanceBottomPoints,
+    double? DistanceLeftPoints,
+    double? DistanceRightPoints);
 
 internal sealed record DocxLineHeightProfile(
     double LineHeight,
@@ -67,6 +75,14 @@ internal sealed record DocxLayoutSnapshot(
                     drawing.AnchorPageIndex,
                     drawing.AnchorBlockVerticalTop,
                     drawing.AnchorBlockVerticalBottom,
+                    drawing.ExtentWidthPoints,
+                    drawing.ExtentHeightPoints,
+                    drawing.HorizontalOffsetPoints,
+                    drawing.VerticalOffsetPoints,
+                    drawing.DistanceTopPoints,
+                    drawing.DistanceBottomPoints,
+                    drawing.DistanceLeftPoints,
+                    drawing.DistanceRightPoints,
                     drawing.Drawing.WrapKind,
                     drawing.Drawing.WrapTextValue,
                     drawing.Drawing.HorizontalRelativeFromValue,
@@ -562,6 +578,14 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     int? AnchorPageIndex,
     double? AnchorBlockVerticalTop,
     double? AnchorBlockVerticalBottom,
+    double? ExtentWidthPoints,
+    double? ExtentHeightPoints,
+    double? HorizontalOffsetPoints,
+    double? VerticalOffsetPoints,
+    double? DistanceTopPoints,
+    double? DistanceBottomPoints,
+    double? DistanceLeftPoints,
+    double? DistanceRightPoints,
     string? WrapKind,
     string? WrapTextValue,
     string? HorizontalRelativeFromValue,
@@ -1416,9 +1440,24 @@ internal sealed class DocxLayoutEngine
                     sourceBlock?.LastPageIndex,
                     sourceBlock?.FirstPageIndex,
                     sourceBlock?.VerticalTop,
-                    sourceBlock?.VerticalBottom);
+                    sourceBlock?.VerticalBottom,
+                    ReadEmuPoints(drawing.ExtentCxValue),
+                    ReadEmuPoints(drawing.ExtentCyValue),
+                    ReadEmuPoints(drawing.HorizontalOffsetValue),
+                    ReadEmuPoints(drawing.VerticalOffsetValue),
+                    ReadEmuPoints(drawing.DistanceTopValue),
+                    ReadEmuPoints(drawing.DistanceBottomValue),
+                    ReadEmuPoints(drawing.DistanceLeftValue),
+                    ReadEmuPoints(drawing.DistanceRightValue));
             })
             .ToArray();
+    }
+
+    private static double? ReadEmuPoints(string? value)
+    {
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu)
+            ? OoxUnits.EmuToPoints(emu)
+            : null;
     }
 
     private static DocxLayoutSourceBlockBounds? FindSourceBlockBounds(IReadOnlyList<DocxLayoutPage> pages, int sourceBlockIndex)

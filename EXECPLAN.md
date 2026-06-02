@@ -777,6 +777,12 @@ High-priority actions:
     layout inputs, not to place anchored images as inline fallbacks or tune per-document coordinates. Focused
     coverage asserts anchor block geometry is available before rendering; validation passed `docx-core
     --skip-slow` (`52`).
+    2026-06-02 architecture follow-up: the floating layout record now parses Wordprocessing Drawing EMU geometry
+    into point values for `wp:extent`, horizontal/vertical `posOffset`, and `distT/distB/distL/distR`. This keeps
+    the anchor frame size separate from the embedded image's intrinsic dimensions, and lets future coordinate
+    resolution consume typed layout data instead of reparsing raw string tokens. Rendering and wrap exclusion
+    remain open until public Office probes establish the supported `relativeFrom`/align/offset combinations and
+    PDF draw order. Validation passed `docx-core --skip-slow` (`52`).
   2026-06-01 follow-up: private-safe page-14..16 flow mapping shifted the page-15 diagnosis away from a
   simple post-table heading gap. Block 208, a `keepNext`/`keepLines` heading between two tables, is `25.665pt`
   higher in the candidate than Office, while the preceding heading block 206 is only `1.414pt` off when it
