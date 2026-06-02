@@ -88,6 +88,15 @@ internal sealed class DocxRenderer
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
             int pageNumber = pageIndex + 1;
+            RenderFloatingDrawings(
+                layout.FloatingDrawings,
+                pageIndex,
+                behindDocument: true,
+                graphics,
+                pageImages,
+                diagnosticSink,
+                ref imageIndex);
+
             foreach (DocxTextLineLayout staticLine in layoutPage.StaticTextLines)
             {
                 RenderTextLine(staticLine, graphics, fontResources, pageNumber, layout.Pages.Count);
@@ -100,6 +109,15 @@ internal sealed class DocxRenderer
                 DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
                 RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
             }
+
+            RenderFloatingDrawings(
+                layout.FloatingDrawings,
+                pageIndex,
+                behindDocument: false,
+                graphics,
+                pageImages,
+                diagnosticSink,
+                ref imageIndex);
 
             IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, fontResources, pageNumber, layout.Pages.Count, bookmarkDestinations);
             pages.Add(new PdfPage(layoutPage.Width, layoutPage.Height, graphics.ToString(), fontResources.Resources, pageImages.ToArray(), [], [], [], annotations));
@@ -428,6 +446,71 @@ internal sealed class DocxRenderer
         string imageName = "Im" + imageIndex++;
         graphics.DrawImage(imageName, image.X, image.Y, image.Width, image.Height);
         pageImages.Add(new PdfImageResource(imageName, xObject));
+    }
+
+    private static void RenderFloatingDrawings(
+        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
+        int pageIndex,
+        bool behindDocument,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        ref int imageIndex)
+    {
+        foreach (DocxFloatingDrawingLayout drawing in floatingDrawings
+            .Where(drawing => drawing.AnchorPageIndex == pageIndex && IsBehindDocument(drawing.Drawing) == behindDocument)
+            .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)))
+        {
+            RenderFloatingDrawing(drawing, graphics, pageImages, diagnosticSink, ref imageIndex);
+        }
+    }
+
+    private static void RenderFloatingDrawing(
+        DocxFloatingDrawingLayout drawing,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        ref int imageIndex)
+    {
+        if (drawing.Drawing.Image is not { } image ||
+            drawing.PlacedX is not { } placedX ||
+            drawing.PlacedTop is not { } placedTop ||
+            drawing.ExtentWidthPoints is not { } width ||
+            drawing.ExtentHeightPoints is not { } height)
+        {
+            return;
+        }
+
+        PdfImageXObject? xObject = CreateImage(image, diagnosticSink, drawing.AnchorPageIndex ?? 0);
+        if (xObject is null)
+        {
+            return;
+        }
+
+        string imageName = "Im" + imageIndex++;
+        graphics.DrawImage(imageName, placedX, placedTop - height, width, height);
+        pageImages.Add(new PdfImageResource(imageName, xObject));
+    }
+
+    private static bool IsBehindDocument(DocxFloatingDrawing drawing)
+    {
+        return IsOnOffTrue(drawing.BehindDocumentValue);
+    }
+
+    private static long ReadZOrder(string? value)
+    {
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long zOrder)
+            ? zOrder
+            : 0L;
+    }
+
+    private static bool IsOnOffTrue(string? value)
+    {
+        return value is not null &&
+            (value.Length == 0 ||
+            value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("on", StringComparison.OrdinalIgnoreCase));
     }
 
     private static void RenderTableRow(

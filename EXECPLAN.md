@@ -7134,6 +7134,15 @@ Current validation baseline:
   coverage now verifies that a second-column `relativeFrom="column"` anchor exposes both its reference frame and
   placed x/top coordinates. Rendering anchored drawings and applying column-aware wrap exclusion remain open.
   Validation passed `docx-page --skip-slow` (`33`) and `docx-core --skip-slow` (`52`).
+  2026-06-02 architecture follow-up: the DOCX renderer now consumes resolved `DocxFloatingDrawingLayout`
+  placement for anchored image drawings instead of leaving anchor geometry as inspection-only data. Behind-document
+  images are emitted before normal page content; foreground anchors are emitted after body content; both paths share
+  the existing image XObject pipeline and use `relativeHeight` only as structural z-order, not as a geometry
+  shortcut. Bottom-up coverage extends the public anchored PNG fixture through PDF output and derives the expected
+  image transform from the layout snapshot. Keep wrap exclusion, non-image DrawingML shapes, unresolved anchor
+  modes, and true Office text-flow interaction open. Validation passed `docx-images --skip-slow` (`3`),
+  `docx-core --skip-slow` (`53`), `docx-page --skip-slow` (`36` after rerun; one parallel run hit a transient
+  build-file lock), and full solution build.
   2026-06-02 architecture follow-up: table layout now resolves a current table frame at each row boundary
   instead of capturing the initial column x/width for the whole table. Multi-column table rows and repeated
   header rows now consume the active `DocxLayoutColumnFrame` after a column/page advance, and the table loop

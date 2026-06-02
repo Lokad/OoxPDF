@@ -6803,6 +6803,17 @@ internal static class DocxTests
         TestAssert.Equal("image/png", layoutSnapshot.ImageContentType ?? string.Empty);
         TestAssert.Equal(144d, layoutSnapshot.ImageWidthPoints ?? 0d);
         TestAssert.Equal(72d, layoutSnapshot.ImageHeightPoints ?? 0d);
+
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.Contains("/Im1 Do", pdf);
+        double placedImageY = (layoutSnapshot.PlacedTop ?? 0d) - (layoutSnapshot.ExtentHeightPoints ?? 0d);
+        string imageTransform = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{layoutSnapshot.ExtentWidthPoints ?? 0d:0.###} 0 0 {layoutSnapshot.ExtentHeightPoints ?? 0d:0.###} {layoutSnapshot.PlacedX ?? 0d:0.###} {placedImageY:0.###} cm");
+        TestAssert.Contains(imageTransform, pdf);
     }
 
     public static void DocxSyntheticTableRendersCellsAndText()
