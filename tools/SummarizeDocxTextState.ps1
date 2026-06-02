@@ -294,8 +294,10 @@ function Group-PlannerAdvance($Segments, [scriptblock] $KeySelector) {
                 GlyphCount = 0
                 GlyphGapCount = 0
                 NaturalPdfWidth = 0d
+                RoundedPdfWidth = 0d
                 LayoutWidth = 0d
                 LayoutToNaturalResidual = 0d
+                LayoutToRoundedResidual = 0d
             }
         }
 
@@ -305,8 +307,10 @@ function Group-PlannerAdvance($Segments, [scriptblock] $KeySelector) {
             $group.GlyphCount += [int]$segment.AdvanceProfile.GlyphCount
             $group.GlyphGapCount += [int]$segment.AdvanceProfile.GlyphGapCount
             $group.NaturalPdfWidth += [double]$segment.AdvanceProfile.NaturalPdfWidth
+            $group.RoundedPdfWidth += [double]$segment.AdvanceProfile.RoundedPdfWidth
             $group.LayoutWidth += [double]$segment.AdvanceProfile.LayoutWidth
             $group.LayoutToNaturalResidual += [double]$segment.AdvanceProfile.LayoutToNaturalResidual
+            $group.LayoutToRoundedResidual += [double]$segment.AdvanceProfile.LayoutToRoundedResidual
         }
     }
 
@@ -319,9 +323,12 @@ function Group-PlannerAdvance($Segments, [scriptblock] $KeySelector) {
                 GlyphCount = $group.GlyphCount
                 GlyphGapCount = $group.GlyphGapCount
                 NaturalPdfWidth = [Math]::Round($group.NaturalPdfWidth, 6)
+                RoundedPdfWidth = [Math]::Round($group.RoundedPdfWidth, 6)
                 LayoutWidth = [Math]::Round($group.LayoutWidth, 6)
                 LayoutToNaturalResidual = [Math]::Round($group.LayoutToNaturalResidual, 6)
+                LayoutToRoundedResidual = [Math]::Round($group.LayoutToRoundedResidual, 6)
                 UniformResidualPerGap = if ($group.GlyphGapCount -eq 0) { $null } else { [Math]::Round($group.LayoutToNaturalResidual / $group.GlyphGapCount, 6) }
+                RoundedResidualPerGap = if ($group.GlyphGapCount -eq 0) { $null } else { [Math]::Round($group.LayoutToRoundedResidual / $group.GlyphGapCount, 6) }
             }
         }
     )
@@ -375,6 +382,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
         })
+        TextClassByRoundedResidualPerGap = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|roundResGap=" + (RoundedKey $segment.AdvanceProfile.RoundedResidualPerGap 6)
+        })
         TextLengthByResidualPerGap = @(Group-Count $segments {
             param($segment)
             "len=" + (RoundedKey $segment.TextLength 0) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
@@ -382,6 +393,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
         FontSizeByResidualPerGap = @(Group-Count $segments {
             param($segment)
             "tf=" + (RoundedKey $segment.PdfFontSize 3) + "|resGap=" + (RoundedKey $segment.AdvanceProfile.UniformResidualPerGap 6)
+        })
+        FontSizeByRoundedResidualPerGap = @(Group-Count $segments {
+            param($segment)
+            "tf=" + (RoundedKey $segment.PdfFontSize 3) + "|roundResGap=" + (RoundedKey $segment.AdvanceProfile.RoundedResidualPerGap 6)
         })
         TerminalSpaceByResidualPerGap = @(Group-Count $segments {
             param($segment)
@@ -434,6 +449,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerRole = $segment.Role
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
             PlannerResidualPerGap = $segment.AdvanceProfile.UniformResidualPerGap
+            PlannerRoundedResidualPerGap = $segment.AdvanceProfile.RoundedResidualPerGap
             PlannerGlyphAdvanceSignature = $segment.GlyphAdvanceSignature.Hash
             PlannerGlyphPairAdvanceSignature = $segment.GlyphAdvanceSignature.PairHash
             PlannerGlyphPairAdvanceUnits = $segment.GlyphAdvanceSignature.PairAdvanceUnits
@@ -463,6 +479,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerResidualPerGap = @(Group-Count $pairs {
             param($pair)
             "resGap=" + (RoundedKey $pair.PlannerResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerRoundedResidualPerGap = @(Group-Count $pairs {
+            param($pair)
+            "roundResGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceTcByPlannerGlyphSignature = @(Group-Count $pairs {
             param($pair)
@@ -503,6 +523,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceNonzeroTcByPlannerResidualPerGap = @(Group-Count $nonzeroReferencePairs {
             param($pair)
             "resGap=" + (RoundedKey $pair.PlannerResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceNonzeroTcByPlannerRoundedResidualPerGap = @(Group-Count $nonzeroReferencePairs {
+            param($pair)
+            "roundResGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceNonzeroTcByPlannerGlyphSignature = @(Group-Count $nonzeroReferencePairs {
             param($pair)

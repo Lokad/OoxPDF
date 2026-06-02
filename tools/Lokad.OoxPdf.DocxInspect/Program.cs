@@ -136,15 +136,19 @@ static object SumAdvanceProfiles(IEnumerable<DocxTextEmissionSegmentSnapshot> se
     int glyphCount = 0;
     int glyphGapCount = 0;
     double naturalPdfWidth = 0d;
+    double roundedPdfWidth = 0d;
     double layoutWidth = 0d;
-    double residual = 0d;
+    double naturalResidual = 0d;
+    double roundedResidual = 0d;
     foreach (DocxTextEmissionSegmentSnapshot segment in segments)
     {
         glyphCount += segment.AdvanceProfile.GlyphCount;
         glyphGapCount += segment.AdvanceProfile.GlyphGapCount;
         naturalPdfWidth += segment.AdvanceProfile.NaturalPdfWidth;
+        roundedPdfWidth += segment.AdvanceProfile.RoundedPdfWidth;
         layoutWidth += segment.AdvanceProfile.LayoutWidth;
-        residual += segment.AdvanceProfile.LayoutToNaturalResidual;
+        naturalResidual += segment.AdvanceProfile.LayoutToNaturalResidual;
+        roundedResidual += segment.AdvanceProfile.LayoutToRoundedResidual;
     }
 
     return new
@@ -152,8 +156,11 @@ static object SumAdvanceProfiles(IEnumerable<DocxTextEmissionSegmentSnapshot> se
         GlyphCount = glyphCount,
         GlyphGapCount = glyphGapCount,
         NaturalPdfWidth = Math.Round(naturalPdfWidth, 6),
+        RoundedPdfWidth = Math.Round(roundedPdfWidth, 6),
         LayoutWidth = Math.Round(layoutWidth, 6),
-        LayoutToNaturalResidual = Math.Round(residual, 6),
-        UniformResidualPerGap = glyphGapCount == 0 ? (double?)null : Math.Round(residual / glyphGapCount, 6)
+        LayoutToNaturalResidual = Math.Round(naturalResidual, 6),
+        LayoutToRoundedResidual = Math.Round(roundedResidual, 6),
+        UniformResidualPerGap = glyphGapCount == 0 ? (double?)null : Math.Round(naturalResidual / glyphGapCount, 6),
+        RoundedResidualPerGap = glyphGapCount == 0 ? (double?)null : Math.Round(roundedResidual / glyphGapCount, 6)
     };
 }

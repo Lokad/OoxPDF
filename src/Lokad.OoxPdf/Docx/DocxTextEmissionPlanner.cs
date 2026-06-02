@@ -24,9 +24,12 @@ internal readonly record struct DocxTextEmissionAdvanceProfile(
     int GlyphCount,
     int GlyphGapCount,
     double NaturalPdfWidth,
+    double RoundedPdfWidth,
     double LayoutWidth,
     double LayoutToNaturalResidual,
-    double? UniformResidualPerGap);
+    double LayoutToRoundedResidual,
+    double? UniformResidualPerGap,
+    double? RoundedResidualPerGap);
 
 internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
     int GlyphCount,
@@ -128,9 +131,21 @@ internal static class DocxTextEmissionPlanner
         int glyphCount = CountMappedGlyphs(text, embedded);
         int glyphGapCount = Math.Max(0, glyphCount - 1);
         double naturalPdfWidth = embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: true);
-        double residual = layoutWidth - naturalPdfWidth;
-        double? residualPerGap = glyphGapCount == 0 ? null : residual / glyphGapCount;
-        return new(glyphCount, glyphGapCount, naturalPdfWidth, layoutWidth, residual, residualPerGap);
+        double roundedPdfWidth = MeasureRoundedPdfWidth(text, embedded, plan.PdfFontSize);
+        double naturalResidual = layoutWidth - naturalPdfWidth;
+        double roundedResidual = layoutWidth - roundedPdfWidth;
+        double? naturalResidualPerGap = glyphGapCount == 0 ? null : naturalResidual / glyphGapCount;
+        double? roundedResidualPerGap = glyphGapCount == 0 ? null : roundedResidual / glyphGapCount;
+        return new(
+            glyphCount,
+            glyphGapCount,
+            naturalPdfWidth,
+            roundedPdfWidth,
+            layoutWidth,
+            naturalResidual,
+            roundedResidual,
+            naturalResidualPerGap,
+            roundedResidualPerGap);
     }
 
     public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(string text, PdfEmbeddedFont embedded)
@@ -267,6 +282,23 @@ internal static class DocxTextEmissionPlanner
         }
 
         return count;
+    }
+
+    private static double MeasureRoundedPdfWidth(string text, PdfEmbeddedFont embedded, double fontSize)
+    {
+        double pdfUnits = 0d;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            ushort glyph = embedded.Font.MapCodePoint(rune.Value);
+            if (glyph == 0)
+            {
+                continue;
+            }
+
+            pdfUnits += Math.Round(embedded.Font.GetAdvanceWidth(glyph) * 1000d / embedded.Font.UnitsPerEm);
+        }
+
+        return pdfUnits * fontSize / 1000d;
     }
 
     private static ulong AppendHash(ulong hash, ushort value, ulong fnvPrime)

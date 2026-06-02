@@ -6714,6 +6714,15 @@ Current validation baseline:
   pair range alone cannot choose the sign. Validation passed `docx-core --skip-slow` (`49`), full solution
   build, refreshed `InspectDocx`, and text-state summary on `docx-ladder-03-text-state-context` run
   `20260602-085135`.
+  2026-06-02 PDF-width residual follow-up: candidate text-emission advance profiles now also expose the
+  residual against the actual rounded PDF `/W` width-array model, not only raw OpenType+kerning natural width.
+  `DocxInspect` aggregates `RoundedPdfWidth`, `LayoutToRoundedResidual`, and `RoundedResidualPerGap`, and the
+  text-state summary pairs those rounded residual buckets against Office `Tc`. Refreshed public evidence:
+  `docx-ladder-03-table-text-state` nonzero Office pairs sit at rounded residual-per-gap `-0.030846` (`2`) and
+  `-0.041128` (`4`) for `refTc=-0.0182`; `docx-ladder-03-text-state-context` confirms rounded residual alone
+  is still insufficient because `roundResGap=-0.053532` maps to both `refTc=-0.0437` and `refTc=0.0509`.
+  Keep this as PDF-level structural evidence; do not turn rounded residuals, pair ranges, text classes, or
+  public bucket values into renderer conditions without a deeper Office-like shaping/decomposition model.
   2026-06-01 negative result: a narrower two-encodable-glyph residual split was tested and reverted. The
   rule computed `Tc` from the difference between the already-laid-out segment width and the natural PDF width
   at Office's rounded export font size, applying it only when there was exactly one glyph gap and no authored
