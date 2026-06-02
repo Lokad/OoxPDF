@@ -4632,9 +4632,15 @@ block models and richer section/pagination layout before adding more Word pagina
     internal-only relationship view for package parts. Structure snapshots expose hyperlink counts split into
     external and internal link inventories; table, row, and cell snapshots now carry the same hyperlink
     inventory for table-cell paragraphs. Validation passed `docx-text --skip-slow` (`45`),
-    `docx-core --skip-slow` (`32`), `docx-tables --skip-slow` (`94`), and full solution build. Keep actual PDF
-    annotations, internal anchor destinations, visited/unvisited style behavior, and side-story hyperlink span
-    coverage open.
+    `docx-core --skip-slow` (`32`), `docx-tables --skip-slow` (`94`), and full solution build.
+  - [x] 2026-06-02: side-story hyperlinks now keep relationship targets as well. Comment/footnote/endnote
+    paragraph parsing receives the full story-part relationship map, so external hyperlinks inside related
+    stories can populate `DocxHyperlinkSpan` just like main-document hyperlinks. `DocxStructureStorySnapshot`
+    now reports hyperlink, external-link, and internal-link counts for body, header/footer, and related
+    stories. The related-story package test includes a comment-owned external hyperlink and checks reader,
+    structure, and font-plan ownership. Validation passed `docx-core --skip-slow` (`32`),
+    `docx-text --skip-slow` (`45`), and full solution build. Keep actual PDF annotations, internal anchor
+    destinations, visited/unvisited style behavior, and visual placement open.
 
 ### DOCX Synthetic Fidelity Ladder
 

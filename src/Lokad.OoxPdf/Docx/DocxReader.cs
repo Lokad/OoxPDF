@@ -1564,7 +1564,6 @@ internal sealed class DocxReader
         using Stream stream = part.OpenRead();
         XDocument partXml = SafeXml.Load(stream);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name)
-            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
         return partXml.Root?

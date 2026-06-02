@@ -10751,6 +10751,12 @@ internal static class DocxTests
                   <Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>
                 </Relationships>
                 """,
+            ["word/_rels/comments.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdCommentLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/comment" TargetMode="External"/>
+                </Relationships>
+                """,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -10768,9 +10774,11 @@ internal static class DocxTests
                 """,
             ["word/comments.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:comment w:id="1">
                     <w:p><w:r><w:t>Comment body</w:t></w:r></w:p>
+                    <w:p><w:hyperlink r:id="rIdCommentLink"><w:r><w:t>Comment link</w:t></w:r></w:hyperlink></w:p>
                     <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Comment table</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
                   </w:comment>
                 </w:comments>
@@ -10820,7 +10828,10 @@ internal static class DocxTests
         TestAssert.Equal(0, endnoteReference.RunChildIndex);
         TestAssert.Equal(0, endnoteReference.TextOffsetInRun);
         TestAssert.Equal(3, document.RelatedStories.Count);
-        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Comment" && story.PartName == "/word/comments.xml" && story.Id == "1" && story.BodyElements.Count == 2 && story.Paragraphs.Count == 1 && story.Tables.Count == 1), "Comment bodies should be preserved as related DOCX stories.");
+        DocxRelatedStory commentStory = document.RelatedStories.Single(story => story.Kind == "Comment");
+        TestAssert.True(commentStory.PartName == "/word/comments.xml" && commentStory.Id == "1" && commentStory.BodyElements.Count == 3 && commentStory.Paragraphs.Count == 2 && commentStory.Tables.Count == 1, "Comment bodies should be preserved as related DOCX stories.");
+        TestAssert.Equal(1, commentStory.Paragraphs.Sum(paragraph => paragraph.Hyperlinks.Count));
+        TestAssert.Equal("https://example.invalid/comment", commentStory.Paragraphs.SelectMany(paragraph => paragraph.Hyperlinks).Single().Target ?? string.Empty);
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
 
@@ -10836,12 +10847,13 @@ internal static class DocxTests
         TestAssert.Equal(1, referenceBlock.FootnoteReferenceCount);
         TestAssert.Equal(1, referenceBlock.EndnoteReferenceCount);
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Body" && story.InlineReferenceCount == 3), "Structure snapshots should expose body inline story-reference ownership.");
-        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.BlockCount == 2 && story.ParagraphCount == 1 && story.TableCount == 1 && story.TextLength == 25), "Structure snapshots should expose comment story ownership and table metrics.");
+        TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Comment" && story.Scope == "/word/comments.xml" && story.VariantType == "1" && story.BlockCount == 3 && story.ParagraphCount == 2 && story.TableCount == 1 && story.TextLength == 37 && story.HyperlinkCount == 1 && story.ExternalHyperlinkCount == 1), "Structure snapshots should expose comment story ownership, hyperlinks, and table metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footnote" && story.Scope == "/word/footnotes.xml" && story.VariantType == "2" && story.TextLength == 13), "Structure snapshots should expose footnote story text metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Endnote" && story.Scope == "/word/endnotes.xml" && story.VariantType == "3" && story.TextLength == 12), "Structure snapshots should expose endnote story text metrics.");
 
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"));
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment body"), "Related story runs should participate in DOCX font planning.");
+        TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment link"), "Related story hyperlink runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment table"), "Related story table runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Footnote body"), "Footnote runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Endnote body"), "Endnote runs should participate in DOCX font planning.");

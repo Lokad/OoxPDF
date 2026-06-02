@@ -104,7 +104,10 @@ internal sealed record DocxStructureSnapshot(
                 bodyBlocks.Count(block => block.Kind == "Table"),
                 bodyBlocks.Sum(block => block.TextLength),
                 bodyBlocks.Sum(block => block.InlineImageCount),
-                bodyBlocks.Sum(block => block.InlineReferenceCount))
+                bodyBlocks.Sum(block => block.InlineReferenceCount),
+                bodyBlocks.Sum(block => block.HyperlinkCount),
+                bodyBlocks.Sum(block => block.ExternalHyperlinkCount),
+                bodyBlocks.Sum(block => block.InternalHyperlinkCount))
         };
 
         AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType);
@@ -144,7 +147,10 @@ internal sealed record DocxStructureSnapshot(
                 0,
                 entry.Value.Sum(TextLength),
                 entry.Value.Sum(paragraph => paragraph.Images.Count),
-                entry.Value.Sum(ParagraphInlineReferenceCount)));
+                entry.Value.Sum(ParagraphInlineReferenceCount),
+                entry.Value.Sum(ParagraphHyperlinkCount),
+                entry.Value.Sum(ParagraphExternalHyperlinkCount),
+                entry.Value.Sum(ParagraphInternalHyperlinkCount)));
         }
     }
 
@@ -168,7 +174,10 @@ internal sealed record DocxStructureSnapshot(
                 tables.Length,
                 paragraphs.Sum(TextLength),
                 paragraphs.Sum(paragraph => paragraph.Images.Count),
-                paragraphs.Sum(ParagraphInlineReferenceCount)));
+                paragraphs.Sum(ParagraphInlineReferenceCount),
+                paragraphs.Sum(ParagraphHyperlinkCount),
+                paragraphs.Sum(ParagraphExternalHyperlinkCount),
+                paragraphs.Sum(ParagraphInternalHyperlinkCount)));
         }
     }
 
@@ -737,7 +746,10 @@ internal sealed record DocxStructureStorySnapshot(
     int TableCount,
     int TextLength,
     int InlineImageCount,
-    int InlineReferenceCount);
+    int InlineReferenceCount,
+    int HyperlinkCount,
+    int ExternalHyperlinkCount,
+    int InternalHyperlinkCount);
 
 internal sealed record DocxStructureFloatingDrawingSnapshot(
     int Index,
