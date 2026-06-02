@@ -121,6 +121,7 @@ File.WriteAllText(
         story.TableCellTextLineCount,
         story.TableRowCount,
         story.InlineImageCount,
+        story.FloatingDrawingCount,
         story.TextLength,
         story.ContentHeight,
         ItemCount = story.Items.Count,

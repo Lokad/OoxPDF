@@ -368,11 +368,12 @@ High-priority actions:
   source paragraph index, and source block index; the source-block resolver now works from the supplied
   block list rather than assuming a `w:body` parent. Structure snapshots and unpaged related-story layout
   summaries expose private-safe floating-drawing counts so future note/comment placement can consume typed
-  drawing ownership without returning to raw XML. Bottom-up coverage adds an anchored image drawing inside a
-  comment story and asserts model, structure, and layout-summary ownership. Validation passed `docx-core
-  --skip-slow` (`53`), `docx-images --skip-slow` (`4`), and full solution build. Keep actual note/comment
-  placement, separator behavior, marker formatting, related-story link rectangles, and related-story drawing
-  rendering open until their Office-derived page regions are modeled.
+  drawing ownership without returning to raw XML, and `DocxInspect` includes the count in
+  `related-story-summary.json`. Bottom-up coverage adds an anchored image drawing inside a comment story and
+  asserts model, structure, and layout-summary ownership. Validation passed `docx-core --skip-slow` (`53`),
+  `docx-images --skip-slow` (`4`), full solution build, and `Lokad.OoxPdf.DocxInspect` build. Keep actual
+  note/comment placement, separator behavior, marker formatting, related-story link rectangles, and
+  related-story drawing rendering open until their Office-derived page regions are modeled.
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
