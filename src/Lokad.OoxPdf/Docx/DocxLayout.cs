@@ -130,6 +130,7 @@ internal sealed record DocxLayoutSnapshot(
             {
                 int tableCellTextLineCount = CountTableCellTextLines(story.TableRows);
                 int inlineImageCount = story.InlineImages.Count + CountTableCellInlineImages(story.TableRows);
+                IReadOnlyList<DocxLayoutItemSnapshot> items = ToRelatedStoryItemSnapshots(story);
                 return new DocxRelatedStoryLayoutSnapshot(
                     story.StoryIndex,
                     story.Story.Kind,
@@ -143,9 +144,45 @@ internal sealed record DocxLayoutSnapshot(
                     story.TableRows.Count,
                     inlineImageCount,
                     CountBodyTextLength(story.Story.BodyElements),
-                    story.ContentHeight);
+                    story.ContentHeight,
+                    items,
+                    story.TableRows.Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex, pageMarginBottom: 0d)).ToArray());
             })
             .ToArray();
+    }
+
+    private static IReadOnlyList<DocxLayoutItemSnapshot> ToRelatedStoryItemSnapshots(DocxRelatedStoryLayout story)
+    {
+        return story.TextLines
+            .Cast<DocxLayoutItem>()
+            .Concat(story.InlineImages)
+            .Concat(story.TableRows)
+            .OrderBy(item => GetSourceBlockIndex(item) ?? int.MaxValue)
+            .ThenByDescending(item => GetVerticalBounds(item).Y)
+            .Select(item => ToSnapshot(item, []))
+            .ToArray();
+    }
+
+    private static int? GetSourceBlockIndex(DocxLayoutItem item)
+    {
+        return item switch
+        {
+            DocxTextLineLayout text => text.SourceBlockIndex,
+            DocxInlineImageLayout image => image.SourceBlockIndex,
+            DocxTableRowLayout row => row.Table.SourceBlockIndex,
+            _ => null
+        };
+    }
+
+    private static (double Y, double Height) GetVerticalBounds(DocxLayoutItem item)
+    {
+        return item switch
+        {
+            DocxTextLineLayout text => (text.BaselineY, text.FontSize),
+            DocxInlineImageLayout image => (image.Y, image.Height),
+            DocxTableRowLayout row => (row.Y, row.Height),
+            _ => (0d, 0d)
+        };
     }
 
     private static int CountBodyTextLength(IReadOnlyList<DocxBodyElement> elements)
@@ -862,7 +899,9 @@ internal sealed record DocxRelatedStoryLayoutSnapshot(
     int TableRowCount,
     int InlineImageCount,
     int TextLength,
-    double ContentHeight);
+    double ContentHeight,
+    IReadOnlyList<DocxLayoutItemSnapshot> Items,
+    IReadOnlyList<DocxTableRowSnapshot> TableRows);
 
 internal sealed record DocxLayoutSourceBlockSnapshot(
     int SourceBlockIndex,

@@ -13790,6 +13790,7 @@ internal static class DocxTests
         DocxRelatedStoryLayoutSnapshot commentLayout = layoutSnapshot.RelatedStories.Single(story => story.Kind == "Comment");
         TestAssert.True(commentLayout.PartName == "/word/comments.xml" && commentLayout.Id == "1" && commentLayout.BlockCount == 3 && commentLayout.ParagraphCount == 2 && commentLayout.TableCount == 1, "Related-story layout snapshots should preserve comment story ownership without flattening it into body layout.");
         TestAssert.True(commentLayout.TextLineCount >= 2 && commentLayout.TableCellTextLineCount >= 1 && commentLayout.TableRowCount == 1 && commentLayout.TextLength == 37 && commentLayout.ContentHeight > 0d, "Comment story layout should measure paragraph text and table rows without rendering them as page content.");
+        TestAssert.True(commentLayout.Items.Count(item => item.Kind == "TextLine") >= 2 && commentLayout.Items.Count(item => item.Kind == "TableRow") == 1 && commentLayout.TableRows.Count == 1, "Related-story snapshots should expose private-safe item and table-row ownership for future story placement.");
         TestAssert.True(layoutSnapshot.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.TextLineCount >= 1 && story.TableRowCount == 0 && story.ContentHeight > 0d), "Footnote story layout should be measured as related-story content.");
         TestAssert.True(layoutSnapshot.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.TextLineCount >= 1 && story.TableRowCount == 0 && story.ContentHeight > 0d), "Endnote story layout should be measured as related-story content.");
 
@@ -13850,6 +13851,8 @@ internal static class DocxTests
 
         TestAssert.True(storySnapshot.Kind == "Comment" && storySnapshot.PartName == "/word/comments.xml" && storySnapshot.Id == "9", "Related-story layout snapshots should preserve the owning story identity.");
         TestAssert.True(storySnapshot.TextLineCount == 0 && storySnapshot.InlineImageCount == 1 && storySnapshot.ContentHeight >= 24d, "Related-story inline images should be owned by story layout instead of only contributing anonymous height.");
+        DocxLayoutItemSnapshot imageItem = storySnapshot.Items.Single(item => item.Kind == "InlineImage");
+        TestAssert.True(imageItem.SourceBlockIndex == 0 && imageItem.SourceParagraphIndex == 0 && imageItem.Width == 48d && imageItem.Height == 24d, "Related-story image item snapshots should carry private-safe source coordinates and geometry.");
     }
 
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()

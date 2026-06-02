@@ -340,6 +340,13 @@ High-priority actions:
   locks an image-only comment story so future note/comment placement can consume measured image layout rather
   than returning to raw story XML. Keep open the same page-owned placement and PDF annotation questions above.
   Validation passed `docx-images --skip-slow` (`4`) and `docx-core --skip-slow` (`53`).
+  2026-06-02 architecture follow-up: related-story layout snapshots now expose private-safe `Items` and
+  `TableRows`, reusing the same item/table-row snapshot records as body pages. This gives future note/comment
+  placement source block/paragraph/line indexes, line/image geometry, and table-row/cell ownership without
+  leaking story text. The existing comment/footnote/endnote fixture now asserts comment paragraph/table items,
+  and the image-only comment fixture asserts image item geometry and source coordinates. Keep rendering open
+  until Office-derived footnote/endnote regions, comment display, marker formatting, and link rectangles are
+  modeled. Validation passed `docx-core --skip-slow` (`53`) and `docx-images --skip-slow` (`4`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
