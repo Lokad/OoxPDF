@@ -4,7 +4,7 @@ internal static class OfficePdfTextEmissionProfile
 {
     private const double OfficeExportFontGridDpi = 600d;
     private const double PointsPerInch = 72d;
-    private const double WordNumberedListTextStateCharacterSpacingEm = 0.004d;
+    private const double ObservedWordNumberedListTextStateCharacterSpacingEm = 0.004d;
 
     public static double FontSize(double layoutFontSize)
     {
@@ -15,8 +15,8 @@ internal static class OfficePdfTextEmissionProfile
         return deviceUnits * PointsPerInch / OfficeExportFontGridDpi;
     }
 
-    public static double WordNumberedListTextStateCharacterSpacing(double layoutFontSize)
+    public static double ObservedWordNumberedListTextStateCharacterSpacing(double layoutFontSize)
     {
-        return layoutFontSize * WordNumberedListTextStateCharacterSpacingEm;
+        return layoutFontSize * ObservedWordNumberedListTextStateCharacterSpacingEm;
     }
 }

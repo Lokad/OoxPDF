@@ -570,6 +570,13 @@ High-priority actions:
   pipeline dependency and gives future Word-target logic a planner-owned entry point, but the existing
   numbered-list profile itself remains an open model to replace with public, structural evidence rather than
   a fixed observed scalar.
+  2026-06-02 architecture follow-up: list-label PDF text-state assembly now goes through
+  `DocxTextEmissionPlanner.CreateForListLabel`, so layout no longer pulls a raw `Tc` scalar and wires segment
+  source/compensation flags itself. The remaining numbered-label profile is explicitly named
+  `ObservedWordNumberedListTextStateCharacterSpacing`, making it a documented fallback replacement point
+  rather than hidden derived logic. Validation passed `docx-core --skip-slow` (`52`) and
+  `docx-numbering --skip-slow` (`12`). Keep the rendering behavior unchanged until public Office/PDF evidence
+  derives the list-label emitted-advance target from OOXML/font structure.
   2026-06-02 provenance follow-up: `DocxTextEmissionPlan` now carries a typed
   `PdfCharacterSpacingSource` (`None`, `Explicit`, `ListLabel`, `TerminalLineSpace`, or `AdvanceTarget`) from
   planner through layout, renderer, and text-emission snapshots. `tools/SummarizeDocxTextState.ps1` carries

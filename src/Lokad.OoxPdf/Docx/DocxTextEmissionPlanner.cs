@@ -118,11 +118,22 @@ internal static class DocxTextEmissionPlanner
         return TextStateCharacterSpacingTargetForListLabel(label, layoutFontSize).CharacterSpacing;
     }
 
+    public static DocxTextEmissionPlan CreateForListLabel(DocxTextRun style, DocxListLabel label)
+    {
+        DocxTextStateCharacterSpacingTarget target = TextStateCharacterSpacingTargetForListLabel(label, style.FontSize);
+        return Create(
+            style,
+            style.FontSize,
+            target.CharacterSpacing,
+            compensatePdfCharacterSpacing: false,
+            target.Source);
+    }
+
     public static DocxTextStateCharacterSpacingTarget TextStateCharacterSpacingTargetForListLabel(DocxListLabel label, double layoutFontSize)
     {
         double characterSpacing = string.Equals(label.FormatValue, "bullet", StringComparison.OrdinalIgnoreCase)
             ? 0d
-            : OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(layoutFontSize);
+            : OfficePdfTextEmissionProfile.ObservedWordNumberedListTextStateCharacterSpacing(layoutFontSize);
         return new(characterSpacing, DocxTextStateCharacterSpacingSource.ListLabel);
     }
 

@@ -2157,8 +2157,7 @@ internal sealed class DocxLayoutEngine
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
         double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
-        DocxTextStateCharacterSpacingTarget textStateTarget =
-            DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(label, fontSize);
+        DocxTextEmissionPlan labelPlan = DocxTextEmissionPlanner.CreateForListLabel(labelRun, label);
         var segments = new List<DocxTextSegmentLayout>
         {
             new(
@@ -2167,9 +2166,9 @@ internal sealed class DocxLayoutEngine
                 labelX,
                 labelWidth,
                 labelRun.FontSize,
-                PdfCharacterSpacing: textStateTarget.CharacterSpacing,
-                PdfCharacterSpacingSource: textStateTarget.Source,
-                CompensatePdfCharacterSpacing: false,
+                PdfCharacterSpacing: labelPlan.PdfCharacterSpacing,
+                PdfCharacterSpacingSource: labelPlan.PdfCharacterSpacingSource,
+                CompensatePdfCharacterSpacing: labelPlan.CompensatePdfCharacterSpacing,
                 SourceTextRunIndex: -1,
                 Role: DocxTextSegmentRole.ListLabel)
         };

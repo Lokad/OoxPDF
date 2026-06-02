@@ -433,16 +433,20 @@ internal static class DocxTests
 
     public static void OfficePdfTextProfileExposesWordNumberedListCharacterSpacing()
     {
-        TestAssert.Equal(0.048d, OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(12d));
-        TestAssert.Equal(0.044d, OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(11d));
+        TestAssert.Equal(0.048d, OfficePdfTextEmissionProfile.ObservedWordNumberedListTextStateCharacterSpacing(12d));
+        TestAssert.Equal(0.044d, OfficePdfTextEmissionProfile.ObservedWordNumberedListTextStateCharacterSpacing(11d));
     }
 
     public static void DocxTextEmissionPlannerOwnsListLabelTextStateTarget()
     {
         var decimalLabel = new DocxListLabel("1", "decimal", "%1.", "tab", "7", 0, DocxNumberingIndent.Empty, DocxTextRunStyle.Empty);
         var bulletLabel = new DocxListLabel("*", "bullet", "\uF0B7", "tab", "7", 0, DocxNumberingIndent.Empty, DocxTextRunStyle.Empty);
+        var decimalRun = new DocxTextRun("1", 12d, null, false, false, false, null, null);
+        var bulletRun = new DocxTextRun("*", 12d, null, false, false, false, null, null);
         DocxTextStateCharacterSpacingTarget decimalTarget = DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(decimalLabel, 12d);
         DocxTextStateCharacterSpacingTarget bulletTarget = DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(bulletLabel, 12d);
+        DocxTextEmissionPlan decimalPlan = DocxTextEmissionPlanner.CreateForListLabel(decimalRun, decimalLabel);
+        DocxTextEmissionPlan bulletPlan = DocxTextEmissionPlanner.CreateForListLabel(bulletRun, bulletLabel);
 
         TestAssert.Equal(0.048d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(decimalLabel, 12d));
         TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(bulletLabel, 12d));
@@ -450,6 +454,11 @@ internal static class DocxTests
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.ListLabel, decimalTarget.Source);
         TestAssert.Equal(0d, bulletTarget.CharacterSpacing);
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.ListLabel, bulletTarget.Source);
+        TestAssert.Equal(0.048d, decimalPlan.PdfCharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.ListLabel, decimalPlan.PdfCharacterSpacingSource);
+        TestAssert.True(!decimalPlan.CompensatePdfCharacterSpacing, "List-label PDF text state should be emitted, not folded into layout positioning.");
+        TestAssert.Equal(0d, bulletPlan.PdfCharacterSpacing);
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.ListLabel, bulletPlan.PdfCharacterSpacingSource);
     }
 
     public static void DocxTextEmissionPlannerOwnsPdfTextStateAndPositioningSpacing()
@@ -468,7 +477,7 @@ internal static class DocxTests
     public static void DocxTextEmissionPlannerKeepsNumberedLabelTcOutOfPositioning()
     {
         var run = new DocxTextRun("1", 12d, null, false, false, false, null, null);
-        double numberedTc = OfficePdfTextEmissionProfile.WordNumberedListTextStateCharacterSpacing(12d);
+        double numberedTc = OfficePdfTextEmissionProfile.ObservedWordNumberedListTextStateCharacterSpacing(12d);
 
         DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 12d, numberedTc, compensatePdfCharacterSpacing: false);
 
