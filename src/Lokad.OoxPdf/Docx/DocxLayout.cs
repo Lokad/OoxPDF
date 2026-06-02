@@ -69,6 +69,29 @@ internal sealed record DocxLayoutColumnFrame(
     double Width,
     double? GutterAfterPoints);
 
+internal static class DocxLayoutColumnOwnership
+{
+    public static int? ResolveColumnIndex(IReadOnlyList<DocxLayoutColumnFrame> frames, double x, double width)
+    {
+        if (frames.Count == 0)
+        {
+            return null;
+        }
+
+        double center = x + Math.Max(0d, width) / 2d;
+        DocxLayoutColumnFrame? containingFrame = frames.FirstOrDefault(frame => center >= frame.X && center <= frame.X + frame.Width);
+        if (containingFrame is not null)
+        {
+            return containingFrame.Index;
+        }
+
+        return frames
+            .OrderBy(frame => Math.Abs(center - (frame.X + frame.Width / 2d)))
+            .First()
+            .Index;
+    }
+}
+
 internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxLayoutPageSnapshot> Pages,
     IReadOnlyList<DocxTableSnapshot> Tables,
@@ -191,8 +214,8 @@ internal sealed record DocxLayoutSnapshot(
                 ResolveSourceBlockKind(group.Select(entry => entry.item)),
                 group.Min(entry => entry.pageIndex),
                 group.Max(entry => entry.pageIndex),
-                group.Select(entry => ResolveItemColumnIndex(pages[entry.pageIndex], entry.item)).Where(index => index is not null).DefaultIfEmpty().Min(),
-                group.Select(entry => ResolveItemColumnIndex(pages[entry.pageIndex], entry.item)).Where(index => index is not null).DefaultIfEmpty().Max(),
+                group.Select(entry => entry.item.ColumnIndex).Where(index => index is not null).DefaultIfEmpty().Min(),
+                group.Select(entry => entry.item.ColumnIndex).Where(index => index is not null).DefaultIfEmpty().Max(),
                 group.Max(entry => entry.item.Y + entry.item.Height),
                 group.Min(entry => entry.item.Y),
                 group.Count(),
@@ -236,29 +259,14 @@ internal sealed record DocxLayoutSnapshot(
         return hasInlineImage ? "InlineImage" : "Unknown";
     }
 
-    private static int? ResolveItemColumnIndex(DocxLayoutPageSnapshot page, DocxLayoutItemSnapshot item)
-    {
-        if (page.ColumnFrames.Count == 0)
-        {
-            return null;
-        }
-
-        double center = item.X + Math.Max(0d, item.Width) / 2d;
-        DocxLayoutColumnFrameSnapshot? containingFrame = page.ColumnFrames.FirstOrDefault(frame => center >= frame.X && center <= frame.X + frame.Width);
-        if (containingFrame is not null)
-        {
-            return containingFrame.Index;
-        }
-
-        return page.ColumnFrames
-            .OrderBy(frame => Math.Abs(center - (frame.X + frame.Width / 2d)))
-            .First()
-            .Index;
-    }
-
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
     {
-        IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(ToSnapshot).ToArray();
+        IReadOnlyList<DocxLayoutColumnFrameSnapshot> columnFrames = page.ColumnFrames.Select(frame => new DocxLayoutColumnFrameSnapshot(
+            frame.Index,
+            frame.X,
+            frame.Width,
+            frame.GutterAfterPoints)).ToArray();
+        IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(item => ToSnapshot(item, page.ColumnFrames)).ToArray();
         IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines.Select(ToStaticSnapshot).ToArray();
         int?[] sourceBlockIndexes = items
             .Select(item => item.SourceBlockIndex)
@@ -289,11 +297,7 @@ internal sealed record DocxLayoutSnapshot(
             page.ColumnFrames.Count,
             page.ColumnFrames.Sum(frame => frame.Width),
             page.ColumnFrames.Sum(frame => frame.GutterAfterPoints ?? 0d),
-            page.ColumnFrames.Select(frame => new DocxLayoutColumnFrameSnapshot(
-                frame.Index,
-                frame.X,
-                frame.Width,
-                frame.GutterAfterPoints)).ToArray(),
+            columnFrames,
             items.Count,
             page.StaticTextLines.Count,
             items.Count(item => item.Kind == "TextLine"),
@@ -319,11 +323,13 @@ internal sealed record DocxLayoutSnapshot(
             "Footer" => "StaticFooterTextLine",
             _ => "StaticTextLine"
         };
-        return ToSnapshot(text) with { Kind = kind };
+        return ToSnapshot(text, []) with { Kind = kind };
     }
 
-    private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item)
+    private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item, IReadOnlyList<DocxLayoutColumnFrame> columnFrames)
     {
+        (double itemX, double itemWidth) = GetHorizontalBounds(item);
+        int? columnIndex = DocxLayoutColumnOwnership.ResolveColumnIndex(columnFrames, itemX, itemWidth);
         return item switch
         {
             DocxTextLineLayout text => new DocxLayoutItemSnapshot(
@@ -334,6 +340,7 @@ internal sealed record DocxLayoutSnapshot(
                 text.FontSize,
                 TextLength: text.Text.Length,
                 CellCount: 0,
+                columnIndex,
                 text.SourceBlockIndex,
                 text.SourceParagraphIndex,
                 text.SourceLineIndex,
@@ -358,6 +365,7 @@ internal sealed record DocxLayoutSnapshot(
                 image.Height,
                 TextLength: 0,
                 CellCount: 0,
+                columnIndex,
                 image.SourceBlockIndex,
                 SourceParagraphIndex: null,
                 SourceLineIndex: null,
@@ -382,6 +390,7 @@ internal sealed record DocxLayoutSnapshot(
                 row.Height,
                 TextLength: row.Cells.Sum(cell => cell.TextLines.Sum(line => line.Text.Length)),
                 CellCount: row.Cells.Count,
+                columnIndex,
                 SourceBlockIndex: row.Table.SourceBlockIndex,
                 SourceParagraphIndex: null,
                 SourceLineIndex: null,
@@ -398,7 +407,18 @@ internal sealed record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null),
-            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+        };
+    }
+
+    private static (double X, double Width) GetHorizontalBounds(DocxLayoutItem item)
+    {
+        return item switch
+        {
+            DocxTextLineLayout text => (text.X, text.Width),
+            DocxInlineImageLayout image => (image.X, image.Width),
+            DocxTableRowLayout row => (row.Table.TableX, row.Table.ResolvedTableWidth),
+            _ => (0d, 0d)
         };
     }
 
@@ -721,6 +741,7 @@ internal sealed record DocxLayoutItemSnapshot(
     double Height,
     int TextLength,
     int CellCount,
+    int? ColumnIndex,
     int? SourceBlockIndex,
     int? SourceParagraphIndex,
     int? SourceLineIndex,
@@ -1731,6 +1752,11 @@ internal sealed class DocxLayoutEngine
 
     private static int? ResolveItemColumnIndex(DocxLayoutPage page, DocxLayoutItem item)
     {
+        return ResolveItemColumnIndex(page.ColumnFrames, item);
+    }
+
+    private static int? ResolveItemColumnIndex(IReadOnlyList<DocxLayoutColumnFrame> frames, DocxLayoutItem item)
+    {
         (double x, double width) = item switch
         {
             DocxTextLineLayout text => (text.X, text.Width),
@@ -1738,27 +1764,7 @@ internal sealed class DocxLayoutEngine
             DocxTableRowLayout row => (row.Table.TableX, row.Table.ResolvedTableWidth),
             _ => (0d, 0d)
         };
-        return ResolveColumnIndex(page.ColumnFrames, x, width);
-    }
-
-    private static int? ResolveColumnIndex(IReadOnlyList<DocxLayoutColumnFrame> frames, double x, double width)
-    {
-        if (frames.Count == 0)
-        {
-            return null;
-        }
-
-        double center = x + Math.Max(0d, width) / 2d;
-        DocxLayoutColumnFrame? containingFrame = frames.FirstOrDefault(frame => center >= frame.X && center <= frame.X + frame.Width);
-        if (containingFrame is not null)
-        {
-            return containingFrame.Index;
-        }
-
-        return frames
-            .OrderBy(frame => Math.Abs(center - (frame.X + frame.Width / 2d)))
-            .First()
-            .Index;
+        return DocxLayoutColumnOwnership.ResolveColumnIndex(frames, x, width);
     }
 
     private sealed record DocxLayoutSourceBlockBounds(

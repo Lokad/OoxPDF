@@ -5105,6 +5105,8 @@ internal static class DocxTests
         TestAssert.Equal(2, lines[1].SourceBlockIndex ?? -1);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        TestAssert.Equal(0, snapshot.Pages[0].Items[0].ColumnIndex ?? -1);
+        TestAssert.Equal(1, snapshot.Pages[0].Items[1].ColumnIndex ?? -1);
         TestAssert.Equal(0, snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 0).FirstColumnIndex ?? -1);
         TestAssert.Equal(1, snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == 2).FirstColumnIndex ?? -1);
         DocxFloatingDrawingLayoutSnapshot anchorSnapshot = snapshot.FloatingDrawings.Single();
