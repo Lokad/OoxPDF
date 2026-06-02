@@ -9444,6 +9444,77 @@ internal static class DocxTests
         TestAssert.True(textLines.All(line => line.TextLength > 0), "Snapshot source indexes must not expose line text.");
     }
 
+    public static void DocxLayoutSnapshotReportsLineHeightProfileFacts()
+    {
+        var label = new DocxListLabel(
+            "1",
+            "decimal",
+            "%1.",
+            "tab",
+            "1",
+            0,
+            DocxNumberingIndent.Empty,
+            new DocxTextRunStyle(10d, null, false, false, false, null, null, new DocxRunFonts(null, null, null, null, null, null, null, null)));
+        var autoSpacing = new DocxParagraphSpacing(null, null, null, null, null, null, "276", "auto", null);
+        var flooredList = new DocxParagraph(
+            [new DocxTextRun("Floored", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.15d,
+            null,
+            autoSpacing,
+            DocxParagraphKeepRules.Empty,
+            label);
+        var listWithoutBeforeSpacing = new DocxParagraph(
+            [new DocxTextRun("No before", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.15d,
+            null,
+            autoSpacing,
+            DocxParagraphKeepRules.Empty,
+            label);
+        var plainParagraph = new DocxParagraph(
+            [new DocxTextRun("Plain", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.15d,
+            null,
+            autoSpacing,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(plainParagraph)],
+            []);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items
+            .Where(item => item.Kind == "TextLine")
+            .ToArray();
+
+        TestAssert.Equal(3, textLines.Length);
+        TestAssert.Equal(10d, textLines[0].SingleLineHeightPoints ?? 0d);
+        TestAssert.Equal(1.19d, textLines[0].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(Math.Abs((textLines[0].LineHeightPoints ?? 0d) - 11.9d) < 0.0001d, "Effective line height should be the measured single-line height multiplied by the effective factor.");
+        TestAssert.True(textLines[0].LineSpacingFactorFloorApplied == true, "Positive before-spacing list paragraphs should report the Word-compatible auto-line floor.");
+        TestAssert.Equal(1.15d, textLines[1].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(textLines[1].LineSpacingFactorFloorApplied == false, "Lists without positive before spacing should not report the floor.");
+        TestAssert.Equal(1.15d, textLines[2].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(textLines[2].LineSpacingFactorFloorApplied == false, "Non-list paragraphs should not report the list floor.");
+    }
+
     public static void DocxTextEmissionSnapshotReportsPrivateSafePdfTextState()
     {
         (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();

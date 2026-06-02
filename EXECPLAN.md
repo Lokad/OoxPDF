@@ -408,6 +408,14 @@ High-priority actions:
   page-1 `MAE=15.916448`, `docx-ladder-03-compact-bullet-spacing` at `MAE=0.803030`, and
   `docx-ladder-03-docgrid-list-use-fe` at `MAE=0.019271`. Private acceptance improved from `MAE=9.982157` to
   `MAE=8.915684`, with pages 9..11 notably lower; page 15 is now the worst remaining private page.
+  2026-06-02 architecture follow-up: `DocxLayout` now resolves line height through an explicit
+  `DocxLineHeightProfile` and carries private-safe `SingleLineHeightPoints`, `EffectiveLineSpacingFactor`,
+  and `LineSpacingFactorFloorApplied` into body and table text-line snapshots. A bottom-up
+  `DocxLayoutSnapshotReportsLineHeightProfileFacts` test locks the accepted compact-list floor predicates
+  (list paragraph, authored positive before-spacing, auto line rule, requested factor below `1.19`) and proves
+  that zero-before lists and non-list paragraphs do not report the floor. This is diagnostic/architectural
+  groundwork, not a rendering change. Use it next to compare public compact-list and table-cell line pitches
+  against Office PDF rows before changing metrics, row fragmentation, or page-bottom rules.
   2026-06-01 follow-up: added private-safe table-cell text profiles to DOCX layout snapshots: whitespace,
   punctuation, digit/letter, non-ASCII, and longest whitespace-delimited token counts. Page-15 inspection
   showed the worst table-to-heading residual is not a table width or column-position error; the 6-column table

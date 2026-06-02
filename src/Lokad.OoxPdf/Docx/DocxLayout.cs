@@ -9,6 +9,12 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxLayout(IReadOnlyList<DocxLayoutPage> Pages);
 
+internal sealed record DocxLineHeightProfile(
+    double LineHeight,
+    double? SingleLineHeight,
+    double? EffectiveLineSpacingFactor,
+    bool LineSpacingFactorFloorApplied);
+
 internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxLayoutPageSnapshot> Pages,
     IReadOnlyList<DocxTableSnapshot> Tables,
@@ -175,6 +181,9 @@ internal sealed record DocxLayoutSnapshot(
                 text.SourceLineIndex,
                 text.LineHeight,
                 text.AppliedBeforeSpacing,
+                text.SingleLineHeight,
+                text.EffectiveLineSpacingFactor,
+                text.LineSpacingFactorFloorApplied,
                 text.IsFirstParagraphLine),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
@@ -188,6 +197,9 @@ internal sealed record DocxLayoutSnapshot(
                 SourceLineIndex: null,
                 LineHeightPoints: null,
                 AppliedBeforeSpacingPoints: null,
+                SingleLineHeightPoints: null,
+                EffectiveLineSpacingFactor: null,
+                LineSpacingFactorFloorApplied: null,
                 IsFirstParagraphLine: null),
             DocxTableRowLayout row => new DocxLayoutItemSnapshot(
                 "TableRow",
@@ -201,8 +213,11 @@ internal sealed record DocxLayoutSnapshot(
                 SourceLineIndex: null,
                 LineHeightPoints: null,
                 AppliedBeforeSpacingPoints: null,
+                SingleLineHeightPoints: null,
+                EffectiveLineSpacingFactor: null,
+                LineSpacingFactorFloorApplied: null,
                 IsFirstParagraphLine: null),
-            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null)
+            _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null)
         };
     }
 
@@ -460,6 +475,9 @@ internal sealed record DocxLayoutItemSnapshot(
     int? SourceLineIndex,
     double? LineHeightPoints,
     double? AppliedBeforeSpacingPoints,
+    double? SingleLineHeightPoints,
+    double? EffectiveLineSpacingFactor,
+    bool? LineSpacingFactorFloorApplied,
     bool? IsFirstParagraphLine);
 
 internal sealed record DocxTableRowSnapshot(
@@ -651,7 +669,10 @@ internal sealed record DocxTextLineLayout(
     double? LineHeight = null,
     double? AppliedBeforeSpacing = null,
     bool? IsFirstParagraphLine = null,
-    bool EndsWithIntraTokenBreak = false) : DocxLayoutItem;
+    bool EndsWithIntraTokenBreak = false,
+    double? SingleLineHeight = null,
+    double? EffectiveLineSpacingFactor = null,
+    bool? LineSpacingFactorFloorApplied = null) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
@@ -1051,7 +1072,8 @@ internal sealed class DocxLayoutEngine
             cursorY -= appliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             double paragraphFontSize = GetParagraphFontSize(paragraph);
-            double lineHeight = ResolveLineHeight(paragraph, paragraphFontSize, textMeasurer);
+            DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, paragraphFontSize, textMeasurer);
+            double lineHeight = lineHeightProfile.LineHeight;
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
@@ -1120,7 +1142,10 @@ internal sealed class DocxLayoutEngine
                         lineHeight,
                         firstLine ? appliedBeforeSpacing : 0d,
                         firstLine,
-                        line.EndsWithIntraTokenBreak));
+                        line.EndsWithIntraTokenBreak,
+                        lineHeightProfile.SingleLineHeight,
+                        lineHeightProfile.EffectiveLineSpacingFactor,
+                        lineHeightProfile.LineSpacingFactorFloorApplied));
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
@@ -1623,27 +1648,40 @@ internal sealed class DocxLayoutEngine
 
     private static double ResolveLineHeight(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer)
     {
+        return ResolveLineHeightProfile(paragraph, fontSize, textMeasurer).LineHeight;
+    }
+
+    private static DocxLineHeightProfile ResolveLineHeightProfile(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer)
+    {
         if (paragraph.LineSpacingPoints is { } exactLineHeight)
         {
-            return exactLineHeight;
+            return new DocxLineHeightProfile(exactLineHeight, SingleLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: false);
         }
 
         double singleLineHeight = textMeasurer is IDocxLineMetricsProvider metricsProvider
             ? metricsProvider.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), fontSize)
             : fontSize;
-        return singleLineHeight * ResolveAutoLineSpacingFactor(paragraph);
+        double effectiveLineSpacingFactor = ResolveAutoLineSpacingFactor(paragraph, out bool floorApplied);
+        return new DocxLineHeightProfile(
+            singleLineHeight * effectiveLineSpacingFactor,
+            singleLineHeight,
+            effectiveLineSpacingFactor,
+            floorApplied);
     }
 
-    private static double ResolveAutoLineSpacingFactor(DocxParagraph paragraph)
+    private static double ResolveAutoLineSpacingFactor(DocxParagraph paragraph, out bool floorApplied)
     {
         if (paragraph.ListLabel is not null &&
             paragraph.LineSpacingPoints is null &&
             paragraph.SpacingBeforePoints > 0d &&
             paragraph.Spacing.LineRuleValue?.Equals("auto", StringComparison.OrdinalIgnoreCase) == true)
         {
-            return Math.Max(paragraph.LineSpacingFactor, WordListMinimumAutoLineSpacingFactor);
+            double effectiveFactor = Math.Max(paragraph.LineSpacingFactor, WordListMinimumAutoLineSpacingFactor);
+            floorApplied = effectiveFactor > paragraph.LineSpacingFactor;
+            return effectiveFactor;
         }
 
+        floorApplied = false;
         return paragraph.LineSpacingFactor;
     }
 
@@ -2565,7 +2603,8 @@ internal sealed class DocxLayoutEngine
                 : Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
             pendingSpacingAfter = 0d;
             double fontSize = GetParagraphFontSize(paragraph);
-            double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
+            DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+            double lineHeight = lineHeightProfile.LineHeight;
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
             if (textSpans.Count != 0)
             {
@@ -2635,7 +2674,8 @@ internal sealed class DocxLayoutEngine
             cursorY -= appliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             double fontSize = GetParagraphFontSize(paragraph);
-            double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
+            DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+            double lineHeight = lineHeightProfile.LineHeight;
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs);
             if (textSpans.Count == 0)
             {
@@ -2692,7 +2732,10 @@ internal sealed class DocxLayoutEngine
                         LineHeight: lineHeight,
                         AppliedBeforeSpacing: firstLine ? appliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: firstLine,
-                        EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak));
+                        EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
+                        SingleLineHeight: lineHeightProfile.SingleLineHeight,
+                        EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
+                        LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied));
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
