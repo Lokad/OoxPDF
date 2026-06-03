@@ -2450,7 +2450,8 @@ internal sealed class DocxReader
             (string?)story.Attribute(WordprocessingNamespace + "id"),
             bodyElements,
             [],
-            [])
+            [],
+            (string?)story.Attribute(WordprocessingNamespace + "type"))
         {
             FloatingDrawings = floatingDrawings
         };

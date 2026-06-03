@@ -180,6 +180,7 @@ internal sealed record DocxLayoutSnapshot(
                     story.Story.Kind,
                     story.Story.PartName,
                     story.Story.Id,
+                    story.Story.Type,
                     story.Story.BodyElements.Count,
                     story.Story.BodyElements.OfType<DocxParagraphElement>().Count(),
                     DocxBlockTraversal.EnumerateBodyTables(story.Story).Count(),
@@ -513,6 +514,7 @@ internal sealed record DocxLayoutSnapshot(
                 story.StoryLayout.Story.Kind,
                 story.StoryLayout.Story.PartName,
                 story.StoryLayout.Story.Id,
+                story.StoryLayout.Story.Type,
                 story.SourceBlockIndex,
                 story.X,
                 story.TopY,
@@ -1142,6 +1144,7 @@ internal sealed record DocxPlacedRelatedStoryLayoutSnapshot(
     string Kind,
     string PartName,
     string? Id,
+    string? Type,
     int SourceBlockIndex,
     double LeftX,
     double TopY,
@@ -1230,6 +1233,7 @@ internal sealed record DocxRelatedStoryLayoutSnapshot(
     string Kind,
     string PartName,
     string? Id,
+    string? Type,
     int BlockCount,
     int ParagraphCount,
     int TableCount,
@@ -2960,13 +2964,19 @@ internal sealed class DocxLayoutEngine
         var storyByKey = new Dictionary<(string Kind, string Id), DocxRelatedStoryLayout>(new RelatedStoryKeyComparer());
         foreach (DocxRelatedStoryLayout story in relatedStoryLayouts)
         {
-            if (story.Story.Id is not null)
+            if (story.Story.Id is not null && IsNormalRelatedStory(story.Story))
             {
                 storyByKey.TryAdd((story.Story.Kind, story.Story.Id), story);
             }
         }
 
         return storyByKey;
+    }
+
+    private static bool IsNormalRelatedStory(DocxRelatedStory story)
+    {
+        return string.IsNullOrEmpty(story.Type) ||
+            string.Equals(story.Type, "normal", StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class RelatedStoryKeyComparer : IEqualityComparer<(string Kind, string Id)>

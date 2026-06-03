@@ -15046,6 +15046,77 @@ internal static class DocxTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE"), "Body paragraph keep/widow rules are parsed and consumed by page layout, so they should not emit stale unsupported diagnostics.");
     }
 
+    public static void DocxReaderPreservesFootnoteStoryTypesWithoutPlacingSeparators()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Body before</w:t></w:r>
+                      <w:r><w:footnoteReference w:id="0"/></w:r>
+                      <w:r><w:t> body middle </w:t></w:r>
+                      <w:r><w:footnoteReference w:id="2"/></w:r>
+                      <w:r><w:t> body after</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/footnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:footnote w:type="separator" w:id="-1">
+                    <w:p><w:r><w:t>Separator body</w:t></w:r></w:p>
+                  </w:footnote>
+                  <w:footnote w:type="continuationSeparator" w:id="0">
+                    <w:p><w:r><w:t>Continuation body</w:t></w:r></w:p>
+                  </w:footnote>
+                  <w:footnote w:id="2">
+                    <w:p><w:r><w:t>Normal footnote body</w:t></w:r></w:p>
+                  </w:footnote>
+                </w:footnotes>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+
+        TestAssert.Equal(3, document.RelatedStories.Count);
+        TestAssert.Equal("separator", document.RelatedStories.Single(story => story.Id == "-1").Type ?? string.Empty);
+        TestAssert.Equal("continuationSeparator", document.RelatedStories.Single(story => story.Id == "0").Type ?? string.Empty);
+        TestAssert.True(document.RelatedStories.Single(story => story.Id == "2").Type is null, "Normal note bodies without w:type should remain normal rather than receiving an inferred type token.");
+
+        DocxLayoutSnapshot layoutSnapshot = new DocxRenderer().InspectLayout(document);
+        TestAssert.Equal("separator", layoutSnapshot.RelatedStories.Single(story => story.Id == "-1").Type ?? string.Empty);
+        TestAssert.Equal("continuationSeparator", layoutSnapshot.RelatedStories.Single(story => story.Id == "0").Type ?? string.Empty);
+        DocxPlacedRelatedStoryLayoutSnapshot placedStory = layoutSnapshot.Pages.SelectMany(page => page.PlacedRelatedStories).Single();
+        TestAssert.True(placedStory.Id == "2" && placedStory.Type is null, "Only normal footnote stories should be reference-placeable; separator stories stay structural until explicit separator rendering is modeled.");
+    }
+
     public static void DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

@@ -51,7 +51,8 @@ internal sealed record DocxRelatedStory(
     string? Id,
     IReadOnlyList<DocxBodyElement> BodyElements,
     IReadOnlyList<DocxParagraph> FallbackParagraphs,
-    IReadOnlyList<DocxTable> FallbackTables)
+    IReadOnlyList<DocxTable> FallbackTables,
+    string? Type = null)
 {
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
     public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
