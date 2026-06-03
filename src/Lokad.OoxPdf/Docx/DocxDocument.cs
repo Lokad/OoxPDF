@@ -182,12 +182,13 @@ internal sealed record DocxDocumentSettings(
 }
 
 internal sealed record DocxNoteReferenceSettings(
+    string? PositionValue,
     string? NumberFormatValue,
     string? NumberStartValue,
     int? NumberStart,
     string? NumberRestartValue)
 {
-    public static DocxNoteReferenceSettings Empty { get; } = new(null, null, null, null);
+    public static DocxNoteReferenceSettings Empty { get; } = new(null, null, null, null, null);
 }
 
 internal sealed record DocxCompatSetting(
@@ -267,6 +268,8 @@ internal sealed record DocxPageSettings(
 
     public double? DocGridLinePitchPoints { get; init; }
     public string? DocGridLinePitchValue { get; init; }
+    public DocxNoteReferenceSettings FootnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
+    public DocxNoteReferenceSettings EndnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);

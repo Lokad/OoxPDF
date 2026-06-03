@@ -411,6 +411,13 @@ High-priority actions:
   ownership checks still require diagnostics to point at `/word/footnotes.xml` and `/word/endnotes.xml` when
   those parts exist, so incomplete note semantics stay visible without falsely saying the note bodies are
   ignored. Validation passed full solution build and `docx-core --skip-slow` (`60`).
+  2026-06-03 architecture follow-up: note reference settings now preserve `w:pos` in the shared
+  `DocxNoteReferenceSettings` record, and `DocxPageSettings` carries section-local `footnotePr`/`endnotePr`
+  settings in addition to document-level settings. This is structural only: layout still treats endnotes as
+  document-end placed stories until Office-PDF probes define how `sectEnd`, `docEnd`, `beneathText`,
+  `pageBottom`, and section restarts should affect placement. Bottom-up coverage extends document-settings
+  and page-settings fixtures to assert note position tokens and section note numbering tokens. Validation
+  passed full solution build, `docx-core --skip-slow` (`60`), and `docx-page --skip-slow` (`47`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring

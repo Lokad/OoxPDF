@@ -112,6 +112,8 @@ internal static class DocxTests
                       <w:pgSz w:w="16840" w:h="11900" w:orient="landscape"/>
                       <w:pgMar w:top="720" w:right="1440" w:bottom="1080" w:left="1800" w:header="1440" w:footer="1080"/>
                       <w:docGrid w:linePitch="326"/>
+                      <w:footnotePr><w:pos w:val="beneathText"/><w:numStart w:val="3"/></w:footnotePr>
+                      <w:endnotePr><w:pos w:val="sectEnd"/><w:numRestart w:val="eachSect"/></w:endnotePr>
                     </w:sectPr>
                   </w:body>
                 </w:document>
@@ -136,6 +138,10 @@ internal static class DocxTests
         TestAssert.Equal(54d, settings.FooterDistancePoints ?? 0d);
         TestAssert.Equal("326", settings.DocGridLinePitchValue ?? string.Empty);
         TestAssert.Equal(16.3d, settings.DocGridLinePitchPoints ?? 0d);
+        TestAssert.Equal("beneathText", settings.FootnoteReferenceSettings.PositionValue ?? string.Empty);
+        TestAssert.Equal(3, settings.FootnoteReferenceSettings.NumberStart ?? 0);
+        TestAssert.Equal("sectEnd", settings.EndnoteReferenceSettings.PositionValue ?? string.Empty);
+        TestAssert.Equal("eachSect", settings.EndnoteReferenceSettings.NumberRestartValue ?? string.Empty);
         TestAssert.Equal(842d, document.PageWidthPoints);
         TestAssert.Equal(595d, document.PageHeightPoints);
         TestAssert.Equal(90d, document.MarginLeftPoints);
@@ -938,11 +944,13 @@ internal static class DocxTests
                   <w:defaultTabStop w:val="720"/>
                   <w:characterSpacingControl w:val="doNotCompress"/>
                   <w:footnotePr>
+                    <w:pos w:val="pageBottom"/>
                     <w:numFmt w:val="lowerRoman"/>
                     <w:numStart w:val="4"/>
                     <w:numRestart w:val="continuous"/>
                   </w:footnotePr>
                   <w:endnotePr>
+                    <w:pos w:val="docEnd"/>
                     <w:numFmt w:val="upperLetter"/>
                     <w:numStart w:val="2"/>
                   </w:endnotePr>
@@ -971,9 +979,11 @@ internal static class DocxTests
         TestAssert.Equal("720", document.Settings.DefaultTabStopValue ?? string.Empty);
         TestAssert.Equal(36d, document.Settings.DefaultTabStopPoints ?? 0d);
         TestAssert.True(document.Settings.UseFELayout == true, "Empty useFELayout should opt in.");
+        TestAssert.Equal("pageBottom", document.Settings.FootnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal("lowerRoman", document.Settings.FootnoteReferenceSettings.NumberFormatValue ?? string.Empty);
         TestAssert.Equal(4, document.Settings.FootnoteReferenceSettings.NumberStart ?? 0);
         TestAssert.Equal("continuous", document.Settings.FootnoteReferenceSettings.NumberRestartValue ?? string.Empty);
+        TestAssert.Equal("docEnd", document.Settings.EndnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal("upperLetter", document.Settings.EndnoteReferenceSettings.NumberFormatValue ?? string.Empty);
         TestAssert.Equal(2, document.Settings.EndnoteReferenceSettings.NumberStart ?? 0);
         DocxCompatSetting compat = document.Settings.CompatSettings.Single();

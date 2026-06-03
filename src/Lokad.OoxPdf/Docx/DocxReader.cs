@@ -186,8 +186,10 @@ internal sealed class DocxReader
         XElement? numberFormat = properties?.Element(WordprocessingNamespace + "numFmt");
         XElement? numberStart = properties?.Element(WordprocessingNamespace + "numStart");
         XElement? numberRestart = properties?.Element(WordprocessingNamespace + "numRestart");
+        XElement? position = properties?.Element(WordprocessingNamespace + "pos");
         string? startValue = (string?)numberStart?.Attribute(WordprocessingNamespace + "val");
         return new DocxNoteReferenceSettings(
+            (string?)position?.Attribute(WordprocessingNamespace + "val"),
             (string?)numberFormat?.Attribute(WordprocessingNamespace + "val"),
             startValue,
             int.TryParse(startValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int start) ? start : null,
@@ -342,7 +344,9 @@ internal sealed class DocxReader
             (string?)evenAndOddHeaders?.Attribute(WordprocessingNamespace + "val"))
         {
             DocGridLinePitchPoints = ReadTwipsAttribute(docGrid, WordprocessingNamespace + "linePitch"),
-            DocGridLinePitchValue = (string?)docGrid?.Attribute(WordprocessingNamespace + "linePitch")
+            DocGridLinePitchValue = (string?)docGrid?.Attribute(WordprocessingNamespace + "linePitch"),
+            FootnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "footnotePr")),
+            EndnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "endnotePr"))
         };
         if (sectionProperties is null || package is null || relationships is null || styles is null || numbering is null)
         {
