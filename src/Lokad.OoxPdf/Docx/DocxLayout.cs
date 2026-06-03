@@ -494,6 +494,12 @@ internal sealed record DocxLayoutSnapshot(
         return hasInlineImage ? "InlineImage" : "Unknown";
     }
 
+    private static bool IsNormalRelatedStory(DocxRelatedStory story)
+    {
+        return string.IsNullOrEmpty(story.Type) ||
+            string.Equals(story.Type, "normal", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
     {
         IReadOnlyList<DocxLayoutColumnFrameSnapshot> columnFrames = page.ColumnFrames.Select(frame => new DocxLayoutColumnFrameSnapshot(
@@ -573,8 +579,8 @@ internal sealed record DocxLayoutSnapshot(
             page.StaticInlineImages.Count,
             page.StaticTableRows.Count,
             page.PlacedRelatedStories.Count,
-            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Footnote"),
-            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Endnote"),
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Footnote" && IsNormalRelatedStory(story.StoryLayout.Story)),
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Endnote" && IsNormalRelatedStory(story.StoryLayout.Story)),
             page.PlacedRelatedStories.Sum(story => story.TextLines.Count),
             page.PlacedRelatedStories.Sum(story => story.InlineImages.Count),
             page.PlacedRelatedStories.Sum(story => story.TableRows.Count),
@@ -2305,10 +2311,12 @@ internal sealed class DocxLayoutEngine
         }
 
         Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
+        DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, "Footnote", "separator");
         for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
         {
             double reserveHeight = 0d;
             var reservedKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
+            bool reservedFootnoteSeparator = false;
             foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
             {
                 DocxInlineReference reference = location.Reference;
@@ -2319,7 +2327,20 @@ internal sealed class DocxLayoutEngine
 
                 if (storyByKey.TryGetValue((reference.Kind, reference.Id), out DocxRelatedStoryLayout? storyLayout))
                 {
-                    reserveHeight += FootnoteSeparatorGapPoints + Math.Max(0d, storyLayout.ContentHeight);
+                    if (footnoteSeparatorLayout is not null)
+                    {
+                        if (!reservedFootnoteSeparator)
+                        {
+                            reserveHeight += Math.Max(0d, footnoteSeparatorLayout.ContentHeight) + FootnoteSeparatorGapPoints;
+                            reservedFootnoteSeparator = true;
+                        }
+
+                        reserveHeight += Math.Max(0d, storyLayout.ContentHeight);
+                    }
+                    else
+                    {
+                        reserveHeight += FootnoteSeparatorGapPoints + Math.Max(0d, storyLayout.ContentHeight);
+                    }
                 }
             }
 
@@ -2350,10 +2371,12 @@ internal sealed class DocxLayoutEngine
 
         var pagesWithStories = new DocxLayoutPage[pages.Count];
         var placedStoryKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
+        DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, "Footnote", "separator");
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             DocxLayoutPage page = pages[pageIndex];
             List<DocxPlacedRelatedStoryLayout> placedStories = [];
+            bool placedFootnoteSeparator = false;
             foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
             {
                 foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
@@ -2381,7 +2404,24 @@ internal sealed class DocxLayoutEngine
                     }
 
                     placedStoryKeys.Add((reference.Kind, reference.Id));
-                    placedStories.Add(PlaceRelatedStory(page, pageIndex, storyLayout, sourceBlockIndex));
+                    if (footnoteSeparatorLayout is not null)
+                    {
+                        double storyHeight = ResolvePlacedStoryHeight(storyLayout, page);
+                        double storyTop = page.MarginBottom + storyHeight;
+                        if (!placedFootnoteSeparator)
+                        {
+                            double separatorHeight = ResolvePlacedStoryHeight(footnoteSeparatorLayout, page);
+                            double separatorTop = storyTop + FootnoteSeparatorGapPoints + separatorHeight;
+                            placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, footnoteSeparatorLayout, sourceBlockIndex, separatorTop, separatorY: null));
+                            placedFootnoteSeparator = true;
+                        }
+
+                        placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, storyLayout, sourceBlockIndex, storyTop, separatorY: null));
+                    }
+                    else
+                    {
+                        placedStories.Add(PlaceRelatedStory(page, pageIndex, storyLayout, sourceBlockIndex));
+                    }
                 }
             }
 
@@ -2977,6 +3017,18 @@ internal sealed class DocxLayoutEngine
     {
         return string.IsNullOrEmpty(story.Type) ||
             string.Equals(story.Type, "normal", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DocxRelatedStoryLayout? FindSpecialRelatedStoryLayout(
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
+        string kind,
+        string type)
+    {
+        return relatedStoryLayouts.FirstOrDefault(story =>
+            story.Story.Id is not null &&
+            story.ContentHeight > 0d &&
+            string.Equals(story.Story.Kind, kind, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(story.Story.Type, type, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class RelatedStoryKeyComparer : IEqualityComparer<(string Kind, string Id)>

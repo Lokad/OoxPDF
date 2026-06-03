@@ -8088,6 +8088,18 @@ Current validation baseline:
   `docx-page --skip-slow` (`52`), and `docx-tables --skip-slow` (`126`). Keep the next Office-derived separator
   slice open: render actual separator/continuation separator story bodies from the special records instead of
   generic fixed-line geometry.
+  2026-06-03 follow-up: footnote separator stories now advance from structural metadata into page-owned
+  placement when `/word/footnotes.xml` supplies a normal `w:type="separator"` record. Footnote reservation
+  includes the measured separator story once per source block instead of relying on a fixed rectangle, placed
+  separator snapshots keep their special `Type`, and placed-footnote body counts now exclude special stories.
+  The renderer therefore uses the normal related-story text/table/image path for authored separator content
+  and suppresses the generic separator rectangle on that structural path. Bottom-up coverage verifies a
+  separator story is placed above the normal footnote body, that only the normal body contributes to
+  `PlacedFootnoteStoryCount`, and that `continuationSeparator` remains unplaced until multi-page note
+  continuation is modeled. Validation passed focused test
+  `DocxReaderPreservesFootnoteStoryTypesWithoutPlacingSeparators`, `docx-core --skip-slow` (`61`),
+  `docx-page --skip-slow` (`52`), and `docx-tables --skip-slow` (`126`). Keep Office-derived continuation
+  separators, multi-page note splitting, and stacked multi-footnote ordering open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

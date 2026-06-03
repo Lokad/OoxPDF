@@ -15113,8 +15113,14 @@ internal static class DocxTests
         DocxLayoutSnapshot layoutSnapshot = new DocxRenderer().InspectLayout(document);
         TestAssert.Equal("separator", layoutSnapshot.RelatedStories.Single(story => story.Id == "-1").Type ?? string.Empty);
         TestAssert.Equal("continuationSeparator", layoutSnapshot.RelatedStories.Single(story => story.Id == "0").Type ?? string.Empty);
-        DocxPlacedRelatedStoryLayoutSnapshot placedStory = layoutSnapshot.Pages.SelectMany(page => page.PlacedRelatedStories).Single();
-        TestAssert.True(placedStory.Id == "2" && placedStory.Type is null, "Only normal footnote stories should be reference-placeable; separator stories stay structural until explicit separator rendering is modeled.");
+        DocxLayoutPageSnapshot footnotePage = layoutSnapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 1);
+        DocxPlacedRelatedStoryLayoutSnapshot[] placedStories = footnotePage.PlacedRelatedStories.ToArray();
+        TestAssert.Equal(2, placedStories.Length);
+        DocxPlacedRelatedStoryLayoutSnapshot separatorStory = placedStories.Single(story => story.Type == "separator");
+        DocxPlacedRelatedStoryLayoutSnapshot placedStory = placedStories.Single(story => story.Id == "2");
+        TestAssert.True(separatorStory.SourceBlockIndex == 0 && separatorStory.TopY > placedStory.TopY && separatorStory.SeparatorY is null, "Structural footnote separator stories should be placed above normal note bodies without drawing the generic separator rectangle.");
+        TestAssert.True(placedStory.Type is null && placedStory.SeparatorY is null, "Only normal footnote stories should count as placed note bodies once separator stories are structural.");
+        TestAssert.True(!placedStories.Any(story => story.Type == "continuationSeparator"), "Continuation separator stories should remain unplaced until actual multi-page note continuation is modeled.");
     }
 
     public static void DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames()
