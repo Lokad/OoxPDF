@@ -8121,6 +8121,19 @@ Current validation baseline:
   `docx-page --skip-slow` (`54`), `docx-core --skip-slow` (`61`), and `docx-tables --skip-slow` (`126`).
   Keep true Office-exact multi-page footnote continuation, inserted continuation pages, continuation separator
   story placement, and table-internal note continuation open.
+  2026-06-03 follow-up: section-end and document-end endnote placement now consumes the full related-story
+  `ContentHeight` as a source story and emits page-owned slices with `ContentTopOffset` instead of placing only
+  the first page-sized rectangle and silently losing the tail. Section-end continuation pages are inserted before
+  the following section page, while document-end continuation pages append at the document tail. Bottom-up coverage
+  adds a single overlong `sectEnd` endnote story and verifies multiple slices preserve marker provenance, remain
+  before the following section, and keep the full story height in diagnostics; the static-header continuation test
+  now checks every endnote slice page receives selected static content. Validation passed focused
+  `DocxLayoutSplitsSingleSectEndEndnoteStoryBeforeFollowingSection`,
+  `DocxLayoutKeepsSectEndEndnoteOverflowPageBeforeFollowingSection`,
+  `DocxLayoutStageAddsStaticHeaderAfterEndnoteContinuationPages`, `docx-page --skip-slow` (`54`),
+  `docx-core --skip-slow` (`62`), `docx-tables --skip-slow` (`126`), and full solution build. Keep true
+  Office-exact split boundaries, continuation separator story selection, footnote cross-page continuation, and
+  table-internal note continuation open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

@@ -13407,10 +13407,16 @@ internal static class DocxTests
         DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
 
         TestAssert.True(snapshot.Pages.Count >= 2, "The oversized endnote story should create a continuation page.");
-        DocxLayoutPageSnapshot endnotePage = snapshot.Pages.Single(page => page.PlacedEndnoteStoryCount == 1);
-        TestAssert.Equal(1, endnotePage.StaticTextLineCount);
-        DocxLayoutItemSnapshot headerItem = endnotePage.StaticItems.Single(item => item.Kind == "StaticHeaderTextLine");
-        TestAssert.Equal(2, headerItem.TextLength);
+        DocxLayoutPageSnapshot[] endnotePages = snapshot.Pages
+            .Where(page => page.PlacedEndnoteStoryCount == 1)
+            .ToArray();
+        TestAssert.True(endnotePages.Length >= 1, "At least one page should own an endnote story slice.");
+        foreach (DocxLayoutPageSnapshot endnotePage in endnotePages)
+        {
+            TestAssert.Equal(1, endnotePage.StaticTextLineCount);
+            DocxLayoutItemSnapshot headerItem = endnotePage.StaticItems.Single(item => item.Kind == "StaticHeaderTextLine");
+            TestAssert.Equal(2, headerItem.TextLength);
+        }
     }
 
     public static void DocxLayoutStageSelectsStaticHeaderBodyElements()
@@ -16024,6 +16030,75 @@ internal static class DocxTests
         TestAssert.Equal("sectEnd", snapshot.Pages[overflowEndnotePageIndex].SectionEndnotePositionValue ?? string.Empty);
         TestAssert.True(snapshot.Pages[overflowEndnotePageIndex].PlacedRelatedStories.Any(story => story.Kind == "Endnote" && story.SourceBlockIndex == 0), "The inserted section-end continuation page should retain marker-owned endnote provenance.");
         TestAssert.Equal(0, snapshot.Pages[secondSectionPageIndex].PlacedEndnoteStoryCount);
+    }
+
+    public static void DocxLayoutSplitsSingleSectEndEndnoteStoryBeforeFollowingSection()
+    {
+        DocxParagraph firstSectionParagraph = CreateDocxLayoutParagraph("first section long endnote marker", 10d, 18d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "24",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 6)
+            ]
+        };
+        DocxParagraph secondSectionParagraph = CreateDocxLayoutParagraph("second section body", 10d, 12d);
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote split body", 10d, 18d);
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "24",
+            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
+            [],
+            []);
+        DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
+        {
+            EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
+        };
+        var document = new DocxDocument(
+            220d,
+            112d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(firstSectionParagraph),
+                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []),
+                new DocxParagraphElement(secondSectionParagraph)
+            ],
+            [firstSectionParagraph, secondSectionParagraph],
+            [])
+        {
+            RelatedStories = [endnoteStory]
+        };
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        int secondSectionPageIndex = snapshot.Pages
+            .Select((page, pageIndex) => (page, pageIndex))
+            .First(item => item.page.Items.Any(pageItem => pageItem.SourceBlockIndex == 2))
+            .pageIndex;
+        var placedSlices = snapshot.Pages
+            .SelectMany((page, pageIndex) => page.PlacedRelatedStories
+                .Where(story => story.Kind == "Endnote" && story.Id == "24")
+                .Select(story => (story, pageIndex)))
+            .ToArray();
+
+        TestAssert.True(placedSlices.Length >= 2, "A single overlong sectEnd endnote story should be split into multiple placed slices instead of clipping away the tail.");
+        TestAssert.True(placedSlices.All(slice => slice.pageIndex < secondSectionPageIndex), "All section-end endnote slices must stay before the following section page.");
+        TestAssert.Equal(0d, placedSlices[0].story.ContentTopOffset);
+        TestAssert.True(placedSlices[^1].story.ContentTopOffset > 0d, "Continuation slices should carry a nonzero source-story top offset.");
+        TestAssert.True(placedSlices[^1].story.ContentHeight > placedSlices[^1].story.Height, "Continuation slices should retain the full unpaged story height for diagnostics.");
     }
 
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()

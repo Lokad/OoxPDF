@@ -2471,30 +2471,15 @@ internal sealed class DocxLayoutEngine
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
         foreach (DocxReferencedRelatedStoryLayout story in sectionEndStories)
         {
-            double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
-            if (storyHeight <= 0d)
-            {
-                continue;
-            }
-
-            if (cursorTop - storyHeight < activePage.MarginBottom)
-            {
-                activePage = CreateEmptyContinuationPage(activePage);
-                activePageIndex++;
-                outputPages.Insert(activePageIndex, activePage);
-                activePlacedStories = [];
-                cursorTop = activePage.Height - activePage.MarginTop;
-            }
-
-            activePlacedStories.Add(PlaceRelatedStoryAtTop(
-                activePage,
-                activePageIndex,
+            PlaceRelatedStorySlices(
+                outputPages,
+                ref activePageIndex,
+                ref activePage,
+                ref activePlacedStories,
+                ref cursorTop,
                 story.StoryLayout,
                 story.Location.SourceBlockIndex,
-                cursorTop,
-                separatorY: null));
-            outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-            cursorTop -= storyHeight + FootnoteSeparatorGapPoints;
+                insertContinuationAfterActivePage: true);
         }
     }
 
@@ -2511,29 +2496,105 @@ internal sealed class DocxLayoutEngine
         DocxLayoutPage activePage = outputPages[^1];
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
+        int activePageIndex = outputPages.Count - 1;
         foreach (DocxRelatedStoryLayout storyLayout in endnoteStories)
         {
-            double storyHeight = ResolvePlacedStoryHeight(storyLayout, activePage);
-            if (storyHeight <= 0d)
-            {
-                continue;
-            }
-
-            if (cursorTop - storyHeight < activePage.MarginBottom)
-            {
-                activePage = CreateEmptyContinuationPage(activePage);
-                outputPages.Add(activePage);
-                activePlacedStories = [];
-                cursorTop = activePage.Height - activePage.MarginTop;
-            }
-
-            DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, outputPages.Count - 1, storyLayout, sourceBlockIndex: -1, cursorTop, separatorY: null);
-            activePlacedStories.Add(placedStory);
-            outputPages[^1] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-            cursorTop -= storyHeight + FootnoteSeparatorGapPoints;
+            PlaceRelatedStorySlices(
+                outputPages,
+                ref activePageIndex,
+                ref activePage,
+                ref activePlacedStories,
+                ref cursorTop,
+                storyLayout,
+                sourceBlockIndex: -1,
+                insertContinuationAfterActivePage: false);
         }
 
         return outputPages;
+    }
+
+    private static void PlaceRelatedStorySlices(
+        List<DocxLayoutPage> outputPages,
+        ref int activePageIndex,
+        ref DocxLayoutPage activePage,
+        ref List<DocxPlacedRelatedStoryLayout> activePlacedStories,
+        ref double cursorTop,
+        DocxRelatedStoryLayout storyLayout,
+        int sourceBlockIndex,
+        bool insertContinuationAfterActivePage)
+    {
+        double remainingHeight = Math.Max(0d, storyLayout.ContentHeight);
+        double storyTopOffset = 0d;
+        while (remainingHeight > 0.001d)
+        {
+            double availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
+            if (availableHeight <= 0.001d)
+            {
+                MoveToRelatedStoryContinuationPage(
+                    outputPages,
+                    ref activePageIndex,
+                    ref activePage,
+                    ref activePlacedStories,
+                    ref cursorTop,
+                    insertContinuationAfterActivePage);
+                availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
+            }
+
+            double sliceHeight = Math.Min(remainingHeight, availableHeight);
+            if (sliceHeight <= 0.001d)
+            {
+                break;
+            }
+
+            activePlacedStories.Add(PlaceRelatedStoryAtTop(
+                activePage,
+                activePageIndex,
+                storyLayout,
+                sourceBlockIndex,
+                cursorTop,
+                storyTopOffset,
+                sliceHeight,
+                separatorY: null));
+            outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+            storyTopOffset += sliceHeight;
+            remainingHeight -= sliceHeight;
+            cursorTop -= sliceHeight + FootnoteSeparatorGapPoints;
+
+            if (remainingHeight > 0.001d)
+            {
+                MoveToRelatedStoryContinuationPage(
+                    outputPages,
+                    ref activePageIndex,
+                    ref activePage,
+                    ref activePlacedStories,
+                    ref cursorTop,
+                    insertContinuationAfterActivePage);
+            }
+        }
+    }
+
+    private static void MoveToRelatedStoryContinuationPage(
+        List<DocxLayoutPage> outputPages,
+        ref int activePageIndex,
+        ref DocxLayoutPage activePage,
+        ref List<DocxPlacedRelatedStoryLayout> activePlacedStories,
+        ref double cursorTop,
+        bool insertContinuationAfterActivePage)
+    {
+        activePage = CreateEmptyContinuationPage(activePage);
+        if (insertContinuationAfterActivePage)
+        {
+            activePageIndex++;
+            outputPages.Insert(activePageIndex, activePage);
+        }
+        else
+        {
+            outputPages.Add(activePage);
+            activePageIndex = outputPages.Count - 1;
+        }
+
+        activePlacedStories = [];
+        cursorTop = activePage.Height - activePage.MarginTop;
     }
 
     private static IEnumerable<DocxReferencedRelatedStoryLayout> ResolveReferencedRelatedStoryLayouts(
