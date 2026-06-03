@@ -1582,6 +1582,7 @@ internal sealed record DocxTextSegmentLayout(
     DocxTextStateCharacterSpacingSource PdfCharacterSpacingSource = DocxTextStateCharacterSpacingSource.None,
     bool CompensatePdfCharacterSpacing = true,
     int SourceTextRunIndex = -1,
+    int SourceTextOffsetInRun = 0,
     DocxTextSegmentRole Role = DocxTextSegmentRole.Text);
 
 internal enum DocxTextSegmentRole
@@ -1594,7 +1595,8 @@ internal enum DocxTextSegmentRole
 internal sealed record DocxTextSpan(
     string Text,
     DocxTextRun StyleRun,
-    int SourceTextRunIndex);
+    int SourceTextRunIndex,
+    int SourceTextOffsetInRun = 0);
 
 internal sealed record DocxWrappedTextLine(
     string Text,
@@ -2525,9 +2527,40 @@ internal sealed class DocxLayoutEngine
             return true;
         }
 
+        if (IsInlineReferenceOffsetRenderedAnywhere(pages, sourceBlockIndex, reference.SourceRunIndex, reference.TextOffsetInRun))
+        {
+            return EnumeratePageTextLines(pages[pageIndex])
+                .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
+                    line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, reference.SourceRunIndex, reference.TextOffsetInRun)));
+        }
+
         return EnumeratePageTextLines(pages[pageIndex])
             .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
                 line.Segments.Any(segment => segment.SourceTextRunIndex == reference.SourceRunIndex));
+    }
+
+    private static bool IsInlineReferenceOffsetRenderedAnywhere(
+        IReadOnlyList<DocxLayoutPage> pages,
+        int sourceBlockIndex,
+        int sourceRunIndex,
+        int textOffsetInRun)
+    {
+        return pages
+            .SelectMany(EnumeratePageTextLines)
+            .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
+                line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, sourceRunIndex, textOffsetInRun)));
+    }
+
+    private static bool SegmentContainsSourceTextOffset(DocxTextSegmentLayout segment, int sourceRunIndex, int textOffsetInRun)
+    {
+        if (segment.SourceTextRunIndex != sourceRunIndex)
+        {
+            return false;
+        }
+
+        int start = Math.Max(0, segment.SourceTextOffsetInRun);
+        int end = start + segment.Text.Length;
+        return textOffsetInRun >= start && textOffsetInRun <= end;
     }
 
     private static bool IsInlineReferenceRunRenderedAnywhere(
@@ -3609,7 +3642,15 @@ internal sealed class DocxLayoutEngine
             double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
             double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
             double width = textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
-            segments.Add(new DocxTextSegmentLayout(span.Text, span.StyleRun, segmentX, width, layoutFontSize, baselineOffset, SourceTextRunIndex: span.SourceTextRunIndex));
+            segments.Add(new DocxTextSegmentLayout(
+                span.Text,
+                span.StyleRun,
+                segmentX,
+                width,
+                layoutFontSize,
+                baselineOffset,
+                SourceTextRunIndex: span.SourceTextRunIndex,
+                SourceTextOffsetInRun: span.SourceTextOffsetInRun));
             segmentX += width;
             if (i + 1 < spans.Count)
             {
@@ -6448,7 +6489,15 @@ internal sealed class DocxLayoutEngine
             }
             else
             {
-                segments.Add(new DocxTextSegmentLayout(text, span.StyleRun, segmentX, width, spanFontSize, baselineOffset, SourceTextRunIndex: span.SourceTextRunIndex));
+                segments.Add(new DocxTextSegmentLayout(
+                    text,
+                    span.StyleRun,
+                    segmentX,
+                    width,
+                    spanFontSize,
+                    baselineOffset,
+                    SourceTextRunIndex: span.SourceTextRunIndex,
+                    SourceTextOffsetInRun: span.SourceTextOffsetInRun + start));
                 segmentX += width;
             }
 
@@ -6530,7 +6579,16 @@ internal sealed class DocxLayoutEngine
             if (i > start)
             {
                 string text = span.Text[start..i];
-                segmentX = AddTextSegment(segments, span.StyleRun, span.SourceTextRunIndex, text, segmentX, spanFontSize, baselineOffset, textMeasurer);
+                segmentX = AddTextSegment(
+                    segments,
+                    span.StyleRun,
+                    span.SourceTextRunIndex,
+                    span.SourceTextOffsetInRun + start,
+                    text,
+                    segmentX,
+                    spanFontSize,
+                    baselineOffset,
+                    textMeasurer);
             }
 
             if (i < span.Text.Length)
@@ -6547,6 +6605,7 @@ internal sealed class DocxLayoutEngine
         List<DocxTextSegmentLayout> segments,
         DocxTextRun styleRun,
         int sourceTextRunIndex,
+        int sourceTextOffsetInRun,
         string text,
         double segmentX,
         double fontSize,
@@ -6557,18 +6616,42 @@ internal sealed class DocxLayoutEngine
         if (leadingSpaces == 0 || leadingSpaces == text.Length)
         {
             double width = textMeasurer.MeasureText(styleRun, text, fontSize);
-            segments.Add(new DocxTextSegmentLayout(text, styleRun, segmentX, width, fontSize, baselineOffset, SourceTextRunIndex: sourceTextRunIndex));
+            segments.Add(new DocxTextSegmentLayout(
+                text,
+                styleRun,
+                segmentX,
+                width,
+                fontSize,
+                baselineOffset,
+                SourceTextRunIndex: sourceTextRunIndex,
+                SourceTextOffsetInRun: sourceTextOffsetInRun));
             return segmentX + width;
         }
 
         string spaceText = text[..leadingSpaces];
         double spaceWidth = textMeasurer.MeasureText(styleRun, spaceText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(spaceText, styleRun, segmentX, spaceWidth, fontSize, baselineOffset, SourceTextRunIndex: sourceTextRunIndex));
+        segments.Add(new DocxTextSegmentLayout(
+            spaceText,
+            styleRun,
+            segmentX,
+            spaceWidth,
+            fontSize,
+            baselineOffset,
+            SourceTextRunIndex: sourceTextRunIndex,
+            SourceTextOffsetInRun: sourceTextOffsetInRun));
         segmentX += spaceWidth + DocxTextSpacing.BoundarySpacing(styleRun, spaceText, text[leadingSpaces..]);
 
         string bodyText = text[leadingSpaces..];
         double bodyWidth = textMeasurer.MeasureText(styleRun, bodyText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(bodyText, styleRun, segmentX, bodyWidth, fontSize, baselineOffset, SourceTextRunIndex: sourceTextRunIndex));
+        segments.Add(new DocxTextSegmentLayout(
+            bodyText,
+            styleRun,
+            segmentX,
+            bodyWidth,
+            fontSize,
+            baselineOffset,
+            SourceTextRunIndex: sourceTextRunIndex,
+            SourceTextOffsetInRun: sourceTextOffsetInRun + leadingSpaces));
         return segmentX + bodyWidth;
     }
 
@@ -6874,7 +6957,12 @@ internal sealed class DocxLayoutEngine
             int sliceEnd = Math.Min(end, spanEnd);
             if (sliceStart < sliceEnd)
             {
-                sliced.Add(new DocxTextSpan(span.Text[(sliceStart - spanStart)..(sliceEnd - spanStart)], span.StyleRun, span.SourceTextRunIndex));
+                int spanOffset = sliceStart - spanStart;
+                sliced.Add(new DocxTextSpan(
+                    span.Text[spanOffset..(sliceEnd - spanStart)],
+                    span.StyleRun,
+                    span.SourceTextRunIndex,
+                    span.SourceTextOffsetInRun + spanOffset));
             }
 
             if (spanEnd >= end)

@@ -8030,8 +8030,18 @@ Current validation baseline:
   an earlier fragment of the same source block. Bottom-up coverage forces a two-run paragraph across pages and
   asserts the placed footnote follows the marker run page. Validation passed full solution build,
   `docx-page --skip-slow` (`48`), `docx-core --skip-slow` (`60`), and `docx-tables --skip-slow` (`125`).
-  Keep offset-level marker ownership for references inside a run that itself splits across pages,
-  table-internal note continuation, multi-page footnotes, section-scoped endnotes, and comments open.
+  At that point, offset-level marker ownership for references inside a run that itself splits across pages
+  still remained open alongside table-internal note continuation, multi-page footnotes, section-scoped endnotes,
+  and comments.
+  2026-06-03 follow-up: layout text provenance now carries `SourceTextOffsetInRun` from `DocxTextSpan` into
+  `DocxTextSegmentLayout`, including sliced wrapped lines, tab-separated segments, leading-space splits, and
+  justified text segments. Footnote placement uses the rendered segment offset range when available, so a
+  single source run that wraps or paginates can place its note on the page containing the marker offset rather
+  than the first page containing any fragment of that run. Bottom-up coverage adds a same-run split-page
+  footnote fixture. Validation passed full solution build, `docx-page --skip-slow` (`49`), `docx-core
+  --skip-slow` (`60`), and `docx-tables --skip-slow` (`125`). Keep Office-derived boundary-offset behavior for
+  reader-generated marker display runs, table-internal note continuation, multi-page footnotes, section-scoped
+  endnotes, and comments open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

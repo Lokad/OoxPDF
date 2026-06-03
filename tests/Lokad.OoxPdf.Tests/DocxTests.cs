@@ -15431,6 +15431,87 @@ internal static class DocxTests
         TestAssert.True(layout.Pages[footnotePageIndex].Items.OfType<DocxTextLineLayout>().Any(line => line.Segments.Any(segment => segment.SourceTextRunIndex == 1)), "The selected footnote page should contain the marker source run.");
     }
 
+    public static void DocxLayoutPlacesFootnoteOnRenderedMarkerOffsetPage()
+    {
+        const int markerOffset = 180;
+        string text = string.Concat(Enumerable.Repeat("alpha beta gamma delta ", 12));
+        var run = new DocxTextRun(
+            text,
+            10d,
+            null,
+            false,
+            false,
+            false,
+            null,
+            null);
+        DocxParagraph anchor = new(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "12",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: markerOffset)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body", 10d, 12d);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "12",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        var document = new DocxDocument(
+            220d,
+            82d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(anchor)],
+            [anchor],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        int footnotePageIndex = Array.FindIndex(snapshot.Pages.ToArray(), page => page.PlacedFootnoteStoryCount == 1);
+
+        TestAssert.True(layout.Pages.Count > 1, "The single marker run should span pages so note ownership requires source offsets.");
+        TestAssert.Equal(0, snapshot.Pages[0].PlacedFootnoteStoryCount);
+        TestAssert.True(footnotePageIndex > 0, "The footnote story should be placed on the page containing the marker offset, not the first page containing the source run.");
+        TestAssert.True(
+            layout.Pages[footnotePageIndex].Items.OfType<DocxTextLineLayout>().Any(line =>
+                line.Segments.Any(segment =>
+                    segment.SourceTextRunIndex == 0 &&
+                    markerOffset >= segment.SourceTextOffsetInRun &&
+                    markerOffset <= segment.SourceTextOffsetInRun + segment.Text.Length)),
+            "The selected footnote page should contain the marker source offset inside the rendered run segment.");
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
