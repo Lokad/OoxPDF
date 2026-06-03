@@ -578,6 +578,8 @@ internal sealed class DocxRenderer
             graphics.FillRectangle(story.X, separatorY, Math.Min(story.SeparatorWidth, story.Width), story.SeparatorThickness);
         }
 
+        graphics.SaveState();
+        graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
         IReadOnlyList<DocxLayoutItem> items = story.TextLines
             .Cast<DocxLayoutItem>()
             .Concat(story.InlineImages)
@@ -597,6 +599,8 @@ internal sealed class DocxRenderer
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageNumber, pageCount, ref imageIndex);
         }
+
+        graphics.RestoreState();
     }
 
     private static void RenderFloatingDrawings(
@@ -624,12 +628,23 @@ internal sealed class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         ref int imageIndex)
     {
-        foreach (DocxFloatingDrawingLayout drawing in story.FloatingDrawings
+        DocxFloatingDrawingLayout[] drawings = story.FloatingDrawings
             .Where(drawing => IsBehindDocument(drawing.Drawing) == behindDocument)
-            .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)))
+            .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue))
+            .ToArray();
+        if (drawings.Length == 0)
+        {
+            return;
+        }
+
+        graphics.SaveState();
+        graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
+        foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
             RenderFloatingDrawing(drawing, graphics, pageImages, diagnosticSink, ref imageIndex);
         }
+
+        graphics.RestoreState();
     }
 
     private static void RenderFloatingDrawing(

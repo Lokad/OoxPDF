@@ -30,6 +30,8 @@ internal sealed record DocxPlacedRelatedStoryLayout(
     double TopY,
     double Width,
     double Height,
+    double ContentTopOffset,
+    double ContentHeight,
     double? SeparatorY,
     double SeparatorWidth,
     double SeparatorThickness,
@@ -526,6 +528,8 @@ internal sealed record DocxLayoutSnapshot(
                 story.TopY,
                 story.Width,
                 story.Height,
+                story.ContentTopOffset,
+                story.ContentHeight,
                 story.SeparatorY,
                 story.SeparatorWidth,
                 story.SeparatorThickness,
@@ -1156,6 +1160,8 @@ internal sealed record DocxPlacedRelatedStoryLayoutSnapshot(
     double TopY,
     double Width,
     double Height,
+    double ContentTopOffset,
+    double ContentHeight,
     double? SeparatorY,
     double SeparatorWidth,
     double SeparatorThickness,
@@ -2993,8 +2999,32 @@ internal sealed class DocxLayoutEngine
         double topY,
         double? separatorY)
     {
-        double storyHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
-        double deltaY = topY;
+        return PlaceRelatedStoryAtTop(
+            page,
+            pageIndex,
+            storyLayout,
+            sourceBlockIndex,
+            topY,
+            storyTopOffset: 0d,
+            storyHeight: ResolvePlacedStoryHeight(storyLayout, page),
+            separatorY);
+    }
+
+    private static DocxPlacedRelatedStoryLayout PlaceRelatedStoryAtTop(
+        DocxLayoutPage page,
+        int pageIndex,
+        DocxRelatedStoryLayout storyLayout,
+        int sourceBlockIndex,
+        double topY,
+        double storyTopOffset,
+        double storyHeight,
+        double? separatorY)
+    {
+        double clampedStoryTopOffset = Math.Max(0d, storyTopOffset);
+        double clampedStoryHeight = Math.Min(
+            Math.Max(0d, storyHeight),
+            Math.Max(0d, storyLayout.ContentHeight - clampedStoryTopOffset));
+        double deltaY = topY + clampedStoryTopOffset;
         return new DocxPlacedRelatedStoryLayout(
             storyLayout,
             storyLayout.StoryIndex,
@@ -3002,7 +3032,9 @@ internal sealed class DocxLayoutEngine
             page.MarginLeft,
             topY,
             Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight),
-            storyHeight,
+            clampedStoryHeight,
+            clampedStoryTopOffset,
+            storyLayout.ContentHeight,
             separatorY,
             FootnoteSeparatorWidthPoints,
             FootnoteSeparatorThicknessPoints,

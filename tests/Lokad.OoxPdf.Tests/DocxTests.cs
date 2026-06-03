@@ -15481,6 +15481,61 @@ internal static class DocxTests
         TestAssert.True(firstPlaced.SeparatorY is not null && secondPlaced.SeparatorY is null, "Generic separator geometry should be emitted once above the stacked footnote group.");
     }
 
+    public static void DocxRendererClipsOverlongPlacedFootnoteStoryToPageRegion()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("body with long footnote", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "16",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote overflow body", 10d, 12d);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "16",
+            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(footnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
+            [],
+            []);
+        var document = new DocxDocument(
+            220d,
+            82d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [bodyParagraph],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxPlacedRelatedStoryLayoutSnapshot placedStory = snapshot.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.Kind == "Footnote" && story.Id == "16");
+        PdfPage placedPage = new DocxRenderer()
+            .RenderBlankPages(document)
+            .Single(page => page.Content.Contains(" re W n", StringComparison.Ordinal));
+
+        TestAssert.True(placedStory.ContentHeight > placedStory.Height, "The overlong footnote should retain full-story height while exposing the clipped page slice height.");
+        TestAssert.Equal(0d, placedStory.ContentTopOffset);
+        TestAssert.Contains(" re W n", placedPage.Content);
+    }
+
     public static void DocxLayoutPlacesFootnoteOnRenderedMarkerRunPage()
     {
         var leadingRun = new DocxTextRun(

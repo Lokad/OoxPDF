@@ -8110,6 +8110,17 @@ Current validation baseline:
   `docx-core --skip-slow` (`61`), `docx-page --skip-slow` (`53`), and `docx-tables --skip-slow` (`126`).
   Keep Office-exact multi-page footnote continuation, continuation separators, and cross-page spill behavior
   open.
+  2026-06-03 follow-up: placed related stories now carry explicit slice metadata
+  (`ContentTopOffset` plus full `ContentHeight`) and the DOCX renderer clips each placed story to its page-owned
+  story rectangle before drawing text, images, tables, and story-owned drawings. This closes the structural overdraw weakness where an
+  overlong measured note story could expose items outside the reserved note region, while preserving the full
+  unpaged story height for future continuation slicing. Bottom-up coverage adds an overlong footnote case that
+  verifies the visible placed height is smaller than the full story height and that PDF emission includes a clip
+  path for the story region. Validation passed focused
+  `DocxRendererClipsOverlongPlacedFootnoteStoryToPageRegion`, `DocxLayoutStacksMultipleFootnotesOnOnePage`,
+  `docx-page --skip-slow` (`54`), `docx-core --skip-slow` (`61`), and `docx-tables --skip-slow` (`126`).
+  Keep true Office-exact multi-page footnote continuation, inserted continuation pages, continuation separator
+  story placement, and table-internal note continuation open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
