@@ -7300,6 +7300,18 @@ Current validation baseline:
   shows reference PDF width units and candidate OpenType advance units are not directly comparable as raw
   numbers, so the next implementation step should normalize or model Office's target advance before promoting
   any residual into `Tc`.
+  2026-06-03 normalized-reference-width follow-up: `SummarizeDocxTextState.ps1` now projects the reference
+  PDF `WidthSignature` into em units (`/W` width units divided by `1000`) and adds paired
+  `ReferenceTcByReferenceFontSizeAndPdfWidthSideEmRange`, `ReferenceVsPlannerPdfWidthSideEmRange`, and
+  ambiguity checks against candidate planner em side ranges. Refreshed summaries for
+  `docx-ladder-03-text-state-context`, `docx-ladder-03-text-state-size-matrix`, and
+  `docx-ladder-03-text-state-font-matrix` (`artifacts/visual/docx-text-state-normalized-width-summary-20260603.json`)
+  show zero ambiguous nonzero-`Tc` keys for `ref-tf+pdf-side-range-em` across the current public probes
+  (`11`, `19`, and `19` nonzero reference operations). The normalized reference widths line up with the
+  planner em side ranges up to PDF width rounding (`0.556` vs `0.556152`, `0.778` vs `0.777832`, etc.),
+  which strengthens the PDF-level structural oracle. Rendering remains unchanged: this still needs a planner
+  target-advance model derived from Office-like width/shaping geometry, not a lookup table of observed
+  normalized side ranges or `Tc` buckets.
   2026-06-02 glyph-signature follow-up: candidate DOCX text-emission snapshots now expose a private-safe
   glyph-advance signature per segment: mapped glyph count, glyph-pair count, summed advance units, summed
   kerning units, and a fixed-width hash over glyph/advance/kerning structure. `SummarizeDocxTextState.ps1`

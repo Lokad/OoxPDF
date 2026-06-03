@@ -710,6 +710,16 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             ReferencePairLeftWidthMaxUnits = $reference.WidthSignature.PairLeftWidthMaxUnits
             ReferencePairRightWidthMinUnits = $reference.WidthSignature.PairRightWidthMinUnits
             ReferencePairRightWidthMaxUnits = $reference.WidthSignature.PairRightWidthMaxUnits
+            ReferenceWidthEm = (DivideOrNull $reference.WidthSignature.WidthUnits 1000d)
+            ReferencePairWidthEm = (DivideOrNull $reference.WidthSignature.PairWidthUnits 1000d)
+            ReferencePairLeftWidthEm = (DivideOrNull $reference.WidthSignature.PairLeftWidthUnits 1000d)
+            ReferencePairRightWidthEm = (DivideOrNull $reference.WidthSignature.PairRightWidthUnits 1000d)
+            ReferencePairWidthMinEm = (DivideOrNull $reference.WidthSignature.PairWidthMinUnits 1000d)
+            ReferencePairWidthMaxEm = (DivideOrNull $reference.WidthSignature.PairWidthMaxUnits 1000d)
+            ReferencePairLeftWidthMinEm = (DivideOrNull $reference.WidthSignature.PairLeftWidthMinUnits 1000d)
+            ReferencePairLeftWidthMaxEm = (DivideOrNull $reference.WidthSignature.PairLeftWidthMaxUnits 1000d)
+            ReferencePairRightWidthMinEm = (DivideOrNull $reference.WidthSignature.PairRightWidthMinUnits 1000d)
+            ReferencePairRightWidthMaxEm = (DivideOrNull $reference.WidthSignature.PairRightWidthMaxUnits 1000d)
             PlannerTextClass = PlannerTextClass $segment
             PlannerTextLength = $segment.TextLength
             PlannerPdfFontSize = $segment.PdfFontSize
@@ -789,6 +799,18 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             param($pair)
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0)
         } $true
+        New-TcAmbiguityReport "ref-tf+pdf-side-range-em" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.ReferenceFontSize 3) + "|leftMinEm=" + (RoundedKey $pair.ReferencePairLeftWidthMinEm 6) + "|leftMaxEm=" + (RoundedKey $pair.ReferencePairLeftWidthMaxEm 6) + "|rightMinEm=" + (RoundedKey $pair.ReferencePairRightWidthMinEm 6) + "|rightMaxEm=" + (RoundedKey $pair.ReferencePairRightWidthMaxEm 6)
+        } $true
+        New-TcAmbiguityReport "ref-tf+pdf-side-range-em+planner-side-range-em" $pairs {
+            param($pair)
+            "tfRef=" + (RoundedKey $pair.ReferenceFontSize 3) + "|tfPlan=" + (RoundedKey $pair.PlannerPdfFontSize 3) +
+                "|refLeftMinEm=" + (RoundedKey $pair.ReferencePairLeftWidthMinEm 6) + "|refLeftMaxEm=" + (RoundedKey $pair.ReferencePairLeftWidthMaxEm 6) +
+                "|refRightMinEm=" + (RoundedKey $pair.ReferencePairRightWidthMinEm 6) + "|refRightMaxEm=" + (RoundedKey $pair.ReferencePairRightWidthMaxEm 6) +
+                "|planLeftMinEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinEm 6) + "|planLeftMaxEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxEm 6) +
+                "|planRightMinEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinEm 6) + "|planRightMaxEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxEm 6)
+        } $true
         New-TcAmbiguityReport "tf+rounded-residual-per-gap" $pairs {
             param($pair)
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|roundedResidualPerGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6)
@@ -854,6 +876,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             param($pair)
             "tf=" + (RoundedKey $pair.ReferenceFontSize 3) + "|leftMin=" + (RoundedKey $pair.ReferencePairLeftWidthMinUnits 0) + "|leftMax=" + (RoundedKey $pair.ReferencePairLeftWidthMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.ReferencePairRightWidthMinUnits 0) + "|rightMax=" + (RoundedKey $pair.ReferencePairRightWidthMaxUnits 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
+        ReferenceTcByReferenceFontSizeAndPdfWidthSideEmRange = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.ReferenceFontSize 3) + "|leftMinEm=" + (RoundedKey $pair.ReferencePairLeftWidthMinEm 6) + "|leftMaxEm=" + (RoundedKey $pair.ReferencePairLeftWidthMaxEm 6) + "|rightMinEm=" + (RoundedKey $pair.ReferencePairRightWidthMinEm 6) + "|rightMaxEm=" + (RoundedKey $pair.ReferencePairRightWidthMaxEm 6) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
         ReferenceVsPlannerPdfWidthSideRange = @(Group-Count $pairs {
             param($pair)
             "tfRef=" + (RoundedKey $pair.ReferenceFontSize 3) + "|tfPlan=" + (RoundedKey $pair.PlannerPdfFontSize 3) +
@@ -861,6 +887,15 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
                 "|refRightMin=" + (RoundedKey $pair.ReferencePairRightWidthMinUnits 0) + "|refRightMax=" + (RoundedKey $pair.ReferencePairRightWidthMaxUnits 0) +
                 "|planLeftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|planLeftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) +
                 "|planRightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|planRightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) +
+                "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceVsPlannerPdfWidthSideEmRange = @(Group-Count $pairs {
+            param($pair)
+            "tfRef=" + (RoundedKey $pair.ReferenceFontSize 3) + "|tfPlan=" + (RoundedKey $pair.PlannerPdfFontSize 3) +
+                "|refLeftMinEm=" + (RoundedKey $pair.ReferencePairLeftWidthMinEm 6) + "|refLeftMaxEm=" + (RoundedKey $pair.ReferencePairLeftWidthMaxEm 6) +
+                "|refRightMinEm=" + (RoundedKey $pair.ReferencePairRightWidthMinEm 6) + "|refRightMaxEm=" + (RoundedKey $pair.ReferencePairRightWidthMaxEm 6) +
+                "|planLeftMinEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinEm 6) + "|planLeftMaxEm=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxEm 6) +
+                "|planRightMinEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinEm 6) + "|planRightMaxEm=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxEm 6) +
                 "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceTcByPlannerFontSizeAndGlyphPairSideAdvanceEmRange = @(Group-Count $pairs {
