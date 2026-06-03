@@ -4986,6 +4986,12 @@ block models and richer section/pagination layout before adding more Word pagina
   `docx-core --skip-slow` (`58`), `docx-page --skip-slow` (`45`), `docx-tables --skip-slow` (`123`), and
   full solution build. Keep this open for removing or renaming the fallback constructor slots once test
   helpers and compatibility constructors no longer need them.
+  2026-06-03 reader-construction follow-up: `DocxReader` no longer computes and passes parallel
+  paragraph/table fallback inventories for main documents or related stories. Reader-built documents now
+  provide only the canonical `BodyElements` stream; the legacy `Paragraphs`/`Tables` properties remain
+  derived compatibility views. Validation passed full solution build, `docx-core --skip-slow` (`58`),
+  `docx-page --skip-slow` (`45`), and `docx-tables --skip-slow` (`123`). Keep this open for removing or
+  renaming fallback constructor slots still used by hand-built tests and compatibility construction paths.
 - [ ] DOCX style-resolved block model: move from reader-flattened paragraph metrics toward a layout-ready
   effective paragraph model with explicit provenance for defaults, basedOn style depth, table-style
   contributions, and direct paragraph overrides. This should let future vertical-flow decisions compare

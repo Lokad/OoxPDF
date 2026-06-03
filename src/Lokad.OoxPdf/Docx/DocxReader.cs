@@ -64,8 +64,6 @@ internal sealed class DocxReader
             ? null
             : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings);
         IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings);
-        IReadOnlyList<DocxParagraph> paragraphs = bodyElements.OfType<DocxParagraphElement>().Select(e => e.Paragraph).ToArray();
-        IReadOnlyList<DocxTable> tables = DocxBlockTraversal.EnumerateBodyTables(bodyElements).ToArray();
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference");
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference");
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
@@ -91,8 +89,8 @@ internal sealed class DocxReader
                 headers,
                 footers,
                 bodyElements,
-                paragraphs,
-                tables)
+                [],
+                [])
             {
                 FontCatalog = fontCatalog,
                 StyleCatalog = ToStyleCatalog(styles),
@@ -133,8 +131,8 @@ internal sealed class DocxReader
             headers,
             footers,
             bodyElements,
-            paragraphs,
-            tables)
+            [],
+            [])
         {
             FontCatalog = fontCatalog,
             StyleCatalog = ToStyleCatalog(styles),
@@ -2217,8 +2215,8 @@ internal sealed class DocxReader
             partName,
             (string?)story.Attribute(WordprocessingNamespace + "id"),
             bodyElements,
-            bodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
-            DocxBlockTraversal.EnumerateBodyTables(bodyElements).ToArray())
+            [],
+            [])
         {
             FloatingDrawings = floatingDrawings
         };
