@@ -4928,6 +4928,15 @@ block models and richer section/pagination layout before adding more Word pagina
   body stream owns the paragraph and still gets a grouped static story snapshot. Validation passed
   `docx-page --skip-slow` (`43`) and full solution build. Keep static table layout/rendering open; tables are
   deliberately modeled and diagnosed before being placed.
+  2026-06-03 static table layout follow-up: static header/footer tables now enter `DocxLayoutPage` as
+  `StaticTableRows` using the same `CreateTableLayoutFrame`/`CreateTableRowLayout` path as body tables, and
+  `DocxRenderer` renders them through the shared `DocxTableRowLayout` branch with adjacent static row context
+  for border ownership. Static layout snapshots now expose private-safe `StaticTableRowCount` plus
+  header/footer table-row story items, and a bottom-up header test covers a table supplied only through the
+  canonical static body-element map. Validation passed `docx-tables --skip-slow` (`122`) and
+  `docx-page --skip-slow` (`43`). Keep the canonical-inventory item open for compatibility deprecation and
+  public Office-oracle coverage of exact static story table vertical placement, but the previous
+  model/layout/rendering invisibility gap is closed.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

@@ -476,6 +476,7 @@ internal sealed record DocxLayoutSnapshot(
         IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines
             .Select(ToStaticSnapshot)
             .Concat(page.StaticInlineImages.Select(ToStaticSnapshot))
+            .Concat(page.StaticTableRows.Select(ToStaticSnapshot))
             .ToArray();
         int?[] sourceBlockIndexes = items
             .Select(item => item.SourceBlockIndex)
@@ -510,6 +511,7 @@ internal sealed record DocxLayoutSnapshot(
             items.Count,
             page.StaticTextLines.Count,
             page.StaticInlineImages.Count,
+            page.StaticTableRows.Count,
             items.Count(item => item.Kind == "TextLine"),
             items.Count(item => item.Kind == "InlineImage"),
             items.Count(item => item.Kind == "TableRow"),
@@ -555,6 +557,7 @@ internal sealed record DocxLayoutSnapshot(
                     group.Key.VariantType,
                     storyItems.Count(item => item.Kind.EndsWith("TextLine", StringComparison.Ordinal)),
                     storyItems.Count(item => item.Kind.EndsWith("InlineImage", StringComparison.Ordinal)),
+                    storyItems.Count(item => item.Kind.EndsWith("TableRow", StringComparison.Ordinal)),
                     paragraphIndexes.Length,
                     lineIndexes.Length,
                     storyItems.Sum(item => item.TextLength),
@@ -578,6 +581,8 @@ internal sealed record DocxLayoutSnapshot(
             "StaticFooterTextLine" => "Footer",
             "StaticHeaderInlineImage" => "Header",
             "StaticFooterInlineImage" => "Footer",
+            "StaticHeaderTableRow" => "Header",
+            "StaticFooterTableRow" => "Footer",
             _ => "Static"
         };
     }
@@ -604,6 +609,17 @@ internal sealed record DocxLayoutSnapshot(
             _ => "StaticInlineImage"
         };
         return ToSnapshot(image, []) with { Kind = kind };
+    }
+
+    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTableRowLayout row)
+    {
+        string kind = row.StoryKind switch
+        {
+            "Header" => "StaticHeaderTableRow",
+            "Footer" => "StaticFooterTableRow",
+            _ => "StaticTableRow"
+        };
+        return ToSnapshot(row, []) with { Kind = kind };
     }
 
     private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item, IReadOnlyList<DocxLayoutColumnFrame> columnFrames)
@@ -689,7 +705,7 @@ internal sealed record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
-                StoryVariantType: null),
+                row.StoryVariantType),
             _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
         };
     }
@@ -979,6 +995,7 @@ internal sealed record DocxLayoutPageSnapshot(
     int ItemCount,
     int StaticTextLineCount,
     int StaticInlineImageCount,
+    int StaticTableRowCount,
     int TextLineCount,
     int InlineImageCount,
     int TableRowCount,
@@ -1051,6 +1068,7 @@ internal sealed record DocxStaticStoryLayoutSnapshot(
     string? VariantType,
     int TextLineCount,
     int InlineImageCount,
+    int TableRowCount,
     int ParagraphCount,
     int SourceLineCount,
     int TextLength,
@@ -1350,6 +1368,7 @@ internal sealed record DocxLayoutPage(
     IReadOnlyList<DocxLayoutColumnFrame> ColumnFrames,
     IReadOnlyList<DocxTextLineLayout> StaticTextLines,
     IReadOnlyList<DocxInlineImageLayout> StaticInlineImages,
+    IReadOnlyList<DocxTableRowLayout> StaticTableRows,
     IReadOnlyList<DocxLayoutItem> Items);
 
 internal abstract record DocxLayoutItem;
@@ -1443,7 +1462,9 @@ internal sealed record DocxTableRowLayout(
     string? HeaderValue,
     bool HasTablePropertyExceptionCellMargins,
     bool CantSplit,
-    string? CantSplitValue) : DocxLayoutItem;
+    string? CantSplitValue,
+    string? StoryKind = null,
+    string? StoryVariantType = null) : DocxLayoutItem;
 
 internal sealed record DocxTableLayoutContext(
     int TableIndex,
@@ -1757,6 +1778,7 @@ internal sealed class DocxLayoutEngine
                 page.ColumnFrames,
                 [],
                 [],
+                [],
                 currentItems.ToArray()));
             currentItems = [];
             activeColumnIndex = 0;
@@ -2058,7 +2080,7 @@ internal sealed class DocxLayoutEngine
             FinishPage();
         }
 
-        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pages, textMeasurer).ToArray();
+        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pages, textMeasurer, defaultTabStopPoints).ToArray();
         return new DocxLayout(
             pagesWithStaticText,
             CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText),
@@ -2640,9 +2662,13 @@ internal sealed class DocxLayoutEngine
 
     private sealed record DocxStaticStoryLayoutResult(
         IReadOnlyList<DocxTextLineLayout> TextLines,
-        IReadOnlyList<DocxInlineImageLayout> InlineImages);
+        IReadOnlyList<DocxInlineImageLayout> InlineImages,
+        IReadOnlyList<DocxTableRowLayout> TableRows);
 
-    private static IReadOnlyList<DocxLayoutPage> AddStaticContent(IReadOnlyList<DocxLayoutPage> pages, IDocxTextMeasurer? textMeasurer)
+    private static IReadOnlyList<DocxLayoutPage> AddStaticContent(
+        IReadOnlyList<DocxLayoutPage> pages,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -2674,7 +2700,8 @@ internal sealed class DocxLayoutEngine
                     pageNumber,
                     pages.Count,
                     textMeasurer,
-                    staticMetrics);
+                    staticMetrics,
+                    defaultTabStopPoints);
             DocxStaticStoryLayoutResult footerLayout = CreateStaticStoryLayout(
                     selectedFooter,
                     page.MarginLeft,
@@ -2684,11 +2711,13 @@ internal sealed class DocxLayoutEngine
                     pageNumber,
                     pages.Count,
                     textMeasurer,
-                    staticMetrics);
+                    staticMetrics,
+                    defaultTabStopPoints);
             pagesWithStaticText[pageIndex] = page with
             {
                 StaticTextLines = headerLayout.TextLines.Concat(footerLayout.TextLines).ToArray(),
-                StaticInlineImages = headerLayout.InlineImages.Concat(footerLayout.InlineImages).ToArray()
+                StaticInlineImages = headerLayout.InlineImages.Concat(footerLayout.InlineImages).ToArray(),
+                StaticTableRows = headerLayout.TableRows.Concat(footerLayout.TableRows).ToArray()
             };
         }
 
@@ -2704,16 +2733,61 @@ internal sealed class DocxLayoutEngine
         int pageNumber,
         int pageCount,
         IDocxTextMeasurer textMeasurer,
-        IDocxStaticTextMetricsProvider staticMetrics)
+        IDocxStaticTextMetricsProvider staticMetrics,
+        double defaultTabStopPoints)
     {
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
+        var tableRows = new List<DocxTableRowLayout>();
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         int paragraphIndex = 0;
+        int tableIndex = 0;
         for (int elementIndex = 0; elementIndex < story.BodyElements.Count; elementIndex++)
         {
+            if (story.BodyElements[elementIndex] is DocxTableElement tableElement)
+            {
+                cursorY -= pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                DocxTableLayoutFrame frame = CreateTableLayoutFrame(
+                    tableElement.Table,
+                    tableIndex++,
+                    elementIndex,
+                    x,
+                    width,
+                    UnpagedRelatedStoryCanvasHeightPoints,
+                    textMeasurer,
+                    defaultTabStopPoints);
+                for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
+                {
+                    double rowHeight = frame.RowHeights[rowIndex];
+                    tableRows.Add(CreateTableRowLayout(
+                        tableElement.Table,
+                        frame.Context,
+                        tableElement.Table.Rows[rowIndex],
+                        rowIndex,
+                        frame.RowHeights,
+                        frame.EffectiveColumns,
+                        frame.Scale,
+                        textMeasurer,
+                        defaultTabStopPoints,
+                        () => pageNumber - 1,
+                        cursorY,
+                        rowHeight,
+                        cursorY,
+                        FragmentIndex: 0,
+                        FragmentCount: 1,
+                        FragmentReason: "None",
+                        StoryKind: isHeader ? "Header" : "Footer",
+                        StoryVariantType: story.VariantType));
+                    cursorY -= rowHeight;
+                }
+
+                continue;
+            }
+
             if (story.BodyElements[elementIndex] is not DocxParagraphElement paragraphElement)
             {
                 pendingSpacingAfter = 0d;
@@ -2800,7 +2874,7 @@ internal sealed class DocxLayoutEngine
             paragraphIndex++;
         }
 
-        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray());
+        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray());
     }
 
     private static DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs, int pageNumber, int pageCount)
@@ -4444,7 +4518,9 @@ internal sealed class DocxLayoutEngine
         double logicalRowTopY,
         int FragmentIndex,
         int FragmentCount,
-        string FragmentReason)
+        string FragmentReason,
+        string? StoryKind = null,
+        string? StoryVariantType = null)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row);
@@ -4594,7 +4670,9 @@ internal sealed class DocxLayoutEngine
             row.HeaderValue,
             row.TablePropertyExceptionCellMargins is not null,
             row.CantSplit,
-            row.CantSplitValue);
+            row.CantSplitValue,
+            StoryKind,
+            StoryVariantType);
     }
 
     private static bool IsVerticalMergeRestart(DocxTableCell cell)

@@ -105,9 +105,13 @@ internal sealed class DocxRenderer
                 diagnosticSink,
                 ref imageIndex);
 
-            foreach (DocxLayoutItem staticItem in EnumerateStaticLayoutItems(layoutPage))
+            IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage).ToArray();
+            for (int itemIndex = 0; itemIndex < staticItems.Count; itemIndex++)
             {
-                RenderLayoutItem(staticItem, previousRow: null, nextRow: null, graphics, pageImages, fontResources, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
+                DocxLayoutItem staticItem = staticItems[itemIndex];
+                DocxTableRowLayout? previousRow = itemIndex > 0 ? staticItems[itemIndex - 1] as DocxTableRowLayout : null;
+                DocxTableRowLayout? nextRow = itemIndex + 1 < staticItems.Count ? staticItems[itemIndex + 1] as DocxTableRowLayout : null;
+                RenderLayoutItem(staticItem, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
             }
 
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
@@ -159,7 +163,7 @@ internal sealed class DocxRenderer
         IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations)
     {
         var annotations = new List<PdfLinkAnnotation>();
-        foreach (DocxTextLineLayout line in page.StaticTextLines.Concat(EnumerateBodyTextLines(page)))
+        foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page).Concat(EnumerateBodyTextLines(page)))
         {
             if (line.SourceParagraph is not { } paragraph ||
                 paragraph.Hyperlinks.Count == 0)
@@ -217,7 +221,7 @@ internal sealed class DocxRenderer
         {
             DocxLayoutPage page = layout.Pages[pageIndex];
             int pageNumber = pageIndex + 1;
-            foreach (DocxTextLineLayout line in page.StaticTextLines.Concat(EnumerateBodyTextLines(page)))
+            foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page).Concat(EnumerateBodyTextLines(page)))
             {
                 if (line.SourceParagraph is not { } paragraph ||
                     paragraph.BookmarkAnchors.Count == 0)
@@ -964,12 +968,30 @@ internal sealed class DocxRenderer
         return page.StaticTextLines
             .Cast<DocxLayoutItem>()
             .Concat(page.StaticInlineImages)
+            .Concat(page.StaticTableRows)
             .OrderByDescending(item => item switch
             {
                 DocxTextLineLayout textLine => textLine.BaselineY,
                 DocxInlineImageLayout image => image.Y + image.Height,
+                DocxTableRowLayout row => row.Y + row.Height,
                 _ => 0d
             });
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page)
+    {
+        foreach (DocxTextLineLayout line in page.StaticTextLines)
+        {
+            yield return line;
+        }
+
+        foreach (DocxTableRowLayout row in page.StaticTableRows)
+        {
+            foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
+            {
+                yield return cellLine;
+            }
+        }
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateTableRowTextLines(DocxTableRowLayout row)

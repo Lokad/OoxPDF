@@ -12916,6 +12916,51 @@ internal static class DocxTests
         TestAssert.Equal("StaticHeaderTextLine", snapshot.Pages[0].StaticItems.Single().Kind);
     }
 
+    public static void DocxLayoutStagePlacesStaticHeaderTableRows()
+    {
+        DocxParagraph headerCellParagraph = CreateDocxLayoutParagraph("HT", 10d, 10d);
+        DocxTableCell headerCell = new("HT", [headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable headerTable = new(null, [40d], [new DocxTableRow([headerCell], 18d)]);
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(headerTable)]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            [headerTable]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        DocxTableRowLayout staticRow = layout.Pages[0].StaticTableRows.Single();
+        TestAssert.True(staticRow.StoryKind == "Header" && staticRow.StoryVariantType == "default", "Static header table rows should retain selected-story provenance.");
+        TestAssert.Equal(10d, staticRow.Cells.Single().X);
+        TestAssert.Equal(18d, staticRow.Height);
+        TestAssert.Equal("HT", staticRow.Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal(0, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        TestAssert.Equal(1, snapshot.Pages[0].StaticTableRowCount);
+        DocxLayoutItemSnapshot staticItem = snapshot.Pages[0].StaticItems.Single();
+        TestAssert.True(staticItem.Kind == "StaticHeaderTableRow" && staticItem.StoryVariantType == "default" && staticItem.TextLength == 2, "Static table snapshots should expose private-safe header table ownership and text length.");
+        DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single();
+        TestAssert.True(headerStory.Kind == "Header" && headerStory.TableRowCount == 1 && headerStory.TextLineCount == 0 && headerStory.TextLength == 2, "Static story snapshots should count table rows separately from text lines.");
+    }
+
     public static void DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants()
     {
         DocxParagraph defaultHeader = CreateDocxLayoutParagraph("DH", 10d, 10d);
