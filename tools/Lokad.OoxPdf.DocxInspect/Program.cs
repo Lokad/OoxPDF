@@ -155,6 +155,7 @@ File.WriteAllText(
         table.GridColumnCount,
         table.GridColumnsWidthSum,
         table.HasExplicitGrid,
+        table.ResolvedColumnWidths,
         table.ResolvedTableWidth,
         table.X,
         table.PreferredWidthPoints,

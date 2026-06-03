@@ -5463,6 +5463,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
     passed `docx-core --skip-slow` (`16`), `docx-tables --skip-slow` (`52`), and full solution build.
     Private DOCX run `20260601-004815` stayed neutral at `16/16` pages, zero dimension mismatches, no
     diagnostics, `MAE=12.509698`, changed16 `0.112673`.
+  - [x] 2026-06-03: Threaded the already-modeled resolved column grid into `DocxInspect`'s
+    `table-summary.json` export through `ResolvedColumnWidths`, so private table analysis can compare the
+    structural grid directly instead of reconstructing it from cell bounds or width sums. Validation passed
+    `dotnet build tools/Lokad.OoxPdf.DocxInspect/Lokad.OoxPdf.DocxInspect.csproj --tl:off --nologo -v
+    minimal` and `docx-tables --skip-slow` (`123`; serial rerun after a transient SDK file lock).
 - [ ] Select representative private tables for repeated inspection: one simple table, one typical dense
   table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
   - [x] 2026-06-01: Selected public-safe representative private DOCX tables from the layout snapshot
