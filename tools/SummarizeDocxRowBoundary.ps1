@@ -13,6 +13,8 @@ param(
 
     [double] $RowSlackPoints = 2,
 
+    [switch] $IncludeStaticStories,
+
     [string] $OutputJson
 )
 
@@ -175,6 +177,11 @@ for ($pageIndex = 0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
     $page = $layout.Pages[$pageIndex]
     $marginBottom = [double]$page.MarginBottom
     foreach ($row in @($page.TableRows)) {
+        $isStaticStory = $row.PSObject.Properties.Name -contains "StoryKind" -and $null -ne $row.StoryKind
+        if ($isStaticStory -and -not $IncludeStaticStories) {
+            continue
+        }
+
         $rowBottom = [double]$row.Y
         $rowTop = [double]$row.Y + [double]$row.Height
         if ($rowBottom -gt $marginBottom + $BottomWindowPoints -and $rowTop -gt $marginBottom + $BottomWindowPoints) {
@@ -203,6 +210,9 @@ for ($pageIndex = 0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
         $layoutRows.Add([pscustomobject]@{
             Page = $pageNumber
             TableIndex = [int]$row.TableIndex
+            IsStaticStory = [bool]$isStaticStory
+            StoryKind = if ($row.PSObject.Properties.Name -contains "StoryKind") { $row.StoryKind } else { $null }
+            StoryVariantType = if ($row.PSObject.Properties.Name -contains "StoryVariantType") { $row.StoryVariantType } else { $null }
             RowIndex = [int]$row.RowIndex
             PageRowIndex = [int]$row.PageRowIndex
             FragmentIndex = [int]$row.FragmentIndex
@@ -256,6 +266,7 @@ $summary = [pscustomobject]@{
     PageStart = $PageStart
     PageEnd = $PageEnd
     BottomWindowPoints = $BottomWindowPoints
+    IncludeStaticStories = [bool]$IncludeStaticStories
     LayoutRows = @($layoutRows.ToArray())
     BottomTextRows = $bottomTextRows
 }

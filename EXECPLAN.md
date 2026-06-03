@@ -5119,6 +5119,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `16/16` pages with zero diagnostics, `MAE=13.791190`, changed16 `0.126277`; worst pages are not exclusively
   table-heavy. Do not add a blanket replacement post-table gap from this evidence: the remaining private drift
   also needs text-line/style/numbering investigation.
+- [x] 2026-06-03: Made DOCX table diagnostics story-aware after static header/footer tables became first-class
+  layout rows. `tools/SummarizeDocxRowBoundary.ps1` now excludes static-story table rows by default, can include
+  them explicitly with `-IncludeStaticStories`, and reports `StoryKind`/`StoryVariantType` when present.
+  `tools/Lokad.OoxPdf.DocxInspect` now writes compact static table counts and a private-safe `table-summary.json`
+  with table story provenance, avoiding silent collisions between body and static table ordinals. Validation
+  passed PowerShell parse plus full solution build.
 - [ ] Implement style-derived paragraph spacing accurately, including exact Office autospacing magnitudes,
   Word-like adjacent paragraph spacing collapse around tables/sections, and diagnostics that distinguish
   supported tokens from unresolved spacing semantics.
