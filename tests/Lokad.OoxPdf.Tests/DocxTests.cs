@@ -10853,6 +10853,44 @@ internal static class DocxTests
         TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTableRowLayout>().Count());
     }
 
+    public static void DocxTableLayoutStageEstimatesKeptTableFirstRowWithResolvedPreferredWidth()
+    {
+        DocxParagraph filler = CreateDocxLayoutParagraph("Filler", 10d, 40d);
+        DocxParagraph heading = CreateDocxLayoutParagraph(
+            "Heading",
+            10d,
+            10d,
+            new DocxParagraphKeepRules(true, "1", null, null, null, null));
+        var table = new DocxTable(
+            null,
+            [100d],
+            [new DocxTableRow([new DocxTableCell("aaaa aaaa aaaa aaaa", [], null, null, null, null, [], DocxTableCellMargins.Empty)], null)],
+            PreferredWidthPoints: 25d);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(filler), new DocxParagraphElement(heading), new DocxTableElement(table)],
+            [filler, heading],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout keptRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal("Filler", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal("Heading", layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal(25d, keptRow.Table.ResolvedTableWidth);
+        TestAssert.True(keptRow.Height > 30d, "The first-row estimate must use the resolved preferred table width so wrapped cell text contributes to keep-with-next pagination.");
+    }
+
     public static void DocxTableLayoutStageAppliesVerticalMergeGeometry()
     {
         var restart = new DocxTableCell(

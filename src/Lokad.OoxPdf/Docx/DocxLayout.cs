@@ -1926,6 +1926,14 @@ internal sealed class DocxLayoutEngine
         double PageContentHeight,
         double TableX);
 
+    private sealed record DocxResolvedTableGrid(
+        double TableX,
+        double TableAvailableWidth,
+        double TargetTableWidth,
+        IReadOnlyList<double> EffectiveColumns,
+        double Scale,
+        IReadOnlyList<double> ResolvedColumnWidths);
+
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
     {
         IDocxTextMeasurer? textMeasurer = embedded is null ? null : new DocxEmbeddedTextMeasurer(embedded);
@@ -4864,14 +4872,8 @@ internal sealed class DocxLayoutEngine
             return 0d;
         }
 
-        double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
-        double gridTableWidth = table.ColumnWidthsPoints.Sum();
-        double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;
-        double targetTableWidth = ResolveTargetTableWidth(table, tableAvailableWidth, fallbackTableWidth);
-        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
-        double rawTableWidth = effectiveColumns.Sum();
-        double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
-        double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+        DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth);
+        double[] cellWidths = GetTableRowCellWidths(row, grid.EffectiveColumns, grid.Scale);
         double rowTopPadding = ResolveTableRowTopPadding(row);
         double contentHeight = row.Cells
             .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding))
@@ -5117,6 +5119,31 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints)
     {
+        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth);
+        var tableContext = new DocxTableLayoutContext(
+            tableIndex,
+            sourceBlockIndex,
+            table.Rows.Count,
+            table.ColumnWidthsPoints.Count,
+            table.ColumnWidthsPoints.Sum(),
+            table.HasExplicitGrid,
+            grid.ResolvedColumnWidths,
+            grid.TargetTableWidth,
+            grid.TableX,
+            table.PreferredWidthPoints,
+            table.PreferredWidthValue,
+            table.PreferredWidthType,
+            table.IndentPoints,
+            table.CellSpacingPoints,
+            table.LayoutValue);
+        double[] rowHeights = table.Rows
+            .Select(row => MeasureTableRowHeight(table, row, grid.EffectiveColumns, grid.Scale, textMeasurer, defaultTabStopPoints))
+            .ToArray();
+        return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
+    }
+
+    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth)
+    {
         double tableX = x + Math.Max(0d, table.IndentPoints ?? 0d);
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         double gridTableWidth = table.ColumnWidthsPoints.Sum();
@@ -5125,26 +5152,13 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
-        var tableContext = new DocxTableLayoutContext(
-            tableIndex,
-            sourceBlockIndex,
-            table.Rows.Count,
-            table.ColumnWidthsPoints.Count,
-            table.ColumnWidthsPoints.Sum(),
-            table.HasExplicitGrid,
-            effectiveColumns.Select(width => width * scale).ToArray(),
-            targetTableWidth,
+        return new DocxResolvedTableGrid(
             tableX,
-            table.PreferredWidthPoints,
-            table.PreferredWidthValue,
-            table.PreferredWidthType,
-            table.IndentPoints,
-            table.CellSpacingPoints,
-            table.LayoutValue);
-        double[] rowHeights = table.Rows
-            .Select(row => MeasureTableRowHeight(table, row, effectiveColumns, scale, textMeasurer, defaultTabStopPoints))
-            .ToArray();
-        return new DocxTableLayoutFrame(tableContext, effectiveColumns, scale, rowHeights, pageContentHeight, tableX);
+            tableAvailableWidth,
+            targetTableWidth,
+            effectiveColumns,
+            scale,
+            effectiveColumns.Select(width => width * scale).ToArray());
     }
 
     private static IReadOnlyList<double> GetEffectiveTableColumnWidths(DocxTable table, double preferredTableWidth)

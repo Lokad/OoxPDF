@@ -2761,6 +2761,14 @@ High-priority actions:
     2026-06-03 tooling follow-up: `DocxInspect` now also writes `style-catalog-summary.json` with private-safe
     style/default/basedOn/conditional-region counts for quick private-run triage. Validation passed
     `Lokad.OoxPdf.DocxInspect` build.
+    2026-06-04 table-grid architecture follow-up: table layout now resolves preferred width, indent,
+    explicit/missing grid, effective columns, scale, and resolved column widths through one
+    `DocxResolvedTableGrid` plan shared by the keep-with-next first-row estimator and the actual
+    `DocxTableLayoutFrame`. This removes duplicated width/grid logic between pagination estimation and row
+    placement. Bottom-up coverage `DocxTableLayoutStageEstimatesKeptTableFirstRowWithResolvedPreferredWidth`
+    verifies that a kept paragraph uses the same resolved preferred table width as real row layout, so wrapped
+    first-row cell text contributes to pagination before the heading is placed. Validation passed
+    `docx-tables --skip-slow` (`132`), `docx-core --skip-slow` (`63`), and full solution build.
   - [x] 2026-05-31: Added a private-safe `DocxLayoutSnapshot` inspection surface over the layout model. It
     reports page dimensions, item counts, item kinds, bounds, cell counts, and text lengths, but not document
     text. This gives private DOCX pagination/table work a restartable trace target before adding Word layout
