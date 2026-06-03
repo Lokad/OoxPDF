@@ -5068,6 +5068,13 @@ block models and richer section/pagination layout before adding more Word pagina
   A targeted scan of `DocxRenderer.cs` and `DocxTextEmissionPlanner.cs` no longer finds the direct run-style
   reads covered by this migration. Validation passed full solution build and `docx-text --skip-slow` (`49`).
   Keep this open for the remaining layout scalar reads and Office-oracle probes of style-derived run metrics.
+  2026-06-03 text-layout follow-up: DOCX text layout now reads `DocxEffectiveRunProperties` for
+  character-spacing advances, hidden-run filtering, superscript/subscript vertical-align detection, static
+  header/footer line font sizing, table-cell first-baseline inset, paragraph fallback font sizing, and
+  body/table text-span font sizing. A targeted scan of `DocxLayout.cs` no longer finds the direct run-style
+  reads covered by this migration. Validation passed full solution build, `docx-text --skip-slow` (`49`),
+  `docx-page --skip-slow` (`45`), and `docx-tables --skip-slow` (`123`). Keep this open for Office-oracle
+  probes of exact style-derived run metrics and for deprecating the legacy direct scalar surface.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

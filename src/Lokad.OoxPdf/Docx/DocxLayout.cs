@@ -1653,7 +1653,7 @@ internal static class DocxTextSpacing
 {
     public static double AddCharacterSpacing(double measuredWidth, DocxTextRun? run, string text)
     {
-        return measuredWidth + CountCharacterSpacingGaps(text) * (run?.CharacterSpacingPoints ?? 0d);
+        return measuredWidth + CountCharacterSpacingGaps(text) * (run?.EffectiveProperties.CharacterSpacingPoints ?? 0d);
     }
 
     public static double BoundarySpacing(DocxTextRun? left, string leftText, string rightText)
@@ -1663,7 +1663,7 @@ internal static class DocxTextSpacing
             leftText[^1] == '\t' ||
             rightText[0] == '\t'
             ? 0d
-            : left?.CharacterSpacingPoints ?? 0d;
+            : left?.EffectiveProperties.CharacterSpacingPoints ?? 0d;
     }
 
     private static int CountCharacterSpacingGaps(string text)
@@ -1720,7 +1720,7 @@ internal static class DocxLineMetrics
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)
     {
         DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
-        return firstTextParagraph is null ? 0d : firstTextParagraph.Runs.Max(run => run.FontSize);
+        return firstTextParagraph is null ? 0d : firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize);
     }
 }
 
@@ -1752,12 +1752,12 @@ internal static class DocxVerticalAlignMetrics
 
     private static bool IsSuperscript(DocxTextRun run)
     {
-        return run.VerticalAlignmentValue?.Equals("superscript", StringComparison.OrdinalIgnoreCase) == true;
+        return run.EffectiveProperties.VerticalAlignmentValue?.Equals("superscript", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static bool IsSubscript(DocxTextRun run)
     {
-        return run.VerticalAlignmentValue?.Equals("subscript", StringComparison.OrdinalIgnoreCase) == true;
+        return run.EffectiveProperties.VerticalAlignmentValue?.Equals("subscript", StringComparison.OrdinalIgnoreCase) == true;
     }
 }
 
@@ -2901,14 +2901,14 @@ internal sealed class DocxLayoutEngine
                         DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
                         _ => x
                     };
-                    double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.FontSize));
-                    double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.FontSize));
+                    double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
+                    double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
                     double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
                     IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX, textMeasurer);
                     lines.Add(new DocxTextLineLayout(
                         line.Text,
                         line.Spans[0].StyleRun,
-                        line.Spans.Max(span => span.StyleRun.FontSize),
+                        line.Spans.Max(span => span.StyleRun.EffectiveProperties.FontSize),
                         lineX,
                         baselineY,
                         lineWidth,
@@ -2963,11 +2963,11 @@ internal sealed class DocxLayoutEngine
 
     private static DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs, int pageNumber, int pageCount)
     {
-        if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.Hidden))
+        if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
         {
             for (int i = 0; i < runs.Count; i++)
             {
-                if (!runs[i].Hidden)
+                if (!runs[i].EffectiveProperties.Hidden)
                 {
                     return [new DocxTextSpan(" ", runs[i], i)];
                 }
@@ -2978,7 +2978,7 @@ internal sealed class DocxLayoutEngine
 
         return runs
             .Select((run, index) => (run, index))
-            .Where(item => !item.run.Hidden)
+            .Where(item => !item.run.EffectiveProperties.Hidden)
             .Select(item => new DocxTextSpan(ResolveStaticFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
             .Where(span => span.Text.Length != 0)
             .ToArray();
@@ -3067,7 +3067,7 @@ internal sealed class DocxLayoutEngine
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            double nominalFontSize = span.StyleRun.FontSize;
+            double nominalFontSize = span.StyleRun.EffectiveProperties.FontSize;
             double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
             double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
             double width = textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
@@ -3088,7 +3088,7 @@ internal sealed class DocxLayoutEngine
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(span.StyleRun.FontSize, span.StyleRun);
+            double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(span.StyleRun.EffectiveProperties.FontSize, span.StyleRun);
             width += textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
             if (i + 1 < spans.Count)
             {
@@ -3575,13 +3575,14 @@ internal sealed class DocxLayoutEngine
             ? metricsProvider.MeasureSingleLineHeight(bodyRun, fontSize)
             : fontSize;
         double? listLabelSingleLineHeight = metricsProvider is not null && listLabelRun is not null
-            ? metricsProvider.MeasureSingleLineHeight(listLabelRun, listLabelRun.FontSize)
+            ? metricsProvider.MeasureSingleLineHeight(listLabelRun, listLabelRun.EffectiveProperties.FontSize)
             : null;
         double? bodyWindowsLineHeight = staticMetrics is not null
             ? staticMetrics.MeasureWindowsAscender(bodyRun, fontSize) + staticMetrics.MeasureWindowsDescender(bodyRun, fontSize)
             : null;
         double? listLabelWindowsLineHeight = staticMetrics is not null && listLabelRun is not null
-            ? staticMetrics.MeasureWindowsAscender(listLabelRun, listLabelRun.FontSize) + staticMetrics.MeasureWindowsDescender(listLabelRun, listLabelRun.FontSize)
+            ? staticMetrics.MeasureWindowsAscender(listLabelRun, listLabelRun.EffectiveProperties.FontSize) +
+                staticMetrics.MeasureWindowsDescender(listLabelRun, listLabelRun.EffectiveProperties.FontSize)
             : null;
         double effectiveLineSpacingFactor = ResolveAutoLineSpacingFactor(paragraph, out bool floorApplied);
         return new DocxLineHeightProfile(
@@ -5694,11 +5695,11 @@ internal sealed class DocxLayoutEngine
 
     private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs)
     {
-        if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.Hidden))
+        if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
         {
             for (int i = 0; i < runs.Count; i++)
             {
-                if (!runs[i].Hidden)
+                if (!runs[i].EffectiveProperties.Hidden)
                 {
                     return [new DocxTextSpan(" ", runs[i], i)];
                 }
@@ -5709,14 +5710,14 @@ internal sealed class DocxLayoutEngine
 
         return runs
             .Select((run, index) => (run, index))
-            .Where(item => item.run.Text.Length != 0 && !item.run.Hidden)
+            .Where(item => item.run.Text.Length != 0 && !item.run.EffectiveProperties.Hidden)
             .Select(item => new DocxTextSpan(item.run.Text, item.run, item.index))
             .ToArray();
     }
 
     private static double GetParagraphFontSize(DocxParagraph paragraph)
     {
-        return paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(run => run.FontSize);
+        return paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(run => run.EffectiveProperties.FontSize);
     }
 
     private static IReadOnlyList<DocxTextSegmentLayout> CreateTextSegments(
@@ -6022,13 +6023,15 @@ internal sealed class DocxLayoutEngine
 
     private static double GetTextSpanFontSize(DocxTextSpan span, double fallbackFontSize)
     {
-        double nominalFontSize = span.StyleRun.FontSize > 0d ? span.StyleRun.FontSize : fallbackFontSize;
+        double fontSize = span.StyleRun.EffectiveProperties.FontSize;
+        double nominalFontSize = fontSize > 0d ? fontSize : fallbackFontSize;
         return DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
     }
 
     private static double GetTextSpanBaselineOffset(DocxTextSpan span, double fallbackFontSize)
     {
-        double nominalFontSize = span.StyleRun.FontSize > 0d ? span.StyleRun.FontSize : fallbackFontSize;
+        double fontSize = span.StyleRun.EffectiveProperties.FontSize;
+        double nominalFontSize = fontSize > 0d ? fontSize : fallbackFontSize;
         double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
         return DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
     }
