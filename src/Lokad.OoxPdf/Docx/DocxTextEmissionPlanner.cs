@@ -88,9 +88,10 @@ internal static class DocxTextEmissionPlanner
         bool compensatePdfCharacterSpacing,
         DocxTextStateCharacterSpacingSource source = DocxTextStateCharacterSpacingSource.None)
     {
+        DocxEffectiveRunProperties effective = style.EffectiveProperties;
         double positioningCharacterSpacing = compensatePdfCharacterSpacing
-            ? style.CharacterSpacingPoints - pdfCharacterSpacing
-            : style.CharacterSpacingPoints;
+            ? effective.CharacterSpacingPoints - pdfCharacterSpacing
+            : effective.CharacterSpacingPoints;
         DocxTextStateCharacterSpacingSource resolvedSource = source == DocxTextStateCharacterSpacingSource.None &&
             Math.Abs(pdfCharacterSpacing) > 0.0000001d
             ? DocxTextStateCharacterSpacingSource.Explicit
@@ -133,10 +134,11 @@ internal static class DocxTextEmissionPlanner
 
     public static DocxTextEmissionPlan CreateForListLabel(DocxTextRun style, DocxListLabel label)
     {
-        DocxTextStateCharacterSpacingTarget target = TextStateCharacterSpacingTargetForListLabel(label, style.FontSize);
+        double fontSize = style.EffectiveProperties.FontSize;
+        DocxTextStateCharacterSpacingTarget target = TextStateCharacterSpacingTargetForListLabel(label, fontSize);
         return Create(
             style,
-            style.FontSize,
+            fontSize,
             target.CharacterSpacing,
             compensatePdfCharacterSpacing: false,
             target.Source);

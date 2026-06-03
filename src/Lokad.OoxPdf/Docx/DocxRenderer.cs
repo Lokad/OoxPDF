@@ -925,6 +925,7 @@ internal sealed class DocxRenderer
         var emissionSegments = new List<DocxTextEmissionSegment>(segments.Count + 1);
         foreach (DocxTextSegmentLayout segment in segments)
         {
+            DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
             if (resource is null)
             {
@@ -939,7 +940,7 @@ internal sealed class DocxRenderer
                     ResolveStaticFieldPlaceholders(part.Text, pageNumber, pageCount),
                     segment.StyleRun,
                     resource,
-                    ReadColor(segment.StyleRun.ColorHex),
+                    ReadColor(effective.ColorHex),
                     part.X,
                     baselineY,
                     part.Width,
@@ -948,7 +949,7 @@ internal sealed class DocxRenderer
                     segment.PdfCharacterSpacingSource,
                     segment.CompensatePdfCharacterSpacing,
                     ShouldApplySyntheticBold(segment.StyleRun, resource),
-                    segment.StyleRun.Italic && !resource.Resolution.Italic,
+                    effective.Italic && !resource.Resolution.Italic,
                     IsTerminalLineSpace: false,
                     segment.SourceTextRunIndex,
                     segment.Role));
@@ -981,7 +982,8 @@ internal sealed class DocxRenderer
 
             double fontSize = GetSegmentFontSize(segment, line.FontSize);
             double baselineY = GetSegmentBaselineY(segment, line.BaselineY);
-            RgbColor color = ReadColor(segment.StyleRun.ColorHex);
+            DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
+            RgbColor color = ReadColor(effective.ColorHex);
             emissionSegments.Add(new DocxTextEmissionSegment(
                 " ",
                 segment.StyleRun,
@@ -995,7 +997,7 @@ internal sealed class DocxRenderer
                 PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
                 CompensatePdfCharacterSpacing: true,
                 SyntheticBold: false,
-                SyntheticItalic: segment.StyleRun.Italic && !resource.Resolution.Italic,
+                SyntheticItalic: effective.Italic && !resource.Resolution.Italic,
                 IsTerminalLineSpace: true,
                 segment.SourceTextRunIndex,
                 segment.Role));
@@ -1122,7 +1124,7 @@ internal sealed class DocxRenderer
             segment.Width,
             segment.FontSize,
             plan.PdfFontSize,
-            segment.StyleRun.CharacterSpacingPoints,
+            segment.StyleRun.EffectiveProperties.CharacterSpacingPoints,
             plan.PdfCharacterSpacing,
             plan.PdfCharacterSpacingSource.ToString(),
             plan.PositioningCharacterSpacing,
@@ -1134,14 +1136,14 @@ internal sealed class DocxRenderer
             segment.Resource.Name,
             segment.SyntheticBold,
             segment.SyntheticItalic,
-            segment.StyleRun.StyleResolution.CharacterStyleId,
-            segment.StyleRun.StyleResolution.CharacterStyleFound,
-            segment.StyleRun.StyleResolution.CharacterStyleDepth,
-            segment.StyleRun.StyleResolution.HasDocumentDefaultRunProperties,
-            segment.StyleRun.StyleResolution.HasParagraphStyleRunProperties,
-            segment.StyleRun.StyleResolution.HasCharacterStyleRunProperties,
-            segment.StyleRun.StyleResolution.HasDirectRunProperties,
-            segment.StyleRun.StyleResolution.HasTableStyleRunProperties);
+            segment.StyleRun.EffectiveProperties.StyleResolution.CharacterStyleId,
+            segment.StyleRun.EffectiveProperties.StyleResolution.CharacterStyleFound,
+            segment.StyleRun.EffectiveProperties.StyleResolution.CharacterStyleDepth,
+            segment.StyleRun.EffectiveProperties.StyleResolution.HasDocumentDefaultRunProperties,
+            segment.StyleRun.EffectiveProperties.StyleResolution.HasParagraphStyleRunProperties,
+            segment.StyleRun.EffectiveProperties.StyleResolution.HasCharacterStyleRunProperties,
+            segment.StyleRun.EffectiveProperties.StyleResolution.HasDirectRunProperties,
+            segment.StyleRun.EffectiveProperties.StyleResolution.HasTableStyleRunProperties);
     }
 
     private static void DrawRunGlyphText(
@@ -1166,7 +1168,7 @@ internal sealed class DocxRenderer
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
     {
-        return style.Bold && !resource.Resolution.Bold;
+        return style.EffectiveProperties.Bold && !resource.Resolution.Bold;
     }
 
     private static void RenderRunBackground(
@@ -1187,14 +1189,15 @@ internal sealed class DocxRenderer
         double descender = DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
         double fillY = baselineY - descender;
         double fillHeight = ascender + descender;
-        if (TryResolveHighlightColor(style.HighlightValue, out RgbColor highlight))
+        DocxEffectiveRunProperties effective = style.EffectiveProperties;
+        if (TryResolveHighlightColor(effective.HighlightValue, out RgbColor highlight))
         {
             graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
             graphics.FillRectangle(x, fillY, width, fillHeight);
             return;
         }
 
-        RenderShadingFill(style.ShadingFillHex, style.ShadingValue, style.ShadingColor, graphics, x, fillY, width, fillHeight);
+        RenderShadingFill(effective.ShadingFillHex, effective.ShadingValue, effective.ShadingColor, graphics, x, fillY, width, fillHeight);
     }
 
     private static bool TryResolveShadingColor(string? fillHex, string? value, string? foregroundHex, out RgbColor color)
@@ -1410,18 +1413,19 @@ internal sealed class DocxRenderer
         }
 
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-        if (style.Underline)
+        DocxEffectiveRunProperties effective = style.EffectiveProperties;
+        if (effective.Underline)
         {
             double thickness = ResolveDecorationThickness(font.Post.UnderlineThickness, font, fontSize);
             double y = baselineY + font.Post.UnderlinePosition * fontSize / font.UnitsPerEm;
             graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
         }
 
-        if (style.Strike || style.DoubleStrike)
+        if (effective.Strike || effective.DoubleStrike)
         {
             double thickness = ResolveDecorationThickness(font.Os2.StrikeoutSize, font, fontSize);
             double y = baselineY + font.Os2.StrikeoutPosition * fontSize / font.UnitsPerEm;
-            if (style.DoubleStrike)
+            if (effective.DoubleStrike)
             {
                 double offset = Math.Max(thickness, fontSize / 18d);
                 graphics.FillRectangle(x, y - offset - thickness / 2d, width, thickness);

@@ -5062,6 +5062,12 @@ block models and richer section/pagination layout before adding more Word pagina
   with the same style/default/table-style cascade used by layout and PDF-emission snapshots. Validation
   passed `docx-core --skip-slow` (`58`), `docx-text --skip-slow` (`49`), and full solution build. Keep this
   open for the remaining PDF-emission/layout consumers and Office-oracle probes of style-derived run metrics.
+  2026-06-03 PDF-emission follow-up: DOCX PDF text emission now reads `DocxEffectiveRunProperties` for
+  emitted text color, synthetic bold/italic decisions, character-spacing plans, list-label font-size
+  planning, background/highlight/shading, text decorations, and private-safe emission provenance snapshots.
+  A targeted scan of `DocxRenderer.cs` and `DocxTextEmissionPlanner.cs` no longer finds the direct run-style
+  reads covered by this migration. Validation passed full solution build and `docx-text --skip-slow` (`49`).
+  Keep this open for the remaining layout scalar reads and Office-oracle probes of style-derived run metrics.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
