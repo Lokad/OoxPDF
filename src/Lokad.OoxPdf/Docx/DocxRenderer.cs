@@ -48,7 +48,7 @@ internal sealed class DocxRenderer
         {
             DocxLayoutPage page = layout.Pages[pageIndex];
             int pageNumber = pageIndex + 1;
-            foreach (DocxTextLineLayout line in page.StaticTextLines)
+            foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page))
             {
                 lines.Add(ToTextEmissionLineSnapshot(pageIndex, isStaticStory: true, line, fontResources, pageNumber, layout.Pages.Count));
             }

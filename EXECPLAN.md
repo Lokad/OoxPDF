@@ -5125,6 +5125,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `tools/Lokad.OoxPdf.DocxInspect` now writes compact static table counts and a private-safe `table-summary.json`
   with table story provenance, avoiding silent collisions between body and static table ordinals. Validation
   passed PowerShell parse plus full solution build.
+- [x] 2026-06-03: Aligned DOCX text-emission diagnostics with static table rendering. `DocxRenderer`
+  `InspectTextEmission` now enumerates static text through the same `EnumerateStaticTextLines(page)` path used
+  by rendering/link/bookmark traversal, so header/footer table-cell text is no longer omitted from private-safe
+  emission diagnostics once a static table row is laid out. Validation passed `docx-tables --skip-slow` (`122`).
 - [ ] Implement style-derived paragraph spacing accurately, including exact Office autospacing magnitudes,
   Word-like adjacent paragraph spacing collapse around tables/sections, and diagnostics that distinguish
   supported tokens from unresolved spacing semantics.
