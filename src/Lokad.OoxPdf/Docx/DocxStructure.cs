@@ -450,8 +450,8 @@ internal sealed record DocxStructureSnapshot(
             PageBreakSourceKind: pageBreak.SourceKind,
             PageBreakValue: pageBreak.Value,
             PageBreakConsumesParagraphLine: pageBreak.BreakParagraph is not null,
-            PageBreakLineSpacingPoints: pageBreak.BreakParagraph?.LineSpacingPoints,
-            PageBreakLineSpacingFactor: pageBreak.BreakParagraph?.LineSpacingFactor);
+            PageBreakLineSpacingPoints: pageBreak.BreakParagraph?.EffectiveProperties.LineSpacingPoints,
+            PageBreakLineSpacingFactor: pageBreak.BreakParagraph?.EffectiveProperties.LineSpacingFactor);
     }
 
     private static DocxStructureBlockSnapshot FromManualBreak(int blockIndex, string? previousKind, string? nextKind, DocxManualBreakElement manualBreak)
@@ -464,8 +464,8 @@ internal sealed record DocxStructureSnapshot(
             ManualBreakSourceKind: manualBreak.SourceKind,
             ManualBreakValue: manualBreak.Value,
             ManualBreakConsumesParagraphLine: manualBreak.BreakParagraph is not null,
-            ManualBreakLineSpacingPoints: manualBreak.BreakParagraph?.LineSpacingPoints,
-            ManualBreakLineSpacingFactor: manualBreak.BreakParagraph?.LineSpacingFactor);
+            ManualBreakLineSpacingPoints: manualBreak.BreakParagraph?.EffectiveProperties.LineSpacingPoints,
+            ManualBreakLineSpacingFactor: manualBreak.BreakParagraph?.EffectiveProperties.LineSpacingFactor);
     }
 
     private static DocxStructureBlockSnapshot FromSectionBreak(int blockIndex, string? previousKind, string? nextKind, DocxSectionBreakElement sectionBreak)
@@ -533,7 +533,7 @@ internal sealed record DocxStructureSnapshot(
             tableParagraphs.Sum(ParagraphExternalHyperlinkCount),
             tableParagraphs.Sum(ParagraphInternalHyperlinkCount),
             tableParagraphs.Count(paragraph => paragraph.ListLabel is not null),
-            tableParagraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
+            tableParagraphs.Count(HasEffectiveKeepConstraint),
             table.Look?.FirstRow,
             table.Look?.FirstColumn,
             table.Look?.NoHorizontalBand,
@@ -611,10 +611,10 @@ internal sealed record DocxStructureSnapshot(
             paragraphs.Sum(ParagraphExternalHyperlinkCount),
             paragraphs.Sum(ParagraphInternalHyperlinkCount),
             paragraphs.Count(paragraph => paragraph.ListLabel is not null),
-            paragraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
+            paragraphs.Count(HasEffectiveKeepConstraint),
             paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
             paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.Spacing)),
-            paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.FontSize).DefaultIfEmpty(0d).Max(),
+            paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.EffectiveProperties.FontSize).DefaultIfEmpty(0d).Max(),
             CountCharacters(paragraphs, static c => c == ' '),
             CountCharacters(paragraphs, static c => c > 127),
             CountCharacters(paragraphs, char.IsPunctuation),
@@ -660,10 +660,16 @@ internal sealed record DocxStructureSnapshot(
             drawing.SourceBlockIndex);
     }
 
+    private static bool HasEffectiveKeepConstraint(DocxParagraph paragraph)
+    {
+        DocxParagraphKeepRules keepRules = paragraph.EffectiveProperties.KeepRules;
+        return keepRules.KeepNext == true || keepRules.KeepLines == true;
+    }
+
     private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
     {
         DocxStructureStyleUsageSnapshot[] paragraphStyles = EnumerateParagraphs(document)
-            .GroupBy(paragraph => paragraph.StyleId, StringComparer.Ordinal)
+            .GroupBy(paragraph => paragraph.EffectiveProperties.StyleId, StringComparer.Ordinal)
             .Select(group => new DocxStructureStyleUsageSnapshot(
                 "Paragraph",
                 group.Key,
@@ -799,16 +805,16 @@ internal sealed record DocxStructureSnapshot(
             nextKind,
             table.Rows.Count,
             MaxColumnCount(table),
-            previousParagraph?.StyleId,
-            previousParagraph?.SpacingAfterPoints,
-            previousParagraph is null ? null : HasAfterSpacingToken(previousParagraph.Spacing),
-            nextParagraph?.StyleId,
-            nextParagraph?.SpacingBeforePoints,
-            nextParagraph is null ? null : HasBeforeSpacingToken(nextParagraph.Spacing),
+            previousParagraph?.EffectiveProperties.StyleId,
+            previousParagraph?.EffectiveProperties.SpacingAfterPoints,
+            previousParagraph is null ? null : HasAfterSpacingToken(previousParagraph.EffectiveProperties.Spacing),
+            nextParagraph?.EffectiveProperties.StyleId,
+            nextParagraph?.EffectiveProperties.SpacingBeforePoints,
+            nextParagraph is null ? null : HasBeforeSpacingToken(nextParagraph.EffectiveProperties.Spacing),
             nextParagraph is null ? null : TextLength(nextParagraph),
             nextParagraph?.ListLabel is not null,
-            nextParagraph?.KeepRules.KeepNext,
-            nextParagraph?.KeepRules.KeepLines);
+            nextParagraph?.EffectiveProperties.KeepRules.KeepNext,
+            nextParagraph?.EffectiveProperties.KeepRules.KeepLines);
     }
 
     private static string GetBlockKind(DocxBodyElement element)
