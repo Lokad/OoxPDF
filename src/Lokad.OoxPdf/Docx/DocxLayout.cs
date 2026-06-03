@@ -2656,10 +2656,12 @@ internal sealed class DocxLayoutEngine
             int pageNumber = pageIndex + 1;
             double bodyWidth = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
             DocxSelectedStaticStory selectedHeader = SelectStaticHeaderFooter(
+                page.PageSettings.HeaderBodyElementsByType,
                 page.PageSettings.HeaderParagraphsByType,
                 page.PageSettings,
                 pageNumber);
             DocxSelectedStaticStory selectedFooter = SelectStaticHeaderFooter(
+                page.PageSettings.FooterBodyElementsByType,
                 page.PageSettings.FooterParagraphsByType,
                 page.PageSettings,
                 pageNumber);
@@ -2709,10 +2711,17 @@ internal sealed class DocxLayoutEngine
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
-        IReadOnlyList<DocxParagraph> paragraphs = story.Paragraphs;
-        for (int paragraphIndex = 0; paragraphIndex < paragraphs.Count; paragraphIndex++)
+        int paragraphIndex = 0;
+        for (int elementIndex = 0; elementIndex < story.BodyElements.Count; elementIndex++)
         {
-            DocxParagraph paragraph = paragraphs[paragraphIndex];
+            if (story.BodyElements[elementIndex] is not DocxParagraphElement paragraphElement)
+            {
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -2788,6 +2797,7 @@ internal sealed class DocxLayoutEngine
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
+            paragraphIndex++;
         }
 
         return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray());
@@ -2932,30 +2942,52 @@ internal sealed class DocxLayoutEngine
     }
 
     private static DocxSelectedStaticStory SelectStaticHeaderFooter(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         DocxPageSettings settings,
         int pageNumber)
     {
         if (settings.TitlePage == true &&
             pageNumber == 1 &&
-            paragraphsByType.TryGetValue("first", out IReadOnlyList<DocxParagraph>? first))
+            TryGetStaticStoryBodyElements("first", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? first))
         {
             return new DocxSelectedStaticStory(first, "first");
         }
 
         if (settings.EvenAndOddHeaders == true &&
             pageNumber % 2 == 0 &&
-            paragraphsByType.TryGetValue("even", out IReadOnlyList<DocxParagraph>? even))
+            TryGetStaticStoryBodyElements("even", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? even))
         {
             return new DocxSelectedStaticStory(even, "even");
         }
 
-        return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? defaults)
+        return TryGetStaticStoryBodyElements("default", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? defaults)
             ? new DocxSelectedStaticStory(defaults, "default")
             : new DocxSelectedStaticStory([], null);
     }
 
-    private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxParagraph> Paragraphs, string? VariantType);
+    private static bool TryGetStaticStoryBodyElements(
+        string variantType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
+        out IReadOnlyList<DocxBodyElement> bodyElements)
+    {
+        if (bodyElementsByType.TryGetValue(variantType, out bodyElements!))
+        {
+            return true;
+        }
+
+        if (paragraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs))
+        {
+            bodyElements = paragraphs.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>().ToArray();
+            return true;
+        }
+
+        bodyElements = [];
+        return false;
+    }
+
+    private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxBodyElement> BodyElements, string? VariantType);
 
     private static DocxSelectedStaticDrawings SelectStaticHeaderFooterDrawings(
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,

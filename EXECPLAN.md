@@ -4922,6 +4922,12 @@ block models and richer section/pagination layout before adding more Word pagina
   block traversal. Validation passed `docx-core --skip-slow` (`56`), `docx-page --skip-slow` (`42`),
   `docx-tables --skip-slow` (`121`), and full solution build. Keep static header/footer table layout/rendering
   open; this closes only the model/diagnostic invisibility gap.
+  2026-06-03 layout follow-up: selected static header/footer text and inline-image layout now selects the
+  variant's `DocxBodyElement` stream directly, falling back to the legacy paragraph map only for constructed
+  compatibility cases. A bottom-up layout test leaves `HeaderParagraphsByType` empty while the selected header
+  body stream owns the paragraph and still gets a grouped static story snapshot. Validation passed
+  `docx-page --skip-slow` (`43`) and full solution build. Keep static table layout/rendering open; tables are
+  deliberately modeled and diagnosed before being placed.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

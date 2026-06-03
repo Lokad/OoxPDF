@@ -12883,6 +12883,39 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
     }
 
+    public static void DocxLayoutStageSelectsStaticHeaderBodyElements()
+    {
+        DocxParagraph header = CreateDocxLayoutParagraph("HB", 10d, 10d);
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(header)]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+
+        DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single();
+        TestAssert.True(headerStory.Kind == "Header" && headerStory.VariantType == "default" && headerStory.TextLineCount == 1 && headerStory.ParagraphCount == 1 && headerStory.TextLength == 2, "Static header layout should select body elements directly instead of requiring the legacy paragraph map.");
+        TestAssert.Equal("StaticHeaderTextLine", snapshot.Pages[0].StaticItems.Single().Kind);
+    }
+
     public static void DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants()
     {
         DocxParagraph defaultHeader = CreateDocxLayoutParagraph("DH", 10d, 10d);
