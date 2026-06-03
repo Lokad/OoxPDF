@@ -825,6 +825,11 @@ internal static class DocxTests
         DocxParagraph paragraph = document.Paragraphs.Single();
         DocxTextRun run = paragraph.Runs.Single();
         TestAssert.Equal("Child", paragraph.StyleId ?? string.Empty);
+        TestAssert.True(paragraph.StyleResolution.StyleFound, "Paragraph style resolution should record that the referenced style was found.");
+        TestAssert.Equal(2, paragraph.StyleResolution.StyleDepth);
+        TestAssert.True(paragraph.StyleResolution.HasDirectParagraphProperties == false, "A pPr containing only pStyle should not be treated as a direct layout override.");
+        TestAssert.True(paragraph.StyleResolution.HasDocumentDefaultParagraphProperties == false, "This package has no paragraph defaults.");
+        TestAssert.True(paragraph.StyleResolution.HasTableStyleParagraphProperties == false, "Body paragraphs should not report table-style paragraph properties.");
         TestAssert.Equal(6d, paragraph.SpacingBeforePoints);
         TestAssert.Equal(0d, paragraph.SpacingAfterPoints);
         TestAssert.Equal("120", paragraph.Spacing.BeforeValue ?? string.Empty);
@@ -838,7 +843,12 @@ internal static class DocxTests
 
         DocxStyleDefinitionSummary childStyle = document.StyleCatalog.ParagraphStyles.Single(style => style.StyleId == "Child");
         TestAssert.True(childStyle.BasedOnStyleId == "Base" && childStyle.HasParagraphProperties && childStyle.HasRunProperties, "The DOCX style catalog should retain private-safe paragraph style topology after resolved properties are applied.");
-        TestAssert.Equal(2, new DocxRenderer().InspectStructure(document).StyleCatalog.ParagraphStyles.Count);
+        DocxStructureSnapshot structure = new DocxRenderer().InspectStructure(document);
+        TestAssert.Equal(2, structure.StyleCatalog.ParagraphStyles.Count);
+        DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Paragraph");
+        TestAssert.True(block.ParagraphStyleFound == true, "Structure snapshots should expose private-safe paragraph style resolution.");
+        TestAssert.Equal(2, block.ParagraphStyleDepth ?? 0);
+        TestAssert.True(block.HasDirectParagraphProperties == false, "Structure snapshots should distinguish pStyle-only pPr from direct paragraph overrides.");
     }
 
     public static void DocxReaderPreservesEmptyParagraphBodyElement()
@@ -7820,6 +7830,10 @@ internal static class DocxTests
 
         DocxParagraph firstParagraph = document.Tables[0].Rows[0].Cells[0].Paragraphs.Single();
         DocxParagraph secondParagraph = document.Tables[0].Rows[0].Cells[1].Paragraphs.Single();
+        TestAssert.True(firstParagraph.StyleResolution.HasTableStyleParagraphProperties, "Table-cell paragraph resolution should record table style participation.");
+        TestAssert.True(firstParagraph.StyleResolution.HasDirectParagraphProperties, "Direct spacing in the table-cell paragraph should remain distinguishable from table style properties.");
+        TestAssert.True(secondParagraph.StyleResolution.HasTableStyleParagraphProperties, "Inherited table-cell paragraph properties should be visible even without direct pPr.");
+        TestAssert.True(secondParagraph.StyleResolution.HasDirectParagraphProperties == false, "A table-cell paragraph without pPr should not report direct paragraph properties.");
         TestAssert.Equal(DocxTextAlignment.Right, firstParagraph.Alignment);
         TestAssert.Equal("right", firstParagraph.AlignmentValue ?? string.Empty);
         TestAssert.Equal(6d, firstParagraph.SpacingAfterPoints);
@@ -12214,6 +12228,46 @@ internal static class DocxTests
         TestAssert.Equal(1, cellSnapshot.ManualBreakElementCount);
         TestAssert.Equal(1, cellSnapshot.PageBreakElementCount);
         TestAssert.Equal(1, cellSnapshot.NestedTableElementCount);
+    }
+
+    public static void DocxTableLayoutSnapshotUsesCanonicalBodyForVerticalMergeVisualOwner()
+    {
+        DocxParagraph ownerParagraph = CreateDocxLayoutParagraph("Owner", 12d, 12d);
+        var ownerCell = new DocxTableCell(
+            string.Empty,
+            [],
+            null,
+            null,
+            null,
+            null,
+            [],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true,
+            VerticalMergeValue: "restart")
+        {
+            BodyElements = [new DocxParagraphElement(ownerParagraph)]
+        };
+        var continuationCell = new DocxTableCell(
+            string.Empty,
+            [],
+            null,
+            null,
+            null,
+            null,
+            [],
+            DocxTableCellMargins.Empty,
+            HasVerticalMerge: true,
+            VerticalMergeValue: "continue");
+        DocxTable table = new(null, [90d], [new DocxTableRow([ownerCell], 24d), new DocxTableRow([continuationCell], 24d)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+
+        DocxTableCellSnapshot continuationSnapshot = snapshot.Pages[0].TableRows[1].Cells.Single();
+        TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
+        TestAssert.Equal(1, continuationSnapshot.VisualParagraphCount);
+        TestAssert.Equal(5, continuationSnapshot.VisualTextLength);
+        TestAssert.Equal(0, continuationSnapshot.ParagraphCount);
     }
 
     public static void DocxLayoutSnapshotReportsOfficeTableCellBaselineFixture()

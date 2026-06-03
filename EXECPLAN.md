@@ -4961,6 +4961,25 @@ block models and richer section/pagination layout before adding more Word pagina
   extract direct paragraphs from the normalized table-cell body stream instead of doing a second compatibility
   paragraph lookup. The remaining direct `GetParagraphs(visualCell)` use is intentionally scoped to the
   vertical-merge visual-owner baseline path. Validation passed `docx-tables --skip-slow` (`122`).
+  2026-06-03 vertical-merge follow-up: table-cell layout snapshots now also derive the visual-owner
+  paragraphs from the canonical visual cell body stream, removing the last layout/snapshot read through the
+  legacy table-cell paragraph accessor. A bottom-up vertical-merge test keeps the owner cell's compatibility
+  paragraph list empty while `BodyElements` carries the visual paragraph, and the continuation snapshot still
+  reports the owner's private-safe visual paragraph/text facts. Validation passed `docx-tables --skip-slow`
+  (`123`) and full solution build. Keep the item open for public model compatibility deprecation; production
+  layout/diagnostic paths now consistently prefer the block stream.
+- [ ] DOCX style-resolved block model: move from reader-flattened paragraph metrics toward a layout-ready
+  effective paragraph model with explicit provenance for defaults, basedOn style depth, table-style
+  contributions, and direct paragraph overrides. This should let future vertical-flow decisions compare
+  Office evidence by structural cause instead of style names, font names, or re-reading XML.
+  2026-06-03 progress: `DocxParagraph` now carries `DocxParagraphStyleResolution` with referenced style id,
+  style-found flag, inheritance depth, document-default participation, direct paragraph-property presence,
+  and table-style paragraph-property participation. `DocxStructureBlockSnapshot` exposes the same
+  private-safe facts for paragraph blocks. Bottom-up coverage locks a basedOn paragraph style cascade and a
+  table-cell paragraph style path, distinguishing pStyle-only `pPr` from direct spacing overrides. Validation
+  passed `docx-core --skip-slow` (`56`), `docx-tables --skip-slow` (`123`), and full solution build. Keep this
+  open for a richer effective paragraph/run model and Office-oracle probes for exact style-derived spacing
+  and line-height semantics.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

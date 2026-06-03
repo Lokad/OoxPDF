@@ -1033,6 +1033,11 @@ internal sealed class DocxReader
             paragraphStyleId,
             styles,
             tableCellStyle?.Paragraph);
+        DocxParagraphStyleResolution styleResolution = CreateParagraphStyleResolution(
+            paragraphProperties,
+            paragraphStyleId,
+            styles,
+            tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
         var inlineReferences = new List<DocxInlineReference>();
@@ -1138,6 +1143,7 @@ internal sealed class DocxReader
             TabStops = resolvedParagraph.TabStops,
             SnapToGrid = resolvedParagraph.SnapToGrid,
             SnapToGridValue = resolvedParagraph.SnapToGridValue,
+            StyleResolution = styleResolution,
             InlineReferences = inlineReferences,
             FieldReferences = fieldReferences,
             Hyperlinks = hyperlinkSpans,
@@ -3136,6 +3142,29 @@ internal sealed class DocxReader
         }
 
         return result.Merge(ReadParagraphProperties(directProperties));
+    }
+
+    private static DocxParagraphStyleResolution CreateParagraphStyleResolution(
+        XElement? directProperties,
+        string? paragraphStyleId,
+        DocxStyleSet styles,
+        DocxResolvedParagraphProperties? tableStyleProperties)
+    {
+        DocxStyle[] styleChain = EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles).ToArray();
+        return new DocxParagraphStyleResolution(
+            paragraphStyleId,
+            paragraphStyleId is not null && styleChain.Length != 0,
+            styleChain.Length,
+            styles.ParagraphDefaults != DocxResolvedParagraphProperties.Empty,
+            HasDirectParagraphProperties(directProperties),
+            tableStyleProperties is not null && tableStyleProperties.Value != DocxResolvedParagraphProperties.Empty);
+    }
+
+    private static bool HasDirectParagraphProperties(XElement? properties)
+    {
+        return properties?.Elements().Any(element =>
+            element.Name != WordprocessingNamespace + "pStyle" &&
+            element.Name != WordprocessingNamespace + "rPr") == true;
     }
 
     private static DocxResolvedRunProperties ResolveRunProperties(

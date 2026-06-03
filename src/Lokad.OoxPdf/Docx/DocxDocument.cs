@@ -323,10 +323,22 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
     public bool? SnapToGrid { get; init; }
     public string? SnapToGridValue { get; init; }
+    public DocxParagraphStyleResolution StyleResolution { get; init; } = DocxParagraphStyleResolution.Empty;
     public IReadOnlyList<DocxInlineReference> InlineReferences { get; init; } = [];
     public IReadOnlyList<DocxFieldReference> FieldReferences { get; init; } = [];
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
+}
+
+internal sealed record DocxParagraphStyleResolution(
+    string? StyleId,
+    bool StyleFound,
+    int StyleDepth,
+    bool HasDocumentDefaultParagraphProperties,
+    bool HasDirectParagraphProperties,
+    bool HasTableStyleParagraphProperties)
+{
+    public static DocxParagraphStyleResolution Empty { get; } = new(null, false, 0, false, false, false);
 }
 
 internal sealed record DocxBookmarkAnchor(

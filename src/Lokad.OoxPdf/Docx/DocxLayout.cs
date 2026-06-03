@@ -842,7 +842,8 @@ internal sealed record DocxLayoutSnapshot(
         DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
         IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
-        IReadOnlyList<DocxParagraph> visualParagraphs = DocxTableCellContent.GetParagraphs(visualCell);
+        IReadOnlyList<DocxBodyElement> visualBodyElements = DocxTableCellContent.GetBodyElements(visualCell);
+        IReadOnlyList<DocxParagraph> visualParagraphs = GetParagraphsFromBodyElements(visualBodyElements);
         IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.SpacingBeforePoints).ToArray();
         IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.SpacingAfterPoints).ToArray();
         string cellText = string.Concat(paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
