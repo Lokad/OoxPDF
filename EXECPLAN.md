@@ -5017,6 +5017,11 @@ block models and richer section/pagination layout before adding more Word pagina
   private-safe PDF text-state snapshot guard now verifies these fields on an emitted segment. Validation
   passed `docx-text --skip-slow` (`49`). Keep this open for summarizer aggregation and Office-oracle
   comparisons that correlate emitted advance residuals with style provenance.
+  2026-06-03 summarizer follow-up: `tools/SummarizeDocxTextState.ps1` now aggregates candidate planner
+  segments by structural run provenance and carries the same provenance key into sequence-paired
+  Office/candidate text-operation comparisons, including a `tf+run-provenance+gaps` ambiguity check for
+  Office `Tc` inference. The key intentionally uses only booleans and character-style depth, not style names.
+  Validation passed PowerShell parser validation for the summarizer.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

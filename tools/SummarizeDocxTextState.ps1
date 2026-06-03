@@ -423,6 +423,20 @@ function PlannerTextClass($Segment) {
     return "mixed"
 }
 
+function PlannerRunProvenanceKey($Segment) {
+    if ($null -eq $Segment) {
+        return "runProv=(missing)"
+    }
+
+    return "charFound=" + ([bool]$Segment.CharacterStyleFound).ToString().ToLowerInvariant() +
+        "|charDepth=" + (RoundedKey $Segment.CharacterStyleDepth 0) +
+        "|docDefault=" + ([bool]$Segment.HasDocumentDefaultRunProperties).ToString().ToLowerInvariant() +
+        "|paraStyle=" + ([bool]$Segment.HasParagraphStyleRunProperties).ToString().ToLowerInvariant() +
+        "|charStyle=" + ([bool]$Segment.HasCharacterStyleRunProperties).ToString().ToLowerInvariant() +
+        "|direct=" + ([bool]$Segment.HasDirectRunProperties).ToString().ToLowerInvariant() +
+        "|tableStyle=" + ([bool]$Segment.HasTableStyleRunProperties).ToString().ToLowerInvariant()
+}
+
 function Flatten-PlannerSegments($Snapshot) {
     if ($null -eq $Snapshot -or $null -eq $Snapshot.Lines) {
         return ,@()
@@ -549,9 +563,17 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|tcSource=" + $segment.PdfCharacterSpacingSource
         })
+        TextClassByRunProvenance = @(Group-Count $segments {
+            param($segment)
+            (PlannerTextClass $segment) + "|" + (PlannerRunProvenanceKey $segment)
+        })
         PdfCharacterSpacingSourceBuckets = @(Group-Count $segments {
             param($segment)
             "tcSource=" + $segment.PdfCharacterSpacingSource + "|pdfTc=" + (RoundedKey $segment.PdfCharacterSpacing 6)
+        })
+        PdfCharacterSpacingSourceByRunProvenance = @(Group-Count $segments {
+            param($segment)
+            "tcSource=" + $segment.PdfCharacterSpacingSource + "|" + (PlannerRunProvenanceKey $segment)
         })
         TextClassByGlyphSignature = @(Group-Count $segments {
             param($segment)
@@ -599,6 +621,10 @@ function Summarize-PlannerSnapshot($Snapshot) {
             param($segment)
             (PlannerTextClass $segment) + "|gaps=" + (RoundedKey $segment.AdvanceProfile.GlyphGapCount 0)
         })
+        AdvanceByRunProvenance = @(Group-PlannerAdvance $segments {
+            param($segment)
+            PlannerRunProvenanceKey $segment
+        })
         AdvanceByGlyphSignature = @(Group-PlannerAdvance $segments {
             param($segment)
             "glyphSig=" + $segment.GlyphAdvanceSignature.Hash
@@ -644,6 +670,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             PlannerSourceParagraphIndex = $segment.SourceParagraphIndex
             PlannerRole = $segment.Role
             PlannerPdfCharacterSpacingSource = $segment.PdfCharacterSpacingSource
+            PlannerRunProvenance = PlannerRunProvenanceKey $segment
             PlannerGlyphGapCount = $segment.AdvanceProfile.GlyphGapCount
             PlannerNaturalWidth = $segment.AdvanceProfile.NaturalPdfWidth
             PlannerUnkernedWidth = $segment.AdvanceProfile.UnkernedPdfWidth
@@ -706,6 +733,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
                 param($pair)
                 "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|tcSource=" + $pair.PlannerPdfCharacterSpacingSource + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
             } $true
+            New-TcAmbiguityReport "tf+run-provenance+gaps" $pairs {
+                param($pair)
+                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|" + $pair.PlannerRunProvenance + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+            } $true
             New-TcAmbiguityReport "tf+gaps+pair-range" $pairs {
                 param($pair)
                 "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|pairMin=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxUnits 0)
@@ -730,6 +761,10 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerGlyphGap = @(Group-Count $pairs {
             param($pair)
             "gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByPlannerRunProvenance = @(Group-Count $pairs {
+            param($pair)
+            $pair.PlannerRunProvenance + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceTcByPlannerResidualPerGap = @(Group-Count $pairs {
             param($pair)
