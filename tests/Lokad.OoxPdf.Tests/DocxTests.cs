@@ -13287,6 +13287,72 @@ internal static class DocxTests
         TestAssert.Equal(4, CountPdfTextShows(pdf));
     }
 
+    public static void DocxReaderPreservesStaticHeaderTablesAsBodyElements()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeaderDefault" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                </Relationships>
+                """,
+            ["word/header1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:tbl>
+                    <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                    <w:tr>
+                      <w:tc><w:p><w:r><w:t>Header table text</w:t></w:r></w:p></w:tc>
+                    </w:tr>
+                  </w:tbl>
+                </w:hdr>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p><w:r><w:t>Body text</w:t></w:r></w:p>
+                    <w:sectPr>
+                      <w:headerReference w:type="default" r:id="rIdHeaderDefault"/>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        IReadOnlyList<DocxBodyElement> headerElements = document.HeaderBodyElementsByType["default"];
+        TestAssert.True(headerElements.Count == 1 && headerElements.Single() is DocxTableElement, "Static header parts should preserve tables as body elements instead of dropping them from the paragraph inventory.");
+        TestAssert.Equal(0, document.HeaderParagraphsByType["default"].Count);
+        TestAssert.Equal(1, document.PageSettings.HeaderBodyElementsByType["default"].Count);
+
+        DocxStructureStorySnapshot headerStory = new DocxRenderer().InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
+        TestAssert.True(headerStory.BlockCount == 1 && headerStory.TableCount == 1 && headerStory.ParagraphCount == 0 && headerStory.TextLength == 17, "Static header structure snapshots should derive counts from body elements, including table-cell paragraphs.");
+
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"));
+        TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Header table text"), "Static header table-cell runs should participate in DOCX font planning through block traversal.");
+    }
+
     public static void DocxReaderPreservesHeaderFloatingDrawingsByVariant()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>

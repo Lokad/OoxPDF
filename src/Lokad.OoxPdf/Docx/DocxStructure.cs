@@ -158,8 +158,8 @@ internal sealed record DocxStructureSnapshot(
                 document.FloatingDrawings.Count)
         };
 
-        AddStaticStories(stories, "Header", "document", null, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, document.RelatedStories);
-        AddStaticStories(stories, "Footer", "document", null, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, document.RelatedStories);
+        AddStaticStories(stories, "Header", "document", null, document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, document.RelatedStories);
+        AddStaticStories(stories, "Footer", "document", null, document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, document.RelatedStories);
         AddRelatedStories(stories, document.RelatedStories);
         for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
         {
@@ -169,8 +169,8 @@ internal sealed record DocxStructureSnapshot(
             }
 
             string scope = "section@" + blockIndex.ToString(CultureInfo.InvariantCulture);
-            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, document.RelatedStories);
-            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, document.RelatedStories);
+            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderBodyElementsByType, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, document.RelatedStories);
+            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterBodyElementsByType, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, document.RelatedStories);
         }
 
         return stories;
@@ -181,20 +181,23 @@ internal sealed record DocxStructureSnapshot(
         string kind,
         string scope,
         int? sectionBreakBlockIndex,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,
         IReadOnlyList<DocxRelatedStory> relatedStories)
     {
-        string[] variantTypes = paragraphsByType.Keys
+        string[] variantTypes = bodyElementsByType.Keys
+            .Concat(paragraphsByType.Keys)
             .Concat(drawingsByType.Keys)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(type => type, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         foreach (string variantType in variantTypes)
         {
-            IReadOnlyList<DocxParagraph> paragraphs = paragraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphList)
-                ? paragraphList
-                : [];
+            IReadOnlyList<DocxBodyElement> bodyElements = DocxBlockTraversal.GetStaticStoryBodyElements(variantType, bodyElementsByType, paragraphsByType);
+            DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(bodyElements).ToArray();
+            int directParagraphCount = bodyElements.OfType<DocxParagraphElement>().Count();
+            int tableCount = DocxBlockTraversal.EnumerateBodyTables(bodyElements).Count();
             IReadOnlyList<DocxFloatingDrawing> drawings = drawingsByType.TryGetValue(variantType, out IReadOnlyList<DocxFloatingDrawing>? drawingList)
                 ? drawingList
                 : [];
@@ -203,9 +206,9 @@ internal sealed record DocxStructureSnapshot(
                 scope,
                 sectionBreakBlockIndex,
                 variantType,
-                0,
-                paragraphs.Count,
-                0,
+                bodyElements.Count,
+                directParagraphCount,
+                tableCount,
                 paragraphs.Sum(TextLength),
                 paragraphs.Sum(paragraph => paragraph.Images.Count),
                 paragraphs.Sum(ParagraphInlineReferenceCount),
@@ -694,20 +697,13 @@ internal sealed record DocxStructureSnapshot(
     private static IEnumerable<DocxParagraph> EnumerateParagraphs(DocxDocument document)
     {
         return DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(document.HeaderParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
-            .Concat(document.FooterParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
-            .Concat(EnumeratePageSettingsParagraphs(document.PageSettings))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
-                .SelectMany(sectionBreak => EnumeratePageSettingsParagraphs(sectionBreak.PageSettings)))
+                .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs));
-    }
-
-    private static IEnumerable<DocxParagraph> EnumeratePageSettingsParagraphs(DocxPageSettings settings)
-    {
-        return settings.HeaderParagraphsByType.Values
-            .Concat(settings.FooterParagraphsByType.Values)
-            .SelectMany(paragraphs => paragraphs);
     }
 
     private static int ParagraphInlineReferenceCount(DocxParagraph paragraph)

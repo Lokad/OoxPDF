@@ -3007,6 +3007,10 @@ internal sealed class DocxLayoutEngine
             new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType =
             new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedHeaderBodyElementsByType =
+            new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedFooterBodyElementsByType =
+            new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
 
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
@@ -3018,19 +3022,25 @@ internal sealed class DocxLayoutEngine
             DocxPageSettings effectiveSettings = ResolveEffectiveSectionSettings(
                 sectionBreak.PageSettings,
                 inheritedHeadersByType,
-                inheritedFootersByType);
+                inheritedFootersByType,
+                inheritedHeaderBodyElementsByType,
+                inheritedFooterBodyElementsByType);
             sectionSettingsByElementIndex[elementIndex] = new DocxEffectiveSectionSettings(
                 effectiveSettings,
                 CreateSectionLayoutProperties(sectionBreak));
             inheritedHeadersByType = effectiveSettings.HeaderParagraphsByType;
             inheritedFootersByType = effectiveSettings.FooterParagraphsByType;
+            inheritedHeaderBodyElementsByType = effectiveSettings.HeaderBodyElementsByType;
+            inheritedFooterBodyElementsByType = effectiveSettings.FooterBodyElementsByType;
         }
 
         finalSectionSettings = new DocxEffectiveSectionSettings(
             ResolveEffectiveSectionSettings(
                 BuildFinalSectionSettings(document),
                 inheritedHeadersByType,
-                inheritedFootersByType),
+                inheritedFootersByType,
+                inheritedHeaderBodyElementsByType,
+                inheritedFooterBodyElementsByType),
             document.FinalSectionBreak is null
                 ? new DocxSectionLayoutProperties(null, null, null, null, null, null, [])
                 : CreateSectionLayoutProperties(document.FinalSectionBreak));
@@ -3064,6 +3074,12 @@ internal sealed class DocxLayoutEngine
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = settings.FooterParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count > 0
             ? document.FooterParagraphsByType
             : settings.FooterParagraphsByType;
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = settings.HeaderBodyElementsByType.Count == 0 && document.HeaderBodyElementsByType.Count > 0
+            ? document.HeaderBodyElementsByType
+            : settings.HeaderBodyElementsByType;
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = settings.FooterBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count > 0
+            ? document.FooterBodyElementsByType
+            : settings.FooterBodyElementsByType;
 
         if (headersByType.Count == 0 && document.HeaderParagraphs.Count > 0)
         {
@@ -3071,6 +3087,7 @@ internal sealed class DocxLayoutEngine
             {
                 ["default"] = document.HeaderParagraphs
             };
+            headerBodyElementsByType = ToStaticBodyElementsByType(headersByType);
         }
 
         if (footersByType.Count == 0 && document.FooterParagraphs.Count > 0)
@@ -3079,25 +3096,69 @@ internal sealed class DocxLayoutEngine
             {
                 ["default"] = document.FooterParagraphs
             };
+            footerBodyElementsByType = ToStaticBodyElementsByType(footersByType);
         }
 
         return settings with
         {
             HeaderParagraphsByType = headersByType,
-            FooterParagraphsByType = footersByType
+            FooterParagraphsByType = footersByType,
+            HeaderBodyElementsByType = headerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(headersByType) : headerBodyElementsByType,
+            FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType
         };
     }
 
     private static DocxPageSettings ResolveEffectiveSectionSettings(
         DocxPageSettings settings,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType)
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedHeaderBodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedFooterBodyElementsByType)
     {
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = MergeInheritedStaticParagraphs(inheritedHeadersByType, settings.HeaderParagraphsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = MergeInheritedStaticParagraphs(inheritedFootersByType, settings.FooterParagraphsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = MergeInheritedStaticBodyElements(inheritedHeaderBodyElementsByType, settings.HeaderBodyElementsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = MergeInheritedStaticBodyElements(inheritedFooterBodyElementsByType, settings.FooterBodyElementsByType);
+
         return settings with
         {
-            HeaderParagraphsByType = MergeInheritedStaticParagraphs(inheritedHeadersByType, settings.HeaderParagraphsByType),
-            FooterParagraphsByType = MergeInheritedStaticParagraphs(inheritedFootersByType, settings.FooterParagraphsByType)
+            HeaderParagraphsByType = headersByType,
+            FooterParagraphsByType = footersByType,
+            HeaderBodyElementsByType = headerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(headersByType) : headerBodyElementsByType,
+            FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType
         };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ToStaticBodyElementsByType(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType)
+    {
+        return paragraphsByType.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<DocxBodyElement>)pair.Value.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>().ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> MergeInheritedStaticBodyElements(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedBodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> localBodyElementsByType)
+    {
+        if (inheritedBodyElementsByType.Count == 0)
+        {
+            return localBodyElementsByType;
+        }
+
+        if (localBodyElementsByType.Count == 0)
+        {
+            return inheritedBodyElementsByType;
+        }
+
+        var merged = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(inheritedBodyElementsByType, StringComparer.OrdinalIgnoreCase);
+        foreach ((string type, IReadOnlyList<DocxBodyElement> bodyElements) in localBodyElementsByType)
+        {
+            merged[type] = bodyElements;
+        }
+
+        return merged;
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> MergeInheritedStaticParagraphs(

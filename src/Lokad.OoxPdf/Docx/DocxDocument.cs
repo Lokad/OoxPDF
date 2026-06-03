@@ -20,6 +20,10 @@ internal sealed record DocxDocument(
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> HeaderBodyElementsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> FooterBodyElementsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> HeaderFloatingDrawingsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> FooterFloatingDrawingsByType { get; init; } =
@@ -55,6 +59,36 @@ internal static class DocxBlockTraversal
     public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(DocxRelatedStory story)
     {
         return EnumerateBodyParagraphs(story.BodyElements);
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateStaticStoryParagraphs(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType)
+    {
+        return bodyElementsByType.Count == 0
+            ? fallbackParagraphsByType.Values.SelectMany(paragraphs => paragraphs)
+            : bodyElementsByType.Values.SelectMany(EnumerateBodyParagraphs);
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateStaticStoryParagraphs(DocxPageSettings settings)
+    {
+        return EnumerateStaticStoryParagraphs(settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType)
+            .Concat(EnumerateStaticStoryParagraphs(settings.FooterBodyElementsByType, settings.FooterParagraphsByType));
+    }
+
+    public static IReadOnlyList<DocxBodyElement> GetStaticStoryBodyElements(
+        string variantType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType)
+    {
+        if (bodyElementsByType.TryGetValue(variantType, out IReadOnlyList<DocxBodyElement>? bodyElements))
+        {
+            return bodyElements;
+        }
+
+        return fallbackParagraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs)
+            ? paragraphs.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>().ToArray()
+            : [];
     }
 
     public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(IEnumerable<DocxBodyElement> bodyElements)
@@ -181,6 +215,12 @@ internal sealed record DocxPageSettings(
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> HeaderBodyElementsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> FooterBodyElementsByType { get; init; } =
+        new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> HeaderFloatingDrawingsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);

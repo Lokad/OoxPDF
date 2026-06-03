@@ -25,12 +25,12 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver)
     {
         IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(GetReferencedHeaderFooterParagraphs(document.HeaderParagraphsByType, document.HeaderParagraphs))
-            .Concat(GetReferencedHeaderFooterParagraphs(document.FooterParagraphsByType, document.FooterParagraphs))
-            .Concat(GetPageSettingsHeaderFooterParagraphs(document.PageSettings))
+            .Concat(GetReferencedHeaderFooterParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
+            .Concat(GetReferencedHeaderFooterParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
-                .SelectMany(sectionBreak => GetPageSettingsHeaderFooterParagraphs(sectionBreak.PageSettings)))
+                .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
             .SelectMany(GetParagraphFontRuns)
             .ToArray();
@@ -41,19 +41,18 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     }
 
     private static IEnumerable<DocxParagraph> GetReferencedHeaderFooterParagraphs(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         IReadOnlyList<DocxParagraph> fallbackParagraphs)
     {
+        if (bodyElementsByType.Count != 0)
+        {
+            return bodyElementsByType.Values.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs);
+        }
+
         return paragraphsByType.Count == 0
             ? fallbackParagraphs
             : paragraphsByType.Values.SelectMany(paragraphs => paragraphs);
-    }
-
-    private static IEnumerable<DocxParagraph> GetPageSettingsHeaderFooterParagraphs(DocxPageSettings settings)
-    {
-        return settings.HeaderParagraphsByType.Values
-            .Concat(settings.FooterParagraphsByType.Values)
-            .SelectMany(paragraphs => paragraphs);
     }
 
     private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver)

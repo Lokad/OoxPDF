@@ -66,8 +66,10 @@ internal sealed class DocxReader
         IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings);
         IReadOnlyList<DocxParagraph> paragraphs = bodyElements.OfType<DocxParagraphElement>().Select(e => e.Paragraph).ToArray();
         IReadOnlyList<DocxTable> tables = DocxBlockTraversal.EnumerateBodyTables(bodyElements).ToArray();
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference");
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ReadReferencedHeaderFooterParagraphsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference");
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference");
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference");
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ToStaticParagraphsByType(footerBodyElementsByType);
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, HeaderRelationshipType, "headerReference");
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, FooterRelationshipType, "footerReference");
         IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
@@ -95,6 +97,8 @@ internal sealed class DocxReader
                 FontCatalog = fontCatalog,
                 HeaderParagraphsByType = headersByType,
                 FooterParagraphsByType = footersByType,
+                HeaderBodyElementsByType = headerBodyElementsByType,
+                FooterBodyElementsByType = footerBodyElementsByType,
                 HeaderFloatingDrawingsByType = headerDrawingsByType,
                 FooterFloatingDrawingsByType = footerDrawingsByType,
                 RelatedStories = relatedStories,
@@ -134,6 +138,8 @@ internal sealed class DocxReader
             FontCatalog = fontCatalog,
             HeaderParagraphsByType = headersByType,
             FooterParagraphsByType = footersByType,
+            HeaderBodyElementsByType = headerBodyElementsByType,
+            FooterBodyElementsByType = footerBodyElementsByType,
             HeaderFloatingDrawingsByType = headerDrawingsByType,
             FooterFloatingDrawingsByType = footerDrawingsByType,
             RelatedStories = relatedStories,
@@ -326,24 +332,29 @@ internal sealed class DocxReader
             return pageSettings;
         }
 
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(
+            sectionProperties,
+            package,
+            relationships,
+            styles,
+            numbering,
+            HeaderRelationshipType,
+            "headerReference");
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(
+            sectionProperties,
+            package,
+            relationships,
+            styles,
+            numbering,
+            FooterRelationshipType,
+            "footerReference");
+
         return pageSettings with
         {
-            HeaderParagraphsByType = ReadReferencedHeaderFooterParagraphsByType(
-                sectionProperties,
-                package,
-                relationships,
-                styles,
-                numbering,
-                HeaderRelationshipType,
-                "headerReference"),
-            FooterParagraphsByType = ReadReferencedHeaderFooterParagraphsByType(
-                sectionProperties,
-                package,
-                relationships,
-                styles,
-                numbering,
-                FooterRelationshipType,
-                "footerReference"),
+            HeaderBodyElementsByType = headerBodyElementsByType,
+            FooterBodyElementsByType = footerBodyElementsByType,
+            HeaderParagraphsByType = ToStaticParagraphsByType(headerBodyElementsByType),
+            FooterParagraphsByType = ToStaticParagraphsByType(footerBodyElementsByType),
             HeaderFloatingDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(
                 sectionProperties,
                 package,
@@ -2011,7 +2022,7 @@ internal sealed class DocxReader
             .ToArray() ?? [];
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> ReadReferencedHeaderFooterParagraphsByType(
+    private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ReadReferencedHeaderFooterBodyElementsByType(
         XContainer referenceRoot,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
@@ -2020,7 +2031,7 @@ internal sealed class DocxReader
         string relationshipType,
         string referenceElementName)
     {
-        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+        var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
         {
             string? relationshipId = (string?)reference.Attribute(RelationshipsNamespace + "id");
@@ -2038,15 +2049,28 @@ internal sealed class DocxReader
             using Stream stream = part.OpenRead();
             XDocument partXml = SafeXml.Load(stream);
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
-            paragraphs[type] = ReadParagraphElements(
-                partXml.Root?.Elements(WordprocessingNamespace + "p") ?? [],
+            IReadOnlyDictionary<string, OoxRelationship> partRelationships = package.GetRelationships(part.Name)
+                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+            bodyElementsByType[type] = ReadRelatedStoryBodyElements(
+                partXml.Root?.Elements() ?? [],
                 styles,
                 numbering,
+                new Dictionary<(string NumId, int Level), int>(),
                 package,
-                package.GetRelationships(part.Name).Where(r => !r.IsExternal && r.ResolvedTarget is not null).ToDictionary(r => r.Id, StringComparer.Ordinal));
+                partRelationships);
         }
 
-        return paragraphs;
+        return bodyElementsByType;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> ToStaticParagraphsByType(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType)
+    {
+        return bodyElementsByType.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<DocxParagraph>)pair.Value.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> ReadReferencedHeaderFooterFloatingDrawingsByType(

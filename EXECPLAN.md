@@ -4913,6 +4913,15 @@ block models and richer section/pagination layout before adding more Word pagina
   (`4`) and `docx-core --skip-slow` (`53`; the parallel run produced a transient apphost copy warning but
   completed successfully). Keep the public model compatibility work open until the parallel inventories can be
   deprecated or converted to derived accessors without breaking reader-focused tests.
+  2026-06-03 architecture follow-up: referenced static header/footer parts now preserve canonical
+  `DocxBodyElement` streams by variant on both `DocxDocument` and `DocxPageSettings`, with paragraph maps kept
+  as compatibility views. Section inheritance carries the body maps alongside the existing selected paragraph
+  maps, and font planning plus private-safe structure snapshots use the static body stream when present.
+  Bottom-up coverage locks a header table that has no direct static paragraph inventory: structure summaries
+  count the header table block and table-cell text, and the font plan sees the table-cell run through shared
+  block traversal. Validation passed `docx-core --skip-slow` (`56`), `docx-page --skip-slow` (`42`),
+  `docx-tables --skip-slow` (`121`), and full solution build. Keep static header/footer table layout/rendering
+  open; this closes only the model/diagnostic invisibility gap.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
