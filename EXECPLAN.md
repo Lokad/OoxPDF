@@ -7258,6 +7258,21 @@ Current validation baseline:
   residual bucket `resGap=-0.053359` pairs to both `refTc=-0.0437` and `refTc=0.0509`, so even paired
   residual-per-gap is insufficient. The next bottom-up step should expose a private-safe glyph-advance
   signature or public-only glyph-pair oracle for short runs before any renderer `Tc` selection is changed.
+  2026-06-03 public text-state discriminator update: reran `docx-ladder-03-text-state-context`,
+  `docx-ladder-03-text-state-size-matrix`, and `docx-ladder-03-text-state-font-matrix` with current code
+  (`20260603-200453`) and refreshed `tools/SummarizeDocxTextState.ps1`. All three cases still match
+  reference/candidate operation counts (`35/35`, `65/65`, `65/65`) while candidate emits `Tc=0` for every
+  operation and Word emits nonzero `Tc` on `11`, `19`, and `19` operations respectively. The joined summaries
+  now surface `ReferenceTcStructuralDiscriminators`, derived from the existing ambiguity checks, so future
+  work can see which candidate structural keys currently separate Word's nonzero buckets. Across these public
+  probes, role/class/gap keys are not stable enough (`context` remains ambiguous), raw residual-per-gap is
+  still ambiguous, and the durable candidate discriminator is Office-grid font size plus glyph-pair side
+  advance range (`tf+side-range`, optionally with gap count). This is useful evidence for a future structural
+  rule, but it is not yet a renderer rule: the paired data also shows Word's `Tc` equals the reference
+  emitted-vs-candidate-rounded per-gap delta for these short-run probes, and the candidate still lacks an
+  independent Office target-advance model to compute that delta without looking at the reference PDF. Keep
+  rendering unchanged until the planner can derive the target advance from Office-like font/glyph geometry
+  rather than token strings, table roles, font names, or observed `Tc` buckets.
   2026-06-02 glyph-signature follow-up: candidate DOCX text-emission snapshots now expose a private-safe
   glyph-advance signature per segment: mapped glyph count, glyph-pair count, summed advance units, summed
   kerning units, and a fixed-width hash over glyph/advance/kerning structure. `SummarizeDocxTextState.ps1`

@@ -141,6 +141,21 @@ function New-TcAmbiguityReport(
     }
 }
 
+function Select-TcStructuralDiscriminators($Reports) {
+    return @(
+        $Reports |
+            Where-Object { [bool]$_.OnlyNonzeroTc -and [int]$_.PairCount -gt 0 -and [int]$_.AmbiguousKeyCount -eq 0 } |
+            Sort-Object @{ Expression = { [int]$_.KeyCount }; Ascending = $true }, Name |
+            ForEach-Object {
+                [pscustomobject]@{
+                    Name = $_.Name
+                    PairCount = $_.PairCount
+                    KeyCount = $_.KeyCount
+                }
+            }
+    )
+}
+
 function TextLength($Operation) {
     if ($null -eq $Operation.DecodedText) {
         return 0
@@ -714,46 +729,48 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
     }
 
     $nonzeroReferencePairs = @($pairs | Where-Object { [Math]::Abs([double]$_.ReferenceTc) -gt 0.001d })
+    $referenceTcAmbiguityChecks = @(
+        New-TcAmbiguityReport "tf+role+class+gaps" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|role=" + $pair.PlannerRole + "|class=" + $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+        } $false
+        New-TcAmbiguityReport "tf+role+class+gaps" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|role=" + $pair.PlannerRole + "|class=" + $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+        } $true
+        New-TcAmbiguityReport "tf+tc-source+gaps" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|tcSource=" + $pair.PlannerPdfCharacterSpacingSource + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+        } $true
+        New-TcAmbiguityReport "tf+run-provenance+gaps" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|" + $pair.PlannerRunProvenance + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
+        } $true
+        New-TcAmbiguityReport "tf+gaps+pair-range" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|pairMin=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxUnits 0)
+        } $true
+        New-TcAmbiguityReport "tf+gaps+side-range" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0)
+        } $true
+        New-TcAmbiguityReport "tf+side-range" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0)
+        } $true
+        New-TcAmbiguityReport "tf+rounded-residual-per-gap" $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|roundedResidualPerGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6)
+        } $true
+    )
     return [pscustomobject]@{
         PairCount = $pairs.Count
         ReferenceOperationCount = $ReferenceOperations.Count
         PlannerSegmentCount = $segments.Count
         CountsMatched = $true
         Pairs = @($pairs.ToArray())
-        ReferenceTcAmbiguityChecks = @(
-            New-TcAmbiguityReport "tf+role+class+gaps" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|role=" + $pair.PlannerRole + "|class=" + $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
-            } $false
-            New-TcAmbiguityReport "tf+role+class+gaps" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|role=" + $pair.PlannerRole + "|class=" + $pair.PlannerTextClass + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
-            } $true
-            New-TcAmbiguityReport "tf+tc-source+gaps" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|tcSource=" + $pair.PlannerPdfCharacterSpacingSource + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
-            } $true
-            New-TcAmbiguityReport "tf+run-provenance+gaps" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|" + $pair.PlannerRunProvenance + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0)
-            } $true
-            New-TcAmbiguityReport "tf+gaps+pair-range" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|pairMin=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMinUnits 0) + "|pairMax=" + (RoundedKey $pair.PlannerGlyphPairAdvanceMaxUnits 0)
-            } $true
-            New-TcAmbiguityReport "tf+gaps+side-range" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|gaps=" + (RoundedKey $pair.PlannerGlyphGapCount 0) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0)
-            } $true
-            New-TcAmbiguityReport "tf+side-range" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0)
-            } $true
-            New-TcAmbiguityReport "tf+rounded-residual-per-gap" $pairs {
-                param($pair)
-                "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|roundedResidualPerGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6)
-            } $true
-        )
+        ReferenceTcAmbiguityChecks = $referenceTcAmbiguityChecks
+        ReferenceTcStructuralDiscriminators = Select-TcStructuralDiscriminators $referenceTcAmbiguityChecks
         ReferenceTcByPlannerTextClass = @(Group-Count $pairs {
             param($pair)
             $pair.PlannerTextClass + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
