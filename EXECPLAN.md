@@ -5223,6 +5223,14 @@ block models and richer section/pagination layout before adding more Word pagina
     structural preservation: Office-derived marker glyphs, numbering/restart rules, footnote separators,
     side-story placement, and annotation/link PDF structures remain open until those rules are modeled from
     OOXML settings and observed Office output instead of guessed. Validation passed the direct test.
+  - [x] 2026-06-03: automatic body footnote/endnote reference markers now project into ordinary superscript
+    text runs at their source run-child positions, while `DocxInlineReference` and structure snapshots retain
+    the private-safe display marker text. This routes visible markers through the existing DOCX font planning,
+    layout, wrapping, and PDF text emission paths instead of adding renderer-side marker drawing. Comment
+    references and `customMarkFollows` footnote/endnote references remain structural only until their Office
+    display rules are modeled. Validation passed `docx-core --skip-slow` (`59`), `docx-text --skip-slow`
+    (`49`), and `docx-page --skip-slow` (`45`). Keep note body placement, separator/continuation separator
+    behavior, numbering format/restart settings, custom marks, and related-story link rectangles open.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent

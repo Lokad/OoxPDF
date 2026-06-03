@@ -4136,6 +4136,9 @@ internal static class DocxTests
         TestAssert.True(footnote.Id == "5" && footnote.CustomMarkFollowsValue == "1", "Inserted footnote marker metadata should survive run-container parsing.");
         TestAssert.True(comment.Id == "6" && comment.CustomMarkFollowsValue is null, "Hyperlink comment marker metadata should survive run-container parsing.");
         TestAssert.True(endnote.Id == "7" && endnote.CustomMarkFollowsValue is null, "Simple-field endnote marker metadata should survive run-container parsing.");
+        TestAssert.True(footnote.DisplayText is null, "Footnote references with customMarkFollows should not synthesize an automatic marker.");
+        TestAssert.True(comment.DisplayText is null, "Comment references should stay structural until comment display rules are modeled.");
+        TestAssert.Equal("1", endnote.DisplayText ?? string.Empty);
         TestAssert.Equal(1, footnote.SourceRunIndex);
         TestAssert.Equal(1, footnote.RunChildIndex);
         TestAssert.Equal(3, footnote.TextOffsetInRun);
@@ -4153,6 +4156,67 @@ internal static class DocxTests
         TestAssert.Equal(1, block.CommentReferenceCount);
         TestAssert.Equal(1, block.FootnoteReferenceCount);
         TestAssert.Equal(1, block.EndnoteReferenceCount);
+    }
+
+    public static void DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersAsSuperscriptRuns()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before</w:t><w:footnoteReference w:id="2"/><w:t>Middle</w:t><w:endnoteReference w:id="3"/><w:t>After</w:t></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:r><w:t>Next</w:t><w:footnoteReference w:id="4"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxParagraph first = document.Paragraphs[0];
+        TestAssert.Equal(5, first.Runs.Count);
+        TestAssert.Equal("Before", first.Runs[0].Text);
+        TestAssert.Equal("1", first.Runs[1].Text);
+        TestAssert.Equal("superscript", first.Runs[1].VerticalAlignmentValue ?? string.Empty);
+        TestAssert.Equal("Middle", first.Runs[2].Text);
+        TestAssert.Equal("1", first.Runs[3].Text);
+        TestAssert.Equal("superscript", first.Runs[3].VerticalAlignmentValue ?? string.Empty);
+        TestAssert.Equal("After", first.Runs[4].Text);
+        TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == "Footnote").DisplayText ?? string.Empty);
+        TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
+
+        DocxParagraph second = document.Paragraphs[1];
+        TestAssert.Equal("2", second.Runs[1].Text);
+        TestAssert.Equal("2", second.InlineReferences.Single().DisplayText ?? string.Empty);
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureInlineReferenceSnapshot[] references = snapshot.InlineReferences.ToArray();
+        TestAssert.Equal("1", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "2").DisplayText ?? string.Empty);
+        TestAssert.Equal("1", references.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
+        TestAssert.Equal("2", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "4").DisplayText ?? string.Empty);
     }
 
     public static void DocxReaderPreservesBookmarkAnchorsForInternalHyperlinks()

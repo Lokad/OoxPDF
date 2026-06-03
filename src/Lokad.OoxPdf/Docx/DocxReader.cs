@@ -1003,9 +1003,10 @@ internal sealed class DocxReader
     {
         var paragraphs = new List<DocxParagraph>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
+        var inlineReferenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "p"))
         {
-            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships);
+            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters);
             if (parsed is not null)
             {
                 paragraphs.Add(parsed);
@@ -1022,7 +1023,8 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxTableCellStyle? tableCellStyle = null)
+        DocxTableCellStyle? tableCellStyle = null,
+        Dictionary<string, int>? inlineReferenceCounters = null)
     {
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         string? paragraphStyleId = ReadParagraphStyleId(paragraphProperties);
@@ -1283,7 +1285,6 @@ internal sealed class DocxReader
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
         {
             int currentSourceRunIndex = sourceRunIndex++;
-            AddInlineReferences(run, currentSourceRunIndex);
             string text = ReadRunText(run);
             string? fieldInstruction = run
                 .Elements(WordprocessingNamespace + "instrText")
@@ -1292,6 +1293,20 @@ internal sealed class DocxReader
             string? placeholder = ResolveFieldPlaceholder(fieldInstruction);
             int fieldTextRunIndex = runs.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
+            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
+            string? characterStyleId = ReadCharacterStyleId(run);
+            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
+                runProperties,
+                paragraphStyleId,
+                characterStyleId,
+                styles,
+                tableCellStyle?.Run);
+            DocxRunStyleResolution runStyleResolution = CreateRunStyleResolution(
+                runProperties,
+                paragraphStyleId,
+                characterStyleId,
+                styles,
+                tableCellStyle?.Run);
 
             if (placeholder is not null)
             {
@@ -1303,24 +1318,21 @@ internal sealed class DocxReader
                 text = string.Empty;
             }
 
-            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
-            string? characterStyleId = ReadCharacterStyleId(run);
-            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
-                runProperties,
-                paragraphStyleId,
-                characterStyleId,
-                styles,
-                tableCellStyle?.Run);
-            if (text.Length != 0)
+            if (placeholder is null &&
+                fieldInstruction is null &&
+                run.Elements().Any(IsInlineReferenceElement))
+            {
+                AddOrderedRunTextAndReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution);
+            }
+            else if (text.Length != 0)
             {
                 string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
-                DocxRunStyleResolution runStyleResolution = CreateRunStyleResolution(
-                    runProperties,
-                    paragraphStyleId,
-                    characterStyleId,
-                    styles,
-                    tableCellStyle?.Run);
                 AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution);
+                AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false);
+            }
+            else
+            {
+                AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false);
             }
 
             if (fieldInstruction is not null)
@@ -1338,46 +1350,135 @@ internal sealed class DocxReader
             images.AddRange(ReadInlineImages(run, package, relationships));
         }
 
-        void AddInlineReferences(XElement run, int currentSourceRunIndex)
+        void AddOrderedRunTextAndReferences(
+            XElement run,
+            int currentSourceRunIndex,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution)
         {
             int childIndex = 0;
             int textOffset = 0;
             foreach (XElement child in run.Elements())
             {
-                if (child.Name == WordprocessingNamespace + "commentReference")
+                if (IsInlineReferenceElement(child))
                 {
-                    inlineReferences.Add(new DocxInlineReference(
-                        "Comment",
-                        (string?)child.Attribute(WordprocessingNamespace + "id"),
-                        null,
-                        currentSourceRunIndex,
-                        childIndex,
-                        textOffset));
+                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true);
                 }
-                else if (child.Name == WordprocessingNamespace + "footnoteReference")
+                else
                 {
-                    inlineReferences.Add(new DocxInlineReference(
-                        "Footnote",
-                        (string?)child.Attribute(WordprocessingNamespace + "id"),
-                        (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows"),
-                        currentSourceRunIndex,
-                        childIndex,
-                        textOffset));
+                    string childText = ReadRunTextChild(child);
+                    if (childText.Length != 0)
+                    {
+                        AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? childText.ToUpperInvariant() : childText, resolvedRun, runStyleResolution);
+                    }
+
+                    textOffset += childText.Length;
                 }
-                else if (child.Name == WordprocessingNamespace + "endnoteReference")
-                {
-                    inlineReferences.Add(new DocxInlineReference(
-                        "Endnote",
-                        (string?)child.Attribute(WordprocessingNamespace + "id"),
-                        (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows"),
-                        currentSourceRunIndex,
-                        childIndex,
-                        textOffset));
-                }
+
+                childIndex++;
+            }
+        }
+
+        void AddInlineReferences(
+            XElement run,
+            int currentSourceRunIndex,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution,
+            bool emitDisplayRuns)
+        {
+            int childIndex = 0;
+            int textOffset = 0;
+            foreach (XElement child in run.Elements())
+            {
+                AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRuns);
 
                 textOffset += ReadRunTextChild(child).Length;
                 childIndex++;
             }
+        }
+
+        void AddInlineReference(
+            XElement child,
+            int currentSourceRunIndex,
+            int childIndex,
+            int textOffset,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution,
+            bool emitDisplayRun)
+        {
+            string? kind = ResolveInlineReferenceKind(child);
+            if (kind is null)
+            {
+                return;
+            }
+
+            string? customMarkFollows = kind == "Footnote" || kind == "Endnote"
+                ? (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows")
+                : null;
+            string? displayText = ResolveInlineReferenceDisplayText(kind, customMarkFollows);
+            inlineReferences.Add(new DocxInlineReference(
+                kind,
+                (string?)child.Attribute(WordprocessingNamespace + "id"),
+                customMarkFollows,
+                displayText,
+                currentSourceRunIndex,
+                childIndex,
+                textOffset));
+
+            if (emitDisplayRun && displayText is not null)
+            {
+                AddInlineReferenceDisplayRun(displayText, resolvedRun, runStyleResolution);
+            }
+        }
+
+        string? ResolveInlineReferenceDisplayText(string kind, string? customMarkFollows)
+        {
+            if (!string.IsNullOrEmpty(customMarkFollows) || (kind != "Footnote" && kind != "Endnote"))
+            {
+                return null;
+            }
+
+            if (inlineReferenceCounters is null)
+            {
+                return null;
+            }
+
+            inlineReferenceCounters.TryGetValue(kind, out int current);
+            int next = current + 1;
+            inlineReferenceCounters[kind] = next;
+            return next.ToString(CultureInfo.InvariantCulture);
+        }
+
+        void AddInlineReferenceDisplayRun(
+            string displayText,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution)
+        {
+            AddResolvedTextRuns(
+                runs,
+                displayText,
+                resolvedRun with { VerticalAlignmentValue = "superscript" },
+                runStyleResolution);
+        }
+
+        static bool IsInlineReferenceElement(XElement element)
+        {
+            return ResolveInlineReferenceKind(element) is not null;
+        }
+
+        static string? ResolveInlineReferenceKind(XElement element)
+        {
+            if (element.Name == WordprocessingNamespace + "commentReference")
+            {
+                return "Comment";
+            }
+
+            if (element.Name == WordprocessingNamespace + "footnoteReference")
+            {
+                return "Footnote";
+            }
+
+            return element.Name == WordprocessingNamespace + "endnoteReference" ? "Endnote" : null;
         }
     }
 
@@ -1622,6 +1723,7 @@ internal sealed class DocxReader
     {
         var elements = new List<DocxBodyElement>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
+        var inlineReferenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (XElement element in document.Descendants(WordprocessingNamespace + "body").Elements())
         {
             if (element.Name == WordprocessingNamespace + "p")
@@ -1641,7 +1743,7 @@ internal sealed class DocxReader
                     elements.Add(new DocxPageBreakElement(
                         "runBreak",
                         "page",
-                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships)));
+                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters)));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -1656,7 +1758,7 @@ internal sealed class DocxReader
                     elements.Add(new DocxManualBreakElement(
                         "runBreak",
                         "column",
-                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships)));
+                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters)));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -1689,7 +1791,7 @@ internal sealed class DocxReader
                             continue;
                         }
 
-                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships);
+                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters);
                         if (splitParagraph is not null)
                         {
                             elements.Add(new DocxParagraphElement(AdjustBreakParagraphFragment(splitParagraph, part)));
@@ -1705,7 +1807,7 @@ internal sealed class DocxReader
                     continue;
                 }
 
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters);
                 if (paragraph is not null)
                 {
                     elements.Add(new DocxParagraphElement(paragraph));

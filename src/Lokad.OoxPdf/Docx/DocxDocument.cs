@@ -403,6 +403,7 @@ internal sealed record DocxInlineReference(
     string Kind,
     string? Id,
     string? CustomMarkFollowsValue,
+    string? DisplayText = null,
     int SourceRunIndex = -1,
     int RunChildIndex = -1,
     int TextOffsetInRun = 0);
