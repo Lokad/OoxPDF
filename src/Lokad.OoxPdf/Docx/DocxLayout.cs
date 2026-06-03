@@ -5471,7 +5471,7 @@ internal sealed class DocxLayoutEngine
             }
 
             IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints);
-            if (HasTableCellKeepLinesBoundaryViolation(cell, textLines, fragmentBottomY))
+            if (HasTableCellKeepRuleBoundaryViolation(cell, textLines, fragmentBottomY))
             {
                 return false;
             }
@@ -5487,7 +5487,7 @@ internal sealed class DocxLayoutEngine
         return false;
     }
 
-    private static bool HasTableCellKeepLinesBoundaryViolation(
+    private static bool HasTableCellKeepRuleBoundaryViolation(
         DocxTableCell cell,
         IReadOnlyList<DocxTextLineLayout> textLines,
         double fragmentBottomY)
@@ -5502,15 +5502,19 @@ internal sealed class DocxLayoutEngine
         {
             if (group.Key is not { } paragraphIndex ||
                 paragraphIndex < 0 ||
-                paragraphIndex >= paragraphs.Count ||
-                paragraphs[paragraphIndex].EffectiveProperties.KeepRules.KeepLines != true)
+                paragraphIndex >= paragraphs.Count)
             {
                 continue;
             }
 
-            bool hasLineInFirstFragment = group.Any(line => line.BaselineY >= fragmentBottomY);
-            bool hasLineInContinuation = group.Any(line => line.BaselineY < fragmentBottomY);
-            if (hasLineInFirstFragment && hasLineInContinuation)
+            DocxParagraphKeepRules keepRules = paragraphs[paragraphIndex].EffectiveProperties.KeepRules;
+            int firstFragmentLineCount = group.Count(line => line.BaselineY >= fragmentBottomY);
+            int continuationLineCount = group.Count(line => line.BaselineY < fragmentBottomY);
+            bool splitsParagraph = firstFragmentLineCount != 0 && continuationLineCount != 0;
+            if (splitsParagraph &&
+                (keepRules.KeepLines == true ||
+                    (keepRules.WidowControl != false &&
+                        (firstFragmentLineCount == 1 || continuationLineCount == 1))))
             {
                 return true;
             }

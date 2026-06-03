@@ -733,8 +733,7 @@ internal sealed class DocxReader
 
     private static bool IsUnsupportedParagraphKeepRule(XElement element)
     {
-        if (element.Name != WordprocessingNamespace + "keepNext" &&
-            element.Name != WordprocessingNamespace + "widowControl")
+        if (element.Name != WordprocessingNamespace + "keepNext")
         {
             return false;
         }
