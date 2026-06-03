@@ -4942,6 +4942,12 @@ block models and richer section/pagination layout before adding more Word pagina
   static table ordinal cannot collide with a body table ordinal or another static story. The same bottom-up
   static header table test now asserts table-level ownership, preserving private-safe diagnostics for rendered
   static tables. Validation passed `docx-tables --skip-slow` (`122`) and `docx-page --skip-slow` (`43`).
+  2026-06-03 structure follow-up: table and table-cell structure snapshots now derive paragraph/text/image/
+  hyperlink/list/style counts from `DocxBlockTraversal.EnumerateTableParagraphs` and canonical cell body
+  streams instead of repeated direct `cell.Paragraphs` reads. The pre-layout structure test now leaves a table
+  cell's compatibility paragraph list empty while `BodyElements` owns the paragraph, preserving the same
+  private-safe table facts. Validation passed `docx-core --skip-slow` (`56`) and `docx-tables --skip-slow`
+  (`122`).
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

@@ -1655,7 +1655,7 @@ internal static class DocxTests
         };
         var restartCell = new DocxTableCell(
             string.Empty,
-            [cellParagraph],
+            [],
             "D9EAF7",
             "clear",
             null,
@@ -1665,7 +1665,10 @@ internal static class DocxTests
             GridSpan: 2,
             GridSpanValue: "2",
             HasVerticalMerge: true,
-            VerticalMergeValue: "restart");
+            VerticalMergeValue: "restart")
+        {
+            BodyElements = [new DocxParagraphElement(cellParagraph)]
+        };
         var continuationCell = new DocxTableCell(
             string.Empty,
             [],

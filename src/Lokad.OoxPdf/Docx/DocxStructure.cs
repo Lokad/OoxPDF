@@ -477,7 +477,8 @@ internal sealed record DocxStructureSnapshot(
     private static DocxStructureTableSnapshot ToTableSnapshot(DocxTable table, int tableIndex, int blockIndex)
     {
         int cellCount = table.Rows.Sum(row => row.Cells.Count);
-        int paragraphCount = table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count));
+        DocxParagraph[] tableParagraphs = DocxBlockTraversal.EnumerateTableParagraphs(table).ToArray();
+        int paragraphCount = tableParagraphs.Length;
         return new DocxStructureTableSnapshot(
             tableIndex,
             blockIndex,
@@ -512,17 +513,17 @@ internal sealed record DocxStructureSnapshot(
             table.Rows.Sum(row => row.Cells.Count(cell => cell.PreferredWidthPoints is not null || cell.PreferredWidthValue is not null)),
             table.Rows.Sum(row => row.Cells.Sum(cell => cell.Borders.Count(border => !string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) && !string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase)))),
             paragraphCount,
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(paragraph => paragraph.Runs.Count))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(TextLength))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(CountWhitespaceDelimitedTokens))),
-            table.Rows.SelectMany(row => row.Cells).SelectMany(DocxTableCellContent.GetParagraphs).Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(paragraph => paragraph.Images.Count))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphInlineReferenceCount))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphHyperlinkCount))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphExternalHyperlinkCount))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(ParagraphInternalHyperlinkCount))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.ListLabel is not null))),
-            table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true))),
+            tableParagraphs.Sum(paragraph => paragraph.Runs.Count),
+            tableParagraphs.Sum(paragraph => TextLength(paragraph)),
+            tableParagraphs.Sum(paragraph => CountWhitespaceDelimitedTokens(paragraph)),
+            tableParagraphs.Select(paragraph => LongestWhitespaceDelimitedTokenLength(paragraph)).DefaultIfEmpty(0).Max(),
+            tableParagraphs.Sum(paragraph => paragraph.Images.Count),
+            tableParagraphs.Sum(ParagraphInlineReferenceCount),
+            tableParagraphs.Sum(ParagraphHyperlinkCount),
+            tableParagraphs.Sum(ParagraphExternalHyperlinkCount),
+            tableParagraphs.Sum(ParagraphInternalHyperlinkCount),
+            tableParagraphs.Count(paragraph => paragraph.ListLabel is not null),
+            tableParagraphs.Count(paragraph => paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true),
             table.Look?.FirstRow,
             table.Look?.FirstColumn,
             table.Look?.NoHorizontalBand,
@@ -572,7 +573,9 @@ internal sealed record DocxStructureSnapshot(
 
     private static DocxStructureTableCellSnapshot ToTableCellSnapshot(DocxTableCell cell, int cellIndex)
     {
-        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
+        DocxParagraph[] paragraphs = DocxBlockTraversal
+            .EnumerateBodyParagraphs(DocxTableCellContent.GetBodyElements(cell))
+            .ToArray();
         return new DocxStructureTableCellSnapshot(
             cellIndex,
             Math.Max(1, cell.GridSpan),
@@ -587,11 +590,11 @@ internal sealed record DocxStructureSnapshot(
             cell.PreferredWidthValue,
             cell.PreferredWidthType,
             cell.Borders.Count(border => !string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) && !string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase)),
-            paragraphs.Count,
+            paragraphs.Length,
             paragraphs.Sum(paragraph => paragraph.Runs.Count),
-            paragraphs.Sum(TextLength),
-            paragraphs.Sum(CountWhitespaceDelimitedTokens),
-            paragraphs.Select(LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
+            paragraphs.Sum(paragraph => TextLength(paragraph)),
+            paragraphs.Sum(paragraph => CountWhitespaceDelimitedTokens(paragraph)),
+            paragraphs.Select(paragraph => LongestWhitespaceDelimitedTokenLength(paragraph)).DefaultIfEmpty(0).Max(),
             paragraphs.Sum(paragraph => paragraph.Images.Count),
             paragraphs.Sum(ParagraphInlineReferenceCount),
             paragraphs.Sum(ParagraphHyperlinkCount),
@@ -668,7 +671,7 @@ internal sealed record DocxStructureSnapshot(
                 group.Count(),
                 0,
                 group.Count(),
-                group.Sum(table => table.Rows.Sum(row => row.Cells.Sum(cell => DocxTableCellContent.GetParagraphs(cell).Sum(TextLength))))))
+                group.Sum(table => DocxBlockTraversal.EnumerateTableParagraphs(table).Sum(paragraph => TextLength(paragraph)))))
             .ToArray();
         return paragraphStyles.Concat(tableStyles).ToArray();
     }
