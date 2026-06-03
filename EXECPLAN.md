@@ -793,6 +793,13 @@ High-priority actions:
   text-state context guard `20260603-224815` stayed paired at `35/35` operations with unchanged
   `MAE=0.493604`, changed16 `0.004763`. The remaining count gap is now cleaner: mixed-token splits (`-33`),
   whitespace splits (`-35`), and a small alphanumeric/letter residual before production `Tc` selection.
+  2026-06-03 public whitespace discovery: public `docx-ladder-02-long-token-wrapping` still has one
+  Office/candidate operation-count mismatch (`29` vs `28`), isolated to a final default-size whitespace
+  operation after a terminal table. The OOXML has no authored `w:p` after the `w:tbl` before `sectPr`, so this
+  appears to be Word's implicit final paragraph mark after a document-ending table, not a generic terminal
+  line-space rule. Keep this open as a structural body-flow item: add a narrow public probe for terminal-table
+  implicit paragraph marks before changing layout or PDF emission. Do not solve it by appending an unconditional
+  final whitespace operation to all documents.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first
