@@ -3539,7 +3539,8 @@ internal sealed class DocxLayoutEngine
 
     private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)
     {
-        return paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true;
+        DocxParagraphKeepRules keepRules = paragraph.EffectiveProperties.KeepRules;
+        return keepRules.KeepLines == true || keepRules.KeepNext == true;
     }
 
     private static double ResolveLineHeight(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer)
@@ -3624,7 +3625,7 @@ internal sealed class DocxLayoutEngine
         double marginBottom,
         bool hasPageContent)
     {
-        if (paragraph.KeepRules.WidowControl == false ||
+        if (paragraph.EffectiveProperties.KeepRules.WidowControl == false ||
             lineCount <= 1 ||
             !hasPageContent)
         {

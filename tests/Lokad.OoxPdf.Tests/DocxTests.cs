@@ -15044,6 +15044,7 @@ internal static class DocxTests
                     <w:pPr>
                       <w:keepNext/>
                       <w:keepLines/>
+                      <w:spacing w:line="200" w:lineRule="exact"/>
                     </w:pPr>
                   </w:style>
                 </w:styles>
@@ -15056,6 +15057,42 @@ internal static class DocxTests
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_STYLE_PARAGRAPH_KEEP_RULE", ids);
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument styledDocument = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
+        ];
+        DocxParagraph[] styledParagraphs = styledDocument.Paragraphs.ToArray();
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Concat(styledParagraphs.Select(paragraph => new DocxParagraphElement(paragraph)))
+            .ToArray();
+        var compactDocument = new DocxDocument(
+            160d,
+            80d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(compactDocument, new FamilyWidthTextMeasurer());
+        DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(4, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+        TestAssert.Equal("One", secondPageLines[0].Text);
+        TestAssert.Equal("Two", secondPageLines[1].Text);
     }
 
     public static void DocxSupportedStyleSpacingVariantsDoNotEmitDiagnostics()

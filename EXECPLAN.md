@@ -4995,6 +4995,14 @@ block models and richer section/pagination layout before adding more Word pagina
   --skip-slow` (`49`) and `docx-tables --skip-slow` (`123`; serial rerun after a transient compiler file
   lock). Keep this open for effective run properties, more layout consumers, and public Office-oracle probes
   of style-derived spacing and line-height behavior.
+  2026-06-03 pagination follow-up: the remaining body paragraph keep/widow gate now reads
+  `paragraph.EffectiveProperties.KeepRules` instead of the legacy direct paragraph surface. This keeps
+  keep-lines, keep-next, and widow-control pagination decisions aligned with the style/default/table-style
+  cascade contract. `DocxSupportedStyleKeepRulesDoNotEmitDiagnostics` now also feeds style-authored keep
+  rules through `DocxReader` into a constrained synthetic layout and asserts that the style-derived kept pair
+  moves together. Validation passed `docx-text --skip-slow` (`49`) and `docx-page --skip-slow` (`43`; serial
+  rerun after a transient compiler file lock). Keep the broader pagination item open for Office-backed
+  line-height, row-fragmentation, manual-break, and widow/orphan edge cases.
   2026-06-03 run-model follow-up: introduced `DocxEffectiveRunProperties` and `DocxRunStyleResolution` so
   resolved DOCX runs now retain character style id/found/depth, document-default run participation,
   paragraph-style run participation, character-style run participation, direct-run-property presence, and
