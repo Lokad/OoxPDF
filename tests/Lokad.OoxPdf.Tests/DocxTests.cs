@@ -12605,7 +12605,16 @@ internal static class DocxTests
         string familyName = font.Value.Resolution.FamilyName;
         var spacedRun = new DocxTextRun("Body", 10d, null, false, false, false, null, familyName, CharacterSpacingPoints: 1.25d)
         {
-            Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null)
+            Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null),
+            StyleResolution = new DocxRunStyleResolution(
+                "Emphasis",
+                CharacterStyleFound: true,
+                CharacterStyleDepth: 1,
+                HasDocumentDefaultRunProperties: true,
+                HasParagraphStyleRunProperties: true,
+                HasCharacterStyleRunProperties: true,
+                HasDirectRunProperties: true,
+                HasTableStyleRunProperties: false)
         };
         var spacedParagraph = new DocxParagraph(
             [spacedRun],
@@ -12717,6 +12726,14 @@ internal static class DocxTests
         TestAssert.Equal("None", spacedSegment.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(spacedSegment.PositioningCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should expose the resulting glyph-positioning spacing.");
         TestAssert.True(spacedSegment.CompensatePdfCharacterSpacing, "Run spacing should be marked as compensated when positioned glyph advances carry the spacing.");
+        TestAssert.Equal("Emphasis", spacedSegment.CharacterStyleId ?? string.Empty);
+        TestAssert.True(spacedSegment.CharacterStyleFound, "Text-emission snapshots should carry character-style provenance.");
+        TestAssert.Equal(1, spacedSegment.CharacterStyleDepth);
+        TestAssert.True(spacedSegment.HasDocumentDefaultRunProperties, "Text-emission snapshots should carry document-default run provenance.");
+        TestAssert.True(spacedSegment.HasParagraphStyleRunProperties, "Text-emission snapshots should carry paragraph-style run provenance.");
+        TestAssert.True(spacedSegment.HasCharacterStyleRunProperties, "Text-emission snapshots should carry character-style run provenance.");
+        TestAssert.True(spacedSegment.HasDirectRunProperties, "Text-emission snapshots should carry direct run-property provenance.");
+        TestAssert.True(spacedSegment.HasTableStyleRunProperties == false, "Text-emission snapshots should not invent table-style run provenance.");
         TestAssert.Equal(1, spacedLine.TerminalSpaceSegmentCount);
 
         DocxTextEmissionLineSnapshot numberedLine = snapshot.Lines.First(line => line.SourceBlockIndex == 1);

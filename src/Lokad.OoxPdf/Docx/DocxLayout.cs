@@ -1419,7 +1419,15 @@ internal sealed record DocxTextEmissionSegmentSnapshot(
     bool IsTerminalLineSpace,
     string? FontResourceName,
     bool SyntheticBold,
-    bool SyntheticItalic);
+    bool SyntheticItalic,
+    string? CharacterStyleId = null,
+    bool CharacterStyleFound = false,
+    int CharacterStyleDepth = 0,
+    bool HasDocumentDefaultRunProperties = false,
+    bool HasParagraphStyleRunProperties = false,
+    bool HasCharacterStyleRunProperties = false,
+    bool HasDirectRunProperties = false,
+    bool HasTableStyleRunProperties = false);
 
 internal sealed record TextProfile(
     int SpaceCharacterCount,

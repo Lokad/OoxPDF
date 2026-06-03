@@ -1102,7 +1102,15 @@ internal sealed class DocxRenderer
             segment.IsTerminalLineSpace,
             segment.Resource.Name,
             segment.SyntheticBold,
-            segment.SyntheticItalic);
+            segment.SyntheticItalic,
+            segment.StyleRun.StyleResolution.CharacterStyleId,
+            segment.StyleRun.StyleResolution.CharacterStyleFound,
+            segment.StyleRun.StyleResolution.CharacterStyleDepth,
+            segment.StyleRun.StyleResolution.HasDocumentDefaultRunProperties,
+            segment.StyleRun.StyleResolution.HasParagraphStyleRunProperties,
+            segment.StyleRun.StyleResolution.HasCharacterStyleRunProperties,
+            segment.StyleRun.StyleResolution.HasDirectRunProperties,
+            segment.StyleRun.StyleResolution.HasTableStyleRunProperties);
     }
 
     private static void DrawRunGlyphText(

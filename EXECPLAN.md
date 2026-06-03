@@ -5011,6 +5011,12 @@ block models and richer section/pagination layout before adding more Word pagina
   PDF-flow/font-metric comparisons tied to the effective run model without exposing document text or raw XML.
   Validation passed `docx-text --skip-slow` (`49`). Keep this open for table-line assertions and PDF-emission
   provenance consumers.
+  2026-06-03 emission-diagnostic follow-up: DOCX text-emission segment snapshots now carry the same run
+  provenance facts as the effective run model: character style id/found/depth plus document-default,
+  paragraph-style, character-style, direct-run-property, and table-style participation. The existing
+  private-safe PDF text-state snapshot guard now verifies these fields on an emitted segment. Validation
+  passed `docx-text --skip-slow` (`49`). Keep this open for summarizer aggregation and Office-oracle
+  comparisons that correlate emitted advance residuals with style provenance.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
