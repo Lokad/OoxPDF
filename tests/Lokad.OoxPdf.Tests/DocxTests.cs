@@ -602,6 +602,16 @@ internal static class DocxTests
         TestAssert.Equal(50d, parts[0].Width);
     }
 
+    public static void DocxTextEmissionPlannerSkipsEmptyOperationParts()
+    {
+        var run = new DocxTextRun(string.Empty, 10d, null, false, false, false, null, null);
+        var segment = new DocxTextSegmentLayout(string.Empty, run, 20d, 0d);
+
+        IReadOnlyList<DocxTextEmissionPart> parts = DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, 10d, new FontSizeWidthTextMeasurer());
+
+        TestAssert.Equal(0, parts.Count);
+    }
+
     public static void DocxTextEmissionPlannerClassifiesTextWithoutExposingIt()
     {
         DocxTextEmissionCharacterProfile profile = DocxTextEmissionPlanner.ClassifyText("A9 -+");

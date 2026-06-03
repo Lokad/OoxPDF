@@ -774,6 +774,15 @@ High-priority actions:
   decomposition/count parity for mixed-token and whitespace boundaries before selecting a production `Tc`
   target rule. Do not compensate this with font names, style names, private text, or observed `Tc` bucket
   lookups.
+  2026-06-03 rendering follow-up: zero-glyph DOCX text segments no longer emit empty PDF text objects (`<>`).
+  This removes fake candidate PDF structure without hiding the real missing glyph/operation-decomposition
+  problem: private run `20260603-224406` stayed visually identical (`16/16` pages, zero dimension mismatches,
+  no diagnostics, aggregate `MAE=8.933935`, changed16 `0.094971`), while candidate PDF text operations dropped
+  from `2332` to `2279`. The public text-state context guard `20260603-224406` stayed paired at `35/35`
+  operations with unchanged `MAE=0.493604`, changed16 `0.004763`. The remaining private planner deltas are
+  still mixed tokens (`-33`) and whitespace (`-35`), and candidate PDF is still short whitespace (`-80`);
+  continue with Office-like whitespace/mixed-token operation splitting and glyph coverage, not with empty
+  operation placeholders.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

@@ -372,8 +372,12 @@ internal static class DocxTextEmissionPlanner
         double fontSize,
         IDocxTextMeasurer? textMeasurer)
     {
+        if (segment.Text.Length == 0)
+        {
+            return [];
+        }
+
         if (textMeasurer is null ||
-            segment.Text.Length == 0 ||
             !segment.Text.Any(IsOfficeTextOperationBoundaryPunctuation))
         {
             return [new DocxTextEmissionPart(segment.Text, segment.X, segment.Width)];

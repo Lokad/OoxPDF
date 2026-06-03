@@ -1266,7 +1266,13 @@ internal sealed class DocxRenderer
             return;
         }
 
-        graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, resource.Embedded.EncodeGlyphHex(text), syntheticItalic, plan.PdfCharacterSpacing);
+        string glyphHex = resource.Embedded.EncodeGlyphHex(text);
+        if (glyphHex.Length == 0)
+        {
+            return;
+        }
+
+        graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic, plan.PdfCharacterSpacing);
     }
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
