@@ -8134,6 +8134,20 @@ Current validation baseline:
   `docx-core --skip-slow` (`62`), `docx-tables --skip-slow` (`126`), and full solution build. Keep true
   Office-exact split boundaries, continuation separator story selection, footnote cross-page continuation, and
   table-internal note continuation open.
+  2026-06-03 architecture follow-up: automatic table-row page-boundary fragmentation now consults the
+  resolved paragraph model inside table cells before splitting a row. If the proposed fragment boundary would
+  cut through a cell paragraph whose effective keep rules include `keepLines`, the row is moved whole to the
+  next page instead of producing row fragments that violate the cell paragraph contract. The unsupported keep
+  diagnostic no longer fires for table-cell `keepLines`, while table-cell `keepNext` and `widowControl` remain
+  diagnostic-only because they require row-block adjacency/orphan logic rather than a split-boundary guard.
+  Bottom-up coverage verifies ordinary tall rows still split at page boundaries, a kept cell paragraph moves
+  whole, and the diagnostic contract is narrowed. Validation passed focused
+  `DocxTableLayoutStageKeepsCellKeepLinesParagraphWholeAtPageBoundary`,
+  `DocxSupportedTableCellKeepLinesDoesNotEmitUnsupportedKeepDiagnostic`,
+  `DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault`, `docx-tables --skip-slow` (`128`),
+  `docx-core --skip-slow` (`62`), `docx-page --skip-slow` (`54`), and full solution build. Keep
+  Office-exact table-cell `keepNext`, widow/orphan, explicit page-break interactions, and paragraph-level
+  continuation semantics open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

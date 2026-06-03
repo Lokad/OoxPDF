@@ -5471,8 +5471,45 @@ internal sealed class DocxLayoutEngine
             }
 
             IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints);
+            if (HasTableCellKeepLinesBoundaryViolation(cell, textLines, fragmentBottomY))
+            {
+                return false;
+            }
+
             bool hasLineInFirstFragment = textLines.Any(line => firstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY);
             bool hasLineInContinuation = textLines.Any(line => line.BaselineY < fragmentBottomY);
+            if (hasLineInFirstFragment && hasLineInContinuation)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasTableCellKeepLinesBoundaryViolation(
+        DocxTableCell cell,
+        IReadOnlyList<DocxTextLineLayout> textLines,
+        double fragmentBottomY)
+    {
+        if (textLines.Count == 0)
+        {
+            return false;
+        }
+
+        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell));
+        foreach (IGrouping<int?, DocxTextLineLayout> group in textLines.GroupBy(line => line.SourceParagraphIndex))
+        {
+            if (group.Key is not { } paragraphIndex ||
+                paragraphIndex < 0 ||
+                paragraphIndex >= paragraphs.Count ||
+                paragraphs[paragraphIndex].EffectiveProperties.KeepRules.KeepLines != true)
+            {
+                continue;
+            }
+
+            bool hasLineInFirstFragment = group.Any(line => line.BaselineY >= fragmentBottomY);
+            bool hasLineInContinuation = group.Any(line => line.BaselineY < fragmentBottomY);
             if (hasLineInFirstFragment && hasLineInContinuation)
             {
                 return true;
