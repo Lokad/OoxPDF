@@ -5005,6 +5005,12 @@ block models and richer section/pagination layout before adding more Word pagina
   --skip-slow` (`49`) and `docx-tables --skip-slow` (`123`; serial rerun after an external build file lock).
   Keep this open for broader layout/PDF-emission consumers and Office-oracle probes of style-derived run
   metrics.
+  2026-06-03 layout-diagnostic follow-up: placed DOCX text-line layout snapshots now expose private-safe text
+  segment provenance buckets for character-style, direct-run-property, paragraph-style-run-property,
+  table-style-run-property, and document-default-run-property participation. This keeps future DOCX
+  PDF-flow/font-metric comparisons tied to the effective run model without exposing document text or raw XML.
+  Validation passed `docx-text --skip-slow` (`49`). Keep this open for table-line assertions and PDF-emission
+  provenance consumers.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

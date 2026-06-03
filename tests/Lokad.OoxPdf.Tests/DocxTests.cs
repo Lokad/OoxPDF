@@ -1348,6 +1348,15 @@ internal static class DocxTests
         TestAssert.True(run.StyleResolution.HasDirectRunProperties, "Direct rPr beyond rStyle should remain distinguishable from style references.");
         TestAssert.True(run.StyleResolution.HasTableStyleRunProperties == false, "Body paragraph runs should not report table-style run contribution.");
         TestAssert.Equal("Emphasis", run.EffectiveProperties.StyleResolution.CharacterStyleId ?? string.Empty);
+
+        DocxLayoutItemSnapshot line = new DocxRenderer().InspectLayout(document).Pages
+            .SelectMany(page => page.Items)
+            .Single(item => item.Kind == "TextLine");
+        TestAssert.True(line.CharacterStyleTextSegmentCount > 0, "Layout snapshots should expose character-style text segment provenance.");
+        TestAssert.True(line.DirectRunPropertyTextSegmentCount > 0, "Layout snapshots should expose direct run-property text segment provenance.");
+        TestAssert.True(line.ParagraphStyleRunPropertyTextSegmentCount > 0, "Layout snapshots should expose paragraph-style run-property text segment provenance.");
+        TestAssert.True(line.DocumentDefaultRunPropertyTextSegmentCount > 0, "Layout snapshots should expose document-default run-property text segment provenance.");
+        TestAssert.Equal(0, line.TableStyleRunPropertyTextSegmentCount ?? -1);
     }
 
     public static void DocxReaderCascadesRunFontTokensThroughBasedOnStyles()

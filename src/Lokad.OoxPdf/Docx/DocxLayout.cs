@@ -671,7 +671,12 @@ internal sealed record DocxLayoutSnapshot(
                 ParagraphStyleDepth: text.SourceParagraph?.StyleResolution.StyleDepth,
                 HasDocumentDefaultParagraphProperties: text.SourceParagraph?.StyleResolution.HasDocumentDefaultParagraphProperties,
                 HasDirectParagraphProperties: text.SourceParagraph?.StyleResolution.HasDirectParagraphProperties,
-                HasTableStyleParagraphProperties: text.SourceParagraph?.StyleResolution.HasTableStyleParagraphProperties),
+                HasTableStyleParagraphProperties: text.SourceParagraph?.StyleResolution.HasTableStyleParagraphProperties,
+                CharacterStyleTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasCharacterStyleRunProperties),
+                DirectRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasDirectRunProperties),
+                ParagraphStyleRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasParagraphStyleRunProperties),
+                TableStyleRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasTableStyleRunProperties),
+                DocumentDefaultRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasDocumentDefaultRunProperties)),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
                 image.X,
@@ -727,6 +732,11 @@ internal sealed record DocxLayoutSnapshot(
                 ToTableRowTextLineSnapshots(row)),
             _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
         };
+    }
+
+    private static int CountTextSegments(DocxTextLineLayout text, Func<DocxRunStyleResolution, bool> predicate)
+    {
+        return text.Segments.Count(segment => predicate(segment.StyleRun.StyleResolution));
     }
 
     private static IReadOnlyList<DocxLayoutItemSnapshot> ToTableRowTextLineSnapshots(DocxTableRowLayout row)
@@ -1210,7 +1220,12 @@ internal sealed record DocxLayoutItemSnapshot(
     int? ParagraphStyleDepth = null,
     bool? HasDocumentDefaultParagraphProperties = null,
     bool? HasDirectParagraphProperties = null,
-    bool? HasTableStyleParagraphProperties = null);
+    bool? HasTableStyleParagraphProperties = null,
+    int? CharacterStyleTextSegmentCount = null,
+    int? DirectRunPropertyTextSegmentCount = null,
+    int? ParagraphStyleRunPropertyTextSegmentCount = null,
+    int? TableStyleRunPropertyTextSegmentCount = null,
+    int? DocumentDefaultRunPropertyTextSegmentCount = null);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,
