@@ -841,7 +841,7 @@ internal sealed record DocxLayoutSnapshot(
         DocxTextLineLayout? firstLine = cellLayout.TextLines.FirstOrDefault();
         DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
         IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
-        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
+        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
         IReadOnlyList<DocxParagraph> visualParagraphs = DocxTableCellContent.GetParagraphs(visualCell);
         IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.SpacingBeforePoints).ToArray();
         IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.SpacingAfterPoints).ToArray();
@@ -913,6 +913,14 @@ internal sealed record DocxLayoutSnapshot(
             bodyElements.OfType<DocxManualBreakElement>().Count(),
             bodyElements.OfType<DocxPageBreakElement>().Count(),
             bodyElements.OfType<DocxTableElement>().Count());
+    }
+
+    private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
+    {
+        return bodyElements
+            .OfType<DocxParagraphElement>()
+            .Select(element => element.Paragraph)
+            .ToArray();
     }
 
     private static TextProfile BuildTextProfile(string text)
@@ -5100,6 +5108,14 @@ internal sealed class DocxLayoutEngine
         return layoutElements;
     }
 
+    private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
+    {
+        return bodyElements
+            .OfType<DocxParagraphElement>()
+            .Select(element => element.Paragraph)
+            .ToArray();
+    }
+
     private static bool IsTableCellColumnBreakElement(DocxBodyElement element)
     {
         return element is DocxManualBreakElement manualBreak &&
@@ -5225,7 +5241,7 @@ internal sealed class DocxLayoutEngine
         }
 
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
-        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
+        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
         if (paragraphs.Count == 0)
         {
             return [];
@@ -5378,7 +5394,7 @@ internal sealed class DocxLayoutEngine
         int pageIndex)
     {
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
-        IReadOnlyList<DocxParagraph> paragraphs = DocxTableCellContent.GetParagraphs(cell);
+        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
         if (paragraphs.Count == 0 || !paragraphs.Any(paragraph => paragraph.Images.Count != 0))
         {
             return [];

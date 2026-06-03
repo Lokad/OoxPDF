@@ -4948,6 +4948,10 @@ block models and richer section/pagination layout before adding more Word pagina
   cell's compatibility paragraph list empty while `BodyElements` owns the paragraph, preserving the same
   private-safe table facts. Validation passed `docx-core --skip-slow` (`56`) and `docx-tables --skip-slow`
   (`122`).
+  2026-06-03 layout cleanup: table-cell layout snapshots, text-line layout, and inline-image layout now
+  extract direct paragraphs from the normalized table-cell body stream instead of doing a second compatibility
+  paragraph lookup. The remaining direct `GetParagraphs(visualCell)` use is intentionally scoped to the
+  vertical-merge visual-owner baseline path. Validation passed `docx-tables --skip-slow` (`122`).
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
