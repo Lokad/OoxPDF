@@ -4987,6 +4987,14 @@ block models and richer section/pagination layout before adding more Word pagina
   names or raw XML reads. The basedOn cascade test now checks both structure and placed-line provenance.
   Validation passed `docx-text --skip-slow` (`49`), `docx-tables --skip-slow` (`123`), and full solution
   build. Keep this open for an explicit effective paragraph/run property model consumed by layout.
+  2026-06-03 effective-model follow-up: introduced `DocxEffectiveParagraphProperties` as the layout-ready
+  paragraph contract carrying resolved alignment, spacing, line spacing, keep rules, indent, tab stops,
+  snap-to-grid tokens, and style provenance. Private-safe structure snapshots and the main contextual-spacing
+  / keep-next estimate path now consume that effective model instead of scattered paragraph scalar reads, and
+  bottom-up style/table-style tests assert the effective contract directly. Validation passed `docx-text
+  --skip-slow` (`49`) and `docx-tables --skip-slow` (`123`; serial rerun after a transient compiler file
+  lock). Keep this open for effective run properties, more layout consumers, and public Office-oracle probes
+  of style-derived spacing and line-height behavior.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

@@ -837,6 +837,13 @@ internal static class DocxTests
         TestAssert.Equal("360", paragraph.Spacing.LineValue ?? string.Empty);
         TestAssert.Equal("auto", paragraph.Spacing.LineRuleValue ?? string.Empty);
         TestAssert.Equal(1.5d, paragraph.LineSpacingFactor);
+        DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
+        TestAssert.Equal("Child", effective.StyleId ?? string.Empty);
+        TestAssert.Equal(6d, effective.SpacingBeforePoints);
+        TestAssert.Equal(0d, effective.SpacingAfterPoints);
+        TestAssert.Equal(1.5d, effective.LineSpacingFactor);
+        TestAssert.True(effective.StyleResolution.StyleFound, "The layout-ready effective paragraph model should preserve style provenance.");
+        TestAssert.True(effective.KeepRules.KeepNext != true, "The effective model should carry resolved keep rules without inventing them.");
         TestAssert.Equal(14d, run.FontSize);
         TestAssert.Equal("112233", run.ColorHex ?? string.Empty);
         TestAssert.True(run.Bold, "Child paragraph style run properties should merge over the inherited base run size/color.");
@@ -7844,6 +7851,9 @@ internal static class DocxTests
         TestAssert.True(secondParagraph.StyleResolution.HasDirectParagraphProperties == false, "A table-cell paragraph without pPr should not report direct paragraph properties.");
         TestAssert.Equal(DocxTextAlignment.Right, firstParagraph.Alignment);
         TestAssert.Equal("right", firstParagraph.AlignmentValue ?? string.Empty);
+        TestAssert.True(firstParagraph.EffectiveProperties.StyleResolution.HasTableStyleParagraphProperties, "Effective table-cell paragraph properties should retain table-style provenance.");
+        TestAssert.True(firstParagraph.EffectiveProperties.StyleResolution.HasDirectParagraphProperties, "Effective table-cell paragraph properties should retain direct paragraph-property provenance.");
+        TestAssert.Equal(DocxTextAlignment.Right, firstParagraph.EffectiveProperties.Alignment);
         TestAssert.Equal(6d, firstParagraph.SpacingAfterPoints);
         TestAssert.Equal(11d, firstParagraph.Runs.Single().FontSize);
         TestAssert.True(firstParagraph.Runs.Single().Italic, "First-column table run style should apply italic.");
@@ -7851,6 +7861,9 @@ internal static class DocxTests
         TestAssert.Equal("FIRST", firstParagraph.Runs.Single().Text);
         TestAssert.Equal("4472C4", firstParagraph.Runs.Single().ColorHex ?? string.Empty);
         TestAssert.Equal(0d, secondParagraph.SpacingAfterPoints);
+        TestAssert.True(secondParagraph.EffectiveProperties.StyleResolution.HasTableStyleParagraphProperties, "Effective inherited table-cell properties should remain tied to the table style.");
+        TestAssert.True(secondParagraph.EffectiveProperties.StyleResolution.HasDirectParagraphProperties == false, "Effective inherited table-cell properties should not pretend to be direct overrides.");
+        TestAssert.Equal(0d, secondParagraph.EffectiveProperties.SpacingAfterPoints);
         TestAssert.Equal(11d, secondParagraph.Runs.Single().FontSize);
     }
 

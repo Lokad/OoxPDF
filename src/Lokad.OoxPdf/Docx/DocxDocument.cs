@@ -328,7 +328,39 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxFieldReference> FieldReferences { get; init; } = [];
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
+
+    public DocxEffectiveParagraphProperties EffectiveProperties => new(
+        StyleId,
+        Alignment,
+        AlignmentValue,
+        SpacingBeforePoints,
+        SpacingAfterPoints,
+        LineSpacingFactor,
+        LineSpacingPoints,
+        Spacing,
+        KeepRules,
+        Indent,
+        TabStops,
+        SnapToGrid,
+        SnapToGridValue,
+        StyleResolution);
 }
+
+internal sealed record DocxEffectiveParagraphProperties(
+    string? StyleId,
+    DocxTextAlignment Alignment,
+    string? AlignmentValue,
+    double SpacingBeforePoints,
+    double SpacingAfterPoints,
+    double LineSpacingFactor,
+    double? LineSpacingPoints,
+    DocxParagraphSpacing Spacing,
+    DocxParagraphKeepRules KeepRules,
+    DocxParagraphIndent Indent,
+    IReadOnlyList<DocxTabStop> TabStops,
+    bool? SnapToGrid,
+    string? SnapToGridValue,
+    DocxParagraphStyleResolution StyleResolution);
 
 internal sealed record DocxParagraphStyleResolution(
     string? StyleId,

@@ -3616,10 +3616,12 @@ internal sealed class DocxLayoutEngine
 
     private static bool ShouldSuppressContextualSpacing(DocxParagraph? previousParagraph, DocxParagraph paragraph)
     {
-        return paragraph.Spacing.ContextualSpacing == true &&
-            previousParagraph?.StyleId is not null &&
-            paragraph.StyleId is not null &&
-            string.Equals(previousParagraph.StyleId, paragraph.StyleId, StringComparison.Ordinal);
+        DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
+        DocxEffectiveParagraphProperties? previousEffective = previousParagraph?.EffectiveProperties;
+        return effective.Spacing.ContextualSpacing == true &&
+            previousEffective?.StyleId is not null &&
+            effective.StyleId is not null &&
+            string.Equals(previousEffective.StyleId, effective.StyleId, StringComparison.Ordinal);
     }
 
     private static DocxParagraphSpacingProfile ResolveParagraphSpacingProfile(
@@ -3627,14 +3629,15 @@ internal sealed class DocxLayoutEngine
         DocxParagraph paragraph,
         double pendingAfterSpacing)
     {
+        DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
         bool suppress = ShouldSuppressContextualSpacing(previousParagraph, paragraph);
         double appliedBefore = suppress
             ? 0d
-            : Math.Max(pendingAfterSpacing, paragraph.SpacingBeforePoints);
+            : Math.Max(pendingAfterSpacing, effective.SpacingBeforePoints);
         return new DocxParagraphSpacingProfile(
             pendingAfterSpacing,
-            paragraph.SpacingBeforePoints,
-            paragraph.SpacingAfterPoints,
+            effective.SpacingBeforePoints,
+            effective.SpacingAfterPoints,
             appliedBefore,
             suppress);
     }
@@ -3656,12 +3659,14 @@ internal sealed class DocxLayoutEngine
         int paragraphCount = 1;
         int firstTableRowCount = 0;
         int nextSearchIndex = elementIndex + 1;
-        while (paragraph.KeepRules.KeepNext == true &&
+        while (paragraph.EffectiveProperties.KeepRules.KeepNext == true &&
             TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
         {
             if (next is DocxParagraphElement nextParagraph)
             {
-                height += Math.Max(paragraph.SpacingAfterPoints, nextParagraph.Paragraph.SpacingBeforePoints);
+                DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
+                DocxEffectiveParagraphProperties nextEffective = nextParagraph.Paragraph.EffectiveProperties;
+                height += Math.Max(effective.SpacingAfterPoints, nextEffective.SpacingBeforePoints);
                 height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer, defaultTabStopPoints);
                 paragraphCount++;
                 paragraph = nextParagraph.Paragraph;
@@ -3671,7 +3676,7 @@ internal sealed class DocxLayoutEngine
 
             if (next is DocxTableElement nextTable)
             {
-                height += paragraph.SpacingAfterPoints;
+                height += paragraph.EffectiveProperties.SpacingAfterPoints;
                 height += EstimateFirstTableRowHeight(nextTable.Table, availableWidth, textMeasurer, defaultTabStopPoints);
                 firstTableRowCount++;
             }
