@@ -25,8 +25,8 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver)
     {
         IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(GetReferencedHeaderFooterParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
-            .Concat(GetReferencedHeaderFooterParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
@@ -41,21 +41,6 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return new DocxFontPlan(runs
             .Select(run => ResolveRunTypeface(run, document.FontCatalog, fontResolver))
             .ToArray());
-    }
-
-    private static IEnumerable<DocxParagraph> GetReferencedHeaderFooterParagraphs(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
-        IReadOnlyList<DocxParagraph> fallbackParagraphs)
-    {
-        if (bodyElementsByType.Count != 0)
-        {
-            return bodyElementsByType.Values.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs);
-        }
-
-        return paragraphsByType.Count == 0
-            ? fallbackParagraphs
-            : paragraphsByType.Values.SelectMany(paragraphs => paragraphs);
     }
 
     private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver)

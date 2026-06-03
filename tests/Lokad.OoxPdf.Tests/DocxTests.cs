@@ -1662,6 +1662,48 @@ internal static class DocxTests
         TestAssert.Equal("Body|Cell", plannedTexts);
     }
 
+    public static void DocxBlockTraversalNormalizesStaticStoryBodyFallbacks()
+    {
+        DocxParagraph legacyFallback = CreateDocxLayoutParagraph("Legacy", 12d, 12d);
+        DocxParagraph paragraphFallback = CreateDocxLayoutParagraph("ParagraphMap", 12d, 12d);
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("BodyMap", 12d, 12d);
+        var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["default"] = [new DocxParagraphElement(bodyParagraph)]
+        };
+        var paragraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["default"] = [paragraphFallback]
+        };
+
+        IReadOnlyList<DocxParagraph> referenced = DocxBlockTraversal
+            .EnumerateReferencedStaticStoryParagraphs(bodyElementsByType, paragraphsByType, [legacyFallback])
+            .ToArray();
+        bool foundBodyElements = DocxBlockTraversal.TryGetStaticStoryBodyElements(
+            "default",
+            bodyElementsByType,
+            paragraphsByType,
+            out IReadOnlyList<DocxBodyElement> selectedBodyElements);
+        bool foundFallbackElements = DocxBlockTraversal.TryGetStaticStoryBodyElements(
+            "default",
+            new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase),
+            paragraphsByType,
+            out IReadOnlyList<DocxBodyElement> selectedFallbackElements);
+        IReadOnlyList<DocxParagraph> legacyOnly = DocxBlockTraversal
+            .EnumerateReferencedStaticStoryParagraphs(
+                new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase),
+                [legacyFallback])
+            .ToArray();
+
+        TestAssert.Equal("BodyMap", referenced.Single().Runs.Single().Text);
+        TestAssert.True(foundBodyElements, "Expected canonical static body elements to be selectable.");
+        TestAssert.Equal("BodyMap", ((DocxParagraphElement)selectedBodyElements.Single()).Paragraph.Runs.Single().Text);
+        TestAssert.True(foundFallbackElements, "Expected paragraph-map compatibility views to be selectable when body elements are absent.");
+        TestAssert.Equal("ParagraphMap", ((DocxParagraphElement)selectedFallbackElements.Single()).Paragraph.Runs.Single().Text);
+        TestAssert.Equal("Legacy", legacyOnly.Single().Runs.Single().Text);
+    }
+
     public static void DocxDocumentCompatibilityInventoriesDeriveFromBodyElements()
     {
         DocxParagraph fallbackParagraph = CreateDocxLayoutParagraph("Fallback", 12d, 12d);

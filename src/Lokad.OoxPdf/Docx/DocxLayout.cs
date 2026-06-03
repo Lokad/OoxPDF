@@ -4214,42 +4214,21 @@ internal sealed class DocxLayoutEngine
     {
         if (settings.TitlePage == true &&
             pageNumber == 1 &&
-            TryGetStaticStoryBodyElements("first", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? first))
+            DocxBlockTraversal.TryGetStaticStoryBodyElements("first", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? first))
         {
             return new DocxSelectedStaticStory(first, "first");
         }
 
         if (settings.EvenAndOddHeaders == true &&
             pageNumber % 2 == 0 &&
-            TryGetStaticStoryBodyElements("even", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? even))
+            DocxBlockTraversal.TryGetStaticStoryBodyElements("even", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? even))
         {
             return new DocxSelectedStaticStory(even, "even");
         }
 
-        return TryGetStaticStoryBodyElements("default", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? defaults)
+        return DocxBlockTraversal.TryGetStaticStoryBodyElements("default", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? defaults)
             ? new DocxSelectedStaticStory(defaults, "default")
             : new DocxSelectedStaticStory([], null);
-    }
-
-    private static bool TryGetStaticStoryBodyElements(
-        string variantType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
-        out IReadOnlyList<DocxBodyElement> bodyElements)
-    {
-        if (bodyElementsByType.TryGetValue(variantType, out bodyElements!))
-        {
-            return true;
-        }
-
-        if (paragraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs))
-        {
-            bodyElements = paragraphs.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>().ToArray();
-            return true;
-        }
-
-        bodyElements = [];
-        return false;
     }
 
     private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxBodyElement> BodyElements, string? VariantType);

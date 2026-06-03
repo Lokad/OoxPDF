@@ -90,6 +90,21 @@ internal static class DocxBlockTraversal
             .Concat(EnumerateStaticStoryParagraphs(settings.FooterBodyElementsByType, settings.FooterParagraphsByType));
     }
 
+    public static IEnumerable<DocxParagraph> EnumerateReferencedStaticStoryParagraphs(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
+        IReadOnlyList<DocxParagraph> fallbackParagraphs)
+    {
+        if (bodyElementsByType.Count != 0)
+        {
+            return bodyElementsByType.Values.SelectMany(EnumerateBodyParagraphs);
+        }
+
+        return paragraphsByType.Count == 0
+            ? fallbackParagraphs
+            : paragraphsByType.Values.SelectMany(paragraphs => paragraphs);
+    }
+
     public static IReadOnlyList<DocxBodyElement> GetStaticStoryBodyElements(
         string variantType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
@@ -103,6 +118,27 @@ internal static class DocxBlockTraversal
         return fallbackParagraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs)
             ? paragraphs.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>().ToArray()
             : [];
+    }
+
+    public static bool TryGetStaticStoryBodyElements(
+        string variantType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType,
+        out IReadOnlyList<DocxBodyElement> bodyElements)
+    {
+        if (bodyElementsByType.TryGetValue(variantType, out bodyElements!))
+        {
+            return true;
+        }
+
+        if (fallbackParagraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs))
+        {
+            bodyElements = paragraphs.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>().ToArray();
+            return true;
+        }
+
+        bodyElements = [];
+        return false;
     }
 
     public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(IEnumerable<DocxBodyElement> bodyElements)

@@ -5097,6 +5097,14 @@ block models and richer section/pagination layout before adding more Word pagina
   `docx-page --skip-slow` (`43`). Keep the canonical-inventory item open for compatibility deprecation and
   public Office-oracle coverage of exact static story table vertical placement, but the previous
   model/layout/rendering invisibility gap is closed.
+  2026-06-04 architecture follow-up: shared `DocxBlockTraversal` now owns referenced static-story paragraph
+  enumeration and variant body-element fallback selection. `DocxFontPlan` and static header/footer layout no
+  longer duplicate the same body-elements-vs-paragraph-map decision, and a bottom-up traversal test locks the
+  precedence order: canonical body elements first, paragraph-map compatibility second, legacy flat header/footer
+  paragraphs only when variant maps are absent. Validation passed `docx-core --skip-slow` (`64`),
+  `docx-page --skip-slow` (`54`), and `docx-tables --skip-slow` (`132`). Keep the item open until the public
+  model can remove or derive the parallel static paragraph maps instead of carrying them as mutable
+  compatibility state.
   2026-06-03 table-ownership follow-up: static header/footer table rows now also participate in table-level
   layout snapshots with `StoryKind`/`StoryVariantType` provenance on row and table snapshots, so a local
   static table ordinal cannot collide with a body table ordinal or another static story. The same bottom-up
