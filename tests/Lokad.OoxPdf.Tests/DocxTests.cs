@@ -937,6 +937,15 @@ internal static class DocxTests
                 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:defaultTabStop w:val="720"/>
                   <w:characterSpacingControl w:val="doNotCompress"/>
+                  <w:footnotePr>
+                    <w:numFmt w:val="lowerRoman"/>
+                    <w:numStart w:val="4"/>
+                    <w:numRestart w:val="continuous"/>
+                  </w:footnotePr>
+                  <w:endnotePr>
+                    <w:numFmt w:val="upperLetter"/>
+                    <w:numStart w:val="2"/>
+                  </w:endnotePr>
                   <w:compat>
                     <w:useFELayout/>
                     <w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/>
@@ -962,6 +971,11 @@ internal static class DocxTests
         TestAssert.Equal("720", document.Settings.DefaultTabStopValue ?? string.Empty);
         TestAssert.Equal(36d, document.Settings.DefaultTabStopPoints ?? 0d);
         TestAssert.True(document.Settings.UseFELayout == true, "Empty useFELayout should opt in.");
+        TestAssert.Equal("lowerRoman", document.Settings.FootnoteReferenceSettings.NumberFormatValue ?? string.Empty);
+        TestAssert.Equal(4, document.Settings.FootnoteReferenceSettings.NumberStart ?? 0);
+        TestAssert.Equal("continuous", document.Settings.FootnoteReferenceSettings.NumberRestartValue ?? string.Empty);
+        TestAssert.Equal("upperLetter", document.Settings.EndnoteReferenceSettings.NumberFormatValue ?? string.Empty);
+        TestAssert.Equal(2, document.Settings.EndnoteReferenceSettings.NumberStart ?? 0);
         DocxCompatSetting compat = document.Settings.CompatSettings.Single();
         TestAssert.Equal("compatibilityMode", compat.Name ?? string.Empty);
         TestAssert.Equal("15", compat.Value ?? string.Empty);
@@ -4217,6 +4231,71 @@ internal static class DocxTests
         TestAssert.Equal("1", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "2").DisplayText ?? string.Empty);
         TestAssert.Equal("1", references.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
         TestAssert.Equal("2", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "4").DisplayText ?? string.Empty);
+    }
+
+    public static void DocxReaderUsesNoteReferenceSettingsForBodyAndTableMarkers()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+                </Relationships>
+                """,
+            ["word/settings.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:footnotePr>
+                    <w:numFmt w:val="lowerRoman"/>
+                    <w:numStart w:val="4"/>
+                  </w:footnotePr>
+                  <w:endnotePr>
+                    <w:numFmt w:val="upperLetter"/>
+                    <w:numStart w:val="2"/>
+                  </w:endnotePr>
+                </w:settings>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Body</w:t><w:footnoteReference w:id="2"/><w:endnoteReference w:id="3"/></w:r></w:p>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="2400"/></w:tblGrid>
+                      <w:tr><w:tc><w:p><w:r><w:t>Cell</w:t><w:footnoteReference w:id="4"/></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxParagraph bodyParagraph = document.Paragraphs[0];
+        TestAssert.Equal("iv", bodyParagraph.InlineReferences.Single(reference => reference.Kind == "Footnote").DisplayText ?? string.Empty);
+        TestAssert.Equal("B", bodyParagraph.InlineReferences.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
+        DocxParagraph cellParagraph = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single();
+        TestAssert.Equal("v", cellParagraph.InlineReferences.Single().DisplayText ?? string.Empty);
+        TestAssert.Equal("v", cellParagraph.Runs.Last().Text);
     }
 
     public static void DocxReaderPreservesBookmarkAnchorsForInternalHyperlinks()

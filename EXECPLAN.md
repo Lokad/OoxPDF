@@ -5231,6 +5231,14 @@ block models and richer section/pagination layout before adding more Word pagina
     display rules are modeled. Validation passed `docx-core --skip-slow` (`59`), `docx-text --skip-slow`
     (`49`), and `docx-page --skip-slow` (`45`). Keep note body placement, separator/continuation separator
     behavior, numbering format/restart settings, custom marks, and related-story link rectangles open.
+  - [x] 2026-06-03: note marker display now consumes document-owned `w:footnotePr`/`w:endnotePr` settings
+    for `numFmt` and `numStart`, with body and table-cell markers sharing the same document-order counters.
+    `DocxDocumentSettings` preserves the raw `numFmt`, `numStart`, and `numRestart` tokens; the display path
+    supports decimal, lower/upper Roman, and lower/upper alphabetic formats, while unsupported formats fall
+    back to decimal until Office-derived cases justify broader formatting. Validation passed
+    `docx-core --skip-slow` (`59`), `docx-tables --skip-slow` (`125`), `docx-text --skip-slow` (`49`), and
+    `docx-page --skip-slow` (`45`). Keep section-scoped restarts, separator/continuation separator behavior,
+    custom mark bodies, and actual footnote/endnote story placement open.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
   - [x] 2026-06-01: Added the first final-view tracked-change slice for simple paragraph run wrappers.
     `w:ins/w:r` now flows through the normal run parser and style cascade, while `w:del/w:r` remains absent

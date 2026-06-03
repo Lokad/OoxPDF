@@ -174,9 +174,20 @@ internal sealed record DocxDocumentSettings(
     double? DefaultTabStopPoints,
     bool? UseFELayout,
     string? UseFELayoutValue,
+    DocxNoteReferenceSettings FootnoteReferenceSettings,
+    DocxNoteReferenceSettings EndnoteReferenceSettings,
     IReadOnlyList<DocxCompatSetting> CompatSettings)
 {
-    public static DocxDocumentSettings Empty { get; } = new(null, null, null, null, null, []);
+    public static DocxDocumentSettings Empty { get; } = new(null, null, null, null, null, DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, []);
+}
+
+internal sealed record DocxNoteReferenceSettings(
+    string? NumberFormatValue,
+    string? NumberStartValue,
+    int? NumberStart,
+    string? NumberRestartValue)
+{
+    public static DocxNoteReferenceSettings Empty { get; } = new(null, null, null, null);
 }
 
 internal sealed record DocxCompatSetting(

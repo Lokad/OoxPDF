@@ -63,7 +63,7 @@ internal sealed class DocxReader
         DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
             ? null
             : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings);
-        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings);
+        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference");
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference");
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
@@ -159,6 +159,8 @@ internal sealed class DocxReader
         XElement? characterSpacingControl = root.Element(WordprocessingNamespace + "characterSpacingControl");
         XElement? defaultTabStop = root.Element(WordprocessingNamespace + "defaultTabStop");
         XElement? useFELayout = root.Element(WordprocessingNamespace + "compat")?.Element(WordprocessingNamespace + "useFELayout");
+        DocxNoteReferenceSettings footnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "footnotePr"));
+        DocxNoteReferenceSettings endnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "endnotePr"));
         IReadOnlyList<DocxCompatSetting> compatSettings = root
             .Element(WordprocessingNamespace + "compat")?
             .Elements(WordprocessingNamespace + "compatSetting")
@@ -174,7 +176,22 @@ internal sealed class DocxReader
             ReadTwipsAttribute(defaultTabStop, WordprocessingNamespace + "val"),
             ReadOnOff(useFELayout),
             (string?)useFELayout?.Attribute(WordprocessingNamespace + "val"),
+            footnoteReferenceSettings,
+            endnoteReferenceSettings,
             compatSettings);
+    }
+
+    private static DocxNoteReferenceSettings ReadNoteReferenceSettings(XElement? properties)
+    {
+        XElement? numberFormat = properties?.Element(WordprocessingNamespace + "numFmt");
+        XElement? numberStart = properties?.Element(WordprocessingNamespace + "numStart");
+        XElement? numberRestart = properties?.Element(WordprocessingNamespace + "numRestart");
+        string? startValue = (string?)numberStart?.Attribute(WordprocessingNamespace + "val");
+        return new DocxNoteReferenceSettings(
+            (string?)numberFormat?.Attribute(WordprocessingNamespace + "val"),
+            startValue,
+            int.TryParse(startValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int start) ? start : null,
+            (string?)numberRestart?.Attribute(WordprocessingNamespace + "val"));
     }
 
     private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
@@ -1006,7 +1023,7 @@ internal sealed class DocxReader
         var inlineReferenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "p"))
         {
-            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters);
+            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: DocxDocumentSettings.Empty);
             if (parsed is not null)
             {
                 paragraphs.Add(parsed);
@@ -1024,7 +1041,8 @@ internal sealed class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxTableCellStyle? tableCellStyle = null,
-        Dictionary<string, int>? inlineReferenceCounters = null)
+        Dictionary<string, int>? inlineReferenceCounters = null,
+        DocxDocumentSettings? documentSettings = null)
     {
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         string? paragraphStyleId = ReadParagraphStyleId(paragraphProperties);
@@ -1443,10 +1461,13 @@ internal sealed class DocxReader
                 return null;
             }
 
+            DocxNoteReferenceSettings settings = kind == "Endnote"
+                ? (documentSettings ?? DocxDocumentSettings.Empty).EndnoteReferenceSettings
+                : (documentSettings ?? DocxDocumentSettings.Empty).FootnoteReferenceSettings;
             inlineReferenceCounters.TryGetValue(kind, out int current);
-            int next = current + 1;
+            int next = current == 0 ? settings.NumberStart ?? 1 : current + 1;
             inlineReferenceCounters[kind] = next;
-            return next.ToString(CultureInfo.InvariantCulture);
+            return FormatNoteReferenceNumber(next, settings.NumberFormatValue);
         }
 
         void AddInlineReferenceDisplayRun(
@@ -1480,6 +1501,75 @@ internal sealed class DocxReader
 
             return element.Name == WordprocessingNamespace + "endnoteReference" ? "Endnote" : null;
         }
+    }
+
+    private static string FormatNoteReferenceNumber(int value, string? format)
+    {
+        return format switch
+        {
+            "lowerRoman" => ToRomanNumeral(value).ToLowerInvariant(),
+            "upperRoman" => ToRomanNumeral(value),
+            "lowerLetter" => ToAlphabeticNumber(value, upper: false),
+            "upperLetter" => ToAlphabeticNumber(value, upper: true),
+            _ => value.ToString(CultureInfo.InvariantCulture)
+        };
+    }
+
+    private static string ToAlphabeticNumber(int value, bool upper)
+    {
+        if (value <= 0)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        var builder = new StringBuilder();
+        int current = value;
+        while (current > 0)
+        {
+            current--;
+            char letter = (char)((upper ? 'A' : 'a') + current % 26);
+            builder.Insert(0, letter);
+            current /= 26;
+        }
+
+        return builder.ToString();
+    }
+
+    private static string ToRomanNumeral(int value)
+    {
+        if (value <= 0 || value > 3999)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        ReadOnlySpan<(int Value, string Text)> numerals =
+        [
+            (1000, "M"),
+            (900, "CM"),
+            (500, "D"),
+            (400, "CD"),
+            (100, "C"),
+            (90, "XC"),
+            (50, "L"),
+            (40, "XL"),
+            (10, "X"),
+            (9, "IX"),
+            (5, "V"),
+            (4, "IV"),
+            (1, "I")
+        ];
+        var builder = new StringBuilder();
+        int current = value;
+        foreach ((int numeralValue, string numeralText) in numerals)
+        {
+            while (current >= numeralValue)
+            {
+                builder.Append(numeralText);
+                current -= numeralValue;
+            }
+        }
+
+        return builder.ToString();
     }
 
     private static string? ResolveFieldPlaceholder(string? instruction)
@@ -1719,7 +1809,8 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        XDocument? settings)
+        XDocument? settings,
+        DocxDocumentSettings documentSettings)
     {
         var elements = new List<DocxBodyElement>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
@@ -1743,7 +1834,7 @@ internal sealed class DocxReader
                     elements.Add(new DocxPageBreakElement(
                         "runBreak",
                         "page",
-                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters)));
+                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings)));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -1758,7 +1849,7 @@ internal sealed class DocxReader
                     elements.Add(new DocxManualBreakElement(
                         "runBreak",
                         "column",
-                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters)));
+                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings)));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -1791,7 +1882,7 @@ internal sealed class DocxReader
                             continue;
                         }
 
-                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters);
+                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings);
                         if (splitParagraph is not null)
                         {
                             elements.Add(new DocxParagraphElement(AdjustBreakParagraphFragment(splitParagraph, part)));
@@ -1807,7 +1898,7 @@ internal sealed class DocxReader
                     continue;
                 }
 
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings);
                 if (paragraph is not null)
                 {
                     elements.Add(new DocxParagraphElement(paragraph));
@@ -1821,7 +1912,7 @@ internal sealed class DocxReader
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships);
+                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings);
                 if (table is not null)
                 {
                     elements.Add(new DocxTableElement(table));
@@ -2396,7 +2487,9 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        Dictionary<string, int>? inlineReferenceCounters = null,
+        DocxDocumentSettings? documentSettings = null)
     {
         XElement? tableProperties = table.Element(WordprocessingNamespace + "tblPr");
         string? layoutValue = (string?)tableProperties
@@ -2445,7 +2538,9 @@ internal sealed class DocxReader
                     numberingCounters,
                     package,
                     relationships,
-                    conditionalStyle);
+                    conditionalStyle,
+                    inlineReferenceCounters,
+                    documentSettings);
                 IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
                 string text = string.Join(" ", paragraphs
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
@@ -2580,7 +2675,9 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxTableCellStyle tableCellStyle)
+        DocxTableCellStyle tableCellStyle,
+        Dictionary<string, int>? inlineReferenceCounters = null,
+        DocxDocumentSettings? documentSettings = null)
     {
         var elements = new List<DocxBodyElement>();
         foreach (XElement child in cell.Elements())
@@ -2601,7 +2698,9 @@ internal sealed class DocxReader
                         numberingCounters,
                         package,
                         relationships,
-                        tableCellStyle);
+                        tableCellStyle,
+                        inlineReferenceCounters: inlineReferenceCounters,
+                        documentSettings: documentSettings);
                     elements.Add(new DocxManualBreakElement("runBreak", "column", breakParagraph));
                     continue;
                 }
@@ -2630,7 +2729,9 @@ internal sealed class DocxReader
                             numberingCounters,
                             package,
                             relationships,
-                            tableCellStyle);
+                            tableCellStyle,
+                            inlineReferenceCounters: inlineReferenceCounters,
+                            documentSettings: documentSettings);
                         if (splitParagraph is not null)
                         {
                             elements.Add(new DocxParagraphElement(AdjustBreakParagraphFragment(splitParagraph, part)));
@@ -2647,7 +2748,9 @@ internal sealed class DocxReader
                     numberingCounters,
                     package,
                     relationships,
-                    tableCellStyle);
+                    tableCellStyle,
+                    inlineReferenceCounters: inlineReferenceCounters,
+                    documentSettings: documentSettings);
                 if (parsed is not null)
                 {
                     elements.Add(new DocxParagraphElement(parsed));
@@ -2655,7 +2758,7 @@ internal sealed class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? nestedTable = ReadTable(child, styles, numbering, numberingCounters, package, relationships);
+                DocxTable? nestedTable = ReadTable(child, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings);
                 if (nestedTable is not null)
                 {
                     elements.Add(new DocxTableElement(nestedTable));
