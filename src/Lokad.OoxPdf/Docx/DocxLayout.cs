@@ -717,9 +717,28 @@ internal sealed record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
-                row.StoryVariantType),
+                row.StoryVariantType,
+                ToTableRowTextLineSnapshots(row)),
             _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
         };
+    }
+
+    private static IReadOnlyList<DocxLayoutItemSnapshot> ToTableRowTextLineSnapshots(DocxTableRowLayout row)
+    {
+        List<DocxLayoutItemSnapshot> lines = [];
+        foreach (DocxTableCellLayout cell in row.Cells)
+        {
+            lines.AddRange(cell.TextLines.Select(line => ToSnapshot(line, [])));
+            foreach (DocxTableRowLayout nestedRow in cell.NestedRows)
+            {
+                lines.AddRange(ToTableRowTextLineSnapshots(nestedRow));
+            }
+        }
+
+        return lines
+            .OrderByDescending(line => line.Y)
+            .ThenBy(line => line.X)
+            .ToArray();
     }
 
     private static (double X, double Width) GetHorizontalBounds(DocxLayoutItem item)
@@ -1169,7 +1188,8 @@ internal sealed record DocxLayoutItemSnapshot(
     double? ParagraphBeforeSpacingPoints,
     double? ParagraphAfterSpacingPoints,
     bool? ContextualSpacingSuppressed,
-    string? StoryVariantType = null);
+    string? StoryVariantType = null,
+    IReadOnlyList<DocxLayoutItemSnapshot>? TextLines = null);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,

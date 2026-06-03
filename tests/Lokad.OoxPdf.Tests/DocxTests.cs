@@ -12246,6 +12246,13 @@ internal static class DocxTests
 
         DocxTableCellSnapshot cellSnapshot = snapshot.Pages[0].TableRows.Single().Cells.Single();
         TestAssert.Equal(2, cellSnapshot.ParagraphCount);
+        DocxLayoutItemSnapshot tableItem = snapshot.Pages[0].Items.Single(item => item.Kind == "TableRow");
+        DocxLayoutItemSnapshot[] tableTextLines = tableItem.TextLines?.ToArray() ?? [];
+        TestAssert.Equal(2, tableTextLines.Length);
+        TestAssert.Equal(0, tableTextLines[0].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(1, tableTextLines[1].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(0, tableTextLines[0].SourceLineIndex ?? -1);
+        TestAssert.Equal(0, tableTextLines[1].SourceLineIndex ?? -1);
         DocxTextLineLayout[] lines = layout.Pages[0].Items
             .OfType<DocxTableRowLayout>()
             .Single()
@@ -12959,6 +12966,7 @@ internal static class DocxTests
         TestAssert.True(snapshot.Pages[0].TableRows.Single().StoryKind == "Header" && snapshot.Pages[0].TableRows.Single().StoryVariantType == "default", "Static table row snapshots should carry story provenance so diagnostics can distinguish them from body tables.");
         DocxLayoutItemSnapshot staticItem = snapshot.Pages[0].StaticItems.Single();
         TestAssert.True(staticItem.Kind == "StaticHeaderTableRow" && staticItem.StoryVariantType == "default" && staticItem.TextLength == 2, "Static table snapshots should expose private-safe header table ownership and text length.");
+        TestAssert.True((staticItem.TextLines ?? []).Single().TextLength == 2, "Static table row snapshots should unfold private-safe table-cell text lines for layout/PDF flow diagnostics without double-counting static story text lines.");
         DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single();
         TestAssert.True(headerStory.Kind == "Header" && headerStory.TableRowCount == 1 && headerStory.TextLineCount == 0 && headerStory.TextLength == 2, "Static story snapshots should count table rows separately from text lines.");
         DocxTableSnapshot tableSnapshot = snapshot.Tables.Single();

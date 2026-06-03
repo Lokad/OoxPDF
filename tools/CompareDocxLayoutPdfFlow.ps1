@@ -191,6 +191,46 @@ function New-RowAdvanceStats($Rows) {
     }
 }
 
+function New-CandidateLayoutLine($Item, [int] $PageNumber, [int] $PageLine, [bool] $IsStaticStory, [string] $StoryKind, $StoryVariantType) {
+    return [pscustomobject]@{
+        CandidatePage = $PageNumber
+        CandidatePageLine = $PageLine
+        CandidateLayoutY = [Math]::Round([double]$Item.Y, 6)
+        CandidateLayoutX = [Math]::Round([double]$Item.X, 6)
+        SourceBlockIndex = $Item.SourceBlockIndex
+        SourceLineIndex = $Item.SourceLineIndex
+        LayoutTextLength = [int]$Item.TextLength
+        IsStaticStory = $IsStaticStory
+        StoryKind = $StoryKind
+        StoryVariantType = $StoryVariantType
+        LineHeightPoints = if ($null -eq $Item.LineHeightPoints) { $null } else { [Math]::Round([double]$Item.LineHeightPoints, 6) }
+        AppliedBeforeSpacingPoints = if ($null -eq $Item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$Item.AppliedBeforeSpacingPoints, 6) }
+        SingleLineHeightPoints = if ($null -eq $Item.SingleLineHeightPoints) { $null } else { [Math]::Round([double]$Item.SingleLineHeightPoints, 6) }
+        ListLabelSingleLineHeightPoints = if ($null -eq $Item.ListLabelSingleLineHeightPoints) { $null } else { [Math]::Round([double]$Item.ListLabelSingleLineHeightPoints, 6) }
+        BodyWindowsLineHeightPoints = if ($null -eq $Item.BodyWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$Item.BodyWindowsLineHeightPoints, 6) }
+        ListLabelWindowsLineHeightPoints = if ($null -eq $Item.ListLabelWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$Item.ListLabelWindowsLineHeightPoints, 6) }
+        EffectiveLineSpacingFactor = if ($null -eq $Item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$Item.EffectiveLineSpacingFactor, 6) }
+        LineSpacingFactorFloorApplied = $Item.LineSpacingFactorFloorApplied
+        IsFirstParagraphLine = $Item.IsFirstParagraphLine
+        PendingAfterSpacingPoints = if ($null -eq $Item.PendingAfterSpacingPoints) { $null } else { [Math]::Round([double]$Item.PendingAfterSpacingPoints, 6) }
+        ParagraphBeforeSpacingPoints = if ($null -eq $Item.ParagraphBeforeSpacingPoints) { $null } else { [Math]::Round([double]$Item.ParagraphBeforeSpacingPoints, 6) }
+        ParagraphAfterSpacingPoints = if ($null -eq $Item.ParagraphAfterSpacingPoints) { $null } else { [Math]::Round([double]$Item.ParagraphAfterSpacingPoints, 6) }
+        ContextualSpacingSuppressed = $Item.ContextualSpacingSuppressed
+    }
+}
+
+function Get-StaticStoryKind($Item) {
+    if ([string]$Item.Kind -eq "StaticHeaderTextLine" -or [string]$Item.Kind -eq "StaticHeaderTableRow") {
+        return "Header"
+    }
+
+    if ([string]$Item.Kind -eq "StaticFooterTextLine" -or [string]$Item.Kind -eq "StaticFooterTableRow") {
+        return "Footer"
+    }
+
+    return "Static"
+}
+
 function Get-LayoutLines($Layout) {
     $lines = New-Object System.Collections.Generic.List[object]
     for ($pageIndex = 0; $pageIndex -lt $Layout.Pages.Count; $pageIndex++) {
@@ -202,68 +242,26 @@ function Get-LayoutLines($Layout) {
         $lineIndex = 0
         if ($IncludeStaticStories) {
             foreach ($item in @($Layout.Pages[$pageIndex].StaticItems)) {
-                if ([string]$item.Kind -ne "StaticHeaderTextLine" -and [string]$item.Kind -ne "StaticFooterTextLine" -and [string]$item.Kind -ne "StaticTextLine") {
-                    continue
+                if ([string]$item.Kind -eq "StaticHeaderTextLine" -or [string]$item.Kind -eq "StaticFooterTextLine" -or [string]$item.Kind -eq "StaticTextLine") {
+                    $lines.Add((New-CandidateLayoutLine $item $pageNumber $lineIndex++ $true (Get-StaticStoryKind $item) $item.StoryVariantType))
                 }
-
-                $lines.Add([pscustomobject]@{
-                    CandidatePage = $pageNumber
-                    CandidatePageLine = $lineIndex++
-                    CandidateLayoutY = [Math]::Round([double]$item.Y, 6)
-                    CandidateLayoutX = [Math]::Round([double]$item.X, 6)
-                    SourceBlockIndex = $item.SourceBlockIndex
-                    SourceLineIndex = $item.SourceLineIndex
-                    LayoutTextLength = [int]$item.TextLength
-                    IsStaticStory = $true
-                    StoryKind = if ([string]$item.Kind -eq "StaticHeaderTextLine") { "Header" } elseif ([string]$item.Kind -eq "StaticFooterTextLine") { "Footer" } else { "Static" }
-                    StoryVariantType = $item.StoryVariantType
-                    LineHeightPoints = if ($null -eq $item.LineHeightPoints) { $null } else { [Math]::Round([double]$item.LineHeightPoints, 6) }
-                    AppliedBeforeSpacingPoints = if ($null -eq $item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.AppliedBeforeSpacingPoints, 6) }
-                    SingleLineHeightPoints = if ($null -eq $item.SingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.SingleLineHeightPoints, 6) }
-                    ListLabelSingleLineHeightPoints = if ($null -eq $item.ListLabelSingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelSingleLineHeightPoints, 6) }
-                    BodyWindowsLineHeightPoints = if ($null -eq $item.BodyWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.BodyWindowsLineHeightPoints, 6) }
-                    ListLabelWindowsLineHeightPoints = if ($null -eq $item.ListLabelWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelWindowsLineHeightPoints, 6) }
-                    EffectiveLineSpacingFactor = if ($null -eq $item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$item.EffectiveLineSpacingFactor, 6) }
-                    LineSpacingFactorFloorApplied = $item.LineSpacingFactorFloorApplied
-                    IsFirstParagraphLine = $item.IsFirstParagraphLine
-                    PendingAfterSpacingPoints = if ($null -eq $item.PendingAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.PendingAfterSpacingPoints, 6) }
-                    ParagraphBeforeSpacingPoints = if ($null -eq $item.ParagraphBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphBeforeSpacingPoints, 6) }
-                    ParagraphAfterSpacingPoints = if ($null -eq $item.ParagraphAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphAfterSpacingPoints, 6) }
-                    ContextualSpacingSuppressed = $item.ContextualSpacingSuppressed
-                })
+                elseif ([string]$item.Kind -eq "StaticHeaderTableRow" -or [string]$item.Kind -eq "StaticFooterTableRow" -or [string]$item.Kind -eq "StaticTableRow") {
+                    foreach ($line in @($item.TextLines)) {
+                        $lines.Add((New-CandidateLayoutLine $line $pageNumber $lineIndex++ $true (Get-StaticStoryKind $item) $item.StoryVariantType))
+                    }
+                }
             }
         }
 
         foreach ($item in @($Layout.Pages[$pageIndex].Items)) {
-            if ([string]$item.Kind -ne "TextLine") {
-                continue
+            if ([string]$item.Kind -eq "TextLine") {
+                $lines.Add((New-CandidateLayoutLine $item $pageNumber $lineIndex++ $false "Body" $null))
             }
-
-            $lines.Add([pscustomobject]@{
-                CandidatePage = $pageNumber
-                CandidatePageLine = $lineIndex++
-                CandidateLayoutY = [Math]::Round([double]$item.Y, 6)
-                CandidateLayoutX = [Math]::Round([double]$item.X, 6)
-                SourceBlockIndex = $item.SourceBlockIndex
-                SourceLineIndex = $item.SourceLineIndex
-                LayoutTextLength = [int]$item.TextLength
-                IsStaticStory = $false
-                StoryKind = "Body"
-                StoryVariantType = $null
-                LineHeightPoints = if ($null -eq $item.LineHeightPoints) { $null } else { [Math]::Round([double]$item.LineHeightPoints, 6) }
-                AppliedBeforeSpacingPoints = if ($null -eq $item.AppliedBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.AppliedBeforeSpacingPoints, 6) }
-                SingleLineHeightPoints = if ($null -eq $item.SingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.SingleLineHeightPoints, 6) }
-                ListLabelSingleLineHeightPoints = if ($null -eq $item.ListLabelSingleLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelSingleLineHeightPoints, 6) }
-                BodyWindowsLineHeightPoints = if ($null -eq $item.BodyWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.BodyWindowsLineHeightPoints, 6) }
-                ListLabelWindowsLineHeightPoints = if ($null -eq $item.ListLabelWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$item.ListLabelWindowsLineHeightPoints, 6) }
-                EffectiveLineSpacingFactor = if ($null -eq $item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$item.EffectiveLineSpacingFactor, 6) }
-                LineSpacingFactorFloorApplied = $item.LineSpacingFactorFloorApplied
-                IsFirstParagraphLine = $item.IsFirstParagraphLine
-                PendingAfterSpacingPoints = if ($null -eq $item.PendingAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.PendingAfterSpacingPoints, 6) }
-                ParagraphBeforeSpacingPoints = if ($null -eq $item.ParagraphBeforeSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphBeforeSpacingPoints, 6) }
-                ParagraphAfterSpacingPoints = if ($null -eq $item.ParagraphAfterSpacingPoints) { $null } else { [Math]::Round([double]$item.ParagraphAfterSpacingPoints, 6) }
-                ContextualSpacingSuppressed = $item.ContextualSpacingSuppressed
-            })
+            elseif ([string]$item.Kind -eq "TableRow") {
+                foreach ($line in @($item.TextLines)) {
+                    $lines.Add((New-CandidateLayoutLine $line $pageNumber $lineIndex++ $false "Body" $null))
+                }
+            }
         }
     }
 

@@ -5129,6 +5129,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `InspectTextEmission` now enumerates static text through the same `EnumerateStaticTextLines(page)` path used
   by rendering/link/bookmark traversal, so header/footer table-cell text is no longer omitted from private-safe
   emission diagnostics once a static table row is laid out. Validation passed `docx-tables --skip-slow` (`122`).
+- [x] 2026-06-03: Closed a DOCX layout/PDF-flow diagnostic blind spot for table-cell text. `TableRow` layout
+  item snapshots now carry private-safe child text-line snapshots, including nested table rows, while static
+  story summaries still count table rows separately from direct static text lines. `CompareDocxLayoutPdfFlow.ps1`
+  now unfolds those child lines for body tables and, under `-IncludeStaticStories`, static header/footer tables
+  instead of treating table rows as textless geometry. Validation passed script parse and
+  `docx-tables --skip-slow` (`122`).
 - [ ] Implement style-derived paragraph spacing accurately, including exact Office autospacing magnitudes,
   Word-like adjacent paragraph spacing collapse around tables/sections, and diagnostics that distinguish
   supported tokens from unresolved spacing semantics.
