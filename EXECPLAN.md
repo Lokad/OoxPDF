@@ -5075,6 +5075,12 @@ block models and richer section/pagination layout before adding more Word pagina
   reads covered by this migration. Validation passed full solution build, `docx-text --skip-slow` (`49`),
   `docx-page --skip-slow` (`45`), and `docx-tables --skip-slow` (`123`). Keep this open for Office-oracle
   probes of exact style-derived run metrics and for deprecating the legacy direct scalar surface.
+  2026-06-03 text-layout continuation: migrated the remaining DOCX layout stragglers for paragraph style
+  provenance snapshots, paragraph indent offsets, list-label font-size measurement/segments, and
+  table-cell column-break paragraph merge spacing to effective paragraph/run properties. A targeted scan of
+  `DocxLayout.cs` no longer finds the direct scalar reads covered by this continuation. Validation passed
+  full solution build, `docx-text --skip-slow` (`49`), `docx-page --skip-slow` (`45`), and `docx-tables
+  --skip-slow` (`123`).
   2026-06-03 structure-diagnostic follow-up: DOCX structure snapshots now consume effective paragraph/run
   properties for break line-spacing facts, table paragraph keep-counts, table-cell max font size, paragraph
   style usage grouping, and table-adjacency spacing/keep facts. A targeted scan of `DocxStructure.cs` no

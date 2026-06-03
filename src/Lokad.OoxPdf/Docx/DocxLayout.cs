@@ -666,12 +666,12 @@ internal sealed record DocxLayoutSnapshot(
                 text.ParagraphAfterSpacing,
                 text.ContextualSpacingSuppressed,
                 text.StoryVariantType,
-                ParagraphStyleId: text.SourceParagraph?.StyleResolution.StyleId,
-                ParagraphStyleFound: text.SourceParagraph?.StyleResolution.StyleFound,
-                ParagraphStyleDepth: text.SourceParagraph?.StyleResolution.StyleDepth,
-                HasDocumentDefaultParagraphProperties: text.SourceParagraph?.StyleResolution.HasDocumentDefaultParagraphProperties,
-                HasDirectParagraphProperties: text.SourceParagraph?.StyleResolution.HasDirectParagraphProperties,
-                HasTableStyleParagraphProperties: text.SourceParagraph?.StyleResolution.HasTableStyleParagraphProperties,
+                ParagraphStyleId: text.SourceParagraph?.EffectiveProperties.StyleResolution.StyleId,
+                ParagraphStyleFound: text.SourceParagraph?.EffectiveProperties.StyleResolution.StyleFound,
+                ParagraphStyleDepth: text.SourceParagraph?.EffectiveProperties.StyleResolution.StyleDepth,
+                HasDocumentDefaultParagraphProperties: text.SourceParagraph?.EffectiveProperties.StyleResolution.HasDocumentDefaultParagraphProperties,
+                HasDirectParagraphProperties: text.SourceParagraph?.EffectiveProperties.StyleResolution.HasDirectParagraphProperties,
+                HasTableStyleParagraphProperties: text.SourceParagraph?.EffectiveProperties.StyleResolution.HasTableStyleParagraphProperties,
                 CharacterStyleTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasCharacterStyleRunProperties),
                 DirectRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasDirectRunProperties),
                 ParagraphStyleRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasParagraphStyleRunProperties),
@@ -3801,7 +3801,7 @@ internal sealed class DocxLayoutEngine
     {
         if (paragraph.ListLabel is null)
         {
-            return Math.Max(0d, paragraph.Indent.LeftPoints ?? 0d);
+            return Math.Max(0d, paragraph.EffectiveProperties.Indent.LeftPoints ?? 0d);
         }
 
         DocxNumberingIndent indent = paragraph.ListLabel.Indent;
@@ -3828,7 +3828,9 @@ internal sealed class DocxLayoutEngine
         DocxTextRun labelRun = CreateListLabelRun(paragraph.ListLabel, paragraph.Runs.FirstOrDefault(), fontSize);
         return Math.Max(
             0d,
-            GetParagraphLabelStartOffset(paragraph) + textMeasurer.MeasureText(labelRun, paragraph.ListLabel.Text, labelRun.FontSize) + gap);
+            GetParagraphLabelStartOffset(paragraph) +
+                textMeasurer.MeasureText(labelRun, paragraph.ListLabel.Text, labelRun.EffectiveProperties.FontSize) +
+                gap);
     }
 
     private static double GetParagraphLabelStartOffset(DocxParagraph paragraph)
@@ -3854,14 +3856,15 @@ internal sealed class DocxLayoutEngine
 
     private static double GetParagraphRightInset(DocxParagraph paragraph)
     {
-        return paragraph.ListLabel?.Indent.RightPoints ?? paragraph.Indent.RightPoints ?? 0d;
+        return paragraph.ListLabel?.Indent.RightPoints ?? paragraph.EffectiveProperties.Indent.RightPoints ?? 0d;
     }
 
     private static double GetParagraphFirstLineIndentOffset(DocxParagraph paragraph)
     {
-        double left = paragraph.Indent.LeftPoints ?? 0d;
-        double firstLine = paragraph.Indent.FirstLinePoints ?? 0d;
-        double hanging = paragraph.Indent.HangingPoints ?? 0d;
+        DocxParagraphIndent indent = paragraph.EffectiveProperties.Indent;
+        double left = indent.LeftPoints ?? 0d;
+        double firstLine = indent.FirstLinePoints ?? 0d;
+        double hanging = indent.HangingPoints ?? 0d;
         return Math.Max(0d, left + firstLine - hanging);
     }
 
@@ -3877,7 +3880,8 @@ internal sealed class DocxLayoutEngine
         double defaultTabStopPoints)
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
-        double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
+        double labelFontSize = labelRun.EffectiveProperties.FontSize;
+        double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelFontSize);
         DocxTextEmissionPlan labelPlan = DocxTextEmissionPlanner.CreateForListLabel(labelRun, label);
         var segments = new List<DocxTextSegmentLayout>
         {
@@ -3886,7 +3890,7 @@ internal sealed class DocxLayoutEngine
                 labelRun,
                 labelX,
                 labelWidth,
-                labelRun.FontSize,
+                labelFontSize,
                 PdfCharacterSpacing: labelPlan.PdfCharacterSpacing,
                 PdfCharacterSpacingSource: labelPlan.PdfCharacterSpacingSource,
                 CompensatePdfCharacterSpacing: labelPlan.CompensatePdfCharacterSpacing,
@@ -3898,8 +3902,8 @@ internal sealed class DocxLayoutEngine
         if (separator.Length != 0)
         {
             double separatorX = labelX + labelWidth;
-            double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelRun.FontSize);
-            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelRun.FontSize, SourceTextRunIndex: -1, Role: DocxTextSegmentRole.ListSeparator));
+            double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelFontSize);
+            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelFontSize, SourceTextRunIndex: -1, Role: DocxTextSegmentRole.ListSeparator));
         }
 
         segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));
@@ -3909,7 +3913,7 @@ internal sealed class DocxLayoutEngine
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
     {
         DocxTextRun labelRun = CreateListLabelRun(label, baseRun, fontSize);
-        return textMeasurer.MeasureText(labelRun, label.Text, labelRun.FontSize);
+        return textMeasurer.MeasureText(labelRun, label.Text, labelRun.EffectiveProperties.FontSize);
     }
 
     internal static DocxTextRun CreateListLabelRun(DocxListLabel label, DocxTextRun? baseRun, double fontSize)
@@ -5175,8 +5179,8 @@ internal sealed class DocxLayoutEngine
         {
             Runs = first.Runs.Concat(second.Runs).ToArray(),
             Images = first.Images.Concat(second.Images).ToArray(),
-            SpacingAfterPoints = second.SpacingAfterPoints,
-            Spacing = second.Spacing
+            SpacingAfterPoints = second.EffectiveProperties.SpacingAfterPoints,
+            Spacing = second.EffectiveProperties.Spacing
         };
     }
 
