@@ -21,6 +21,19 @@ internal sealed record DocxRelatedStoryLayout(
     IReadOnlyList<DocxTableRowLayout> TableRows,
     double ContentHeight);
 
+internal sealed record DocxPlacedRelatedStoryLayout(
+    DocxRelatedStoryLayout StoryLayout,
+    int StoryIndex,
+    int SourceBlockIndex,
+    double X,
+    double TopY,
+    double Width,
+    double Height,
+    double? SeparatorY,
+    IReadOnlyList<DocxTextLineLayout> TextLines,
+    IReadOnlyList<DocxInlineImageLayout> InlineImages,
+    IReadOnlyList<DocxTableRowLayout> TableRows);
+
 internal sealed record DocxFloatingDrawingLayout(
     DocxFloatingDrawing Drawing,
     int? PageStartIndex,
@@ -484,6 +497,13 @@ internal sealed record DocxLayoutSnapshot(
             frame.Width,
             frame.GutterAfterPoints)).ToArray();
         IReadOnlyList<DocxLayoutItemSnapshot> items = page.Items.Select(item => ToSnapshot(item, page.ColumnFrames)).ToArray();
+        IReadOnlyList<DocxLayoutItemSnapshot> placedRelatedItems = page.PlacedRelatedStories
+            .SelectMany(story => story.TextLines
+                .Cast<DocxLayoutItem>()
+                .Concat(story.InlineImages)
+                .Concat(story.TableRows)
+                .Select(ToPlacedRelatedSnapshot))
+            .ToArray();
         IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines
             .Select(ToStaticSnapshot)
             .Concat(page.StaticInlineImages.Select(ToStaticSnapshot))
@@ -524,6 +544,12 @@ internal sealed record DocxLayoutSnapshot(
             page.StaticTextLines.Count,
             page.StaticInlineImages.Count,
             page.StaticTableRows.Count,
+            page.PlacedRelatedStories.Count,
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Footnote"),
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Endnote"),
+            page.PlacedRelatedStories.Sum(story => story.TextLines.Count),
+            page.PlacedRelatedStories.Sum(story => story.InlineImages.Count),
+            page.PlacedRelatedStories.Sum(story => story.TableRows.Count),
             items.Count(item => item.Kind == "TextLine"),
             items.Count(item => item.Kind == "InlineImage"),
             items.Count(item => item.Kind == "TableRow"),
@@ -536,6 +562,7 @@ internal sealed record DocxLayoutSnapshot(
             items.Where(item => item.Kind == "TableRow").Sum(item => item.Height),
             ToStaticStorySnapshots(staticItems),
             staticItems,
+            placedRelatedItems,
             items,
             tableRows);
     }
@@ -632,6 +659,12 @@ internal sealed record DocxLayoutSnapshot(
             _ => "StaticTableRow"
         };
         return ToSnapshot(row, []) with { Kind = kind };
+    }
+
+    private static DocxLayoutItemSnapshot ToPlacedRelatedSnapshot(DocxLayoutItem item)
+    {
+        DocxLayoutItemSnapshot snapshot = ToSnapshot(item, []);
+        return snapshot with { Kind = "Placed" + snapshot.Kind };
     }
 
     private static DocxLayoutItemSnapshot ToSnapshot(DocxLayoutItem item, IReadOnlyList<DocxLayoutColumnFrame> columnFrames)
@@ -1051,6 +1084,12 @@ internal sealed record DocxLayoutPageSnapshot(
     int StaticTextLineCount,
     int StaticInlineImageCount,
     int StaticTableRowCount,
+    int PlacedRelatedStoryCount,
+    int PlacedFootnoteStoryCount,
+    int PlacedEndnoteStoryCount,
+    int PlacedRelatedStoryTextLineCount,
+    int PlacedRelatedStoryInlineImageCount,
+    int PlacedRelatedStoryTableRowCount,
     int TextLineCount,
     int InlineImageCount,
     int TableRowCount,
@@ -1063,6 +1102,7 @@ internal sealed record DocxLayoutPageSnapshot(
     double TableRowHeightSum,
     IReadOnlyList<DocxStaticStoryLayoutSnapshot> StaticStories,
     IReadOnlyList<DocxLayoutItemSnapshot> StaticItems,
+    IReadOnlyList<DocxLayoutItemSnapshot> PlacedRelatedItems,
     IReadOnlyList<DocxLayoutItemSnapshot> Items,
     IReadOnlyList<DocxTableRowSnapshot> TableRows);
 
@@ -1448,6 +1488,7 @@ internal sealed record DocxLayoutPage(
     IReadOnlyList<DocxTextLineLayout> StaticTextLines,
     IReadOnlyList<DocxInlineImageLayout> StaticInlineImages,
     IReadOnlyList<DocxTableRowLayout> StaticTableRows,
+    IReadOnlyList<DocxPlacedRelatedStoryLayout> PlacedRelatedStories,
     IReadOnlyList<DocxLayoutItem> Items);
 
 internal abstract record DocxLayoutItem;
@@ -1858,6 +1899,7 @@ internal sealed class DocxLayoutEngine
                 [],
                 [],
                 [],
+                [],
                 currentItems.ToArray()));
             currentItems = [];
             activeColumnIndex = 0;
@@ -2161,11 +2203,147 @@ internal sealed class DocxLayoutEngine
         }
 
         DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pages, textMeasurer, defaultTabStopPoints).ToArray();
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints);
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pagesWithStaticText, relatedStoryLayouts).ToArray();
         return new DocxLayout(
-            pagesWithStaticText,
-            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText),
-            CreateStaticFloatingDrawingLayouts(pagesWithStaticText),
-            CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints));
+            pagesWithRelatedStories,
+            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithRelatedStories),
+            CreateStaticFloatingDrawingLayouts(pagesWithRelatedStories),
+            relatedStoryLayouts);
+    }
+
+    private static IReadOnlyList<DocxLayoutPage> AddPlacedRelatedStories(
+        DocxDocument document,
+        IReadOnlyList<DocxLayoutPage> pages,
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts)
+    {
+        if (pages.Count == 0 || relatedStoryLayouts.Count == 0)
+        {
+            return pages;
+        }
+
+        var storyByKey = new Dictionary<(string Kind, string Id), DocxRelatedStoryLayout>(new RelatedStoryKeyComparer());
+        foreach (DocxRelatedStoryLayout story in relatedStoryLayouts)
+        {
+            if (story.Story.Id is null)
+            {
+                continue;
+            }
+
+            storyByKey.TryAdd((story.Story.Kind, story.Story.Id), story);
+        }
+
+        if (storyByKey.Count == 0)
+        {
+            return pages;
+        }
+
+        var pagesWithStories = new DocxLayoutPage[pages.Count];
+        var placedStoryKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            DocxLayoutPage page = pages[pageIndex];
+            List<DocxPlacedRelatedStoryLayout> placedStories = [];
+            foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
+            {
+                foreach (DocxInlineReference reference in EnumerateInlineReferences(document.BodyElements, sourceBlockIndex))
+                {
+                    if (reference.Kind != "Footnote" || reference.Id is null)
+                    {
+                        continue;
+                    }
+
+                    if (!placedStoryKeys.Add((reference.Kind, reference.Id)))
+                    {
+                        continue;
+                    }
+
+                    if (!storyByKey.TryGetValue((reference.Kind, reference.Id), out DocxRelatedStoryLayout? storyLayout) ||
+                        storyLayout.ContentHeight <= 0d)
+                    {
+                        continue;
+                    }
+
+                    placedStories.Add(PlaceRelatedStory(page, storyLayout, sourceBlockIndex));
+                }
+            }
+
+            pagesWithStories[pageIndex] = placedStories.Count == 0
+                ? page
+                : page with { PlacedRelatedStories = placedStories.ToArray() };
+        }
+
+        return pagesWithStories;
+    }
+
+    private static IEnumerable<int> EnumeratePageSourceBlockIndexes(DocxLayoutPage page)
+    {
+        return page.Items
+            .Select(GetSourceBlockIndex)
+            .Where(index => index is not null)
+            .Select(index => index!.Value)
+            .Distinct()
+            .OrderBy(index => index);
+    }
+
+    private static IEnumerable<DocxInlineReference> EnumerateInlineReferences(IReadOnlyList<DocxBodyElement> elements, int sourceBlockIndex)
+    {
+        if (sourceBlockIndex < 0 || sourceBlockIndex >= elements.Count)
+        {
+            yield break;
+        }
+
+        foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateDirectParagraphs([elements[sourceBlockIndex]]))
+        {
+            foreach (DocxInlineReference reference in paragraph.InlineReferences)
+            {
+                yield return reference;
+            }
+        }
+
+        if (elements[sourceBlockIndex] is DocxTableElement tableElement)
+        {
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateTableParagraphs(tableElement.Table))
+            {
+                foreach (DocxInlineReference reference in paragraph.InlineReferences)
+                {
+                    yield return reference;
+                }
+            }
+        }
+    }
+
+    private static DocxPlacedRelatedStoryLayout PlaceRelatedStory(DocxLayoutPage page, DocxRelatedStoryLayout storyLayout, int sourceBlockIndex)
+    {
+        double storyHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
+        double topY = page.MarginBottom + storyHeight;
+        double deltaY = topY;
+        return new DocxPlacedRelatedStoryLayout(
+            storyLayout,
+            storyLayout.StoryIndex,
+            sourceBlockIndex,
+            page.MarginLeft,
+            topY,
+            Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight),
+            storyHeight,
+            topY + 3d,
+            ShiftTextLines(storyLayout.TextLines, deltaY),
+            ShiftInlineImages(storyLayout.InlineImages, deltaY),
+            ShiftTableRows(storyLayout.TableRows, deltaY));
+    }
+
+    private sealed class RelatedStoryKeyComparer : IEqualityComparer<(string Kind, string Id)>
+    {
+        public bool Equals((string Kind, string Id) x, (string Kind, string Id) y)
+        {
+            return string.Equals(x.Kind, y.Kind, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.Id, y.Id, StringComparison.Ordinal);
+        }
+
+        public int GetHashCode((string Kind, string Id) obj)
+        {
+            return HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Kind), StringComparer.Ordinal.GetHashCode(obj.Id));
+        }
     }
 
     private static IReadOnlyList<DocxRelatedStoryLayout> CreateRelatedStoryLayouts(
@@ -5661,6 +5839,35 @@ internal sealed class DocxLayoutEngine
         return lines
             .Select(line => line with { BaselineY = line.BaselineY + deltaY })
             .ToArray();
+    }
+
+    private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images, double deltaY)
+    {
+        return images
+            .Select(image => image with { Y = image.Y + deltaY })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows, double deltaY)
+    {
+        return rows
+            .Select(row => row with
+            {
+                Y = row.Y + deltaY,
+                Cells = row.Cells.Select(cell => ShiftTableCell(cell, deltaY)).ToArray()
+            })
+            .ToArray();
+    }
+
+    private static DocxTableCellLayout ShiftTableCell(DocxTableCellLayout cell, double deltaY)
+    {
+        return cell with
+        {
+            Y = cell.Y + deltaY,
+            TextLines = ShiftTextLines(cell.TextLines, deltaY),
+            InlineImages = ShiftInlineImages(cell.InlineImages, deltaY),
+            NestedTableRows = ShiftTableRows(cell.NestedRows, deltaY)
+        };
     }
 
     private static double ResolveTableCellHorizontalPadding(double? points)

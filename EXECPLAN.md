@@ -7946,6 +7946,16 @@ Current validation baseline:
   image XObject and draw operation. Validation passed `docx-page --skip-slow` (`40`), `docx-images
   --skip-slow` (`4`), `docx-core --skip-slow` (`53`), and full solution build. Keep Office-derived static
   story draw-order acceptance gates and PDF row matching open.
+- 2026-06-03 DOCX related-story rendering follow-up: resolved footnote story bodies now advance from
+  "measured but invisible" to page-owned layout/rendering. `DocxLayoutPage` carries `PlacedRelatedStories`;
+  placement is driven by resolved body inline references and reuses the existing related-story text/image/table
+  layouts after shifting them into the page footnote area. `DocxRenderer` renders placed footnotes through the
+  same text/table/image paths and emits a simple separator. Layout snapshots expose private-safe placed-story
+  counts and item geometry, while endnote bodies remain measured but intentionally unplaced. Keep the important
+  long-term gaps open: Word-like footnote reservation must participate in pagination before body flow is final,
+  the exact marker-line page must be derived from source offsets when a source block splits across pages,
+  multi-page footnote continuation is not modeled, endnote placement is still missing, and comments remain
+  structural/non-rendered.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

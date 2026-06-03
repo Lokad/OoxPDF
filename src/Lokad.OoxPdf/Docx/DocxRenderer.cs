@@ -57,6 +57,11 @@ internal sealed class DocxRenderer
             {
                 lines.Add(ToTextEmissionLineSnapshot(pageIndex, isStaticStory: false, line, fontResources, pageNumber, layout.Pages.Count));
             }
+
+            foreach (DocxTextLineLayout line in EnumeratePlacedRelatedStoryTextLines(page))
+            {
+                lines.Add(ToTextEmissionLineSnapshot(pageIndex, isStaticStory: false, line, fontResources, pageNumber, layout.Pages.Count));
+            }
         }
 
         return new DocxTextEmissionSnapshot(
@@ -151,6 +156,11 @@ internal sealed class DocxRenderer
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
                 RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
+            }
+
+            foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
+            {
+                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
             }
 
             RenderFloatingDrawings(
@@ -544,6 +554,43 @@ internal sealed class DocxRenderer
         string imageName = "Im" + imageIndex++;
         graphics.DrawImage(imageName, image.X, image.Y, image.Width, image.Height);
         pageImages.Add(new PdfImageResource(imageName, xObject));
+    }
+
+    private static void RenderPlacedRelatedStory(
+        DocxPlacedRelatedStoryLayout story,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        DocxFontResources fontResources,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int pageNumber,
+        int pageCount,
+        ref int imageIndex)
+    {
+        if (story.SeparatorY is { } separatorY)
+        {
+            graphics.SetFillRgb(0, 0, 0);
+            graphics.FillRectangle(story.X, separatorY, Math.Min(120d, story.Width), 0.5d);
+        }
+
+        IReadOnlyList<DocxLayoutItem> items = story.TextLines
+            .Cast<DocxLayoutItem>()
+            .Concat(story.InlineImages)
+            .Concat(story.TableRows)
+            .OrderByDescending(item => item switch
+            {
+                DocxTextLineLayout textLine => textLine.BaselineY,
+                DocxInlineImageLayout image => image.Y + image.Height,
+                DocxTableRowLayout row => row.Y + row.Height,
+                _ => 0d
+            })
+            .ToArray();
+        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+        {
+            DocxLayoutItem item = items[itemIndex];
+            DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
+            DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+        }
     }
 
     private static void RenderFloatingDrawings(
@@ -1054,6 +1101,25 @@ internal sealed class DocxRenderer
             foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
             {
                 yield return cellLine;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumeratePlacedRelatedStoryTextLines(DocxLayoutPage page)
+    {
+        foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
+        {
+            foreach (DocxTextLineLayout line in story.TextLines)
+            {
+                yield return line;
+            }
+
+            foreach (DocxTableRowLayout row in story.TableRows)
+            {
+                foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
+                {
+                    yield return cellLine;
+                }
             }
         }
     }
