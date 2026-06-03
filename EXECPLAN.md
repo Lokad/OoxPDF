@@ -5056,6 +5056,12 @@ block models and richer section/pagination layout before adding more Word pagina
   Office/candidate text-operation comparisons, including a `tf+run-provenance+gaps` ambiguity check for
   Office `Tc` inference. The key intentionally uses only booleans and character-style depth, not style names.
   Validation passed PowerShell parser validation for the summarizer.
+  2026-06-03 font-plan follow-up: DOCX font planning now consumes `DocxEffectiveRunProperties` for
+  bold/italic face requests, list-label font-size fallback, and private-safe font-metric bucket sizing
+  instead of the legacy direct run scalar surface. This keeps face selection and metric diagnostics aligned
+  with the same style/default/table-style cascade used by layout and PDF-emission snapshots. Validation
+  passed `docx-core --skip-slow` (`58`), `docx-text --skip-slow` (`49`), and full solution build. Keep this
+  open for the remaining PDF-emission/layout consumers and Office-oracle probes of style-derived run metrics.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

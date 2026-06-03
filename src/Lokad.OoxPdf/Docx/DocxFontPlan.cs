@@ -57,6 +57,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 
     private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver)
     {
+        DocxEffectiveRunProperties effective = run.EffectiveProperties;
         DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, fontCatalog);
         IReadOnlyList<string> families = DistinctFamilies(candidates.Primary, candidates.Alternate, candidates.Theme);
         if (families.Count == 0)
@@ -67,7 +68,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         for (int i = 0; i < families.Count; i++)
         {
             string family = families[i];
-            FontFaceResolution resolution = fontResolver.Resolve(new FontRequest(family, run.Bold, run.Italic));
+            FontFaceResolution resolution = fontResolver.Resolve(new FontRequest(family, effective.Bold, effective.Italic));
             if (!resolution.IsFallback)
             {
                 return new DocxResolvedRunTypeface(run, families, family, resolution.FamilyName, SourceForCandidate(candidates, family), resolution);
@@ -75,7 +76,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         }
 
         string requested = families[0];
-        FontFaceResolution fallback = fontResolver.Resolve(new FontRequest(requested, run.Bold, run.Italic));
+        FontFaceResolution fallback = fontResolver.Resolve(new FontRequest(requested, effective.Bold, effective.Italic));
         return new DocxResolvedRunTypeface(run, families, requested, fallback.FamilyName, DocxTypefaceResolutionSource.ResolverFallback, fallback);
     }
 
@@ -112,7 +113,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             yield return DocxLayoutEngine.CreateListLabelRun(
                 paragraph.ListLabel,
                 firstRun,
-                firstRun?.FontSize ?? 11d);
+                firstRun?.EffectiveProperties.FontSize ?? 11d);
         }
     }
 
@@ -270,7 +271,7 @@ internal sealed record DocxFontPlanSnapshot(
             .GroupBy(run => new
             {
                 run.Source,
-                FontSize = Math.Round(run.Run.FontSize, 3),
+                FontSize = Math.Round(run.Run.EffectiveProperties.FontSize, 3),
                 ResolvedFamilyHash = HashFamily(run.ResolvedFamily)
             })
             .OrderByDescending(group => group.Count())
