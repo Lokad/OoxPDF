@@ -7956,6 +7956,13 @@ Current validation baseline:
   the exact marker-line page must be derived from source offsets when a source block splits across pages,
   multi-page footnote continuation is not modeled, endnote placement is still missing, and comments remain
   structural/non-rendered.
+- 2026-06-03 DOCX footnote reservation follow-up: footnote story bodies now reserve a page-owned area during
+  body layout instead of merely overlaying after pagination. The layout engine pre-measures related stories,
+  maps resolved footnote references to source blocks, raises the active bottom boundary by the measured note
+  area, and uses the same reserved geometry for final placement. Bottom-up coverage asserts body items remain
+  above the placed footnote band. Validation passed `docx-page --skip-slow` (`46`), `docx-core --skip-slow`
+  (`59`), `docx-tables --skip-slow` (`125`), and full solution build. Keep exact marker-line ownership for
+  split source blocks, table-internal note continuation, multi-page footnotes, endnotes, and comments open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

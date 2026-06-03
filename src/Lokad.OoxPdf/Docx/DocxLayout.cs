@@ -30,6 +30,8 @@ internal sealed record DocxPlacedRelatedStoryLayout(
     double Width,
     double Height,
     double? SeparatorY,
+    double SeparatorWidth,
+    double SeparatorThickness,
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
     IReadOnlyList<DocxTableRowLayout> TableRows);
@@ -1827,6 +1829,9 @@ internal sealed class DocxLayoutEngine
     private const double WordDefaultTabStopPoints = 36d;
     private const double InlineImageParagraphGapPoints = 6d;
     private const double WordListMinimumAutoLineSpacingFactor = 1.19d;
+    private const double FootnoteSeparatorGapPoints = 3d;
+    private const double FootnoteSeparatorWidthPoints = 120d;
+    private const double FootnoteSeparatorThicknessPoints = 0.5d;
     private const double UnpagedRelatedStoryCanvasHeightPoints = 100000d;
 
     private sealed record DocxPageGeometry(
@@ -1876,6 +1881,9 @@ internal sealed class DocxLayoutEngine
         bool activeColumnHasContent = false;
         int tableIndex = 0;
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints);
+        IReadOnlyDictionary<int, double> footnoteReserveHeightBySourceBlock = CreateFootnoteReserveHeightBySourceBlock(document, relatedStoryLayouts);
+        double currentPageFootnoteReserveHeight = 0d;
 
         void ApplyActiveColumnFrame()
         {
@@ -1908,6 +1916,20 @@ internal sealed class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             previousParagraph = null;
             activeColumnHasContent = false;
+            currentPageFootnoteReserveHeight = 0d;
+        }
+
+        double CurrentFrameBottom()
+        {
+            return page.MarginBottom + currentPageFootnoteReserveHeight;
+        }
+
+        void EnsureFootnoteReserveForSourceBlock(int sourceBlockIndex)
+        {
+            if (footnoteReserveHeightBySourceBlock.TryGetValue(sourceBlockIndex, out double reserveHeight))
+            {
+                currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, reserveHeight);
+            }
         }
 
         void AdvanceColumnOrPage()
@@ -1920,6 +1942,7 @@ internal sealed class DocxLayoutEngine
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 activeColumnHasContent = false;
+                currentPageFootnoteReserveHeight = 0d;
                 return;
             }
 
@@ -1952,7 +1975,7 @@ internal sealed class DocxLayoutEngine
                     double breakFontSize = GetParagraphFontSize(breakParagraph);
                     double breakLineHeight = ResolveLineHeight(breakParagraph, breakFontSize, textMeasurer);
                     double paragraphAdvance = breakSpacingProfile.AppliedBeforeSpacing + breakLineHeight;
-                    if (cursorY - paragraphAdvance < page.MarginBottom && HasCurrentColumnContent())
+                    if (cursorY - paragraphAdvance < CurrentFrameBottom() && HasCurrentColumnContent())
                     {
                         AdvanceColumnOrPage();
                     }
@@ -2009,6 +2032,7 @@ internal sealed class DocxLayoutEngine
 
             if (element is DocxTableElement tableElement)
             {
+                EnsureFootnoteReserveForSourceBlock(elementIndex);
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
@@ -2038,12 +2062,12 @@ internal sealed class DocxLayoutEngine
                         elementIndex,
                         x,
                         width,
-                        page.Height - page.MarginTop - page.MarginBottom,
+                        page.Height - page.MarginTop - CurrentFrameBottom(),
                         textMeasurer,
                         defaultTabStopPoints);
                 }
 
-                LayoutTable(tableElement.Table, page.MarginBottom, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent);
+                LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent);
                 if (currentItems.Count > itemCountBeforeTable)
                 {
                     activeColumnHasContent = true;
@@ -2059,6 +2083,7 @@ internal sealed class DocxLayoutEngine
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
             DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
+            EnsureFootnoteReserveForSourceBlock(elementIndex);
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -2068,9 +2093,10 @@ internal sealed class DocxLayoutEngine
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
-                cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints).Height <= page.MarginBottom)
+                cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints).Height <= CurrentFrameBottom())
             {
                 AdvanceColumnOrPage();
+                EnsureFootnoteReserveForSourceBlock(elementIndex);
             }
 
             IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs);
@@ -2085,17 +2111,19 @@ internal sealed class DocxLayoutEngine
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
                 DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: false).ToArray();
-                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, page.MarginBottom, HasCurrentColumnContent()))
+                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, CurrentFrameBottom(), HasCurrentColumnContent()))
                 {
                     AdvanceColumnOrPage();
+                    EnsureFootnoteReserveForSourceBlock(elementIndex);
                 }
 
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
                     DocxWrappedTextLine line = lines[lineIndex];
-                    if (cursorY - lineHeight < page.MarginBottom && HasCurrentColumnContent())
+                    if (cursorY - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
                     {
                         AdvanceColumnOrPage();
+                        EnsureFootnoteReserveForSourceBlock(elementIndex);
                     }
 
                     double lineWidth = MeasureTextSpans(line.Spans, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
@@ -2156,9 +2184,10 @@ internal sealed class DocxLayoutEngine
             }
             else if (paragraph.Images.Count == 0)
             {
-                if (cursorY - lineHeight < page.MarginBottom && HasCurrentColumnContent())
+                if (cursorY - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
                 {
                     AdvanceColumnOrPage();
+                    EnsureFootnoteReserveForSourceBlock(elementIndex);
                 }
 
                 cursorY -= lineHeight;
@@ -2169,9 +2198,10 @@ internal sealed class DocxLayoutEngine
             {
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-                if (cursorY - imageHeight < page.MarginBottom && HasCurrentColumnContent())
+                if (cursorY - imageHeight < CurrentFrameBottom() && HasCurrentColumnContent())
                 {
                     AdvanceColumnOrPage();
+                    EnsureFootnoteReserveForSourceBlock(elementIndex);
                 }
 
                 double imageX = effective.Alignment switch
@@ -2203,13 +2233,49 @@ internal sealed class DocxLayoutEngine
         }
 
         DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pages, textMeasurer, defaultTabStopPoints).ToArray();
-        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints);
         DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pagesWithStaticText, relatedStoryLayouts).ToArray();
         return new DocxLayout(
             pagesWithRelatedStories,
             CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithRelatedStories),
             CreateStaticFloatingDrawingLayouts(pagesWithRelatedStories),
             relatedStoryLayouts);
+    }
+
+    private static IReadOnlyDictionary<int, double> CreateFootnoteReserveHeightBySourceBlock(
+        DocxDocument document,
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts)
+    {
+        var reserveHeightBySourceBlock = new Dictionary<int, double>();
+        if (relatedStoryLayouts.Count == 0)
+        {
+            return reserveHeightBySourceBlock;
+        }
+
+        Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
+        for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
+        {
+            double reserveHeight = 0d;
+            var reservedKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
+            foreach (DocxInlineReference reference in EnumerateInlineReferences(document.BodyElements, sourceBlockIndex))
+            {
+                if (reference.Kind != "Footnote" || reference.Id is null || !reservedKeys.Add((reference.Kind, reference.Id)))
+                {
+                    continue;
+                }
+
+                if (storyByKey.TryGetValue((reference.Kind, reference.Id), out DocxRelatedStoryLayout? storyLayout))
+                {
+                    reserveHeight += FootnoteSeparatorGapPoints + Math.Max(0d, storyLayout.ContentHeight);
+                }
+            }
+
+            if (reserveHeight > 0d)
+            {
+                reserveHeightBySourceBlock[sourceBlockIndex] = reserveHeight;
+            }
+        }
+
+        return reserveHeightBySourceBlock;
     }
 
     private static IReadOnlyList<DocxLayoutPage> AddPlacedRelatedStories(
@@ -2222,17 +2288,7 @@ internal sealed class DocxLayoutEngine
             return pages;
         }
 
-        var storyByKey = new Dictionary<(string Kind, string Id), DocxRelatedStoryLayout>(new RelatedStoryKeyComparer());
-        foreach (DocxRelatedStoryLayout story in relatedStoryLayouts)
-        {
-            if (story.Story.Id is null)
-            {
-                continue;
-            }
-
-            storyByKey.TryAdd((story.Story.Kind, story.Story.Id), story);
-        }
-
+        Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
         if (storyByKey.Count == 0)
         {
             return pages;
@@ -2326,10 +2382,26 @@ internal sealed class DocxLayoutEngine
             topY,
             Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight),
             storyHeight,
-            topY + 3d,
+            topY + FootnoteSeparatorGapPoints,
+            FootnoteSeparatorWidthPoints,
+            FootnoteSeparatorThicknessPoints,
             ShiftTextLines(storyLayout.TextLines, deltaY),
             ShiftInlineImages(storyLayout.InlineImages, deltaY),
             ShiftTableRows(storyLayout.TableRows, deltaY));
+    }
+
+    private static Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> CreateRelatedStoryLookup(IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts)
+    {
+        var storyByKey = new Dictionary<(string Kind, string Id), DocxRelatedStoryLayout>(new RelatedStoryKeyComparer());
+        foreach (DocxRelatedStoryLayout story in relatedStoryLayouts)
+        {
+            if (story.Story.Id is not null)
+            {
+                storyByKey.TryAdd((story.Story.Kind, story.Story.Id), story);
+            }
+        }
+
+        return storyByKey;
     }
 
     private sealed class RelatedStoryKeyComparer : IEqualityComparer<(string Kind, string Id)>

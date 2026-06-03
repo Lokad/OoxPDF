@@ -15058,6 +15058,64 @@ internal static class DocxTests
         TestAssert.True(imageBlock.Kind == "InlineImage" && imageBlock.InlineImageCount == 1 && imageBlock.ItemCount == 1 && imageBlock.ConsumedHeight >= 24d, "Related-story source-block snapshots should summarize image-only story blocks without page ownership.");
     }
 
+    public static void DocxLayoutReservesPageFootnoteStoryArea()
+    {
+        DocxParagraph anchor = CreateDocxLayoutParagraph("Anchor paragraph", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "7",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 6)
+            ]
+        };
+        DocxParagraph filler = CreateDocxLayoutParagraph("Filler paragraph keeps body close to the bottom", 10d, 12d);
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body line one wraps line two", 10d, 12d);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "7",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        var document = new DocxDocument(
+            220d,
+            112d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(anchor),
+                new DocxParagraphElement(filler),
+                new DocxParagraphElement(filler),
+                new DocxParagraphElement(filler),
+                new DocxParagraphElement(filler)
+            ],
+            [],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutPageSnapshot footnotePage = snapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 1);
+        double footnoteTop = footnotePage.PlacedRelatedItems.Max(item => item.Y + item.Height);
+        double bodyBottom = footnotePage.Items.Min(item => item.Y);
+
+        TestAssert.True(footnotePage.PlacedRelatedStoryTextLineCount >= 1, "Resolved footnote story text should be placed on the body-reference page.");
+        TestAssert.True(bodyBottom >= footnoteTop, $"Body layout should reserve page space above placed footnotes; body bottom {bodyBottom} footnote top {footnoteTop}.");
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

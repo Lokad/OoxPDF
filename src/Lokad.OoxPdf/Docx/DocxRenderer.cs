@@ -569,7 +569,7 @@ internal sealed class DocxRenderer
         if (story.SeparatorY is { } separatorY)
         {
             graphics.SetFillRgb(0, 0, 0);
-            graphics.FillRectangle(story.X, separatorY, Math.Min(120d, story.Width), 0.5d);
+            graphics.FillRectangle(story.X, separatorY, Math.Min(story.SeparatorWidth, story.Width), story.SeparatorThickness);
         }
 
         IReadOnlyList<DocxLayoutItem> items = story.TextLines
