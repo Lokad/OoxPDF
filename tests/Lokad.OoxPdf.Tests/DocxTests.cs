@@ -15754,6 +15754,90 @@ internal static class DocxTests
         TestAssert.True(endnotePage.PlacedRelatedStories.Any(story => story.Kind == "Endnote" && story.SourceBlockIndex == 0), "A sectEnd endnote should be owned by the source section end page, not rewritten as a document-end story.");
     }
 
+    public static void DocxLayoutKeepsSectEndEndnoteOverflowPageBeforeFollowingSection()
+    {
+        DocxParagraph firstSectionParagraph = CreateDocxLayoutParagraph("first section endnote marker", 10d, 18d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "22",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 6),
+                new DocxInlineReference(
+                    "Endnote",
+                    "23",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "2",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 2,
+                    TextOffsetInRun: 12)
+            ]
+        };
+        DocxParagraph secondSectionParagraph = CreateDocxLayoutParagraph("second section body", 10d, 12d);
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote overflow body", 10d, 18d);
+        var firstEndnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "22",
+            Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
+            [],
+            []);
+        var secondEndnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "23",
+            Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
+            [],
+            []);
+        DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
+        {
+            EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
+        };
+        var document = new DocxDocument(
+            220d,
+            112d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(firstSectionParagraph),
+                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []),
+                new DocxParagraphElement(secondSectionParagraph)
+            ],
+            [firstSectionParagraph, secondSectionParagraph],
+            [])
+        {
+            RelatedStories = [firstEndnoteStory, secondEndnoteStory]
+        };
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        int secondSectionPageIndex = snapshot.Pages
+            .Select((page, pageIndex) => (page, pageIndex))
+            .First(item => item.page.Items.Any(pageItem => pageItem.SourceBlockIndex == 2))
+            .pageIndex;
+        int overflowEndnotePageIndex = snapshot.Pages
+            .Select((page, pageIndex) => (page, pageIndex))
+            .Where(item => item.page.PlacedEndnoteStoryCount == 1)
+            .Select(item => item.pageIndex)
+            .Last();
+
+        TestAssert.True(snapshot.Pages.Count >= 3, "Multiple sectEnd endnotes that cannot all fit on the section end page should create a section-owned continuation page.");
+        TestAssert.True(overflowEndnotePageIndex > 0 && overflowEndnotePageIndex < secondSectionPageIndex, "Section-end endnote overflow must be inserted before the following section instead of falling back to document-end placement.");
+        TestAssert.Equal("sectEnd", snapshot.Pages[overflowEndnotePageIndex].SectionEndnotePositionValue ?? string.Empty);
+        TestAssert.True(snapshot.Pages[overflowEndnotePageIndex].PlacedRelatedStories.Any(story => story.Kind == "Endnote" && story.SourceBlockIndex == 0), "The inserted section-end continuation page should retain marker-owned endnote provenance.");
+        TestAssert.Equal(0, snapshot.Pages[secondSectionPageIndex].PlacedEndnoteStoryCount);
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

@@ -2403,48 +2403,71 @@ internal sealed class DocxLayoutEngine
 
         var outputPages = pages.ToList();
         var documentEndStories = new List<DocxRelatedStoryLayout>();
-        foreach (IGrouping<int, DocxReferencedRelatedStoryLayout> sectionGroup in endnoteStories
-                     .GroupBy(story => ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, story.Location))
-                     .OrderBy(group => group.Key))
+        var sectionEndStories = new List<DocxReferencedRelatedStoryLayout>();
+        foreach (DocxReferencedRelatedStoryLayout endnoteStory in endnoteStories)
         {
-            int sectionEndPageIndex = sectionGroup.Key;
+            if (ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, endnoteStory.Location) < 0)
+            {
+                documentEndStories.Add(endnoteStory.StoryLayout);
+                continue;
+            }
+
+            sectionEndStories.Add(endnoteStory);
+        }
+
+        foreach (IGrouping<(int StartBlockIndex, int EndBlockIndex), DocxReferencedRelatedStoryLayout> sectionGroup in sectionEndStories
+                     .GroupBy(story => ResolveSectionBlockRange(document.BodyElements, story.Location.SourceBlockIndex))
+                     .OrderBy(group => group.Key.StartBlockIndex))
+        {
+            int sectionEndPageIndex = ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, sectionGroup.First().Location);
             if (sectionEndPageIndex < 0)
             {
                 documentEndStories.AddRange(sectionGroup.Select(story => story.StoryLayout));
                 continue;
             }
 
-            DocxLayoutPage sectionEndPage = outputPages[sectionEndPageIndex];
-            List<DocxPlacedRelatedStoryLayout> placedStories = sectionEndPage.PlacedRelatedStories.ToList();
-            double cursorTop = ResolveEndnoteStartTop(sectionEndPage, placedStories);
-            foreach (DocxReferencedRelatedStoryLayout story in sectionGroup)
-            {
-                double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, sectionEndPage);
-                if (storyHeight <= 0d)
-                {
-                    continue;
-                }
-
-                if (cursorTop - storyHeight < sectionEndPage.MarginBottom)
-                {
-                    documentEndStories.Add(story.StoryLayout);
-                    continue;
-                }
-
-                placedStories.Add(PlaceRelatedStoryAtTop(
-                    sectionEndPage,
-                    sectionEndPageIndex,
-                    story.StoryLayout,
-                    story.Location.SourceBlockIndex,
-                    cursorTop,
-                    separatorY: null));
-                cursorTop -= storyHeight + FootnoteSeparatorGapPoints;
-            }
-
-            outputPages[sectionEndPageIndex] = sectionEndPage with { PlacedRelatedStories = placedStories.ToArray() };
+            PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionGroup.ToArray());
         }
 
-        return AddDocumentEndnoteStories(outputPages, documentEndStories);
+        return ReindexPageOwnedLayouts(AddDocumentEndnoteStories(outputPages, documentEndStories));
+    }
+
+    private static void PlaceSectionEndEndnoteStories(
+        List<DocxLayoutPage> outputPages,
+        int sectionEndPageIndex,
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories)
+    {
+        int activePageIndex = sectionEndPageIndex;
+        DocxLayoutPage activePage = outputPages[activePageIndex];
+        List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
+        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
+        foreach (DocxReferencedRelatedStoryLayout story in sectionEndStories)
+        {
+            double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
+            if (storyHeight <= 0d)
+            {
+                continue;
+            }
+
+            if (cursorTop - storyHeight < activePage.MarginBottom)
+            {
+                activePage = CreateEmptyContinuationPage(activePage);
+                activePageIndex++;
+                outputPages.Insert(activePageIndex, activePage);
+                activePlacedStories = [];
+                cursorTop = activePage.Height - activePage.MarginTop;
+            }
+
+            activePlacedStories.Add(PlaceRelatedStoryAtTop(
+                activePage,
+                activePageIndex,
+                story.StoryLayout,
+                story.Location.SourceBlockIndex,
+                cursorTop,
+                separatorY: null));
+            outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+            cursorTop -= storyHeight + FootnoteSeparatorGapPoints;
+        }
     }
 
     private static IReadOnlyList<DocxLayoutPage> AddDocumentEndnoteStories(
@@ -2602,6 +2625,83 @@ internal sealed class DocxLayoutEngine
             PlacedRelatedStories = [],
             Items = []
         };
+    }
+
+    private static IReadOnlyList<DocxLayoutPage> ReindexPageOwnedLayouts(IReadOnlyList<DocxLayoutPage> pages)
+    {
+        return pages
+            .Select((page, pageIndex) => page with
+            {
+                StaticInlineImages = ReindexInlineImages(page.StaticInlineImages, pageIndex),
+                StaticTableRows = ReindexTableRows(page.StaticTableRows, pageIndex),
+                PlacedRelatedStories = page.PlacedRelatedStories
+                    .Select(story => ReindexPlacedRelatedStory(story, pageIndex))
+                    .ToArray(),
+                Items = page.Items
+                    .Select(item => ReindexLayoutItem(item, pageIndex))
+                    .ToArray()
+            })
+            .ToArray();
+    }
+
+    private static DocxLayoutItem ReindexLayoutItem(DocxLayoutItem item, int pageIndex)
+    {
+        return item switch
+        {
+            DocxInlineImageLayout image => image with { PageIndex = pageIndex },
+            DocxTableRowLayout row => ReindexTableRow(row, pageIndex),
+            _ => item
+        };
+    }
+
+    private static DocxPlacedRelatedStoryLayout ReindexPlacedRelatedStory(DocxPlacedRelatedStoryLayout story, int pageIndex)
+    {
+        return story with
+        {
+            InlineImages = ReindexInlineImages(story.InlineImages, pageIndex),
+            FloatingDrawings = story.FloatingDrawings
+                .Select(drawing => drawing with
+                {
+                    PageStartIndex = pageIndex,
+                    PageEndIndex = pageIndex,
+                    AnchorPageIndex = pageIndex
+                })
+                .ToArray(),
+            TableRows = ReindexTableRows(story.TableRows, pageIndex)
+        };
+    }
+
+    private static IReadOnlyList<DocxTableRowLayout> ReindexTableRows(IReadOnlyList<DocxTableRowLayout> rows, int pageIndex)
+    {
+        return rows
+            .Select(row => ReindexTableRow(row, pageIndex))
+            .ToArray();
+    }
+
+    private static DocxTableRowLayout ReindexTableRow(DocxTableRowLayout row, int pageIndex)
+    {
+        return row with
+        {
+            Cells = row.Cells
+                .Select(cell => ReindexTableCell(cell, pageIndex))
+                .ToArray()
+        };
+    }
+
+    private static DocxTableCellLayout ReindexTableCell(DocxTableCellLayout cell, int pageIndex)
+    {
+        return cell with
+        {
+            InlineImages = ReindexInlineImages(cell.InlineImages, pageIndex),
+            NestedTableRows = ReindexTableRows(cell.NestedRows, pageIndex)
+        };
+    }
+
+    private static IReadOnlyList<DocxInlineImageLayout> ReindexInlineImages(IReadOnlyList<DocxInlineImageLayout> images, int pageIndex)
+    {
+        return images
+            .Select(image => image with { PageIndex = pageIndex })
+            .ToArray();
     }
 
     private sealed record DocxInlineReferenceLocation(

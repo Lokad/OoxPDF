@@ -8069,6 +8069,15 @@ Current validation baseline:
   Validation passed full solution build, `docx-page --skip-slow` (`51`), `docx-core --skip-slow` (`60`), and
   `docx-tables --skip-slow` (`126`). Keep Office-derived section-end overflow pages, continuation separators,
   and mixed section/document numbering behavior open.
+  2026-06-03 follow-up: section-end endnote overflow now stays section-local instead of falling back to
+  document-end placement. `DocxLayout` groups `sectEnd` endnotes by source section, inserts continuation
+  pages immediately after the owning section end page, and reindexes page-owned inline images/table-cell
+  images/related-story floating drawings after page insertion so later diagnostics and anchors retain correct
+  page ownership. Bottom-up coverage adds a two-endnote `sectEnd` fixture that forces the second endnote onto
+  an inserted continuation page before the following section. Validation passed `docx-page --skip-slow` (`52`),
+  `docx-core --skip-slow` (`60`), and `docx-tables --skip-slow` (`126`). Keep Office-derived continuation
+  separator kinds, actual multi-page story splitting, table-internal note continuation, comments, and mixed
+  section/document numbering behavior open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
