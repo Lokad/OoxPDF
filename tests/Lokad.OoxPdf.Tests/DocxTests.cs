@@ -13325,6 +13325,80 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
     }
 
+    public static void DocxLayoutStageAddsStaticHeaderAfterEndnoteContinuationPages()
+    {
+        DocxParagraph header = new(
+            [
+                new DocxTextRun("H", 10d, "000000", false, false, false, null, "Narrow"),
+                new DocxTextRun("{PAGE}", 10d, "000000", false, false, false, null, "Narrow")
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "5",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote continuation line", 10d, 12d);
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "5",
+            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
+            [],
+            []);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(header)]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            [])
+        {
+            RelatedStories = [endnoteStory]
+        };
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+
+        TestAssert.True(snapshot.Pages.Count >= 2, "The oversized endnote story should create a continuation page.");
+        DocxLayoutPageSnapshot endnotePage = snapshot.Pages.Single(page => page.PlacedEndnoteStoryCount == 1);
+        TestAssert.Equal(1, endnotePage.StaticTextLineCount);
+        DocxLayoutItemSnapshot headerItem = endnotePage.StaticItems.Single(item => item.Kind == "StaticHeaderTextLine");
+        TestAssert.Equal(2, headerItem.TextLength);
+    }
+
     public static void DocxLayoutStageSelectsStaticHeaderBodyElements()
     {
         DocxParagraph header = CreateDocxLayoutParagraph("HB", 10d, 10d);

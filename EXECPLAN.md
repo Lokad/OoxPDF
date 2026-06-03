@@ -386,11 +386,18 @@ High-priority actions:
   `DocxLayoutSnapshot.Pages[].PlacedRelatedStories` now exposes private-safe story-level placement ownership
   (kind, part, id, source owner, geometry, separator geometry, and item counts), while `PlacedRelatedItems`
   remains item-oriented for PDF-flow diagnostics. This slice intentionally exposes two open architecture gaps:
-  endnote overflow pages are appended after static header/footer selection, so continuation pages do not yet
-  rebuild static content/page fields with final page count; and section-scoped endnote positioning/settings
-  (`endnotePr`, end-of-section vs end-of-document, continuation separators) still need Office-PDF probes.
+  section-scoped endnote positioning/settings (`endnotePr`, end-of-section vs end-of-document, continuation
+  separators) still need Office-PDF probes.
   Validation passed full solution build, `docx-core --skip-slow` (`59`), `docx-page --skip-slow` (`46`), and
   `docx-tables --skip-slow` (`125`).
+  2026-06-03 architecture follow-up: related-story placement now runs before static header/footer injection,
+  so endnote continuation pages are part of the final page list before static stories and page fields are
+  resolved. This removes the stale-page-count/static-content weakness for endnote-only overflow pages without
+  adding a separate continuation-page renderer. Bottom-up coverage forces an endnote continuation page with a
+  default header `{PAGE}` field and asserts the continuation page receives a static header. Keep section-scoped
+  endnote positioning, continuation separators, and multi-section page-field edge cases open for Office-PDF
+  probes. Validation passed full solution build, `docx-core --skip-slow` (`60`), `docx-page --skip-slow`
+  (`47`), and `docx-tables --skip-slow` (`125`).
   2026-06-03 architecture follow-up: PDF hyperlink annotations and bookmark destinations now include placed
   related-story text lines through the same renderer path as body, table-cell, and static-story text. This
   closes external link rectangles for placed footnote/endnote stories without note-specific PDF logic, and it

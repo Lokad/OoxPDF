@@ -2267,12 +2267,12 @@ internal sealed class DocxLayoutEngine
             FinishPage();
         }
 
-        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pages, textMeasurer, defaultTabStopPoints).ToArray();
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pagesWithStaticText, relatedStoryLayouts).ToArray();
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, relatedStoryLayouts).ToArray();
+        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints).ToArray();
         return new DocxLayout(
-            pagesWithRelatedStories,
-            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithRelatedStories),
-            CreateStaticFloatingDrawingLayouts(pagesWithRelatedStories),
+            pagesWithStaticText,
+            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText),
+            CreateStaticFloatingDrawingLayouts(pagesWithStaticText),
             relatedStoryLayouts);
     }
 
