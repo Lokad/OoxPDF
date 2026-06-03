@@ -2327,20 +2327,15 @@ internal sealed class DocxLayoutEngine
 
                 if (storyByKey.TryGetValue((reference.Kind, reference.Id), out DocxRelatedStoryLayout? storyLayout))
                 {
-                    if (footnoteSeparatorLayout is not null)
+                    if (!reservedFootnoteSeparator)
                     {
-                        if (!reservedFootnoteSeparator)
-                        {
-                            reserveHeight += Math.Max(0d, footnoteSeparatorLayout.ContentHeight) + FootnoteSeparatorGapPoints;
-                            reservedFootnoteSeparator = true;
-                        }
+                        reserveHeight += footnoteSeparatorLayout is null
+                            ? FootnoteSeparatorGapPoints
+                            : Math.Max(0d, footnoteSeparatorLayout.ContentHeight) + FootnoteSeparatorGapPoints;
+                        reservedFootnoteSeparator = true;
+                    }
 
-                        reserveHeight += Math.Max(0d, storyLayout.ContentHeight);
-                    }
-                    else
-                    {
-                        reserveHeight += FootnoteSeparatorGapPoints + Math.Max(0d, storyLayout.ContentHeight);
-                    }
+                    reserveHeight += Math.Max(0d, storyLayout.ContentHeight);
                 }
             }
 
@@ -2375,8 +2370,7 @@ internal sealed class DocxLayoutEngine
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             DocxLayoutPage page = pages[pageIndex];
-            List<DocxPlacedRelatedStoryLayout> placedStories = [];
-            bool placedFootnoteSeparator = false;
+            List<DocxReferencedRelatedStoryLayout> pageFootnoteStories = [];
             foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
             {
                 foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
@@ -2404,30 +2398,14 @@ internal sealed class DocxLayoutEngine
                     }
 
                     placedStoryKeys.Add((reference.Kind, reference.Id));
-                    if (footnoteSeparatorLayout is not null)
-                    {
-                        double storyHeight = ResolvePlacedStoryHeight(storyLayout, page);
-                        double storyTop = page.MarginBottom + storyHeight;
-                        if (!placedFootnoteSeparator)
-                        {
-                            double separatorHeight = ResolvePlacedStoryHeight(footnoteSeparatorLayout, page);
-                            double separatorTop = storyTop + FootnoteSeparatorGapPoints + separatorHeight;
-                            placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, footnoteSeparatorLayout, sourceBlockIndex, separatorTop, separatorY: null));
-                            placedFootnoteSeparator = true;
-                        }
-
-                        placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, storyLayout, sourceBlockIndex, storyTop, separatorY: null));
-                    }
-                    else
-                    {
-                        placedStories.Add(PlaceRelatedStory(page, pageIndex, storyLayout, sourceBlockIndex));
-                    }
+                    pageFootnoteStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
                 }
             }
 
+            IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories = PlaceFootnoteStories(page, pageIndex, pageFootnoteStories, footnoteSeparatorLayout);
             pagesWithStories[pageIndex] = placedStories.Count == 0
                 ? page
-                : page with { PlacedRelatedStories = placedStories.ToArray() };
+                : page with { PlacedRelatedStories = placedStories };
         }
 
         return AddPlacedEndnoteStories(document, pagesWithStories, relatedStoryLayouts, placedStoryKeys);
@@ -2970,6 +2948,41 @@ internal sealed class DocxLayoutEngine
         double storyHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
         double topY = page.MarginBottom + storyHeight;
         return PlaceRelatedStoryAtTop(page, pageIndex, storyLayout, sourceBlockIndex, topY, topY + FootnoteSeparatorGapPoints);
+    }
+
+    private static IReadOnlyList<DocxPlacedRelatedStoryLayout> PlaceFootnoteStories(
+        DocxLayoutPage page,
+        int pageIndex,
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
+        DocxRelatedStoryLayout? separatorLayout)
+    {
+        if (footnoteStories.Count == 0)
+        {
+            return [];
+        }
+
+        double bodyHeight = footnoteStories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, page));
+        double cursorTop = page.MarginBottom + bodyHeight;
+        var placedStories = new List<DocxPlacedRelatedStoryLayout>(footnoteStories.Count + (separatorLayout is null ? 0 : 1));
+        if (separatorLayout is not null)
+        {
+            double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
+            double separatorTop = cursorTop + FootnoteSeparatorGapPoints + separatorHeight;
+            placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorY: null));
+        }
+
+        bool firstStory = true;
+        foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
+        {
+            double? separatorY = separatorLayout is null && firstStory
+                ? cursorTop + FootnoteSeparatorGapPoints
+                : null;
+            placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, story.StoryLayout, story.Location.SourceBlockIndex, cursorTop, separatorY));
+            cursorTop -= ResolvePlacedStoryHeight(story.StoryLayout, page);
+            firstStory = false;
+        }
+
+        return placedStories.ToArray();
     }
 
     private static DocxPlacedRelatedStoryLayout PlaceRelatedStoryAtTop(

@@ -8100,6 +8100,16 @@ Current validation baseline:
   `DocxReaderPreservesFootnoteStoryTypesWithoutPlacingSeparators`, `docx-core --skip-slow` (`61`),
   `docx-page --skip-slow` (`52`), and `docx-tables --skip-slow` (`126`). Keep Office-derived continuation
   separators, multi-page note splitting, and stacked multi-footnote ordering open.
+  2026-06-03 follow-up: page-level footnote placement now groups all resolved footnote stories for a page
+  before placement, stacks normal footnote bodies in marker order, and emits either one structural separator
+  story or one generic separator geometry for the group. Reservation now mirrors that ownership by charging
+  the separator once for a source block and then adding measured note body heights. Bottom-up coverage adds a
+  two-footnote same-page layout case and verifies the stories no longer overlap, the first story sits above
+  the second, and the generic separator is emitted once. Validation passed focused
+  `DocxLayoutStacksMultipleFootnotesOnOnePage`, `DocxReaderPreservesFootnoteStoryTypesWithoutPlacingSeparators`,
+  `docx-core --skip-slow` (`61`), `docx-page --skip-slow` (`53`), and `docx-tables --skip-slow` (`126`).
+  Keep Office-exact multi-page footnote continuation, continuation separators, and cross-page spill behavior
+  open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

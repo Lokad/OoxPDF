@@ -15425,6 +15425,62 @@ internal static class DocxTests
         TestAssert.True(bodyBottom >= footnoteTop, $"Body layout should reserve page space above placed footnotes; body bottom {bodyBottom} footnote top {footnoteTop}.");
     }
 
+    public static void DocxLayoutStacksMultipleFootnotesOnOnePage()
+    {
+        DocxParagraph anchor = CreateDocxLayoutParagraph("Anchor paragraph with two footnote markers", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "31",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 0,
+                    TextOffsetInRun: 8),
+                new DocxInlineReference(
+                    "Footnote",
+                    "32",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "2",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 0,
+                    TextOffsetInRun: 22)
+            ]
+        };
+        DocxParagraph firstFootnote = CreateDocxLayoutParagraph("First footnote body", 10d, 12d);
+        DocxParagraph secondFootnote = CreateDocxLayoutParagraph("Second footnote body", 10d, 12d);
+        var firstStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "31",
+            [new DocxParagraphElement(firstFootnote)],
+            [],
+            []);
+        var secondStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "32",
+            [new DocxParagraphElement(secondFootnote)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(anchor)], []) with
+        {
+            RelatedStories = [firstStory, secondStory]
+        };
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutPageSnapshot footnotePage = snapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 2);
+        DocxPlacedRelatedStoryLayoutSnapshot[] placedStories = footnotePage.PlacedRelatedStories.ToArray();
+        DocxPlacedRelatedStoryLayoutSnapshot firstPlaced = placedStories.Single(story => story.Id == "31");
+        DocxPlacedRelatedStoryLayoutSnapshot secondPlaced = placedStories.Single(story => story.Id == "32");
+
+        TestAssert.True(firstPlaced.TopY > secondPlaced.TopY, "The first footnote body should be placed above the later footnote body instead of both stories sharing the page bottom.");
+        TestAssert.True(secondPlaced.TopY <= firstPlaced.TopY - firstPlaced.Height + 0.001d, "Stacked footnote bodies should not overlap vertically.");
+        TestAssert.True(firstPlaced.SeparatorY is not null && secondPlaced.SeparatorY is null, "Generic separator geometry should be emitted once above the stacked footnote group.");
+    }
+
     public static void DocxLayoutPlacesFootnoteOnRenderedMarkerRunPage()
     {
         var leadingRun = new DocxTextRun(
