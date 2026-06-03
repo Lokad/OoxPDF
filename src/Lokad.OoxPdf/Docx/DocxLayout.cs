@@ -357,8 +357,15 @@ internal sealed record DocxLayoutSnapshot(
     {
         return pages
             .SelectMany((page, pageIndex) => page.TableRows.Select(row => (pageIndex, row)))
-            .GroupBy(entry => entry.row.TableIndex)
-            .OrderBy(group => group.Key)
+            .GroupBy(entry => new TableSnapshotKey(
+                entry.row.StoryKind,
+                entry.row.StoryVariantType,
+                entry.row.TableIndex,
+                entry.row.SourceBlockIndex))
+            .OrderBy(group => group.Key.StoryKind ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(group => group.Key.StoryVariantType ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(group => group.Key.TableIndex)
+            .ThenBy(group => group.Key.SourceBlockIndex)
             .Select(group =>
             {
                 DocxTableRowSnapshot first = group.First().row;
@@ -370,7 +377,7 @@ internal sealed record DocxLayoutSnapshot(
                 DocxTableCellSnapshot[] authoredCells = distinctRows.SelectMany(row => row.Cells).ToArray();
                 DocxTableCellSnapshot[] laidOutCells = group.SelectMany(entry => entry.row.Cells).ToArray();
                 return new DocxTableSnapshot(
-                    group.Key,
+                    group.Key.TableIndex,
                     first.SourceBlockIndex,
                     group.Min(entry => entry.pageIndex),
                     group.Max(entry => entry.pageIndex),
@@ -402,10 +409,14 @@ internal sealed record DocxLayoutSnapshot(
                     authoredCells.Count(cell => string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase)),
                     authoredCells.Count(cell => cell.IsVerticalMergeContinuation),
                     laidOutCells.Count(cell => cell.IsVerticalMergeContinuation),
-                    laidOutCells.Count(cell => string.Equals(cell.VisualOwnership, DocxTableCellVisualOwnership.MissingVerticalMergeOwner.ToString(), StringComparison.Ordinal)));
+                    laidOutCells.Count(cell => string.Equals(cell.VisualOwnership, DocxTableCellVisualOwnership.MissingVerticalMergeOwner.ToString(), StringComparison.Ordinal)),
+                    first.StoryKind,
+                    first.StoryVariantType);
             })
             .ToArray();
     }
+
+    private sealed record TableSnapshotKey(string? StoryKind, string? StoryVariantType, int TableIndex, int SourceBlockIndex);
 
     private static IReadOnlyList<DocxLayoutSourceBlockSnapshot> ToSourceBlockSnapshots(IReadOnlyList<DocxLayoutPageSnapshot> pages)
     {
@@ -484,6 +495,7 @@ internal sealed record DocxLayoutSnapshot(
             .ToArray();
         IReadOnlyList<DocxTableRowSnapshot> tableRows = page.Items
             .OfType<DocxTableRowLayout>()
+            .Concat(page.StaticTableRows)
             .Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex, page.MarginBottom))
             .ToArray();
         double verticalTop = items.Count == 0 ? 0d : items.Max(item => item.Y + item.Height);
@@ -778,6 +790,8 @@ internal sealed record DocxLayoutSnapshot(
             row.HasTablePropertyExceptionCellMargins,
             row.CantSplit,
             row.CantSplitValue,
+            row.StoryKind,
+            row.StoryVariantType,
             cells);
     }
 
@@ -1199,6 +1213,8 @@ internal sealed record DocxTableRowSnapshot(
     bool HasTablePropertyExceptionCellMargins,
     bool CantSplit,
     string? CantSplitValue,
+    string? StoryKind,
+    string? StoryVariantType,
     IReadOnlyList<DocxTableCellSnapshot> Cells);
 
 internal sealed record DocxTableSnapshot(
@@ -1234,7 +1250,9 @@ internal sealed record DocxTableSnapshot(
     int AuthoredVerticalMergeRestartCellCount,
     int AuthoredVerticalMergeContinuationCellCount,
     int LaidOutVerticalMergeContinuationCellCount,
-    int MissingVerticalMergeOwnerCellCount);
+    int MissingVerticalMergeOwnerCellCount,
+    string? StoryKind = null,
+    string? StoryVariantType = null);
 
 internal sealed record DocxTableCellSnapshot(
     int CellIndex,

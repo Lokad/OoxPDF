@@ -4937,6 +4937,11 @@ block models and richer section/pagination layout before adding more Word pagina
   `docx-page --skip-slow` (`43`). Keep the canonical-inventory item open for compatibility deprecation and
   public Office-oracle coverage of exact static story table vertical placement, but the previous
   model/layout/rendering invisibility gap is closed.
+  2026-06-03 table-ownership follow-up: static header/footer table rows now also participate in table-level
+  layout snapshots with `StoryKind`/`StoryVariantType` provenance on row and table snapshots, so a local
+  static table ordinal cannot collide with a body table ordinal or another static story. The same bottom-up
+  static header table test now asserts table-level ownership, preserving private-safe diagnostics for rendered
+  static tables. Validation passed `docx-tables --skip-slow` (`122`) and `docx-page --skip-slow` (`43`).
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.

@@ -12955,10 +12955,14 @@ internal static class DocxTests
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         TestAssert.Equal(1, snapshot.Pages[0].StaticTableRowCount);
+        TestAssert.Equal(1, snapshot.Pages[0].TableRows.Count);
+        TestAssert.True(snapshot.Pages[0].TableRows.Single().StoryKind == "Header" && snapshot.Pages[0].TableRows.Single().StoryVariantType == "default", "Static table row snapshots should carry story provenance so diagnostics can distinguish them from body tables.");
         DocxLayoutItemSnapshot staticItem = snapshot.Pages[0].StaticItems.Single();
         TestAssert.True(staticItem.Kind == "StaticHeaderTableRow" && staticItem.StoryVariantType == "default" && staticItem.TextLength == 2, "Static table snapshots should expose private-safe header table ownership and text length.");
         DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single();
         TestAssert.True(headerStory.Kind == "Header" && headerStory.TableRowCount == 1 && headerStory.TextLineCount == 0 && headerStory.TextLength == 2, "Static story snapshots should count table rows separately from text lines.");
+        DocxTableSnapshot tableSnapshot = snapshot.Tables.Single();
+        TestAssert.True(tableSnapshot.StoryKind == "Header" && tableSnapshot.StoryVariantType == "default" && tableSnapshot.RowCount == 1 && tableSnapshot.LaidOutRowCount == 1, "Static header tables should participate in table-level ownership snapshots without colliding with body table ordinals.");
     }
 
     public static void DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants()
