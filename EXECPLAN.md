@@ -2617,6 +2617,12 @@ High-priority actions:
     content from raw document reading, promote paragraph spacing/keep decisions into the block-pagination
     stage, then enrich private-safe layout traces so pagination drift can be diagnosed without inspecting
     private text.
+    2026-06-03 progress: DOCX reading now retains a private-safe `DocxStyleCatalog` summary on the document
+    instead of discarding all style topology after flattening resolved paragraph/run/table properties. The
+    catalog records defaults, paragraph/character/table style ids, `basedOn` links, table default id, and
+    property/conditional-region presence; structure snapshots and `DocxInspect` now expose it through
+    `style-catalog.json`. Bottom-up based-on paragraph and table-style tests lock the summary without changing
+    rendering behavior. Validation passed `docx-core --skip-slow` (`56`) and `docx-tables --skip-slow` (`122`).
   - [x] 2026-05-31: Added a private-safe `DocxLayoutSnapshot` inspection surface over the layout model. It
     reports page dimensions, item counts, item kinds, bounds, cell counts, and text lengths, but not document
     text. This gives private DOCX pagination/table work a restartable trace target before adding Word layout

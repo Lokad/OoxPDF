@@ -832,6 +832,10 @@ internal static class DocxTests
         TestAssert.Equal(14d, run.FontSize);
         TestAssert.Equal("112233", run.ColorHex ?? string.Empty);
         TestAssert.True(run.Bold, "Child paragraph style run properties should merge over the inherited base run size/color.");
+
+        DocxStyleDefinitionSummary childStyle = document.StyleCatalog.ParagraphStyles.Single(style => style.StyleId == "Child");
+        TestAssert.True(childStyle.BasedOnStyleId == "Base" && childStyle.HasParagraphProperties && childStyle.HasRunProperties, "The DOCX style catalog should retain private-safe paragraph style topology after resolved properties are applied.");
+        TestAssert.Equal(2, new DocxRenderer().InspectStructure(document).StyleCatalog.ParagraphStyles.Count);
     }
 
     public static void DocxReaderPreservesEmptyParagraphBodyElement()
@@ -7661,6 +7665,9 @@ internal static class DocxTests
         TestAssert.Equal(DocxTextAlignment.Right, headerParagraph.Alignment);
         TestAssert.True(headerParagraph.Runs.Single().Bold, "Inherited base table run style should apply bold.");
         TestAssert.Equal("336699", headerParagraph.Runs.Single().ColorHex ?? string.Empty);
+
+        DocxTableStyleDefinitionSummary tableStyle = document.StyleCatalog.TableStyles.Single(style => style.StyleId == "ChildTable");
+        TestAssert.True(tableStyle.BasedOnStyleId == "BaseTable" && tableStyle.HasCellProperties && tableStyle.HasParagraphProperties && tableStyle.HasRunProperties && tableStyle.ConditionalRegionCount == 1, "The DOCX style catalog should retain private-safe table style topology after basedOn resolution.");
     }
 
     public static void DocxReaderTableStyleAppliesTableProperties()

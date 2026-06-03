@@ -39,6 +39,9 @@ File.WriteAllText(
     Path.Combine(outputDirectory, "structure-snapshot.json"),
     JsonSerializer.Serialize(structure, options));
 File.WriteAllText(
+    Path.Combine(outputDirectory, "style-catalog.json"),
+    JsonSerializer.Serialize(document.StyleCatalog, options));
+File.WriteAllText(
     Path.Combine(outputDirectory, "text-emission-snapshot.json"),
     JsonSerializer.Serialize(textEmission, options));
 File.WriteAllText(

@@ -16,6 +16,7 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxTable> Tables)
 {
     public DocxFontCatalog FontCatalog { get; init; } = DocxFontCatalog.Empty;
+    public DocxStyleCatalog StyleCatalog { get; init; } = DocxStyleCatalog.Empty;
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
         new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
@@ -187,6 +188,33 @@ internal sealed record DocxThemeFonts(
 {
     public static DocxThemeFonts Empty { get; } = new(null, null);
 }
+
+internal sealed record DocxStyleCatalog(
+    bool HasRunDefaults,
+    bool HasParagraphDefaults,
+    string? DefaultTableStyleId,
+    IReadOnlyList<DocxStyleDefinitionSummary> ParagraphStyles,
+    IReadOnlyList<DocxStyleDefinitionSummary> CharacterStyles,
+    IReadOnlyList<DocxTableStyleDefinitionSummary> TableStyles)
+{
+    public static DocxStyleCatalog Empty { get; } = new(false, false, null, [], [], []);
+}
+
+internal sealed record DocxStyleDefinitionSummary(
+    string StyleId,
+    string? BasedOnStyleId,
+    bool HasParagraphProperties,
+    bool HasRunProperties);
+
+internal sealed record DocxTableStyleDefinitionSummary(
+    string StyleId,
+    string? BasedOnStyleId,
+    bool HasTableProperties,
+    bool HasCellProperties,
+    bool HasParagraphProperties,
+    bool HasRunProperties,
+    int BorderCount,
+    int ConditionalRegionCount);
 
 internal sealed record DocxPageSettings(
     string? WidthValue,

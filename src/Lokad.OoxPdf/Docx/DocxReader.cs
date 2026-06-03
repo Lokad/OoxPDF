@@ -95,6 +95,7 @@ internal sealed class DocxReader
                 tables)
             {
                 FontCatalog = fontCatalog,
+                StyleCatalog = ToStyleCatalog(styles),
                 HeaderParagraphsByType = headersByType,
                 FooterParagraphsByType = footersByType,
                 HeaderBodyElementsByType = headerBodyElementsByType,
@@ -136,6 +137,7 @@ internal sealed class DocxReader
             tables)
         {
             FontCatalog = fontCatalog,
+            StyleCatalog = ToStyleCatalog(styles),
             HeaderParagraphsByType = headersByType,
             FooterParagraphsByType = footersByType,
             HeaderBodyElementsByType = headerBodyElementsByType,
@@ -2955,7 +2957,49 @@ internal sealed class DocxReader
         DocxTableStyle? defaultTableStyle = defaultTableStyleId is not null && resolvedTableStyles.TryGetValue(defaultTableStyleId, out DocxTableStyle? resolvedDefault)
             ? resolvedDefault
             : null;
-        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyle);
+        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyleId, defaultTableStyle);
+    }
+
+    private static DocxStyleCatalog ToStyleCatalog(DocxStyleSet styles)
+    {
+        return new DocxStyleCatalog(
+            styles.RunDefaults != DocxResolvedRunProperties.Empty,
+            styles.ParagraphDefaults != DocxResolvedParagraphProperties.Empty,
+            styles.DefaultTableStyleId,
+            styles.ParagraphStyles
+                .OrderBy(style => style.Key, StringComparer.Ordinal)
+                .Select(style => ToStyleDefinitionSummary(style.Key, style.Value))
+                .ToArray(),
+            styles.CharacterStyles
+                .OrderBy(style => style.Key, StringComparer.Ordinal)
+                .Select(style => ToStyleDefinitionSummary(style.Key, style.Value))
+                .ToArray(),
+            styles.TableStyles
+                .OrderBy(style => style.Key, StringComparer.Ordinal)
+                .Select(style => ToTableStyleDefinitionSummary(style.Key, style.Value))
+                .ToArray());
+    }
+
+    private static DocxStyleDefinitionSummary ToStyleDefinitionSummary(string styleId, DocxStyle style)
+    {
+        return new DocxStyleDefinitionSummary(
+            styleId,
+            style.BasedOnStyleId,
+            style.Paragraph != DocxResolvedParagraphProperties.Empty,
+            style.Run != DocxResolvedRunProperties.Empty);
+    }
+
+    private static DocxTableStyleDefinitionSummary ToTableStyleDefinitionSummary(string styleId, DocxTableStyle style)
+    {
+        return new DocxTableStyleDefinitionSummary(
+            styleId,
+            style.BasedOnStyleId,
+            style.Table != DocxTableStyleProperties.Empty,
+            style.Cell != DocxTableCellStyle.Empty,
+            style.Cell.Paragraph != DocxResolvedParagraphProperties.Empty,
+            style.Cell.Run != DocxResolvedRunProperties.Empty,
+            style.TableBorders.Count,
+            style.ConditionalRegions.Count);
     }
 
     private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog)
@@ -3436,6 +3480,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, DocxStyle> ParagraphStyles,
         IReadOnlyDictionary<string, DocxStyle> CharacterStyles,
         IReadOnlyDictionary<string, DocxTableStyle> TableStyles,
+        string? DefaultTableStyleId,
         DocxTableStyle? DefaultTableStyle)
     {
         public static DocxStyleSet Empty { get; } = new(
@@ -3444,6 +3489,7 @@ internal sealed class DocxReader
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxTableStyle>(),
+            null,
             null);
     }
 
@@ -3623,7 +3669,12 @@ internal sealed class DocxReader
             resolved = resolved.Merge(chain.Pop());
         }
 
-        return resolved with { BasedOnStyleId = null };
+        return resolved with
+        {
+            BasedOnStyleId = tableStyles.TryGetValue(styleId, out DocxTableStyle? source)
+                ? source.BasedOnStyleId
+                : null
+        };
     }
 
     private static DocxTableCellStyle ReadTableCellStyle(
