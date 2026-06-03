@@ -638,6 +638,16 @@ High-priority actions:
   source-indexed row mappings and emits `CandidateLineHeightSourceBuckets`. Future compact-list and
   table-cell row-rhythm probes can therefore group PDF Y residuals by the line-height rule actually selected
   by layout, instead of inferring ownership from the presence of body/list-label metric candidates.
+  2026-06-04 public evidence update: fresh public runs
+  `docx-ladder-03-compact-bullet-alt-line115` (`20260604-010009`) and
+  `docx-ladder-03-compact-bullet-alt-bottom` (`20260604-010208`) both map all `43/43` PDF rows with
+  `CandidateLineHeightSourceBuckets = BodySingleLineAuto`. For `line115`, Office repeated-row mean excluding
+  the largest paragraph-boundary gap is `16.3735` pt versus candidate `16.326375` pt; for `alt-bottom`,
+  Office is `16.4755` pt versus candidate `16.44845` pt. The same font metric buckets appear in both
+  (`BodyWindowsLineHeightPoints=12.207031`, `ListLabelWindowsLineHeightPoints=12.250977`), but directly using
+  list-label Windows extent would nearly fit the `1.19` case and overshoot the `1.20` case. Keep the next
+  implementation branch focused on Word's structural line-box/baseline-grid ownership and row-advance
+  quantization, not on a direct label-metric substitution.
   2026-06-02 accepted default-model update: missing paragraph spacing now follows the public Office-observed
   Word defaults (`1.2` auto-line factor and implicit `8pt` after spacing), replacing the earlier split between
   untokened and spacing-token paragraphs. Public compact-list probes improved or stayed guarded

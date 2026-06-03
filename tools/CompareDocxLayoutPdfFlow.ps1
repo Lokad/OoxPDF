@@ -244,11 +244,13 @@ function Get-LayoutLines($Layout) {
         if ($IncludeStaticStories) {
             foreach ($item in @($Layout.Pages[$pageIndex].StaticItems)) {
                 if ([string]$item.Kind -eq "StaticHeaderTextLine" -or [string]$item.Kind -eq "StaticFooterTextLine" -or [string]$item.Kind -eq "StaticTextLine") {
-                    $lines.Add((New-CandidateLayoutLine $item $pageNumber $lineIndex++ $true (Get-StaticStoryKind $item) $item.StoryVariantType))
+                    $lines.Add((New-CandidateLayoutLine $item $pageNumber $lineIndex $true (Get-StaticStoryKind $item) $item.StoryVariantType))
+                    $lineIndex++
                 }
                 elseif ([string]$item.Kind -eq "StaticHeaderTableRow" -or [string]$item.Kind -eq "StaticFooterTableRow" -or [string]$item.Kind -eq "StaticTableRow") {
                     foreach ($line in @($item.TextLines)) {
-                        $lines.Add((New-CandidateLayoutLine $line $pageNumber $lineIndex++ $true (Get-StaticStoryKind $item) $item.StoryVariantType))
+                        $lines.Add((New-CandidateLayoutLine $line $pageNumber $lineIndex $true (Get-StaticStoryKind $item) $item.StoryVariantType))
+                        $lineIndex++
                     }
                 }
             }
@@ -256,11 +258,13 @@ function Get-LayoutLines($Layout) {
 
         foreach ($item in @($Layout.Pages[$pageIndex].Items)) {
             if ([string]$item.Kind -eq "TextLine") {
-                $lines.Add((New-CandidateLayoutLine $item $pageNumber $lineIndex++ $false "Body" $null))
+                $lines.Add((New-CandidateLayoutLine $item $pageNumber $lineIndex $false "Body" $null))
+                $lineIndex++
             }
             elseif ([string]$item.Kind -eq "TableRow") {
                 foreach ($line in @($item.TextLines)) {
-                    $lines.Add((New-CandidateLayoutLine $line $pageNumber $lineIndex++ $false "Body" $null))
+                    $lines.Add((New-CandidateLayoutLine $line $pageNumber $lineIndex $false "Body" $null))
+                    $lineIndex++
                 }
             }
         }
