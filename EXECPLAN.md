@@ -7465,6 +7465,21 @@ Current validation baseline:
   which strengthens the PDF-level structural oracle. Rendering remains unchanged: this still needs a planner
   target-advance model derived from Office-like width/shaping geometry, not a lookup table of observed
   normalized side ranges or `Tc` buckets.
+  2026-06-04 target-advance architecture follow-up: the DOCX text-emission planner now has an explicit
+  `DocxTextStateAdvanceTarget` record, separating the mechanics of distributing a known emitted-advance target
+  into uniform PDF `Tc` from the still-open problem of deriving Word's target advance. The text-state summary
+  tool now exposes `ReferenceTcTargetAdvanceModel` at the run level and splits hypotheses into reference-oracle
+  inputs and candidate-only inputs, with `RendererReady=false` until the target can be computed without the
+  reference PDF. Refreshed public summaries in
+  `artifacts/visual/docx-text-state-target-advance-summary-20260604.json` show the current state across
+  `docx-ladder-03-text-state-context` (`20260603-224815`), `docx-ladder-03-text-state-size-matrix`
+  (`20260603-200453`), and `docx-ladder-03-text-state-font-matrix` (`20260603-200453`): the reference-emitted
+  oracle hypotheses match all Word nonzero-`Tc` pairs (`11/11`, `19/19`, `19/19`), while candidate-only
+  `planner-layout-minus-rounded-per-gap` and `planner-layout-minus-emitted-per-gap` match none (`0/11`,
+  `0/19`, `0/19`). This confirms the planner has the right place to apply a structural target once discovered,
+  but the renderer must not promote current layout or rounded-width residuals into `Tc`; the missing piece is
+  an Office-like target-advance derivation from font/PDF width and shaping structure. Validation passed
+  `docx-core --skip-slow` (`63`) and full solution build.
   2026-06-02 glyph-signature follow-up: candidate DOCX text-emission snapshots now expose a private-safe
   glyph-advance signature per segment: mapped glyph count, glyph-pair count, summed advance units, summed
   kerning units, and a fixed-width hash over glyph/advance/kerning structure. `SummarizeDocxTextState.ps1`

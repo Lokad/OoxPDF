@@ -220,6 +220,28 @@ function Select-TcStructuralDiscriminators($Reports) {
     )
 }
 
+function New-TcTargetAdvanceModelReport($Pairs, $TargetHypotheses) {
+    $nonzeroReferencePairs = @($Pairs | Where-Object { [Math]::Abs([double]$_.ReferenceTc) -gt 0.001d })
+    $withGlyphGaps = @($nonzeroReferencePairs | Where-Object { $null -ne $_.PlannerGlyphGapCount -and [int]$_.PlannerGlyphGapCount -gt 0 })
+    $withReferenceEmittedAdvance = @($withGlyphGaps | Where-Object { $null -ne $_.ReferenceEmittedAdvance -and [string]$_.ReferenceEmittedAdvance -ne "" })
+    $withPlannerEmittedAdvance = @($withGlyphGaps | Where-Object { $null -ne $_.PlannerEmittedAdvance -and [string]$_.PlannerEmittedAdvance -ne "" })
+    $withPlannerRoundedAdvance = @($withGlyphGaps | Where-Object { $null -ne $_.PlannerRoundedWidth -and [string]$_.PlannerRoundedWidth -ne "" })
+    $oracleHypotheses = @($TargetHypotheses | Where-Object { $_.Name -like "reference-emitted-*" })
+    $candidateInputHypotheses = @($TargetHypotheses | Where-Object { $_.Name -notlike "reference-emitted-*" })
+
+    return [pscustomobject]@{
+        NonzeroReferenceTcPairCount = $nonzeroReferencePairs.Count
+        NonzeroReferenceTcPairsWithGlyphGaps = $withGlyphGaps.Count
+        NonzeroReferenceTcPairsWithReferenceEmittedAdvance = $withReferenceEmittedAdvance.Count
+        NonzeroReferenceTcPairsWithPlannerEmittedAdvance = $withPlannerEmittedAdvance.Count
+        NonzeroReferenceTcPairsWithPlannerRoundedAdvance = $withPlannerRoundedAdvance.Count
+        OracleTargetAdvanceHypotheses = $oracleHypotheses
+        CandidateInputHypotheses = $candidateInputHypotheses
+        RendererReady = $false
+        RendererBlocker = "Word Tc is explained only when the reference emitted advance is available; candidate-only width residuals remain mismatched or ambiguous."
+    }
+}
+
 function TextLength($Operation) {
     if ($null -eq $Operation.DecodedText) {
         return 0
@@ -958,7 +980,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             param($pair)
             $pair.PlannerRoundedResidualPerGap
         }
-        New-TcTargetHypothesisReport "planner-emitted-minus-layout-per-gap" $pairs {
+        New-TcTargetHypothesisReport "planner-layout-minus-emitted-per-gap" $pairs {
             param($pair)
             $pair.PlannerEmittedResidualPerGap
         }
@@ -972,6 +994,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcAmbiguityChecks = $referenceTcAmbiguityChecks
         ReferenceTcStructuralDiscriminators = Select-TcStructuralDiscriminators $referenceTcAmbiguityChecks
         ReferenceTcTargetHypotheses = $referenceTcTargetHypotheses
+        ReferenceTcTargetAdvanceModel = New-TcTargetAdvanceModelReport $pairs $referenceTcTargetHypotheses
         ReferenceTcByPlannerTextClass = @(Group-Count $pairs {
             param($pair)
             $pair.PlannerTextClass + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
@@ -1125,6 +1148,7 @@ $summaries = foreach ($run in $runs) {
     Ensure-CandidateDocxInspect $resolvedRun
     $candidatePlannerSummary = Read-CandidatePlannerSummary $resolvedRun
     $candidatePlannerSnapshot = Read-CandidatePlannerSnapshot $resolvedRun
+    $candidatePlannerReferencePairs = Summarize-PlannerReferencePairs $referenceOps $candidatePlannerSnapshot
     $metricsPath = Join-Path $resolvedRun "comparison\metrics.json"
     $metrics = if (Test-Path -LiteralPath $metricsPath) {
         $pages = Read-JsonArray $metricsPath
@@ -1148,7 +1172,8 @@ $summaries = foreach ($run in $runs) {
         Candidate = Summarize-Operations $candidateOps
         CandidatePlanner = $candidatePlannerSummary
         CandidatePlannerSegments = Summarize-PlannerSnapshot $candidatePlannerSnapshot
-        CandidatePlannerReferencePairs = Summarize-PlannerReferencePairs $referenceOps $candidatePlannerSnapshot
+        CandidatePlannerReferencePairs = $candidatePlannerReferencePairs
+        ReferenceTcTargetAdvanceModel = $candidatePlannerReferencePairs.ReferenceTcTargetAdvanceModel
         TextClassCountDeltas = New-TextClassCountDeltas $referenceOps $candidateOps $candidatePlannerSnapshot
     }
 }

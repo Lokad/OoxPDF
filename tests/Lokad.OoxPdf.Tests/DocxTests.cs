@@ -543,6 +543,10 @@ internal static class DocxTests
     {
         var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.12d);
 
+        DocxTextStateAdvanceTarget target = DocxTextEmissionPlanner.CreateAdvanceTarget(
+            glyphGapCount: 3,
+            currentEmittedAdvance: 24d,
+            targetEmittedAdvance: 24.18d);
         double tc = DocxTextEmissionPlanner.TextStateCharacterSpacingForAdvanceTarget(
             glyphGapCount: 3,
             currentEmittedAdvance: 24d,
@@ -562,6 +566,11 @@ internal static class DocxTests
             targetEmittedAdvance: 24.18d,
             compensatePdfCharacterSpacing: true);
 
+        TestAssert.Equal(3, target.GlyphGapCount);
+        TestAssert.Equal(24d, target.CurrentEmittedAdvance);
+        TestAssert.Equal(24.18d, target.TargetEmittedAdvance);
+        TestAssert.True(Math.Abs(target.CharacterSpacing - 0.06d) < 0.0001d, "Advance target should expose the derived uniform text-state spacing.");
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, target.Source);
         TestAssert.True(Math.Abs(tc - 0.06d) < 0.0001d, "Tc should be the emitted-advance delta distributed over glyph gaps.");
         TestAssert.True(Math.Abs(emittedPlan.PdfCharacterSpacing - 0.06d) < 0.0001d, "Uncompensated plans should carry the derived Tc.");
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, emittedPlan.PdfCharacterSpacingSource);

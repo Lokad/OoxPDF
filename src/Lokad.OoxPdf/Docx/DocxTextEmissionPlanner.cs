@@ -24,6 +24,13 @@ internal readonly record struct DocxTextStateCharacterSpacingTarget(
     double CharacterSpacing,
     DocxTextStateCharacterSpacingSource Source);
 
+internal readonly record struct DocxTextStateAdvanceTarget(
+    int GlyphGapCount,
+    double CurrentEmittedAdvance,
+    double TargetEmittedAdvance,
+    double CharacterSpacing,
+    DocxTextStateCharacterSpacingSource Source);
+
 internal readonly record struct DocxTextEmissionPart(string Text, double X, double Width);
 
 internal readonly record struct DocxTextEmissionCharacterProfile(
@@ -157,9 +164,23 @@ internal static class DocxTextEmissionPlanner
         double currentEmittedAdvance,
         double targetEmittedAdvance)
     {
-        return glyphGapCount <= 0
+        return CreateAdvanceTarget(glyphGapCount, currentEmittedAdvance, targetEmittedAdvance).CharacterSpacing;
+    }
+
+    public static DocxTextStateAdvanceTarget CreateAdvanceTarget(
+        int glyphGapCount,
+        double currentEmittedAdvance,
+        double targetEmittedAdvance)
+    {
+        double characterSpacing = glyphGapCount <= 0
             ? 0d
             : (targetEmittedAdvance - currentEmittedAdvance) / glyphGapCount;
+        return new(
+            glyphGapCount,
+            currentEmittedAdvance,
+            targetEmittedAdvance,
+            characterSpacing,
+            DocxTextStateCharacterSpacingSource.AdvanceTarget);
     }
 
     public static DocxTextEmissionPlan CreateForAdvanceTarget(
@@ -170,16 +191,16 @@ internal static class DocxTextEmissionPlanner
         double targetEmittedAdvance,
         bool compensatePdfCharacterSpacing)
     {
-        double pdfCharacterSpacing = TextStateCharacterSpacingForAdvanceTarget(
+        DocxTextStateAdvanceTarget target = CreateAdvanceTarget(
             glyphGapCount,
             currentEmittedAdvance,
             targetEmittedAdvance);
         return Create(
             style,
             layoutFontSize,
-            pdfCharacterSpacing,
+            target.CharacterSpacing,
             compensatePdfCharacterSpacing,
-            DocxTextStateCharacterSpacingSource.AdvanceTarget);
+            target.Source);
     }
 
     public static DocxTextEmissionCharacterProfile ClassifyText(string text)
