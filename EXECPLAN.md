@@ -7273,6 +7273,18 @@ Current validation baseline:
   independent Office target-advance model to compute that delta without looking at the reference PDF. Keep
   rendering unchanged until the planner can derive the target advance from Office-like font/glyph geometry
   rather than token strings, table roles, font names, or observed `Tc` buckets.
+  2026-06-03 reference-width-signature follow-up: `PdfInspect` text operations now include a private-safe
+  `WidthSignature` derived from the reference PDF font width map and encoded payload: code count, pair count,
+  total width units, and pair/left/right width ranges. `SummarizeDocxTextState.ps1` refreshes stale inspected
+  PDF text-operation JSON that lacks this field and joins the reference PDF width ranges with candidate
+  planner glyph ranges in paired summaries. Public rerun summaries for `docx-ladder-03-text-state-context`,
+  `docx-ladder-03-text-state-size-matrix`, and `docx-ladder-03-text-state-font-matrix` now have reference
+  width signatures on every nonzero `Tc` pair (`11`, `19`, `19`; no missing reference widths), with
+  `ReferenceTcByReferenceFontSizeAndPdfWidthSideRange` and `ReferenceVsPlannerPdfWidthSideRange` buckets
+  available for the next oracle pass. This still deliberately leaves rendering unchanged: early paired data
+  shows reference PDF width units and candidate OpenType advance units are not directly comparable as raw
+  numbers, so the next implementation step should normalize or model Office's target advance before promoting
+  any residual into `Tc`.
   2026-06-02 glyph-signature follow-up: candidate DOCX text-emission snapshots now expose a private-safe
   glyph-advance signature per segment: mapped glyph count, glyph-pair count, summed advance units, summed
   kerning units, and a fixed-width hash over glyph/advance/kerning structure. `SummarizeDocxTextState.ps1`

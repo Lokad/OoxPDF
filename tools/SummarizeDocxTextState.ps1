@@ -200,9 +200,28 @@ function TextClass($Operation) {
     return "mixed"
 }
 
+function Test-PdfTextOperationsFresh([string] $Path) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return $false
+    }
+
+    $operations = Read-JsonArray $Path
+    if ($operations.Count -eq 0) {
+        return $true
+    }
+
+    foreach ($operation in $operations) {
+        if ($null -ne $operation.WidthSignature) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Ensure-TextOperations([string] $Run, [string] $Side) {
     $runLocal = Join-Path $Run ("comparison\pdf-text\" + $Side + "\text-operations.json")
-    if (Test-Path -LiteralPath $runLocal) {
+    if (Test-PdfTextOperationsFresh $runLocal) {
         return $runLocal
     }
 
@@ -227,7 +246,7 @@ function Ensure-TextOperations([string] $Run, [string] $Side) {
     }
 
     $json = Join-Path $out "text-operations.json"
-    if (-not (Test-Path -LiteralPath $json)) {
+    if (-not (Test-PdfTextOperationsFresh $json)) {
         pwsh tools\InspectPdf.ps1 -InputPdf $pdf -OutputDirectory $out -TextOnly | Out-Null
     }
 
@@ -679,6 +698,18 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             ReferenceNaturalWidth = $reference.NaturalWidthPoints
             ReferenceEmittedAdvance = $reference.EmittedAdvancePoints
             ReferenceFontSize = $reference.FontSize
+            ReferenceWidthCodeCount = $reference.WidthSignature.CodeCount
+            ReferenceWidthPairCount = $reference.WidthSignature.PairCount
+            ReferenceWidthUnits = $reference.WidthSignature.WidthUnits
+            ReferencePairWidthUnits = $reference.WidthSignature.PairWidthUnits
+            ReferencePairLeftWidthUnits = $reference.WidthSignature.PairLeftWidthUnits
+            ReferencePairRightWidthUnits = $reference.WidthSignature.PairRightWidthUnits
+            ReferencePairWidthMinUnits = $reference.WidthSignature.PairWidthMinUnits
+            ReferencePairWidthMaxUnits = $reference.WidthSignature.PairWidthMaxUnits
+            ReferencePairLeftWidthMinUnits = $reference.WidthSignature.PairLeftWidthMinUnits
+            ReferencePairLeftWidthMaxUnits = $reference.WidthSignature.PairLeftWidthMaxUnits
+            ReferencePairRightWidthMinUnits = $reference.WidthSignature.PairRightWidthMinUnits
+            ReferencePairRightWidthMaxUnits = $reference.WidthSignature.PairRightWidthMaxUnits
             PlannerTextClass = PlannerTextClass $segment
             PlannerTextLength = $segment.TextLength
             PlannerPdfFontSize = $segment.PdfFontSize
@@ -818,6 +849,19 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         ReferenceTcByPlannerFontSizeAndGlyphPairSideAdvanceRange = @(Group-Count $pairs {
             param($pair)
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|leftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|leftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|rightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceTcByReferenceFontSizeAndPdfWidthSideRange = @(Group-Count $pairs {
+            param($pair)
+            "tf=" + (RoundedKey $pair.ReferenceFontSize 3) + "|leftMin=" + (RoundedKey $pair.ReferencePairLeftWidthMinUnits 0) + "|leftMax=" + (RoundedKey $pair.ReferencePairLeftWidthMaxUnits 0) + "|rightMin=" + (RoundedKey $pair.ReferencePairRightWidthMinUnits 0) + "|rightMax=" + (RoundedKey $pair.ReferencePairRightWidthMaxUnits 0) + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
+        })
+        ReferenceVsPlannerPdfWidthSideRange = @(Group-Count $pairs {
+            param($pair)
+            "tfRef=" + (RoundedKey $pair.ReferenceFontSize 3) + "|tfPlan=" + (RoundedKey $pair.PlannerPdfFontSize 3) +
+                "|refLeftMin=" + (RoundedKey $pair.ReferencePairLeftWidthMinUnits 0) + "|refLeftMax=" + (RoundedKey $pair.ReferencePairLeftWidthMaxUnits 0) +
+                "|refRightMin=" + (RoundedKey $pair.ReferencePairRightWidthMinUnits 0) + "|refRightMax=" + (RoundedKey $pair.ReferencePairRightWidthMaxUnits 0) +
+                "|planLeftMin=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMinUnits 0) + "|planLeftMax=" + (RoundedKey $pair.PlannerGlyphPairLeftAdvanceMaxUnits 0) +
+                "|planRightMin=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMinUnits 0) + "|planRightMax=" + (RoundedKey $pair.PlannerGlyphPairRightAdvanceMaxUnits 0) +
+                "|refTc=" + (RoundedKey $pair.ReferenceTc 6)
         })
         ReferenceTcByPlannerFontSizeAndGlyphPairSideAdvanceEmRange = @(Group-Count $pairs {
             param($pair)

@@ -626,6 +626,7 @@ internal sealed record PdfTextOperation(
     double NetSpacingGapTotalPoints,
     double? NaturalWidthPoints,
     double? EmittedAdvancePoints,
+    PdfTextPayloadWidthSignature? WidthSignature,
     double NetAverageCharacterSpacing,
     string DecodedText)
 {
@@ -740,6 +741,12 @@ internal sealed record PdfTextOperation(
                 double? naturalWidthPoints = fontWidthMaps.TryGetValue(font, out PdfFontWidthMap? widthMap)
                     ? MeasurePayloadWidth(payload, fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMapForCodes) ? unicodeMapForCodes : null, widthMap, fontSize)
                     : null;
+                PdfTextPayloadWidthSignature? widthSignature = widthMap is null
+                    ? null
+                    : CreatePayloadWidthSignature(
+                        payload,
+                        fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMapForSignature) ? unicodeMapForSignature : null,
+                        widthMap);
                 operations.Add(new PdfTextOperation(
                     pageNumber,
                     objectNumber,
@@ -774,6 +781,7 @@ internal sealed record PdfTextOperation(
                     characterSpacingGapTotalPoints + adjustmentTotalPoints,
                     naturalWidthPoints,
                     naturalWidthPoints + characterSpacingGapTotalPoints + adjustmentTotalPoints,
+                    widthSignature,
                     characterSpacing + averageAdjustmentPoints,
                     decodedText));
             }
@@ -864,6 +872,64 @@ internal sealed record PdfTextOperation(
         }
 
         return widthUnits * fontSize / 1000d;
+    }
+
+    private static PdfTextPayloadWidthSignature CreatePayloadWidthSignature(
+        string payload,
+        IReadOnlyDictionary<int, string>? unicodeMap,
+        PdfFontWidthMap widthMap)
+    {
+        IReadOnlyList<int> codes = ReadPayloadTextCodes(payload, unicodeMap);
+        int codeCount = codes.Count;
+        int pairCount = Math.Max(0, codeCount - 1);
+        int widthUnits = 0;
+        int pairWidthUnits = 0;
+        int pairLeftWidthUnits = 0;
+        int pairRightWidthUnits = 0;
+        int pairWidthMinUnits = 0;
+        int pairWidthMaxUnits = 0;
+        int pairLeftWidthMinUnits = 0;
+        int pairLeftWidthMaxUnits = 0;
+        int pairRightWidthMinUnits = 0;
+        int pairRightWidthMaxUnits = 0;
+        int previousWidth = 0;
+
+        for (int index = 0; index < codes.Count; index++)
+        {
+            int width = widthMap.Widths.TryGetValue(codes[index], out int mappedWidth)
+                ? mappedWidth
+                : widthMap.DefaultWidth;
+            widthUnits += width;
+            if (index > 0)
+            {
+                int pairWidth = previousWidth + width;
+                pairWidthUnits += pairWidth;
+                pairLeftWidthUnits += previousWidth;
+                pairRightWidthUnits += width;
+                pairWidthMinUnits = index == 1 ? pairWidth : Math.Min(pairWidthMinUnits, pairWidth);
+                pairWidthMaxUnits = index == 1 ? pairWidth : Math.Max(pairWidthMaxUnits, pairWidth);
+                pairLeftWidthMinUnits = index == 1 ? previousWidth : Math.Min(pairLeftWidthMinUnits, previousWidth);
+                pairLeftWidthMaxUnits = index == 1 ? previousWidth : Math.Max(pairLeftWidthMaxUnits, previousWidth);
+                pairRightWidthMinUnits = index == 1 ? width : Math.Min(pairRightWidthMinUnits, width);
+                pairRightWidthMaxUnits = index == 1 ? width : Math.Max(pairRightWidthMaxUnits, width);
+            }
+
+            previousWidth = width;
+        }
+
+        return new(
+            codeCount,
+            pairCount,
+            widthUnits,
+            pairWidthUnits,
+            pairLeftWidthUnits,
+            pairRightWidthUnits,
+            pairWidthMinUnits,
+            pairWidthMaxUnits,
+            pairLeftWidthMinUnits,
+            pairLeftWidthMaxUnits,
+            pairRightWidthMinUnits,
+            pairRightWidthMaxUnits);
     }
 
     private static IReadOnlyList<int> ReadPayloadTextCodes(string payload, IReadOnlyDictionary<int, string>? unicodeMap)
@@ -1008,6 +1074,20 @@ internal sealed record PdfTextPayloadProfile(
     double AdjustmentSum,
     double AdjustmentMin,
     double AdjustmentMax);
+
+internal sealed record PdfTextPayloadWidthSignature(
+    int CodeCount,
+    int PairCount,
+    int WidthUnits,
+    int PairWidthUnits,
+    int PairLeftWidthUnits,
+    int PairRightWidthUnits,
+    int PairWidthMinUnits,
+    int PairWidthMaxUnits,
+    int PairLeftWidthMinUnits,
+    int PairLeftWidthMaxUnits,
+    int PairRightWidthMinUnits,
+    int PairRightWidthMaxUnits);
 
 internal sealed record PdfFontWidthMap(int DefaultWidth, IReadOnlyDictionary<int, int> Widths);
 
