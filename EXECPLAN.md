@@ -597,6 +597,15 @@ High-priority actions:
   changed16 `0.013480`; private DOCX run `20260603-003619` stayed page-stable at `16/16`, zero dimension
   mismatches, no diagnostics, aggregate `MAE=8.924355`, changed16 `0.095330`. Keep the branch open for the
   remaining row-boundary and table-cell text-state gaps rather than broadening line-height rounding again.
+  2026-06-03 follow-up: split table-row border emission now uses the row fragment metadata already present in
+  layout (`FragmentIndex`/`FragmentCount`) instead of treating page-local missing neighbors as authored row
+  edges. Continuation fragments no longer synthesize a top border, and first fragments no longer synthesize a
+  bottom border at page-break row-fragment boundaries; vertical side borders and the authored final bottom edge
+  still render. Bottom-up PDF coverage locks this with a split bordered row. Public
+  `docx-ladder-03-table-continuation-adjacency` run `20260603-203156` stayed dimension-stable and essentially
+  metric-neutral against the latest accepted run (page 1 `MAE=2.726277`, changed16 `0.037500`, page 2
+  `MAE=1.426858`, changed16 `0.013480`). Keep the visual residual open for row text/baseline and any
+  remaining Office PDF text-state decomposition, not for synthetic split-boundary row-edge borders.
   2026-06-02 architecture follow-up: DOCX text emission snapshots now carry a private-safe segment role
   (`ListLabel`, `ListSeparator`, or `Text`) from layout through PDF emission, and
   `tools/SummarizeDocxTextState.ps1` buckets planner/reference pairs by that role. This removes the need to

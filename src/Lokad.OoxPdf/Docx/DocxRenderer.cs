@@ -701,23 +701,23 @@ internal sealed class DocxRenderer
                 continue;
             }
 
-            if (previousRow is null)
+            if (previousRow is null && IsFirstTableRowFragment(row))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height, cellLayout.VisualCell, "top", rowBoundaries, graphics, emittedJunctions);
             }
 
-            if (nextRow is null)
+            if (nextRow is null && IsLastTableRowFragment(row))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaries, graphics, emittedJunctions);
             }
         }
 
-        if (previousRow is null)
+        if (previousRow is null && IsFirstTableRowFragment(row))
         {
             RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "top", graphics);
         }
 
-        if (nextRow is null)
+        if (nextRow is null && IsLastTableRowFragment(row))
         {
             RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "bottom", graphics);
         }
@@ -1457,12 +1457,12 @@ internal sealed class DocxRenderer
                 continue;
             }
 
-            if (previousRow is null)
+            if (previousRow is null && IsFirstTableRowFragment(row))
             {
                 RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
             }
 
-            if (nextRow is null)
+            if (nextRow is null && IsLastTableRowFragment(row))
             {
                 RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
             }
@@ -1491,6 +1491,16 @@ internal sealed class DocxRenderer
         {
             RenderSharedHorizontalTableBorders(row, nextRow, graphics);
         }
+    }
+
+    private static bool IsFirstTableRowFragment(DocxTableRowLayout row)
+    {
+        return row.FragmentIndex <= 0;
+    }
+
+    private static bool IsLastTableRowFragment(DocxTableRowLayout row)
+    {
+        return row.FragmentIndex >= Math.Max(0, row.FragmentCount - 1);
     }
 
     private static void RenderSharedHorizontalTableBorders(

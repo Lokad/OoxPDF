@@ -10059,6 +10059,46 @@ internal static class DocxTests
         TestAssert.Equal(20d, splitRowSnapshots[1].FragmentOffsetFromRowTop);
     }
 
+    public static void DocxTableRendererDoesNotDrawRowEdgeBordersAtSplitFragmentBoundaries()
+    {
+        DocxTableCellBorder[] borders =
+        [
+            new("top", "single", "000000", "4"),
+            new("bottom", "single", "000000", "4"),
+            new("left", "single", "000000", "4"),
+            new("right", "single", "000000", "4")
+        ];
+        DocxParagraph firstParagraph = CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph[] splitParagraphs = Enumerable.Range(1, 8)
+            .Select(index => CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, borders, DocxTableCellMargins.Empty)], 80d);
+        var table = new DocxTable(null, [60d], [first, split]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        IReadOnlyList<PdfPage> pages = new DocxRenderer().RenderBlankPages(document);
+
+        TestAssert.Equal(2, pages.Count);
+        TestAssert.DoesNotContain("10.48 10 59.52 0.48 re f", pages[0].Content);
+        TestAssert.DoesNotContain("10.48 89.52 59.52 0.48 re f", pages[1].Content);
+        TestAssert.Contains("10 10 0.48 20 re f", pages[0].Content);
+        TestAssert.Contains("10.48 29.52 59.52 0.48 re f", pages[1].Content);
+    }
+
     public static void DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations()
     {
         DocxParagraph headerParagraph = CreateDocxLayoutParagraph("Header", 10d, 10d);
