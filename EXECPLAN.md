@@ -4968,6 +4968,16 @@ block models and richer section/pagination layout before adding more Word pagina
   reports the owner's private-safe visual paragraph/text facts. Validation passed `docx-tables --skip-slow`
   (`123`) and full solution build. Keep the item open for public model compatibility deprecation; production
   layout/diagnostic paths now consistently prefer the block stream.
+  2026-06-03 renderer-entry follow-up: `DocxRenderer.RenderBlankPages` no longer decides document emptiness
+  from only the main body plus legacy static paragraph lists. The guard now treats canonical static
+  header/footer body streams and image-backed floating drawings on the document/page-settings maps as
+  renderable content, so header-table-only and static-header-image-only constructed documents enter the
+  normal layout/PDF pipeline instead of returning a blank page. Bottom-up regression coverage leaves the
+  body and compatibility static paragraph inventories empty in both cases. Validation passed
+  `docx-page --skip-slow` (`45`) and `docx-images --skip-slow` (`4`; serial rerun after a transient
+  compiler/Defender file lock). Keep the item open for compatibility deprecation, public Office-oracle
+  coverage of exact static-story placement, and eventual conversion of parallel inventories to derived
+  accessors.
 - [ ] DOCX style-resolved block model: move from reader-flattened paragraph metrics toward a layout-ready
   effective paragraph model with explicit provenance for defaults, basedOn style depth, table-style
   contributions, and direct paragraph overrides. This should let future vertical-flow decisions compare

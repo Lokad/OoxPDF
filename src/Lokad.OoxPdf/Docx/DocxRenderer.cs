@@ -19,7 +19,7 @@ internal sealed class DocxRenderer
 
     public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        if (document.BodyElements.Count == 0 && document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0)
+        if (!HasRenderableContent(document))
         {
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
@@ -71,6 +71,37 @@ internal sealed class DocxRenderer
     internal DocxStructureSnapshot InspectStructure(DocxDocument document)
     {
         return DocxStructureSnapshot.FromDocument(document);
+    }
+
+    private static bool HasRenderableContent(DocxDocument document)
+    {
+        return document.BodyElements.Count != 0
+            || HasRenderableDrawings(document.FloatingDrawings)
+            || document.HeaderParagraphs.Count != 0
+            || document.FooterParagraphs.Count != 0
+            || HasBodyElements(document.HeaderBodyElementsByType)
+            || HasBodyElements(document.FooterBodyElementsByType)
+            || HasBodyElements(document.PageSettings.HeaderBodyElementsByType)
+            || HasBodyElements(document.PageSettings.FooterBodyElementsByType)
+            || HasRenderableDrawings(document.HeaderFloatingDrawingsByType)
+            || HasRenderableDrawings(document.FooterFloatingDrawingsByType)
+            || HasRenderableDrawings(document.PageSettings.HeaderFloatingDrawingsByType)
+            || HasRenderableDrawings(document.PageSettings.FooterFloatingDrawingsByType);
+    }
+
+    private static bool HasBodyElements(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> elementsByType)
+    {
+        return elementsByType.Values.Any(elements => elements.Count != 0);
+    }
+
+    private static bool HasRenderableDrawings(IReadOnlyList<DocxFloatingDrawing> drawings)
+    {
+        return drawings.Any(drawing => drawing.Image is not null);
+    }
+
+    private static bool HasRenderableDrawings(IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType)
+    {
+        return drawingsByType.Values.Any(HasRenderableDrawings);
     }
 
     private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)

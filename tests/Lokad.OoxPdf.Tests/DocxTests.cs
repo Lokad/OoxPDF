@@ -13101,6 +13101,92 @@ internal static class DocxTests
         TestAssert.True(tableSnapshot.StoryKind == "Header" && tableSnapshot.StoryVariantType == "default" && tableSnapshot.RowCount == 1 && tableSnapshot.LaidOutRowCount == 1, "Static header tables should participate in table-level ownership snapshots without colliding with body table ordinals.");
     }
 
+    public static void DocxRendererTreatsStaticHeaderBodyElementsAsRenderableContent()
+    {
+        DocxParagraph headerCellParagraph = CreateDocxLayoutParagraph("HT", 10d, 10d);
+        DocxTableCell headerCell = new("HT", [headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable headerTable = new(null, [40d], [new DocxTableRow([headerCell], 18d)]);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(headerTable)]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [],
+            [],
+            [headerTable]);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        TestAssert.True(CountPdfTextShows(page.Content) >= 1, "Static header body elements should pass the renderer's empty-document guard instead of producing a blank page.");
+    }
+
+    public static void DocxRendererTreatsStaticHeaderFloatingImagesAsRenderableContent()
+    {
+        var headerImage = new DocxInlineImage(72d, 36d, "image/png", TestFixtures.CreateRgbPng(1, 1, [32, 64, 96]), "/word/media/header.png");
+        var headerDrawing = new DocxFloatingDrawing(
+            DistanceTopValue: "0",
+            DistanceBottomValue: "0",
+            DistanceLeftValue: "0",
+            DistanceRightValue: "0",
+            SimplePositionValue: "0",
+            RelativeHeightValue: "0",
+            BehindDocumentValue: "0",
+            LockedValue: null,
+            LayoutInCellValue: null,
+            AllowOverlapValue: null,
+            ExtentCxValue: "914400",
+            ExtentCyValue: "457200",
+            HorizontalRelativeFromValue: "page",
+            HorizontalAlignValue: null,
+            HorizontalOffsetValue: "914400",
+            VerticalRelativeFromValue: "page",
+            VerticalAlignValue: null,
+            VerticalOffsetValue: "457200",
+            WrapKind: "wrapNone",
+            WrapTextValue: null,
+            ImageRelationshipId: "rIdHeaderImage1",
+            Image: headerImage);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [headerDrawing]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [],
+            [],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        TestAssert.Equal(1, page.Images.Count);
+        TestAssert.Contains("/Im1 Do", page.Content);
+    }
+
     public static void DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants()
     {
         DocxParagraph defaultHeader = CreateDocxLayoutParagraph("DH", 10d, 10d);
