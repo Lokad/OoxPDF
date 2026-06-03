@@ -433,6 +433,40 @@ foreach ($line in $layoutLines) {
     })
 }
 
+$matchedRowAdvances = New-Object System.Collections.Generic.List[object]
+foreach ($pageGroup in ($mapped | Where-Object { $_.Status -eq "matched" -and $null -ne $_.ReferenceY -and $null -ne $_.CandidateY } | Group-Object CandidatePage | Sort-Object { [int]$_.Name })) {
+    $ordered = @($pageGroup.Group | Sort-Object -Property @{ Expression = { [double]$_.CandidateY }; Descending = $true })
+    for ($index = 1; $index -lt $ordered.Count; $index++) {
+        $previous = $ordered[$index - 1]
+        $current = $ordered[$index]
+        if ([int]$previous.ReferencePage -ne [int]$current.ReferencePage) {
+            continue
+        }
+
+        $referenceAdvance = [double]$previous.ReferenceY - [double]$current.ReferenceY
+        $candidateAdvance = [double]$previous.CandidateY - [double]$current.CandidateY
+        if ($referenceAdvance -le 0d -or $candidateAdvance -le 0d) {
+            continue
+        }
+
+        $matchedRowAdvances.Add([pscustomobject]@{
+            CandidatePage = [int]$current.CandidatePage
+            ReferencePage = [int]$current.ReferencePage
+            PreviousSourceBlockIndex = $previous.SourceBlockIndex
+            SourceBlockIndex = $current.SourceBlockIndex
+            PreviousSourceLineIndex = $previous.SourceLineIndex
+            SourceLineIndex = $current.SourceLineIndex
+            LineHeightSource = $current.LineHeightSource
+            ReferenceAdvancePoints = [Math]::Round($referenceAdvance, 6)
+            CandidateAdvancePoints = [Math]::Round($candidateAdvance, 6)
+            DeltaAdvancePoints = [Math]::Round($candidateAdvance - $referenceAdvance, 6)
+            LineHeightPoints = $current.LineHeightPoints
+            AppliedBeforeSpacingPoints = $current.AppliedBeforeSpacingPoints
+            EffectiveLineSpacingFactor = $current.EffectiveLineSpacingFactor
+        })
+    }
+}
+
 $summary = [pscustomobject]@{
     RunDirectory = $resolvedRun
     LayoutSnapshot = (Resolve-Path -LiteralPath $LayoutSnapshot).Path
@@ -510,6 +544,25 @@ $summary = [pscustomobject]@{
                     Count = $_.Count
                 }
             }
+    )
+    MatchedRowAdvanceDeltaBuckets = @(
+        $matchedRowAdvances |
+            Group-Object {
+                ([Math]::Round([double]$_.DeltaAdvancePoints, 3)).ToString("0.000", [Globalization.CultureInfo]::InvariantCulture)
+            } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    DeltaAdvancePoints = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+    WorstMatchedRowAdvanceDeltas = @(
+        $matchedRowAdvances |
+            Sort-Object -Property @{ Expression = { [Math]::Abs([double]$_.DeltaAdvancePoints) }; Descending = $true } |
+            Select-Object -First $Top
     )
     CandidateParagraphSpacingProfileBuckets = @(
         $layoutLines |

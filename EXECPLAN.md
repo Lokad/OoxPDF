@@ -648,6 +648,10 @@ High-priority actions:
   list-label Windows extent would nearly fit the `1.19` case and overshoot the `1.20` case. Keep the next
   implementation branch focused on Word's structural line-box/baseline-grid ownership and row-advance
   quantization, not on a direct label-metric substitution.
+  2026-06-04 tooling follow-up: `CompareDocxLayoutPdfFlow.ps1` now emits adjacent matched-row advance deltas.
+  On the same compact-list runs, many adjacent rows are already within about `+0.006`/`+0.009` pt while
+  periodic rows are low by roughly `0.11..0.14` pt, matching the Office `0.12`-bucket advance pattern. This
+  makes the next rendering branch a baseline-grid/carry problem rather than a uniform line-pitch offset.
   2026-06-02 accepted default-model update: missing paragraph spacing now follows the public Office-observed
   Word defaults (`1.2` auto-line factor and implicit `8pt` after spacing), replacing the earlier split between
   untokened and spacing-token paragraphs. Public compact-list probes improved or stayed guarded
