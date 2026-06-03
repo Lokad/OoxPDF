@@ -747,6 +747,9 @@ internal static class DocxTests
         TestAssert.Equal(string.Empty, paragraph.Spacing.AfterLinesValue ?? string.Empty);
         TestAssert.Equal(string.Empty, paragraph.Spacing.BeforeAutoSpacingValue ?? string.Empty);
         TestAssert.Equal("1", paragraph.Spacing.AfterAutoSpacingValue ?? string.Empty);
+        DocxStructureBlockSnapshot block = DocxStructureSnapshot.FromDocument(document).Blocks.Single(block => block.Kind == "Paragraph");
+        TestAssert.Equal("1", block.AfterAutoSpacingValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, block.BeforeAutoSpacingValue ?? string.Empty);
         TestAssert.Equal("480", paragraph.Spacing.LineValue ?? string.Empty);
         TestAssert.Equal("exact", paragraph.Spacing.LineRuleValue ?? string.Empty);
         TestAssert.Equal(48d, paragraph.Indent.LeftPoints ?? 0d);

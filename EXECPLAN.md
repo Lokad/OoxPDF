@@ -5161,6 +5161,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - [ ] Implement style-derived paragraph spacing accurately, including exact Office autospacing magnitudes,
   Word-like adjacent paragraph spacing collapse around tables/sections, and diagnostics that distinguish
   supported tokens from unresolved spacing semantics.
+  - [x] 2026-06-03: Promoted raw paragraph autospacing tokens into private-safe structure block snapshots.
+    Paragraph blocks now expose `BeforeAutoSpacingValue` and `AfterAutoSpacingValue` alongside resolved spacing
+    points and token-presence flags, so private-safe block traces can distinguish authored autospacing from
+    ordinary before/after spacing while the exact Office autospacing magnitude remains open. Validation passed
+    `docx-text --skip-slow` (`49`).
 - [ ] Implement paragraph and numbering indents: left/right/first-line/hanging indents from paragraph styles
   and numbering levels, with corresponding wrapping-width changes.
   - [x] 2026-06-01: Added typed `DocxParagraphIndent` for ordinary paragraph `w:ind` values and cascaded it
