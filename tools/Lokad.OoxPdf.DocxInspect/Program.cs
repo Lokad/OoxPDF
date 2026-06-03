@@ -42,6 +42,21 @@ File.WriteAllText(
     Path.Combine(outputDirectory, "style-catalog.json"),
     JsonSerializer.Serialize(document.StyleCatalog, options));
 File.WriteAllText(
+    Path.Combine(outputDirectory, "style-catalog-summary.json"),
+    JsonSerializer.Serialize(new
+    {
+        document.StyleCatalog.HasRunDefaults,
+        document.StyleCatalog.HasParagraphDefaults,
+        document.StyleCatalog.DefaultTableStyleId,
+        ParagraphStyleCount = document.StyleCatalog.ParagraphStyles.Count,
+        CharacterStyleCount = document.StyleCatalog.CharacterStyles.Count,
+        TableStyleCount = document.StyleCatalog.TableStyles.Count,
+        ParagraphBasedOnCount = document.StyleCatalog.ParagraphStyles.Count(style => style.BasedOnStyleId is not null),
+        CharacterBasedOnCount = document.StyleCatalog.CharacterStyles.Count(style => style.BasedOnStyleId is not null),
+        TableBasedOnCount = document.StyleCatalog.TableStyles.Count(style => style.BasedOnStyleId is not null),
+        TableConditionalRegionCount = document.StyleCatalog.TableStyles.Sum(style => style.ConditionalRegionCount)
+    }, options));
+File.WriteAllText(
     Path.Combine(outputDirectory, "text-emission-snapshot.json"),
     JsonSerializer.Serialize(textEmission, options));
 File.WriteAllText(
