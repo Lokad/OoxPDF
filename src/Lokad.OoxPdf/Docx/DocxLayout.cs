@@ -2356,7 +2356,7 @@ internal sealed class DocxLayoutEngine
                         continue;
                     }
 
-                    if (!placedStoryKeys.Add((reference.Kind, reference.Id)))
+                    if (placedStoryKeys.Contains((reference.Kind, reference.Id)))
                     {
                         continue;
                     }
@@ -2367,6 +2367,12 @@ internal sealed class DocxLayoutEngine
                         continue;
                     }
 
+                    if (!IsInlineReferenceRenderedOnPage(pages, pageIndex, sourceBlockIndex, reference))
+                    {
+                        continue;
+                    }
+
+                    placedStoryKeys.Add((reference.Kind, reference.Id));
                     placedStories.Add(PlaceRelatedStory(page, pageIndex, storyLayout, sourceBlockIndex));
                 }
             }
@@ -2504,6 +2510,73 @@ internal sealed class DocxLayoutEngine
                     yield return reference;
                 }
             }
+        }
+    }
+
+    private static bool IsInlineReferenceRenderedOnPage(
+        IReadOnlyList<DocxLayoutPage> pages,
+        int pageIndex,
+        int sourceBlockIndex,
+        DocxInlineReference reference)
+    {
+        if (reference.SourceRunIndex < 0 ||
+            !IsInlineReferenceRunRenderedAnywhere(pages, sourceBlockIndex, reference.SourceRunIndex))
+        {
+            return true;
+        }
+
+        return EnumeratePageTextLines(pages[pageIndex])
+            .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
+                line.Segments.Any(segment => segment.SourceTextRunIndex == reference.SourceRunIndex));
+    }
+
+    private static bool IsInlineReferenceRunRenderedAnywhere(
+        IReadOnlyList<DocxLayoutPage> pages,
+        int sourceBlockIndex,
+        int sourceRunIndex)
+    {
+        return pages
+            .SelectMany(EnumeratePageTextLines)
+            .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
+                line.Segments.Any(segment => segment.SourceTextRunIndex == sourceRunIndex));
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumeratePageTextLines(DocxLayoutPage page)
+    {
+        foreach (DocxLayoutItem item in page.Items)
+        {
+            foreach (DocxTextLineLayout line in EnumerateTextLines(item))
+            {
+                yield return line;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateTextLines(DocxLayoutItem item)
+    {
+        switch (item)
+        {
+            case DocxTextLineLayout line:
+                yield return line;
+                break;
+            case DocxTableRowLayout row:
+                foreach (DocxTableCellLayout cell in row.Cells)
+                {
+                    foreach (DocxTextLineLayout line in cell.TextLines)
+                    {
+                        yield return line;
+                    }
+
+                    foreach (DocxTableRowLayout nestedRow in cell.NestedRows)
+                    {
+                        foreach (DocxTextLineLayout line in EnumerateTextLines(nestedRow))
+                        {
+                            yield return line;
+                        }
+                    }
+                }
+
+                break;
         }
     }
 

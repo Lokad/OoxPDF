@@ -8024,8 +8024,14 @@ Current validation baseline:
   maps resolved footnote references to source blocks, raises the active bottom boundary by the measured note
   area, and uses the same reserved geometry for final placement. Bottom-up coverage asserts body items remain
   above the placed footnote band. Validation passed `docx-page --skip-slow` (`46`), `docx-core --skip-slow`
-  (`59`), `docx-tables --skip-slow` (`125`), and full solution build. Keep exact marker-line ownership for
-  split source blocks, table-internal note continuation, multi-page footnotes, endnotes, and comments open.
+  (`59`), `docx-tables --skip-slow` (`125`), and full solution build.
+  2026-06-03 follow-up: footnote placement now prefers the page where the reference's source run is actually
+  rendered, so a paragraph split across pages no longer places the note on the first page that merely contains
+  an earlier fragment of the same source block. Bottom-up coverage forces a two-run paragraph across pages and
+  asserts the placed footnote follows the marker run page. Validation passed full solution build,
+  `docx-page --skip-slow` (`48`), `docx-core --skip-slow` (`60`), and `docx-tables --skip-slow` (`125`).
+  Keep offset-level marker ownership for references inside a run that itself splits across pages,
+  table-internal note continuation, multi-page footnotes, section-scoped endnotes, and comments open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
