@@ -9,14 +9,15 @@ internal static class DocxFontResolver
 {
     public static DocxTypefaceCandidates ResolveLatinTypeface(DocxTextRun run, DocxFontCatalog catalog)
     {
+        DocxEffectiveRunProperties effective = run.EffectiveProperties;
         bool complexScript = DocxScriptClassifier.IsComplexScriptText(run.Text);
         string? primary = complexScript
-            ? FirstNonEmpty(run.Fonts.ComplexScript, run.FontFamily, run.Fonts.Ascii, run.Fonts.HighAnsi)
-            : FirstNonEmpty(run.Fonts.Ascii, run.Fonts.HighAnsi, run.FontFamily);
+            ? FirstNonEmpty(effective.Fonts.ComplexScript, effective.FontFamily, effective.Fonts.Ascii, effective.Fonts.HighAnsi)
+            : FirstNonEmpty(effective.Fonts.Ascii, effective.Fonts.HighAnsi, effective.FontFamily);
         string? alternate = ResolveAlternate(primary, catalog);
         string? theme = complexScript
-            ? ResolveThemeTypeface(FirstNonEmpty(run.Fonts.ComplexScriptTheme, run.Fonts.AsciiTheme, run.Fonts.HighAnsiTheme), catalog.ThemeFonts)
-            : ResolveThemeTypeface(FirstNonEmpty(run.Fonts.AsciiTheme, run.Fonts.HighAnsiTheme), catalog.ThemeFonts);
+            ? ResolveThemeTypeface(FirstNonEmpty(effective.Fonts.ComplexScriptTheme, effective.Fonts.AsciiTheme, effective.Fonts.HighAnsiTheme), catalog.ThemeFonts)
+            : ResolveThemeTypeface(FirstNonEmpty(effective.Fonts.AsciiTheme, effective.Fonts.HighAnsiTheme), catalog.ThemeFonts);
         return new DocxTypefaceCandidates(primary, alternate, theme);
     }
 

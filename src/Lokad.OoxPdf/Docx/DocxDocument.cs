@@ -508,6 +508,72 @@ internal sealed record DocxTextRun(
     string? HiddenValue = null)
 {
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
+    public DocxRunStyleResolution StyleResolution { get; init; } = DocxRunStyleResolution.Empty;
+
+    public DocxEffectiveRunProperties EffectiveProperties => new(
+        FontSize,
+        ColorHex,
+        Bold,
+        Italic,
+        Underline,
+        UnderlineValue,
+        FontFamily,
+        Fonts,
+        CharacterSpacingPoints,
+        AllCaps,
+        VerticalAlignmentValue,
+        Strike,
+        StrikeValue,
+        DoubleStrike,
+        DoubleStrikeValue,
+        HighlightValue,
+        ShadingFillHex,
+        ShadingValue,
+        ShadingColor,
+        SmallCaps,
+        SmallCapsValue,
+        Hidden,
+        HiddenValue,
+        StyleResolution);
+}
+
+internal sealed record DocxEffectiveRunProperties(
+    double FontSize,
+    string? ColorHex,
+    bool Bold,
+    bool Italic,
+    bool Underline,
+    string? UnderlineValue,
+    string? FontFamily,
+    DocxRunFonts Fonts,
+    double CharacterSpacingPoints,
+    bool AllCaps,
+    string? VerticalAlignmentValue,
+    bool Strike,
+    string? StrikeValue,
+    bool DoubleStrike,
+    string? DoubleStrikeValue,
+    string? HighlightValue,
+    string? ShadingFillHex,
+    string? ShadingValue,
+    string? ShadingColor,
+    bool SmallCaps,
+    string? SmallCapsValue,
+    bool Hidden,
+    string? HiddenValue,
+    DocxRunStyleResolution StyleResolution);
+
+internal sealed record DocxRunStyleResolution(
+    string? CharacterStyleId,
+    bool CharacterStyleFound,
+    int CharacterStyleDepth,
+    bool HasDocumentDefaultRunProperties,
+    bool HasParagraphStyleRunProperties,
+    bool HasCharacterStyleRunProperties,
+    bool HasDirectRunProperties,
+    bool HasTableStyleRunProperties)
+{
+    public static DocxRunStyleResolution Empty { get; } = new(null, false, 0, false, false, false, false, false);
 }
 
 internal sealed record DocxTextRunStyle(
@@ -565,7 +631,8 @@ internal sealed record DocxTextRunStyle(
             Hidden ?? source.Hidden,
             HiddenValue ?? source.HiddenValue)
         {
-            Fonts = MergeRunFonts(source.Fonts, Fonts)
+            Fonts = MergeRunFonts(source.Fonts, Fonts),
+            StyleResolution = source.StyleResolution
         };
     }
 

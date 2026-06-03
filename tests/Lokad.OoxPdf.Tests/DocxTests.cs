@@ -1339,6 +1339,15 @@ internal static class DocxTests
         TestAssert.Equal("majorHAnsi", run.Fonts.AsciiTheme ?? string.Empty);
         TestAssert.Equal("minorHAnsi", run.Fonts.HighAnsiTheme ?? string.Empty);
         TestAssert.Equal("majorBidi", run.Fonts.ComplexScriptTheme ?? string.Empty);
+        TestAssert.Equal("Emphasis", run.StyleResolution.CharacterStyleId ?? string.Empty);
+        TestAssert.True(run.StyleResolution.CharacterStyleFound, "Run style provenance should record resolved character styles.");
+        TestAssert.Equal(1, run.StyleResolution.CharacterStyleDepth);
+        TestAssert.True(run.StyleResolution.HasDocumentDefaultRunProperties, "Run style provenance should retain document-default participation.");
+        TestAssert.True(run.StyleResolution.HasParagraphStyleRunProperties, "Run style provenance should retain paragraph-style run contribution.");
+        TestAssert.True(run.StyleResolution.HasCharacterStyleRunProperties, "Run style provenance should retain character-style run contribution.");
+        TestAssert.True(run.StyleResolution.HasDirectRunProperties, "Direct rPr beyond rStyle should remain distinguishable from style references.");
+        TestAssert.True(run.StyleResolution.HasTableStyleRunProperties == false, "Body paragraph runs should not report table-style run contribution.");
+        TestAssert.Equal("Emphasis", run.EffectiveProperties.StyleResolution.CharacterStyleId ?? string.Empty);
     }
 
     public static void DocxReaderCascadesRunFontTokensThroughBasedOnStyles()
@@ -7991,6 +8000,11 @@ internal static class DocxTests
         TestAssert.True(run.Italic, "Non-conflicting table-style italic should still apply.");
         TestAssert.True(run.AllCaps, "Non-conflicting table-style caps should still apply.");
         TestAssert.Equal("CONFLICT", run.Text);
+        TestAssert.Equal("StrongRed", run.StyleResolution.CharacterStyleId ?? string.Empty);
+        TestAssert.True(run.StyleResolution.HasTableStyleRunProperties, "Table-cell run provenance should retain table-style contribution.");
+        TestAssert.True(run.StyleResolution.HasParagraphStyleRunProperties, "Table-cell run provenance should retain paragraph-style run contribution.");
+        TestAssert.True(run.StyleResolution.HasCharacterStyleRunProperties, "Table-cell run provenance should retain character-style run contribution.");
+        TestAssert.True(run.StyleResolution.HasDirectRunProperties == false, "An rPr containing only rStyle should not be treated as a direct run override.");
     }
 
     public static void DocxReaderTableStyleUsesCellConditionalFormatTokens()

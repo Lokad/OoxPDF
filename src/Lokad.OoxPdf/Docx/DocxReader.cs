@@ -1112,13 +1112,20 @@ internal sealed class DocxReader
 
         if (runs.Count == 0 && images.Count == 0)
         {
+            XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
             DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
-                paragraphProperties?.Element(WordprocessingNamespace + "rPr"),
+                paragraphMarkRunProperties,
                 paragraphStyleId,
                 characterStyleId: null,
                 styles,
                 tableCellStyle?.Run);
-            AddResolvedTextRun(runs, string.Empty, paragraphMarkRun, complexScript: false);
+            DocxRunStyleResolution paragraphMarkStyleResolution = CreateRunStyleResolution(
+                paragraphMarkRunProperties,
+                paragraphStyleId,
+                characterStyleId: null,
+                styles,
+                tableCellStyle?.Run);
+            AddResolvedTextRun(runs, string.Empty, paragraphMarkRun, paragraphMarkStyleResolution, complexScript: false);
         }
 
         double paragraphFontSize = runs.Count == 0 ? 11d : runs.Max(run => run.FontSize);
@@ -1258,13 +1265,21 @@ internal sealed class DocxReader
 
         void AddFieldPlaceholderRun(XElement run, string text)
         {
+            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
+            string? characterStyleId = ReadCharacterStyleId(run);
             DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
-                run.Element(WordprocessingNamespace + "rPr"),
+                runProperties,
                 paragraphStyleId,
-                ReadCharacterStyleId(run),
+                characterStyleId,
                 styles,
                 tableCellStyle?.Run);
-            AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, resolvedRun);
+            DocxRunStyleResolution runStyleResolution = CreateRunStyleResolution(
+                runProperties,
+                paragraphStyleId,
+                characterStyleId,
+                styles,
+                tableCellStyle?.Run);
+            AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, resolvedRun, runStyleResolution);
         }
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
@@ -1291,16 +1306,23 @@ internal sealed class DocxReader
             }
 
             XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
+            string? characterStyleId = ReadCharacterStyleId(run);
             DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
                 runProperties,
                 paragraphStyleId,
-                ReadCharacterStyleId(run),
+                characterStyleId,
                 styles,
                 tableCellStyle?.Run);
             if (text.Length != 0)
             {
                 string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
-                AddResolvedTextRuns(runs, displayText, resolvedRun);
+                DocxRunStyleResolution runStyleResolution = CreateRunStyleResolution(
+                    runProperties,
+                    paragraphStyleId,
+                    characterStyleId,
+                    styles,
+                    tableCellStyle?.Run);
+                AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution);
             }
 
             if (fieldInstruction is not null)
@@ -1407,7 +1429,11 @@ internal sealed class DocxReader
             ?.Attribute(WordprocessingNamespace + "val");
     }
 
-    private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun)
+    private static void AddResolvedTextRuns(
+        List<DocxTextRun> runs,
+        string text,
+        DocxResolvedRunProperties resolvedRun,
+        DocxRunStyleResolution styleResolution)
     {
         var segment = new StringBuilder();
         bool? currentComplexScript = null;
@@ -1416,7 +1442,7 @@ internal sealed class DocxReader
             bool complexScript = DocxScriptClassifier.IsComplexScriptRune(rune.Value);
             if (currentComplexScript is not null && currentComplexScript.Value != complexScript)
             {
-                AddResolvedTextRun(runs, segment.ToString(), resolvedRun, currentComplexScript.Value);
+                AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value);
                 segment.Clear();
             }
 
@@ -1426,11 +1452,16 @@ internal sealed class DocxReader
 
         if (segment.Length != 0 && currentComplexScript is not null)
         {
-            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, currentComplexScript.Value);
+            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value);
         }
     }
 
-    private static void AddResolvedTextRun(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, bool complexScript)
+    private static void AddResolvedTextRun(
+        List<DocxTextRun> runs,
+        string text,
+        DocxResolvedRunProperties resolvedRun,
+        DocxRunStyleResolution styleResolution,
+        bool complexScript)
     {
         bool bold = complexScript
             ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
@@ -1466,7 +1497,8 @@ internal sealed class DocxReader
             resolvedRun.Hidden ?? false,
             resolvedRun.HiddenValue)
         {
-            Fonts = resolvedRun.Fonts
+            Fonts = resolvedRun.Fonts,
+            StyleResolution = styleResolution
         });
     }
 
@@ -3191,6 +3223,31 @@ internal sealed class DocxReader
         }
 
         return result.Merge(ReadRunProperties(directProperties));
+    }
+
+    private static DocxRunStyleResolution CreateRunStyleResolution(
+        XElement? directProperties,
+        string? paragraphStyleId,
+        string? characterStyleId,
+        DocxStyleSet styles,
+        DocxResolvedRunProperties? tableStyleProperties = null)
+    {
+        DocxStyle[] paragraphStyleChain = EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles).ToArray();
+        DocxStyle[] characterStyleChain = EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles).ToArray();
+        return new DocxRunStyleResolution(
+            characterStyleId,
+            characterStyleId is not null && characterStyleChain.Length != 0,
+            characterStyleChain.Length,
+            styles.RunDefaults != DocxResolvedRunProperties.Empty,
+            paragraphStyleChain.Any(style => style.Run != DocxResolvedRunProperties.Empty),
+            characterStyleChain.Any(style => style.Run != DocxResolvedRunProperties.Empty),
+            HasDirectRunProperties(directProperties),
+            tableStyleProperties is not null && tableStyleProperties.Value != DocxResolvedRunProperties.Empty);
+    }
+
+    private static bool HasDirectRunProperties(XElement? properties)
+    {
+        return properties?.Elements().Any(element => element.Name != WordprocessingNamespace + "rStyle") == true;
     }
 
     private static IEnumerable<DocxStyle> EnumerateStyleInheritance(string? styleId, IReadOnlyDictionary<string, DocxStyle> styles)

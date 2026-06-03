@@ -4995,6 +4995,16 @@ block models and richer section/pagination layout before adding more Word pagina
   --skip-slow` (`49`) and `docx-tables --skip-slow` (`123`; serial rerun after a transient compiler file
   lock). Keep this open for effective run properties, more layout consumers, and public Office-oracle probes
   of style-derived spacing and line-height behavior.
+  2026-06-03 run-model follow-up: introduced `DocxEffectiveRunProperties` and `DocxRunStyleResolution` so
+  resolved DOCX runs now retain character style id/found/depth, document-default run participation,
+  paragraph-style run participation, character-style run participation, direct-run-property presence, and
+  table-style run participation. The reader threads these facts through normal runs, field placeholder runs,
+  paragraph-mark fallback runs, and complex-script split runs; `DocxFontResolver` now resolves typefaces from
+  the effective run surface. Bottom-up body and table-style cascade tests assert the run provenance, including
+  the distinction between `rStyle`-only `rPr` and direct run overrides. Validation passed `docx-text
+  --skip-slow` (`49`) and `docx-tables --skip-slow` (`123`; serial rerun after an external build file lock).
+  Keep this open for broader layout/PDF-emission consumers and Office-oracle probes of style-derived run
+  metrics.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
