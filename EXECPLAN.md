@@ -405,6 +405,12 @@ High-priority actions:
   model. Comment links remain open because comments are still unplaced. Bottom-up coverage adds a placed
   footnote external hyperlink test. Validation passed full solution build, `docx-core --skip-slow` (`60`) and
   `docx-page --skip-slow` (`46`).
+  2026-06-03 diagnostic follow-up: footnote and endnote diagnostics now use `DOCX_APPROXIMATED_FOOTNOTE` and
+  `DOCX_APPROXIMATED_ENDNOTE` with fallback `Approximated` instead of stale `DOCX_UNSUPPORTED_*` IDs. Comments
+  remain `DOCX_UNSUPPORTED_COMMENTS` because they still have no placed display model. The related-part
+  ownership checks still require diagnostics to point at `/word/footnotes.xml` and `/word/endnotes.xml` when
+  those parts exist, so incomplete note semantics stay visible without falsely saying the note bodies are
+  ignored. Validation passed full solution build and `docx-core --skip-slow` (`60`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
@@ -5201,16 +5207,18 @@ block models and richer section/pagination layout before adding more Word pagina
     result range ownership, layout-time field sizing, field-specific PDF structures, and non-page field
     semantics open.
 - [ ] Footnotes/endnotes/comments: render bodies or emit precise diagnostics with usable fallback behavior.
-  - [x] 2026-06-02: precise unsupported diagnostics now preserve related story-part ownership when the
+  - [x] 2026-06-02: precise side-story diagnostics now preserve related story-part ownership when the
     referenced body part exists. `DocxReader` resolves `/word/comments.xml`, `/word/footnotes.xml`, and
-    `/word/endnotes.xml` through the main document relationships or content types before emitting
-    `DOCX_UNSUPPORTED_COMMENTS`, `DOCX_UNSUPPORTED_FOOTNOTE`, and `DOCX_UNSUPPORTED_ENDNOTE`; if a document
+    `/word/endnotes.xml` through the main document relationships or content types before emitting diagnostics;
+    comments remain `DOCX_UNSUPPORTED_COMMENTS`, while rendered-but-incomplete notes now use
+    `DOCX_APPROXIMATED_FOOTNOTE` and `DOCX_APPROXIMATED_ENDNOTE` with fallback `Approximated`. If a document
     has only main-story references and no related body part, diagnostics remain scoped to `/word/document.xml`.
     This keeps the fallback private-safe and structurally aligned with the OOXML package instead of flattening
-    ignored side stories into the body story. Bottom-up coverage `DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames`
-    builds a minimal synthetic package with all three story parts and checks their diagnostic part names.
-    Validation passed `docx-core --skip-slow` (`26`). Keep this item open for actual footnote/endnote/comment
-    body rendering and placement.
+    side stories into the body story. Bottom-up coverage `DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames`
+    builds a minimal synthetic package with all three story parts and checks their diagnostic part names and
+    note approximation fallback. Validation passed `docx-core --skip-slow` (`26`) for the original slice and
+    `docx-core --skip-slow` (`60`) after the 2026-06-03 note-rendering update. Keep this item open for comment
+    display, Office-derived note continuation semantics, and richer related-story rendering.
   - [x] 2026-06-02: comments, footnotes, and endnotes now have a first-class structural home before rendering.
     `DocxDocument.RelatedStories` stores parsed `DocxRelatedStory` records with kind, owning package part,
     story id, and paragraphs read through the existing paragraph/style/numbering/run pipeline. `DocxStructureSnapshot`

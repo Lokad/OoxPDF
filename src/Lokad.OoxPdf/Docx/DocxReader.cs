@@ -464,17 +464,19 @@ internal sealed class DocxReader
         if (document.Descendants(WordprocessingNamespace + "footnoteReference").Any())
         {
             Emit(
-                "DOCX_UNSUPPORTED_FOOTNOTE",
+                "DOCX_APPROXIMATED_FOOTNOTE",
                 "footnote",
-                ResolveRelatedPartNameOrDefault(package, partName, FootnotesRelationshipType, FootnotesContentType));
+                ResolveRelatedPartNameOrDefault(package, partName, FootnotesRelationshipType, FootnotesContentType),
+                "Approximated");
         }
 
         if (document.Descendants(WordprocessingNamespace + "endnoteReference").Any())
         {
             Emit(
-                "DOCX_UNSUPPORTED_ENDNOTE",
+                "DOCX_APPROXIMATED_ENDNOTE",
                 "endnote",
-                ResolveRelatedPartNameOrDefault(package, partName, EndnotesRelationshipType, EndnotesContentType));
+                ResolveRelatedPartNameOrDefault(package, partName, EndnotesRelationshipType, EndnotesContentType),
+                "Approximated");
         }
 
         if (HasUnsupportedMultiColumnSection(document))

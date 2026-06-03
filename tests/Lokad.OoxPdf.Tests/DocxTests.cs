@@ -14595,10 +14595,10 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_COMMENTS", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", ids);
-        TestAssert.Contains("DOCX_UNSUPPORTED_ENDNOTE", ids);
+        TestAssert.Contains("DOCX_APPROXIMATED_ENDNOTE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_EQUATION", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_FLOATING_DRAWING", ids);
-        TestAssert.Contains("DOCX_UNSUPPORTED_FOOTNOTE", ids);
+        TestAssert.Contains("DOCX_APPROXIMATED_FOOTNOTE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_MACRO", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_OLE_OBJECT", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", ids);
@@ -15052,10 +15052,10 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_COMMENTS" && d.PartName == "/word/comments.xml"), "Comments diagnostics should point to comments.xml when the story body exists.");
-        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_FOOTNOTE" && d.PartName == "/word/footnotes.xml"), "Footnote diagnostics should point to footnotes.xml when the story body exists.");
-        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_ENDNOTE" && d.PartName == "/word/endnotes.xml"), "Endnote diagnostics should point to endnotes.xml when the story body exists.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_FOOTNOTE" && d.PartName == "/word/footnotes.xml" && d.Fallback == "Approximated"), "Footnote diagnostics should point to footnotes.xml and report approximation when the story body exists.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_ENDNOTE" && d.PartName == "/word/endnotes.xml" && d.Fallback == "Approximated"), "Endnote diagnostics should point to endnotes.xml and report approximation when the story body exists.");
         TestAssert.True(!diagnostics.Any(d =>
-            (d.Id == "DOCX_UNSUPPORTED_COMMENTS" || d.Id == "DOCX_UNSUPPORTED_FOOTNOTE" || d.Id == "DOCX_UNSUPPORTED_ENDNOTE") &&
+            (d.Id == "DOCX_UNSUPPORTED_COMMENTS" || d.Id == "DOCX_APPROXIMATED_FOOTNOTE" || d.Id == "DOCX_APPROXIMATED_ENDNOTE") &&
             d.PartName == "/word/document.xml"), "Story-body diagnostics should not be flattened to document.xml when the related body part exists.");
 
         using FileStream stream = File.OpenRead(input);
