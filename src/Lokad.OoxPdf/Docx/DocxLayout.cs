@@ -2305,8 +2305,9 @@ internal sealed class DocxLayoutEngine
         {
             double reserveHeight = 0d;
             var reservedKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
-            foreach (DocxInlineReference reference in EnumerateInlineReferences(document.BodyElements, sourceBlockIndex))
+            foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
             {
+                DocxInlineReference reference = location.Reference;
                 if (reference.Kind != "Footnote" || reference.Id is null || !reservedKeys.Add((reference.Kind, reference.Id)))
                 {
                     continue;
@@ -2351,8 +2352,9 @@ internal sealed class DocxLayoutEngine
             List<DocxPlacedRelatedStoryLayout> placedStories = [];
             foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
             {
-                foreach (DocxInlineReference reference in EnumerateInlineReferences(document.BodyElements, sourceBlockIndex))
+                foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
                 {
+                    DocxInlineReference reference = location.Reference;
                     if (reference.Kind != "Footnote" || reference.Id is null)
                     {
                         continue;
@@ -2369,7 +2371,7 @@ internal sealed class DocxLayoutEngine
                         continue;
                     }
 
-                    if (!IsInlineReferenceRenderedOnPage(pages, pageIndex, sourceBlockIndex, reference))
+                    if (!IsInlineReferenceRenderedOnPage(pages, pageIndex, location))
                     {
                         continue;
                     }
@@ -2437,8 +2439,9 @@ internal sealed class DocxLayoutEngine
         Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
         for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
         {
-            foreach (DocxInlineReference reference in EnumerateInlineReferences(document.BodyElements, sourceBlockIndex))
+            foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
             {
+                DocxInlineReference reference = location.Reference;
                 if (!string.Equals(reference.Kind, kind, StringComparison.OrdinalIgnoreCase) ||
                     reference.Id is null ||
                     !placedStoryKeys.Add((reference.Kind, reference.Id)))
@@ -2478,6 +2481,15 @@ internal sealed class DocxLayoutEngine
         };
     }
 
+    private sealed record DocxInlineReferenceLocation(
+        int SourceBlockIndex,
+        DocxParagraph SourceParagraph,
+        DocxInlineReference Reference);
+
+    private readonly record struct DocxPageTextLineOwner(
+        DocxTextLineLayout Line,
+        int? SourceBlockIndex);
+
     private static IEnumerable<int> EnumeratePageSourceBlockIndexes(DocxLayoutPage page)
     {
         return page.Items
@@ -2488,7 +2500,7 @@ internal sealed class DocxLayoutEngine
             .OrderBy(index => index);
     }
 
-    private static IEnumerable<DocxInlineReference> EnumerateInlineReferences(IReadOnlyList<DocxBodyElement> elements, int sourceBlockIndex)
+    private static IEnumerable<DocxInlineReferenceLocation> EnumerateInlineReferenceLocations(IReadOnlyList<DocxBodyElement> elements, int sourceBlockIndex)
     {
         if (sourceBlockIndex < 0 || sourceBlockIndex >= elements.Count)
         {
@@ -2499,7 +2511,7 @@ internal sealed class DocxLayoutEngine
         {
             foreach (DocxInlineReference reference in paragraph.InlineReferences)
             {
-                yield return reference;
+                yield return new DocxInlineReferenceLocation(sourceBlockIndex, paragraph, reference);
             }
         }
 
@@ -2509,7 +2521,7 @@ internal sealed class DocxLayoutEngine
             {
                 foreach (DocxInlineReference reference in paragraph.InlineReferences)
                 {
-                    yield return reference;
+                    yield return new DocxInlineReferenceLocation(sourceBlockIndex, paragraph, reference);
                 }
             }
         }
@@ -2518,37 +2530,47 @@ internal sealed class DocxLayoutEngine
     private static bool IsInlineReferenceRenderedOnPage(
         IReadOnlyList<DocxLayoutPage> pages,
         int pageIndex,
-        int sourceBlockIndex,
-        DocxInlineReference reference)
+        DocxInlineReferenceLocation location)
     {
+        int sourceBlockIndex = location.SourceBlockIndex;
+        DocxInlineReference reference = location.Reference;
         if (reference.SourceRunIndex < 0 ||
-            !IsInlineReferenceRunRenderedAnywhere(pages, sourceBlockIndex, reference.SourceRunIndex))
+            !IsInlineReferenceRunRenderedAnywhere(pages, location, reference.SourceRunIndex))
         {
             return true;
         }
 
-        if (IsInlineReferenceOffsetRenderedAnywhere(pages, sourceBlockIndex, reference.SourceRunIndex, reference.TextOffsetInRun))
+        if (IsInlineReferenceOffsetRenderedAnywhere(pages, location, reference.SourceRunIndex, reference.TextOffsetInRun))
         {
-            return EnumeratePageTextLines(pages[pageIndex])
-                .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
-                    line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, reference.SourceRunIndex, reference.TextOffsetInRun)));
+            return EnumeratePageTextLineOwners(pages[pageIndex])
+                .Any(owner => TextLineMatchesInlineReferenceOwner(owner, sourceBlockIndex, location.SourceParagraph) &&
+                    owner.Line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, reference.SourceRunIndex, reference.TextOffsetInRun)));
         }
 
-        return EnumeratePageTextLines(pages[pageIndex])
-            .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
-                line.Segments.Any(segment => segment.SourceTextRunIndex == reference.SourceRunIndex));
+        return EnumeratePageTextLineOwners(pages[pageIndex])
+            .Any(owner => TextLineMatchesInlineReferenceOwner(owner, sourceBlockIndex, location.SourceParagraph) &&
+                owner.Line.Segments.Any(segment => segment.SourceTextRunIndex == reference.SourceRunIndex));
     }
 
     private static bool IsInlineReferenceOffsetRenderedAnywhere(
         IReadOnlyList<DocxLayoutPage> pages,
-        int sourceBlockIndex,
+        DocxInlineReferenceLocation location,
         int sourceRunIndex,
         int textOffsetInRun)
     {
-        return pages
-            .SelectMany(EnumeratePageTextLines)
-            .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
-                line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, sourceRunIndex, textOffsetInRun)));
+        foreach (DocxLayoutPage page in pages)
+        {
+            foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
+            {
+                if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
+                    owner.Line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, sourceRunIndex, textOffsetInRun)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static bool SegmentContainsSourceTextOffset(DocxTextSegmentLayout segment, int sourceRunIndex, int textOffsetInRun)
@@ -2565,13 +2587,72 @@ internal sealed class DocxLayoutEngine
 
     private static bool IsInlineReferenceRunRenderedAnywhere(
         IReadOnlyList<DocxLayoutPage> pages,
-        int sourceBlockIndex,
+        DocxInlineReferenceLocation location,
         int sourceRunIndex)
     {
-        return pages
-            .SelectMany(EnumeratePageTextLines)
-            .Any(line => line.SourceBlockIndex == sourceBlockIndex &&
-                line.Segments.Any(segment => segment.SourceTextRunIndex == sourceRunIndex));
+        foreach (DocxLayoutPage page in pages)
+        {
+            foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
+            {
+                if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
+                    owner.Line.Segments.Any(segment => segment.SourceTextRunIndex == sourceRunIndex))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TextLineMatchesInlineReferenceOwner(DocxPageTextLineOwner owner, int sourceBlockIndex, DocxParagraph sourceParagraph)
+    {
+        if (owner.SourceBlockIndex != sourceBlockIndex)
+        {
+            return false;
+        }
+
+        return owner.Line.SourceParagraph is null || ReferenceEquals(owner.Line.SourceParagraph, sourceParagraph);
+    }
+
+    private static IEnumerable<DocxPageTextLineOwner> EnumeratePageTextLineOwners(DocxLayoutPage page)
+    {
+        foreach (DocxLayoutItem item in page.Items)
+        {
+            foreach (DocxPageTextLineOwner owner in EnumerateTextLineOwners(item, inheritedSourceBlockIndex: null))
+            {
+                yield return owner;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxPageTextLineOwner> EnumerateTextLineOwners(DocxLayoutItem item, int? inheritedSourceBlockIndex)
+    {
+        switch (item)
+        {
+            case DocxTextLineLayout line:
+                yield return new DocxPageTextLineOwner(line, line.SourceBlockIndex ?? inheritedSourceBlockIndex);
+                break;
+            case DocxTableRowLayout row:
+                int? rowSourceBlockIndex = row.Table.SourceBlockIndex;
+                foreach (DocxTableCellLayout cell in row.Cells)
+                {
+                    foreach (DocxTextLineLayout line in cell.TextLines)
+                    {
+                        yield return new DocxPageTextLineOwner(line, line.SourceBlockIndex ?? rowSourceBlockIndex);
+                    }
+
+                    foreach (DocxTableRowLayout nestedRow in cell.NestedRows)
+                    {
+                        foreach (DocxPageTextLineOwner owner in EnumerateTextLineOwners(nestedRow, rowSourceBlockIndex))
+                        {
+                            yield return owner;
+                        }
+                    }
+                }
+
+                break;
+        }
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumeratePageTextLines(DocxLayoutPage page)

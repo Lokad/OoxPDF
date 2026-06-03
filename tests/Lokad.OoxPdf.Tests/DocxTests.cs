@@ -15625,6 +15625,73 @@ internal static class DocxTests
             "The selected footnote page should contain the normalized marker display run with original OOXML source provenance.");
     }
 
+    public static void DocxLayoutPlacesTableCellFootnoteOnOwningParagraphPage()
+    {
+        DocxParagraph firstCellParagraph = CreateDocxLayoutParagraph("first table paragraph", 10d, 12d);
+        DocxParagraph markerParagraph = CreateDocxLayoutParagraph("marker table paragraph", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "14",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 0)
+            ]
+        };
+        var table = new DocxTable(
+            null,
+            [180d],
+            [
+                new DocxTableRow([new DocxTableCell("first table paragraph", [firstCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d),
+                new DocxTableRow([new DocxTableCell("marker table paragraph", [markerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d)
+            ]);
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body", 10d, 12d);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "14",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        var document = new DocxDocument(
+            220d,
+            82d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        int footnotePageIndex = Array.FindIndex(snapshot.Pages.ToArray(), page => page.PlacedFootnoteStoryCount == 1);
+
+        TestAssert.True(layout.Pages.Count > 1, "The table rows should split across pages so table-cell note placement must use paragraph ownership.");
+        TestAssert.Equal(0, snapshot.Pages[0].PlacedFootnoteStoryCount);
+        TestAssert.True(footnotePageIndex > 0, "The footnote story should be placed on the page containing the owning table-cell paragraph, not an earlier table-cell paragraph with the same local run index.");
+        TestAssert.True(
+            layout.Pages[footnotePageIndex]
+                .Items
+                .OfType<DocxTableRowLayout>()
+                .SelectMany(row => row.Cells)
+                .SelectMany(cell => cell.TextLines)
+                .Any(line => ReferenceEquals(line.SourceParagraph, markerParagraph)),
+            "The selected footnote page should contain the marker paragraph carried through table-cell text-line provenance.");
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

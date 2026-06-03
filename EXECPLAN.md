@@ -8052,6 +8052,15 @@ Current validation baseline:
   solution build, `docx-page --skip-slow` (`50`), `docx-core --skip-slow` (`60`), and `docx-tables
   --skip-slow` (`125`). Keep table-internal note continuation, multi-page footnotes, section-scoped endnotes,
   comment placement, and Office-derived separator/continuation behavior open.
+  2026-06-03 follow-up: inline-reference placement now carries the owning `DocxParagraph` through a layout-owned
+  reference location and compares it with page text-line provenance. Table-cell text lines use their enclosing
+  table source block plus exact paragraph identity, so repeated local run indexes in different cells/rows no
+  longer let an earlier table paragraph claim a later footnote marker. Bottom-up coverage adds a split-page
+  table-cell footnote fixture with two local source run `0` paragraphs and asserts placement follows the owning
+  paragraph page. Validation passed full solution build, `docx-page --skip-slow` (`50`), `docx-core
+  --skip-slow` (`60`), and `docx-tables --skip-slow` (`126`). Keep actual table-internal note continuation,
+  multi-page footnotes, section-scoped endnotes, comment placement, and Office-derived separator/continuation
+  behavior open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
