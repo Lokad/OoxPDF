@@ -142,6 +142,10 @@ internal static class DocxTests
         TestAssert.Equal(3, settings.FootnoteReferenceSettings.NumberStart ?? 0);
         TestAssert.Equal("sectEnd", settings.EndnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal("eachSect", settings.EndnoteReferenceSettings.NumberRestartValue ?? string.Empty);
+        DocxLayoutPageSnapshot pageSnapshot = new DocxRenderer().InspectLayout(document).Pages.Single();
+        TestAssert.Equal("beneathText", pageSnapshot.SectionFootnotePositionValue ?? string.Empty);
+        TestAssert.Equal("sectEnd", pageSnapshot.SectionEndnotePositionValue ?? string.Empty);
+        TestAssert.Equal("eachSect", pageSnapshot.SectionEndnoteNumberRestartValue ?? string.Empty);
         TestAssert.Equal(842d, document.PageWidthPoints);
         TestAssert.Equal(595d, document.PageHeightPoints);
         TestAssert.Equal(90d, document.MarginLeftPoints);

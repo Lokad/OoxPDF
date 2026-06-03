@@ -418,6 +418,12 @@ High-priority actions:
   `pageBottom`, and section restarts should affect placement. Bottom-up coverage extends document-settings
   and page-settings fixtures to assert note position tokens and section note numbering tokens. Validation
   passed full solution build, `docx-core --skip-slow` (`60`), and `docx-page --skip-slow` (`47`).
+  2026-06-03 tooling follow-up: `DocxLayoutPageSnapshot` now carries section note settings
+  (`SectionFootnotePositionValue`, `SectionFootnoteNumberRestartValue`, `SectionEndnotePositionValue`,
+  `SectionEndnoteNumberRestartValue`) beside the existing section break/column fields. This lets public and
+  private flow probes correlate placed note behavior with section-local OOXML tokens without reopening the
+  package XML. Validation passed full solution build, `docx-core --skip-slow` (`60`), and `docx-page
+  --skip-slow` (`47`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
