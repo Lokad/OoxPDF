@@ -18,10 +18,7 @@ internal static class DocxTableCellContent
     {
         if (cell.BodyElements.Count != 0)
         {
-            return cell.BodyElements
-                .OfType<DocxParagraphElement>()
-                .Select(element => element.Paragraph)
-                .ToArray();
+            return DocxBlockTraversal.EnumerateDirectParagraphs(cell.BodyElements).ToArray();
         }
 
         return cell.Paragraphs.Count == 0 && cell.Text.Length != 0

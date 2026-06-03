@@ -34,7 +34,7 @@ internal sealed record DocxDocument(
     public DocxSectionBreakElement? FinalSectionBreak { get; init; }
     public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
         ? FallbackParagraphs
-        : BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray();
+        : DocxBlockTraversal.EnumerateDirectParagraphs(BodyElements).ToArray();
     public IReadOnlyList<DocxTable> Tables => BodyElements.Count == 0
         ? FallbackTables
         : DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
@@ -56,7 +56,7 @@ internal sealed record DocxRelatedStory(
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
     public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
         ? FallbackParagraphs
-        : BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray();
+        : DocxBlockTraversal.EnumerateDirectParagraphs(BodyElements).ToArray();
     public IReadOnlyList<DocxTable> Tables => BodyElements.Count == 0
         ? FallbackTables
         : DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
@@ -122,6 +122,13 @@ internal static class DocxBlockTraversal
                     break;
             }
         }
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateDirectParagraphs(IEnumerable<DocxBodyElement> bodyElements)
+    {
+        return bodyElements
+            .OfType<DocxParagraphElement>()
+            .Select(element => element.Paragraph);
     }
 
     public static IEnumerable<DocxTable> EnumerateBodyTables(DocxDocument document)

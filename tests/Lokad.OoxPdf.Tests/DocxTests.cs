@@ -1584,6 +1584,8 @@ internal static class DocxTests
             []);
 
         TestAssert.Equal("Body", document.Paragraphs.Single().Runs.Single().Text);
+        TestAssert.Equal("Body|Nested", string.Join("|", DocxBlockTraversal.EnumerateBodyParagraphs(document).Select(paragraph => paragraph.Runs.Single().Text)));
+        TestAssert.Equal("Body", string.Join("|", DocxBlockTraversal.EnumerateDirectParagraphs(document.BodyElements).Select(paragraph => paragraph.Runs.Single().Text)));
         TestAssert.Equal(2, document.Tables.Count);
     }
 
@@ -1610,6 +1612,8 @@ internal static class DocxTests
             []);
 
         TestAssert.Equal("Story", story.Paragraphs.Single().Runs.Single().Text);
+        TestAssert.Equal("Story|Nested", string.Join("|", DocxBlockTraversal.EnumerateBodyParagraphs(story).Select(paragraph => paragraph.Runs.Single().Text)));
+        TestAssert.Equal("Story", string.Join("|", DocxBlockTraversal.EnumerateDirectParagraphs(story.BodyElements).Select(paragraph => paragraph.Runs.Single().Text)));
         TestAssert.Equal(2, story.Tables.Count);
     }
 

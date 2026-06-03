@@ -4992,6 +4992,14 @@ block models and richer section/pagination layout before adding more Word pagina
   derived compatibility views. Validation passed full solution build, `docx-core --skip-slow` (`58`),
   `docx-page --skip-slow` (`45`), and `docx-tables --skip-slow` (`123`). Keep this open for removing or
   renaming fallback constructor slots still used by hand-built tests and compatibility construction paths.
+  2026-06-03 direct-projection follow-up: introduced `DocxBlockTraversal.EnumerateDirectParagraphs` as the
+  single explicit direct-paragraph compatibility projection. Document/story `Paragraphs`, table-cell
+  paragraph synthesis, static-story paragraph projections, and layout snapshot helpers now use that helper
+  instead of open-coded `DocxParagraphElement` scans. Bottom-up tests now pin the intended split:
+  compatibility paragraph lists expose direct body paragraphs, while recursive `EnumerateBodyParagraphs`
+  still owns nested table-cell paragraphs. Validation passed `docx-core --skip-slow` (`58`) and
+  `docx-tables --skip-slow` (`123`); the first parallel table run hit a shared build-output lock and passed
+  when rerun serially.
 - [ ] DOCX style-resolved block model: move from reader-flattened paragraph metrics toward a layout-ready
   effective paragraph model with explicit provenance for defaults, basedOn style depth, table-style
   contributions, and direct paragraph overrides. This should let future vertical-flow decisions compare

@@ -2107,7 +2107,7 @@ internal sealed class DocxReader
     {
         return bodyElementsByType.ToDictionary(
             pair => pair.Key,
-            pair => (IReadOnlyList<DocxParagraph>)pair.Value.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            pair => (IReadOnlyList<DocxParagraph>)DocxBlockTraversal.EnumerateDirectParagraphs(pair.Value).ToArray(),
             StringComparer.OrdinalIgnoreCase);
     }
 
@@ -2344,10 +2344,7 @@ internal sealed class DocxReader
                     package,
                     relationships,
                     conditionalStyle);
-                IReadOnlyList<DocxParagraph> paragraphs = cellBodyElements
-                    .OfType<DocxParagraphElement>()
-                    .Select(element => element.Paragraph)
-                    .ToArray();
+                IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
                 string text = string.Join(" ", paragraphs
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
                     .Where(t => t.Length != 0));

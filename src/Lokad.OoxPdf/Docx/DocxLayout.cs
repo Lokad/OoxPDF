@@ -934,10 +934,7 @@ internal sealed record DocxLayoutSnapshot(
 
     private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
     {
-        return bodyElements
-            .OfType<DocxParagraphElement>()
-            .Select(element => element.Paragraph)
-            .ToArray();
+        return DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
     }
 
     private static TextProfile BuildTextProfile(string text)
@@ -5161,10 +5158,7 @@ internal sealed class DocxLayoutEngine
 
     private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
     {
-        return bodyElements
-            .OfType<DocxParagraphElement>()
-            .Select(element => element.Paragraph)
-            .ToArray();
+        return DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
     }
 
     private static bool IsTableCellColumnBreakElement(DocxBodyElement element)
