@@ -15692,6 +15692,68 @@ internal static class DocxTests
             "The selected footnote page should contain the marker paragraph carried through table-cell text-line provenance.");
     }
 
+    public static void DocxLayoutPlacesSectEndEndnoteOnOwningSectionEndPage()
+    {
+        DocxParagraph firstSectionParagraph = CreateDocxLayoutParagraph("first section endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "21",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 6)
+            ]
+        };
+        DocxParagraph secondSectionParagraph = CreateDocxLayoutParagraph("second section body", 10d, 12d);
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote body", 10d, 12d);
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "21",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
+        {
+            EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
+        };
+        var sectionBreak = new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []);
+        var document = new DocxDocument(
+            220d,
+            112d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(firstSectionParagraph),
+                sectionBreak,
+                new DocxParagraphElement(secondSectionParagraph)
+            ],
+            [firstSectionParagraph, secondSectionParagraph],
+            [])
+        {
+            RelatedStories = [endnoteStory]
+        };
+
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutPageSnapshot endnotePage = snapshot.Pages.Single(page => page.PlacedEndnoteStoryCount == 1);
+
+        TestAssert.True(snapshot.Pages.Count >= 2, "The next-page section break should separate the two sections.");
+        TestAssert.Equal("sectEnd", snapshot.Pages[0].SectionEndnotePositionValue ?? string.Empty);
+        TestAssert.Equal(1, snapshot.Pages[0].PlacedEndnoteStoryCount);
+        TestAssert.Equal(0, snapshot.Pages[^1].PlacedEndnoteStoryCount);
+        TestAssert.True(endnotePage.PlacedRelatedStories.Any(story => story.Kind == "Endnote" && story.SourceBlockIndex == 0), "A sectEnd endnote should be owned by the source section end page, not rewritten as a document-end story.");
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

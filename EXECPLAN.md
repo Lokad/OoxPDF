@@ -385,18 +385,18 @@ High-priority actions:
   order and appends them as document-end placed related stories instead of leaving them measured-only.
   `DocxLayoutSnapshot.Pages[].PlacedRelatedStories` now exposes private-safe story-level placement ownership
   (kind, part, id, source owner, geometry, separator geometry, and item counts), while `PlacedRelatedItems`
-  remains item-oriented for PDF-flow diagnostics. This slice intentionally exposes two open architecture gaps:
-  section-scoped endnote positioning/settings (`endnotePr`, end-of-section vs end-of-document, continuation
-  separators) still need Office-PDF probes.
+  remains item-oriented for PDF-flow diagnostics. This slice intentionally exposed an architecture gap that is
+  now partly closed: fitting `sectEnd` endnotes are section-end page-owned, but Office-PDF probes are still
+  needed for multi-page section-end continuations, continuation separators, and mixed section/document settings.
   Validation passed full solution build, `docx-core --skip-slow` (`59`), `docx-page --skip-slow` (`46`), and
   `docx-tables --skip-slow` (`125`).
   2026-06-03 architecture follow-up: related-story placement now runs before static header/footer injection,
   so endnote continuation pages are part of the final page list before static stories and page fields are
   resolved. This removes the stale-page-count/static-content weakness for endnote-only overflow pages without
   adding a separate continuation-page renderer. Bottom-up coverage forces an endnote continuation page with a
-  default header `{PAGE}` field and asserts the continuation page receives a static header. Keep section-scoped
-  endnote positioning, continuation separators, and multi-section page-field edge cases open for Office-PDF
-  probes. Validation passed full solution build, `docx-core --skip-slow` (`60`), `docx-page --skip-slow`
+  default header `{PAGE}` field and asserts the continuation page receives a static header. Keep section-end
+  endnote overflow/continuation behavior, continuation separators, and multi-section page-field edge cases open
+  for Office-PDF probes. Validation passed full solution build, `docx-core --skip-slow` (`60`), `docx-page --skip-slow`
   (`47`), and `docx-tables --skip-slow` (`125`).
   2026-06-03 architecture follow-up: PDF hyperlink annotations and bookmark destinations now include placed
   related-story text lines through the same renderer path as body, table-cell, and static-story text. This
@@ -8059,8 +8059,16 @@ Current validation baseline:
   table-cell footnote fixture with two local source run `0` paragraphs and asserts placement follows the owning
   paragraph page. Validation passed full solution build, `docx-page --skip-slow` (`50`), `docx-core
   --skip-slow` (`60`), and `docx-tables --skip-slow` (`126`). Keep actual table-internal note continuation,
-  multi-page footnotes, section-scoped endnotes, comment placement, and Office-derived separator/continuation
+  multi-page footnotes, section-end endnote overflow, comment placement, and Office-derived separator/continuation
   behavior open.
+  2026-06-03 follow-up: endnote placement now preserves the source inline-reference location instead of
+  reducing references to story layouts before placement. `endnotePr w:pos="sectEnd"` references that fit are
+  placed on the last rendered page of their owning section, with marker-owned `SourceBlockIndex`, while ordinary
+  document-end endnotes keep the existing document-end flow. Bottom-up coverage adds a two-section DOCX layout
+  case where the first section owns a `sectEnd` endnote and the following section starts on a later page.
+  Validation passed full solution build, `docx-page --skip-slow` (`51`), `docx-core --skip-slow` (`60`), and
+  `docx-tables --skip-slow` (`126`). Keep Office-derived section-end overflow pages, continuation separators,
+  and mixed section/document numbering behavior open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.
