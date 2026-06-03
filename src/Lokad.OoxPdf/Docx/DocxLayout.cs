@@ -105,6 +105,12 @@ internal enum DocxLineHeightSource
     TerminalParagraphMark
 }
 
+internal sealed record DocxParagraphLineShape(
+    string Text,
+    double X,
+    double Width,
+    IReadOnlyList<DocxTextSegmentLayout> Segments);
+
 internal sealed record DocxParagraphSpacingProfile(
     double PendingAfterSpacing,
     double ParagraphBeforeSpacing,
@@ -2241,7 +2247,6 @@ internal sealed class DocxLayoutEngine
                     }
 
                     double lineWidth = MeasureTextSpans(line.Spans, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
-                    double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
                     double lineX = effective.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -2249,27 +2254,27 @@ internal sealed class DocxLayoutEngine
                         _ => paragraphX
                     };
                     double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, effective.LineSpacingPoints is not null);
-                    bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
-                        ShouldJustifyTextLine(effective.Alignment, lineIndex == lines.Length - 1, drawableLineWidth, paragraphWidth, line.Spans);
-                    IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-                        ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, x + labelStartOffset, lineX, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints)
-                        : justifyLine
-                            ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints)
-                            : CreateTextSegments(line.Spans, lineX, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
-                    double effectiveX = firstLine && paragraph.ListLabel is not null ? x + labelStartOffset : lineX;
-                    double effectiveWidth = firstLine && paragraph.ListLabel is not null
-                        ? Math.Max(lineX + lineWidth, x + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, paragraphFontSize, textMeasurer)) - (x + labelStartOffset)
-                        : justifyLine
-                            ? paragraphWidth
-                            : lineWidth;
+                    DocxParagraphLineShape lineShape = CreateParagraphLineShape(
+                        paragraph,
+                        line,
+                        firstRun,
+                        firstLine,
+                        lineIndex == lines.Length - 1,
+                        x + labelStartOffset,
+                        lineX,
+                        paragraphWidth,
+                        paragraphFontSize,
+                        textMeasurer,
+                        effective.TabStops,
+                        defaultTabStopPoints);
                     currentItems.Add(new DocxTextLineLayout(
-                        firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,
+                        lineShape.Text,
                         firstRun,
                         paragraphFontSize,
-                        effectiveX,
+                        lineShape.X,
                         cursorY - baselineOffset,
-                        effectiveWidth,
-                        segments,
+                        lineShape.Width,
+                        lineShape.Segments,
                         SourceBlockIndex: elementIndex,
                         SourceParagraphIndex: 0,
                         SourceLineIndex: lineIndex,
@@ -3438,7 +3443,6 @@ internal sealed class DocxLayoutEngine
         {
             DocxWrappedTextLine line = lines[lineIndex];
             double lineWidth = MeasureTextSpans(line.Spans, fontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
-            double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, fontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
             double lineX = effective.Alignment switch
             {
                 DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -3446,27 +3450,27 @@ internal sealed class DocxLayoutEngine
                 _ => paragraphX
             };
             double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, effective.LineSpacingPoints is not null);
-            bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
-                ShouldJustifyTextLine(effective.Alignment, lineIndex == lines.Length - 1, drawableLineWidth, paragraphWidth, line.Spans);
-            IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-                ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, labelStartOffset, lineX, fontSize, textMeasurer, effective.TabStops, defaultTabStopPoints)
-                : justifyLine
-                    ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, fontSize, textMeasurer, effective.TabStops, defaultTabStopPoints)
-                    : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
-            double effectiveX = firstLine && paragraph.ListLabel is not null ? labelStartOffset : lineX;
-            double effectiveWidth = firstLine && paragraph.ListLabel is not null
-                ? Math.Max(lineX + lineWidth, labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - labelStartOffset
-                : justifyLine
-                    ? paragraphWidth
-                    : lineWidth;
+            DocxParagraphLineShape lineShape = CreateParagraphLineShape(
+                paragraph,
+                line,
+                firstRun,
+                firstLine,
+                lineIndex == lines.Length - 1,
+                labelStartOffset,
+                lineX,
+                paragraphWidth,
+                fontSize,
+                textMeasurer,
+                effective.TabStops,
+                defaultTabStopPoints);
             layouts.Add(new DocxTextLineLayout(
-                firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,
+                lineShape.Text,
                 firstRun,
                 fontSize,
-                effectiveX,
+                lineShape.X,
                 cursorY - baselineOffset,
-                effectiveWidth,
-                segments,
+                lineShape.Width,
+                lineShape.Segments,
                 SourceBlockIndex: sourceBlockIndex,
                 SourceParagraphIndex: sourceParagraphIndex,
                 SourceLineIndex: lineIndex,
@@ -4948,6 +4952,41 @@ internal sealed class DocxLayoutEngine
         double firstLine = indent.FirstLinePoints ?? 0d;
         double hanging = indent.HangingPoints ?? 0d;
         return Math.Max(0d, left + firstLine - hanging);
+    }
+
+    private static DocxParagraphLineShape CreateParagraphLineShape(
+        DocxParagraph paragraph,
+        DocxWrappedTextLine line,
+        DocxTextRun firstRun,
+        bool firstLine,
+        bool finalWrappedLine,
+        double labelX,
+        double lineX,
+        double paragraphWidth,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops,
+        double defaultTabStopPoints)
+    {
+        double lineWidth = MeasureTextSpans(line.Spans, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+        double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+        bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
+            ShouldJustifyTextLine(paragraph.EffectiveProperties.Alignment, finalWrappedLine, drawableLineWidth, paragraphWidth, line.Spans);
+        IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
+            ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, labelX, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
+            : justifyLine
+                ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
+                : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+        double effectiveX = firstLine && paragraph.ListLabel is not null ? labelX : lineX;
+        double effectiveWidth = firstLine && paragraph.ListLabel is not null
+            ? Math.Max(lineX + lineWidth, labelX + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - labelX
+            : justifyLine
+                ? paragraphWidth
+                : lineWidth;
+        string text = firstLine && paragraph.ListLabel is not null
+            ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text
+            : line.Text;
+        return new DocxParagraphLineShape(text, effectiveX, effectiveWidth, segments);
     }
 
     private static IReadOnlyList<DocxTextSegmentLayout> CreateNumberedLineSegments(
@@ -6512,34 +6551,33 @@ internal sealed class DocxLayoutEngine
                 {
                     DocxWrappedTextLine line = wrappedLines[lineIndex];
                     double lineWidth = MeasureTextSpans(line.Spans, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints);
-                    double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints);
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
                         DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
                         _ => paragraphX
                     };
-                    bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
-                        ShouldJustifyTextLine(paragraph.EffectiveProperties.Alignment, lineIndex == wrappedLines.Length - 1, drawableLineWidth, paragraphWidth, line.Spans);
-                    IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-                        ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, cellX + paddingLeft + labelStartOffset, lineX, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints)
-                        : justifyLine
-                            ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints)
-                            : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints);
-                    double effectiveX = firstLine && paragraph.ListLabel is not null ? cellX + paddingLeft + labelStartOffset : lineX;
-                    double effectiveWidth = firstLine && paragraph.ListLabel is not null
-                        ? Math.Max(lineX + lineWidth, cellX + paddingLeft + labelStartOffset + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - (cellX + paddingLeft + labelStartOffset)
-                        : justifyLine
-                            ? paragraphWidth
-                            : lineWidth;
+                    DocxParagraphLineShape lineShape = CreateParagraphLineShape(
+                        paragraph,
+                        line,
+                        firstRun,
+                        firstLine,
+                        lineIndex == wrappedLines.Length - 1,
+                        cellX + paddingLeft + labelStartOffset,
+                        lineX,
+                        paragraphWidth,
+                        fontSize,
+                        textMeasurer,
+                        paragraph.EffectiveProperties.TabStops,
+                        defaultTabStopPoints);
                     lines.Add(new DocxTextLineLayout(
-                        firstLine && paragraph.ListLabel is not null ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text : line.Text,
+                        lineShape.Text,
                         firstRun,
                         fontSize,
-                        effectiveX,
+                        lineShape.X,
                         cursorY,
-                        effectiveWidth,
-                        segments,
+                        lineShape.Width,
+                        lineShape.Segments,
                         SourceBlockIndex: null,
                         SourceParagraphIndex: paragraphIndex,
                         SourceLineIndex: lineIndex,

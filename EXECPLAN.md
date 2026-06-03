@@ -652,6 +652,13 @@ High-priority actions:
   On the same compact-list runs, many adjacent rows are already within about `+0.006`/`+0.009` pt while
   periodic rows are low by roughly `0.11..0.14` pt, matching the Office `0.12`-bucket advance pattern. This
   makes the next rendering branch a baseline-grid/carry problem rather than a uniform line-pitch offset.
+  2026-06-04 architecture follow-up: body paragraphs, related-story paragraphs, and table-cell paragraphs now
+  share `CreateParagraphLineShape` for list-label segment construction, justification, effective X, and
+  effective width. This is behavior-neutral groundwork for the baseline-grid/carry branch: future line-shape,
+  text-state, or justification changes no longer need to be mirrored across three paragraph surfaces.
+  Validation passed `docx-core --skip-slow` (`64`), `docx-page --skip-slow` (`54`), `docx-tables --skip-slow`
+  (`132`), full solution build, and public `docx-ladder-03-compact-bullet-alt-line115` stayed at page-1
+  `MAE=12.164815`, page-2 `MAE=0.253264`.
   2026-06-02 accepted default-model update: missing paragraph spacing now follows the public Office-observed
   Word defaults (`1.2` auto-line factor and implicit `8pt` after spacing), replacing the earlier split between
   untokened and spacing-token paragraphs. Public compact-list probes improved or stayed guarded
