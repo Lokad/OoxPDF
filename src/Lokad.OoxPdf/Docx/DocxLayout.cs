@@ -5512,15 +5512,36 @@ internal sealed class DocxLayoutEngine
             int continuationLineCount = group.Count(line => line.BaselineY < fragmentBottomY);
             bool splitsParagraph = firstFragmentLineCount != 0 && continuationLineCount != 0;
             if (splitsParagraph &&
-                (keepRules.KeepLines == true ||
+                (keepRules.KeepNext == true ||
+                    keepRules.KeepLines == true ||
                     (keepRules.WidowControl != false &&
                         (firstFragmentLineCount == 1 || continuationLineCount == 1))))
+            {
+                return true;
+            }
+
+            if (keepRules.KeepNext == true &&
+                firstFragmentLineCount != 0 &&
+                continuationLineCount == 0 &&
+                IsNextTableCellParagraphInContinuation(paragraphIndex, textLines, fragmentBottomY))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool IsNextTableCellParagraphInContinuation(
+        int paragraphIndex,
+        IReadOnlyList<DocxTextLineLayout> textLines,
+        double fragmentBottomY)
+    {
+        int nextParagraphIndex = paragraphIndex + 1;
+        return textLines.Any(line => line.SourceParagraphIndex == nextParagraphIndex) &&
+            textLines
+                .Where(line => line.SourceParagraphIndex == nextParagraphIndex)
+                .All(line => line.BaselineY < fragmentBottomY);
     }
 
     private static bool TryResolveExplicitTableCellPageBreakBoundaries(

@@ -493,11 +493,6 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "unsupported manual column break container", fallback: "Visible body column breaks are supported");
         }
 
-        if (document.Descendants().Any(IsUnsupportedParagraphKeepRule))
-        {
-            Emit("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", "table-cell paragraph keep/widow-orphan rule", fallback: "Body paragraph keep rules are supported");
-        }
-
         if (document.Descendants(WordprocessingNamespace + "pPr")
             .Elements(WordprocessingNamespace + "sectPr")
             .Any(IsUnsupportedParagraphSectionBreak))
@@ -729,17 +724,6 @@ internal sealed class DocxReader
             .TakeWhile(element => element != paragraph)
             .FirstOrDefault(element => element.Name == WordprocessingNamespace + "r" || IsVisibleRunContainer(element));
         return visibleOwner is null;
-    }
-
-    private static bool IsUnsupportedParagraphKeepRule(XElement element)
-    {
-        if (element.Name != WordprocessingNamespace + "keepNext")
-        {
-            return false;
-        }
-
-        XElement? paragraph = element.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
-        return paragraph is null || paragraph.Ancestors(WordprocessingNamespace + "tc").Any();
     }
 
     private static bool HasUnsupportedTableBorderStyle(XDocument document)

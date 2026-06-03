@@ -8138,18 +8138,20 @@ Current validation baseline:
   resolved paragraph model inside table cells before splitting a row. If the proposed fragment boundary would
   cut through a cell paragraph whose effective keep rules include `keepLines`, or would violate the default or
   explicit-on `widowControl` rule by leaving one line stranded on either side, the row is moved whole to the
-  next page instead of producing row fragments that violate the cell paragraph contract. The unsupported keep
-  diagnostic no longer fires for table-cell `keepLines` or `widowControl`, while table-cell `keepNext` remains
-  diagnostic-only because it requires row-block adjacency logic rather than a split-boundary guard. Bottom-up
-  coverage verifies ordinary tall rows still split at page boundaries, kept and widow-controlled cell
-  paragraphs move whole, and the diagnostic contract is narrowed. Validation passed focused
+  next page instead of producing row fragments that violate the cell paragraph contract. The same boundary
+  guard now also keeps a `keepNext` cell paragraph with the following visible cell paragraph when the proposed
+  boundary falls between them. The stale `DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE` diagnostic is removed because
+  body and table-cell keep rules now have layout-stage behavior instead of being ignored. Bottom-up coverage
+  verifies ordinary tall rows still split at page boundaries, kept/widow-controlled/keep-next cell paragraphs
+  move whole, and the broad diagnostic fixture no longer emits the stale keep-rule ID. Validation passed focused
   `DocxTableLayoutStageKeepsCellKeepLinesParagraphWholeAtPageBoundary`,
   `DocxTableLayoutStageKeepsCellWidowControlledParagraphWholeAtPageBoundary`,
-  `DocxSupportedTableCellKeepLinesAndWidowControlDoNotEmitUnsupportedKeepDiagnostic`,
-  `DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault`, `docx-tables --skip-slow` (`129`),
+  `DocxTableLayoutStageKeepsCellKeepNextParagraphWithFollowingParagraphAtPageBoundary`,
+  `DocxSupportedTableCellKeepRulesDoNotEmitUnsupportedKeepDiagnostic`,
+  `DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault`, `docx-tables --skip-slow` (`130`),
   `docx-core --skip-slow` (`62`), `docx-page --skip-slow` (`54`), and full solution build. Keep
-  Office-exact table-cell `keepNext`, explicit page-break interactions, and paragraph-level continuation
-  semantics open.
+  Office-exact explicit page-break interactions, non-paragraph keep-next targets, and paragraph-level
+  continuation semantics open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

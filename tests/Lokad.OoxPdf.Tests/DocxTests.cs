@@ -10353,6 +10353,46 @@ internal static class DocxTests
         TestAssert.Equal(3, secondPageRows[0].Cells[0].TextLines.Count);
     }
 
+    public static void DocxTableLayoutStageKeepsCellKeepNextParagraphWithFollowingParagraphAtPageBoundary()
+    {
+        DocxParagraph firstParagraph = CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph keepNextParagraph = CreateDocxLayoutParagraph(
+            "One\nTwo",
+            10d,
+            10d,
+            keepRules: DocxParagraphKeepRules.Empty with { KeepNext = true });
+        DocxParagraph followingParagraph = CreateDocxLayoutParagraph("Three", 10d, 10d);
+        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell("Second", [keepNextParagraph, followingParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d);
+        var table = new DocxTable(null, [60d], [first, second]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(1, firstPageRows.Length);
+        TestAssert.Equal(1, secondPageRows.Length);
+        TestAssert.Equal(1, secondPageRows[0].RowIndex);
+        TestAssert.Equal(1, secondPageRows[0].FragmentCount);
+        TestAssert.Equal("None", secondPageRows[0].FragmentReason);
+        TestAssert.Equal(3, secondPageRows[0].Cells[0].TextLines.Count);
+    }
+
     public static void DocxTableRendererDoesNotDrawRowEdgeBordersAtSplitFragmentBoundaries()
     {
         DocxTableCellBorder[] borders =
@@ -14778,9 +14818,9 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_APPROXIMATED_FOOTNOTE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_MACRO", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_OLE_OBJECT", ids);
-        TestAssert.Contains("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_SECTION_BREAK", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_TRACKED_CHANGES", ids);
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", ids);
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.PartName == "/word/document.xml"), "Unsupported DOCX diagnostics should be document-scoped warnings.");
     }
 
@@ -15128,7 +15168,7 @@ internal static class DocxTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE"), "Body paragraph keep/widow rules are parsed and consumed by page layout, so they should not emit stale unsupported diagnostics.");
     }
 
-    public static void DocxSupportedTableCellKeepLinesAndWidowControlDoNotEmitUnsupportedKeepDiagnostic()
+    public static void DocxSupportedTableCellKeepRulesDoNotEmitUnsupportedKeepDiagnostic()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -15162,6 +15202,11 @@ internal static class DocxTests
                             <w:pPr><w:widowControl/></w:pPr>
                             <w:r><w:t>Widow controlled cell paragraph</w:t></w:r>
                           </w:p>
+                          <w:p>
+                            <w:pPr><w:keepNext/></w:pPr>
+                            <w:r><w:t>Keep-next cell paragraph</w:t></w:r>
+                          </w:p>
+                          <w:p><w:r><w:t>Following cell paragraph</w:t></w:r></w:p>
                         </w:tc>
                       </w:tr>
                     </w:tbl>
@@ -15175,7 +15220,7 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
-        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE"), "Table-cell keepLines is consumed by row-fragment layout and should not emit an unsupported keep diagnostic.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE"), "Table-cell keep rules are consumed by row-fragment layout and should not emit an unsupported keep diagnostic.");
     }
 
     public static void DocxReaderPreservesFootnoteStoryTypesWithoutPlacingSeparators()
