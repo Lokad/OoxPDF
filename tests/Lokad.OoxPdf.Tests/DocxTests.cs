@@ -1605,7 +1605,7 @@ internal static class DocxTests
 
     public static void DocxFontPlanSnapshotReportsPrivateSafeOpenTypeMetrics()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -2363,7 +2363,7 @@ internal static class DocxTests
 
     public static void DocxFontPlanTextMeasurerUsesResolvedFontFace()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -2709,7 +2709,7 @@ internal static class DocxTests
     {
         var resolver = new WindowsFontResolver(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts"));
         string defaultFamily = resolver.Resolve(new FontRequest(DocxRenderer.DefaultDocumentTypefaceRequest)).FamilyName;
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFontExcept(defaultFamily);
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFontExcept(defaultFamily);
         if (font is null)
         {
             return;
@@ -2782,7 +2782,7 @@ internal static class DocxTests
     {
         var resolver = new WindowsFontResolver(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts"));
         string defaultFamily = resolver.Resolve(new FontRequest(DocxRenderer.DefaultDocumentTypefaceRequest)).FamilyName;
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFontExcept(defaultFamily);
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFontExcept(defaultFamily);
         if (font is null)
         {
             return;
@@ -2847,8 +2847,8 @@ internal static class DocxTests
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        (FontResolution Resolution, string FirstFamily)? collectionFace = resolver.GetDiscoveredFonts()
-            .Where(f => f.FontFaceIndex > 0 && f.FontFilePath is not null && Regex.IsMatch(f.FamilyName, @"^[A-Za-z0-9 ._-]+$"))
+        (FontFaceResolution Resolution, string FirstFamily)? collectionFace = resolver.GetDiscoveredFonts()
+            .Where(f => f.FontFaceIndex > 0 && f.Source is FileFontProgramSource && Regex.IsMatch(f.FamilyName, @"^[A-Za-z0-9 ._-]+$"))
             .Select(f => TryLoadCollectionFace(f))
             .Where(item => item is not null)
             .Select(item => item!.Value)
@@ -2910,15 +2910,15 @@ internal static class DocxTests
             return;
         }
 
-        (FontResolution Resolution, OpenTypeFont Font)? first = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? first = FindUsableInstalledFont();
         if (first is null)
         {
             return;
         }
 
-        (FontResolution Resolution, OpenTypeFont Font)? second = FindUsableInstalledFontExcept(first.Value.Resolution.FamilyName);
+        (FontFaceResolution Resolution, OpenTypeFont Font)? second = FindUsableInstalledFontExcept(first.Value.Resolution.FamilyName);
         if (second is null ||
-            string.Equals(first.Value.Resolution.FontFilePath, second.Value.Resolution.FontFilePath, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(first.Value.Resolution.Source.StableId, second.Value.Resolution.Source.StableId, StringComparison.OrdinalIgnoreCase) &&
             first.Value.Resolution.FontFaceIndex == second.Value.Resolution.FontFaceIndex)
         {
             return;
@@ -2974,7 +2974,7 @@ internal static class DocxTests
 
     public static void DocxRendererDoesNotSynthesizeBoldWhenResolvedFaceIsBold()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -5595,7 +5595,7 @@ internal static class DocxTests
 
     public static void DocxLayoutStageUsesFontMetricsForAutoLineHeight()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -10870,7 +10870,7 @@ internal static class DocxTests
 
     public static void DocxTableLayoutStageLaysOutNestedTableCellBodies()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -10907,7 +10907,7 @@ internal static class DocxTests
 
     public static void DocxTableLayoutStagePreservesMixedCellBodyOrderAroundNestedTables()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -11787,7 +11787,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionOmitsTerminalSpacesAfterIntraTokenBreaks()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -11831,7 +11831,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionSplitsDashPunctuationIntoOfficeLikeOperations()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -12280,7 +12280,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionSnapshotReportsTableCellParagraphIndexes()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -12498,7 +12498,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionSnapshotReportsPrivateSafePdfTextState()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -12663,7 +12663,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionDoesNotApplyNumberedTcToBulletListMarkers()
     {
-        (FontResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
         if (font is null)
         {
             return;
@@ -15052,17 +15052,13 @@ internal static class DocxTests
         };
     }
 
-    private static (FontResolution Resolution, string FirstFamily)? TryLoadCollectionFace(FontResolution resolution)
+    private static (FontFaceResolution Resolution, string FirstFamily)? TryLoadCollectionFace(FontFaceResolution resolution)
     {
         try
         {
-            if (resolution.FontFilePath is null)
-            {
-                return null;
-            }
-
-            OpenTypeFont first = OpenTypeFont.Load(resolution.FontFilePath, 0);
-            OpenTypeFont selected = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
+            ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync().AsTask().GetAwaiter().GetResult();
+            OpenTypeFont first = OpenTypeFont.Load(bytes.ToArray(), 0);
+            OpenTypeFont selected = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
             return selected.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase)
                 ? (resolution, first.FamilyName)
                 : null;
@@ -15073,7 +15069,7 @@ internal static class DocxTests
         }
     }
 
-    private static (FontResolution Resolution, OpenTypeFont Font)? FindUsableInstalledFont()
+    private static (FontFaceResolution Resolution, OpenTypeFont Font)? FindUsableInstalledFont()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
         if (!Directory.Exists(fontsDirectory))
@@ -15082,11 +15078,12 @@ internal static class DocxTests
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        foreach (FontResolution resolution in resolver.GetDiscoveredFonts().Where(font => font.FontFilePath is not null))
+        foreach (FontFaceResolution resolution in resolver.GetDiscoveredFonts())
         {
             try
             {
-                OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath!, resolution.FontFaceIndex);
+                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync().AsTask().GetAwaiter().GetResult();
+                OpenTypeFont font = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
                 if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
                 {
                     return (resolution, font);
@@ -15100,7 +15097,7 @@ internal static class DocxTests
         return null;
     }
 
-    private static (FontResolution Resolution, OpenTypeFont Font)? FindUsableInstalledFontExcept(string familyName)
+    private static (FontFaceResolution Resolution, OpenTypeFont Font)? FindUsableInstalledFontExcept(string familyName)
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
         if (!Directory.Exists(fontsDirectory))
@@ -15109,11 +15106,12 @@ internal static class DocxTests
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        foreach (FontResolution resolution in resolver.GetDiscoveredFonts().Where(font => font.FontFilePath is not null && !font.FamilyName.Equals(familyName, StringComparison.OrdinalIgnoreCase)))
+        foreach (FontFaceResolution resolution in resolver.GetDiscoveredFonts().Where(font => !font.FamilyName.Equals(familyName, StringComparison.OrdinalIgnoreCase)))
         {
             try
             {
-                OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath!, resolution.FontFaceIndex);
+                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync().AsTask().GetAwaiter().GetResult();
+                OpenTypeFont font = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
                 if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
                 {
                     return (resolution, font);
@@ -15146,14 +15144,14 @@ internal static class DocxTests
         return units * fontSize / font.UnitsPerEm;
     }
 
-    private sealed class SingleResolutionFontResolver(FontResolution resolution) : IFontResolver
+    private sealed class SingleResolutionFontResolver(FontFaceResolution resolution) : IFontResolver
     {
-        public FontResolution Resolve(FontRequest request)
+        public FontFaceResolution Resolve(FontRequest request)
         {
             return resolution with
             {
-                Bold = request.Bold,
-                Italic = request.Italic,
+                Style = resolution.Style with { Bold = request.Bold, Italic = request.Italic },
+                RequestedFamily = request.FamilyName,
                 IsFallback = !request.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase)
             };
         }

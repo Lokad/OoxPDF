@@ -805,7 +805,7 @@ internal sealed partial class PptxRenderer
         XElement? bulletSizePoints = FindBulletProperty(paragraphProperties, "buSzPts");
         string? fontTypeface = (string?)bulletFont?.Attribute("typeface");
         string? fontCharset = (string?)bulletFont?.Attribute("charset");
-        PptxThemeTypefaceResolution fontResolution = theme.ResolveTypefaceWithSource(fontTypeface);
+        PptxThemeTypefaceResolution FontFaceResolution = theme.ResolveTypefaceWithSource(fontTypeface);
         RgbColor? color = bulletColor is not null && PptxColorResolver.TryReadSolidColor(bulletColor, theme, colorMap, out RgbColor resolvedColor)
             ? resolvedColor
             : null;
@@ -827,7 +827,7 @@ internal sealed partial class PptxRenderer
             string resolvedCharacter = IsSymbolBulletFont(bulletFont)
                 ? MapSymbolBulletText(character)
                 : character;
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Character, character, resolvedCharacter, null, null, null, fontTypeface, fontCharset, fontResolution.Typeface, fontResolution.Source, color, sizeKind, sizeValue);
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Character, character, resolvedCharacter, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
         }
 
         if (paragraphProperties.Element(DrawingNamespace + "buAutoNum") is { } autoNumber)
@@ -845,8 +845,8 @@ internal sealed partial class PptxRenderer
                 startAt,
                 fontTypeface,
                 fontCharset,
-                fontResolution.Typeface,
-                fontResolution.Source,
+                FontFaceResolution.Typeface,
+                FontFaceResolution.Source,
                 color,
                 sizeKind,
                 sizeValue);
@@ -854,10 +854,10 @@ internal sealed partial class PptxRenderer
 
         if (paragraphProperties.Element(DrawingNamespace + "buBlip") is not null)
         {
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Blip, null, null, null, null, null, fontTypeface, fontCharset, fontResolution.Typeface, fontResolution.Source, color, sizeKind, sizeValue);
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Blip, null, null, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
         }
 
-        return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, fontTypeface, fontCharset, fontResolution.Typeface, fontResolution.Source, color, sizeKind, sizeValue);
+        return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
     }
 
     private static string? FormatColor(RgbColor? color)

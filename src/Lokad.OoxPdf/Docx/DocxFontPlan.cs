@@ -18,7 +18,7 @@ internal sealed record DocxResolvedRunTypeface(
     string? RequestedFamily,
     string? ResolvedFamily,
     DocxTypefaceResolutionSource Source,
-    FontResolution? Resolution);
+    FontFaceResolution? Resolution);
 
 internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 {
@@ -67,7 +67,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         for (int i = 0; i < families.Count; i++)
         {
             string family = families[i];
-            FontResolution resolution = fontResolver.Resolve(new FontRequest(family, run.Bold, run.Italic));
+            FontFaceResolution resolution = fontResolver.Resolve(new FontRequest(family, run.Bold, run.Italic));
             if (!resolution.IsFallback)
             {
                 return new DocxResolvedRunTypeface(run, families, family, resolution.FamilyName, SourceForCandidate(candidates, family), resolution);
@@ -75,7 +75,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         }
 
         string requested = families[0];
-        FontResolution fallback = fontResolver.Resolve(new FontRequest(requested, run.Bold, run.Italic));
+        FontFaceResolution fallback = fontResolver.Resolve(new FontRequest(requested, run.Bold, run.Italic));
         return new DocxResolvedRunTypeface(run, families, requested, fallback.FamilyName, DocxTypefaceResolutionSource.ResolverFallback, fallback);
     }
 
@@ -129,10 +129,10 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
 {
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
-    private readonly FontResolution? fallbackResolution;
-    private readonly Dictionary<(string Path, int FaceIndex), OpenTypeFont?> fonts = new();
+    private readonly FontFaceResolution? fallbackResolution;
+    private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts = new();
 
-    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontResolution? fallbackResolution = null)
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution = null)
     {
         runs = plan.Runs;
         this.fallbackResolution = fallbackResolution;
@@ -141,7 +141,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontResolution resolution)
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
         {
             return 0d;
         }
@@ -172,7 +172,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
     {
         DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontResolution resolution)
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
         {
             return fontSize;
         }
@@ -208,39 +208,22 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     private OpenTypeFont? ResolveFont(DocxTextRun? run)
     {
         DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        return (resolved?.Resolution ?? fallbackResolution) is FontResolution resolution
+        return (resolved?.Resolution ?? fallbackResolution) is FontFaceResolution resolution
             ? LoadFont(resolution)
             : null;
     }
 
-    private OpenTypeFont? LoadFont(FontResolution resolution)
+    private OpenTypeFont? LoadFont(FontFaceResolution resolution)
     {
-        if (string.IsNullOrWhiteSpace(resolution.FontFilePath))
-        {
-            return null;
-        }
-
-        var key = (resolution.FontFilePath, resolution.FontFaceIndex);
+        var key = (resolution.Source.StableId, resolution.FontFaceIndex);
         if (fonts.TryGetValue(key, out OpenTypeFont? cached))
         {
             return cached;
         }
 
-        OpenTypeFont? loaded = TryLoadFont(resolution.FontFilePath, resolution.FontFaceIndex);
+        OpenTypeFont? loaded = FontProgramLoader.Load(resolution);
         fonts[key] = loaded;
         return loaded;
-    }
-
-    private static OpenTypeFont? TryLoadFont(string path, int faceIndex)
-    {
-        try
-        {
-            return OpenTypeFont.Load(path, faceIndex);
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
-        {
-            return null;
-        }
     }
 }
 
@@ -307,9 +290,9 @@ internal sealed record DocxFontPlanSnapshot(
         double fontSize,
         string? resolvedFamilyHash,
         int runCount,
-        FontResolution? resolution)
+        FontFaceResolution? resolution)
     {
-        OpenTypeFont? font = resolution is null ? null : TryLoadFont(resolution.FontFilePath, resolution.FontFaceIndex);
+        OpenTypeFont? font = FontProgramLoader.Load(resolution);
         if (font is null)
         {
             return new DocxFontMetricBucketSnapshot(
@@ -342,23 +325,6 @@ internal sealed record DocxFontPlanSnapshot(
             DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize),
             DocxLineMetrics.MeasureWindowsAscender(font, fontSize),
             DocxLineMetrics.MeasureWindowsDescender(font, fontSize));
-    }
-
-    private static OpenTypeFont? TryLoadFont(string? path, int faceIndex)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        try
-        {
-            return OpenTypeFont.Load(path, faceIndex);
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
-        {
-            return null;
-        }
     }
 
     private static string? HashFamily(string? family)

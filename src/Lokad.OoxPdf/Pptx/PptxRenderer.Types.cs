@@ -794,7 +794,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct RenderedFont(
         string ResourceName,
         PdfEmbeddedFont Font,
-        FontResolution Resolution,
+        FontFaceResolution Resolution,
         bool SyntheticBold,
         bool SyntheticItalic);
 
@@ -825,7 +825,7 @@ internal sealed partial class PptxRenderer
     {
         private readonly PresentationFontResolver resolver;
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, FontResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FontFaceResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
 
         public TextAdvanceEstimator(PresentationFontResolver? resolver = null)
@@ -910,7 +910,7 @@ internal sealed partial class PptxRenderer
                 return cached;
             }
 
-            FontResolution? primaryResolution = ResolveFontResolution(requestedFamily, bold, italic);
+            FontFaceResolution? primaryResolution = ResolveFontResolution(requestedFamily, bold, italic);
             OpenTypeFont? primaryFont = LoadFont(primaryResolution);
             if (primaryResolution is not null && primaryFont is not null && primaryFont.MapCodePoint(codePoint) != 0)
             {
@@ -919,18 +919,18 @@ internal sealed partial class PptxRenderer
                 return cached;
             }
 
-            foreach (FontResolution resolution in resolver.GetDiscoveredFonts()
-                         .Where(f => !f.HasMathTable && f.FontFilePath is not null)
+            foreach (FontFaceResolution resolution in resolver.GetDiscoveredFonts()
+                         .Where(f => !f.HasMathTable)
                          .OrderBy(f => f.Bold == bold ? 0 : 1000)
                          .ThenBy(f => f.Italic == italic ? 0 : 1000)
                          .ThenBy(f => Math.Abs(f.WeightClass - (bold ? 700 : 400)))
                          .ThenBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
-                         .ThenBy(f => f.FontFilePath, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(f => f.Source.StableId, StringComparer.OrdinalIgnoreCase)
                          .ThenBy(f => f.FontFaceIndex))
             {
                 if (primaryResolution is not null &&
                     resolution.FontFaceIndex == primaryResolution.FontFaceIndex &&
-                    string.Equals(resolution.FontFilePath, primaryResolution.FontFilePath, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(resolution.Source.StableId, primaryResolution.Source.StableId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -960,7 +960,7 @@ internal sealed partial class PptxRenderer
                 return false;
             }
 
-            FontResolution? resolution = ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
+            FontFaceResolution? resolution = ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
             return resolution is not null && !resolution.Bold;
         }
 
@@ -971,7 +971,7 @@ internal sealed partial class PptxRenderer
                 return false;
             }
 
-            FontResolution? resolution = ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
+            FontFaceResolution? resolution = ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
             return resolution is not null && !resolution.Italic;
         }
 
@@ -980,10 +980,10 @@ internal sealed partial class PptxRenderer
             return LoadFont(ResolveFontResolution(familyName, bold, italic));
         }
 
-        private FontResolution? ResolveFontResolution(string familyName, bool bold, bool italic)
+        private FontFaceResolution? ResolveFontResolution(string familyName, bool bold, bool italic)
         {
             string key = familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
-            if (resolutions.TryGetValue(key, out FontResolution? cached))
+            if (resolutions.TryGetValue(key, out FontFaceResolution? cached))
             {
                 return cached;
             }
@@ -1001,28 +1001,20 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
-        private OpenTypeFont? LoadFont(FontResolution? resolution)
+        private OpenTypeFont? LoadFont(FontFaceResolution? resolution)
         {
-            if (resolution is null || resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
+            if (resolution is null)
             {
                 return null;
             }
 
-            string key = resolution.FontFilePath + "\u001f" + resolution.FontFaceIndex.ToString(CultureInfo.InvariantCulture);
+            string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(CultureInfo.InvariantCulture);
             if (fonts.TryGetValue(key, out OpenTypeFont? cached))
             {
                 return cached;
             }
 
-            try
-            {
-                cached = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
-            }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
-            {
-                cached = null;
-            }
-
+            cached = FontProgramLoader.Load(resolution);
             fonts[key] = cached;
             return cached;
         }

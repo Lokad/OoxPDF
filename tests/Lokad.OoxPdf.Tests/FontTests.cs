@@ -16,17 +16,17 @@ internal static class FontTests
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        IReadOnlyList<FontResolution> fonts = resolver.GetDiscoveredFonts();
+        IReadOnlyList<FontFaceResolution> fonts = resolver.GetDiscoveredFonts();
         if (fonts.Count == 0)
         {
             throw new InvalidOperationException("Expected at least one discoverable Windows font.");
         }
 
-        FontResolution resolved = resolver.Resolve(new FontRequest("Arial"));
-        TestAssert.NotNull(resolved.FontFilePath);
+        FontFaceResolution resolved = resolver.Resolve(new FontRequest("Arial"));
+        TestAssert.NotNull(resolved.Source);
 
-        FontResolution bold = resolver.Resolve(new FontRequest("Arial", Bold: true));
-        TestAssert.NotNull(bold.FontFilePath);
+        FontFaceResolution bold = resolver.Resolve(new FontRequest("Arial", Bold: true));
+        TestAssert.NotNull(bold.Source);
         TestAssert.True(bold.WeightClass >= resolved.WeightClass, "Expected bold font resolution to prefer a heavier face when one is available.");
     }
 
@@ -53,6 +53,41 @@ internal static class FontTests
         ushort glyph = font.MapCodePoint('A');
         TestAssert.True(glyph > 0, "Expected a glyph mapping for 'A'.");
         TestAssert.True(font.GetAdvanceWidth(glyph) > 0, "Expected a positive advance width for 'A'.");
+    }
+
+    public static void PresentationFontResolverLoadsMemoryBackedFontSource()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        byte[] bytes = File.ReadAllBytes(arial);
+        OpenTypeFont font = OpenTypeFont.Load(bytes);
+        var resolution = new FontFaceResolution(
+            font.FamilyName,
+            font.FamilyName,
+            new FontStyleKey(
+                Bold: font.Os2.WeightClass >= 600,
+                Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
+                WeightClass: font.Os2.WeightClass,
+                HasMathTable: font.TableTags.Contains("MATH")),
+            new MemoryFontProgramSource("memory:test-arial", bytes),
+            IsFallback: false);
+
+        var resolver = new PresentationFontResolver(new SingleFontResolver(resolution));
+        (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = resolver.ResolvePresentationOpenTypeFont(new FontRequest(font.FamilyName));
+
+        if (resolved is null)
+        {
+            throw new InvalidOperationException("Expected memory-backed font source to load through presentation resolver.");
+        }
+
+        TestAssert.Equal("memory:test-arial", resolved.Value.Resolution.Source.StableId);
+        TestAssert.Equal(font.FamilyName, resolved.Value.Font.FamilyName);
+        TestAssert.True(resolved.Value.Font.MapCodePoint('A') != 0, "Expected memory-backed font to map capital A.");
     }
 
     public static void OpenTypeParserReadsSimpleGlyphOutlines()
@@ -325,18 +360,19 @@ internal static class FontTests
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        FontResolution? mathFace = resolver.GetDiscoveredFonts()
-            .FirstOrDefault(f => f.HasMathTable && f.FontFilePath is not null && f.FontFilePath.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase));
+        FontFaceResolution? mathFace = resolver.GetDiscoveredFonts()
+            .FirstOrDefault(f => f.HasMathTable &&
+                f.Source is FileFontProgramSource source &&
+                source.Path.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase));
         if (mathFace is null)
         {
             return;
         }
 
-        FontResolution resolved = resolver.Resolve(new FontRequest(mathFace.FamilyName));
+        FontFaceResolution resolved = resolver.Resolve(new FontRequest(mathFace.FamilyName));
 
-        TestAssert.NotNull(resolved.FontFilePath);
         TestAssert.True(resolved.HasMathTable, "Expected exact font resolution to keep the requested math-table face.");
-        TestAssert.Equal(mathFace.FontFilePath, resolved.FontFilePath);
+        TestAssert.Equal(mathFace.Source.StableId, resolved.Source.StableId);
         TestAssert.True(!resolved.IsFallback, "Expected exact font resolution not to be marked as fallback.");
     }
 
@@ -350,23 +386,21 @@ internal static class FontTests
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        FontResolution? mathFace = resolver.GetDiscoveredFonts()
+        FontFaceResolution? mathFace = resolver.GetDiscoveredFonts()
             .FirstOrDefault(f => f.HasMathTable &&
-                f.FontFilePath is not null &&
-                f.FontFilePath.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase) &&
+                f.Source is FileFontProgramSource source &&
+                source.Path.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase) &&
                 resolver.GetDiscoveredFonts().Any(other =>
                     !other.HasMathTable &&
-                    other.FontFilePath is not null &&
-                    other.FontFilePath.Equals(f.FontFilePath, StringComparison.OrdinalIgnoreCase)));
+                    other.Source.StableId.Equals(f.Source.StableId, StringComparison.OrdinalIgnoreCase)));
         if (mathFace is null)
         {
             return;
         }
 
-        FontResolution resolved = resolver.ResolvePresentationTextFace(new FontRequest(mathFace.FamilyName));
+        FontFaceResolution resolved = resolver.ResolvePresentationTextFace(new FontRequest(mathFace.FamilyName));
 
-        TestAssert.NotNull(resolved.FontFilePath);
-        TestAssert.Equal(mathFace.FontFilePath, resolved.FontFilePath);
+        TestAssert.Equal(mathFace.Source.StableId, resolved.Source.StableId);
         TestAssert.True(resolved.HasMathTable, "Expected PPTX presentation text to preserve the requested math-table face.");
         TestAssert.True(!resolved.IsFallback, "Expected the requested presentation math face not to be marked as fallback.");
     }
@@ -380,11 +414,11 @@ internal static class FontTests
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        FontResolution display = resolver.Resolve(new FontRequest("Aptos Display"));
-        FontResolution body = resolver.Resolve(new FontRequest("Aptos"));
+        FontFaceResolution display = resolver.Resolve(new FontRequest("Aptos Display"));
+        FontFaceResolution body = resolver.Resolve(new FontRequest("Aptos"));
 
-        TestAssert.NotNull(display.FontFilePath);
-        TestAssert.NotNull(body.FontFilePath);
+        TestAssert.NotNull(display.Source);
+        TestAssert.NotNull(body.Source);
         if (!resolver.GetDiscoveredFonts().Any(f => f.FamilyName.Equals("Aptos Display", StringComparison.OrdinalIgnoreCase)))
         {
             TestAssert.True(
@@ -415,10 +449,10 @@ internal static class FontTests
         }
 
         var resolver = new WindowsFontResolver();
-        IReadOnlyList<FontResolution> fonts = resolver.GetDiscoveredFonts();
+        IReadOnlyList<FontFaceResolution> fonts = resolver.GetDiscoveredFonts();
 
         TestAssert.True(
-            fonts.Any(f => f.FontFilePath is not null && f.FontFilePath.StartsWith(cloudFonts, StringComparison.OrdinalIgnoreCase)),
+            fonts.Any(f => f.Source is FileFontProgramSource source && source.Path.StartsWith(cloudFonts, StringComparison.OrdinalIgnoreCase)),
             "Expected the default Windows resolver to scan Microsoft cloud font cache directories.");
     }
 
@@ -448,7 +482,7 @@ internal static class FontTests
         string positioning = TestAssert.NotNull(embedded.EncodeGlyphPositioningArray("The scale", 0d, 18d, forcePositioningArray: true));
         string widths = embedded.BuildWidthArray();
 
-        TestAssert.Contains($"<{glyph:X4}>", positioning);
+        TestAssert.Contains(glyph.ToString("X4", CultureInfo.InvariantCulture), positioning);
         TestAssert.Contains(glyph.ToString(CultureInfo.InvariantCulture) + " [", widths);
     }
 
@@ -487,5 +521,18 @@ internal static class FontTests
 
         TestAssert.Equal("Cambria Math", font.FamilyName);
         TestAssert.True(font.GlyphCount > 0, "Expected glyphs from the selected TTC face.");
+    }
+
+    private sealed class SingleFontResolver(FontFaceResolution resolution) : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            return resolution with
+            {
+                RequestedFamily = request.FamilyName,
+                IsFallback = !request.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase),
+                Style = resolution.Style with { Bold = request.Bold, Italic = request.Italic }
+            };
+        }
     }
 }

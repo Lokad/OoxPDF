@@ -13,10 +13,20 @@ internal sealed class MapFontResolver : IFontResolver
         this.fallbackFamily = fallbackFamily;
     }
 
-    public FontResolution Resolve(FontRequest request)
+    public FontFaceResolution Resolve(FontRequest request)
     {
         return availableFamilies.Contains(request.FamilyName)
-            ? new FontResolution(request.FamilyName, request.FamilyName + ".ttf", IsFallback: false, request.Bold, request.Italic)
-            : new FontResolution(fallbackFamily, fallbackFamily + ".ttf", IsFallback: true, request.Bold, request.Italic);
+            ? CreateResolution(request.FamilyName, request.FamilyName, request, isFallback: false)
+            : CreateResolution(request.FamilyName, fallbackFamily, request, isFallback: true);
+    }
+
+    private static FontFaceResolution CreateResolution(string requestedFamily, string resolvedFamily, FontRequest request, bool isFallback)
+    {
+        return new FontFaceResolution(
+            requestedFamily,
+            resolvedFamily,
+            new FontStyleKey(request.Bold, request.Italic),
+            new MemoryFontProgramSource("test:" + resolvedFamily, ReadOnlyMemory<byte>.Empty),
+            isFallback);
     }
 }

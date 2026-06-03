@@ -2,7 +2,47 @@
 
 `Lokad.OoxPdf` is a dependency-free .NET OOXML-to-PDF renderer for `.pptx` and `.docx` files. The library reads Office Open XML packages directly, builds static PDF pages, and does not call Microsoft Office, PDFium, PowerShell, external executables, or third-party packages at runtime.
 
-The current renderer is intended for simple corporate decks and documents. It supports common text, shapes, images, tables, page setup, headers and footers, and emits diagnostics for unsupported features that cannot be represented faithfully in a static PDF.
+The current renderer is intended for corporate decks and documents. PPTX rendering is the more mature path; DOCX rendering supports text, page setup, headers and footers, images, tables, numbering, and diagnostics, with layout coverage still being expanded bottom-up.
+
+## Runtime Model
+
+The converter runtime is pure managed .NET:
+
+- no Office automation;
+- no PDFium;
+- no PowerShell scripts;
+- no native image, font, browser, or PDF libraries;
+- no NuGet package dependencies in `src/Lokad.OoxPdf`.
+
+The runtime inputs are the OOXML file, the output PDF path, options, diagnostics callbacks, and resolved font programs. Validation tools under `tools/` use Office and PDFium, but those tools are not part of library conversion.
+
+Rendering follows this broad pipeline:
+
+```text
+OOXML package -> typed document/scene model -> layout -> PDF pages/resources
+```
+
+Font handling follows a storage-neutral pipeline:
+
+```text
+FontRequest -> FontFaceResolution -> IFontProgramSource -> OpenTypeFont -> embedded PDF font
+```
+
+## Fonts And Portability
+
+OOXPDF embeds resolved OpenType font programs in generated PDFs when a font source is available. Font access is intentionally not hard-wired to the filesystem: an `IFontResolver` returns a `FontFaceResolution`, and that resolution carries an `IFontProgramSource`.
+
+An `IFontProgramSource` can be backed by files, memory, blob storage, memory-mapped files, embedded resources, or another deployment-specific source:
+
+```csharp
+public interface IFontProgramSource
+{
+    string StableId { get; }
+    ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default);
+}
+```
+
+The built-in `WindowsFontResolver` is a file-backed resolver for local Windows font directories. For deterministic Linux operation, provide a font package and resolver/source implementation instead of relying on whatever fonts happen to be installed on the host. Without resolved font programs, conversion may still produce a PDF, but typography, wrapping, glyph coverage, and visual fidelity are degraded.
 
 ## Library Usage
 
@@ -23,6 +63,36 @@ OoxPdfConverter.Convert(
 ```
 
 Use `OoxPdfInputKind.Pptx` or `OoxPdfInputKind.Docx` in `OoxPdfOptions.InputKind` to override extension-based detection.
+
+Advanced deployments can provide their own font resolver:
+
+```csharp
+using Lokad.OoxPdf;
+using Lokad.OoxPdf.Fonts;
+
+public sealed class MyFontResolver : IFontResolver
+{
+    public FontFaceResolution Resolve(FontRequest request)
+    {
+        byte[] bytes = LoadFontBytesFromPackageOrBlob(request);
+
+        return new FontFaceResolution(
+            request.FamilyName,
+            "Resolved Family",
+            new FontStyleKey(request.Bold, request.Italic),
+            new MemoryFontProgramSource("font-pack:resolved-family:regular", bytes),
+            IsFallback: false);
+    }
+}
+
+OoxPdfConverter.Convert(
+    "input.pptx",
+    "output.pdf",
+    new OoxPdfOptions
+    {
+        FontResolver = new MyFontResolver()
+    });
+```
 
 ## CLI Usage
 
@@ -67,7 +137,7 @@ See [docs/PrivateValidation.md](docs/PrivateValidation.md) for local-only valida
 ```powershell
 dotnet restore Lokad.OoxPdf.slnx --tl:off -v minimal
 dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
-dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off
+dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow
 dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore
 ```
 

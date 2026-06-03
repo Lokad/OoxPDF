@@ -1564,7 +1564,7 @@ internal enum DocxTableCellVisualOwnership
     MissingVerticalMergeOwner
 }
 
-internal sealed record DocxRunFontResource(string Name, PdfEmbeddedFont Embedded, FontResolution Resolution);
+internal sealed record DocxRunFontResource(string Name, PdfEmbeddedFont Embedded, FontFaceResolution Resolution);
 
 internal sealed record DocxFontResources(
     DocxFontPlan Plan,

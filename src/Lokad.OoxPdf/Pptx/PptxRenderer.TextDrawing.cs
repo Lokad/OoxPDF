@@ -288,13 +288,13 @@ internal sealed partial class PptxRenderer
         foreach (IGrouping<string, TextFontUse> group in uses.GroupBy(use => FontKey(use.FamilyName, use.Bold, use.Italic), StringComparer.OrdinalIgnoreCase))
         {
             TextFontUse first = group.First();
-            (FontResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic));
+            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic));
             if (resolved is null)
             {
                 continue;
             }
 
-            FontResolution resolution = resolved.Value.Resolution;
+            FontFaceResolution resolution = resolved.Value.Resolution;
             OpenTypeFont font = resolved.Value.Font;
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(use => use.CodePoints));
             string resourceName = resourcePrefix + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);

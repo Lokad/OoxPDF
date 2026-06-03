@@ -8,7 +8,7 @@ internal sealed class CountingFontResolver : IFontResolver
 
     public int ResolveCalls { get; private set; }
 
-    public FontResolution Resolve(FontRequest request)
+    public FontFaceResolution Resolve(FontRequest request)
     {
         ResolveCalls++;
         return fallback.Resolve(request);

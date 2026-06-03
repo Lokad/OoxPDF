@@ -3,8 +3,8 @@ namespace Lokad.OoxPdf.Fonts;
 public sealed class WindowsFontResolver : IFontResolver
 {
     private static readonly object CacheLock = new();
-    private static readonly Dictionary<string, Lazy<IReadOnlyList<FontResolution>>> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Lazy<IReadOnlyList<FontResolution>> cache;
+    private static readonly Dictionary<string, Lazy<IReadOnlyList<FontFaceResolution>>> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lazy<IReadOnlyList<FontFaceResolution>> cache;
 
     public WindowsFontResolver()
         : this(GetDefaultFontDirectories())
@@ -21,11 +21,11 @@ public sealed class WindowsFontResolver : IFontResolver
         cache = GetOrCreateCache(fontDirectories);
     }
 
-    public FontResolution Resolve(FontRequest request)
+    public FontFaceResolution Resolve(FontRequest request)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.FamilyName);
 
-        FontResolution[] exact = cache.Value
+        FontFaceResolution[] exact = cache.Value
             .Where(f => f.FamilyName.Equals(request.FamilyName, StringComparison.OrdinalIgnoreCase))
             .ToArray();
         if (exact.Length != 0)
@@ -33,30 +33,35 @@ public sealed class WindowsFontResolver : IFontResolver
             return SelectBest(exact, request);
         }
 
-        FontResolution[] textFonts = cache.Value
+        FontFaceResolution[] textFonts = cache.Value
             .Where(f => !f.HasMathTable)
             .ToArray();
         if (textFonts.Length != 0)
         {
-            return SelectBest(textFonts, request) with { IsFallback = true };
+            return SelectBest(textFonts, request) with { RequestedFamily = request.FamilyName, IsFallback = true };
         }
 
         return cache.Value.FirstOrDefault() is { } first
-            ? first with { IsFallback = true }
-            : new FontResolution(request.FamilyName, null, IsFallback: true);
+            ? first with { RequestedFamily = request.FamilyName, IsFallback = true }
+            : new FontFaceResolution(
+                request.FamilyName,
+                request.FamilyName,
+                new FontStyleKey(request.Bold, request.Italic),
+                new MemoryFontProgramSource("missing:" + request.FamilyName, ReadOnlyMemory<byte>.Empty),
+                IsFallback: true);
     }
 
-    internal FontResolution ResolvePresentationTextFace(FontRequest request)
+    internal FontFaceResolution ResolvePresentationTextFace(FontRequest request)
     {
         return Resolve(request);
     }
 
-    internal IReadOnlyList<FontResolution> GetDiscoveredFonts()
+    internal IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
         return cache.Value;
     }
 
-    private static Lazy<IReadOnlyList<FontResolution>> GetOrCreateCache(IReadOnlyList<string> fontDirectories)
+    private static Lazy<IReadOnlyList<FontFaceResolution>> GetOrCreateCache(IReadOnlyList<string> fontDirectories)
     {
         string cacheKey = string.Join(
             "|",
@@ -66,9 +71,9 @@ public sealed class WindowsFontResolver : IFontResolver
                 .Order(StringComparer.OrdinalIgnoreCase));
         lock (CacheLock)
         {
-            if (!DiscoveryCaches.TryGetValue(cacheKey, out Lazy<IReadOnlyList<FontResolution>>? cached))
+            if (!DiscoveryCaches.TryGetValue(cacheKey, out Lazy<IReadOnlyList<FontFaceResolution>>? cached))
             {
-                cached = new Lazy<IReadOnlyList<FontResolution>>(() => Discover(fontDirectories));
+                cached = new Lazy<IReadOnlyList<FontFaceResolution>>(() => Discover(fontDirectories));
                 DiscoveryCaches[cacheKey] = cached;
             }
 
@@ -76,9 +81,9 @@ public sealed class WindowsFontResolver : IFontResolver
         }
     }
 
-    private static IReadOnlyList<FontResolution> Discover(IReadOnlyList<string> fontDirectories)
+    private static IReadOnlyList<FontFaceResolution> Discover(IReadOnlyList<string> fontDirectories)
     {
-        var fonts = new List<FontResolution>();
+        var fonts = new List<FontFaceResolution>();
         foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
@@ -93,21 +98,24 @@ public sealed class WindowsFontResolver : IFontResolver
                 try
                 {
                     byte[] bytes = File.ReadAllBytes(path);
+                    var source = new FileFontProgramSource(path);
                     int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
                     for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
                     {
                         OpenTypeFont font = OpenTypeFont.Load(bytes, faceIndex);
                         if (!string.IsNullOrWhiteSpace(font.FamilyName))
                         {
-                            fonts.Add(new FontResolution(
+                            fonts.Add(new FontFaceResolution(
                                 font.FamilyName,
-                                path,
-                                IsFallback: false,
-                                Bold: font.Os2.WeightClass >= 600,
-                                Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
-                                WeightClass: font.Os2.WeightClass,
-                                FontFaceIndex: faceIndex,
-                                HasMathTable: font.TableTags.Contains("MATH")));
+                                font.FamilyName,
+                                new FontStyleKey(
+                                    Bold: font.Os2.WeightClass >= 600,
+                                    Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
+                                    WeightClass: font.Os2.WeightClass,
+                                    FaceIndex: faceIndex,
+                                    HasMathTable: font.TableTags.Contains("MATH")),
+                                source,
+                                IsFallback: false));
                         }
                     }
                 }
@@ -135,14 +143,15 @@ public sealed class WindowsFontResolver : IFontResolver
         return [windowsFonts, cloudFonts];
     }
 
-    private static FontResolution SelectBest(IReadOnlyList<FontResolution> candidates, FontRequest request)
+    private static FontFaceResolution SelectBest(IReadOnlyList<FontFaceResolution> candidates, FontRequest request)
     {
         int targetWeight = request.Bold ? 700 : 400;
         return candidates
             .OrderBy(f => f.Italic == request.Italic ? 0 : 1000)
             .ThenBy(f => Math.Abs(f.WeightClass - targetWeight))
             .ThenBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(f => f.FontFilePath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(f => f.Source.StableId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(f => f.FontFaceIndex)
             .First();
     }
 }
