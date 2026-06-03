@@ -1045,6 +1045,12 @@ internal sealed class DocxRenderer
             return emissionSegments;
         }
 
+        if (line.EmitsTerminalParagraphMark)
+        {
+            AddTerminalLineSpace(emissionSegments, segments, line, fontResources);
+            return emissionSegments;
+        }
+
         for (int i = segments.Count - 1; i >= 0; i--)
         {
             DocxTextSegmentLayout segment = segments[i];
@@ -1089,6 +1095,46 @@ internal sealed class DocxRenderer
         }
 
         return emissionSegments;
+    }
+
+    private static void AddTerminalLineSpace(
+        List<DocxTextEmissionSegment> emissionSegments,
+        IReadOnlyList<DocxTextSegmentLayout> segments,
+        DocxTextLineLayout line,
+        DocxFontResources fontResources)
+    {
+        if (segments.Count == 0)
+        {
+            return;
+        }
+
+        DocxTextSegmentLayout segment = segments[^1];
+        DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
+        if (resource is null)
+        {
+            return;
+        }
+
+        double fontSize = GetSegmentFontSize(segment, line.FontSize);
+        double baselineY = GetSegmentBaselineY(segment, line.BaselineY);
+        DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
+        emissionSegments.Add(new DocxTextEmissionSegment(
+            " ",
+            segment.StyleRun,
+            resource,
+            ReadColor(effective.ColorHex),
+            segment.X + segment.Width,
+            baselineY,
+            0d,
+            fontSize,
+            PdfCharacterSpacing: 0d,
+            PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
+            CompensatePdfCharacterSpacing: true,
+            SyntheticBold: false,
+            SyntheticItalic: effective.Italic && !resource.Resolution.Italic,
+            IsTerminalLineSpace: true,
+            segment.SourceTextRunIndex,
+            segment.Role));
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateBodyTextLines(DocxLayoutPage page)

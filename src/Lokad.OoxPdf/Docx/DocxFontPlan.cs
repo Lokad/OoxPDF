@@ -33,6 +33,9 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
                 .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
             .SelectMany(GetParagraphFontRuns)
+            .Concat(document.BodyElements
+                .OfType<DocxImplicitParagraphElement>()
+                .Select(_ => DocxImplicitParagraphElement.CreateParagraphMarkRun()))
             .ToArray();
 
         return new DocxFontPlan(runs
@@ -113,7 +116,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             yield return DocxLayoutEngine.CreateListLabelRun(
                 paragraph.ListLabel,
                 firstRun,
-                firstRun?.EffectiveProperties.FontSize ?? 11d);
+                firstRun?.EffectiveProperties.FontSize ?? DocxDefaults.FontSizePoints);
         }
     }
 

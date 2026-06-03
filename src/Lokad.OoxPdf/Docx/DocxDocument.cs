@@ -323,6 +323,14 @@ internal sealed record DocxParagraphElement(DocxParagraph Paragraph) : DocxBodyE
 
 internal sealed record DocxTableElement(DocxTable Table) : DocxBodyElement;
 
+internal sealed record DocxImplicitParagraphElement(string SourceKind) : DocxBodyElement
+{
+    public static DocxTextRun CreateParagraphMarkRun()
+    {
+        return new DocxTextRun(string.Empty, DocxDefaults.FontSizePoints, null, false, false, false, null, null);
+    }
+}
+
 internal sealed record DocxPageBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph = null) : DocxBodyElement;
 
 internal sealed record DocxManualBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph = null) : DocxBodyElement;

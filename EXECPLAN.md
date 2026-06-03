@@ -305,6 +305,16 @@ High-priority actions:
   hyphenated words and overwide table token fragments. Treat this long-token operation-order branch as closed;
   any remaining raster gap on this case belongs to broader glyph metrics/positioning, not wrapping, terminal
   spaces, or dash decomposition.
+  2026-06-04 follow-up: the remaining `docx-ladder-02-long-token-wrapping` PDF text-operation mismatch was not
+  a private-case or token heuristic; it was Word's implicit final paragraph mark after a document body ends with
+  a table. Added public `docx-ladder-03-terminal-table-implicit-paragraph` and modeled that as a
+  `DocxImplicitParagraphElement` owned by the top-level body reader, with layout/rendering emitting the same
+  terminal whitespace operation through the existing terminal-line-space text-state path. The isolated probe
+  moved from Office/candidate/planner `7/6/6` text ops (`whitespace -1`) to `7/7/7`, paired, zero class deltas
+  on run `20260604-003549`; the original long-token case moved to `29/29/29`, paired, zero class deltas on run
+  `20260604-003728`. `docx-inspect` now exposes the hidden block as `ImplicitParagraph` with
+  `ImplicitSourceKind=terminalTable`, and a bottom-up reader test asserts this is a document-body rule, not a
+  table-cell nested-body rule.
   2026-06-02 follow-up: DOCX body hyperlinks now lower through explicit PDF link annotations instead of being
   only parser/structure metadata. The PDF writer has a first-class `PdfLinkAnnotation` primitive with stable
   object numbering, `/Annots` page wiring, rectangle emission, URI actions, and PDF-string escaping. DOCX

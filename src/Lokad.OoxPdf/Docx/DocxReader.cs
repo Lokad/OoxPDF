@@ -1141,7 +1141,7 @@ internal sealed class DocxReader
                 sourceTextOffsetInRun: 0);
         }
 
-        double paragraphFontSize = runs.Count == 0 ? 11d : runs.Max(run => run.FontSize);
+        double paragraphFontSize = runs.Count == 0 ? DocxDefaults.FontSizePoints : runs.Max(run => run.FontSize);
         double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ?? ResolveDefaultAutoLineSpacingFactor(resolvedParagraph);
         double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * lineSpacingFactor;
 
@@ -1218,7 +1218,7 @@ internal sealed class DocxReader
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
                 if (firstRun is null)
                 {
-                    runs.Add(new DocxTextRun(placeholder, 11d, null, false, false, false, null, null)
+                    runs.Add(new DocxTextRun(placeholder, DocxDefaults.FontSizePoints, null, false, false, false, null, null)
                     {
                         SourceRunIndex = fieldSourceRunIndex
                     });
@@ -1684,7 +1684,7 @@ internal sealed class DocxReader
             : resolvedRun.FontFamily;
         runs.Add(new DocxTextRun(
             text,
-            resolvedRun.FontSize ?? 11d,
+            resolvedRun.FontSize ?? DocxDefaults.FontSizePoints,
             resolvedRun.ColorHex,
             bold,
             italic,
@@ -1943,6 +1943,7 @@ internal sealed class DocxReader
             }
         }
 
+        AddImplicitTerminalTableParagraph(elements);
         return elements;
     }
 
@@ -2791,6 +2792,17 @@ internal sealed class DocxReader
         }
 
         return elements;
+    }
+
+    private static void AddImplicitTerminalTableParagraph(List<DocxBodyElement> elements)
+    {
+        if (elements.Count == 0 ||
+            elements[^1] is not DocxTableElement)
+        {
+            return;
+        }
+
+        elements.Add(new DocxImplicitParagraphElement("terminalTable"));
     }
 
     private static DocxTableCellMargins ReadTableCellMargins(XElement? cellProperties)

@@ -60,6 +60,9 @@ internal sealed record DocxStructureSnapshot(
                     adjacency.Add(ToTableAdjacencySnapshot(document.BodyElements, table.Table, tableIndex, blockIndex, previousKind, nextKind));
                     tableIndex++;
                     break;
+                case DocxImplicitParagraphElement implicitParagraph:
+                    blocks.Add(FromImplicitParagraph(blockIndex, previousKind, nextKind, implicitParagraph));
+                    break;
                 case DocxPageBreakElement pageBreak:
                     blocks.Add(FromPageBreak(blockIndex, previousKind, nextKind, pageBreak));
                     break;
@@ -455,6 +458,16 @@ internal sealed record DocxStructureSnapshot(
             PageBreakLineSpacingFactor: pageBreak.BreakParagraph?.EffectiveProperties.LineSpacingFactor);
     }
 
+    private static DocxStructureBlockSnapshot FromImplicitParagraph(int blockIndex, string? previousKind, string? nextKind, DocxImplicitParagraphElement implicitParagraph)
+    {
+        return new DocxStructureBlockSnapshot(
+            blockIndex,
+            "ImplicitParagraph",
+            previousKind,
+            nextKind,
+            ImplicitSourceKind: implicitParagraph.SourceKind);
+    }
+
     private static DocxStructureBlockSnapshot FromManualBreak(int blockIndex, string? previousKind, string? nextKind, DocxManualBreakElement manualBreak)
     {
         return new DocxStructureBlockSnapshot(
@@ -824,6 +837,7 @@ internal sealed record DocxStructureSnapshot(
         {
             DocxParagraphElement => "Paragraph",
             DocxTableElement => "Table",
+            DocxImplicitParagraphElement => "ImplicitParagraph",
             DocxPageBreakElement => "PageBreak",
             DocxManualBreakElement => "ManualBreak",
             DocxSectionBreakElement => "SectionBreak",
@@ -973,6 +987,7 @@ internal sealed record DocxStructureBlockSnapshot(
     string? PageBreakValue = null,
     string? ManualBreakSourceKind = null,
     string? ManualBreakValue = null,
+    string? ImplicitSourceKind = null,
     string? SectionBreakTypeValue = null,
     string? SectionColumnCountValue = null,
     string? SectionColumnEqualWidthValue = null,

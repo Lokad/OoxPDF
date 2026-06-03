@@ -2,8 +2,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxTableCellContent
 {
-    private const double PlainTextDefaultFontSize = 11d;
-
     public static IReadOnlyList<DocxBodyElement> GetBodyElements(DocxTableCell cell)
     {
         return cell.BodyElements.Count != 0
@@ -29,7 +27,7 @@ internal static class DocxTableCellContent
     private static DocxParagraph CreatePlainTextParagraph(string text)
     {
         return new DocxParagraph(
-            [new DocxTextRun(text, PlainTextDefaultFontSize, null, false, false, false, null, null)],
+            [new DocxTextRun(text, DocxDefaults.FontSizePoints, null, false, false, false, null, null)],
             [],
             null,
             DocxTextAlignment.Left,

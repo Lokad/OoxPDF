@@ -1585,7 +1585,8 @@ internal sealed record DocxTextLineLayout(
     double? ParagraphAfterSpacing = null,
     bool? ContextualSpacingSuppressed = null,
     DocxParagraph? SourceParagraph = null,
-    string? StoryVariantType = null) : DocxLayoutItem;
+    string? StoryVariantType = null,
+    bool EmitsTerminalParagraphMark = false) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
@@ -2138,6 +2139,33 @@ internal sealed class DocxLayoutEngine
                     activeColumnHasContent = true;
                 }
 
+                continue;
+            }
+
+            if (element is DocxImplicitParagraphElement implicitParagraph &&
+                string.Equals(implicitParagraph.SourceKind, "terminalTable", StringComparison.OrdinalIgnoreCase))
+            {
+                DocxTextRun markRun = DocxImplicitParagraphElement.CreateParagraphMarkRun();
+                double markFontSize = markRun.EffectiveProperties.FontSize;
+                double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(markFontSize, markFontSize, hasExplicitLineSpacing: false);
+                currentItems.Add(new DocxTextLineLayout(
+                    string.Empty,
+                    markRun,
+                    markFontSize,
+                    x,
+                    cursorY - baselineOffset,
+                    0d,
+                    [new DocxTextSegmentLayout(string.Empty, markRun, x, 0d)],
+                    SourceBlockIndex: elementIndex,
+                    SourceParagraphIndex: 0,
+                    SourceLineIndex: 0,
+                    StoryKind: "Body",
+                    LineHeight: markFontSize,
+                    IsFirstParagraphLine: true,
+                    EmitsTerminalParagraphMark: true));
+                activeColumnHasContent = true;
+                previousParagraph = null;
+                pendingSpacingAfter = 0d;
                 continue;
             }
 
@@ -6901,7 +6929,7 @@ internal sealed class DocxLayoutEngine
 
     private static double GetParagraphFontSize(DocxParagraph paragraph)
     {
-        return paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(run => run.EffectiveProperties.FontSize);
+        return paragraph.Runs.Count == 0 ? DocxDefaults.FontSizePoints : paragraph.Runs.Max(run => run.EffectiveProperties.FontSize);
     }
 
     private static IReadOnlyList<DocxTextSegmentLayout> CreateTextSegments(

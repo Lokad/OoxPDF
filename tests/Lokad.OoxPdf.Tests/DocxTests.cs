@@ -927,6 +927,67 @@ internal static class DocxTests
         TestAssert.Equal(string.Empty, paragraphs[1].Paragraph.Runs[0].Text);
     }
 
+    public static void DocxReaderAddsImplicitParagraphOnlyAfterTerminalBodyTable()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="2400"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr><w:tcW w:w="2400" w:type="dxa"/></w:tcPr>
+                          <w:tbl>
+                            <w:tblGrid><w:gridCol w:w="1200"/></w:tblGrid>
+                            <w:tr>
+                              <w:tc>
+                                <w:tcPr><w:tcW w:w="1200" w:type="dxa"/></w:tcPr>
+                                <w:p><w:r><w:t>Nested</w:t></w:r></w:p>
+                              </w:tc>
+                            </w:tr>
+                          </w:tbl>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+
+        TestAssert.Equal(2, document.BodyElements.Count);
+        TestAssert.True(document.BodyElements[0] is DocxTableElement, "The authored terminal table should remain a table body element.");
+        TestAssert.True(document.BodyElements[1] is DocxImplicitParagraphElement, "A terminal body table should synthesize Word's implicit final paragraph mark.");
+        var implicitParagraph = (DocxImplicitParagraphElement)document.BodyElements[1];
+        TestAssert.Equal("terminalTable", implicitParagraph.SourceKind);
+
+        DocxTable bodyTable = ((DocxTableElement)document.BodyElements[0]).Table;
+        DocxTableCell outerCell = bodyTable.Rows.Single().Cells.Single();
+        TestAssert.Equal(1, outerCell.BodyElements.Count);
+        TestAssert.True(outerCell.BodyElements[0] is DocxTableElement, "Nested table-cell flow should preserve its authored terminal table.");
+        TestAssert.True(!outerCell.BodyElements.OfType<DocxImplicitParagraphElement>().Any(), "The implicit terminal body paragraph is a document-body rule, not a table-cell body rule.");
+    }
+
     public static void DocxReaderPreservesDocumentSettingsCompatibilityFacts()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
