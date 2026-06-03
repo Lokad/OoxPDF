@@ -67,6 +67,14 @@ function DivideOrNull($Numerator, $Denominator) {
     return [double]$Numerator / $denominatorValue
 }
 
+function Test-NumericClose($Left, $Right, [double] $Tolerance) {
+    if ($null -eq $Left -or [string]$Left -eq "" -or $null -eq $Right -or [string]$Right -eq "") {
+        return $false
+    }
+
+    return [Math]::Abs([double]$Left - [double]$Right) -le $Tolerance
+}
+
 function Group-Count($Items, [scriptblock] $KeySelector) {
     $groups = @{}
     foreach ($item in $Items) {
@@ -92,6 +100,62 @@ function Group-Count($Items, [scriptblock] $KeySelector) {
             }
         }
     )
+}
+
+function New-TcTargetHypothesisReport(
+    [string] $Name,
+    $Pairs,
+    [scriptblock] $CandidateSelector,
+    [bool] $OnlyNonzeroTc = $true,
+    [double] $Tolerance = 0.001d) {
+    $candidatePairs = New-Object System.Collections.Generic.List[object]
+    foreach ($pair in $Pairs) {
+        if ($OnlyNonzeroTc -and [Math]::Abs([double]$pair.ReferenceTc) -le $Tolerance) {
+            continue
+        }
+
+        $candidate = & $CandidateSelector $pair
+        if ($null -eq $candidate -or [string]$candidate -eq "") {
+            continue
+        }
+
+        $candidatePairs.Add([pscustomobject]@{
+            Pair = $pair
+            CandidateTc = [double]$candidate
+        })
+    }
+
+    $matches = @($candidatePairs | Where-Object { Test-NumericClose $_.Pair.ReferenceTc $_.CandidateTc $Tolerance })
+    $mismatches = @($candidatePairs | Where-Object { -not (Test-NumericClose $_.Pair.ReferenceTc $_.CandidateTc $Tolerance) })
+    $pairCount = if ($OnlyNonzeroTc) {
+        @($Pairs | Where-Object { [Math]::Abs([double]$_.ReferenceTc) -gt $Tolerance }).Count
+    }
+    else {
+        @($Pairs).Count
+    }
+
+    return [pscustomobject]@{
+        Name = $Name
+        OnlyNonzeroTc = $OnlyNonzeroTc
+        Tolerance = $Tolerance
+        PairCount = $pairCount
+        ComparablePairCount = $candidatePairs.Count
+        MatchCount = $matches.Count
+        MismatchCount = $mismatches.Count
+        MatchRatio = if ($candidatePairs.Count -eq 0) { $null } else { [Math]::Round($matches.Count / $candidatePairs.Count, 6) }
+        MismatchExamples = @($mismatches | Select-Object -First 12 | ForEach-Object {
+            [pscustomobject]@{
+                ReferenceTc = [Math]::Round([double]$_.Pair.ReferenceTc, 6)
+                CandidateTc = [Math]::Round([double]$_.CandidateTc, 6)
+                PlannerPdfFontSize = $_.Pair.PlannerPdfFontSize
+                PlannerGlyphGapCount = $_.Pair.PlannerGlyphGapCount
+                PlannerTextClass = $_.Pair.PlannerTextClass
+                PlannerTextLength = $_.Pair.PlannerTextLength
+                PlannerRole = $_.Pair.PlannerRole
+                PlannerPdfCharacterSpacingSource = $_.Pair.PlannerPdfCharacterSpacingSource
+            }
+        })
+    }
 }
 
 function New-TcAmbiguityReport(
@@ -816,6 +880,24 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
             "tf=" + (RoundedKey $pair.PlannerPdfFontSize 3) + "|roundedResidualPerGap=" + (RoundedKey $pair.PlannerRoundedResidualPerGap 6)
         } $true
     )
+    $referenceTcTargetHypotheses = @(
+        New-TcTargetHypothesisReport "reference-emitted-minus-planner-emitted-per-gap" $pairs {
+            param($pair)
+            $pair.ReferenceEmittedMinusPlannerEmittedPerGap
+        }
+        New-TcTargetHypothesisReport "reference-emitted-minus-planner-rounded-per-gap" $pairs {
+            param($pair)
+            $pair.ReferenceEmittedMinusPlannerRoundedPerGap
+        }
+        New-TcTargetHypothesisReport "planner-layout-minus-rounded-per-gap" $pairs {
+            param($pair)
+            $pair.PlannerRoundedResidualPerGap
+        }
+        New-TcTargetHypothesisReport "planner-emitted-minus-layout-per-gap" $pairs {
+            param($pair)
+            $pair.PlannerEmittedResidualPerGap
+        }
+    )
     return [pscustomobject]@{
         PairCount = $pairs.Count
         ReferenceOperationCount = $ReferenceOperations.Count
@@ -824,6 +906,7 @@ function Summarize-PlannerReferencePairs($ReferenceOperations, $Snapshot) {
         Pairs = @($pairs.ToArray())
         ReferenceTcAmbiguityChecks = $referenceTcAmbiguityChecks
         ReferenceTcStructuralDiscriminators = Select-TcStructuralDiscriminators $referenceTcAmbiguityChecks
+        ReferenceTcTargetHypotheses = $referenceTcTargetHypotheses
         ReferenceTcByPlannerTextClass = @(Group-Count $pairs {
             param($pair)
             $pair.PlannerTextClass + "|refTc=" + (RoundedKey $pair.ReferenceTc 6)

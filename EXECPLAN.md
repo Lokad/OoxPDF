@@ -684,6 +684,17 @@ High-priority actions:
   `None` plus `TerminalLineSpace` source buckets; `Tf+TcSource+gaps` remains ambiguous for nonzero Office
   `Tc`, which is the intended negative evidence that provenance clarifies ownership but cannot be used as a
   Word target rule by itself.
+  2026-06-03 target-hypothesis follow-up: `tools/SummarizeDocxTextState.ps1` now emits
+  `ReferenceTcTargetHypotheses`, which compares Office `Tc` against explicit candidate target models rather
+  than relying on manual bucket inspection. Across the current public context/size/font text-state probes
+  (`20260603-200453`), nonzero Office `Tc` matches `(ReferenceEmittedAdvance - PlannerEmittedAdvance) /
+  GlyphGapCount` and `(ReferenceEmittedAdvance - PlannerRoundedWidth) / GlyphGapCount` for all `49/49`
+  comparable rows, while the production-visible candidate residual shortcuts
+  `PlannerLayoutWidth - PlannerRoundedWidth` and `PlannerEmittedAdvance - PlannerLayoutWidth` match `0/49`.
+  Treat the emitted-advance delta as an oracle invariant and the layout residuals as rejected target
+  hypotheses. The remaining renderer work is still to derive Word's emitted-advance target from document,
+  shaping, and font/PDF structure available before emission, not to key behavior on layout residuals, font
+  names, roles, strings, or observed constants.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first
