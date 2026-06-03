@@ -849,6 +849,14 @@ internal static class DocxTests
         TestAssert.True(block.ParagraphStyleFound == true, "Structure snapshots should expose private-safe paragraph style resolution.");
         TestAssert.Equal(2, block.ParagraphStyleDepth ?? 0);
         TestAssert.True(block.HasDirectParagraphProperties == false, "Structure snapshots should distinguish pStyle-only pPr from direct paragraph overrides.");
+
+        DocxLayoutItemSnapshot line = new DocxRenderer().InspectLayout(document).Pages
+            .SelectMany(page => page.Items)
+            .Single(item => item.Kind == "TextLine");
+        TestAssert.Equal("Child", line.ParagraphStyleId ?? string.Empty);
+        TestAssert.True(line.ParagraphStyleFound == true, "Layout snapshots should carry paragraph style resolution for placed lines.");
+        TestAssert.Equal(2, line.ParagraphStyleDepth ?? 0);
+        TestAssert.True(line.HasDirectParagraphProperties == false, "Placed line snapshots should preserve pStyle-only provenance.");
     }
 
     public static void DocxReaderPreservesEmptyParagraphBodyElement()

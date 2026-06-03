@@ -665,7 +665,13 @@ internal sealed record DocxLayoutSnapshot(
                 text.ParagraphBeforeSpacing,
                 text.ParagraphAfterSpacing,
                 text.ContextualSpacingSuppressed,
-                text.StoryVariantType),
+                text.StoryVariantType,
+                ParagraphStyleId: text.SourceParagraph?.StyleResolution.StyleId,
+                ParagraphStyleFound: text.SourceParagraph?.StyleResolution.StyleFound,
+                ParagraphStyleDepth: text.SourceParagraph?.StyleResolution.StyleDepth,
+                HasDocumentDefaultParagraphProperties: text.SourceParagraph?.StyleResolution.HasDocumentDefaultParagraphProperties,
+                HasDirectParagraphProperties: text.SourceParagraph?.StyleResolution.HasDirectParagraphProperties,
+                HasTableStyleParagraphProperties: text.SourceParagraph?.StyleResolution.HasTableStyleParagraphProperties),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
                 image.X,
@@ -1198,7 +1204,13 @@ internal sealed record DocxLayoutItemSnapshot(
     double? ParagraphAfterSpacingPoints,
     bool? ContextualSpacingSuppressed,
     string? StoryVariantType = null,
-    IReadOnlyList<DocxLayoutItemSnapshot>? TextLines = null);
+    IReadOnlyList<DocxLayoutItemSnapshot>? TextLines = null,
+    string? ParagraphStyleId = null,
+    bool? ParagraphStyleFound = null,
+    int? ParagraphStyleDepth = null,
+    bool? HasDocumentDefaultParagraphProperties = null,
+    bool? HasDirectParagraphProperties = null,
+    bool? HasTableStyleParagraphProperties = null);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,

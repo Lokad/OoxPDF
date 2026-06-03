@@ -4980,6 +4980,13 @@ block models and richer section/pagination layout before adding more Word pagina
   passed `docx-core --skip-slow` (`56`), `docx-tables --skip-slow` (`123`), and full solution build. Keep this
   open for a richer effective paragraph/run model and Office-oracle probes for exact style-derived spacing
   and line-height semantics.
+  2026-06-03 layout follow-up: placed DOCX text-line layout snapshots now carry the same paragraph style
+  provenance as the structure block snapshots: style id, style-found flag, basedOn depth, document-default
+  participation, direct paragraph-property presence, and table-style paragraph-property participation. This
+  keeps private-safe pagination and PDF-flow comparisons tied to structural style causes instead of style
+  names or raw XML reads. The basedOn cascade test now checks both structure and placed-line provenance.
+  Validation passed `docx-text --skip-slow` (`49`), `docx-tables --skip-slow` (`123`), and full solution
+  build. Keep this open for an explicit effective paragraph/run property model consumed by layout.
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next,
   keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size
   rounding.
