@@ -1554,6 +1554,65 @@ internal static class DocxTests
         TestAssert.Equal("Body|Cell", plannedTexts);
     }
 
+    public static void DocxDocumentCompatibilityInventoriesDeriveFromBodyElements()
+    {
+        DocxParagraph fallbackParagraph = CreateDocxLayoutParagraph("Fallback", 12d, 12d);
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body", 12d, 12d);
+        DocxParagraph nestedParagraph = CreateDocxLayoutParagraph("Nested", 12d, 12d);
+        var nestedTable = new DocxTable(
+            null,
+            [40d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxTableCell cell = new(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxTableElement(nestedTable)]
+        };
+        var bodyTable = new DocxTable(null, [60d], [new DocxTableRow([cell], 30d)]);
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(bodyTable)],
+            [fallbackParagraph],
+            []);
+
+        TestAssert.Equal("Body", document.Paragraphs.Single().Runs.Single().Text);
+        TestAssert.Equal(2, document.Tables.Count);
+    }
+
+    public static void DocxRelatedStoryCompatibilityInventoriesDeriveFromBodyElements()
+    {
+        DocxParagraph fallbackParagraph = CreateDocxLayoutParagraph("Fallback", 12d, 12d);
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Story", 12d, 12d);
+        DocxParagraph nestedParagraph = CreateDocxLayoutParagraph("Nested", 12d, 12d);
+        var nestedTable = new DocxTable(
+            null,
+            [40d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxTableCell cell = new(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxTableElement(nestedTable)]
+        };
+        var storyTable = new DocxTable(null, [60d], [new DocxTableRow([cell], 30d)]);
+        var story = new DocxRelatedStory(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(storyTable)],
+            [fallbackParagraph],
+            []);
+
+        TestAssert.Equal("Story", story.Paragraphs.Single().Runs.Single().Text);
+        TestAssert.Equal(2, story.Tables.Count);
+    }
+
     public static void DocxBlockTraversalAndFontPlanIncludeNestedTableCellBody()
     {
         DocxParagraph nestedParagraph = CreateDocxLayoutParagraph("Nested cell", 12d, 12d);
@@ -14793,7 +14852,6 @@ internal static class DocxTests
         DocxDocument document = new DocxDocument(612d, 792d)
         {
             BodyElements = [new DocxParagraphElement(bodyParagraph)],
-            Paragraphs = [bodyParagraph],
             RelatedStories = [commentStory]
         };
 

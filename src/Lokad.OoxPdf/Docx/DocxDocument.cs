@@ -12,8 +12,8 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxParagraph> HeaderParagraphs,
     IReadOnlyList<DocxParagraph> FooterParagraphs,
     IReadOnlyList<DocxBodyElement> BodyElements,
-    IReadOnlyList<DocxParagraph> Paragraphs,
-    IReadOnlyList<DocxTable> Tables)
+    IReadOnlyList<DocxParagraph> FallbackParagraphs,
+    IReadOnlyList<DocxTable> FallbackTables)
 {
     public DocxFontCatalog FontCatalog { get; init; } = DocxFontCatalog.Empty;
     public DocxStyleCatalog StyleCatalog { get; init; } = DocxStyleCatalog.Empty;
@@ -32,6 +32,12 @@ internal sealed record DocxDocument(
     public IReadOnlyList<DocxRelatedStory> RelatedStories { get; init; } = [];
     public DocxDocumentSettings Settings { get; init; } = DocxDocumentSettings.Empty;
     public DocxSectionBreakElement? FinalSectionBreak { get; init; }
+    public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
+        ? FallbackParagraphs
+        : BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray();
+    public IReadOnlyList<DocxTable> Tables => BodyElements.Count == 0
+        ? FallbackTables
+        : DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
 
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
         : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
@@ -44,10 +50,16 @@ internal sealed record DocxRelatedStory(
     string PartName,
     string? Id,
     IReadOnlyList<DocxBodyElement> BodyElements,
-    IReadOnlyList<DocxParagraph> Paragraphs,
-    IReadOnlyList<DocxTable> Tables)
+    IReadOnlyList<DocxParagraph> FallbackParagraphs,
+    IReadOnlyList<DocxTable> FallbackTables)
 {
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
+    public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
+        ? FallbackParagraphs
+        : BodyElements.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray();
+    public IReadOnlyList<DocxTable> Tables => BodyElements.Count == 0
+        ? FallbackTables
+        : DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
 }
 
 internal static class DocxBlockTraversal

@@ -4978,6 +4978,14 @@ block models and richer section/pagination layout before adding more Word pagina
   compiler/Defender file lock). Keep the item open for compatibility deprecation, public Office-oracle
   coverage of exact static-story placement, and eventual conversion of parallel inventories to derived
   accessors.
+  2026-06-03 compatibility-view follow-up: `DocxDocument.Paragraphs`/`Tables` and
+  `DocxRelatedStory.Paragraphs`/`Tables` are now derived compatibility views whenever the canonical
+  `BodyElements` stream exists, with constructor-provided fallback inventories used only for legacy
+  empty-body constructions. Bottom-up regression coverage supplies stale fallback paragraphs and still expects
+  document/story paragraph and nested-table projections to come from `BodyElements`. Validation passed
+  `docx-core --skip-slow` (`58`), `docx-page --skip-slow` (`45`), `docx-tables --skip-slow` (`123`), and
+  full solution build. Keep this open for removing or renaming the fallback constructor slots once test
+  helpers and compatibility constructors no longer need them.
 - [ ] DOCX style-resolved block model: move from reader-flattened paragraph metrics toward a layout-ready
   effective paragraph model with explicit provenance for defaults, basedOn style depth, table-style
   contributions, and direct paragraph overrides. This should let future vertical-flow decisions compare
