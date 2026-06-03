@@ -5005,6 +5005,14 @@ block models and richer section/pagination layout before adding more Word pagina
   --skip-slow` (`49`) and `docx-tables --skip-slow` (`123`; serial rerun after a transient compiler file
   lock). Keep this open for effective run properties, more layout consumers, and public Office-oracle probes
   of style-derived spacing and line-height behavior.
+  2026-06-03 layout-consumer follow-up: body, related-story, static header/footer, and table-cell text/image
+  placement now consume `DocxEffectiveParagraphProperties` for alignment, tab stops, line-height presence,
+  before/after spacing snapshots, and wrapped-line estimates instead of direct paragraph scalar reads. A
+  targeted scan of `DocxLayout.cs` no longer finds raw paragraph alignment/tab/line-spacing/spacing scalar
+  reads in these layout consumers. Validation passed full solution build, `docx-text --skip-slow` (`49`),
+  `docx-page --skip-slow` (`45`), and `docx-tables --skip-slow` (`123`). Keep this open for Office-oracle
+  probes of the exact style-derived spacing/line-height rules and for deprecating the legacy paragraph scalar
+  surface once all downstream consumers are structurally aligned.
   2026-06-03 pagination follow-up: the remaining body paragraph keep/widow gate now reads
   `paragraph.EffectiveProperties.KeepRules` instead of the legacy direct paragraph surface. This keeps
   keep-lines, keep-next, and widow-control pagination decisions aligned with the style/default/table-style
