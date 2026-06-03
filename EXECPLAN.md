@@ -658,6 +658,12 @@ High-priority actions:
   changed16 `0.013480`; private DOCX run `20260603-003619` stayed page-stable at `16/16`, zero dimension
   mismatches, no diagnostics, aggregate `MAE=8.924355`, changed16 `0.095330`. Keep the branch open for the
   remaining row-boundary and table-cell text-state gaps rather than broadening line-height rounding again.
+  2026-06-03 private acceptance update after table-cell keep-rule work: run `20260603-223224` remains
+  page-stable at `16/16`, zero dimension mismatches, no diagnostics, aggregate `MAE=8.933935`, changed16
+  `0.094971`; worst pages are page 15 (`MAE=11.920075`), page 2 (`11.148190`), page 10 (`11.099188`), page 11
+  (`11.077034`), and page 9 (`10.973885`). Treat the small aggregate movement as neutral/regression-watch:
+  the keep-rule changes are structurally correct bottom-up, but the private run still points to operation
+  decomposition and table text-state rather than a new broad pagination constant.
   2026-06-03 follow-up: split table-row border emission now uses the row fragment metadata already present in
   layout (`FragmentIndex`/`FragmentCount`) instead of treating page-local missing neighbors as authored row
   edges. Continuation fragments no longer synthesize a top border, and first fragments no longer synthesize a
@@ -756,6 +762,18 @@ High-priority actions:
   hypotheses. The remaining renderer work is still to derive Word's emitted-advance target from document,
   shaping, and font/PDF structure available before emission, not to key behavior on layout residuals, font
   names, roles, strings, or observed constants.
+  2026-06-03 private-sidecar follow-up: `tools/SummarizeDocxTextState.ps1` now resolves ignored
+  `private-cases/<case>.json` manifests as well as public visual manifests when generating candidate
+  `DocxInspect` sidecars, and it emits `TextClassCountDeltas` comparing Office PDF operations, candidate PDF
+  operations, and candidate planner segments by private-safe text class. On private DOCX run
+  `20260603-223224`, Office has `2388` text operations with `81` nonzero `Tc`; candidate PDF has `2332`
+  operations with `0` nonzero `Tc`; candidate planner has `2316` segments with `0` nonzero `Tc`, so sequence
+  pairing remains blocked. The planner deltas are concentrated in mixed tokens (`-33`) and whitespace (`-35`),
+  with smaller alphanumeric (`-2`) and letter (`-4`) gaps. Candidate PDF also has `53` empty operations while
+  Office has none. The next DOCX text-state slice should therefore first close Office-like operation
+  decomposition/count parity for mixed-token and whitespace boundaries before selecting a production `Tc`
+  target rule. Do not compensate this with font names, style names, private text, or observed `Tc` bucket
+  lookups.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first

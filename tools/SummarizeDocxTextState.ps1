@@ -321,8 +321,7 @@ function Get-RunCaseId([string] $Run) {
     return Split-Path -Leaf (Split-Path -Parent $Run)
 }
 
-function Resolve-PublicCaseInput([string] $CaseId) {
-    $manifestPath = Join-Path $RepoRoot ("visual-cases\cases\" + $CaseId + "\case.json")
+function Resolve-CaseManifestInput([string] $ManifestPath) {
     if (-not (Test-Path -LiteralPath $manifestPath)) {
         return $null
     }
@@ -338,6 +337,25 @@ function Resolve-PublicCaseInput([string] $CaseId) {
     }
 
     return $null
+}
+
+function Resolve-VisualCaseInput([string] $CaseId) {
+    $manifestPath = Join-Path $RepoRoot ("visual-cases\cases\" + $CaseId + "\case.json")
+    return Resolve-CaseManifestInput $manifestPath
+}
+
+function Resolve-PrivateCaseInput([string] $CaseId) {
+    $manifestPath = Join-Path $RepoRoot ("private-cases\" + $CaseId + ".json")
+    return Resolve-CaseManifestInput $manifestPath
+}
+
+function Resolve-CaseInput([string] $CaseId) {
+    $input = Resolve-VisualCaseInput $CaseId
+    if ($null -ne $input) {
+        return $input
+    }
+
+    return Resolve-PrivateCaseInput $CaseId
 }
 
 function Test-DocxInspectSnapshotFresh([string] $SnapshotPath) {
@@ -376,14 +394,14 @@ function Ensure-CandidateDocxInspect([string] $Run) {
     }
 
     $caseId = Get-RunCaseId $Run
-    $input = Resolve-PublicCaseInput $caseId
+    $input = Resolve-CaseInput $caseId
     if ($null -eq $input) {
         return
     }
 
     & pwsh (Join-Path $RepoRoot "tools\InspectDocx.ps1") -InputDocx $input -OutputDirectory $output | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "InspectDocx failed for public case '$caseId' with exit code $LASTEXITCODE."
+        throw "InspectDocx failed for case '$caseId' with exit code $LASTEXITCODE."
     }
 }
 
@@ -452,6 +470,53 @@ function Summarize-Operations($Operations) {
             "emitted=" + (RoundedKey $op.EmittedAdvancePoints 6) + "|tc=" + (RoundedKey $op.CharacterSpacing 6)
         })
     }
+}
+
+function New-TextClassCountMap($Items, [scriptblock] $ClassSelector) {
+    $map = @{}
+    foreach ($item in $Items) {
+        $key = & $ClassSelector $item
+        if ($null -eq $key -or [string]$key -eq "") {
+            $key = "(missing)"
+        }
+
+        $key = [string]$key
+        if ($map.ContainsKey($key)) {
+            $map[$key]++
+        }
+        else {
+            $map[$key] = 1
+        }
+    }
+
+    return $map
+}
+
+function New-TextClassCountDeltas($ReferenceOperations, $CandidateOperations, $PlannerSnapshot) {
+    $plannerSegments = Flatten-PlannerSegments $PlannerSnapshot
+    $referenceMap = New-TextClassCountMap $ReferenceOperations { param($op) TextClass $op }
+    $candidateMap = New-TextClassCountMap $CandidateOperations { param($op) TextClass $op }
+    $plannerMap = New-TextClassCountMap $plannerSegments { param($segment) PlannerTextClass $segment }
+    $keys = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($key in $referenceMap.Keys) { [void]$keys.Add($key) }
+    foreach ($key in $candidateMap.Keys) { [void]$keys.Add($key) }
+    foreach ($key in $plannerMap.Keys) { [void]$keys.Add($key) }
+
+    return @(
+        foreach ($key in ($keys | Sort-Object)) {
+            $referenceCount = if ($referenceMap.ContainsKey($key)) { $referenceMap[$key] } else { 0 }
+            $candidateCount = if ($candidateMap.ContainsKey($key)) { $candidateMap[$key] } else { 0 }
+            $plannerCount = if ($plannerMap.ContainsKey($key)) { $plannerMap[$key] } else { 0 }
+            [pscustomobject]@{
+                Key = $key
+                Reference = $referenceCount
+                Candidate = $candidateCount
+                Planner = $plannerCount
+                CandidateMinusReference = $candidateCount - $referenceCount
+                PlannerMinusReference = $plannerCount - $referenceCount
+            }
+        }
+    )
 }
 
 function Read-CandidatePlannerSummary([string] $Run) {
@@ -1084,6 +1149,7 @@ $summaries = foreach ($run in $runs) {
         CandidatePlanner = $candidatePlannerSummary
         CandidatePlannerSegments = Summarize-PlannerSnapshot $candidatePlannerSnapshot
         CandidatePlannerReferencePairs = Summarize-PlannerReferencePairs $referenceOps $candidatePlannerSnapshot
+        TextClassCountDeltas = New-TextClassCountDeltas $referenceOps $candidateOps $candidatePlannerSnapshot
     }
 }
 
