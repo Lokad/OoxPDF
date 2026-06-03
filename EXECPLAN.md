@@ -5145,6 +5145,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   now unfolds those child lines for body tables and, under `-IncludeStaticStories`, static header/footer tables
   instead of treating table rows as textless geometry. Validation passed script parse and
   `docx-tables --skip-slow` (`122`).
+- [x] 2026-06-03: Surfaced the new DOCX table-row child text-line ownership in compact inspect sidecars.
+  `DocxInspect` page summaries now report body/static table-cell text-line counts, and static/related story
+  item summaries expose each table-row item's private-safe child line count. Validation passed
+  `Lokad.OoxPdf.DocxInspect` build.
 - [ ] Implement style-derived paragraph spacing accurately, including exact Office autospacing magnitudes,
   Word-like adjacent paragraph spacing collapse around tables/sections, and diagnostics that distinguish
   supported tokens from unresolved spacing semantics.

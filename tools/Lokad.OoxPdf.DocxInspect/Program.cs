@@ -55,9 +55,11 @@ File.WriteAllText(
         page.TextLineCount,
         page.InlineImageCount,
         page.TableRowCount,
+        BodyTableCellTextLineCount = CountChildTextLines(page.Items),
         page.StaticTextLineCount,
         page.StaticInlineImageCount,
         page.StaticTableRowCount,
+        StaticTableCellTextLineCount = CountChildTextLines(page.StaticItems),
         StaticStoryCount = page.StaticStories.Count,
         page.SourceBlockCount,
         page.FirstSourceBlockIndex,
@@ -109,6 +111,7 @@ File.WriteAllText(
         item.Width,
         item.Height,
         item.TextLength,
+        ChildTextLineCount = item.TextLines?.Count ?? 0,
         item.LineHeightPoints,
         item.AppliedBeforeSpacingPoints,
         item.IsFirstParagraphLine,
@@ -216,6 +219,7 @@ File.WriteAllText(
         item.Height,
         item.TextLength,
         item.CellCount,
+        ChildTextLineCount = item.TextLines?.Count ?? 0,
         item.LineHeightPoints,
         item.AppliedBeforeSpacingPoints,
         item.SingleLineHeightPoints,
@@ -316,6 +320,11 @@ static object ToFloatingDrawingSummary(string streamKind, DocxFloatingDrawingLay
         drawing.ImageWidthPoints,
         drawing.ImageHeightPoints
     };
+}
+
+static int CountChildTextLines(IEnumerable<DocxLayoutItemSnapshot> items)
+{
+    return items.Sum(item => item.TextLines?.Count ?? 0);
 }
 
 static DocxTextEmissionCharacterProfile SumCharacterProfiles(IEnumerable<DocxTextEmissionSegmentSnapshot> segments)
