@@ -5082,6 +5082,13 @@ block models and richer section/pagination layout before adding more Word pagina
   A targeted scan of `DocxRenderer.cs` and `DocxTextEmissionPlanner.cs` no longer finds the direct run-style
   reads covered by this migration. Validation passed full solution build and `docx-text --skip-slow` (`49`).
   Keep this open for the remaining layout scalar reads and Office-oracle probes of style-derived run metrics.
+  2026-06-03 layout/structure cleanup: table-cell layout snapshots and structure table-cell snapshots now
+  count before/after spacing tokens from `DocxEffectiveParagraphProperties.Spacing`, and the main body layout
+  alignment switches use the already-resolved effective paragraph model. A targeted scan of `DocxLayout.cs`
+  and `DocxStructure.cs` no longer finds legacy direct paragraph/run scalar reads in production layout or
+  structure diagnostics. Validation passed `docx-text --skip-slow` (`49`), `docx-tables --skip-slow` (`123`;
+  serial rerun after a shared build-output lock), and full solution build. Keep this open for public
+  Office-oracle probes of style-derived spacing, line-height, and run metric semantics.
   2026-06-03 text-layout follow-up: DOCX text layout now reads `DocxEffectiveRunProperties` for
   character-spacing advances, hidden-run filtering, superscript/subscript vertical-align detection, static
   header/footer line font sizing, table-cell first-baseline inset, paragraph fallback font sizing, and

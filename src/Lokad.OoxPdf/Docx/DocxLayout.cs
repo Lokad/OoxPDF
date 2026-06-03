@@ -888,10 +888,10 @@ internal sealed record DocxLayoutSnapshot(
             lastLine?.BaselineY,
             cellLayout.InlineImages.Count,
             paragraphs.Count,
-            paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.Spacing)),
-            paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.Spacing)),
-            paragraphs.Count(paragraph => string.Equals(paragraph.Spacing.BeforeValue, "0", StringComparison.Ordinal)),
-            paragraphs.Count(paragraph => string.Equals(paragraph.Spacing.AfterValue, "0", StringComparison.Ordinal)),
+            paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.EffectiveProperties.Spacing)),
+            paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.EffectiveProperties.Spacing)),
+            paragraphs.Count(paragraph => string.Equals(paragraph.EffectiveProperties.Spacing.BeforeValue, "0", StringComparison.Ordinal)),
+            paragraphs.Count(paragraph => string.Equals(paragraph.EffectiveProperties.Spacing.AfterValue, "0", StringComparison.Ordinal)),
             spacingBeforePoints.Count == 0 ? null : spacingBeforePoints.Min(),
             spacingBeforePoints.Count == 0 ? null : spacingBeforePoints.Max(),
             spacingAfterPoints.Count == 0 ? null : spacingAfterPoints.Min(),
@@ -2058,7 +2058,7 @@ internal sealed class DocxLayoutEngine
 
                     double lineWidth = MeasureTextSpans(line.Spans, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
                     double drawableLineWidth = MeasureDrawableTextSpans(line.Spans, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints);
-                    double lineX = paragraph.EffectiveProperties.Alignment switch
+                    double lineX = effective.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
                         DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
@@ -2132,7 +2132,7 @@ internal sealed class DocxLayoutEngine
                     AdvanceColumnOrPage();
                 }
 
-                double imageX = paragraph.EffectiveProperties.Alignment switch
+                double imageX = effective.Alignment switch
                 {
                     DocxTextAlignment.Center => x + Math.Max(0, width - imageWidth) / 2d,
                     DocxTextAlignment.Right => x + Math.Max(0, width - imageWidth),
