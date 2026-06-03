@@ -313,16 +313,16 @@ High-priority actions:
   static header/footer text lines use the same annotation path for external URI links, and internal links now
   resolve through the shared bookmark destination map for body, table-cell, and static story sources. Public
   bottom-up coverage asserts footer external links and static-story internal destinations; validation passed
-  `docx-core --skip-slow` (`52`) and `docx-page --skip-slow` (`31`). Keep only non-rendered related-story
-  annotations open: comment/endnote/footnote stories are preserved structurally, but they are not yet placed
-  page stories and therefore cannot honestly emit PDF link rectangles without a story-owned layout model.
+  `docx-core --skip-slow` (`52`) and `docx-page --skip-slow` (`31`). Keep related-story annotations open:
+  comment stories are still unplaced, and footnote/endnote story link rectangles still need story-region
+  ownership before they can honestly emit PDF annotations.
   2026-06-02 architecture follow-up: inline comment/footnote/endnote markers now have a private-safe
   structure reference map. `DocxStructureSnapshot.InlineReferences` records each marker's source block,
   source paragraph, run child, text offset, custom-mark token, and resolved target story kind/part/id plus
   target block/text sizes when the related story can be joined. This removes the prior aggregate-only
   resolution surface and gives future note/comment layout a structural join point. Keep rendering open for
-  story-owned page placement, note separator behavior, comment/endnote/footnote link rectangles, and any
-  Office-derived marker formatting. Validation passed `docx-core --skip-slow` (`52`).
+  complete story-owned page placement, note separator behavior, comment/endnote/footnote link rectangles, and
+  any Office-derived marker formatting. Validation passed `docx-core --skip-slow` (`52`).
   2026-06-02 architecture follow-up: related comment/footnote/endnote stories now have non-rendering
   `DocxRelatedStoryLayout` ownership in the layout pipeline. The layout stage measures top-level story
   paragraphs through normal wrapping/segment construction and story tables through the existing table-row
@@ -330,8 +330,8 @@ High-priority actions:
   counts, text length, and consumed height through `DocxLayoutSnapshot.RelatedStories`. This gives future
   note/comment rendering a measured story surface instead of raw XML or hard-coded diagnostics, while still
   deliberately avoiding fake PDF rectangles before Office-derived story placement is understood. Keep open:
-  page-owned footnote/endnote placement, separator/continuation separator behavior, comment display model,
-  marker formatting, and related-story hyperlink rectangles once their story pages/regions are real.
+  complete footnote/endnote placement semantics, separator/continuation separator behavior, comment display
+  model, marker formatting, and related-story hyperlink rectangles once their story pages/regions are real.
   Validation passed `docx-core --skip-slow` (`53`), `docx-tables --skip-slow` (`118`), and full solution
   build.
   2026-06-02 architecture follow-up: `DocxRelatedStoryLayout` now owns top-level related-story inline images
@@ -372,8 +372,25 @@ High-priority actions:
   `related-story-summary.json`. Bottom-up coverage adds an anchored image drawing inside a comment story and
   asserts model, structure, and layout-summary ownership. Validation passed `docx-core --skip-slow` (`53`),
   `docx-images --skip-slow` (`4`), full solution build, and `Lokad.OoxPdf.DocxInspect` build. Keep actual
-  note/comment placement, separator behavior, marker formatting, related-story link rectangles, and
+  comment placement, note separator behavior, marker formatting, related-story link rectangles, and
   related-story drawing rendering open until their Office-derived page regions are modeled.
+  2026-06-03 architecture follow-up: footnote story placement now reserves body frame height before body/table
+  pagination and renders resolved footnote bodies as page-owned placed related stories at the marker page
+  bottom. The reservation uses measured `DocxRelatedStoryLayout.ContentHeight` plus named separator metrics,
+  not an inline magic number, so body flow and note flow share the same measured story model. Keep open:
+  Office-derived footnote continuation separators, multi-column note balancing, story-owned hyperlink
+  rectangles, marker formatting, and separator variant stories. Validation passed full solution build,
+  `docx-core --skip-slow` (`59`), `docx-page --skip-slow` (`46`), and `docx-tables --skip-slow` (`125`).
+  2026-06-03 architecture follow-up: endnote story placement now resolves referenced endnote stories in body
+  order and appends them as document-end placed related stories instead of leaving them measured-only.
+  `DocxLayoutSnapshot.Pages[].PlacedRelatedStories` now exposes private-safe story-level placement ownership
+  (kind, part, id, source owner, geometry, separator geometry, and item counts), while `PlacedRelatedItems`
+  remains item-oriented for PDF-flow diagnostics. This slice intentionally exposes two open architecture gaps:
+  endnote overflow pages are appended after static header/footer selection, so continuation pages do not yet
+  rebuild static content/page fields with final page count; and section-scoped endnote positioning/settings
+  (`endnotePr`, end-of-section vs end-of-document, continuation separators) still need Office-PDF probes.
+  Validation passed full solution build, `docx-core --skip-slow` (`59`), `docx-page --skip-slow` (`46`), and
+  `docx-tables --skip-slow` (`125`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
