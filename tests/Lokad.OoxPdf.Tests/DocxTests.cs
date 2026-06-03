@@ -15512,6 +15512,119 @@ internal static class DocxTests
             "The selected footnote page should contain the marker source offset inside the rendered run segment.");
     }
 
+    public static void DocxLayoutPlacesFootnoteOnReaderProvenanceMarkerOffsetPage()
+    {
+        string leadingText = string.Concat(Enumerable.Repeat("alpha beta gamma delta ", 12));
+        const string markerText = "1";
+        int markerOffset = leadingText.Length;
+        var leadingRun = new DocxTextRun(
+            leadingText,
+            10d,
+            null,
+            false,
+            false,
+            false,
+            null,
+            null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = 0
+        };
+        var markerRun = new DocxTextRun(
+            markerText,
+            10d,
+            null,
+            false,
+            false,
+            false,
+            null,
+            null,
+            VerticalAlignmentValue: "superscript")
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = markerOffset
+        };
+        var trailingRun = new DocxTextRun(
+            " trailing text after marker",
+            10d,
+            null,
+            false,
+            false,
+            false,
+            null,
+            null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = markerOffset
+        };
+        DocxParagraph anchor = new(
+            [leadingRun, markerRun, trailingRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "13",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: markerText,
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: markerOffset)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body", 10d, 12d);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "13",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        var document = new DocxDocument(
+            220d,
+            82d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(anchor)],
+            [anchor],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        int footnotePageIndex = Array.FindIndex(snapshot.Pages.ToArray(), page => page.PlacedFootnoteStoryCount == 1);
+
+        TestAssert.True(layout.Pages.Count > 1, "The normalized run sequence should span pages so source provenance is required.");
+        TestAssert.Equal(0, snapshot.Pages[0].PlacedFootnoteStoryCount);
+        TestAssert.True(footnotePageIndex > 0, "The footnote story should be placed on the page containing the normalized marker run, not the first page containing earlier text from the same source run.");
+        TestAssert.True(
+            layout.Pages[footnotePageIndex].Items.OfType<DocxTextLineLayout>().Any(line =>
+                line.Segments.Any(segment =>
+                    segment.Text == markerText &&
+                    segment.SourceTextRunIndex == 0 &&
+                    segment.SourceTextOffsetInRun == markerOffset)),
+            "The selected footnote page should contain the normalized marker display run with original OOXML source provenance.");
+    }
+
     public static void DocxStyleAndNumberingLayoutRisksEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

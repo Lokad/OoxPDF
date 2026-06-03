@@ -2560,7 +2560,7 @@ internal sealed class DocxLayoutEngine
 
         int start = Math.Max(0, segment.SourceTextOffsetInRun);
         int end = start + segment.Text.Length;
-        return textOffsetInRun >= start && textOffsetInRun <= end;
+        return textOffsetInRun >= start && textOffsetInRun < end;
     }
 
     private static bool IsInlineReferenceRunRenderedAnywhere(
@@ -3540,7 +3540,7 @@ internal sealed class DocxLayoutEngine
             {
                 if (!runs[i].EffectiveProperties.Hidden)
                 {
-                    return [new DocxTextSpan(" ", runs[i], i)];
+                    return [CreateTextSpan(" ", runs[i], i)];
                 }
             }
 
@@ -3550,7 +3550,7 @@ internal sealed class DocxLayoutEngine
         return runs
             .Select((run, index) => (run, index))
             .Where(item => !item.run.EffectiveProperties.Hidden)
-            .Select(item => new DocxTextSpan(ResolveStaticFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
+            .Select(item => CreateTextSpan(ResolveStaticFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
             .Where(span => span.Text.Length != 0)
             .ToArray();
     }
@@ -6336,7 +6336,7 @@ internal sealed class DocxLayoutEngine
             {
                 if (!runs[i].EffectiveProperties.Hidden)
                 {
-                    return [new DocxTextSpan(" ", runs[i], i)];
+                    return [CreateTextSpan(" ", runs[i], i)];
                 }
             }
 
@@ -6346,8 +6346,17 @@ internal sealed class DocxLayoutEngine
         return runs
             .Select((run, index) => (run, index))
             .Where(item => item.run.Text.Length != 0 && !item.run.EffectiveProperties.Hidden)
-            .Select(item => new DocxTextSpan(item.run.Text, item.run, item.index))
+            .Select(item => CreateTextSpan(item.run.Text, item.run, item.index))
             .ToArray();
+    }
+
+    private static DocxTextSpan CreateTextSpan(string text, DocxTextRun run, int fallbackSourceRunIndex)
+    {
+        return new DocxTextSpan(
+            text,
+            run,
+            run.SourceRunIndex >= 0 ? run.SourceRunIndex : fallbackSourceRunIndex,
+            Math.Max(0, run.SourceTextOffsetInRun));
     }
 
     private static double GetParagraphFontSize(DocxParagraph paragraph)

@@ -8042,6 +8042,16 @@ Current validation baseline:
   --skip-slow` (`60`), and `docx-tables --skip-slow` (`125`). Keep Office-derived boundary-offset behavior for
   reader-generated marker display runs, table-internal note continuation, multi-page footnotes, section-scoped
   endnotes, and comments open.
+  2026-06-03 follow-up: normalized DOCX text runs now preserve their original OOXML source run index and
+  source text offset, including complex-script splits, automatic footnote/endnote marker display runs, simple
+  field placeholders, and static story text. `DocxLayout` builds text spans from that provenance rather than
+  from normalized run-list indexes, and inline-reference offset matching now treats text segment ranges as
+  half-open so a marker at offset `N` is not owned by the preceding segment ending at `N`. This closes the
+  reader-generated marker-display gap without a document-specific rule. Bottom-up coverage models one source
+  run normalized into pre-text, superscript marker, and trailing text across pages. Validation passed full
+  solution build, `docx-page --skip-slow` (`50`), `docx-core --skip-slow` (`60`), and `docx-tables
+  --skip-slow` (`125`). Keep table-internal note continuation, multi-page footnotes, section-scoped endnotes,
+  comment placement, and Office-derived separator/continuation behavior open.
 - Public straight stealth connector fixture: `pptx-ladder-06-straight-stealth-connectors` run
   `20260531-124414` passed with tightened gates (`MAE=0.000717`, changed16 `0.00000868`), locking the 6 pt
   minimum marker geometry for 1 pt straight-line stealth ends.

@@ -543,6 +543,8 @@ internal sealed record DocxTextRun(
 {
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
     public DocxRunStyleResolution StyleResolution { get; init; } = DocxRunStyleResolution.Empty;
+    public int SourceRunIndex { get; init; } = -1;
+    public int SourceTextOffsetInRun { get; init; } = 0;
 
     public DocxEffectiveRunProperties EffectiveProperties => new(
         FontSize,
@@ -666,7 +668,9 @@ internal sealed record DocxTextRunStyle(
             HiddenValue ?? source.HiddenValue)
         {
             Fonts = MergeRunFonts(source.Fonts, Fonts),
-            StyleResolution = source.StyleResolution
+            StyleResolution = source.StyleResolution,
+            SourceRunIndex = source.SourceRunIndex,
+            SourceTextOffsetInRun = source.SourceTextOffsetInRun
         };
     }
 

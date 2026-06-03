@@ -1149,7 +1149,14 @@ internal sealed class DocxReader
                 characterStyleId: null,
                 styles,
                 tableCellStyle?.Run);
-            AddResolvedTextRun(runs, string.Empty, paragraphMarkRun, paragraphMarkStyleResolution, complexScript: false);
+            AddResolvedTextRun(
+                runs,
+                string.Empty,
+                paragraphMarkRun,
+                paragraphMarkStyleResolution,
+                complexScript: false,
+                sourceRunIndex: -1,
+                sourceTextOffsetInRun: 0);
         }
 
         double paragraphFontSize = runs.Count == 0 ? 11d : runs.Max(run => run.FontSize);
@@ -1229,12 +1236,15 @@ internal sealed class DocxReader
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
                 if (firstRun is null)
                 {
-                    runs.Add(new DocxTextRun(placeholder, 11d, null, false, false, false, null, null));
+                    runs.Add(new DocxTextRun(placeholder, 11d, null, false, false, false, null, null)
+                    {
+                        SourceRunIndex = fieldSourceRunIndex
+                    });
                     AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
                     return;
                 }
 
-                AddFieldPlaceholderRun(firstRun, placeholder);
+                AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex);
                 images.AddRange(ReadInlineImages(firstRun, package, relationships));
                 AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
                 return;
@@ -1287,7 +1297,7 @@ internal sealed class DocxReader
                 runs.Sum(run => run.Text.Length) - textLengthStart);
         }
 
-        void AddFieldPlaceholderRun(XElement run, string text)
+        void AddFieldPlaceholderRun(XElement run, string text, int sourceRunIndex)
         {
             XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
             string? characterStyleId = ReadCharacterStyleId(run);
@@ -1303,7 +1313,13 @@ internal sealed class DocxReader
                 characterStyleId,
                 styles,
                 tableCellStyle?.Run);
-            AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, resolvedRun, runStyleResolution);
+            AddResolvedTextRuns(
+                runs,
+                resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text,
+                resolvedRun,
+                runStyleResolution,
+                sourceRunIndex,
+                sourceTextOffsetInRun: 0);
         }
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
@@ -1351,7 +1367,7 @@ internal sealed class DocxReader
             else if (text.Length != 0)
             {
                 string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
-                AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution);
+                AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffsetInRun: 0);
                 AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false);
             }
             else
@@ -1393,7 +1409,13 @@ internal sealed class DocxReader
                     string childText = ReadRunTextChild(child);
                     if (childText.Length != 0)
                     {
-                        AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? childText.ToUpperInvariant() : childText, resolvedRun, runStyleResolution);
+                        AddResolvedTextRuns(
+                            runs,
+                            resolvedRun.AllCaps == true ? childText.ToUpperInvariant() : childText,
+                            resolvedRun,
+                            runStyleResolution,
+                            currentSourceRunIndex,
+                            textOffset);
                     }
 
                     textOffset += childText.Length;
@@ -1451,7 +1473,7 @@ internal sealed class DocxReader
 
             if (emitDisplayRun && displayText is not null)
             {
-                AddInlineReferenceDisplayRun(displayText, resolvedRun, runStyleResolution);
+                AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution);
             }
         }
 
@@ -1478,6 +1500,8 @@ internal sealed class DocxReader
 
         void AddInlineReferenceDisplayRun(
             string displayText,
+            int currentSourceRunIndex,
+            int textOffset,
             DocxResolvedRunProperties resolvedRun,
             DocxRunStyleResolution runStyleResolution)
         {
@@ -1485,7 +1509,9 @@ internal sealed class DocxReader
                 runs,
                 displayText,
                 resolvedRun with { VerticalAlignmentValue = "superscript" },
-                runStyleResolution);
+                runStyleResolution,
+                currentSourceRunIndex,
+                textOffset);
         }
 
         static bool IsInlineReferenceElement(XElement element)
@@ -1628,16 +1654,21 @@ internal sealed class DocxReader
         List<DocxTextRun> runs,
         string text,
         DocxResolvedRunProperties resolvedRun,
-        DocxRunStyleResolution styleResolution)
+        DocxRunStyleResolution styleResolution,
+        int sourceRunIndex = -1,
+        int sourceTextOffsetInRun = 0)
     {
         var segment = new StringBuilder();
         bool? currentComplexScript = null;
+        int segmentSourceOffset = sourceTextOffsetInRun;
         foreach (Rune rune in text.EnumerateRunes())
         {
             bool complexScript = DocxScriptClassifier.IsComplexScriptRune(rune.Value);
             if (currentComplexScript is not null && currentComplexScript.Value != complexScript)
             {
-                AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value);
+                string segmentText = segment.ToString();
+                AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset);
+                segmentSourceOffset += segmentText.Length;
                 segment.Clear();
             }
 
@@ -1647,7 +1678,7 @@ internal sealed class DocxReader
 
         if (segment.Length != 0 && currentComplexScript is not null)
         {
-            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value);
+            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset);
         }
     }
 
@@ -1656,7 +1687,9 @@ internal sealed class DocxReader
         string text,
         DocxResolvedRunProperties resolvedRun,
         DocxRunStyleResolution styleResolution,
-        bool complexScript)
+        bool complexScript,
+        int sourceRunIndex,
+        int sourceTextOffsetInRun)
     {
         bool bold = complexScript
             ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
@@ -1693,7 +1726,9 @@ internal sealed class DocxReader
             resolvedRun.HiddenValue)
         {
             Fonts = resolvedRun.Fonts,
-            StyleResolution = styleResolution
+            StyleResolution = styleResolution,
+            SourceRunIndex = sourceRunIndex,
+            SourceTextOffsetInRun = sourceTextOffsetInRun
         });
     }
 
