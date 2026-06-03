@@ -204,7 +204,9 @@ internal sealed class DocxRenderer
         IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations)
     {
         var annotations = new List<PdfLinkAnnotation>();
-        foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page).Concat(EnumerateBodyTextLines(page)))
+        foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page)
+            .Concat(EnumerateBodyTextLines(page))
+            .Concat(EnumeratePlacedRelatedStoryTextLines(page)))
         {
             if (line.SourceParagraph is not { } paragraph ||
                 paragraph.Hyperlinks.Count == 0)
@@ -262,7 +264,9 @@ internal sealed class DocxRenderer
         {
             DocxLayoutPage page = layout.Pages[pageIndex];
             int pageNumber = pageIndex + 1;
-            foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page).Concat(EnumerateBodyTextLines(page)))
+            foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page)
+                .Concat(EnumerateBodyTextLines(page))
+                .Concat(EnumeratePlacedRelatedStoryTextLines(page)))
             {
                 if (line.SourceParagraph is not { } paragraph ||
                     paragraph.BookmarkAnchors.Count == 0)

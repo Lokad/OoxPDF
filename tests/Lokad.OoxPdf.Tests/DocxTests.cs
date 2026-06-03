@@ -2155,6 +2155,67 @@ internal static class DocxTests
         TestAssert.True(annotation.Width > 0d, "The annotation should cover table-cell hyperlink text.");
     }
 
+    public static void DocxRendererEmitsPlacedFootnoteExternalHyperlinkAnnotations()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "9",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        var footnoteRuns = new[]
+        {
+            new DocxTextRun("Footnote ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var footnoteParagraph = new DocxParagraph(
+            footnoteRuns,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdFootnoteLink", null, null, null, "https://example.invalid/footnote", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "9",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [footnoteStory]
+            };
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/footnote", annotation.Uri);
+        TestAssert.True(annotation.Y >= document.MarginBottomPoints, "The footnote annotation should be anchored inside the placed note region.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover placed footnote hyperlink text.");
+    }
+
     public static void DocxRendererEmitsTableCellInternalHyperlinkDestinations()
     {
         DocxParagraph linkParagraph = new(

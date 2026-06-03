@@ -391,6 +391,13 @@ High-priority actions:
   (`endnotePr`, end-of-section vs end-of-document, continuation separators) still need Office-PDF probes.
   Validation passed full solution build, `docx-core --skip-slow` (`59`), `docx-page --skip-slow` (`46`), and
   `docx-tables --skip-slow` (`125`).
+  2026-06-03 architecture follow-up: PDF hyperlink annotations and bookmark destinations now include placed
+  related-story text lines through the same renderer path as body, table-cell, and static-story text. This
+  closes external link rectangles for placed footnote/endnote stories without note-specific PDF logic, and it
+  lets internal links target placed note bookmarks once those bookmarks are present in the story paragraph
+  model. Comment links remain open because comments are still unplaced. Bottom-up coverage adds a placed
+  footnote external hyperlink test. Validation passed full solution build, `docx-core --skip-slow` (`60`) and
+  `docx-page --skip-slow` (`46`).
   2026-06-01 follow-up: added private-safe `tools/CompareDocxLayoutPdfFlow.ps1`, which maps candidate layout
   source block/line indices to Office/candidate PDF text rows using decoded text internally but emits only
   lengths, hashes, pages, and coordinates. The first all-page private flow map shows page shifts recurring
