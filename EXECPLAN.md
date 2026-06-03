@@ -634,6 +634,10 @@ High-priority actions:
   Office-oracle probes able to distinguish available metric candidates from the metric actually used by the
   renderer. Keep the open item on deriving Word's true line-box owner/alternation rule from OOXML and PDF
   structure rather than from a family name, bullet character, or residual constant.
+  2026-06-04 tooling follow-up: `CompareDocxLayoutPdfFlow.ps1` now carries `LineHeightSource` into
+  source-indexed row mappings and emits `CandidateLineHeightSourceBuckets`. Future compact-list and
+  table-cell row-rhythm probes can therefore group PDF Y residuals by the line-height rule actually selected
+  by layout, instead of inferring ownership from the presence of body/list-label metric candidates.
   2026-06-02 accepted default-model update: missing paragraph spacing now follows the public Office-observed
   Word defaults (`1.2` auto-line factor and implicit `8pt` after spacing), replacing the earlier split between
   untokened and spacing-token paragraphs. Public compact-list probes improved or stayed guarded

@@ -210,6 +210,7 @@ function New-CandidateLayoutLine($Item, [int] $PageNumber, [int] $PageLine, [boo
         BodyWindowsLineHeightPoints = if ($null -eq $Item.BodyWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$Item.BodyWindowsLineHeightPoints, 6) }
         ListLabelWindowsLineHeightPoints = if ($null -eq $Item.ListLabelWindowsLineHeightPoints) { $null } else { [Math]::Round([double]$Item.ListLabelWindowsLineHeightPoints, 6) }
         EffectiveLineSpacingFactor = if ($null -eq $Item.EffectiveLineSpacingFactor) { $null } else { [Math]::Round([double]$Item.EffectiveLineSpacingFactor, 6) }
+        LineHeightSource = $Item.LineHeightSource
         LineSpacingFactorFloorApplied = $Item.LineSpacingFactorFloorApplied
         IsFirstParagraphLine = $Item.IsFirstParagraphLine
         PendingAfterSpacingPoints = if ($null -eq $Item.PendingAfterSpacingPoints) { $null } else { [Math]::Round([double]$Item.PendingAfterSpacingPoints, 6) }
@@ -374,6 +375,7 @@ foreach ($line in $layoutLines) {
             BodyWindowsLineHeightPoints = $line.BodyWindowsLineHeightPoints
             ListLabelWindowsLineHeightPoints = $line.ListLabelWindowsLineHeightPoints
             EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
+            LineHeightSource = $line.LineHeightSource
             LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
             IsFirstParagraphLine = $line.IsFirstParagraphLine
             PendingAfterSpacingPoints = $line.PendingAfterSpacingPoints
@@ -417,6 +419,7 @@ foreach ($line in $layoutLines) {
         BodyWindowsLineHeightPoints = $line.BodyWindowsLineHeightPoints
         ListLabelWindowsLineHeightPoints = $line.ListLabelWindowsLineHeightPoints
         EffectiveLineSpacingFactor = $line.EffectiveLineSpacingFactor
+        LineHeightSource = $line.LineHeightSource
         LineSpacingFactorFloorApplied = $line.LineSpacingFactorFloorApplied
         IsFirstParagraphLine = $line.IsFirstParagraphLine
         PendingAfterSpacingPoints = $line.PendingAfterSpacingPoints
@@ -487,6 +490,19 @@ $summary = [pscustomobject]@{
             ForEach-Object {
                 [pscustomobject]@{
                     LineSpacingFactorFloorApplied = $_.Name
+                    Count = $_.Count
+                }
+            }
+    )
+    CandidateLineHeightSourceBuckets = @(
+        $layoutLines |
+            Where-Object { $null -ne $_.LineHeightSource -and [string]$_.LineHeightSource -ne "" } |
+            Group-Object { [string]$_.LineHeightSource } |
+            Sort-Object Count -Descending |
+            Select-Object -First $Top |
+            ForEach-Object {
+                [pscustomobject]@{
+                    LineHeightSource = $_.Name
                     Count = $_.Count
                 }
             }
