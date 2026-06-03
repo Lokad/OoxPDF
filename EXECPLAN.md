@@ -626,6 +626,14 @@ High-priority actions:
   run `20260602-023605` remained passing at page-1 `MAE=15.195190`, page-2 `MAE=0.253264`. Keep the evidence,
   but do not promote label Windows extents directly into line height until another Office-PDF probe explains
   the row-rhythm alternation and first list boundary gap together.
+  2026-06-04 architecture follow-up: DOCX text-line layout snapshots now expose the selected
+  `LineHeightSource` alongside body/list-label metric candidates. Current auto-spaced body and list
+  paragraphs remain explicitly owned by `BodySingleLineAuto`; exact line spacing, static header/footer
+  Windows extents, and terminal table paragraph marks are tagged separately. This is deliberately
+  behavior-neutral: it preserves the rejected list-label Windows trial as evidence while making future
+  Office-oracle probes able to distinguish available metric candidates from the metric actually used by the
+  renderer. Keep the open item on deriving Word's true line-box owner/alternation rule from OOXML and PDF
+  structure rather than from a family name, bullet character, or residual constant.
   2026-06-02 accepted default-model update: missing paragraph spacing now follows the public Office-observed
   Word defaults (`1.2` auto-line factor and implicit `8pt` after spacing), replacing the earlier split between
   untokened and spacing-token paragraphs. Public compact-list probes improved or stayed guarded

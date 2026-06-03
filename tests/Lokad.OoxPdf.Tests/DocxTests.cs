@@ -13211,6 +13211,7 @@ internal static class DocxTests
         TestAssert.Equal(12d, line.BodyWindowsLineHeightPoints ?? 0d);
         TestAssert.Equal(14d, line.ListLabelWindowsLineHeightPoints ?? 0d);
         TestAssert.Equal(11.9d, Math.Round(line.LineHeightPoints ?? 0d, 2));
+        TestAssert.Equal("BodySingleLineAuto", line.LineHeightSource ?? string.Empty);
         TestAssert.True((line.ListLabelWindowsLineHeightPoints ?? 0d) > (line.BodyWindowsLineHeightPoints ?? 0d), "Snapshot should expose when list-label Windows extents exceed body extents.");
     }
 

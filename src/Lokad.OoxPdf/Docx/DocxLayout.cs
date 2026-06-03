@@ -94,7 +94,16 @@ internal sealed record DocxLineHeightProfile(
     double? BodyWindowsLineHeight,
     double? ListLabelWindowsLineHeight,
     double? EffectiveLineSpacingFactor,
-    bool LineSpacingFactorFloorApplied);
+    bool LineSpacingFactorFloorApplied,
+    DocxLineHeightSource Source);
+
+internal enum DocxLineHeightSource
+{
+    ExactLineSpacing,
+    BodySingleLineAuto,
+    StaticWindowsExtents,
+    TerminalParagraphMark
+}
 
 internal sealed record DocxParagraphSpacingProfile(
     double PendingAfterSpacing,
@@ -748,7 +757,8 @@ internal sealed record DocxLayoutSnapshot(
                 DirectRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasDirectRunProperties),
                 ParagraphStyleRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasParagraphStyleRunProperties),
                 TableStyleRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasTableStyleRunProperties),
-                DocumentDefaultRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasDocumentDefaultRunProperties)),
+                DocumentDefaultRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasDocumentDefaultRunProperties),
+                LineHeightSource: text.LineHeightSource?.ToString()),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
                 image.X,
@@ -1327,7 +1337,8 @@ internal sealed record DocxLayoutItemSnapshot(
     int? DirectRunPropertyTextSegmentCount = null,
     int? ParagraphStyleRunPropertyTextSegmentCount = null,
     int? TableStyleRunPropertyTextSegmentCount = null,
-    int? DocumentDefaultRunPropertyTextSegmentCount = null);
+    int? DocumentDefaultRunPropertyTextSegmentCount = null,
+    string? LineHeightSource = null);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,
@@ -1586,6 +1597,7 @@ internal sealed record DocxTextLineLayout(
     bool? ContextualSpacingSuppressed = null,
     DocxParagraph? SourceParagraph = null,
     string? StoryVariantType = null,
+    DocxLineHeightSource? LineHeightSource = null,
     bool EmitsTerminalParagraphMark = false) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
@@ -2170,6 +2182,7 @@ internal sealed class DocxLayoutEngine
                     StoryKind: "Body",
                     LineHeight: markFontSize,
                     IsFirstParagraphLine: true,
+                    LineHeightSource: DocxLineHeightSource.TerminalParagraphMark,
                     EmitsTerminalParagraphMark: true));
                 activeColumnHasContent = true;
                 previousParagraph = null;
@@ -2270,6 +2283,7 @@ internal sealed class DocxLayoutEngine
                         ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                         EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                         LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                        LineHeightSource: lineHeightProfile.Source,
                         PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
                         ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
@@ -3467,6 +3481,7 @@ internal sealed class DocxLayoutEngine
                 ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                 EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                 LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                LineHeightSource: lineHeightProfile.Source,
                 PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
                 ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                 ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
@@ -4007,7 +4022,8 @@ internal sealed class DocxLayoutEngine
                         SourceParagraph: paragraph,
                         SourceParagraphIndex: paragraphIndex,
                         StoryKind: isHeader ? "Header" : "Footer",
-                        StoryVariantType: story.VariantType));
+                        StoryVariantType: story.VariantType,
+                        LineHeightSource: DocxLineHeightSource.StaticWindowsExtents));
                     sourceLineIndex++;
                     cursorY -= ascender + descender;
                 }
@@ -4653,7 +4669,8 @@ internal sealed class DocxLayoutEngine
                 BodyWindowsLineHeight: null,
                 ListLabelWindowsLineHeight: null,
                 EffectiveLineSpacingFactor: null,
-                LineSpacingFactorFloorApplied: false);
+                LineSpacingFactorFloorApplied: false,
+                Source: DocxLineHeightSource.ExactLineSpacing);
         }
 
         DocxTextRun? bodyRun = paragraph.Runs.FirstOrDefault();
@@ -4683,7 +4700,8 @@ internal sealed class DocxLayoutEngine
             bodyWindowsLineHeight,
             listLabelWindowsLineHeight,
             effectiveLineSpacingFactor,
-            floorApplied);
+            floorApplied,
+            DocxLineHeightSource.BodySingleLineAuto);
     }
 
     private static double ResolveAutoLineSpacingFactor(DocxParagraph paragraph, out bool floorApplied)
@@ -6557,6 +6575,7 @@ internal sealed class DocxLayoutEngine
                         ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
                         EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                         LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                        LineHeightSource: lineHeightProfile.Source,
                         PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
                         ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
