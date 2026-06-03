@@ -18,6 +18,7 @@ internal sealed record DocxRelatedStoryLayout(
     int StoryIndex,
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
+    IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings,
     IReadOnlyList<DocxTableRowLayout> TableRows,
     double ContentHeight);
 
@@ -34,6 +35,7 @@ internal sealed record DocxPlacedRelatedStoryLayout(
     double SeparatorThickness,
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
+    IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings,
     IReadOnlyList<DocxTableRowLayout> TableRows);
 
 internal sealed record DocxFloatingDrawingLayout(
@@ -185,7 +187,7 @@ internal sealed record DocxLayoutSnapshot(
                     tableCellTextLineCount,
                     story.TableRows.Count,
                     inlineImageCount,
-                    story.Story.FloatingDrawings.Count,
+                    story.FloatingDrawings.Count,
                     CountBodyTextLength(story.Story.BodyElements),
                     story.ContentHeight,
                     items,
@@ -521,6 +523,7 @@ internal sealed record DocxLayoutSnapshot(
                 story.SeparatorThickness,
                 story.TextLines.Count,
                 story.InlineImages.Count,
+                story.FloatingDrawings.Count,
                 story.TableRows.Count))
             .ToArray();
         IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines
@@ -1149,6 +1152,7 @@ internal sealed record DocxPlacedRelatedStoryLayoutSnapshot(
     double SeparatorThickness,
     int TextLineCount,
     int InlineImageCount,
+    int FloatingDrawingCount,
     int TableRowCount);
 
 internal sealed record DocxLayoutColumnFrameSnapshot(
@@ -2363,7 +2367,7 @@ internal sealed class DocxLayoutEngine
                         continue;
                     }
 
-                    placedStories.Add(PlaceRelatedStory(page, storyLayout, sourceBlockIndex));
+                    placedStories.Add(PlaceRelatedStory(page, pageIndex, storyLayout, sourceBlockIndex));
                 }
             }
 
@@ -2407,7 +2411,7 @@ internal sealed class DocxLayoutEngine
                 cursorTop = activePage.Height - activePage.MarginTop;
             }
 
-            DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, storyLayout, sourceBlockIndex: -1, cursorTop, separatorY: null);
+            DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, outputPages.Count - 1, storyLayout, sourceBlockIndex: -1, cursorTop, separatorY: null);
             activePlacedStories.Add(placedStory);
             outputPages[^1] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             cursorTop -= storyHeight + FootnoteSeparatorGapPoints;
@@ -2503,15 +2507,16 @@ internal sealed class DocxLayoutEngine
         }
     }
 
-    private static DocxPlacedRelatedStoryLayout PlaceRelatedStory(DocxLayoutPage page, DocxRelatedStoryLayout storyLayout, int sourceBlockIndex)
+    private static DocxPlacedRelatedStoryLayout PlaceRelatedStory(DocxLayoutPage page, int pageIndex, DocxRelatedStoryLayout storyLayout, int sourceBlockIndex)
     {
         double storyHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
         double topY = page.MarginBottom + storyHeight;
-        return PlaceRelatedStoryAtTop(page, storyLayout, sourceBlockIndex, topY, topY + FootnoteSeparatorGapPoints);
+        return PlaceRelatedStoryAtTop(page, pageIndex, storyLayout, sourceBlockIndex, topY, topY + FootnoteSeparatorGapPoints);
     }
 
     private static DocxPlacedRelatedStoryLayout PlaceRelatedStoryAtTop(
         DocxLayoutPage page,
+        int pageIndex,
         DocxRelatedStoryLayout storyLayout,
         int sourceBlockIndex,
         double topY,
@@ -2532,6 +2537,7 @@ internal sealed class DocxLayoutEngine
             FootnoteSeparatorThicknessPoints,
             ShiftTextLines(storyLayout.TextLines, deltaY),
             ShiftInlineImages(storyLayout.InlineImages, deltaY),
+            ShiftFloatingDrawings(storyLayout.FloatingDrawings, pageIndex, deltaY),
             ShiftTableRows(storyLayout.TableRows, deltaY));
     }
 
@@ -2572,7 +2578,7 @@ internal sealed class DocxLayoutEngine
         if (textMeasurer is null || stories.Count == 0)
         {
             return stories
-                .Select((story, index) => new DocxRelatedStoryLayout(story, index, [], [], [], 0d))
+                .Select((story, index) => new DocxRelatedStoryLayout(story, index, [], [], [], [], 0d))
                 .ToArray();
         }
 
@@ -2695,7 +2701,74 @@ internal sealed class DocxLayoutEngine
         }
 
         cursorY -= pendingSpacingAfter;
-        return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), tableRows.ToArray(), Math.Abs(cursorY));
+        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings = CreateRelatedStoryFloatingDrawingLayouts(
+            story,
+            bodyWidth,
+            textLines,
+            inlineImages,
+            tableRows);
+        return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), floatingDrawings, tableRows.ToArray(), Math.Abs(cursorY));
+    }
+
+    private static IReadOnlyList<DocxFloatingDrawingLayout> CreateRelatedStoryFloatingDrawingLayouts(
+        DocxRelatedStory story,
+        double bodyWidth,
+        IReadOnlyList<DocxTextLineLayout> textLines,
+        IReadOnlyList<DocxInlineImageLayout> inlineImages,
+        IReadOnlyList<DocxTableRowLayout> tableRows)
+    {
+        if (story.FloatingDrawings.Count == 0)
+        {
+            return [];
+        }
+
+        DocxLayoutPage storyCanvas = CreateRelatedStoryLayoutCanvas(bodyWidth, textLines, inlineImages, tableRows);
+        return story.FloatingDrawings
+            .Select(drawing =>
+            {
+                DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is null
+                    ? null
+                    : FindSourceBlockBounds([storyCanvas], drawing.SourceBlockIndex.Value);
+                return CreateFloatingDrawingLayout(
+                    drawing,
+                    storyCanvas,
+                    pageStartIndex: null,
+                    pageEndIndex: null,
+                    anchorPageIndex: null,
+                    anchorColumnIndex: sourceBlock?.FirstColumnIndex,
+                    sourceBlock,
+                    story.Kind,
+                    storyVariantType: null);
+            })
+            .ToArray();
+    }
+
+    private static DocxLayoutPage CreateRelatedStoryLayoutCanvas(
+        double bodyWidth,
+        IReadOnlyList<DocxTextLineLayout> textLines,
+        IReadOnlyList<DocxInlineImageLayout> inlineImages,
+        IReadOnlyList<DocxTableRowLayout> tableRows)
+    {
+        IReadOnlyList<DocxLayoutItem> items = textLines
+            .Cast<DocxLayoutItem>()
+            .Concat(inlineImages)
+            .Concat(tableRows)
+            .ToArray();
+        return new DocxLayoutPage(
+            bodyWidth,
+            UnpagedRelatedStoryCanvasHeightPoints,
+            0d,
+            0d,
+            0d,
+            0d,
+            DocxPageSettings.Empty,
+            new DocxSectionLayoutProperties(null, null, null, null, null, null, []),
+            [new DocxLayoutColumnFrame(0, 0d, bodyWidth, null)],
+            [],
+            [],
+            [],
+            [],
+            items);
     }
 
     private static IReadOnlyList<DocxTextLineLayout> LayoutRelatedStoryParagraphTextLines(
@@ -6063,6 +6136,32 @@ internal sealed class DocxLayoutEngine
         return images
             .Select(image => image with { Y = image.Y + deltaY })
             .ToArray();
+    }
+
+    private static IReadOnlyList<DocxFloatingDrawingLayout> ShiftFloatingDrawings(
+        IReadOnlyList<DocxFloatingDrawingLayout> drawings,
+        int pageIndex,
+        double deltaY)
+    {
+        return drawings
+            .Select(drawing => drawing with
+            {
+                PageStartIndex = pageIndex,
+                PageEndIndex = pageIndex,
+                AnchorPageIndex = pageIndex,
+                AnchorBlockVerticalTop = ShiftNullable(drawing.AnchorBlockVerticalTop, deltaY),
+                AnchorBlockVerticalBottom = ShiftNullable(drawing.AnchorBlockVerticalBottom, deltaY),
+                VerticalReferenceTop = ShiftNullable(drawing.VerticalReferenceTop, deltaY),
+                VerticalReferenceBottom = ShiftNullable(drawing.VerticalReferenceBottom, deltaY),
+                PlacedTop = ShiftNullable(drawing.PlacedTop, deltaY),
+                WrapExclusionTop = ShiftNullable(drawing.WrapExclusionTop, deltaY)
+            })
+            .ToArray();
+    }
+
+    private static double? ShiftNullable(double? value, double delta)
+    {
+        return value is null ? null : value.Value + delta;
     }
 
     private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows, double deltaY)

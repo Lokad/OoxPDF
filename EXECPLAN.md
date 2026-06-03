@@ -405,6 +405,17 @@ High-priority actions:
   model. Comment links remain open because comments are still unplaced. Bottom-up coverage adds a placed
   footnote external hyperlink test. Validation passed full solution build, `docx-core --skip-slow` (`60`) and
   `docx-page --skip-slow` (`46`).
+  2026-06-03 rendering follow-up: placed DOCX related stories now carry story-local floating drawing layouts
+  through to page-owned placement instead of dropping anchored images after the reader inventories them.
+  `DocxRelatedStoryLayout` and `DocxPlacedRelatedStoryLayout` include `FloatingDrawings`; placement assigns
+  the final page and shifts vertical anchor/reference coordinates into the footnote/endnote band, and
+  `DocxRenderer` dispatches those drawings through the shared floating-image path in the existing
+  behind-document/foreground phases. Bottom-up coverage adds a placed-footnote paragraph-relative anchored
+  PNG case that asserts both layout ownership and PDF image emission. Keep Office-derived story anchor
+  reference semantics, draw order against separators/text, multi-page note continuation, comment placement,
+  and non-image anchored story shapes open; this slice closes the visible dropped-image gap for structurally
+  resolvable placed note story anchors. Validation passed full solution build, `docx-page --skip-slow` (`47`),
+  `docx-images --skip-slow` (`5`), and `docx-core --skip-slow` (`60`).
   2026-06-03 diagnostic follow-up: footnote and endnote diagnostics now use `DOCX_APPROXIMATED_FOOTNOTE` and
   `DOCX_APPROXIMATED_ENDNOTE` with fallback `Approximated` instead of stale `DOCX_UNSUPPORTED_*` IDs. Comments
   remain `DOCX_UNSUPPORTED_COMMENTS` because they still have no placed display model. The related-part

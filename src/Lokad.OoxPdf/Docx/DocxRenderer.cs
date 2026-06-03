@@ -160,7 +160,9 @@ internal sealed class DocxRenderer
 
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
             {
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, diagnosticSink, ref imageIndex);
                 RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, diagnosticSink, ref imageIndex);
             }
 
             RenderFloatingDrawings(
@@ -608,6 +610,22 @@ internal sealed class DocxRenderer
     {
         foreach (DocxFloatingDrawingLayout drawing in floatingDrawings
             .Where(drawing => drawing.AnchorPageIndex == pageIndex && IsBehindDocument(drawing.Drawing) == behindDocument)
+            .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)))
+        {
+            RenderFloatingDrawing(drawing, graphics, pageImages, diagnosticSink, ref imageIndex);
+        }
+    }
+
+    private static void RenderPlacedRelatedStoryDrawings(
+        DocxPlacedRelatedStoryLayout story,
+        bool behindDocument,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        ref int imageIndex)
+    {
+        foreach (DocxFloatingDrawingLayout drawing in story.FloatingDrawings
+            .Where(drawing => IsBehindDocument(drawing.Drawing) == behindDocument)
             .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)))
         {
             RenderFloatingDrawing(drawing, graphics, pageImages, diagnosticSink, ref imageIndex);

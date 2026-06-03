@@ -13582,6 +13582,87 @@ internal static class DocxTests
         TestAssert.Contains("/Im1 Do", page.Content);
     }
 
+    public static void DocxRendererRendersPlacedFootnoteFloatingImages()
+    {
+        DocxParagraph body = CreateDocxLayoutParagraph("Body footnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "42",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 5)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote anchored image", 10d, 12d);
+        var footnoteImage = new DocxInlineImage(18d, 9d, "image/png", TestFixtures.CreateRgbPng(1, 1, [96, 48, 24]), "/word/media/footnote-anchor.png");
+        var footnoteDrawing = new DocxFloatingDrawing(
+            DistanceTopValue: "0",
+            DistanceBottomValue: "0",
+            DistanceLeftValue: "0",
+            DistanceRightValue: "0",
+            SimplePositionValue: "0",
+            RelativeHeightValue: "0",
+            BehindDocumentValue: "0",
+            LockedValue: null,
+            LayoutInCellValue: null,
+            AllowOverlapValue: null,
+            ExtentCxValue: "228600",
+            ExtentCyValue: "114300",
+            HorizontalRelativeFromValue: "column",
+            HorizontalAlignValue: null,
+            HorizontalOffsetValue: "457200",
+            VerticalRelativeFromValue: "paragraph",
+            VerticalAlignValue: null,
+            VerticalOffsetValue: "0",
+            WrapKind: "wrapNone",
+            WrapTextValue: null,
+            ImageRelationshipId: "rIdFootnoteImage1",
+            Image: footnoteImage,
+            SourceParagraphIndex: 0,
+            SourceBlockIndex: 0);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "42",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            [])
+        {
+            FloatingDrawings = [footnoteDrawing]
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxPlacedRelatedStoryLayoutSnapshot placedStory = snapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 1).PlacedRelatedStories.Single();
+        TestAssert.Equal(1, placedStory.FloatingDrawingCount);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        TestAssert.Equal(1, page.Images.Count);
+        TestAssert.Contains("/Im1 Do", page.Content);
+    }
+
     public static void DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants()
     {
         DocxParagraph defaultHeader = CreateDocxLayoutParagraph("DH", 10d, 10d);
