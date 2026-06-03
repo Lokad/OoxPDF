@@ -4956,9 +4956,11 @@ internal sealed class DocxLayoutEngine
         string separator = GetListLabelPdfSeparator(label);
         if (separator.Length != 0)
         {
+            DocxTextRun separatorRun = styleRun;
+            double separatorFontSize = separatorRun.EffectiveProperties.FontSize;
             double separatorX = labelX + labelWidth;
-            double separatorWidth = textMeasurer.MeasureText(labelRun, separator, labelFontSize);
-            segments.Add(new DocxTextSegmentLayout(separator, labelRun, separatorX, separatorWidth, labelFontSize, SourceTextRunIndex: -1, Role: DocxTextSegmentRole.ListSeparator));
+            double separatorWidth = textMeasurer.MeasureText(separatorRun, separator, separatorFontSize);
+            segments.Add(new DocxTextSegmentLayout(separator, separatorRun, separatorX, separatorWidth, separatorFontSize, SourceTextRunIndex: -1, Role: DocxTextSegmentRole.ListSeparator));
         }
 
         segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));

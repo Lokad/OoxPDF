@@ -7103,6 +7103,71 @@ internal static class DocxTests
         TestAssert.True(line.Segments[2].X < 108d, "A space suffix should not advance text to the numbering tab stop.");
     }
 
+    public static void DocxNumberingSeparatorUsesBodyRunStyle()
+    {
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        var label = new DocxListLabel(
+            "•",
+            "bullet",
+            "\uF0B7",
+            "tab",
+            "1",
+            0,
+            DocxNumberingIndent.Empty,
+            new DocxTextRunStyle(10d, null, false, false, false, null, "MarkerFace", new DocxRunFonts("MarkerFace", null, null, null, null, null, null, null)));
+        var bodyRun = new DocxTextRun("Item", 10d, null, false, false, false, null, "BodyFace")
+        {
+            Fonts = new DocxRunFonts("BodyFace", null, null, null, null, null, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            [bodyRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            label);
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [paragraph],
+            []);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "• Item".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(DocxTextSegmentRole.ListLabel, line.Segments[0].Role);
+        TestAssert.Equal("MarkerFace", line.Segments[0].StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
+        TestAssert.Equal(DocxTextSegmentRole.ListSeparator, line.Segments[1].Role);
+        TestAssert.Equal("BodyFace", line.Segments[1].StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
+        TestAssert.Equal(DocxTextSegmentRole.Text, line.Segments[2].Role);
+        TestAssert.Equal("BodyFace", line.Segments[2].StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
+    }
+
     public static void DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

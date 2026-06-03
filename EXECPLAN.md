@@ -783,6 +783,16 @@ High-priority actions:
   still mixed tokens (`-33`) and whitespace (`-35`), and candidate PDF is still short whitespace (`-80`);
   continue with Office-like whitespace/mixed-token operation splitting and glyph coverage, not with empty
   operation placeholders.
+  2026-06-03 list-separator ownership follow-up: numbering suffix separators now use the paragraph body run
+  style instead of the marker run style, so symbol/bullet marker fonts no longer force separator spaces through
+  an unmappable marker face. Bottom-up layout coverage asserts the marker segment keeps marker style while the
+  `ListSeparator` and body text segments use body style. Private run `20260603-224832` stayed visually
+  identical (`16/16`, zero dimension mismatches, no diagnostics, aggregate `MAE=8.933935`, changed16
+  `0.094971`), but candidate PDF text operations rose from `2279` to `2324`; the whitespace delta improved
+  from `-80` to `-35`, matching the planner, and there are no zero-glyph planner segments left. Public
+  text-state context guard `20260603-224815` stayed paired at `35/35` operations with unchanged
+  `MAE=0.493604`, changed16 `0.004763`. The remaining count gap is now cleaner: mixed-token splits (`-33`),
+  whitespace splits (`-35`), and a small alphanumeric/letter residual before production `Tc` selection.
   2026-06-02 architecture follow-up: `DocxLayout` now resolves paragraph boundary spacing through an explicit
   `DocxParagraphSpacingProfile` and carries private-safe `PendingAfterSpacingPoints`,
   `ParagraphBeforeSpacingPoints`, `ParagraphAfterSpacingPoints`, and `ContextualSpacingSuppressed` on first
