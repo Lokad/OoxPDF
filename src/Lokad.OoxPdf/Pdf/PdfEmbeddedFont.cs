@@ -7,37 +7,61 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal sealed class PdfEmbeddedFont
 {
-    private PdfEmbeddedFont(OpenTypeFont font, string baseFontName, IReadOnlyDictionary<ushort, int> unicodeByCid)
+    private readonly IReadOnlyDictionary<ushort, ushort> cidByOriginalGlyph;
+    private readonly byte[]? subsetFontBytes;
+
+    private PdfEmbeddedFont(
+        OpenTypeFont font,
+        string baseFontName,
+        IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph,
+        OpenTypeFontSubset? subset)
     {
         Font = font;
         BaseFontName = baseFontName;
-        UnicodeByCid = unicodeByCid;
+        UnicodeByOriginalGlyph = unicodeByOriginalGlyph;
+        if (subset is not null)
+        {
+            cidByOriginalGlyph = subset.CidByOriginalGlyph;
+            subsetFontBytes = subset.Bytes;
+        }
+        else
+        {
+            cidByOriginalGlyph = new Dictionary<ushort, ushort>();
+        }
+
+        UnicodeByCid = BuildUnicodeByCid();
     }
 
     public OpenTypeFont Font { get; }
 
     public string BaseFontName { get; }
 
+    public IReadOnlyDictionary<ushort, int> UnicodeByOriginalGlyph { get; }
+
     public IReadOnlyDictionary<ushort, int> UnicodeByCid { get; }
+
+    public ReadOnlyMemory<byte> FontProgramBytes => subsetFontBytes is null ? Font.Bytes : subsetFontBytes;
+
+    public bool UsesSubsetFontProgram => subsetFontBytes is not null;
 
     public string ResourceKey => BaseFontName;
 
     public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken = default)
     {
-        var unicodeByCid = new SortedDictionary<ushort, int>();
+        var unicodeByOriginalGlyph = new SortedDictionary<ushort, int>();
         foreach (int codePoint in codePoints)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(codePoint);
             if (glyph != 0)
             {
-                unicodeByCid[glyph] = codePoint;
+                unicodeByOriginalGlyph[glyph] = codePoint;
             }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         string fontHash = Convert.ToHexString(SHA256.HashData(font.Bytes.Span)).Substring(0, 8);
-        return new PdfEmbeddedFont(font, "LOKAD+" + SanitizeName(font.FamilyName) + "-" + fontHash, unicodeByCid);
+        return CreateFromOriginalGlyphs(font, "LOKAD+" + SanitizeName(font.FamilyName) + "-" + fontHash, unicodeByOriginalGlyph, cancellationToken);
     }
 
     public static PdfEmbeddedFont Merge(IEnumerable<PdfEmbeddedFont> fonts, CancellationToken cancellationToken = default)
@@ -53,18 +77,35 @@ internal sealed class PdfEmbeddedFont
             return items[0];
         }
 
-        var unicodeByCid = new SortedDictionary<ushort, int>();
+        var unicodeByOriginalGlyph = new SortedDictionary<ushort, int>();
         foreach (PdfEmbeddedFont font in items)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            foreach ((ushort cid, int codePoint) in font.UnicodeByCid)
+            foreach ((ushort glyph, int codePoint) in font.UnicodeByOriginalGlyph)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                unicodeByCid[cid] = codePoint;
+                unicodeByOriginalGlyph[glyph] = codePoint;
             }
         }
 
-        return new PdfEmbeddedFont(items[0].Font, items[0].BaseFontName, unicodeByCid);
+        return CreateFromOriginalGlyphs(items[0].Font, items[0].BaseFontName, unicodeByOriginalGlyph, cancellationToken);
+    }
+
+    private static PdfEmbeddedFont CreateFromOriginalGlyphs(
+        OpenTypeFont font,
+        string baseFontName,
+        IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        OpenTypeFontSubset? subset = OpenTypeFontSubsetter.Create(font, unicodeByOriginalGlyph, cancellationToken);
+        var sortedGlyphs = new SortedDictionary<ushort, int>();
+        foreach ((ushort glyph, int codePoint) in unicodeByOriginalGlyph)
+        {
+            sortedGlyphs[glyph] = codePoint;
+        }
+
+        return new PdfEmbeddedFont(font, baseFontName, sortedGlyphs, subset);
     }
 
     public string BuildToUnicodeCMap(CancellationToken cancellationToken = default)
@@ -110,30 +151,40 @@ internal sealed class PdfEmbeddedFont
 
     public string BuildWidthArray(CancellationToken cancellationToken = default)
     {
-        if (Font.GlyphCount == 0)
+        if (UnicodeByOriginalGlyph.Count == 0)
         {
             return "[]";
         }
 
         var builder = new StringBuilder("[");
         bool first = true;
-        for (int glyphId = 0; glyphId < Font.GlyphCount; glyphId++)
+        var widthsByCid = new SortedDictionary<ushort, int>();
+        foreach (ushort originalGlyph in UnicodeByOriginalGlyph.Keys)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            ushort cid = (ushort)glyphId;
-            ushort advance = Font.GetAdvanceWidth(cid);
+            if (!TryGetCid(originalGlyph, out ushort cid))
+            {
+                continue;
+            }
+
+            ushort advance = Font.GetAdvanceWidth(originalGlyph);
             if (advance == 0)
             {
                 continue;
             }
 
+            widthsByCid[cid] = (int)Math.Round(advance * 1000d / Font.UnitsPerEm);
+        }
+
+        foreach ((ushort cid, int width) in widthsByCid)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!first)
             {
                 builder.Append(' ');
             }
 
             first = false;
-            int width = (int)Math.Round(advance * 1000d / Font.UnitsPerEm);
             builder.Append(CultureInfo.InvariantCulture, $"{cid} [{width}]");
         }
 
@@ -147,9 +198,9 @@ internal sealed class PdfEmbeddedFont
         foreach (Rune rune in text.EnumerateRunes())
         {
             ushort glyph = Font.MapCodePoint(rune.Value);
-            if (glyph != 0)
+            if (glyph != 0 && TryGetCid(glyph, out ushort cid))
             {
-                builder.Append(glyph.ToString("X4", CultureInfo.InvariantCulture));
+                builder.Append(cid.ToString("X4", CultureInfo.InvariantCulture));
             }
         }
 
@@ -161,15 +212,20 @@ internal sealed class PdfEmbeddedFont
         return EncodeGlyphPositioningArray(text, 0d, 1d);
     }
 
+    public bool TryGetEncodedCid(ushort originalGlyph, out ushort cid)
+    {
+        return TryGetCid(originalGlyph, out cid);
+    }
+
     public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray = false, bool kerningEnabled = true)
     {
-        var glyphs = new List<ushort>();
+        var glyphs = new List<EncodedGlyph>();
         foreach (Rune rune in text.EnumerateRunes())
         {
             ushort glyph = Font.MapCodePoint(rune.Value);
-            if (glyph != 0)
+            if (glyph != 0 && TryGetCid(glyph, out ushort cid))
             {
-                glyphs.Add(glyph);
+                glyphs.Add(new EncodedGlyph(glyph, cid));
             }
         }
 
@@ -189,7 +245,7 @@ internal sealed class PdfEmbeddedFont
             if (i > 0)
             {
                 double adjustment = trackingAdjustment;
-                short kerning = kerningEnabled ? Font.GetKerning(glyphs[i - 1], glyphs[i]) : (short)0;
+                short kerning = kerningEnabled ? Font.GetKerning(glyphs[i - 1].OriginalGlyph, glyphs[i].OriginalGlyph) : (short)0;
                 if (kerning != 0)
                 {
                     adjustment += -kerning * 1000d / Font.UnitsPerEm;
@@ -203,7 +259,7 @@ internal sealed class PdfEmbeddedFont
                 }
             }
 
-            glyphChunk.Append(glyphs[i].ToString("X4", CultureInfo.InvariantCulture));
+            glyphChunk.Append(glyphs[i].Cid.ToString("X4", CultureInfo.InvariantCulture));
         }
 
         AppendGlyphChunk(builder, glyphChunk);
@@ -220,6 +276,37 @@ internal sealed class PdfEmbeddedFont
 
         builder.Append('<').Append(glyphChunk).Append('>');
         glyphChunk.Clear();
+    }
+
+    private IReadOnlyDictionary<ushort, int> BuildUnicodeByCid()
+    {
+        var unicodeByCid = new SortedDictionary<ushort, int>();
+        foreach ((ushort originalGlyph, int codePoint) in UnicodeByOriginalGlyph)
+        {
+            if (TryGetCid(originalGlyph, out ushort cid))
+            {
+                unicodeByCid[cid] = codePoint;
+            }
+        }
+
+        return unicodeByCid;
+    }
+
+    private bool TryGetCid(ushort originalGlyph, out ushort cid)
+    {
+        if (cidByOriginalGlyph.TryGetValue(originalGlyph, out cid))
+        {
+            return true;
+        }
+
+        if (UsesSubsetFontProgram)
+        {
+            cid = 0;
+            return false;
+        }
+
+        cid = originalGlyph;
+        return true;
     }
 
     public double MeasureTextPoints(string text, double fontSize)
@@ -256,4 +343,6 @@ internal sealed class PdfEmbeddedFont
 
         return builder.Length == 0 ? "Font" : builder.ToString();
     }
+
+    private readonly record struct EncodedGlyph(ushort OriginalGlyph, ushort Cid);
 }

@@ -16,79 +16,114 @@ public synthetic OOXML as the implementation oracle, inspect those PDFs and thei
 changing renderer behavior, use private local-only documents only to discover missing Office features, and
 keep diagnostics honest when a feature is still missing.
 
-## Current Task: End-to-End Cancellation
+## Current Task: Subset Embedded TrueType Fonts For DOCX And PPTX
 
-Users can currently call `OoxPdfConverter.Convert(...)`, but they cannot ask conversion to stop when a host
-request is cancelled. This task makes `.pptx` and `.docx` conversion cooperatively cancellable from the
-public API through package loading, document reading, rendering, font loading, and PDF writing. A cooperative
-cancellation point is a place where code calls `CancellationToken.ThrowIfCancellationRequested()` so a
-requested cancellation becomes an `OperationCanceledException` instead of the converter continuing until the
-whole document is complete.
+Small `.docx` and `.pptx` files can currently produce multi-megabyte PDFs when they use several installed
+fonts, because the PDF writer embeds each complete TrueType font program. The fixture
+`tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-text-state-font-matrix.docx` is 14,874 bytes but currently
+converts to a 3,657,884-byte PDF; inspection shows eight `/FontFile2` streams account for 3,358,112 compressed
+bytes, or 91.8% of the output, while the ToUnicode maps cover only 184 glyphs. This task implements
+dependency-free TrueType subsetting in the shared font/PDF layer so both DOCX and PPTX conversions embed only
+the glyph outlines required by the emitted text.
 
-At the end of this task, a caller should be able to call `await OoxPdfConverter.ConvertAsync(input, output,
-options, cancellationToken)` and observe that an already-cancelled or later-cancelled token stops conversion.
-The existing synchronous `Convert(...)` calls remain source-compatible, and token-aware synchronous overloads
-are added for hosts that do not want a task-returning API.
+At the end of this task, converting the public DOCX font-matrix fixture should produce a PDF comfortably below
+1 MB while preserving visual output. PPTX text should benefit through the same `PdfEmbeddedFont` path used by
+`PptxRenderer.TextDrawing`, so no PPTX-specific fork is needed.
 
 ### Current Task Progress
 
-- [x] (2026-06-05 12:41Z) Confirmed the current public API is synchronous-only: `OoxPdfConverter.Convert(...)`
-  has no cancellation token and `OoxPdfOptions` has no cancellation property.
-- [x] (2026-06-05 12:41Z) Confirmed font byte sources already expose `GetBytesAsync(CancellationToken)`, but
-  `FontProgramLoader` currently calls it without passing a token and blocks synchronously.
-- [x] (2026-06-05 13:26Z) Added additive public conversion overloads and token propagation through the conversion core.
-- [x] (2026-06-05 13:26Z) Added cooperative cancellation checks in the major package, reader, renderer, font, layout, and PDF writer
-  loops.
-- [x] (2026-06-05 13:26Z) Added dependency-free unit tests proving cancelled conversion fails with `OperationCanceledException` and
-  that async conversion can complete normally.
-- [x] (2026-06-05 13:26Z) Ran focused public API tests and a full build with `--tl:off`.
+- [x] (2026-06-05 18:55Z) Reproduced the size issue with the current CLI: the DOCX font-matrix fixture
+  converts to exactly 3,657,884 bytes.
+- [x] (2026-06-05 18:55Z) Confirmed the cause in `src/Lokad.OoxPdf/Pdf/PdfDocumentWriter.cs`: `/FontFile2`
+  is written from `font.Font.Bytes`, which is the complete loaded font.
+- [x] (2026-06-05 18:55Z) Confirmed both DOCX and PPTX already group code points by resolved font face before
+  constructing `PdfEmbeddedFont`, so the fix belongs in `PdfEmbeddedFont` and the shared TrueType font code.
+- [x] (2026-06-05 19:14Z) Implemented a dependency-free TrueType subsetter that rewrites `glyf`, `loca`, `hmtx`, `hhea`, `maxp`,
+  `cmap`, `head`, and related required tables for the used glyphs.
+- [x] (2026-06-05 19:14Z) Wired `PdfEmbeddedFont` to encode dense subset glyph IDs while retaining original fonts for measuring and
+  kerning.
+- [x] (2026-06-05 19:14Z) Validated focused unit tests, full non-slow tests, DOCX fixture size, and DOCX/PPTX
+  visual cases.
 
 ### Current Task Surprises & Discoveries
 
 - `dotnet test` on the console test project only restored/built and did not run the custom grouped test
   runner. Use `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- ...` for
   unit-test validation.
-- Private reflection tests invoke the chart workbook helper by name and expected the old one-argument
-  `ReadWorkbookData(OoxPackage)` method. The cancellable implementation was moved behind a separate core
-  helper so that reflection surface remains stable.
+- The existing ToUnicode maps already prove the logical glyph subset is tiny: the DOCX font-matrix PDF maps
+  184 glyphs across eight font resources, yet embeds 6,351,460 decoded bytes of complete font programs.
+- The `/W` width array is also currently emitted for every glyph in each face. It is not the main byte cost,
+  but it must be changed with glyph remapping so PDF widths match the subset CIDs.
+- PPTX positioned text spans had their own glyph hex and `TJ` array encoders that bypassed
+  `PdfEmbeddedFont.EncodeGlyphHex`. The first PPTX visual run after subsetting rendered wrong glyphs and failed
+  the existing gate at MAE 4.578509; after routing those encoders through the subset CID mapping, the same case
+  passed at MAE 0.509285 with a 53,602-byte PDF.
 
 ### Current Task Decision Log
 
-- Decision: Keep existing synchronous conversion signatures and add token-aware overloads instead of replacing
-  the API.
-  Rationale: Existing users and tests call `Convert(input, output, options)`; preserving those calls avoids a
-  breaking change while still giving cancellation-capable hosts a first-class path.
+- Decision: Implement subsetting in the shared PDF/font layer rather than separately in DOCX and PPTX.
+  Rationale: `DocxRenderer` and `PptxRenderer.TextDrawing` both create `PdfEmbeddedFont` resources from
+  resolved font faces and used code points. A shared subsetter fixes both formats and avoids divergent font
+  embedding behavior.
   Date/Author: 2026-06-05 / Codex.
 
-- Decision: Add `ConvertAsync` as an additive public API that uses the same token-aware core as the
-  synchronous overloads.
-  Rationale: The renderer is mostly CPU-bound and currently builds complete page objects before serializing
-  the PDF. Sharing one cooperative cancellation core keeps behavior consistent between sync and async callers.
+- Decision: Keep layout measurement and kerning on the original `OpenTypeFont`, and only remap glyph IDs at
+  PDF emission time.
+  Rationale: The layout engines already depend on original font metrics and kerning pairs. Remapping only the
+  emitted CIDs keeps layout stable while allowing the embedded `/FontFile2` program to contain dense subset
+  glyph IDs.
+  Date/Author: 2026-06-05 / Codex.
+
+- Decision: Keep PPTX `TextGlyphAtom.GlyphId` values as original font glyph IDs and remap only inside the PDF
+  text encoders.
+  Rationale: The same glyph atoms are also used for glyph-outline fallback paths and diagnostic summaries.
+  Preserving original IDs avoids changing measurement and outline behavior while ensuring embedded subset fonts
+  receive dense CIDs in the PDF content stream.
   Date/Author: 2026-06-05 / Codex.
 
 ### Current Task Validation
 
 Run from `C:\Users\JoannesVermorel\code\OoxPDF`:
 
-    dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group api --skip-slow
+    dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group fonts --skip-slow
+    dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pdf --skip-slow
+    dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow
+    dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow
     dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
+    dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-text-state-font-matrix.docx artifacts/size-check/docx-ladder-03-text-state-font-matrix-current.pdf
+    pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-ladder-03-text-state-font-matrix/case.json
+    pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-ladder-04-typography-font-families/case.json
 
-The public API test group should include cancellation tests that fail before this change because no
-token-aware conversion API exists, and pass afterward by observing `OperationCanceledException` from both
-sync and async conversion paths when the token is cancelled.
+The new font/PDF tests should fail before the change by observing that subset font streams are the original
+font size or that encoded glyph IDs are not remapped, and pass after the change. The CLI conversion should
+show the DOCX font-matrix PDF shrinking below 1 MB. The visual case should still pass its existing page count,
+dimension, and visual thresholds.
 
 Validation results:
 
-- PASS: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group api --skip-slow`
-  reported 9 passed, 0 failed, 0 skipped.
-- PASS: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` completed with 0 warnings and 0
-  errors.
-- PARTIAL: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`
-  still reports four standalone PPTX fidelity failures unrelated to cancellation:
-  `PptxSyntheticGroupedConnectorHonorsGroupFlip`,
-  `PptxSyntheticTextBoxUsesThemeHyperlinkColor`,
-  `PptxBoundaryInvarianceProbeCoalescesLeftAlignedHighlightBoundaries`, and
-  `PptxThemeColorMapResolvesSceneTextAndShapeColors`.
+- Baseline before implementation: the current CLI emits
+  `artifacts/size-check/docx-ladder-03-text-state-font-matrix-current.pdf` at 3,657,884 bytes.
+- PASS: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group fonts --skip-slow`
+  reported 23 passed, 0 failed, 0 skipped.
+- PASS: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pdf --skip-slow`
+  reported 18 passed, 0 failed, 0 skipped.
+- PASS: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
+  reported 138 passed, 0 failed, 2 skipped.
+- PASS: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group docx-text --skip-slow`
+  reported 49 passed, 0 failed, 0 skipped.
+- PASS: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`
+  reported 797 passed, 0 failed, 7 skipped.
+- PASS: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` completed with 0 warnings and 0 errors.
+- PASS: `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-ladder-03-text-state-font-matrix/case.json`
+  produced run `20260605-210730`; candidate PDF size was 144,642 bytes, dimensions matched, and MAE was
+  0.766012.
+- PASS: `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-ladder-04-typography-font-families/case.json`
+  produced run `20260605-211228`; candidate PDF size was 53,602 bytes, dimensions matched, and MAE was
+  0.509285.
+
+Outcomes and retrospective note: 2026-06-05 update completed TrueType subsetting for the shared PDF font path.
+The DOCX font-matrix PDF shrank from 3,657,884 bytes to 144,642 bytes, and the PPTX typography font-family
+case shrank from historical 2,386,295-byte candidates to 53,602 bytes while staying within its visual gate.
 
 ## Context and Orientation
 
