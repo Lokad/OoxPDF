@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-character-spacing",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-character-spacing.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "character-spacing", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.166,
+    "maxChangedPixelRatioAtThreshold16": 0.00146
+  },
+  "allowedUnsupportedFeatures": []
+}

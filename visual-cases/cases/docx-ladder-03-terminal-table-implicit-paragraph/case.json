@@ -1,0 +1,21 @@
+{
+  "id": "docx-ladder-03-terminal-table-implicit-paragraph",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-terminal-table-implicit-paragraph.docx",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "table",
+    "terminal-table",
+    "paragraph-mark",
+    "text-state"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -1,0 +1,370 @@
+using Lokad.OoxPdf.Fonts;
+using System.Text;
+
+namespace Lokad.OoxPdf.Docx;
+
+internal enum DocxTypefaceResolutionSource
+{
+    Primary,
+    FontTableAlternate,
+    Theme,
+    ResolverFallback,
+    Missing
+}
+
+internal sealed record DocxResolvedRunTypeface(
+    DocxTextRun Run,
+    IReadOnlyList<string> CandidateFamilies,
+    string? RequestedFamily,
+    string? ResolvedFamily,
+    DocxTypefaceResolutionSource Source,
+    FontFaceResolution? Resolution);
+
+internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
+{
+    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            .Concat(document.BodyElements
+                .OfType<DocxSectionBreakElement>()
+                .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
+            .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
+            .SelectMany(GetParagraphFontRuns)
+            .Concat(document.BodyElements
+                .OfType<DocxImplicitParagraphElement>()
+                .Select(_ => DocxImplicitParagraphElement.CreateParagraphMarkRun()))
+            .ToArray();
+
+        var resolvedRuns = new DocxResolvedRunTypeface[runs.Count];
+        for (int i = 0; i < runs.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            resolvedRuns[i] = ResolveRunTypeface(runs[i], document.FontCatalog, fontResolver, cancellationToken);
+        }
+
+        return new DocxFontPlan(resolvedRuns);
+    }
+
+    private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxEffectiveRunProperties effective = run.EffectiveProperties;
+        DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, fontCatalog);
+        IReadOnlyList<string> families = DistinctFamilies(candidates.Primary, candidates.Alternate, candidates.Theme);
+        if (families.Count == 0)
+        {
+            return new DocxResolvedRunTypeface(run, families, null, null, DocxTypefaceResolutionSource.Missing, null);
+        }
+
+        for (int i = 0; i < families.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string family = families[i];
+            FontFaceResolution resolution = fontResolver.Resolve(new FontRequest(family, effective.Bold, effective.Italic));
+            if (!resolution.IsFallback)
+            {
+                return new DocxResolvedRunTypeface(run, families, family, resolution.FamilyName, SourceForCandidate(candidates, family), resolution);
+            }
+        }
+
+        string requested = families[0];
+        FontFaceResolution fallback = fontResolver.Resolve(new FontRequest(requested, effective.Bold, effective.Italic));
+        return new DocxResolvedRunTypeface(run, families, requested, fallback.FamilyName, DocxTypefaceResolutionSource.ResolverFallback, fallback);
+    }
+
+    private static DocxTypefaceResolutionSource SourceForCandidate(DocxTypefaceCandidates candidates, string family)
+    {
+        if (EqualsCandidate(candidates.Primary, family))
+        {
+            return DocxTypefaceResolutionSource.Primary;
+        }
+
+        if (EqualsCandidate(candidates.Alternate, family))
+        {
+            return DocxTypefaceResolutionSource.FontTableAlternate;
+        }
+
+        return DocxTypefaceResolutionSource.Theme;
+    }
+
+    private static bool EqualsCandidate(string? candidate, string family)
+    {
+        return candidate is not null && candidate.Equals(family, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<DocxTextRun> GetParagraphFontRuns(DocxParagraph paragraph)
+    {
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            yield return run;
+        }
+
+        if (paragraph.ListLabel is not null)
+        {
+            DocxTextRun? firstRun = paragraph.Runs.FirstOrDefault();
+            yield return DocxLayoutEngine.CreateListLabelRun(
+                paragraph.ListLabel,
+                firstRun,
+                firstRun?.EffectiveProperties.FontSize ?? DocxDefaults.FontSizePoints);
+        }
+    }
+
+    private static IReadOnlyList<string> DistinctFamilies(params string?[] families)
+    {
+        return families
+            .Where(family => !string.IsNullOrWhiteSpace(family))
+            .Select(family => family!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+}
+
+internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+{
+    private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
+    private readonly FontFaceResolution? fallbackResolution;
+    private readonly CancellationToken cancellationToken;
+    private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts = new();
+
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution = null, CancellationToken cancellationToken = default)
+    {
+        runs = plan.Runs;
+        this.fallbackResolution = fallbackResolution;
+        this.cancellationToken = cancellationToken;
+    }
+
+    public double MeasureText(DocxTextRun? run, string text, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
+        {
+            return 0d;
+        }
+
+        OpenTypeFont? font = LoadFont(resolution);
+        if (font is null || font.UnitsPerEm == 0)
+        {
+            return 0d;
+        }
+
+        double units = 0d;
+        ushort previousGlyph = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ushort glyph = font.MapCodePoint(rune.Value);
+            if (previousGlyph != 0 && glyph != 0)
+            {
+                units += font.GetKerning(previousGlyph, glyph);
+            }
+
+            units += font.GetAdvanceWidth(glyph);
+            previousGlyph = glyph;
+        }
+
+        return DocxTextSpacing.AddCharacterSpacing(units * fontSize / font.UnitsPerEm, run, text);
+    }
+
+    public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
+        {
+            return fontSize;
+        }
+
+        OpenTypeFont? font = LoadFont(resolution);
+        return font is null
+            ? fontSize
+            : DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize);
+    }
+
+    public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        OpenTypeFont? font = ResolveFont(run);
+        return font is null ? fontSize : DocxLineMetrics.MeasureWindowsAscender(font, fontSize);
+    }
+
+    public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        OpenTypeFont? font = ResolveFont(run);
+        return font is null ? 0d : DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
+    }
+
+    private DocxResolvedRunTypeface? ResolveRun(DocxTextRun? run)
+    {
+        if (run is null)
+        {
+            return null;
+        }
+
+        foreach (DocxResolvedRunTypeface resolved in runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (resolved.Run.Equals(run))
+            {
+                return resolved;
+            }
+        }
+
+        return null;
+    }
+
+    private OpenTypeFont? ResolveFont(DocxTextRun? run)
+    {
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        return (resolved?.Resolution ?? fallbackResolution) is FontFaceResolution resolution
+            ? LoadFont(resolution)
+            : null;
+    }
+
+    private OpenTypeFont? LoadFont(FontFaceResolution resolution)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var key = (resolution.Source.StableId, resolution.FontFaceIndex);
+        if (fonts.TryGetValue(key, out OpenTypeFont? cached))
+        {
+            return cached;
+        }
+
+        OpenTypeFont? loaded = FontProgramLoader.Load(resolution, cancellationToken);
+        fonts[key] = loaded;
+        return loaded;
+    }
+}
+
+internal sealed record DocxFontPlanSnapshot(
+    int RunCount,
+    int PrimaryCount,
+    int FontTableAlternateCount,
+    int ThemeCount,
+    int ResolverFallbackCount,
+    int MissingCount,
+    int DistinctCandidateFamilyCount,
+    int DistinctResolvedFamilyCount,
+    IReadOnlyList<DocxFontMetricBucketSnapshot> MetricBuckets)
+{
+    public static DocxFontPlanSnapshot FromPlan(DocxFontPlan plan)
+    {
+        return new DocxFontPlanSnapshot(
+            plan.Runs.Count,
+            Count(plan, DocxTypefaceResolutionSource.Primary),
+            Count(plan, DocxTypefaceResolutionSource.FontTableAlternate),
+            Count(plan, DocxTypefaceResolutionSource.Theme),
+            Count(plan, DocxTypefaceResolutionSource.ResolverFallback),
+            Count(plan, DocxTypefaceResolutionSource.Missing),
+            plan.Runs
+                .SelectMany(run => run.CandidateFamilies)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(),
+            plan.Runs
+                .Select(run => run.ResolvedFamily)
+                .Where(family => !string.IsNullOrWhiteSpace(family))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(),
+            ToMetricBuckets(plan));
+    }
+
+    private static int Count(DocxFontPlan plan, DocxTypefaceResolutionSource source)
+    {
+        return plan.Runs.Count(run => run.Source == source);
+    }
+
+    private static IReadOnlyList<DocxFontMetricBucketSnapshot> ToMetricBuckets(DocxFontPlan plan)
+    {
+        return plan.Runs
+            .GroupBy(run => new
+            {
+                run.Source,
+                FontSize = Math.Round(run.Run.EffectiveProperties.FontSize, 3),
+                ResolvedFamilyHash = HashFamily(run.ResolvedFamily)
+            })
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key.Source.ToString(), StringComparer.Ordinal)
+            .ThenBy(group => group.Key.FontSize)
+            .Select(group => ToMetricBucketSnapshot(
+                group.Key.Source.ToString(),
+                group.Key.FontSize,
+                group.Key.ResolvedFamilyHash,
+                group.Count(),
+                group.FirstOrDefault()?.Resolution))
+            .ToArray();
+    }
+
+    private static DocxFontMetricBucketSnapshot ToMetricBucketSnapshot(
+        string source,
+        double fontSize,
+        string? resolvedFamilyHash,
+        int runCount,
+        FontFaceResolution? resolution)
+    {
+        OpenTypeFont? font = FontProgramLoader.Load(resolution);
+        if (font is null)
+        {
+            return new DocxFontMetricBucketSnapshot(
+                source,
+                fontSize,
+                resolvedFamilyHash,
+                runCount,
+                UnitsPerEm: null,
+                TypographicAscender: null,
+                TypographicDescender: null,
+                TypographicLineGap: null,
+                WindowsAscender: null,
+                WindowsDescender: null,
+                SingleLineHeightPoints: null,
+                WindowsAscenderPoints: null,
+                WindowsDescenderPoints: null);
+        }
+
+        return new DocxFontMetricBucketSnapshot(
+            source,
+            fontSize,
+            resolvedFamilyHash,
+            runCount,
+            font.UnitsPerEm,
+            font.Os2.TypographicAscender,
+            font.Os2.TypographicDescender,
+            font.Os2.TypographicLineGap,
+            font.Os2.WindowsAscender,
+            font.Os2.WindowsDescender,
+            DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize),
+            DocxLineMetrics.MeasureWindowsAscender(font, fontSize),
+            DocxLineMetrics.MeasureWindowsDescender(font, fontSize));
+    }
+
+    private static string? HashFamily(string? family)
+    {
+        if (string.IsNullOrWhiteSpace(family))
+        {
+            return null;
+        }
+
+        byte[] bytes = Encoding.UTF8.GetBytes(family.ToUpperInvariant());
+        byte[] hash = System.Security.Cryptography.SHA256.HashData(bytes);
+        return Convert.ToHexString(hash).Substring(0, 12).ToLowerInvariant();
+    }
+}
+
+internal sealed record DocxFontMetricBucketSnapshot(
+    string Source,
+    double FontSize,
+    string? ResolvedFamilyHash,
+    int RunCount,
+    int? UnitsPerEm,
+    int? TypographicAscender,
+    int? TypographicDescender,
+    int? TypographicLineGap,
+    int? WindowsAscender,
+    int? WindowsDescender,
+    double? SingleLineHeightPoints,
+    double? WindowsAscenderPoints,
+    double? WindowsDescenderPoints);

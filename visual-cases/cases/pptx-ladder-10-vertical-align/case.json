@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-10-vertical-align",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-vertical-align.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "tables", "vertical-align"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.014,
+    "maxChangedPixelRatioAtThreshold16": 0.00031
+  },
+  "allowedUnsupportedFeatures": []
+}

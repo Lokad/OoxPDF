@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-03-table-bottom-slack",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-bottom-slack.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "table", "row-height", "pagination"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}

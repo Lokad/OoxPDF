@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-10-rich-text-cell",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-rich-text-cell.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "tables", "rich-text-cell"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.093,
+    "maxChangedPixelRatioAtThreshold16": 0.00136
+  },
+  "allowedUnsupportedFeatures": []
+}

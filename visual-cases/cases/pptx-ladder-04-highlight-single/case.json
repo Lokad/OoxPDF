@@ -1,0 +1,27 @@
+{
+  "id": "pptx-ladder-04-highlight-single",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-highlight-single.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "highlight", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.033,
+    "maxChangedPixelRatioAtThreshold16": 0.00125,
+    "maxTextOperationPositionDelta": 0.1,
+    "maxTextOperationFontSizeDelta": 0.01,
+    "compareDecodedTextOperations": true,
+    "maxGraphicsOperationBoundsDelta": 0.15,
+    "compareGraphicsOperationKinds": ["Fill"],
+    "compareGraphicsOperationOperators": ["f*"],
+    "matchGraphicsOperationOperators": true,
+    "matchGraphicsOperationsByBounds": true,
+    "compareGraphicsOperationSegmentCounts": true,
+    "compareGraphicsOperationPathCommandCounts": true,
+    "compareGraphicsOperationPathOperators": true
+  },
+  "allowedUnsupportedFeatures": []
+}

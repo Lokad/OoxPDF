@@ -1,0 +1,14 @@
+{
+  "id": "pptx-ladder-04-typography-spautofit-numbered-synthetic-bold-tc-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-spautofit-numbered-synthetic-bold-tc-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "spautofit", "autonumber", "synthetic-bold", "text-state", "tc", "probe", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

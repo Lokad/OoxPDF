@@ -1,0 +1,757 @@
+param(
+    [Parameter(Mandatory = $true)]
+    [string] $Case
+)
+
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$caseFull = (Resolve-Path -LiteralPath $Case).Path
+$caseDirectory = Split-Path -Parent $caseFull
+$manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
+$runId = Get-Date -Format "yyyyMMdd-HHmmss"
+$runRoot = Join-Path $repoRoot ("artifacts/visual/{0}/{1}" -f $manifest.id, $runId)
+$referenceDir = Join-Path $runRoot "reference"
+$candidateDir = Join-Path $runRoot "candidate"
+$comparisonDir = Join-Path $runRoot "comparison"
+
+New-Item -ItemType Directory -Force -Path $referenceDir, $candidateDir, $comparisonDir | Out-Null
+
+function Invoke-DotnetBuildIfStale {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Project,
+
+        [Parameter(Mandatory = $true)]
+        [string] $OutputDll,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Description,
+
+        [string[]] $AdditionalSourceDirectories = @()
+    )
+
+    $projectDirectory = Split-Path -Parent $Project
+    $sourceDirectories = @($projectDirectory) + $AdditionalSourceDirectories
+    $sourceNewest = $sourceDirectories | ForEach-Object {
+        Get-ChildItem -LiteralPath $_ -Recurse -Include *.cs,*.csproj
+    } |
+        Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    if ((Test-Path -LiteralPath $OutputDll) -and $sourceNewest.LastWriteTimeUtc -le (Get-Item -LiteralPath $OutputDll).LastWriteTimeUtc) {
+        return
+    }
+
+    dotnet build $Project --tl:off --nologo -v minimal
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Description build failed with exit code $LASTEXITCODE."
+    }
+}
+
+$inputPath = Join-Path $caseDirectory $manifest.input
+$inputFull = (Resolve-Path -LiteralPath $inputPath).Path
+$candidatePdf = Join-Path $candidateDir "output.pdf"
+$diagnostics = Join-Path $candidateDir "diagnostics.json"
+$dpi = if ($manifest.dpi -ne $null) { [int]$manifest.dpi } else { 144 }
+
+$cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
+$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+$librarySourceDirectory = Join-Path $repoRoot "src/Lokad.OoxPdf"
+Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -AdditionalSourceDirectories @($librarySourceDirectory)
+dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnostics
+if ($LASTEXITCODE -ne 0) {
+    throw "Candidate conversion failed with exit code $LASTEXITCODE."
+}
+
+& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $dpi
+& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
+
+$visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
+$visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
+Invoke-DotnetBuildIfStale -Project $visualDiffProject -OutputDll $visualDiffDll -Description "VisualDiff"
+dotnet $visualDiffDll $referenceDir $candidateDir $comparisonDir
+if ($LASTEXITCODE -ne 0) {
+    throw "VisualDiff failed with exit code $LASTEXITCODE."
+}
+
+$metricsPath = Join-Path $comparisonDir "metrics.json"
+$metrics = Get-Content -Raw -LiteralPath $metricsPath | ConvertFrom-Json
+$referencePages = @(Get-ChildItem -LiteralPath $referenceDir -Filter "page-*.png")
+$candidatePages = @(Get-ChildItem -LiteralPath $candidateDir -Filter "page-*.png")
+
+if ($manifest.expected.pageCountMustMatch -eq $true -and $referencePages.Count -ne $candidatePages.Count) {
+    throw "Page count mismatch. Reference: $($referencePages.Count). Candidate: $($candidatePages.Count)."
+}
+
+if ($manifest.expected.dimensionsMustMatch -eq $true) {
+    $mismatched = @($metrics | Where-Object { $_.DimensionsMatch -ne $true })
+    if ($mismatched.Count -ne 0) {
+        $pages = ($mismatched | ForEach-Object { $_.Page }) -join ", "
+        throw "Dimension mismatch on page(s): $pages."
+    }
+}
+
+if ($manifest.expected.maxMeanAbsoluteError -ne $null) {
+    $maxMae = [double]$manifest.expected.maxMeanAbsoluteError
+    $exceeded = @($metrics | Where-Object { [double]$_.MeanAbsoluteError -gt $maxMae })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property MeanAbsoluteError -Descending | Select-Object -First 1
+        throw "Mean absolute error gate failed. Page $($worst.Page) was $($worst.MeanAbsoluteError), limit is $maxMae."
+    }
+}
+
+if ($manifest.expected.maxChangedPixelRatioAtThreshold16 -ne $null) {
+    $maxChanged = [double]$manifest.expected.maxChangedPixelRatioAtThreshold16
+    $exceeded = @($metrics | Where-Object { [double]$_.ChangedPixelRatioAtThreshold16 -gt $maxChanged })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property ChangedPixelRatioAtThreshold16 -Descending | Select-Object -First 1
+        throw "Changed-pixel ratio gate failed. Page $($worst.Page) was $($worst.ChangedPixelRatioAtThreshold16), limit is $maxChanged."
+    }
+}
+
+if ($manifest.expected.minStructuralSimilarity -ne $null) {
+    $minStructuralSimilarity = [double]$manifest.expected.minStructuralSimilarity
+    $exceeded = @($metrics | Where-Object { $_.StructuralSimilarity -eq $null -or [double]$_.StructuralSimilarity -lt $minStructuralSimilarity })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property StructuralSimilarity | Select-Object -First 1
+        throw "Structural similarity gate failed. Page $($worst.Page) was $($worst.StructuralSimilarity), minimum is $minStructuralSimilarity."
+    }
+}
+
+if ($manifest.expected.minForegroundColorHistogramCorrelation -ne $null) {
+    $minColorHistogram = [double]$manifest.expected.minForegroundColorHistogramCorrelation
+    $exceeded = @($metrics | Where-Object { $_.ForegroundColorHistogramCorrelation -eq $null -or [double]$_.ForegroundColorHistogramCorrelation -lt $minColorHistogram })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property ForegroundColorHistogramCorrelation | Select-Object -First 1
+        throw "Foreground color histogram gate failed. Page $($worst.Page) was $($worst.ForegroundColorHistogramCorrelation), minimum is $minColorHistogram."
+    }
+}
+
+if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
+    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
+    $referenceTextInspect = Join-Path $textInspectRoot "reference"
+    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect | Out-Null
+
+    & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        -InputPdf (Join-Path $referenceDir "reference.pdf") `
+        -OutputDirectory $referenceTextInspect
+    & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        -InputPdf $candidatePdf `
+        -OutputDirectory $candidateTextInspect
+
+    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
+    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
+        throw "PDF text operation gate failed because one inspected PDF had no text operations."
+    }
+
+    $positionTolerance = [double]$manifest.expected.maxTextOperationPositionDelta
+    $fontSizeTolerance = if ($manifest.expected.maxTextOperationFontSizeDelta -ne $null) {
+        [double]$manifest.expected.maxTextOperationFontSizeDelta
+    }
+    else {
+        0.01
+    }
+    $characterSpacingTolerance = if ($manifest.expected.maxTextOperationCharacterSpacingDelta -ne $null) {
+        [double]$manifest.expected.maxTextOperationCharacterSpacingDelta
+    }
+    else {
+        0.001
+    }
+
+    $compareTextArgs = @{
+        Reference = $referenceTextOperations
+        Candidate = $candidateTextOperations
+        PositionTolerance = $positionTolerance
+        FontSizeTolerance = $fontSizeTolerance
+        CharacterSpacingTolerance = $characterSpacingTolerance
+    }
+    if ($manifest.expected.matchTextOperationsByPosition -eq $true) {
+        $compareTextArgs.MatchByPosition = $true
+    }
+    if ($manifest.expected.compareTextOperationsWithEffectiveMatrix -eq $true) {
+        $compareTextArgs.UseEffectiveMatrix = $true
+    }
+    if ($manifest.expected.compareDecodedTextOperations -eq $true) {
+        $compareTextArgs.CompareDecodedText = $true
+    }
+
+    & (Join-Path $PSScriptRoot "ComparePdfTextOperations.ps1") @compareTextArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF text operation gate failed."
+    }
+}
+
+if ($manifest.expected.maxTextLineStartDelta -ne $null) {
+    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
+    $referenceTextInspect = Join-Path $textInspectRoot "reference"
+    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect | Out-Null
+
+    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
+    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
+        throw "PDF text line-start gate failed because one inspected PDF had no text operations."
+    }
+
+    $lineStartTolerance = [double]$manifest.expected.maxTextLineStartDelta
+    $lineYTolerance = if ($manifest.expected.maxTextLineStartYDelta -ne $null) {
+        [double]$manifest.expected.maxTextLineStartYDelta
+    }
+    else {
+        0.75
+    }
+
+    if ($manifest.expected.matchTextLineStartsByPosition -eq $true) {
+        $lineStartArgs = @{
+            Reference = $referenceTextOperations
+            Candidate = $candidateTextOperations
+            StartTolerance = $lineStartTolerance
+            LineTolerance = $lineYTolerance
+            MatchByPosition = $true
+        }
+        if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
+            $lineStartArgs.FirstStartOnly = $true
+        }
+        if ($manifest.expected.ignoreWhitespaceOnlyTextLineStartOperations -eq $true) {
+            $lineStartArgs.IgnoreWhitespaceOnlyOperations = $true
+        }
+
+        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
+    }
+    else {
+        $lineStartArgs = @{
+            Reference = $referenceTextOperations
+            Candidate = $candidateTextOperations
+            StartTolerance = $lineStartTolerance
+            LineTolerance = $lineYTolerance
+        }
+        if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
+            $lineStartArgs.FirstStartOnly = $true
+        }
+        if ($manifest.expected.ignoreWhitespaceOnlyTextLineStartOperations -eq $true) {
+            $lineStartArgs.IgnoreWhitespaceOnlyOperations = $true
+        }
+
+        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF text line-start gate failed."
+    }
+}
+
+if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
+    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
+    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
+    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
+
+    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
+    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        throw "PDF graphics operation gate failed because one inspected PDF had no graphics operations."
+    }
+
+    $compareGraphicsArgs = @{
+        Reference = $referenceGraphicsOperations
+        Candidate = $candidateGraphicsOperations
+        BoundsTolerance = [double]$manifest.expected.maxGraphicsOperationBoundsDelta
+    }
+
+    if ($manifest.expected.maxGraphicsOperationLineWidthDelta -ne $null) {
+        $compareGraphicsArgs.LineWidthTolerance = [double]$manifest.expected.maxGraphicsOperationLineWidthDelta
+    }
+    if ($manifest.expected.compareGraphicsOperationKinds -ne $null) {
+        $compareGraphicsArgs.Kinds = @($manifest.expected.compareGraphicsOperationKinds)
+    }
+    if ($manifest.expected.compareGraphicsOperationOperators -ne $null) {
+        $compareGraphicsArgs.Operators = @($manifest.expected.compareGraphicsOperationOperators)
+    }
+    if ($manifest.expected.compareGraphicsOperationPageNumber -ne $null) {
+        $compareGraphicsArgs.PageNumber = [int]$manifest.expected.compareGraphicsOperationPageNumber
+    }
+    if ($manifest.expected.matchGraphicsOperationsByBounds -eq $true) {
+        $compareGraphicsArgs.MatchByBounds = $true
+    }
+    if ($manifest.expected.matchGraphicsOperationOperators -eq $true) {
+        $compareGraphicsArgs.MatchOperator = $true
+    }
+    if ($manifest.expected.compareGraphicsOperationSegmentCounts -eq $true) {
+        $compareGraphicsArgs.MatchSegmentCount = $true
+    }
+    if ($manifest.expected.compareGraphicsOperationPathCommandCounts -eq $true) {
+        $compareGraphicsArgs.MatchPathCommandCounts = $true
+    }
+    if ($manifest.expected.compareGraphicsOperationPathOperators -eq $true) {
+        $compareGraphicsArgs.MatchPathOperators = $true
+    }
+    if ($manifest.expected.compareGraphicsOperationPathCommandCoordinates -eq $true -or $manifest.expected.maxGraphicsOperationPathCommandCoordinateDelta -ne $null) {
+        $compareGraphicsArgs.MatchPathCommandCoordinates = $true
+    }
+    if ($manifest.expected.maxGraphicsOperationPathCommandCoordinateDelta -ne $null) {
+        $compareGraphicsArgs.PathCommandCoordinateTolerance = [double]$manifest.expected.maxGraphicsOperationPathCommandCoordinateDelta
+    }
+
+    & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareGraphicsArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF graphics operation gate failed."
+    }
+}
+
+$hasChartGraphicsStructureGlobalBoundsTolerance = $manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null
+$hasChartGraphicsStructureKindBoundsTolerances = $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind -ne $null
+if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructureKindBoundsTolerances) {
+    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
+    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
+    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
+
+    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
+    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        throw "PDF chart graphics structure gate failed because one inspected PDF had no graphics operations."
+    }
+
+    $referenceChartStructures = Join-Path $referenceGraphicsInspect "chart-structures.json"
+    $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
+    $classifyReferenceArgs = @{
+        InputPath = $referenceGraphicsOperations
+        TextOperations = Join-Path $referenceGraphicsInspect "text-operations.json"
+        Output = $referenceChartStructures
+    }
+    $classifyCandidateArgs = @{
+        InputPath = $candidateGraphicsOperations
+        TextOperations = Join-Path $candidateGraphicsInspect "text-operations.json"
+        Output = $candidateChartStructures
+    }
+    if ($manifest.expected.compareChartGraphicsStructurePageNumber -ne $null) {
+        $classifyReferenceArgs.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
+        $classifyCandidateArgs.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
+    }
+    if ($manifest.expected.chartGraphicsLineTolerance -ne $null) {
+        $classifyReferenceArgs.LineTolerance = [double]$manifest.expected.chartGraphicsLineTolerance
+        $classifyCandidateArgs.LineTolerance = [double]$manifest.expected.chartGraphicsLineTolerance
+    }
+    if ($manifest.expected.chartGraphicsMinLineLength -ne $null) {
+        $classifyReferenceArgs.MinLineLength = [double]$manifest.expected.chartGraphicsMinLineLength
+        $classifyCandidateArgs.MinLineLength = [double]$manifest.expected.chartGraphicsMinLineLength
+    }
+    if ($manifest.expected.chartGraphicsMarkerMaxSize -ne $null) {
+        $classifyReferenceArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
+        $classifyCandidateArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
+    }
+    if ($manifest.expected.chartGraphicsGridlineBoundsTolerance -ne $null) {
+        $classifyReferenceArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartGraphicsGridlineBoundsTolerance
+        $classifyCandidateArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartGraphicsGridlineBoundsTolerance
+    }
+
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart graphics structure gate failed while classifying the reference PDF."
+    }
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyCandidateArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart graphics structure gate failed while classifying the candidate PDF."
+    }
+
+    $compareChartArgs = @{
+        Reference = $referenceChartStructures
+        Candidate = $candidateChartStructures
+        MatchByBounds = $true
+    }
+    if ($hasChartGraphicsStructureGlobalBoundsTolerance) {
+        $compareChartArgs.BoundsTolerance = [double]$manifest.expected.maxChartGraphicsStructureBoundsDelta
+        $compareChartArgs.UseBoundsToleranceForUnlistedKinds = $true
+    }
+    if ($hasChartGraphicsStructureKindBoundsTolerances) {
+        $boundsToleranceByKind = @{}
+        foreach ($entry in $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind.PSObject.Properties) {
+            $boundsToleranceByKind[[string]$entry.Name] = [double]$entry.Value
+        }
+
+        $compareChartArgs.BoundsToleranceByKind = $boundsToleranceByKind
+    }
+    if ($manifest.expected.maxChartGraphicsStructureLineWidthDelta -ne $null) {
+        $compareChartArgs.LineWidthTolerance = [double]$manifest.expected.maxChartGraphicsStructureLineWidthDelta
+    }
+    if ($manifest.expected.compareChartGraphicsStructureKinds -ne $null) {
+        $compareChartArgs.Kinds = @($manifest.expected.compareChartGraphicsStructureKinds)
+    }
+    else {
+        $compareChartArgs.Kinds = @("HorizontalLine", "VerticalLine", "PlotBoxCandidate", "FilledRegion", "MarkerCandidate", "ClipBox")
+    }
+    if ($manifest.expected.compareChartGraphicsStructureOperators -eq $true) {
+        $compareChartArgs.MatchOperator = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructureSegmentCounts -eq $true) {
+        $compareChartArgs.MatchSegmentCount = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructurePathCommandCounts -eq $true) {
+        $compareChartArgs.MatchPathCommandCounts = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructurePathOperators -eq $true) {
+        $compareChartArgs.MatchPathOperators = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructurePathCommandCoordinates -eq $true -or $manifest.expected.maxChartGraphicsStructurePathCommandCoordinateDelta -ne $null) {
+        $compareChartArgs.MatchPathCommandCoordinates = $true
+    }
+    if ($manifest.expected.maxChartGraphicsStructurePathCommandCoordinateDelta -ne $null) {
+        $compareChartArgs.PathCommandCoordinateTolerance = [double]$manifest.expected.maxChartGraphicsStructurePathCommandCoordinateDelta
+    }
+    if ($manifest.expected.compareChartGraphicsStructureStrokeColors -eq $true) {
+        $compareChartArgs.MatchStrokeColor = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructureFillColors -eq $true) {
+        $compareChartArgs.MatchFillColor = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructureLineCaps -eq $true) {
+        $compareChartArgs.MatchLineCap = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructureLineJoins -eq $true) {
+        $compareChartArgs.MatchLineJoin = $true
+    }
+    $hasChartGraphicsPathGeometryKindTolerances = $manifest.expected.maxChartGraphicsStructurePathGeometryDeltaByKind -ne $null
+    if ($manifest.expected.compareChartGraphicsStructurePathGeometry -eq $true -or $hasChartGraphicsPathGeometryKindTolerances) {
+        $compareChartArgs.MatchPathGeometry = $true
+    }
+    if ($manifest.expected.maxChartGraphicsStructurePathGeometryDelta -ne $null) {
+        $compareChartArgs.PathGeometryTolerance = [double]$manifest.expected.maxChartGraphicsStructurePathGeometryDelta
+        $compareChartArgs.UsePathGeometryToleranceForUnlistedKinds = $true
+    }
+    if ($hasChartGraphicsPathGeometryKindTolerances) {
+        $pathGeometryToleranceByKind = @{}
+        foreach ($entry in $manifest.expected.maxChartGraphicsStructurePathGeometryDeltaByKind.PSObject.Properties) {
+            $pathGeometryToleranceByKind[[string]$entry.Name] = [double]$entry.Value
+        }
+
+        $compareChartArgs.PathGeometryToleranceByKind = $pathGeometryToleranceByKind
+    }
+
+    & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart graphics structure gate failed."
+    }
+
+    foreach ($additionalComparison in @($manifest.expected.additionalChartGraphicsStructureComparisons)) {
+        if ($null -eq $additionalComparison) {
+            continue
+        }
+
+        $additionalCompareArgs = @{
+            Reference = $referenceChartStructures
+            Candidate = $candidateChartStructures
+            MatchByBounds = $true
+        }
+        if ($additionalComparison.pageNumber -ne $null) {
+            $additionalCompareArgs.PageNumber = [int]$additionalComparison.pageNumber
+        }
+        if ($additionalComparison.kinds -ne $null) {
+            $additionalCompareArgs.Kinds = @($additionalComparison.kinds)
+        }
+        if ($additionalComparison.maxBoundsDelta -ne $null) {
+            $additionalCompareArgs.BoundsTolerance = [double]$additionalComparison.maxBoundsDelta
+            $additionalCompareArgs.UseBoundsToleranceForUnlistedKinds = $true
+        }
+        if ($additionalComparison.maxBoundsDeltaByKind -ne $null) {
+            $boundsToleranceByKind = @{}
+            foreach ($entry in $additionalComparison.maxBoundsDeltaByKind.PSObject.Properties) {
+                $boundsToleranceByKind[[string]$entry.Name] = [double]$entry.Value
+            }
+
+            $additionalCompareArgs.BoundsToleranceByKind = $boundsToleranceByKind
+        }
+        if ($additionalComparison.maxLineWidthDelta -ne $null) {
+            $additionalCompareArgs.LineWidthTolerance = [double]$additionalComparison.maxLineWidthDelta
+        }
+        if ($additionalComparison.matchFillColors -eq $true) {
+            $additionalCompareArgs.MatchFillColor = $true
+        }
+        if ($additionalComparison.matchStrokeColors -eq $true) {
+            $additionalCompareArgs.MatchStrokeColor = $true
+        }
+        if ($additionalComparison.matchOperators -eq $true) {
+            $additionalCompareArgs.MatchOperator = $true
+        }
+        if ($additionalComparison.matchSegmentCounts -eq $true) {
+            $additionalCompareArgs.MatchSegmentCount = $true
+        }
+        if ($additionalComparison.matchPathCommandCounts -eq $true) {
+            $additionalCompareArgs.MatchPathCommandCounts = $true
+        }
+        if ($additionalComparison.matchPathOperators -eq $true) {
+            $additionalCompareArgs.MatchPathOperators = $true
+        }
+
+        & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @additionalCompareArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Additional PDF chart graphics structure gate failed."
+        }
+    }
+}
+
+$hasChartTextGlobalTolerance = $manifest.expected.maxChartTextStructurePositionDelta -ne $null
+$hasChartTextKindTolerances = $manifest.expected.maxChartTextStructurePositionDeltaByKind -ne $null
+if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
+    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
+    $referenceTextInspect = Join-Path $textInspectRoot "reference"
+    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
+    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
+    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
+    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect, $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
+
+    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
+    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
+        throw "PDF chart text structure gate failed because one inspected PDF had no text operations."
+    }
+
+    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
+    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        throw "PDF chart text structure gate failed because one inspected PDF had no graphics operations for plot-box classification."
+    }
+
+    $referenceChartStructures = Join-Path $referenceGraphicsInspect "chart-structures.json"
+    $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
+    $classifyReferenceGraphicsArgs = @{
+        InputPath = $referenceGraphicsOperations
+        TextOperations = Join-Path $referenceGraphicsInspect "text-operations.json"
+        Output = $referenceChartStructures
+    }
+    $classifyCandidateGraphicsArgs = @{
+        InputPath = $candidateGraphicsOperations
+        TextOperations = Join-Path $candidateGraphicsInspect "text-operations.json"
+        Output = $candidateChartStructures
+    }
+    if ($manifest.expected.compareChartTextStructurePageNumber -ne $null) {
+        $classifyReferenceGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+        $classifyCandidateGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+    }
+    if ($manifest.expected.chartTextGraphicsGridlineBoundsTolerance -ne $null) {
+        $classifyReferenceGraphicsArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartTextGraphicsGridlineBoundsTolerance
+        $classifyCandidateGraphicsArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartTextGraphicsGridlineBoundsTolerance
+    }
+
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceGraphicsArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying reference graphics."
+    }
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyCandidateGraphicsArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying candidate graphics."
+    }
+
+    $referenceChartTextStructures = Join-Path $referenceTextInspect "chart-text-structures.json"
+    $candidateChartTextStructures = Join-Path $candidateTextInspect "chart-text-structures.json"
+    $classifyReferenceTextArgs = @{
+        InputPath = $referenceTextOperations
+        ChartStructures = $referenceChartStructures
+        Output = $referenceChartTextStructures
+    }
+    $classifyCandidateTextArgs = @{
+        InputPath = $candidateTextOperations
+        ChartStructures = $candidateChartStructures
+        Output = $candidateChartTextStructures
+    }
+    if ($manifest.expected.compareChartTextStructurePageNumber -ne $null) {
+        $classifyReferenceTextArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+        $classifyCandidateTextArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+    }
+    if ($manifest.expected.chartTextPlotTolerance -ne $null) {
+        $classifyReferenceTextArgs.PlotTolerance = [double]$manifest.expected.chartTextPlotTolerance
+        $classifyCandidateTextArgs.PlotTolerance = [double]$manifest.expected.chartTextPlotTolerance
+    }
+
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartText.ps1") @classifyReferenceTextArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying reference text."
+    }
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartText.ps1") @classifyCandidateTextArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying candidate text."
+    }
+
+    $compareChartTextArgs = @{
+        Reference = $referenceChartTextStructures
+        Candidate = $candidateChartTextStructures
+        BoundsTolerance = 0d
+        LineWidthTolerance = 0
+        MatchByBounds = $true
+    }
+    if ($hasChartTextGlobalTolerance) {
+        $compareChartTextArgs.BoundsTolerance = [double]$manifest.expected.maxChartTextStructurePositionDelta
+    }
+    if ($manifest.expected.compareChartTextStructureKinds -ne $null) {
+        $compareChartTextArgs.Kinds = @($manifest.expected.compareChartTextStructureKinds)
+    }
+    else {
+        $compareChartTextArgs.Kinds = @(
+            "ChartTitleText",
+            "CategoryAxisTickLabel",
+            "ValueAxisTickLabel",
+            "DataLabelText",
+            "LegendText",
+            "AbovePlotText",
+            "BelowPlotText",
+            "InsidePlotText",
+            "LeftAxisText",
+            "RightSideText",
+            "OuterChartText",
+            "ChartText")
+    }
+    if ($manifest.expected.compareChartTextStructureTextHash -eq $true) {
+        $compareChartTextArgs.MatchTextHash = $true
+    }
+
+    if ($hasChartTextGlobalTolerance) {
+        & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartTextArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "PDF chart text structure gate failed."
+        }
+    }
+
+    if ($hasChartTextKindTolerances) {
+        foreach ($entry in $manifest.expected.maxChartTextStructurePositionDeltaByKind.PSObject.Properties) {
+            $kindTolerance = [double]$entry.Value
+            $kindCompareArgs = $compareChartTextArgs.Clone()
+            $kindCompareArgs.BoundsTolerance = $kindTolerance
+            $kindCompareArgs.Kinds = @([string]$entry.Name)
+            & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @kindCompareArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw "PDF chart text structure gate failed for kind '$($entry.Name)'."
+            }
+        }
+    }
+}
+
+$diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
+$diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
+    @()
+}
+else {
+    @(ConvertFrom-Json -InputObject $diagnosticsJson)
+}
+if ($manifest.expected.diagnosticsMustBeEmpty -eq $true -and $diagnosticItems.Count -ne 0) {
+    $ids = ($diagnosticItems | ForEach-Object { $_.Id } | Sort-Object -Unique) -join ", "
+    throw "Expected no diagnostics, but found: $ids."
+}
+
+$allowedUnsupportedFeatures = @($manifest.allowedUnsupportedFeatures | Where-Object { $_ -is [string] -and $_.Length -ne 0 })
+if ($allowedUnsupportedFeatures.Count -ne 0 -and $diagnosticItems.Count -ne 0) {
+    $unexpectedDiagnostics = @($diagnosticItems | Where-Object {
+        $allowedUnsupportedFeatures -notcontains $_.Id -and
+            $allowedUnsupportedFeatures -notcontains $_.Feature
+    })
+    if ($unexpectedDiagnostics.Count -ne 0) {
+        $ids = ($unexpectedDiagnostics | ForEach-Object { $_.Id } | Sort-Object -Unique) -join ", "
+        throw "Unexpected diagnostics: $ids."
+    }
+}
+
+$requiredDiagnostics = @($manifest.expected.requiredDiagnostics | Where-Object { $_ -is [string] -and $_.Length -ne 0 })
+if ($requiredDiagnostics.Count -ne 0) {
+    $missingDiagnostics = @($requiredDiagnostics | Where-Object {
+        $required = $_
+        -not ($diagnosticItems | Where-Object {
+            $_.Id -eq $required -or $_.Feature -eq $required
+        } | Select-Object -First 1)
+    })
+    if ($missingDiagnostics.Count -ne 0) {
+        throw "Missing required diagnostics: $($missingDiagnostics -join ', ')."
+    }
+}
+
+$assessment = @"
+# Visual assessment: $($manifest.id)
+
+Input: $inputFull
+Kind: $($manifest.kind)
+Run: $runId
+Agent rating: <0-5>
+
+## Summary
+
+<One paragraph summary of visual fidelity.>
+
+## Pages/slides reviewed
+
+- Page 1: <rating>, <main differences>
+
+## Major defects
+
+1. <Defect, page, suspected feature>
+
+## Diagnostics reviewed
+
+<Note important warnings/errors from diagnostics.json.>
+
+## Next implementation target
+
+<The smallest renderer improvement likely to improve this case.>
+"@
+
+Set-Content -LiteralPath (Join-Path $runRoot "assessment.md") -Value $assessment
+Write-Host "Visual case artifacts: $runRoot"

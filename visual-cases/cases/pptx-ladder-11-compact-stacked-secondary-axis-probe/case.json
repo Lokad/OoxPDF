@@ -1,0 +1,24 @@
+{
+  "id": "pptx-ladder-11-compact-stacked-secondary-axis-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-compact-stacked-secondary-axis-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "secondary-axis", "stacked", "compact", "bottom-up"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.55,
+    "maxChangedPixelRatioAtThreshold16": 0.008,
+    "maxChartGraphicsStructureBoundsDelta": 8.0,
+    "compareChartGraphicsStructureKinds": ["HorizontalLine", "PlotAreaClipBoxCandidate"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 6.0,
+      "ValueAxisTickLabel": 5.0
+    }
+  },
+  "allowedUnsupportedFeatures": []
+}

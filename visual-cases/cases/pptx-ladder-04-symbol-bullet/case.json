@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-symbol-bullet",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-symbol-bullet.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "bullet", "symbol-font", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.002,
+    "maxChangedPixelRatioAtThreshold16": 0.00005
+  },
+  "allowedUnsupportedFeatures": []
+}

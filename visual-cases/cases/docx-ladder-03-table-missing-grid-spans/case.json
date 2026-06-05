@@ -1,0 +1,11 @@
+{
+  "id": "docx-ladder-03-table-missing-grid-spans",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-missing-grid-spans.docx",
+  "support": {
+    "minStructuralSimilarity": 0.98,
+    "minForegroundColorHistogramCorrelation": 0.98,
+    "maxMeanAbsoluteError": 2.0,
+    "maxChangedPixelRatioAtThreshold16": 0.05
+  }
+}

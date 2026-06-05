@@ -1,0 +1,44 @@
+{
+  "id": "pptx-ladder-11-chart-doughnut-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 3.65,
+    "maxChangedPixelRatioAtThreshold16": 0.039,
+    "maxChartGraphicsStructureBoundsDelta": 21,
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 10.4,
+    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
+      "PolarSliceCandidate": 0.6
+    },
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["DataLabelText", "LegendText"],
+    "compareChartTextStructureTextHash": true,
+    "maxChartTextStructurePositionDeltaByKind": {
+      "DataLabelText": 0.8,
+      "LegendText": 24
+    },
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["MarkerCandidate"],
+        "maxBoundsDelta": 33,
+        "maxLineWidthDelta": 0.05,
+        "matchFillColors": true
+      }
+    ]
+  }
+}

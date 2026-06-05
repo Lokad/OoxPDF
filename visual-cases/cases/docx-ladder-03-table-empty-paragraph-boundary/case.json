@@ -1,0 +1,16 @@
+{
+  "id": "docx-ladder-03-table-empty-paragraph-boundary",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-empty-paragraph-boundary.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "table", "paragraph", "empty-paragraph"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.25,
+    "maxChangedPixelRatioAtThreshold16": 0.003
+  },
+  "allowedUnsupportedFeatures": []
+}

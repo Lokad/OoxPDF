@@ -1,0 +1,14 @@
+{
+  "id": "docx-ladder-03-compact-bullet-alt-line115",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-compact-bullet-alt-line115.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "font-table", "line-spacing"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

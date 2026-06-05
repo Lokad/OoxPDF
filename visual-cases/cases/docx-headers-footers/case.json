@@ -1,0 +1,13 @@
+{
+  "id": "docx-headers-footers",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-headers-footers.docx",
+  "dpi": 144,
+  "tags": ["docx", "headers-footers", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

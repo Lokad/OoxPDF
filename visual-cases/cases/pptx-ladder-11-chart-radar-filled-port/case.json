@@ -1,0 +1,39 @@
+{
+  "id": "pptx-ladder-11-chart-radar-filled-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-radar-filled-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "radar-chart", "filled", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 4.3,
+    "maxChangedPixelRatioAtThreshold16": 0.108,
+    "maxChartGraphicsStructureBoundsDelta": 0.75,
+    "maxChartGraphicsStructureLineWidthDelta": 0.01,
+    "compareChartGraphicsStructureKinds": [
+      "RadarRingGridGroupCandidate",
+      "RadarSpokeGroupCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructureStrokeColors": true,
+    "compareChartGraphicsStructureLineCaps": true,
+    "compareChartGraphicsStructureLineJoins": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 0.5,
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.75,
+      "ChartTitleText": 1.0,
+      "ValueAxisTickLabel": 0.5
+    },
+    "compareChartTextStructureKinds": [
+      "CategoryAxisTickLabel",
+      "ChartTitleText",
+      "ValueAxisTickLabel"
+    ]
+  }
+}

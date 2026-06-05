@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-04-paragraph-advance",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-paragraph-advance.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "paragraph-advance", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.173,
+    "maxChangedPixelRatioAtThreshold16": 0.00296,
+    "maxTextOperationPositionDelta": 0.35,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-11-chart-line-3series-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-3series-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "line-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 3.6,
+    "maxChangedPixelRatioAtThreshold16": 0.033,
+    "maxChartGraphicsStructureBoundsDelta": 1.0,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": ["GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "HorizontalLine", "LegendSwatchCandidate", "PlotAreaClipBoxCandidate"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.75,
+      "ValueAxisTickLabel": 0.75,
+      "LegendText": 0.5
+    }
+  }
+}

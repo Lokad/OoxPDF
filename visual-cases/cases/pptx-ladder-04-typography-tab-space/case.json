@@ -1,0 +1,18 @@
+{
+  "id": "pptx-ladder-04-typography-tab-space",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-tab-space.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "tabs", "spaces", "locked-text-ops"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.2,
+    "maxChangedPixelRatioAtThreshold16": 0.0025,
+    "maxTextLineStartDelta": 0.1,
+    "matchTextLineStartsByPosition": true
+  },
+  "allowedUnsupportedFeatures": []
+}

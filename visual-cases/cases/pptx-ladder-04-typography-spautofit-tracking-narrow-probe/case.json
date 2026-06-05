@@ -1,0 +1,14 @@
+{
+  "id": "pptx-ladder-04-typography-spautofit-tracking-narrow-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-spautofit-tracking-narrow-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "spautofit", "tracking", "narrow", "probe", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

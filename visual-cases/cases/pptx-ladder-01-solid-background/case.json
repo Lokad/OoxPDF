@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-01-solid-background",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-01-solid-background.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "background"],
+  "expected": {
+    "minAgentRating": 5,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0,
+    "maxChangedPixelRatioAtThreshold16": 0
+  },
+  "allowedUnsupportedFeatures": []
+}

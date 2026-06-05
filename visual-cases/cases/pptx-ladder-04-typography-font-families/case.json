@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-typography-font-families",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-font-families.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "font-family", "kerning", "accent", "needs-review"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.716,
+    "maxChangedPixelRatioAtThreshold16": 0.0112
+  },
+  "allowedUnsupportedFeatures": []
+}

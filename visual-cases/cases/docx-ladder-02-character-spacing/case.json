@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-02-character-spacing",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-character-spacing.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "text", "character-spacing"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}

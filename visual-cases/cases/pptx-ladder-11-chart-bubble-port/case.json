@@ -1,0 +1,54 @@
+{
+  "id": "pptx-ladder-11-chart-bubble-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-bubble-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "bubble-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.3,
+    "maxChangedPixelRatioAtThreshold16": 0.018,
+    "maxChartGraphicsStructureBoundsDelta": 1.0,
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "HorizontalLine",
+      "VerticalLine"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": [
+          "LegendSwatchCandidate"
+        ],
+        "maxBoundsDelta": 0.1
+      },
+      {
+        "kinds": [
+          "FilledRegion"
+        ],
+        "maxBoundsDelta": 2.2,
+        "matchOperators": true,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true,
+        "matchPathOperators": true
+      }
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": [
+      "CategoryAxisTickLabel",
+      "LegendText",
+      "ValueAxisTickLabel"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.9,
+      "LegendText": 2.0,
+      "ValueAxisTickLabel": 0.1
+    }
+  }
+}

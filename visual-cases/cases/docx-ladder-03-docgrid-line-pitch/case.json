@@ -1,0 +1,14 @@
+{
+  "id": "docx-ladder-03-docgrid-line-pitch",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-docgrid-line-pitch.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "pagination", "docgrid", "line-height"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

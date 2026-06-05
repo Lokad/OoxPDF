@@ -1,0 +1,26 @@
+{
+  "id": "pptx-ladder-11-chart-column-negative-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-negative-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "column-chart", "negative-values", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.9,
+    "maxChangedPixelRatioAtThreshold16": 0.042,
+    "minStructuralSimilarity": 0.96,
+    "maxChartGraphicsStructureBoundsDelta": 1,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": ["CrossingAxisPlotBoxCandidate", "PlotAreaClipBoxCandidate", "HorizontalLine", "VerticalLine"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "ChartTitleText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.25,
+      "ValueAxisTickLabel": 0.25,
+      "ChartTitleText": 1.7
+    }
+  }
+}

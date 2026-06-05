@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-04-centered-bold-cambria-width",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-centered-bold-cambria-width.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "alignment", "synthetic-bold", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.7,
+    "maxChangedPixelRatioAtThreshold16": 0.012,
+    "maxTextOperationPositionDelta": 0.8,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

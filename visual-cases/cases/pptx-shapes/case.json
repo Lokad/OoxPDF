@@ -1,0 +1,13 @@
+{
+  "id": "pptx-shapes",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-shapes.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "shapes", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

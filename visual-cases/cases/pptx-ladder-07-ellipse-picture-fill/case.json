@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-07-ellipse-picture-fill",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-ellipse-picture-fill.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "images", "shape-fill", "ellipse"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.001,
+    "maxChangedPixelRatioAtThreshold16": 0.0
+  },
+  "allowedUnsupportedFeatures": []
+}

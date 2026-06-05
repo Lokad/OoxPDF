@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-08-composite-port-a",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-08-composite-port-a.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "composite", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.98,
+    "maxChangedPixelRatioAtThreshold16": 0.0485
+  },
+  "allowedUnsupportedFeatures": []
+}

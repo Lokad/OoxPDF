@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-03-text-anchor-overflow",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-03-text-anchor-overflow.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "text-anchor", "text-overflow", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.06,
+    "maxChangedPixelRatioAtThreshold16": 0.0011,
+    "maxTextOperationPositionDelta": 0.8,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-anchor-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-anchor-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "text-anchor", "pptx-renderer-port", "needs-review"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.62,
+    "maxChangedPixelRatioAtThreshold16": 0.0153
+  },
+  "allowedUnsupportedFeatures": []
+}

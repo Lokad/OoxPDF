@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-11-composite-chart-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-composite-chart-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "composite", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 12.41,
+    "maxChangedPixelRatioAtThreshold16": 0.139,
+    "maxChartGraphicsStructureBoundsDelta": 2.0,
+    "compareChartGraphicsStructureKinds": ["GridlineAxisPlotBoxCandidate", "LegendSwatchCandidate"],
+    "chartGraphicsGridlineBoundsTolerance": 1.0,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 1.0,
+      "ValueAxisTickLabel": 0.9,
+      "LegendText": 1.6
+    },
+    "chartTextPlotTolerance": 8.0
+  }
+}

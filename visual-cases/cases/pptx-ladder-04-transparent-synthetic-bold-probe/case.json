@@ -1,0 +1,22 @@
+{
+  "id": "pptx-ladder-04-transparent-synthetic-bold-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-transparent-synthetic-bold-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "transparency", "synthetic-bold", "glyph-outline", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.021,
+    "maxChangedPixelRatioAtThreshold16": 0.00065,
+    "maxGraphicsOperationBoundsDelta": 1.0,
+    "compareGraphicsOperationKinds": ["Fill"],
+    "compareGraphicsOperationOperators": ["f"],
+    "matchGraphicsOperationOperators": true,
+    "compareGraphicsOperationSegmentCounts": true,
+    "compareGraphicsOperationPathCommandCounts": true
+  },
+  "allowedUnsupportedFeatures": []
+}

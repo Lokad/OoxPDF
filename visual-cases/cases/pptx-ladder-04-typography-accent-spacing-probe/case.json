@@ -1,0 +1,17 @@
+{
+  "id": "pptx-ladder-04-typography-accent-spacing-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-accent-spacing-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "spacing", "accent", "probe", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxTextLineStartDelta": 0.1,
+    "matchTextLineStartsByPosition": true,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-11-chart-line-trend-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-trend-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "line-chart", "trend", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.2,
+    "maxChangedPixelRatioAtThreshold16": 0.015,
+    "maxChartGraphicsStructureBoundsDelta": 0.7,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "HorizontalLine", "VerticalLine", "PlotAreaClipBoxCandidate"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.1,
+      "ValueAxisTickLabel": 0.4,
+      "LegendText": 0.7
+    }
+  }
+}

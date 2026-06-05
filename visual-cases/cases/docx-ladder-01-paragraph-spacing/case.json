@@ -1,0 +1,16 @@
+{
+  "id": "docx-ladder-01-paragraph-spacing",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-paragraph-spacing.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "paragraph", "spacing"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.015,
+    "maxChangedPixelRatioAtThreshold16": 0.0004
+  },
+  "allowedUnsupportedFeatures": []
+}

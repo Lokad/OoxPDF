@@ -1,0 +1,20 @@
+{
+  "id": "pptx-ladder-04-soft-hyphen",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-soft-hyphen.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "text", "hyphenation", "locked"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.0,
+    "maxChangedPixelRatioAtThreshold16": 0.0,
+    "maxTextOperationPositionDelta": 0.1,
+    "maxTextOperationFontSizeDelta": 0.05,
+    "matchTextOperationsByPosition": true,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

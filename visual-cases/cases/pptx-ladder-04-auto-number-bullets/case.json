@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-auto-number-bullets",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-auto-number-bullets.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "numbering", "bullet", "needs-review"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.97,
+    "maxChangedPixelRatioAtThreshold16": 0.0081
+  },
+  "allowedUnsupportedFeatures": []
+}

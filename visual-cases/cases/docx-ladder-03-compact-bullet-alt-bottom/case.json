@@ -1,0 +1,14 @@
+{
+  "id": "docx-ladder-03-compact-bullet-alt-bottom",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-compact-bullet-alt-bottom.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "font-table"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

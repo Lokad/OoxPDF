@@ -1,0 +1,22 @@
+{
+  "id": "pptx-ladder-11-chart-scatter-clusters-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-scatter-clusters-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "scatter-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.22,
+    "maxChangedPixelRatioAtThreshold16": 0.0203,
+    "maxChartGraphicsStructureBoundsDelta": 19.0,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "VerticalLine"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["LegendText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "LegendText": 20.0
+    }
+  }
+}

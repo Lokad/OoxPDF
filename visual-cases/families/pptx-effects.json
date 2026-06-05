@@ -1,0 +1,12 @@
+{
+  "id": "pptx-effects",
+  "kind": "pptx",
+  "description": "Transparency, advanced fills, shadows, and diagnostics for unsupported effects.",
+  "support": {
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
+  "casePatterns": [
+    "pptx-ladder-12-*"
+  ]
+}

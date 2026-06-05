@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-12-arrow-alpha",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-arrow-alpha.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "effects", "alpha", "line", "arrow"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.007,
+    "maxChangedPixelRatioAtThreshold16": 0.00018
+  },
+  "allowedUnsupportedFeatures": []
+}

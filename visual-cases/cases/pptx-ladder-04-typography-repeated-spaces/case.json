@@ -1,0 +1,18 @@
+{
+  "id": "pptx-ladder-04-typography-repeated-spaces",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-repeated-spaces.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "whitespace", "spaces", "locked-text-ops"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.25,
+    "maxChangedPixelRatioAtThreshold16": 0.0029,
+    "maxTextLineStartDelta": 0.1,
+    "matchTextLineStartsByPosition": true
+  },
+  "allowedUnsupportedFeatures": []
+}

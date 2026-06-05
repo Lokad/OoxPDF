@@ -1,0 +1,15 @@
+{
+  "id": "pptx-ladder-12-shadow-diagnostic",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-shadow-diagnostic.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "effects", "shadow", "diagnostic"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.09,
+    "maxChangedPixelRatioAtThreshold16": 0.003
+  }
+}

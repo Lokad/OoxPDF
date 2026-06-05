@@ -1,0 +1,16 @@
+{
+  "id": "docx-ladder-00-blank",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-00-blank.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "blank"],
+  "expected": {
+    "minAgentRating": 4,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.01,
+    "maxChangedPixelRatioAtThreshold16": 0
+  },
+  "allowedUnsupportedFeatures": []
+}

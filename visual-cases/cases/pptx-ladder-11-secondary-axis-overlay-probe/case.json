@@ -1,0 +1,29 @@
+{
+  "id": "pptx-ladder-11-secondary-axis-overlay-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-secondary-axis-overlay-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "secondary-axis", "connector", "bottom-up"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.1,
+    "maxChangedPixelRatioAtThreshold16": 0.03,
+    "maxChartGraphicsStructureBoundsDelta": 4.6,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": [
+      "GridlineAxisPlotBoxCandidate",
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate"
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 3.8,
+      "ValueAxisTickLabel": 3.5
+    }
+  },
+  "allowedUnsupportedFeatures": []
+}

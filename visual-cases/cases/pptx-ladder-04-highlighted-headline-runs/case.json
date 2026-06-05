@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-04-highlighted-headline-runs",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-highlighted-headline-runs.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "highlight", "headline", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.0,
+    "maxChangedPixelRatioAtThreshold16": 0.019,
+    "maxTextOperationPositionDelta": 3.0,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -1,0 +1,36 @@
+{
+  "id": "pptx-ladder-11-chart-pie-exploded-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pie-exploded-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "pie-chart", "exploded", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.25,
+    "maxChangedPixelRatioAtThreshold16": 0.004,
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.999,
+    "maxChartGraphicsStructureBoundsDelta": 14,
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 6.5,
+    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
+      "PolarSliceCandidate": 0.6
+    },
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["DataLabelText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "DataLabelText": 0.7
+    }
+  }
+}

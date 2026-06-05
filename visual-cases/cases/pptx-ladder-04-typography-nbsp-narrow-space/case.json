@@ -1,0 +1,18 @@
+{
+  "id": "pptx-ladder-04-typography-nbsp-narrow-space",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-nbsp-narrow-space.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "whitespace", "nbsp", "narrow-space", "locked-text-ops"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.27,
+    "maxChangedPixelRatioAtThreshold16": 0.0032,
+    "maxTextLineStartDelta": 0.5,
+    "matchTextLineStartsByPosition": true
+  },
+  "allowedUnsupportedFeatures": []
+}

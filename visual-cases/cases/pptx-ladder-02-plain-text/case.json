@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-02-plain-text",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-02-plain-text.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "text", "approximate"],
+  "expected": {
+    "minAgentRating": 4,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxTextOperationPositionDelta": 0.05,
+    "maxTextOperationFontSizeDelta": 0.01,
+    "maxTextOperationCharacterSpacingDelta": 0.001,
+    "maxMeanAbsoluteError": 0.05,
+    "maxChangedPixelRatioAtThreshold16": 0.0006
+  },
+  "allowedUnsupportedFeatures": []
+}

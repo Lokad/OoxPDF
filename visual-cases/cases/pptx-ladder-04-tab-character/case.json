@@ -1,0 +1,20 @@
+{
+  "id": "pptx-ladder-04-tab-character",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-tab-character.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "tabs", "locked"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0,
+    "maxChangedPixelRatioAtThreshold16": 0,
+    "maxTextOperationPositionDelta": 0.05,
+    "maxTextOperationFontSizeDelta": 0.05,
+    "matchTextOperationsByPosition": true,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

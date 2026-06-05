@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+.idea/
+artifacts/**
+!artifacts/.gitkeep
+private-cases/**
+*.user
+*.suo

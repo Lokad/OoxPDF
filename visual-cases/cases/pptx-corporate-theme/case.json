@@ -1,0 +1,13 @@
+{
+  "id": "pptx-corporate-theme",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-corporate-theme.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "theme", "master", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

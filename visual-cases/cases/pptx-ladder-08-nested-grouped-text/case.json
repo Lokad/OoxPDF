@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-08-nested-grouped-text",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-08-nested-grouped-text.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "groups", "text"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.003,
+    "maxChangedPixelRatioAtThreshold16": 0.0001
+  },
+  "allowedUnsupportedFeatures": []
+}

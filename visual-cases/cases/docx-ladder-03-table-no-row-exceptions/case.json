@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-03-table-no-row-exceptions",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-no-row-exceptions.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "table", "row-height", "tblPrEx"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}

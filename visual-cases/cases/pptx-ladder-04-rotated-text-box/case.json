@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-rotated-text-box",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-rotated-text-box.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "rotation", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.033,
+    "maxChangedPixelRatioAtThreshold16": 0.00085
+  },
+  "allowedUnsupportedFeatures": []
+}

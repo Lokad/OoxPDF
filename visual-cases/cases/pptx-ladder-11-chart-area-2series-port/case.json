@@ -1,0 +1,30 @@
+{
+  "id": "pptx-ladder-11-chart-area-2series-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-area-2series-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "area-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 3.8,
+    "maxChangedPixelRatioAtThreshold16": 0.04,
+    "maxChartGraphicsStructureBoundsDelta": 0.9,
+    "compareChartGraphicsStructureKinds": [
+      "VerticalLine"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": [
+      "ValueAxisTickLabel"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "ValueAxisTickLabel": 1.0
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "pptx-ladder-03-text-flow",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-03-text-flow.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "text-flow", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxTextOperationPositionDelta": 0.12,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "maxTextOperationCharacterSpacingDelta": 0.011,
+    "compareDecodedTextOperations": true,
+    "maxMeanAbsoluteError": 0.04,
+    "maxChangedPixelRatioAtThreshold16": 0.001
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-mixed-bullet-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-mixed-bullet-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "mixed-formatting", "bullet", "pptx-renderer-port", "needs-review"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.93,
+    "maxChangedPixelRatioAtThreshold16": 0.0128
+  },
+  "allowedUnsupportedFeatures": []
+}

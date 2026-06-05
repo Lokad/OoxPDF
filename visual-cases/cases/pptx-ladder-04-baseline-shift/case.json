@@ -1,0 +1,20 @@
+{
+  "id": "pptx-ladder-04-baseline-shift",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-baseline-shift.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "baseline", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.018,
+    "maxChangedPixelRatioAtThreshold16": 0.00049,
+    "maxTextOperationPositionDelta": 0.2,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "maxTextOperationCharacterSpacingDelta": 0.05,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

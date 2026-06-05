@@ -1,0 +1,17 @@
+{
+  "id": "pptx-ladder-12-pattern-diagnostic",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-pattern-diagnostic.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "effects", "pattern", "diagnostic"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "requiredDiagnostics": ["PPTX_UNSUPPORTED_PATTERN_FILL"],
+    "maxMeanAbsoluteError": 8.4,
+    "maxChangedPixelRatioAtThreshold16": 0.101
+  },
+  "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_PATTERN_FILL"]
+}

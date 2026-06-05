@@ -1,0 +1,31 @@
+{
+  "id": "pptx-ladder-11-chart-doughnut-no-legend-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-no-legend-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "no-legend", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.02,
+    "maxChangedPixelRatioAtThreshold16": 0.001,
+    "minStructuralSimilarity": 0.9999,
+    "minForegroundColorHistogramCorrelation": 0.9999,
+    "maxChartGraphicsStructureBoundsDelta": 22.1,
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 11,
+    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
+      "PolarSliceCandidate": 0.6
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "pptx-ladder-04-text-overflow-ellipsis",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-text-overflow-ellipsis.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "overflow", "locked-text-ops"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.03,
+    "maxChangedPixelRatioAtThreshold16": 0.0007,
+    "maxTextOperationPositionDelta": 0.4,
+    "maxTextOperationFontSizeDelta": 0.05,
+    "matchTextOperationsByPosition": true,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

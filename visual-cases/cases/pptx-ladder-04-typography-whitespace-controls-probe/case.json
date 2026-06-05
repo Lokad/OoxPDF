@@ -1,0 +1,20 @@
+{
+  "id": "pptx-ladder-04-typography-whitespace-controls-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-whitespace-controls-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "whitespace", "probe", "needs-review"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.633,
+    "maxChangedPixelRatioAtThreshold16": 0.008,
+    "maxTextOperationPositionDelta": 0.75,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "maxTextOperationCharacterSpacingDelta": 0.04,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

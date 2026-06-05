@@ -1,0 +1,54 @@
+{
+  "id": "pptx-ladder-11-chart-data-label-legend-keys-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-data-label-legend-keys-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "data-labels", "legend-keys", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.8,
+    "maxChangedPixelRatioAtThreshold16": 0.035,
+    "maxChartGraphicsStructureBoundsDeltaByKind": {
+      "MarkerCandidate": 20.0,
+      "StrokeMarkerCandidate": 20.0,
+      "DataLabelLegendKeyFillCandidate": 20.0,
+      "DataLabelLegendKeyStrokeCandidate": 20.0
+    },
+    "maxChartGraphicsStructureLineWidthDelta": 0.1,
+    "compareChartGraphicsStructureKinds": [
+      "MarkerCandidate",
+      "StrokeMarkerCandidate",
+      "DataLabelLegendKeyFillCandidate",
+      "DataLabelLegendKeyStrokeCandidate"
+    ],
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["MarkerCandidate"],
+        "maxBoundsDelta": 20.0,
+        "matchFillColors": true
+      },
+      {
+        "kinds": ["StrokeMarkerCandidate"],
+        "maxBoundsDelta": 20.0,
+        "maxLineWidthDelta": 0.1,
+        "matchStrokeColors": true
+      },
+      {
+        "kinds": ["DataLabelLegendKeyFillCandidate"],
+        "maxBoundsDelta": 20.0,
+        "matchFillColors": true
+      },
+      {
+        "kinds": ["DataLabelLegendKeyStrokeCandidate"],
+        "maxBoundsDelta": 20.0,
+        "maxLineWidthDelta": 0.1,
+        "matchStrokeColors": true
+      }
+    ]
+  }
+}

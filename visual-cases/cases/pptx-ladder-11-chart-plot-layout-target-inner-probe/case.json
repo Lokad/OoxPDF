@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-11-chart-plot-layout-target-inner-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-plot-layout-target-inner-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "manual-layout", "layout-target", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.2,
+    "maxChangedPixelRatioAtThreshold16": 0.01,
+    "minForegroundColorHistogramCorrelation": 0.998,
+    "maxChartGraphicsStructureBoundsDelta": 1.0,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotAreaClipBoxCandidate"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ChartTitleText", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 20.0,
+      "ChartTitleText": 1.0,
+      "ValueAxisTickLabel": 0.2
+    }
+  }
+}

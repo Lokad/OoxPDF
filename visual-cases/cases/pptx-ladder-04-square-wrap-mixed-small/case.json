@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-square-wrap-mixed-small",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-square-wrap-mixed-small.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "text", "wrap", "small-text", "mixed-runs", "needs-review"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.772,
+    "maxChangedPixelRatioAtThreshold16": 0.00831
+  },
+  "allowedUnsupportedFeatures": []
+}

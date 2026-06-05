@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-02-paragraph-logical-indents",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-paragraph-logical-indents.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "paragraph", "indent", "logical"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "pptx-ladder-11-chart-column-100-stacked-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-100-stacked-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "column-chart", "stacked-100", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.5,
+    "maxChangedPixelRatioAtThreshold16": 0.018,
+    "minStructuralSimilarity": 0.94,
+    "maxChartGraphicsStructureBoundsDelta": 2,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "FilledRegion",
+      "GridlineAxisPlotBoxCandidate",
+      "HorizontalGridlineGroupCandidate",
+      "PlotAreaClipBoxCandidate"
+    ],
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["FilledRegion"],
+        "maxBoundsDelta": 2,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true,
+        "matchPathOperators": true
+      }
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": [
+      "CategoryAxisTickLabel",
+      "ValueAxisTickLabel"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 1.35,
+      "ValueAxisTickLabel": 1.6
+    }
+  }
+}

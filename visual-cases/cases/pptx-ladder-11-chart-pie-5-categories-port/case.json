@@ -1,0 +1,34 @@
+{
+  "id": "pptx-ladder-11-chart-pie-5-categories-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pie-5-categories-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "pie-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 8.75,
+    "maxChangedPixelRatioAtThreshold16": 0.12,
+    "maxChartGraphicsStructureBoundsDelta": 21,
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 10.1,
+    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
+      "PolarSliceCandidate": 0.6
+    },
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["ChartTitleText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "ChartTitleText": 1.7
+    }
+  }
+}

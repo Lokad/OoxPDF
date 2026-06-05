@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-paragraph-spacing-percent",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-paragraph-spacing-percent.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "paragraph-spacing", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.416,
+    "maxChangedPixelRatioAtThreshold16": 0.0041
+  },
+  "allowedUnsupportedFeatures": []
+}

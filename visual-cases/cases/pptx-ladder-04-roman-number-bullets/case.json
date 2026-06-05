@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-roman-number-bullets",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-roman-number-bullets.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "numbering", "bullet", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.495,
+    "maxChangedPixelRatioAtThreshold16": 0.0046
+  },
+  "allowedUnsupportedFeatures": []
+}

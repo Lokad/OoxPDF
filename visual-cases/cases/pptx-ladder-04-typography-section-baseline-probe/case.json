@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-04-typography-section-baseline-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-section-baseline-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "baseline", "public-probe"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.6,
+    "maxChangedPixelRatioAtThreshold16": 0.021,
+    "maxTextOperationPositionDelta": 0.9,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}

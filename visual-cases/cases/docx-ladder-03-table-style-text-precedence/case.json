@@ -1,0 +1,12 @@
+{
+  "id": "docx-ladder-03-table-style-text-precedence",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-style-text-precedence.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "table", "style", "text-precedence"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  }
+}

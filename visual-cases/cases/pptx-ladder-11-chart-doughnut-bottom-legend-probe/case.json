@@ -1,0 +1,50 @@
+{
+  "id": "pptx-ladder-11-chart-doughnut-bottom-legend-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-bottom-legend-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "bottom-legend", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.55,
+    "maxChangedPixelRatioAtThreshold16": 0.005,
+    "minStructuralSimilarity": 0.97,
+    "maxChartGraphicsStructureBoundsDeltaByKind": {
+      "PolarPlotBoxCandidate": 20.1,
+      "PolarSliceCandidate": 20.1
+    },
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": [
+      "LegendText"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "LegendText": 15
+    },
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 10,
+    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
+      "PolarSliceCandidate": 0.6
+    },
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["LegendSwatchCandidate"],
+        "maxBoundsDelta": 15.0,
+        "matchFillColors": true,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true,
+        "matchPathOperators": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "pptx-ladder-11-chart-top-right-default-axis-titles-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-top-right-default-axis-titles-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "axis-title", "default-layout", "top-axis", "right-axis", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 19.0,
+    "maxChangedPixelRatioAtThreshold16": 0.22,
+    "compareChartGraphicsStructureKinds": [
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate",
+      "VerticalLine"
+    ],
+    "maxChartGraphicsStructureBoundsDelta": 1.0,
+    "maxChartGraphicsStructureLineWidthDelta": 0.25,
+    "compareChartTextStructureKinds": [
+      "AxisTitleText",
+      "CategoryAxisTickLabel"
+    ],
+    "compareChartTextStructureTextHash": true,
+    "maxChartTextStructurePositionDelta": 8.0
+  }
+}

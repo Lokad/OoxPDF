@@ -1,0 +1,13 @@
+{
+  "id": "pptx-table",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-table.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "tables", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -1,0 +1,26 @@
+{
+  "id": "pptx-ladder-11-chart-column-stacked-bottom-legend-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-stacked-bottom-legend-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "column-chart", "stacked", "bottom-legend", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.4,
+    "maxChangedPixelRatioAtThreshold16": 0.03,
+    "minStructuralSimilarity": 0.69,
+    "maxChartGraphicsStructureBoundsDelta": 10.0,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "GridlineAxisPlotBoxCandidate",
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate",
+      "VerticalLine"
+    ],
+    "compareChartTextStructurePageNumber": 1
+  }
+}

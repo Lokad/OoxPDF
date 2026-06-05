@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-08-text-shape-zorder",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-08-text-shape-zorder.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "groups", "z-order", "text"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.001,
+    "maxChangedPixelRatioAtThreshold16": 0
+  },
+  "allowedUnsupportedFeatures": []
+}

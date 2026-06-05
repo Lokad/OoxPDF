@@ -1,0 +1,33 @@
+{
+  "id": "pptx-ladder-11-chart-line-markers-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-markers-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "line-chart", "markers", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.9,
+    "maxChangedPixelRatioAtThreshold16": 0.027,
+    "maxChartGraphicsStructureBoundsDelta": 0.9,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "VerticalLine", "PlotAreaClipBoxCandidate", "MarkerCandidate"],
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["LegendSwatchCandidate", "StrokeMarkerCandidate"],
+        "maxBoundsDelta": 1.8,
+        "maxLineWidthDelta": 1.0,
+        "matchOperators": true
+      }
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.8,
+      "ValueAxisTickLabel": 1.0,
+      "LegendText": 0.4
+    }
+  }
+}

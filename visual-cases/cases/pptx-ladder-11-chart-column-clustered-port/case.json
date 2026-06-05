@@ -1,0 +1,24 @@
+{
+  "id": "pptx-ladder-11-chart-column-clustered-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-clustered-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "column-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 16.4,
+    "maxChangedPixelRatioAtThreshold16": 0.220,
+    "maxChartGraphicsStructureBoundsDelta": 1,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "PlotAreaClipBoxCandidate"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.1,
+      "ValueAxisTickLabel": 0.1
+    }
+  }
+}

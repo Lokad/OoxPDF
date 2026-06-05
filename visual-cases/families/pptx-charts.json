@@ -1,0 +1,12 @@
+{
+  "id": "pptx-charts",
+  "kind": "pptx",
+  "description": "Native chart rendering cases and parity targets.",
+  "support": {
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
+  "casePatterns": [
+    "pptx-ladder-11-*"
+  ]
+}

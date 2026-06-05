@@ -1,0 +1,13 @@
+{
+  "id": "pptx-shapes",
+  "kind": "pptx",
+  "description": "Preset geometry, connectors, arrowheads, joins, caps, and adjustment handles.",
+  "support": {
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
+  "casePatterns": [
+    "pptx-ladder-05-*",
+    "pptx-ladder-06-*"
+  ]
+}

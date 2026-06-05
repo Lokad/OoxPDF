@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-07-bmp-alpha",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-bmp-alpha.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "images", "bmp", "alpha"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.0,
+    "maxChangedPixelRatioAtThreshold16": 0.0
+  },
+  "allowedUnsupportedFeatures": []
+}
