@@ -9,6 +9,7 @@ using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -6760,7 +6761,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("[<0037><0052>] TJ", pdf);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(times), "To".Select(c => (int)c));
+        string expected = "[<" + embedded.EncodeGlyphHex("T") + "><" + embedded.EncodeGlyphHex("o") + ">] TJ";
+        TestAssert.Contains(expected, pdf);
     }
 
     public static void PptxSyntheticTextBoxEmitsCharacterSpacingAsTextState()

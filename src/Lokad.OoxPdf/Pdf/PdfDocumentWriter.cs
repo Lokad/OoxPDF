@@ -325,7 +325,7 @@ internal sealed class PdfDocumentWriter
         writer.WriteObject(objects.Descriptor, FormattableString.Invariant(
             $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags {metrics.Flags} /FontBBox [{metrics.XMin} {metrics.YMin} {metrics.XMax} {metrics.YMax}] /ItalicAngle {FormatNumber(metrics.ItalicAngle)} /Ascent {metrics.Ascent} /Descent {metrics.Descent} /CapHeight {metrics.CapHeight} /StemV 80 /FontFile2 {objects.FontFile} 0 R >>\n"));
 
-        writer.WriteStreamObject(objects.FontFile, "/Filter /FlateDecode", Compress(font.Font.Bytes.Span, cancellationToken));
+        writer.WriteStreamObject(objects.FontFile, "/Filter /FlateDecode", Compress(font.FontProgramBytes.Span, cancellationToken));
         writer.WriteStreamObject(objects.ToUnicode, string.Empty, Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken)));
     }
 

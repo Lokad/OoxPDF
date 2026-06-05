@@ -481,9 +481,65 @@ internal static class FontTests
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "The scale".EnumerateRunes().Select(rune => rune.Value));
         string positioning = TestAssert.NotNull(embedded.EncodeGlyphPositioningArray("The scale", 0d, 18d, forcePositioningArray: true));
         string widths = embedded.BuildWidthArray();
+        string encodedGlyph = embedded.EncodeGlyphHex("h");
+        TestAssert.True(encodedGlyph.Length == 4, "Expected a single encoded CID for 'h'.");
+        int cid = int.Parse(encodedGlyph, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
 
-        TestAssert.Contains(glyph.ToString("X4", CultureInfo.InvariantCulture), positioning);
-        TestAssert.Contains(glyph.ToString(CultureInfo.InvariantCulture) + " [", widths);
+        TestAssert.Contains(encodedGlyph, positioning);
+        TestAssert.Contains(cid.ToString(CultureInfo.InvariantCulture) + " [", widths);
+    }
+
+    public static void PdfEmbeddedFontBuildsLoadableSubsetFontProgram()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c));
+
+        TestAssert.True(embedded.UsesSubsetFontProgram, "Expected PDF font embedding to use a subset font program.");
+        TestAssert.True(embedded.FontProgramBytes.Length < font.Bytes.Length / 4, "Expected a tiny two-glyph subset compared to the source font.");
+        TestAssert.Equal("0001", embedded.EncodeGlyphHex("A"));
+        TestAssert.Equal("0002", embedded.EncodeGlyphHex("z"));
+        TestAssert.Contains("1 [", embedded.BuildWidthArray());
+        TestAssert.Contains("2 [", embedded.BuildWidthArray());
+
+        OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
+        TestAssert.True(subset.GlyphCount < font.GlyphCount, "Expected the subset font to expose fewer glyphs than the source font.");
+        TestAssert.True(subset.MapCodePoint('A') != 0, "Expected the subset cmap to map capital A.");
+        TestAssert.True(subset.MapCodePoint('z') != 0, "Expected the subset cmap to map lowercase z.");
+    }
+
+    public static void PdfEmbeddedFontSubsetKeepsCompoundGlyphComponents()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        ushort originalGlyph = font.MapCodePoint('é');
+        if (originalGlyph == 0 ||
+            !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) ||
+            !originalOutline.IsCompound)
+        {
+            return;
+        }
+
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "é".EnumerateRunes().Select(rune => rune.Value));
+        OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
+        ushort subsetGlyph = subset.MapCodePoint('é');
+
+        TestAssert.True(embedded.UsesSubsetFontProgram, "Expected compound glyph fixture to use a subset font program.");
+        TestAssert.True(subsetGlyph != 0, "Expected the subset cmap to map the compound glyph.");
+        TestAssert.True(subset.TryReadGlyphOutline(subsetGlyph, out OpenTypeFont.OpenTypeGlyphOutline subsetOutline), "Expected remapped compound glyph outline to be readable.");
+        TestAssert.True(subsetOutline.Contours.Count > 0, "Expected remapped compound glyph to keep component contours.");
     }
 
     public static void OpenTypeParserLoadsTrueTypeCollections()

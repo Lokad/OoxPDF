@@ -1091,14 +1091,14 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms(embedded, run);
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
         double pdfCharacterSpacing = run.CharacterSpacing;
-        string? positioningArray = EncodeGlyphPositioningArray(glyphs, run.FontSize, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
+        string? positioningArray = EncodeGlyphPositioningArray(embedded, glyphs, run.FontSize, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
     }
 
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
     {
         TextRun run = span.Run;
-        string glyphHex = EncodeGlyphHex(span.GlyphSpan);
+        string glyphHex = EncodeGlyphHex(embedded, span.GlyphSpan);
         double baselineY = run.Y + run.BaselineOffset;
         if (glyphHex.Length == 0 || !BaselineIntersectsClip(run, baselineY))
         {
@@ -1116,7 +1116,7 @@ internal sealed partial class PptxRenderer
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(emissionContext);
         double pdfCharacterSpacing = span.PdfCharacterSpacingOverride
             ?? PptxPdfTextEmissionProfile.CharacterSpacing(emissionContext, span.GlyphSpan.CharacterSpacing);
-        string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
+        string? positioningArray = EncodeGlyphPositioningArray(embedded, span.GlyphSpan, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.TypefaceResolutionSource, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
@@ -1168,18 +1168,21 @@ internal sealed partial class PptxRenderer
             span.LineBox?.MaxFontSize ?? run.FontSize);
     }
 
-    private static string EncodeGlyphHex(PptxTextGlyphSpanLayout span)
+    private static string EncodeGlyphHex(PdfEmbeddedFont embedded, PptxTextGlyphSpanLayout span)
     {
         var builder = new StringBuilder(span.Glyphs.Count * 4);
         foreach (PptxTextGlyphLayout glyph in span.Glyphs)
         {
-            builder.Append(glyph.GlyphId.ToString("X4", CultureInfo.InvariantCulture));
+            if (embedded.TryGetEncodedCid(glyph.GlyphId, out ushort cid))
+            {
+                builder.Append(cid.ToString("X4", CultureInfo.InvariantCulture));
+            }
         }
 
         return builder.ToString();
     }
 
-    private static string? EncodeGlyphPositioningArray(PptxTextGlyphSpanLayout span, double pdfFontSize, double pdfCharacterSpacing, bool forcePositioningArray)
+    private static string? EncodeGlyphPositioningArray(PdfEmbeddedFont embedded, PptxTextGlyphSpanLayout span, double pdfFontSize, double pdfCharacterSpacing, bool forcePositioningArray)
     {
         if (span.Glyphs.Count == 0)
         {
@@ -1207,14 +1210,17 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            builder.Append('<').Append(glyph.GlyphId.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+            if (embedded.TryGetEncodedCid(glyph.GlyphId, out ushort cid))
+            {
+                builder.Append('<').Append(cid.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+            }
         }
 
         builder.Append(']');
         return hasPositioning || forcePositioningArray ? builder.ToString() : null;
     }
 
-    private static string? EncodeGlyphPositioningArray(IReadOnlyList<TextGlyphAtom> glyphs, double layoutFontSize, double pdfFontSize, double characterSpacing, bool forcePositioningArray)
+    private static string? EncodeGlyphPositioningArray(PdfEmbeddedFont embedded, IReadOnlyList<TextGlyphAtom> glyphs, double layoutFontSize, double pdfFontSize, double characterSpacing, bool forcePositioningArray)
     {
         if (glyphs.Count == 0)
         {
@@ -1242,7 +1248,10 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            builder.Append('<').Append(glyph.GlyphId.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+            if (embedded.TryGetEncodedCid(glyph.GlyphId, out ushort cid))
+            {
+                builder.Append('<').Append(cid.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+            }
         }
 
         builder.Append(']');
