@@ -602,7 +602,8 @@ internal sealed partial class PptxRenderer
     {
         if (left.SourceRun is not null &&
             right.SourceRun is not null &&
-            !ReferenceEquals(left.SourceRun, right.SourceRun))
+            !ReferenceEquals(left.SourceRun, right.SourceRun) &&
+            PreservesSourceRunTextOperationBoundary(left, right))
         {
             return false;
         }
@@ -645,6 +646,34 @@ internal sealed partial class PptxRenderer
     private static bool PreservesHighlightTextOperationBoundaries(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
     {
         return left.SourceAlignment != TextAlignment.Left || right.SourceAlignment != TextAlignment.Left;
+    }
+
+    private static bool PreservesSourceRunTextOperationBoundary(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
+    {
+        if (left.SourceAlignment != TextAlignment.Left || right.SourceAlignment != TextAlignment.Left)
+        {
+            return true;
+        }
+
+        if (UsesMathTypeface(left.Run.FontFamily) ||
+            UsesMathTypeface(right.Run.FontFamily) ||
+            string.Equals(left.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) ||
+            string.Equals(right.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return !HasTrailingWhitespaceBoundary(left.Run.Text);
+    }
+
+    private static bool UsesMathTypeface(string? typeface)
+    {
+        return typeface?.IndexOf("Math", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static bool HasTrailingWhitespaceBoundary(string text)
+    {
+        return text.Length > 0 && char.IsWhiteSpace(text[^1]);
     }
 
     private static void DrawHighlightRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
@@ -1324,12 +1353,9 @@ internal sealed partial class PptxRenderer
     {
         TextRun run = glyphRun.Source;
         double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
-        double underlineThickness = Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale;
-        if (underlineThickness <= PptxTextMetricRules.TextStateTolerance)
-        {
-            underlineThickness = run.FontSize * PptxTextMetricRules.UnderlineThicknessFallback;
-        }
-        double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
+        double underlineThickness = PptxTextMetricRules.UnderlineThickness(embedded, run.FontSize);
+        double underlineTopY = glyphRun.BaselineY + embedded.Font.Post.UnderlinePosition * underlineScale;
+        double underlineY = underlineTopY - underlineThickness;
         rectangle = new TextDecorationRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
         return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && underlineThickness > 0d;
     }

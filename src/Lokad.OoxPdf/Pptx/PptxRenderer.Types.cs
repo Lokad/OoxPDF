@@ -1092,7 +1092,8 @@ internal sealed partial class PptxRenderer
         public const double OfficeAutofitNumberedDefaultCharacterSpacingEm = -0.004d;
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
-        public const double UnderlineThicknessFallback = 0.025d;
+        public const double UnderlineThicknessFallback = 0.0125d;
+        public const double OfficeUnderlineThicknessMetricScale = 0.25d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
         public const double HighlightMaximumDescentFontScale = 0.23d;
         public const double HighlightMaximumHeightFontScale = 1.18d;
@@ -1149,6 +1150,15 @@ internal sealed partial class PptxRenderer
             double fontScale = fontSize / embedded.Font.UnitsPerEm;
             double strikeoutSize = embedded.Font.Os2.StrikeoutSize * fontScale;
             return Math.Max(MinimumStrokeWidth, strikeoutSize > 0d ? strikeoutSize : fontSize * StrikeThicknessFallback);
+        }
+
+        public static double UnderlineThickness(PdfEmbeddedFont embedded, double fontSize)
+        {
+            double fontScale = fontSize / embedded.Font.UnitsPerEm;
+            double underlineSize = Math.Abs(embedded.Font.Post.UnderlineThickness) * fontScale;
+            return underlineSize > TextStateTolerance
+                ? underlineSize * OfficeUnderlineThicknessMetricScale
+                : fontSize * UnderlineThicknessFallback;
         }
 
         public static double HighlightDescent(PdfEmbeddedFont embedded, double fontSize, double fontScale)

@@ -8357,6 +8357,13 @@ Current validation baseline:
 - Public table text-state fixtures: `pptx-ladder-10-table-font-fragmentation` run `20260531-025104` passed at MAE `1.524499`, changed16 `0.026186`; `pptx-ladder-10-table-middle-small-insets` run `20260531-025127` passed unchanged at MAE `0.966760`, changed16 `0.019591`.
 - Focused table tests: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-tables --skip-slow` passed `19` tests.
 - `tools\NewOfficeVisualFixtures.ps1` parses after the latest table fixture additions.
+- 2026-06-05 follow-up: the four standalone PPTX fidelity failures are fixed rather than masked:
+  grouped straight connectors now keep the stroked connector body under group flips, PPTX underline rectangles use
+  scaled font underline metrics instead of the PDF stroke minimum, left-aligned highlight-boundary coalescing keeps
+  Office text-state guardrails for math/autofit spans, and logical text-run inspection now uses scene-resolved
+  colors for shape/table text. Validation passed focused connector/text/theme cases, full
+  `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`
+  (`795` passed, `0` failed, `7` skipped), and full `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`.
 
 Preferred commands for the next slices:
 

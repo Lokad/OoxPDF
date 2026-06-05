@@ -328,7 +328,10 @@ internal sealed partial class PptxRenderer
                 bool hasHeadArrow = IsFilledTriangleArrow(headEnd);
                 bool hasTailArrow = IsFilledTriangleArrow(tailEnd);
                 bool hasStealthEnd = headEnd.Kind == LineEndKind.Stealth || tailEnd.Kind == LineEndKind.Stealth;
-                if (hasStealthEnd && headEnd.Kind is LineEndKind.None or LineEndKind.Stealth && tailEnd.Kind is LineEndKind.None or LineEndKind.Stealth && !hasDash && lineCap is null)
+                bool useFilledStealthBody = string.Equals(preset, "line", StringComparison.Ordinal) ||
+                    rawBounds.FlipHorizontal ||
+                    rawBounds.FlipVertical;
+                if (hasStealthEnd && useFilledStealthBody && headEnd.Kind is LineEndKind.None or LineEndKind.Stealth && tailEnd.Kind is LineEndKind.None or LineEndKind.Stealth && !hasDash && lineCap is null)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     FillStealthEndedLine(graphics, x1, y1, x2, y2, lineWidth, headEnd, tailEnd);
