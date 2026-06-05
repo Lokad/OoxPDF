@@ -16,9 +16,12 @@ internal static class SafeXml
         };
     }
 
-    public static XDocument Load(Stream stream)
+    public static XDocument Load(Stream stream, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using XmlReader reader = XmlReader.Create(stream, CreateReaderSettings());
-        return XDocument.Load(reader, LoadOptions.None);
+        XDocument document = XDocument.Load(reader, LoadOptions.None);
+        cancellationToken.ThrowIfCancellationRequested();
+        return document;
     }
 }

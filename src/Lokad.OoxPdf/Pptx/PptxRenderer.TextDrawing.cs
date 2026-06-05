@@ -236,11 +236,13 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxPositionedTextSpan> textSpans,
         IReadOnlyList<TextRun> legacyTextRuns,
         PresentationFontResolver fontResolver,
-        string resourcePrefix = "F")
+        string resourcePrefix = "F",
+        CancellationToken cancellationToken = default)
     {
         var uses = new List<TextFontUse>();
         foreach (PptxPositionedTextSpan span in textSpans)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             foreach (IGrouping<string, PptxTextGlyphLayout> group in span.GlyphSpan.Glyphs.GroupBy(
                         glyph => string.IsNullOrWhiteSpace(glyph.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : glyph.Typeface!,
                          StringComparer.OrdinalIgnoreCase))
@@ -251,14 +253,15 @@ internal sealed partial class PptxRenderer
 
         foreach (TextRun run in CoalesceUnderlineRuns(CoalesceAdjacentTextRuns(legacyTextRuns, compareHighlight: false)))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string familyName = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
             uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
         }
 
-        return CreateRenderedFonts(uses, fontResolver, resourcePrefix);
+        return CreateRenderedFonts(uses, fontResolver, resourcePrefix, cancellationToken);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix = "F")
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix = "F", CancellationToken cancellationToken = default)
     {
         if (textRuns.Count == 0)
         {
@@ -273,10 +276,10 @@ internal sealed partial class PptxRenderer
                 run.Bold,
                 run.Italic,
                 run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()))
-            .ToArray(), fontResolver, resourcePrefix);
+            .ToArray(), fontResolver, resourcePrefix, cancellationToken);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix)
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken = default)
     {
         if (uses.Count == 0)
         {
@@ -287,8 +290,9 @@ internal sealed partial class PptxRenderer
         var resources = new List<PdfFontResource>();
         foreach (IGrouping<string, TextFontUse> group in uses.GroupBy(use => FontKey(use.FamilyName, use.Bold, use.Italic), StringComparer.OrdinalIgnoreCase))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             TextFontUse first = group.First();
-            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic));
+            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic), cancellationToken);
             if (resolved is null)
             {
                 continue;
@@ -296,7 +300,7 @@ internal sealed partial class PptxRenderer
 
             FontFaceResolution resolution = resolved.Value.Resolution;
             OpenTypeFont font = resolved.Value.Font;
-            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(use => use.CodePoints));
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(use => use.CodePoints), cancellationToken);
             string resourceName = resourcePrefix + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             fonts[group.Key] = new RenderedFont(resourceName, embedded, resolution, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));

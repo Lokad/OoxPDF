@@ -824,13 +824,15 @@ internal sealed partial class PptxRenderer
     private sealed class TextAdvanceEstimator
     {
         private readonly PresentationFontResolver resolver;
+        private readonly CancellationToken cancellationToken;
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FontFaceResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
 
-        public TextAdvanceEstimator(PresentationFontResolver? resolver = null)
+        public TextAdvanceEstimator(PresentationFontResolver? resolver = null, CancellationToken cancellationToken = default)
         {
             this.resolver = resolver ?? new PresentationFontResolver();
+            this.cancellationToken = cancellationToken;
         }
 
         public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
@@ -846,6 +848,7 @@ internal sealed partial class PptxRenderer
             int runeCount = 0;
             foreach (Rune rune in text.EnumerateRunes())
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 runeCount++;
                 ResolvedGlyphFont? resolved = ResolveGlyphFont(familyName, bold, italic, rune.Value);
                 if (resolved is null)
@@ -903,6 +906,7 @@ internal sealed partial class PptxRenderer
 
         public ResolvedGlyphFont? ResolveGlyphFont(string? familyName, bool bold, bool italic, int codePoint)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
             string key = requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture) + "\u001f" + codePoint.ToString(CultureInfo.InvariantCulture);
             if (glyphFonts.TryGetValue(key, out ResolvedGlyphFont? cached))
@@ -928,6 +932,7 @@ internal sealed partial class PptxRenderer
                          .ThenBy(f => f.Source.StableId, StringComparer.OrdinalIgnoreCase)
                          .ThenBy(f => f.FontFaceIndex))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (primaryResolution is not null &&
                     resolution.FontFaceIndex == primaryResolution.FontFaceIndex &&
                     string.Equals(resolution.Source.StableId, primaryResolution.Source.StableId, StringComparison.OrdinalIgnoreCase))
@@ -982,6 +987,7 @@ internal sealed partial class PptxRenderer
 
         private FontFaceResolution? ResolveFontResolution(string familyName, bool bold, bool italic)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string key = familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
             if (resolutions.TryGetValue(key, out FontFaceResolution? cached))
             {
@@ -1008,13 +1014,14 @@ internal sealed partial class PptxRenderer
                 return null;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(CultureInfo.InvariantCulture);
             if (fonts.TryGetValue(key, out OpenTypeFont? cached))
             {
                 return cached;
             }
 
-            cached = FontProgramLoader.Load(resolution);
+            cached = FontProgramLoader.Load(resolution, cancellationToken);
             fonts[key] = cached;
             return cached;
         }

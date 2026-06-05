@@ -31,6 +31,7 @@ internal sealed partial class PptxRenderer
         PptxSceneNode node,
         GroupTransform transform)
     {
+        context.CancellationToken.ThrowIfCancellationRequested();
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
@@ -65,6 +66,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<RgbColor>? chartPalette,
         PptxSceneChart? sceneChart)
     {
+        context.CancellationToken.ThrowIfCancellationRequested();
         string? chartPartName = targetPartName;
 
         if (bounds is null || chartPartName is null)
@@ -81,7 +83,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ChartWorkbookData? chartWorkbook = ReadEmbeddedChartWorkbookData(sceneChart?.ExternalData ?? default);
+        ChartWorkbookData? chartWorkbook = ReadEmbeddedChartWorkbookData(sceneChart?.ExternalData ?? default, context.CancellationToken);
+        context.CancellationToken.ThrowIfCancellationRequested();
 
         PptxColorMap chartColorMap = sceneChart?.ColorMap ?? context.SlideColorMap;
         if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver))
@@ -1860,8 +1863,9 @@ internal sealed partial class PptxRenderer
             new XElement(ChartNamespace + "v", value));
     }
 
-    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(PptxSceneChartExternalData sceneExternalData)
+    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(PptxSceneChartExternalData sceneExternalData, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!sceneExternalData.IsDefined ||
             sceneExternalData.Resource is null)
         {
@@ -1869,14 +1873,20 @@ internal sealed partial class PptxRenderer
         }
 
         using var stream = new MemoryStream(sceneExternalData.Resource.Bytes, writable: false);
-        OoxPackage workbookPackage = OoxPackage.Open(stream);
-        return ReadWorkbookData(workbookPackage);
+        OoxPackage workbookPackage = OoxPackage.Open(stream, cancellationToken);
+        return ReadWorkbookDataCore(workbookPackage, cancellationToken);
     }
 
     private static ChartWorkbookData? ReadWorkbookData(OoxPackage workbookPackage)
     {
+        return ReadWorkbookDataCore(workbookPackage, CancellationToken.None);
+    }
+
+    private static ChartWorkbookData? ReadWorkbookDataCore(OoxPackage workbookPackage, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         OoxPart? workbookPart = workbookPackage
-            .GetRelationships("/")
+            .GetRelationships("/", cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.Type == WorkbookRelationshipType && relationship.ResolvedTarget is not null)
             .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
             .FirstOrDefault(part => part is not null);
@@ -1887,11 +1897,11 @@ internal sealed partial class PptxRenderer
         }
 
         using Stream workbookStream = workbookPart.OpenRead();
-        XDocument workbookXml = SafeXml.Load(workbookStream);
-        ChartWorkbookSharedString[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
-        ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart);
+        XDocument workbookXml = SafeXml.Load(workbookStream, cancellationToken);
+        ChartWorkbookSharedString[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart, cancellationToken);
+        ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart, cancellationToken);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
-            .GetRelationships(workbookPart.Name)
+            .GetRelationships(workbookPart.Name, cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
             .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
         ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml, workbookRelationships);
@@ -1903,6 +1913,7 @@ internal sealed partial class PptxRenderer
 
         foreach (ChartWorkbookSheet sheet in workbookSheets)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(sheet.Name) ||
                 string.IsNullOrWhiteSpace(sheet.RelationshipId) ||
                 !workbookRelationships.TryGetValue(sheet.RelationshipId, out OoxRelationship? relationship) ||
@@ -1918,9 +1929,10 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            sheets[sheet.Name] = ReadWorksheetData(worksheetPart, sharedStrings);
-            foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, sheet.Name))
+            sheets[sheet.Name] = ReadWorksheetData(worksheetPart, sharedStrings, cancellationToken);
+            foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, sheet.Name, cancellationToken))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 tables[table.Name] = table;
                 if (!string.Equals(table.DisplayName, table.Name, StringComparison.OrdinalIgnoreCase))
                 {
@@ -1952,10 +1964,11 @@ internal sealed partial class PptxRenderer
                 IsOoxmlTrue((string?)calculation.Attribute("forceFullCalc")));
     }
 
-    private static ChartWorkbookSharedString[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart)
+    private static ChartWorkbookSharedString[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         OoxPart? sharedStringsPart = workbookPackage
-            .GetRelationships(workbookPart.Name)
+            .GetRelationships(workbookPart.Name, cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.Type == SharedStringsRelationshipType && relationship.ResolvedTarget is not null)
             .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
             .FirstOrDefault(part => part is not null);
@@ -1966,11 +1979,15 @@ internal sealed partial class PptxRenderer
         }
 
         using Stream stream = sharedStringsPart.OpenRead();
-        XDocument document = SafeXml.Load(stream);
-        return document
-            .Descendants(SpreadsheetNamespace + "si")
-            .Select(ReadWorkbookSharedString)
-            .ToArray();
+        XDocument document = SafeXml.Load(stream, cancellationToken);
+        var sharedStrings = new List<ChartWorkbookSharedString>();
+        foreach (XElement item in document.Descendants(SpreadsheetNamespace + "si"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            sharedStrings.Add(ReadWorkbookSharedString(item));
+        }
+
+        return sharedStrings.ToArray();
     }
 
     private static ChartWorkbookSharedString ReadWorkbookSharedString(XElement item)
@@ -2043,10 +2060,11 @@ internal sealed partial class PptxRenderer
         return definedNames;
     }
 
-    private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, OoxPart workbookPart)
+    private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         OoxPart? stylesPart = workbookPackage
-            .GetRelationships(workbookPart.Name)
+            .GetRelationships(workbookPart.Name, cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.Type == SpreadsheetStylesRelationshipType && relationship.ResolvedTarget is not null)
             .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
             .FirstOrDefault(part => part is not null);
@@ -2057,10 +2075,11 @@ internal sealed partial class PptxRenderer
         }
 
         using Stream stream = stylesPart.OpenRead();
-        XDocument document = SafeXml.Load(stream);
+        XDocument document = SafeXml.Load(stream, cancellationToken);
         var customNumberFormats = new Dictionary<int, string>();
         foreach (XElement numberFormat in document.Root?.Element(SpreadsheetNamespace + "numFmts")?.Elements(SpreadsheetNamespace + "numFmt") ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (numberFormat.Attribute("numFmtId") is { } idAttribute &&
                 int.TryParse(idAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id) &&
                 id >= 0)
@@ -2072,6 +2091,7 @@ internal sealed partial class PptxRenderer
         var cellFormats = new List<ChartWorkbookCellFormat>();
         foreach (XElement format in document.Root?.Element(SpreadsheetNamespace + "cellXfs")?.Elements(SpreadsheetNamespace + "xf") ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int? numberFormatId = ReadSpreadsheetIntegerAttribute(format, "numFmtId");
             bool? applyNumberFormat = format.Attribute("applyNumberFormat") is { } applyAttribute
                 ? IsOoxmlTrue(applyAttribute.Value)
@@ -2164,15 +2184,16 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings)
+    private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken = default)
     {
         using Stream stream = worksheetPart.OpenRead();
-        XDocument document = SafeXml.Load(stream);
+        XDocument document = SafeXml.Load(stream, cancellationToken);
         var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
         var hiddenRows = new HashSet<int>();
         var hiddenColumns = new HashSet<int>();
         foreach (XElement row in document.Descendants(SpreadsheetNamespace + "row"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (IsOoxmlTrue((string?)row.Attribute("hidden")) &&
                 ReadSpreadsheetIntegerAttribute(row, "r") is { } rowIndex)
             {
@@ -2182,6 +2203,7 @@ internal sealed partial class PptxRenderer
 
         foreach (XElement column in document.Descendants(SpreadsheetNamespace + "col"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!IsOoxmlTrue((string?)column.Attribute("hidden")) ||
                 ReadSpreadsheetIntegerAttribute(column, "min") is not { } minColumn ||
                 ReadSpreadsheetIntegerAttribute(column, "max") is not { } maxColumn)
@@ -2191,12 +2213,14 @@ internal sealed partial class PptxRenderer
 
             for (int columnIndex = minColumn; columnIndex <= maxColumn; columnIndex++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 hiddenColumns.Add(columnIndex);
             }
         }
 
         foreach (XElement cell in document.Descendants(SpreadsheetNamespace + "c"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string? reference = (string?)cell.Attribute("r");
             if (string.IsNullOrWhiteSpace(reference))
             {
@@ -2291,11 +2315,12 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName)
+    private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName, CancellationToken cancellationToken = default)
     {
         var tables = new List<ChartWorkbookTable>();
-        foreach (OoxRelationship relationship in workbookPackage.GetRelationships(worksheetPart.Name))
+        foreach (OoxRelationship relationship in workbookPackage.GetRelationships(worksheetPart.Name, cancellationToken))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (relationship.IsExternal ||
                 relationship.Type != SpreadsheetTableRelationshipType ||
                 relationship.ResolvedTarget is null)
@@ -2310,7 +2335,7 @@ internal sealed partial class PptxRenderer
             }
 
             using Stream stream = tablePart.OpenRead();
-            XDocument tableXml = SafeXml.Load(stream);
+            XDocument tableXml = SafeXml.Load(stream, cancellationToken);
             XElement? tableElement = tableXml.Root;
             if (tableElement is null)
             {

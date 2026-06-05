@@ -22,11 +22,12 @@ internal sealed class PdfEmbeddedFont
 
     public string ResourceKey => BaseFontName;
 
-    public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints)
+    public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken = default)
     {
         var unicodeByCid = new SortedDictionary<ushort, int>();
         foreach (int codePoint in codePoints)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(codePoint);
             if (glyph != 0)
             {
@@ -34,11 +35,12 @@ internal sealed class PdfEmbeddedFont
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         string fontHash = Convert.ToHexString(SHA256.HashData(font.Bytes.Span)).Substring(0, 8);
         return new PdfEmbeddedFont(font, "LOKAD+" + SanitizeName(font.FamilyName) + "-" + fontHash, unicodeByCid);
     }
 
-    public static PdfEmbeddedFont Merge(IEnumerable<PdfEmbeddedFont> fonts)
+    public static PdfEmbeddedFont Merge(IEnumerable<PdfEmbeddedFont> fonts, CancellationToken cancellationToken = default)
     {
         PdfEmbeddedFont[] items = fonts.ToArray();
         if (items.Length == 0)
@@ -54,8 +56,10 @@ internal sealed class PdfEmbeddedFont
         var unicodeByCid = new SortedDictionary<ushort, int>();
         foreach (PdfEmbeddedFont font in items)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             foreach ((ushort cid, int codePoint) in font.UnicodeByCid)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 unicodeByCid[cid] = codePoint;
             }
         }
@@ -63,7 +67,7 @@ internal sealed class PdfEmbeddedFont
         return new PdfEmbeddedFont(items[0].Font, items[0].BaseFontName, unicodeByCid);
     }
 
-    public string BuildToUnicodeCMap()
+    public string BuildToUnicodeCMap(CancellationToken cancellationToken = default)
     {
         var builder = new StringBuilder();
         builder.AppendLine("/CIDInit /ProcSet findresource begin");
@@ -78,6 +82,7 @@ internal sealed class PdfEmbeddedFont
         builder.Append(CultureInfo.InvariantCulture, $"{UnicodeByCid.Count} beginbfchar\n");
         foreach ((ushort cid, int codePoint) in UnicodeByCid)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             builder.Append('<').Append(cid.ToString("X4", CultureInfo.InvariantCulture)).Append("> <");
             if (codePoint <= 0xFFFF)
             {
@@ -103,7 +108,7 @@ internal sealed class PdfEmbeddedFont
         return builder.ToString();
     }
 
-    public string BuildWidthArray()
+    public string BuildWidthArray(CancellationToken cancellationToken = default)
     {
         if (Font.GlyphCount == 0)
         {
@@ -114,6 +119,7 @@ internal sealed class PdfEmbeddedFont
         bool first = true;
         for (int glyphId = 0; glyphId < Font.GlyphCount; glyphId++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             ushort cid = (ushort)glyphId;
             ushort advance = Font.GetAdvanceWidth(cid);
             if (advance == 0)

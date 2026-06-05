@@ -1,4 +1,5 @@
 using Lokad.OoxPdf;
+using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -99,5 +100,118 @@ internal static class PublicApiTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
         TestAssert.True(resolver.ResolveCalls > 0, "DOCX conversion should use the supplied font resolver for text embedding.");
+    }
+
+    public static void ConvertWithCancelledTokenThrowsBeforeInputValidation()
+    {
+        string missingInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".docx");
+        string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        TestAssert.Throws<OperationCanceledException>(
+            () => OoxPdfConverter.Convert(missingInput, output, cancellation.Token));
+
+        TestAssert.True(!File.Exists(output), "Cancelled conversion should not create an output file.");
+    }
+
+    public static void ConvertAsyncWithCancelledTokenThrowsBeforeInputValidation()
+    {
+        string missingInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pptx");
+        string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        TestAssert.Throws<OperationCanceledException>(
+            () => OoxPdfConverter.ConvertAsync(missingInput, output, cancellation.Token).GetAwaiter().GetResult());
+
+        TestAssert.True(!File.Exists(output), "Cancelled async conversion should not create an output file.");
+    }
+
+    public static void ConvertAsyncCompletesForDocx()
+    {
+        string input = WriteMinimalDocx("<w:p/>");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.ConvertAsync(input, output).GetAwaiter().GetResult();
+
+        TestAssert.True(File.Exists(output), "Async conversion should create a PDF.");
+        TestAssert.True(new FileInfo(output).Length > 0, "Async conversion should write PDF bytes.");
+    }
+
+    public static void ConverterPassesCancellationTokenToFontProgramSource()
+    {
+        string input = WriteMinimalDocx("<w:p><w:r><w:t>token probe</w:t></w:r></w:p>");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using var cancellation = new CancellationTokenSource();
+        var source = new ObservingFontProgramSource();
+
+        OoxPdfConverter.Convert(
+            input,
+            output,
+            new OoxPdfOptions { FontResolver = new ObservingFontResolver(source) },
+            cancellation.Token);
+
+        TestAssert.True(source.WasCalled, "DOCX conversion should load the custom font source.");
+        TestAssert.True(source.ObservedCanBeCanceled, "DOCX conversion should pass the caller token to font loading.");
+    }
+
+    private static string WriteMinimalDocx(string bodyContent)
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                """ + bodyContent + """
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private sealed class ObservingFontResolver(IFontProgramSource source) : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            return new FontFaceResolution(
+                request.FamilyName,
+                request.FamilyName,
+                new FontStyleKey(request.Bold, request.Italic),
+                source,
+                IsFallback: false);
+        }
+    }
+
+    private sealed class ObservingFontProgramSource : IFontProgramSource
+    {
+        public string StableId => "test:observed-font";
+
+        public bool WasCalled { get; private set; }
+
+        public bool ObservedCanBeCanceled { get; private set; }
+
+        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
+        {
+            WasCalled = true;
+            ObservedCanBeCanceled = ct.CanBeCanceled;
+            return ValueTask.FromResult(ReadOnlyMemory<byte>.Empty);
+        }
     }
 }

@@ -40,7 +40,8 @@ internal sealed partial class PptxRenderer
             picture.Picture.Alpha,
             picture.Picture.Recolor,
             ToLineStyle(picture.Picture.Line),
-            ToOuterShadow(picture.Picture.OuterShadow));
+            ToOuterShadow(picture.Picture.OuterShadow),
+            context.CancellationToken);
     }
 
     private static void RenderPicture(
@@ -60,8 +61,10 @@ internal sealed partial class PptxRenderer
         double alpha,
         PptxSceneImageRecolor recolor,
         LineStyle line,
-        OuterShadow? outerShadow)
+        OuterShadow? outerShadow,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (targetPartName is null)
         {
             return;
@@ -90,7 +93,7 @@ internal sealed partial class PptxRenderer
         RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index);
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
-            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect);
+            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, cancellationToken);
             StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
             return;
         }
@@ -317,14 +320,15 @@ internal sealed partial class PptxRenderer
         return new FillRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 
-    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect)
+    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, CancellationToken cancellationToken = default)
     {
         XDocument svg;
         using (var stream = new MemoryStream(bytes))
         {
-            svg = SafeXml.Load(stream);
+            svg = SafeXml.Load(stream, cancellationToken);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (!TryReadSvgViewBox(svg.Root, out double minX, out double minY, out double viewWidth, out double viewHeight) ||
             viewWidth <= 0d ||
             viewHeight <= 0d)

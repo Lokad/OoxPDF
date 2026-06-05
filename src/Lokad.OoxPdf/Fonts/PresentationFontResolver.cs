@@ -24,10 +24,11 @@ internal sealed class PresentationFontResolver
             : primary.Resolve(request);
     }
 
-    public (FontFaceResolution Resolution, OpenTypeFont Font)? ResolvePresentationOpenTypeFont(FontRequest request)
+    public (FontFaceResolution Resolution, OpenTypeFont Font)? ResolvePresentationOpenTypeFont(FontRequest request, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         FontFaceResolution resolution = ResolvePresentationTextFace(request);
-        OpenTypeFont? font = LoadOpenTypeFont(resolution);
+        OpenTypeFont? font = LoadOpenTypeFont(resolution, cancellationToken);
         return font is null ? null : (resolution, font);
     }
 
@@ -36,15 +37,16 @@ internal sealed class PresentationFontResolver
         return windowsCatalog.GetDiscoveredFonts();
     }
 
-    private OpenTypeFont? LoadOpenTypeFont(FontFaceResolution resolution)
+    private OpenTypeFont? LoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (openTypeFonts.TryGetValue(key, out OpenTypeFont? cached))
         {
             return cached;
         }
 
-        cached = FontProgramLoader.Load(resolution);
+        cached = FontProgramLoader.Load(resolution, cancellationToken);
         openTypeFonts[key] = cached;
         return cached;
     }

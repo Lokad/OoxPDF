@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal sealed class PdfDocumentWriter
 {
-    public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages)
+    public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(stream);
         if (pages.Count == 0)
@@ -13,14 +13,16 @@ internal sealed class PdfDocumentWriter
             throw new ArgumentException("A PDF document must contain at least one page.", nameof(pages));
         }
 
-        var writer = new PdfObjectWriter(stream);
+        cancellationToken.ThrowIfCancellationRequested();
+        var writer = new PdfObjectWriter(stream, cancellationToken);
         writer.WriteHeader();
 
         List<PdfEmbeddedFont> fonts = pages
             .SelectMany(p => p.Fonts.Select(f => f.Font))
             .GroupBy(f => f.ResourceKey, StringComparer.Ordinal)
-            .Select(PdfEmbeddedFont.Merge)
+            .Select(group => PdfEmbeddedFont.Merge(group, cancellationToken))
             .ToList();
+        cancellationToken.ThrowIfCancellationRequested();
         List<PdfImageXObject> images = pages
             .SelectMany(p => p.Images
                 .Select(i => i.Image)
@@ -28,10 +30,12 @@ internal sealed class PdfDocumentWriter
                 .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image))))
             .DistinctBy(i => i.ResourceKey)
             .ToList();
+        cancellationToken.ThrowIfCancellationRequested();
         List<PdfAxialShading> shadings = pages
             .SelectMany(p => p.Shadings.Select(s => s.Shading))
             .DistinctBy(s => s.ResourceKey)
             .ToList();
+        cancellationToken.ThrowIfCancellationRequested();
         List<PdfTilingPattern> patterns = pages
             .SelectMany(p => p.Patterns.Select(s => s.Pattern))
             .DistinctBy(s => s.ResourceKey)
@@ -41,6 +45,7 @@ internal sealed class PdfDocumentWriter
         var fontObjects = new Dictionary<string, FontObjectNumbers>(StringComparer.Ordinal);
         for (int i = 0; i < fonts.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int baseObject = fontObjectBase + i * 5;
             fontObjects[fonts[i].ResourceKey] = new FontObjectNumbers(
                 Type0: baseObject,
@@ -55,6 +60,7 @@ internal sealed class PdfDocumentWriter
         int nextImageObject = imageObjectBase;
         foreach (PdfImageXObject image in images)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int imageObject = nextImageObject++;
             int? softMaskObject = image.Alpha is null ? null : nextImageObject++;
             imageObjects[image.ResourceKey] = new ImageObjectNumbers(imageObject, softMaskObject);
@@ -64,6 +70,7 @@ internal sealed class PdfDocumentWriter
         var shadingObjects = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < shadings.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             shadingObjects[shadings[i].ResourceKey] = shadingObjectBase + i;
         }
 
@@ -77,6 +84,7 @@ internal sealed class PdfDocumentWriter
         var softMaskObjects = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < softMasks.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             softMaskObjects[softMasks[i].ResourceKey] = softMaskObjectBase + i;
         }
 
@@ -84,6 +92,7 @@ internal sealed class PdfDocumentWriter
         var patternObjects = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < patterns.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             patternObjects[patterns[i].ResourceKey] = patternObjectBase + i;
         }
 
@@ -92,6 +101,7 @@ internal sealed class PdfDocumentWriter
         int nextAnnotationObject = annotationObjectBase;
         foreach (PdfPage page in pages)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var annotationObjects = new int[page.Annotations.Count];
             for (int i = 0; i < annotationObjects.Length; i++)
             {
@@ -107,6 +117,7 @@ internal sealed class PdfDocumentWriter
 
         for (int i = 0; i < pages.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int pageObjectNumber = 3 + i * 2;
             int contentObjectNumber = pageObjectNumber + 1;
             PdfPage page = pages[i];
@@ -120,35 +131,42 @@ internal sealed class PdfDocumentWriter
 
         foreach (PdfEmbeddedFont font in fonts)
         {
-            WriteFontObjects(writer, font, fontObjects[font.ResourceKey]);
+            cancellationToken.ThrowIfCancellationRequested();
+            WriteFontObjects(writer, font, fontObjects[font.ResourceKey], cancellationToken);
         }
 
         foreach (PdfImageXObject image in images)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             WriteImageObjects(writer, image, imageObjects[image.ResourceKey]);
         }
 
         foreach (PdfAxialShading shading in shadings)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             WriteAxialShadingObject(writer, shading, shadingObjects[shading.ResourceKey]);
         }
 
         foreach (PdfLuminositySoftMask softMask in softMasks)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             WriteLuminositySoftMaskObject(writer, softMask, softMaskObjects[softMask.ResourceKey], imageObjects);
         }
 
         foreach (PdfTilingPattern pattern in patterns)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             WriteTilingPatternObject(writer, pattern, patternObjects[pattern.ResourceKey], imageObjects);
         }
 
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int[] annotationObjects = annotationObjectsByPage[pageIndex];
             IReadOnlyList<PdfLinkAnnotation> annotations = pages[pageIndex].Annotations;
             for (int annotationIndex = 0; annotationIndex < annotations.Count; annotationIndex++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 WriteLinkAnnotationObject(writer, annotations[annotationIndex], annotationObjects[annotationIndex], pages.Count);
             }
         }
@@ -158,6 +176,7 @@ internal sealed class PdfDocumentWriter
         writer.WriteAscii("0000000000 65535 f \n");
         foreach (long offset in writer.Offsets)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             writer.WriteAscii(FormattableString.Invariant($"{offset:0000000000} 00000 n \n"));
         }
 
@@ -293,21 +312,21 @@ internal sealed class PdfDocumentWriter
         return builder.ToString();
     }
 
-    private static void WriteFontObjects(PdfObjectWriter writer, PdfEmbeddedFont font, FontObjectNumbers objects)
+    private static void WriteFontObjects(PdfObjectWriter writer, PdfEmbeddedFont font, FontObjectNumbers objects, CancellationToken cancellationToken)
     {
         string baseFont = PdfEmbeddedFont.SanitizeName(font.BaseFontName);
         writer.WriteObject(objects.Type0, FormattableString.Invariant(
             $"<< /Type /Font /Subtype /Type0 /BaseFont /{baseFont} /Encoding /Identity-H /DescendantFonts [{objects.CidFont} 0 R] /ToUnicode {objects.ToUnicode} 0 R >>\n"));
 
         writer.WriteObject(objects.CidFont, FormattableString.Invariant(
-            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap /Identity /W {font.BuildWidthArray()} >>\n"));
+            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap /Identity /W {font.BuildWidthArray(cancellationToken)} >>\n"));
 
         OpenTypeFontMetrics metrics = OpenTypeFontMetrics.From(font.Font);
         writer.WriteObject(objects.Descriptor, FormattableString.Invariant(
             $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags {metrics.Flags} /FontBBox [{metrics.XMin} {metrics.YMin} {metrics.XMax} {metrics.YMax}] /ItalicAngle {FormatNumber(metrics.ItalicAngle)} /Ascent {metrics.Ascent} /Descent {metrics.Descent} /CapHeight {metrics.CapHeight} /StemV 80 /FontFile2 {objects.FontFile} 0 R >>\n"));
 
-        writer.WriteStreamObject(objects.FontFile, "/Filter /FlateDecode", Compress(font.Font.Bytes.Span));
-        writer.WriteStreamObject(objects.ToUnicode, string.Empty, Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap()));
+        writer.WriteStreamObject(objects.FontFile, "/Filter /FlateDecode", Compress(font.Font.Bytes.Span, cancellationToken));
+        writer.WriteStreamObject(objects.ToUnicode, string.Empty, Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken)));
     }
 
     private static void WriteImageObjects(PdfObjectWriter writer, PdfImageXObject image, ImageObjectNumbers objects)
@@ -476,14 +495,17 @@ internal sealed class PdfDocumentWriter
             $"<< /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(start.Red)} {FormatColor(start.Green)} {FormatColor(start.Blue)}] /C1 [{FormatColor(end.Red)} {FormatColor(end.Green)} {FormatColor(end.Blue)}] /N 1 >>");
     }
 
-    private static byte[] Compress(ReadOnlySpan<byte> bytes)
+    private static byte[] Compress(ReadOnlySpan<byte> bytes, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var output = new MemoryStream();
         using (var zlib = new System.IO.Compression.ZLibStream(output, System.IO.Compression.CompressionLevel.SmallestSize, leaveOpen: true))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             zlib.Write(bytes);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return output.ToArray();
     }
 

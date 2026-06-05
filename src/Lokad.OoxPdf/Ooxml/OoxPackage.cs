@@ -21,14 +21,16 @@ internal sealed class OoxPackage
 
     public IReadOnlyCollection<OoxPart> Parts => parts.Values;
 
-    public static OoxPackage Open(string path)
+    public static OoxPackage Open(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using FileStream stream = File.OpenRead(path);
-        return Open(stream);
+        return Open(stream, cancellationToken);
     }
 
-    public static OoxPackage Open(Stream stream)
+    public static OoxPackage Open(Stream stream, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
         if (archive.Entries.Count > MaxEntryCount)
         {
@@ -39,13 +41,15 @@ internal sealed class OoxPackage
             ?? throw new InvalidDataException("OOXML package is missing [Content_Types].xml.");
 
         using Stream contentTypesStream = contentTypesEntry.Open();
-        OoxContentTypes contentTypes = OoxContentTypes.Parse(contentTypesStream);
+        OoxContentTypes contentTypes = OoxContentTypes.Parse(contentTypesStream, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
         long totalBytes = 0;
         var parts = new Dictionary<string, OoxPart>(StringComparer.OrdinalIgnoreCase);
 
         foreach (ZipArchiveEntry entry in archive.Entries)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (entry.FullName.EndsWith('/'))
             {
                 continue;
@@ -73,7 +77,7 @@ internal sealed class OoxPackage
 
             using Stream entryStream = entry.Open();
             using var memory = new MemoryStream((int)entry.Length);
-            entryStream.CopyTo(memory);
+            CopyTo(entryStream, memory, cancellationToken);
             parts[partName] = new OoxPart(partName, contentType, memory.ToArray());
         }
 
@@ -85,8 +89,9 @@ internal sealed class OoxPackage
         return parts.TryGetValue(OoxPath.NormalizePartName(partName), out OoxPart? part) ? part : null;
     }
 
-    public IReadOnlyList<OoxRelationship> GetRelationships(string sourcePartName)
+    public IReadOnlyList<OoxRelationship> GetRelationships(string sourcePartName, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         string relationshipPartName = OoxPath.GetRelationshipPartName(sourcePartName);
         OoxPart? relationshipPart = GetPart(relationshipPartName);
         if (relationshipPart is null)
@@ -95,17 +100,18 @@ internal sealed class OoxPackage
         }
 
         using Stream stream = relationshipPart.OpenRead();
-        return ParseRelationships(stream, sourcePartName);
+        return ParseRelationships(stream, sourcePartName, cancellationToken);
     }
 
-    public static IReadOnlyList<OoxRelationship> ParseRelationships(Stream stream, string sourcePartName)
+    public static IReadOnlyList<OoxRelationship> ParseRelationships(Stream stream, string sourcePartName, CancellationToken cancellationToken = default)
     {
         XNamespace relationshipsNamespace = "http://schemas.openxmlformats.org/package/2006/relationships";
-        XDocument document = SafeXml.Load(stream);
+        XDocument document = SafeXml.Load(stream, cancellationToken);
         var relationships = new List<OoxRelationship>();
 
         foreach (XElement element in document.Root?.Elements(relationshipsNamespace + "Relationship") ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string id = RequiredAttribute(element, "Id");
             string type = RequiredAttribute(element, "Type");
             string target = RequiredAttribute(element, "Target");
@@ -118,6 +124,22 @@ internal sealed class OoxPackage
         }
 
         return relationships;
+    }
+
+    private static void CopyTo(Stream source, Stream destination, CancellationToken cancellationToken)
+    {
+        byte[] buffer = new byte[81920];
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int read = source.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                return;
+            }
+
+            destination.Write(buffer, 0, read);
+        }
     }
 
     private static string RequiredAttribute(XElement element, string name)

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
@@ -17,14 +18,15 @@ internal sealed class DocxRenderer
         this.fontResolver = fontResolver ?? new WindowsFontResolver();
     }
 
-    public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink = null, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!HasRenderableContent(document))
         {
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
 
-        return RenderParagraphs(document, fontResolver, diagnosticSink);
+        return RenderParagraphs(document, fontResolver, diagnosticSink, cancellationToken);
     }
 
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
@@ -109,17 +111,19 @@ internal sealed class DocxRenderer
         return drawingsByType.Values.Any(HasRenderableDrawings);
     }
 
-    private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
+    private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken = default)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.TextMeasurer);
-        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations(layout, fontResources);
+        DocxLayout layout = new DocxLayoutEngine().Create(document, fontResources.TextMeasurer, cancellationToken);
+        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations(layout, fontResources, cancellationToken);
         var pages = new List<PdfPage>(layout.Pages.Count);
         int imageIndex = 1;
 
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
@@ -144,6 +148,7 @@ internal sealed class DocxRenderer
             IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage).ToArray();
             for (int itemIndex = 0; itemIndex < staticItems.Count; itemIndex++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutItem staticItem = staticItems[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? staticItems[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < staticItems.Count ? staticItems[itemIndex + 1] as DocxTableRowLayout : null;
@@ -152,6 +157,7 @@ internal sealed class DocxRenderer
 
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutItem item = layoutPage.Items[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
@@ -160,6 +166,7 @@ internal sealed class DocxRenderer
 
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, diagnosticSink, ref imageIndex);
                 RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
                 RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, diagnosticSink, ref imageIndex);
@@ -182,7 +189,7 @@ internal sealed class DocxRenderer
                 diagnosticSink,
                 ref imageIndex);
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, fontResources, pageNumber, layout.Pages.Count, bookmarkDestinations);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, fontResources, pageNumber, layout.Pages.Count, bookmarkDestinations, cancellationToken);
             pages.Add(new PdfPage(
                 layoutPage.Width,
                 layoutPage.Height,
@@ -203,13 +210,15 @@ internal sealed class DocxRenderer
         DocxFontResources fontResources,
         int pageNumber,
         int pageCount,
-        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations)
+        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations,
+        CancellationToken cancellationToken = default)
     {
         var annotations = new List<PdfLinkAnnotation>();
         foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumeratePlacedRelatedStoryTextLines(page)))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (line.SourceParagraph is not { } paragraph ||
                 paragraph.Hyperlinks.Count == 0)
             {
@@ -219,6 +228,7 @@ internal sealed class DocxRenderer
             IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
             foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex < 0 || segment.Width <= 0d)
                 {
                     continue;
@@ -259,17 +269,20 @@ internal sealed class DocxRenderer
 
     private static IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations(
         DocxLayout layout,
-        DocxFontResources fontResources)
+        DocxFontResources fontResources,
+        CancellationToken cancellationToken = default)
     {
         var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = layout.Pages[pageIndex];
             int pageNumber = pageIndex + 1;
             foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page)
                 .Concat(EnumerateBodyTextLines(page))
                 .Concat(EnumeratePlacedRelatedStoryTextLines(page)))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (line.SourceParagraph is not { } paragraph ||
                     paragraph.BookmarkAnchors.Count == 0)
                 {
@@ -286,6 +299,7 @@ internal sealed class DocxRenderer
 
                 foreach (DocxBookmarkAnchor bookmark in paragraph.BookmarkAnchors)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (string.IsNullOrEmpty(bookmark.Name) || destinations.ContainsKey(bookmark.Name))
                     {
                         continue;
@@ -322,16 +336,17 @@ internal sealed class DocxRenderer
             string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver)
+    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken = default)
     {
-        DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver);
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver, cancellationToken);
         var resources = new List<PdfFontResource>();
         var runResources = new Dictionary<DocxTextRun, DocxRunFontResource>();
         var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
-        PrepareResolvedRunFontResources(plan, resources, runResources, fontCache);
-        DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources, fontCache);
-        IDocxTextMeasurer? measurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache) is not null) || fallback is not null
-            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution)
+        PrepareResolvedRunFontResources(plan, resources, runResources, fontCache, cancellationToken);
+        DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources, fontCache, cancellationToken);
+        IDocxTextMeasurer? measurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
+            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken)
             : null;
         return new DocxFontResources(plan, measurer, resources, runResources, fallback);
     }
@@ -340,31 +355,42 @@ internal sealed class DocxRenderer
         DocxFontPlan plan,
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
-        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache)
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        CancellationToken cancellationToken = default)
     {
-        foreach (IGrouping<(string StableId, int FaceIndex), DocxResolvedRunTypeface> group in plan.Runs
-            .Where(run => LoadFont(run.Resolution, fontCache) is not null)
-            .GroupBy(run => (run.Resolution!.Source.StableId, run.Resolution.FontFaceIndex)))
+        var resolvedRuns = new List<DocxResolvedRunTypeface>();
+        foreach (DocxResolvedRunTypeface run in plan.Runs)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (LoadFont(run.Resolution, fontCache, cancellationToken) is not null)
+            {
+                resolvedRuns.Add(run);
+            }
+        }
+
+        foreach (IGrouping<(string StableId, int FaceIndex), DocxResolvedRunTypeface> group in resolvedRuns.GroupBy(run => (run.Resolution!.Source.StableId, run.Resolution.FontFaceIndex)))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             FontFaceResolution resolution = group.First().Resolution!;
-            IReadOnlyList<int> glyphs = CollectRunGlyphs(group);
+            IReadOnlyList<int> glyphs = CollectRunGlyphs(group, cancellationToken);
             if (glyphs.Count == 0)
             {
                 continue;
             }
 
-            OpenTypeFont? font = LoadFont(resolution, fontCache);
+            OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
             if (font is null)
             {
                 continue;
             }
 
-            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs);
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs, cancellationToken);
             string name = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             var runResource = new DocxRunFontResource(name, embedded, resolution);
             resources.Add(new PdfFontResource(name, embedded));
             foreach (DocxResolvedRunTypeface run in group)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 runResources[run.Run] = runResource;
             }
         }
@@ -375,10 +401,11 @@ internal sealed class DocxRenderer
         IFontResolver fontResolver,
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
-        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache)
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        CancellationToken cancellationToken = default)
     {
-        FontFaceResolution resolution = ResolveDocumentBaseFont(plan, fontResolver, fontCache);
-        OpenTypeFont? font = LoadFont(resolution, fontCache);
+        FontFaceResolution resolution = ResolveDocumentBaseFont(plan, fontResolver, fontCache, cancellationToken);
+        OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
         if (font is null)
         {
             return null;
@@ -392,42 +419,57 @@ internal sealed class DocxRenderer
             return null;
         }
 
-        IReadOnlyList<int> glyphs = CollectRunGlyphs(fallbackRuns);
+        IReadOnlyList<int> glyphs = CollectRunGlyphs(fallbackRuns, cancellationToken);
         if (glyphs.Count == 0)
         {
             return null;
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs, cancellationToken);
         string name = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
         var runResource = new DocxRunFontResource(name, embedded, resolution);
         resources.Add(new PdfFontResource(name, embedded));
         foreach (DocxResolvedRunTypeface run in fallbackRuns)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             runResources[run.Run] = runResource;
         }
 
         return runResource;
     }
 
-    private static IReadOnlyList<int> CollectRunGlyphs(IEnumerable<DocxResolvedRunTypeface> runs)
+    private static IReadOnlyList<int> CollectRunGlyphs(IEnumerable<DocxResolvedRunTypeface> runs, CancellationToken cancellationToken = default)
     {
-        return runs
-            .SelectMany(run => run.Run.Text.EnumerateRunes().Select(rune => rune.Value))
-            .Concat(" ".EnumerateRunes().Select(rune => rune.Value))
-            .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
-            .Distinct()
-            .ToArray();
+        var glyphs = new HashSet<int>();
+        foreach (DocxResolvedRunTypeface run in runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (Rune rune in run.Run.Text.EnumerateRunes())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                glyphs.Add(rune.Value);
+            }
+        }
+
+        foreach (Rune rune in " 0123456789".EnumerateRunes())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            glyphs.Add(rune.Value);
+        }
+
+        return glyphs.ToArray();
     }
 
     private static FontFaceResolution ResolveDocumentBaseFont(
         DocxFontPlan plan,
         IFontResolver fontResolver,
-        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache)
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        CancellationToken cancellationToken = default)
     {
         foreach (DocxResolvedRunTypeface run in plan.Runs)
         {
-            if (LoadFont(run.Resolution, fontCache) is not null)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (LoadFont(run.Resolution, fontCache, cancellationToken) is not null)
             {
                 return run.Resolution!;
             }
@@ -438,8 +480,10 @@ internal sealed class DocxRenderer
 
     private static OpenTypeFont? LoadFont(
         FontFaceResolution? resolution,
-        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache)
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (resolution is null)
         {
             return null;
@@ -451,7 +495,7 @@ internal sealed class DocxRenderer
             return cached;
         }
 
-        cached = FontProgramLoader.Load(resolution);
+        cached = FontProgramLoader.Load(resolution, cancellationToken);
         fontCache[key] = cached;
         return cached;
     }

@@ -2118,12 +2118,14 @@ internal sealed class PptxSceneBuilder
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
     private const string ChartStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartStyle";
 
-    public PptxScene Build(PptxDocument document, OoxPackage package)
+    public PptxScene Build(PptxDocument document, OoxPackage package, CancellationToken cancellationToken = default)
     {
-        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
+        cancellationToken.ThrowIfCancellationRequested();
+        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName, cancellationToken);
         var slides = new List<PptxSceneSlide>(document.Slides.Count);
         foreach (PptxSlide slide in document.Slides)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             OoxPart? slidePart = package.GetPart(slide.PartName);
             if (slidePart is null)
             {
@@ -2153,14 +2155,14 @@ internal sealed class PptxSceneBuilder
                 continue;
             }
 
-            XDocument slideXml = LoadXml(slidePart);
-            OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType);
-            OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType);
-            XDocument? masterXml = masterPart is null ? null : LoadXml(masterPart);
-            XDocument? layoutXml = layoutPart is null ? null : LoadXml(layoutPart);
-            IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name);
-            IReadOnlyDictionary<string, OoxRelationship> layoutRelationships = layoutPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, layoutPart.Name);
-            IReadOnlyDictionary<string, OoxRelationship> slideRelationships = ReadRelationships(package, slide.PartName);
+            XDocument slideXml = LoadXml(slidePart, cancellationToken);
+            OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType, cancellationToken);
+            OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType, cancellationToken);
+            XDocument? masterXml = masterPart is null ? null : LoadXml(masterPart, cancellationToken);
+            XDocument? layoutXml = layoutPart is null ? null : LoadXml(layoutPart, cancellationToken);
+            IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name, cancellationToken);
+            IReadOnlyDictionary<string, OoxRelationship> layoutRelationships = layoutPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, layoutPart.Name, cancellationToken);
+            IReadOnlyDictionary<string, OoxRelationship> slideRelationships = ReadRelationships(package, slide.PartName, cancellationToken);
             IReadOnlyList<XDocument> layoutSources = masterXml is null ? [] : [masterXml];
             IReadOnlyList<XDocument> slideSources = masterXml is null
                 ? layoutXml is null ? [] : [layoutXml]
@@ -2188,18 +2190,18 @@ internal sealed class PptxSceneBuilder
                 HasSlideTransition(slideXml),
                 HasSlideTiming(slideXml),
                 HasSlideOleObject(slideXml),
-                masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships),
-                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships),
-                ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships)));
+                masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships, cancellationToken),
+                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships, cancellationToken),
+                ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
         }
 
         return new PptxScene(document, theme, slides);
     }
 
-    private static XDocument LoadXml(OoxPart part)
+    private static XDocument LoadXml(OoxPart part, CancellationToken cancellationToken = default)
     {
         using Stream stream = part.OpenRead();
-        return SafeXml.Load(stream);
+        return SafeXml.Load(stream, cancellationToken);
     }
 
     private static bool HasSlideTransition(XDocument slideXml)
@@ -2230,16 +2232,18 @@ internal sealed class PptxSceneBuilder
         return PptxColorMap.FromElement(overrideColorMap, inheritedColorMap);
     }
 
-    private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType)
+    private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType, CancellationToken cancellationToken = default)
     {
-        OoxRelationship? relationship = package.GetRelationships(sourcePartName)
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxRelationship? relationship = package.GetRelationships(sourcePartName, cancellationToken)
             .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
         return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
-    private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(OoxPackage package, string sourcePartName)
+    private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(OoxPackage package, string sourcePartName, CancellationToken cancellationToken = default)
     {
-        return package.GetRelationships(sourcePartName)
+        cancellationToken.ThrowIfCancellationRequested();
+        return package.GetRelationships(sourcePartName, cancellationToken)
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
     }
@@ -2250,12 +2254,14 @@ internal sealed class PptxSceneBuilder
         PptxTheme theme,
         PptxColorMap colorMap,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken cancellationToken = default)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
         {
-            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, colorMap, package, relationships));
+            cancellationToken.ThrowIfCancellationRequested();
+            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, colorMap, package, relationships, cancellationToken));
         }
 
         return nodes;
@@ -2278,11 +2284,13 @@ internal sealed class PptxSceneBuilder
         PptxTheme theme,
         PptxColorMap colorMap,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken cancellationToken = default)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement child in container.Elements())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             PptxSceneNodeKind kind = ReadNodeKind(child);
             if (kind == PptxSceneNodeKind.Unknown)
             {
@@ -2302,9 +2310,9 @@ internal sealed class PptxSceneBuilder
                 ReadTextBody(child, placeholderSources, theme, colorMap),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, colorMap, package, relationships) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme, colorMap) : null,
-                kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, colorMap, relationships) : null,
+                kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, colorMap, relationships, cancellationToken) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
-                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, colorMap, package, relationships) : [],
+                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, colorMap, package, relationships, cancellationToken) : [],
                 child));
         }
 
@@ -2516,8 +2524,10 @@ internal sealed class PptxSceneBuilder
         OoxPackage package,
         PptxTheme theme,
         PptxColorMap colorMap,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         XElement? graphicData = frame
             .Element(DrawingNamespace + "graphic")
             ?.Element(DrawingNamespace + "graphicData");
@@ -2529,18 +2539,23 @@ internal sealed class PptxSceneBuilder
             ? relationship.ResolvedTarget
             : null;
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
-        XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart);
+        XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         PptxSceneChartExternalData externalData = chartPart is null
             ? default
-            : ReadChartExternalData(package, chartPart.Name, chartXml);
+            : ReadChartExternalData(package, chartPart.Name, chartXml, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         PptxSceneChartColorStyle colorStyle = chartPart is null
             ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], 0, [], [], [], null)
-            : ReadChartColorStyle(package, chartPart.Name, theme, colorMap);
+            : ReadChartColorStyle(package, chartPart.Name, theme, colorMap, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         PptxSceneChartStyle stylePart = chartPart is null
             ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
-            : ReadChartStylePart(package, chartPart.Name, theme, colorMap);
+            : ReadChartStylePart(package, chartPart.Name, theme, colorMap, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
         IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart);
         return new PptxSceneChart(
             relationshipId,
@@ -4025,8 +4040,9 @@ internal sealed class PptxSceneBuilder
             ReadChartTextStyleOverride(legend, theme, colorMap));
     }
 
-    private static PptxSceneChartExternalData ReadChartExternalData(OoxPackage package, string chartPartName, XDocument? chartXml)
+    private static PptxSceneChartExternalData ReadChartExternalData(OoxPackage package, string chartPartName, XDocument? chartXml, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         XElement? externalData = chartXml?.Root?.Element(ChartNamespace + "externalData");
         if (externalData is null)
         {
@@ -4037,7 +4053,7 @@ internal sealed class PptxSceneBuilder
         string? targetPartName = null;
         if (!string.IsNullOrWhiteSpace(relationshipId))
         {
-            targetPartName = package.GetRelationships(chartPartName)
+            targetPartName = package.GetRelationships(chartPartName, cancellationToken)
                 .FirstOrDefault(relationship => !relationship.IsExternal &&
                     relationship.Id == relationshipId &&
                     relationship.Type == ChartExternalDataPackageRelationshipType)
@@ -4054,9 +4070,10 @@ internal sealed class PptxSceneBuilder
             autoUpdateValue);
     }
 
-    private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap)
+    private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken = default)
     {
-        OoxRelationship? colorRelationship = package.GetRelationships(chartPartName)
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxRelationship? colorRelationship = package.GetRelationships(chartPartName, cancellationToken)
             .FirstOrDefault(relationship => !relationship.IsExternal &&
                 relationship.Type == ChartColorStyleRelationshipType &&
                 relationship.ResolvedTarget is not null);
@@ -4071,13 +4088,14 @@ internal sealed class PptxSceneBuilder
             return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, [], 0, [], [], [], null);
         }
 
-        XDocument document = LoadXml(colorPart);
+        XDocument document = LoadXml(colorPart, cancellationToken);
         IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations = ReadChartColorStyleRootDeclarations(document, theme, colorMap);
         IReadOnlyList<PptxSceneChartColorDeclaration> declarations = ReadChartColorStyleDeclarations(document, theme, colorMap, rootDeclarations);
         IReadOnlyList<PptxSceneChartColorVariation> variations = ReadChartColorStyleVariations(document, theme, colorMap);
         var colors = new List<RgbColor>();
         foreach (XElement colorElement in document.Root?.Elements().Where(element => element.Name.Namespace == DrawingNamespace) ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
             if (TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out RgbColor color, out _))
             {
@@ -4190,9 +4208,10 @@ internal sealed class PptxSceneBuilder
         return element.Name.LocalName is "srgbClr" or "schemeClr" or "scrgbClr" or "prstClr" or "sysClr" or "hslClr";
     }
 
-    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap)
+    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken = default)
     {
-        OoxRelationship? styleRelationship = package.GetRelationships(chartPartName)
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxRelationship? styleRelationship = package.GetRelationships(chartPartName, cancellationToken)
             .FirstOrDefault(relationship => !relationship.IsExternal &&
                 relationship.Type == ChartStyleRelationshipType &&
                 relationship.ResolvedTarget is not null);
@@ -4207,7 +4226,7 @@ internal sealed class PptxSceneBuilder
             return new PptxSceneChartStyle(false, styleRelationship.ResolvedTarget, string.Empty, null, []);
         }
 
-        XDocument document = LoadXml(stylePart);
+        XDocument document = LoadXml(stylePart, cancellationToken);
         return new PptxSceneChartStyle(
             true,
             stylePart.Name,

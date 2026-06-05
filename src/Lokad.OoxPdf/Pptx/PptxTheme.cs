@@ -55,18 +55,19 @@ internal sealed class PptxTheme
 
     public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], [], []);
 
-    public static PptxTheme Load(OoxPackage package, string presentationPartName)
+    public static PptxTheme Load(OoxPackage package, string presentationPartName, CancellationToken cancellationToken = default)
     {
-        OoxRelationship? themeRelationship = package.GetRelationships(presentationPartName)
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxRelationship? themeRelationship = package.GetRelationships(presentationPartName, cancellationToken)
             .FirstOrDefault(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null);
         string? themePartName = themeRelationship?.ResolvedTarget;
         if (themePartName is null)
         {
-            OoxRelationship? masterRelationship = package.GetRelationships(presentationPartName)
+            OoxRelationship? masterRelationship = package.GetRelationships(presentationPartName, cancellationToken)
                 .FirstOrDefault(r => !r.IsExternal && r.Type == SlideMasterRelationshipType && r.ResolvedTarget is not null);
             themePartName = masterRelationship?.ResolvedTarget is null
                 ? null
-                : package.GetRelationships(masterRelationship.ResolvedTarget)
+                : package.GetRelationships(masterRelationship.ResolvedTarget, cancellationToken)
                     .FirstOrDefault(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null)
                     ?.ResolvedTarget;
         }
@@ -83,13 +84,14 @@ internal sealed class PptxTheme
         }
 
         using Stream stream = themePart.OpenRead();
-        XDocument document = SafeXml.Load(stream);
+        XDocument document = SafeXml.Load(stream, cancellationToken);
         var colors = new Dictionary<string, RgbColor>(StringComparer.Ordinal);
         XElement? colorScheme = document.Descendants(DrawingNamespace + "clrScheme").FirstOrDefault();
         if (colorScheme is not null)
         {
             foreach (XElement colorElement in colorScheme.Elements())
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (TryReadColorElement(colorElement, out RgbColor color))
                 {
                     colors[colorElement.Name.LocalName] = color;

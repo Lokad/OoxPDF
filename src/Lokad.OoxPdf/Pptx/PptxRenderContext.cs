@@ -29,7 +29,8 @@ internal sealed record PptxRenderContext(
     IReadOnlyList<PptxRenderSource> InheritedSources,
     PresentationFontResolver FontResolver,
     Dictionary<string, PdfImageXObject?> ImageCache,
-    Action<OoxPdfDiagnostic>? DiagnosticSink)
+    Action<OoxPdfDiagnostic>? DiagnosticSink,
+    CancellationToken CancellationToken)
 {
     public IReadOnlyList<XDocument> InheritedXml { get; } = InheritedSources.Select(source => source.Xml).ToArray();
 

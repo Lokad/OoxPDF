@@ -15,14 +15,15 @@ internal sealed class OoxContentTypes
         this.overrides = overrides;
     }
 
-    public static OoxContentTypes Parse(Stream stream)
+    public static OoxContentTypes Parse(Stream stream, CancellationToken cancellationToken = default)
     {
-        XDocument document = SafeXml.Load(stream);
+        XDocument document = SafeXml.Load(stream, cancellationToken);
         var defaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (XElement element in document.Root?.Elements() ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (element.Name == ContentTypesNamespace + "Default")
             {
                 string extension = RequiredAttribute(element, "Extension");

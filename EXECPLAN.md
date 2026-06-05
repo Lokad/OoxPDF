@@ -16,6 +16,80 @@ public synthetic OOXML as the implementation oracle, inspect those PDFs and thei
 changing renderer behavior, use private local-only documents only to discover missing Office features, and
 keep diagnostics honest when a feature is still missing.
 
+## Current Task: End-to-End Cancellation
+
+Users can currently call `OoxPdfConverter.Convert(...)`, but they cannot ask conversion to stop when a host
+request is cancelled. This task makes `.pptx` and `.docx` conversion cooperatively cancellable from the
+public API through package loading, document reading, rendering, font loading, and PDF writing. A cooperative
+cancellation point is a place where code calls `CancellationToken.ThrowIfCancellationRequested()` so a
+requested cancellation becomes an `OperationCanceledException` instead of the converter continuing until the
+whole document is complete.
+
+At the end of this task, a caller should be able to call `await OoxPdfConverter.ConvertAsync(input, output,
+options, cancellationToken)` and observe that an already-cancelled or later-cancelled token stops conversion.
+The existing synchronous `Convert(...)` calls remain source-compatible, and token-aware synchronous overloads
+are added for hosts that do not want a task-returning API.
+
+### Current Task Progress
+
+- [x] (2026-06-05 12:41Z) Confirmed the current public API is synchronous-only: `OoxPdfConverter.Convert(...)`
+  has no cancellation token and `OoxPdfOptions` has no cancellation property.
+- [x] (2026-06-05 12:41Z) Confirmed font byte sources already expose `GetBytesAsync(CancellationToken)`, but
+  `FontProgramLoader` currently calls it without passing a token and blocks synchronously.
+- [x] (2026-06-05 13:26Z) Added additive public conversion overloads and token propagation through the conversion core.
+- [x] (2026-06-05 13:26Z) Added cooperative cancellation checks in the major package, reader, renderer, font, layout, and PDF writer
+  loops.
+- [x] (2026-06-05 13:26Z) Added dependency-free unit tests proving cancelled conversion fails with `OperationCanceledException` and
+  that async conversion can complete normally.
+- [x] (2026-06-05 13:26Z) Ran focused public API tests and a full build with `--tl:off`.
+
+### Current Task Surprises & Discoveries
+
+- `dotnet test` on the console test project only restored/built and did not run the custom grouped test
+  runner. Use `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- ...` for
+  unit-test validation.
+- Private reflection tests invoke the chart workbook helper by name and expected the old one-argument
+  `ReadWorkbookData(OoxPackage)` method. The cancellable implementation was moved behind a separate core
+  helper so that reflection surface remains stable.
+
+### Current Task Decision Log
+
+- Decision: Keep existing synchronous conversion signatures and add token-aware overloads instead of replacing
+  the API.
+  Rationale: Existing users and tests call `Convert(input, output, options)`; preserving those calls avoids a
+  breaking change while still giving cancellation-capable hosts a first-class path.
+  Date/Author: 2026-06-05 / Codex.
+
+- Decision: Add `ConvertAsync` as an additive public API that uses the same token-aware core as the
+  synchronous overloads.
+  Rationale: The renderer is mostly CPU-bound and currently builds complete page objects before serializing
+  the PDF. Sharing one cooperative cancellation core keeps behavior consistent between sync and async callers.
+  Date/Author: 2026-06-05 / Codex.
+
+### Current Task Validation
+
+Run from `C:\Users\JoannesVermorel\code\OoxPDF`:
+
+    dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group api --skip-slow
+    dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
+
+The public API test group should include cancellation tests that fail before this change because no
+token-aware conversion API exists, and pass afterward by observing `OperationCanceledException` from both
+sync and async conversion paths when the token is cancelled.
+
+Validation results:
+
+- PASS: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group api --skip-slow`
+  reported 9 passed, 0 failed, 0 skipped.
+- PASS: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` completed with 0 warnings and 0
+  errors.
+- PARTIAL: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`
+  still reports four standalone PPTX fidelity failures unrelated to cancellation:
+  `PptxSyntheticGroupedConnectorHonorsGroupFlip`,
+  `PptxSyntheticTextBoxUsesThemeHyperlinkColor`,
+  `PptxBoundaryInvarianceProbeCoalescesLeftAlignedHighlightBoundaries`, and
+  `PptxThemeColorMapResolvesSceneTextAndShapeColors`.
+
 ## Context and Orientation
 
 - `src/Lokad.OoxPdf`: production library, OOXML parsers, renderers, PDF writer, font/image code.

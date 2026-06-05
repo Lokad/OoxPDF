@@ -22,8 +22,9 @@ internal sealed record DocxResolvedRunTypeface(
 
 internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 {
-    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver)
+    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateBodyParagraphs(document)
             .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
             .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
@@ -38,13 +39,19 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
                 .Select(_ => DocxImplicitParagraphElement.CreateParagraphMarkRun()))
             .ToArray();
 
-        return new DocxFontPlan(runs
-            .Select(run => ResolveRunTypeface(run, document.FontCatalog, fontResolver))
-            .ToArray());
+        var resolvedRuns = new DocxResolvedRunTypeface[runs.Count];
+        for (int i = 0; i < runs.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            resolvedRuns[i] = ResolveRunTypeface(runs[i], document.FontCatalog, fontResolver, cancellationToken);
+        }
+
+        return new DocxFontPlan(resolvedRuns);
     }
 
-    private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver)
+    private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         DocxEffectiveRunProperties effective = run.EffectiveProperties;
         DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, fontCatalog);
         IReadOnlyList<string> families = DistinctFamilies(candidates.Primary, candidates.Alternate, candidates.Theme);
@@ -55,6 +62,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 
         for (int i = 0; i < families.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string family = families[i];
             FontFaceResolution resolution = fontResolver.Resolve(new FontRequest(family, effective.Bold, effective.Italic));
             if (!resolution.IsFallback)
@@ -119,16 +127,19 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
 {
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
     private readonly FontFaceResolution? fallbackResolution;
+    private readonly CancellationToken cancellationToken;
     private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts = new();
 
-    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution = null)
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution = null, CancellationToken cancellationToken = default)
     {
         runs = plan.Runs;
         this.fallbackResolution = fallbackResolution;
+        this.cancellationToken = cancellationToken;
     }
 
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         DocxResolvedRunTypeface? resolved = ResolveRun(run);
         if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
         {
@@ -145,6 +156,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         ushort previousGlyph = 0;
         foreach (Rune rune in text.EnumerateRunes())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(rune.Value);
             if (previousGlyph != 0 && glyph != 0)
             {
@@ -160,6 +172,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
 
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         DocxResolvedRunTypeface? resolved = ResolveRun(run);
         if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
         {
@@ -174,12 +187,14 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
 
     public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         OpenTypeFont? font = ResolveFont(run);
         return font is null ? fontSize : DocxLineMetrics.MeasureWindowsAscender(font, fontSize);
     }
 
     public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         OpenTypeFont? font = ResolveFont(run);
         return font is null ? 0d : DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
     }
@@ -191,7 +206,16 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             return null;
         }
 
-        return runs.FirstOrDefault(resolved => resolved.Run.Equals(run));
+        foreach (DocxResolvedRunTypeface resolved in runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (resolved.Run.Equals(run))
+            {
+                return resolved;
+            }
+        }
+
+        return null;
     }
 
     private OpenTypeFont? ResolveFont(DocxTextRun? run)
@@ -204,13 +228,14 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
 
     private OpenTypeFont? LoadFont(FontFaceResolution resolution)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var key = (resolution.Source.StableId, resolution.FontFaceIndex);
         if (fonts.TryGetValue(key, out OpenTypeFont? cached))
         {
             return cached;
         }
 
-        OpenTypeFont? loaded = FontProgramLoader.Load(resolution);
+        OpenTypeFont? loaded = FontProgramLoader.Load(resolution, cancellationToken);
         fonts[key] = loaded;
         return loaded;
     }

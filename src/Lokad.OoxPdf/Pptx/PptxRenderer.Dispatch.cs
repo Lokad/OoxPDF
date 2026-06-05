@@ -17,10 +17,12 @@ internal sealed partial class PptxRenderer
         PptxColorMap sourceColorMap,
         ref int imageIndex,
         GroupTransform transform,
-        bool renderPlaceholders)
+        bool renderPlaceholders,
+        CancellationToken cancellationToken = default)
     {
         foreach (PptxSceneNode node in nodes)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int stateDepth = graphics.StateDepth;
             try
             {
@@ -35,7 +37,8 @@ internal sealed partial class PptxRenderer
                     sourceColorMap,
                     ref imageIndex,
                     transform,
-                    renderPlaceholders);
+                    renderPlaceholders,
+                    cancellationToken);
             }
             catch (Exception ex) when (IsRecoverableNodeRenderException(ex))
             {
@@ -56,8 +59,10 @@ internal sealed partial class PptxRenderer
         PptxColorMap sourceColorMap,
         ref int imageIndex,
         GroupTransform transform,
-        bool renderPlaceholders)
+        bool renderPlaceholders,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         switch (node.Kind)
         {
             case PptxSceneNodeKind.Shape:
@@ -122,6 +127,7 @@ internal sealed partial class PptxRenderer
                 break;
             case PptxSceneNodeKind.Chart:
                 BeginSlideNodeClip(context, graphics);
+                cancellationToken.ThrowIfCancellationRequested();
                 RenderChartFrame(context, graphics, chartFonts, node, transform);
                 EndSlideNodeClip(graphics);
                 break;
@@ -140,7 +146,8 @@ internal sealed partial class PptxRenderer
                     sourceColorMap,
                     ref imageIndex,
                     transform.Combine(ToGroupTransform(node.GroupTransform)),
-                    renderPlaceholders);
+                    renderPlaceholders,
+                    cancellationToken);
                 break;
         }
     }

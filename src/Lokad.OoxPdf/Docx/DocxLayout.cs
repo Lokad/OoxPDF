@@ -1952,14 +1952,16 @@ internal sealed class DocxLayoutEngine
         double Scale,
         IReadOnlyList<double> ResolvedColumnWidths);
 
-    public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded)
+    public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IDocxTextMeasurer? textMeasurer = embedded is null ? null : new DocxEmbeddedTextMeasurer(embedded);
-        return Create(document, textMeasurer);
+        return Create(document, textMeasurer, cancellationToken);
     }
 
-    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer)
+    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
@@ -1973,8 +1975,8 @@ internal sealed class DocxLayoutEngine
         bool activeColumnHasContent = false;
         int tableIndex = 0;
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
-        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints);
-        IReadOnlyDictionary<int, double> footnoteReserveHeightBySourceBlock = CreateFootnoteReserveHeightBySourceBlock(document, relatedStoryLayouts);
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = CreateRelatedStoryLayouts(document.RelatedStories, page.BodyWidth, textMeasurer, defaultTabStopPoints, cancellationToken);
+        IReadOnlyDictionary<int, double> footnoteReserveHeightBySourceBlock = CreateFootnoteReserveHeightBySourceBlock(document, relatedStoryLayouts, cancellationToken);
         double currentPageFootnoteReserveHeight = 0d;
 
         void ApplyActiveColumnFrame()
@@ -2058,6 +2060,7 @@ internal sealed class DocxLayoutEngine
 
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxBodyElement element = document.BodyElements[elementIndex];
             if (element is DocxPageBreakElement pageBreak)
             {
@@ -2156,10 +2159,11 @@ internal sealed class DocxLayoutEngine
                         width,
                         page.Height - page.MarginTop - CurrentFrameBottom(),
                         textMeasurer,
-                        defaultTabStopPoints);
+                        defaultTabStopPoints,
+                        cancellationToken);
                 }
 
-                LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent);
+                LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken);
                 if (currentItems.Count > itemCountBeforeTable)
                 {
                     activeColumnHasContent = true;
@@ -2239,6 +2243,7 @@ internal sealed class DocxLayoutEngine
 
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     DocxWrappedTextLine line = lines[lineIndex];
                     if (cursorY - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
                     {
@@ -2316,6 +2321,7 @@ internal sealed class DocxLayoutEngine
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
                 if (cursorY - imageHeight < CurrentFrameBottom() && HasCurrentColumnContent())
@@ -2352,18 +2358,19 @@ internal sealed class DocxLayoutEngine
             FinishPage();
         }
 
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, relatedStoryLayouts).ToArray();
-        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints).ToArray();
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, relatedStoryLayouts, cancellationToken).ToArray();
+        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, cancellationToken).ToArray();
         return new DocxLayout(
             pagesWithStaticText,
-            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText),
-            CreateStaticFloatingDrawingLayouts(pagesWithStaticText),
+            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, cancellationToken),
+            CreateStaticFloatingDrawingLayouts(pagesWithStaticText, cancellationToken),
             relatedStoryLayouts);
     }
 
     private static IReadOnlyDictionary<int, double> CreateFootnoteReserveHeightBySourceBlock(
         DocxDocument document,
-        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts)
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
+        CancellationToken cancellationToken = default)
     {
         var reserveHeightBySourceBlock = new Dictionary<int, double>();
         if (relatedStoryLayouts.Count == 0)
@@ -2375,11 +2382,13 @@ internal sealed class DocxLayoutEngine
         DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, "Footnote", "separator");
         for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             double reserveHeight = 0d;
             var reservedKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
             bool reservedFootnoteSeparator = false;
             foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 DocxInlineReference reference = location.Reference;
                 if (reference.Kind != "Footnote" || reference.Id is null || !reservedKeys.Add((reference.Kind, reference.Id)))
                 {
@@ -2412,7 +2421,8 @@ internal sealed class DocxLayoutEngine
     private static IReadOnlyList<DocxLayoutPage> AddPlacedRelatedStories(
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,
-        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts)
+        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
+        CancellationToken cancellationToken = default)
     {
         if (pages.Count == 0 || relatedStoryLayouts.Count == 0)
         {
@@ -2430,12 +2440,15 @@ internal sealed class DocxLayoutEngine
         DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, "Footnote", "separator");
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = pages[pageIndex];
             List<DocxReferencedRelatedStoryLayout> pageFootnoteStories = [];
             foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     DocxInlineReference reference = location.Reference;
                     if (reference.Kind != "Footnote" || reference.Id is null)
                     {
@@ -2469,14 +2482,15 @@ internal sealed class DocxLayoutEngine
                 : page with { PlacedRelatedStories = placedStories };
         }
 
-        return AddPlacedEndnoteStories(document, pagesWithStories, relatedStoryLayouts, placedStoryKeys);
+        return AddPlacedEndnoteStories(document, pagesWithStories, relatedStoryLayouts, placedStoryKeys, cancellationToken);
     }
 
     private static IReadOnlyList<DocxLayoutPage> AddPlacedEndnoteStories(
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
-        HashSet<(string Kind, string Id)> placedStoryKeys)
+        HashSet<(string Kind, string Id)> placedStoryKeys,
+        CancellationToken cancellationToken = default)
     {
         List<DocxReferencedRelatedStoryLayout> endnoteStories = ResolveReferencedRelatedStoryLayouts(document, relatedStoryLayouts, "Endnote", placedStoryKeys).ToList();
         if (endnoteStories.Count == 0)
@@ -2489,6 +2503,7 @@ internal sealed class DocxLayoutEngine
         var sectionEndStories = new List<DocxReferencedRelatedStoryLayout>();
         foreach (DocxReferencedRelatedStoryLayout endnoteStory in endnoteStories)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, endnoteStory.Location) < 0)
             {
                 documentEndStories.Add(endnoteStory.StoryLayout);
@@ -2502,6 +2517,7 @@ internal sealed class DocxLayoutEngine
                      .GroupBy(story => ResolveSectionBlockRange(document.BodyElements, story.Location.SourceBlockIndex))
                      .OrderBy(group => group.Key.StartBlockIndex))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int sectionEndPageIndex = ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, sectionGroup.First().Location);
             if (sectionEndPageIndex < 0)
             {
@@ -2509,7 +2525,7 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
-            PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionGroup.ToArray());
+            PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionGroup.ToArray(), cancellationToken);
         }
 
         return ReindexPageOwnedLayouts(AddDocumentEndnoteStories(outputPages, documentEndStories));
@@ -2518,7 +2534,8 @@ internal sealed class DocxLayoutEngine
     private static void PlaceSectionEndEndnoteStories(
         List<DocxLayoutPage> outputPages,
         int sectionEndPageIndex,
-        IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories)
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories,
+        CancellationToken cancellationToken = default)
     {
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
@@ -2526,6 +2543,7 @@ internal sealed class DocxLayoutEngine
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
         foreach (DocxReferencedRelatedStoryLayout story in sectionEndStories)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             PlaceRelatedStorySlices(
                 outputPages,
                 ref activePageIndex,
@@ -3210,18 +3228,30 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxRelatedStory> stories,
         double bodyWidth,
         IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints)
+        double defaultTabStopPoints,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (textMeasurer is null || stories.Count == 0)
         {
-            return stories
-                .Select((story, index) => new DocxRelatedStoryLayout(story, index, [], [], [], [], 0d))
-                .ToArray();
+            var emptyLayouts = new DocxRelatedStoryLayout[stories.Count];
+            for (int index = 0; index < stories.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                emptyLayouts[index] = new DocxRelatedStoryLayout(stories[index], index, [], [], [], [], 0d);
+            }
+
+            return emptyLayouts;
         }
 
-        return stories
-            .Select((story, index) => CreateRelatedStoryLayout(story, index, bodyWidth, textMeasurer, defaultTabStopPoints))
-            .ToArray();
+        var layouts = new DocxRelatedStoryLayout[stories.Count];
+        for (int index = 0; index < stories.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            layouts[index] = CreateRelatedStoryLayout(stories[index], index, bodyWidth, textMeasurer, defaultTabStopPoints, cancellationToken);
+        }
+
+        return layouts;
     }
 
     private static DocxRelatedStoryLayout CreateRelatedStoryLayout(
@@ -3229,7 +3259,8 @@ internal sealed class DocxLayoutEngine
         int storyIndex,
         double bodyWidth,
         IDocxTextMeasurer textMeasurer,
-        double defaultTabStopPoints)
+        double defaultTabStopPoints,
+        CancellationToken cancellationToken = default)
     {
         var textLines = new List<DocxTextLineLayout>();
         var inlineImages = new List<DocxInlineImageLayout>();
@@ -3242,6 +3273,7 @@ internal sealed class DocxLayoutEngine
 
         for (int elementIndex = 0; elementIndex < story.BodyElements.Count; elementIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxBodyElement element = story.BodyElements[elementIndex];
             if (element is DocxTableElement tableElement)
             {
@@ -3256,9 +3288,11 @@ internal sealed class DocxLayoutEngine
                     bodyWidth,
                     UnpagedRelatedStoryCanvasHeightPoints,
                     textMeasurer,
-                    defaultTabStopPoints);
+                    defaultTabStopPoints,
+                    cancellationToken);
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     double rowHeight = frame.RowHeights[rowIndex];
                     tableRows.Add(CreateTableRowLayout(
                         tableElement.Table,
@@ -3312,6 +3346,7 @@ internal sealed class DocxLayoutEngine
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double imageWidth = Math.Min(bodyWidth, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
                 double imageX = paragraph.EffectiveProperties.Alignment switch
@@ -3502,34 +3537,39 @@ internal sealed class DocxLayoutEngine
 
     private static IReadOnlyList<DocxFloatingDrawingLayout> CreateFloatingDrawingLayouts(
         IReadOnlyList<DocxFloatingDrawing> drawings,
-        IReadOnlyList<DocxLayoutPage> pages)
+        IReadOnlyList<DocxLayoutPage> pages,
+        CancellationToken cancellationToken = default)
     {
-        return drawings
-            .Select(drawing =>
-            {
-                DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is null
-                    ? null
-                    : FindSourceBlockBounds(pages, drawing.SourceBlockIndex.Value);
-                DocxLayoutPage? anchorPage = sourceBlock is null
-                    ? pages.FirstOrDefault()
-                    : pages[sourceBlock.FirstPageIndex];
-                return CreateFloatingDrawingLayout(
-                    drawing,
-                    anchorPage,
-                    sourceBlock?.FirstPageIndex,
-                    sourceBlock?.LastPageIndex,
-                    sourceBlock?.FirstPageIndex,
-                    sourceBlock?.FirstColumnIndex,
-                    sourceBlock);
-            })
-            .ToArray();
+        var layouts = new DocxFloatingDrawingLayout[drawings.Count];
+        for (int i = 0; i < drawings.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxFloatingDrawing drawing = drawings[i];
+            DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is null
+                ? null
+                : FindSourceBlockBounds(pages, drawing.SourceBlockIndex.Value);
+            DocxLayoutPage? anchorPage = sourceBlock is null
+                ? pages.FirstOrDefault()
+                : pages[sourceBlock.FirstPageIndex];
+            layouts[i] = CreateFloatingDrawingLayout(
+                drawing,
+                anchorPage,
+                sourceBlock?.FirstPageIndex,
+                sourceBlock?.LastPageIndex,
+                sourceBlock?.FirstPageIndex,
+                sourceBlock?.FirstColumnIndex,
+                sourceBlock);
+        }
+
+        return layouts;
     }
 
-    private static IReadOnlyList<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(IReadOnlyList<DocxLayoutPage> pages)
+    private static IReadOnlyList<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(IReadOnlyList<DocxLayoutPage> pages, CancellationToken cancellationToken = default)
     {
         var layouts = new List<DocxFloatingDrawingLayout>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = pages[pageIndex];
             int pageNumber = pageIndex + 1;
             DocxSelectedStaticDrawings selectedHeader = SelectStaticHeaderFooterDrawings(
@@ -3540,8 +3580,8 @@ internal sealed class DocxLayoutEngine
                 page.PageSettings.FooterFloatingDrawingsByType,
                 page.PageSettings,
                 pageNumber);
-            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedHeader, "Header", page, pageIndex));
-            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedFooter, "Footer", page, pageIndex));
+            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedHeader, "Header", page, pageIndex, cancellationToken));
+            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedFooter, "Footer", page, pageIndex, cancellationToken));
         }
 
         return layouts;
@@ -3551,10 +3591,12 @@ internal sealed class DocxLayoutEngine
         DocxSelectedStaticDrawings selectedDrawings,
         string storyKind,
         DocxLayoutPage page,
-        int pageIndex)
+        int pageIndex,
+        CancellationToken cancellationToken = default)
     {
         foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             yield return CreateFloatingDrawingLayout(
                 drawing,
                 page,
@@ -3854,7 +3896,8 @@ internal sealed class DocxLayoutEngine
     private static IReadOnlyList<DocxLayoutPage> AddStaticContent(
         IReadOnlyList<DocxLayoutPage> pages,
         IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints)
+        double defaultTabStopPoints,
+        CancellationToken cancellationToken = default)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -3864,6 +3907,7 @@ internal sealed class DocxLayoutEngine
         var pagesWithStaticText = new DocxLayoutPage[pages.Count];
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = pages[pageIndex];
             int pageNumber = pageIndex + 1;
             double bodyWidth = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
@@ -3887,7 +3931,8 @@ internal sealed class DocxLayoutEngine
                     pages.Count,
                     textMeasurer,
                     staticMetrics,
-                    defaultTabStopPoints);
+                    defaultTabStopPoints,
+                    cancellationToken);
             DocxStaticStoryLayoutResult footerLayout = CreateStaticStoryLayout(
                     selectedFooter,
                     page.MarginLeft,
@@ -3898,7 +3943,8 @@ internal sealed class DocxLayoutEngine
                     pages.Count,
                     textMeasurer,
                     staticMetrics,
-                    defaultTabStopPoints);
+                    defaultTabStopPoints,
+                    cancellationToken);
             pagesWithStaticText[pageIndex] = page with
             {
                 StaticTextLines = headerLayout.TextLines.Concat(footerLayout.TextLines).ToArray(),
@@ -3920,7 +3966,8 @@ internal sealed class DocxLayoutEngine
         int pageCount,
         IDocxTextMeasurer textMeasurer,
         IDocxStaticTextMetricsProvider staticMetrics,
-        double defaultTabStopPoints)
+        double defaultTabStopPoints,
+        CancellationToken cancellationToken = default)
     {
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
@@ -3932,6 +3979,7 @@ internal sealed class DocxLayoutEngine
         int tableIndex = 0;
         for (int elementIndex = 0; elementIndex < story.BodyElements.Count; elementIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (story.BodyElements[elementIndex] is DocxTableElement tableElement)
             {
                 cursorY -= pendingSpacingAfter;
@@ -3945,9 +3993,11 @@ internal sealed class DocxLayoutEngine
                     width,
                     UnpagedRelatedStoryCanvasHeightPoints,
                     textMeasurer,
-                    defaultTabStopPoints);
+                    defaultTabStopPoints,
+                    cancellationToken);
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     double rowHeight = frame.RowHeights[rowIndex];
                     tableRows.Add(CreateTableRowLayout(
                         tableElement.Table,
@@ -3991,6 +4041,7 @@ internal sealed class DocxLayoutEngine
             {
                 foreach (DocxWrappedTextLine line in WrapStaticTextLines(spans, width, textMeasurer))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (line.Spans.Count == 0)
                     {
                         continue;
@@ -4035,6 +4086,7 @@ internal sealed class DocxLayoutEngine
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
                 double imageX = paragraph.EffectiveProperties.Alignment switch
@@ -5081,7 +5133,8 @@ internal sealed class DocxLayoutEngine
         Func<DocxTableLayoutFrame> resolveFrame,
         Action finishPage,
         Func<bool> hasPageContent,
-        Action markBoundaryContent)
+        Action markBoundaryContent,
+        CancellationToken cancellationToken = default)
     {
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
             .Select((row, rowIndex) => (row, rowIndex))
@@ -5090,6 +5143,7 @@ internal sealed class DocxLayoutEngine
             .ToArray();
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxTableLayoutFrame frame = resolveFrame();
             DocxTableRow row = table.Rows[rowIndex];
             IReadOnlyList<double> rowHeights = frame.RowHeights;
@@ -5153,7 +5207,8 @@ internal sealed class DocxLayoutEngine
         double availableWidth,
         double pageContentHeight,
         IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints)
+        double defaultTabStopPoints,
+        CancellationToken cancellationToken = default)
     {
         DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth);
         var tableContext = new DocxTableLayoutContext(
@@ -5172,9 +5227,13 @@ internal sealed class DocxLayoutEngine
             table.IndentPoints,
             table.CellSpacingPoints,
             table.LayoutValue);
-        double[] rowHeights = table.Rows
-            .Select(row => MeasureTableRowHeight(table, row, grid.EffectiveColumns, grid.Scale, textMeasurer, defaultTabStopPoints))
-            .ToArray();
+        var rowHeights = new double[table.Rows.Count];
+        for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            rowHeights[rowIndex] = MeasureTableRowHeight(table, table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale, textMeasurer, defaultTabStopPoints);
+        }
+
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
     }
 

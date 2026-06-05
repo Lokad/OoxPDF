@@ -13,17 +13,18 @@ internal sealed class PptxReader
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     private const string SlideRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
 
-    public PptxDocument Read(OoxPackage package)
+    public PptxDocument Read(OoxPackage package, CancellationToken cancellationToken = default)
     {
-        OoxPart presentationPart = FindPresentationPart(package);
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxPart presentationPart = FindPresentationPart(package, cancellationToken);
         using Stream stream = presentationPart.OpenRead();
-        XDocument document = SafeXml.Load(stream);
+        XDocument document = SafeXml.Load(stream, cancellationToken);
 
         XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");
         double width = size is null ? 720d : OoxUnits.EmuToPoints(ParseLongAttribute(size, "cx"));
         double height = size is null ? 540d : OoxUnits.EmuToPoints(ParseLongAttribute(size, "cy"));
 
-        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(presentationPart.Name)
+        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(presentationPart.Name, cancellationToken)
             .Where(r => !r.IsExternal && r.Type == SlideRelationshipType && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
 
@@ -34,6 +35,7 @@ internal sealed class PptxReader
 
         foreach (XElement slideId in slideIds)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string? relationshipId = (string?)slideId.Attribute(RelationshipsDocumentNamespace + "id");
             if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
             {
@@ -49,9 +51,10 @@ internal sealed class PptxReader
         return new PptxDocument(presentationPart.Name, slides, width, height);
     }
 
-    private static OoxPart FindPresentationPart(OoxPackage package)
+    private static OoxPart FindPresentationPart(OoxPackage package, CancellationToken cancellationToken)
     {
-        OoxRelationship? packageRelationship = package.GetRelationships("/")
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxRelationship? packageRelationship = package.GetRelationships("/", cancellationToken)
             .FirstOrDefault(r => !r.IsExternal && r.Type == OfficeDocumentRelationshipType && r.ResolvedTarget is not null);
         if (packageRelationship?.ResolvedTarget is not null)
         {

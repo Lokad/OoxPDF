@@ -62,6 +62,22 @@ OoxPdfConverter.Convert(
     });
 ```
 
+Conversion is cooperatively cancellable. Use the async API when the host already has an async request
+lifetime, or the token-aware synchronous overload when the caller is synchronous:
+
+```csharp
+using var cancellation = new CancellationTokenSource();
+
+await OoxPdfConverter.ConvertAsync(
+    "input.docx",
+    "output.pdf",
+    new OoxPdfOptions { Deterministic = true },
+    cancellation.Token);
+```
+
+The same token is passed through package loading, OOXML reading, rendering, font loading, and PDF writing.
+Custom `IFontProgramSource.GetBytesAsync(CancellationToken)` implementations should observe the token.
+
 Use `OoxPdfInputKind.Pptx` or `OoxPdfInputKind.Docx` in `OoxPdfOptions.InputKind` to override extension-based detection.
 
 Advanced deployments can provide their own font resolver:
