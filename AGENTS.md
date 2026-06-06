@@ -1,15 +1,3 @@
-
-## .NET Commands
-
-Use `--tl:off` to avoid dynamic terminal logger output.
-
-```powershell
-dotnet restore Foo.slnx --tl:off -v minimal
-dotnet build   Foo.slnx --tl:off --nologo -v minimal
-dotnet test    tests/Foo.Tests/Foo.Tests.csproj --tl:off --nologo -v minimal
-dotnet pack    src/Foo/Foo.csproj --tl:off --nologo -v minimal --no-restore
-```
-
 NuGet packages are written to ignored `artifacts/nuget/`.
 
 ## Repo Map
@@ -53,7 +41,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/Lokad.OoxPdf.PptxInspect`: dependency-free PPTX text/glyph-run inspector.
 
 Unit tests can be filtered by capability group with `--group`, for example:
-`dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`.
+`dotnet run --project tests/Lokad.OoxPdf.Tests -- --group pptx-typography --skip-slow`.
 
 ## Private Mode
 

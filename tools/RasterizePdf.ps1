@@ -27,7 +27,7 @@ $sourceNewest = Get-ChildItem -LiteralPath (Split-Path -Parent $rasterizerProjec
     Sort-Object LastWriteTimeUtc -Descending |
     Select-Object -First 1
 if (-not (Test-Path -LiteralPath $rasterizerDll) -or $sourceNewest.LastWriteTimeUtc -gt (Get-Item -LiteralPath $rasterizerDll).LastWriteTimeUtc) {
-    dotnet build $rasterizerProject --tl:off --nologo -v minimal
+    dotnet build $rasterizerProject --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "PDFium rasterizer build failed with exit code $LASTEXITCODE."
     }

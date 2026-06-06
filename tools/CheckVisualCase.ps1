@@ -43,7 +43,7 @@ function Invoke-DotnetBuildIfStale {
         return
     }
 
-    dotnet build $Project --tl:off --nologo -v minimal
+    dotnet build $Project --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "$Description build failed with exit code $LASTEXITCODE."
     }
