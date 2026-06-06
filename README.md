@@ -4,6 +4,8 @@
 
 The current renderer is intended for corporate decks and documents. PPTX rendering is the more mature path; DOCX rendering supports text, page setup, headers and footers, images, tables, numbering, and diagnostics, with layout coverage still being expanded bottom-up.
 
+Release notes are tracked in [CHANGELOG.md](CHANGELOG.md).
+
 ## Runtime Model
 
 The converter runtime is pure managed .NET:
