@@ -80,10 +80,7 @@ internal static class CliTests
         };
         start.ArgumentList.Add("build");
         start.ArgumentList.Add("src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj");
-        start.ArgumentList.Add("--tl:off");
         start.ArgumentList.Add("--nologo");
-        start.ArgumentList.Add("-v");
-        start.ArgumentList.Add("minimal");
 
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to build CLI project.");
         string output = process.StandardOutput.ReadToEnd();

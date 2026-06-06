@@ -1,0 +1,2 @@
+# Keep command-line builds on the stable console logger for automation and coding agents.
+-tl:off

@@ -19,7 +19,7 @@ $sourceNewest = Get-ChildItem -LiteralPath (Split-Path -Parent $project) -Recurs
     Sort-Object LastWriteTimeUtc -Descending |
     Select-Object -First 1
 if (-not (Test-Path -LiteralPath $dll) -or $sourceNewest.LastWriteTimeUtc -gt (Get-Item -LiteralPath $dll).LastWriteTimeUtc) {
-    dotnet build $project --tl:off --nologo -v minimal
+    dotnet build $project --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "PDF inspect build failed with exit code $LASTEXITCODE."
     }

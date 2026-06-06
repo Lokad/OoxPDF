@@ -113,7 +113,7 @@ OoxPdfConverter.Convert(
 ## CLI Usage
 
 ```powershell
-dotnet build src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj --tl:off --nologo -v minimal
+dotnet build src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj
 dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert input.pptx output.pdf --diagnostics diagnostics.json
 ```
 
@@ -151,10 +151,10 @@ See [docs/PrivateValidation.md](docs/PrivateValidation.md) for local-only valida
 ## Development
 
 ```powershell
-dotnet restore Lokad.OoxPdf.slnx --tl:off -v minimal
-dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
-dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow
-dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore
+dotnet restore Lokad.OoxPdf.slnx
+dotnet build Lokad.OoxPdf.slnx
+dotnet run --project tests/Lokad.OoxPdf.Tests -- --skip-slow
+dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --no-restore
 ```
 
 Packages are written to `artifacts/nuget/`.

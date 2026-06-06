@@ -4,9 +4,9 @@ The test project is a dependency-free console runner. Tests are cataloged by cap
 renderer can be tightened bottom-up without running the whole suite on every iteration.
 
 ```powershell
-dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj --tl:off --nologo -v minimal -- --list
-dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj --tl:off --nologo -v minimal -- --skip-slow
-dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow
+dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj -- --list
+dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj -- --skip-slow
+dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj -- --group pptx-typography --skip-slow
 ```
 
 Primary groups are `pptx-model`, `pptx-typography`, `pptx-shapes`, `pptx-images`,
