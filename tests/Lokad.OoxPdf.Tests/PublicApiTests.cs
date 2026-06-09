@@ -139,6 +139,64 @@ internal static class PublicApiTests
         TestAssert.True(new FileInfo(output).Length > 0, "Async conversion should write PDF bytes.");
     }
 
+    public static void ConvertStreamCompletesForDocx()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var output = new MemoryStream();
+
+        OoxPdfConverter.Convert(
+            input,
+            output,
+            new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+
+        TestAssert.True(input.CanRead, "Stream conversion should leave the input stream open.");
+        TestAssert.True(output.CanWrite, "Stream conversion should leave the output stream open.");
+        AssertPdfHeader(output);
+    }
+
+    public static void ConvertAsyncStreamCompletesForDocx()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var output = new MemoryStream();
+
+        OoxPdfConverter.ConvertAsync(
+            input,
+            output,
+            new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx })
+            .GetAwaiter()
+            .GetResult();
+
+        AssertPdfHeader(output);
+    }
+
+    public static void ConvertStreamRequiresExplicitInputKind()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var output = new MemoryStream();
+
+        NotSupportedException ex = TestAssert.Throws<NotSupportedException>(
+            () => OoxPdfConverter.Convert(input, output, new OoxPdfOptions()));
+
+        TestAssert.Contains("InputKind", ex.Message);
+        TestAssert.Equal(0L, output.Length);
+    }
+
+    public static void ConvertStreamWithCancelledTokenThrowsBeforeInputKindValidation()
+    {
+        using var input = new MemoryStream([]);
+        using var output = new MemoryStream();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        TestAssert.Throws<OperationCanceledException>(
+            () => OoxPdfConverter.Convert(input, output, new OoxPdfOptions(), cancellation.Token));
+
+        TestAssert.Equal(0L, output.Length);
+    }
+
     public static void ConverterPassesCancellationTokenToFontProgramSource()
     {
         string input = WriteMinimalDocx("<w:p><w:r><w:t>token probe</w:t></w:r></w:p>");
@@ -154,6 +212,22 @@ internal static class PublicApiTests
 
         TestAssert.True(source.WasCalled, "DOCX conversion should load the custom font source.");
         TestAssert.True(source.ObservedCanBeCanceled, "DOCX conversion should pass the caller token to font loading.");
+    }
+
+    private static byte[] ReadMinimalDocxBytes(string bodyContent)
+    {
+        return File.ReadAllBytes(WriteMinimalDocx(bodyContent));
+    }
+
+    private static void AssertPdfHeader(MemoryStream output)
+    {
+        byte[] bytes = output.ToArray();
+        TestAssert.True(bytes.Length > 5, "Stream conversion should write PDF bytes.");
+        TestAssert.Equal((byte)'%', bytes[0]);
+        TestAssert.Equal((byte)'P', bytes[1]);
+        TestAssert.Equal((byte)'D', bytes[2]);
+        TestAssert.Equal((byte)'F', bytes[3]);
+        TestAssert.Equal((byte)'-', bytes[4]);
     }
 
     private static string WriteMinimalDocx(string bodyContent)

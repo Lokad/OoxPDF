@@ -16,7 +16,7 @@ The converter runtime is pure managed .NET:
 - no native image, font, browser, or PDF libraries;
 - no NuGet package dependencies in `src/Lokad.OoxPdf`.
 
-The runtime inputs are the OOXML file, the output PDF path, options, diagnostics callbacks, and resolved font programs. Validation tools under `tools/` use Office and PDFium, but those tools are not part of library conversion.
+The runtime inputs are the OOXML file or stream, the output PDF path or stream, options, diagnostics callbacks, and resolved font programs. Validation tools under `tools/` use Office and PDFium, but those tools are not part of library conversion.
 
 Rendering follows this broad pipeline:
 
@@ -59,8 +59,7 @@ OoxPdfConverter.Convert(
     "output.pdf",
     new OoxPdfOptions
     {
-        DiagnosticSink = diagnostics.Add,
-        Deterministic = true
+        DiagnosticSink = diagnostics.Add
     });
 ```
 
@@ -73,7 +72,6 @@ using var cancellation = new CancellationTokenSource();
 await OoxPdfConverter.ConvertAsync(
     "input.docx",
     "output.pdf",
-    new OoxPdfOptions { Deterministic = true },
     cancellation.Token);
 ```
 
@@ -81,6 +79,24 @@ The same token is passed through package loading, OOXML reading, rendering, font
 Custom `IFontProgramSource.GetBytesAsync(CancellationToken)` implementations should observe the token.
 
 Use `OoxPdfInputKind.Pptx` or `OoxPdfInputKind.Docx` in `OoxPdfOptions.InputKind` to override extension-based detection.
+
+Stream conversion avoids materializing temporary input and output files. For stream input, `InputKind` must be `Pptx` or `Docx` because there is no filename extension to inspect. The converter leaves caller-owned streams open:
+
+```csharp
+using var input = new MemoryStream(ooxmlBytes, writable: false);
+using var output = new MemoryStream();
+
+await OoxPdfConverter.ConvertAsync(
+    input,
+    output,
+    new OoxPdfOptions
+    {
+        InputKind = OoxPdfInputKind.Pptx
+    },
+    cancellation.Token);
+
+byte[] pdfBytes = output.ToArray();
+```
 
 Advanced deployments can provide their own font resolver:
 

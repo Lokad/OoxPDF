@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added public stream-based conversion overloads so callers can convert PPTX and DOCX packages to PDF without creating temporary input or output files.
+
 ## 0.1.1 - 2026-06-06
 
 - Subset embedded TrueType fonts so generated PDFs carry only the glyphs, metrics, and Unicode map entries needed by rendered PPTX and DOCX text.
