@@ -47,10 +47,6 @@ Unit tests can be filtered by capability group with `--group`, for example:
 
 Use private mode for documents that must not be versioned or made public. Put manifests and inputs under ignored `private-cases/`, run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/<case>.json`, and review ignored outputs under `artifacts/private-visual/`. The script rejects tracked files, paths outside `private-cases/`, and unsafe case IDs. Public notes must be anonymized: record feature gaps, not private text, screenshots, filenames, or document contents.
 
-## ExecPlans
-
-When writing complex features or significant refactors, use an ExecPlan (as described in PLANS.md) from design to implementation.
-
 ## Autonomy Policy
 
 If you're working towards goals, do NOT end your turn. This allows for continuous autonomous work.
