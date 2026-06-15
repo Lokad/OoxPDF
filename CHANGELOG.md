@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 - 2026-06-15
+
+- Added DOCX markup printing support for comments, insertions, deletions, and move revisions.
+- Added DOCX review-mode options for final/original/simple/all-markup output and margin-preserving or expanded comment geometry.
+- Added public visual validation coverage and tooling for DOCX markup reference-cache workflows.
+
 ## 0.1.2 - 2026-06-09
 
 - Added public stream-based conversion overloads so callers can convert PPTX and DOCX packages to PDF without creating temporary input or output files.
