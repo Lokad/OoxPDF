@@ -30,6 +30,14 @@ internal static class PublicApiTests
         TestAssert.Equal(OoxPdfInputKind.Docx, kind);
     }
 
+    public static void OptionsDefaultToFinalDocxMarkupMode()
+    {
+        var options = new OoxPdfOptions();
+
+        TestAssert.Equal(OoxPdfDocxMarkupMode.Final, options.DocxMarkupMode);
+        TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, options.DocxMarkupGeometryMode);
+    }
+
     public static void DeterministicConversionProducesStableBytes()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

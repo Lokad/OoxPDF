@@ -1,0 +1,13 @@
+{
+  "id": "docx-markup-final",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-markup-review.docx",
+  "docxMarkup": "final",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "markup", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -200,6 +200,11 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re S");
     }
 
+    public void FillStrokeRectangleEvenOdd(double x, double y, double width, double height)
+    {
+        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re B*");
+    }
+
     public void FillRoundedRectangle(double x, double y, double width, double height, double radius)
     {
         AppendRoundedRectanglePath(x, y, width, height, radius);

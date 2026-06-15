@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string] $Case
+    [string] $Case,
+
+    [switch] $CacheOnlyReference
 )
 
 $ErrorActionPreference = "Stop"
@@ -49,22 +51,70 @@ function Invoke-DotnetBuildIfStale {
     }
 }
 
+function Read-JsonArray([string] $Path) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return ,@()
+    }
+
+    $items = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
+    if ($null -eq $items) {
+        return @()
+    }
+
+    if ($items -is [array]) {
+        return $items
+    }
+
+    return @($items)
+}
+
 $inputPath = Join-Path $caseDirectory $manifest.input
 $inputFull = (Resolve-Path -LiteralPath $inputPath).Path
 $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
 $dpi = if ($manifest.dpi -ne $null) { [int]$manifest.dpi } else { 144 }
+$docxMarkup = if ($manifest.PSObject.Properties.Name -contains "docxMarkup" -and $manifest.docxMarkup -ne $null) { [string]$manifest.docxMarkup } else { $null }
+$docxMarkupGeometry = if ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and $manifest.docxMarkupGeometry -ne $null) { [string]$manifest.docxMarkupGeometry } else { $null }
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
 $cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
 $librarySourceDirectory = Join-Path $repoRoot "src/Lokad.OoxPdf"
 Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -AdditionalSourceDirectories @($librarySourceDirectory)
-dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnostics
+$candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
+if (-not [string]::IsNullOrWhiteSpace($docxMarkup)) {
+    if ($manifest.kind -ne "docx") {
+        throw "Case '$($manifest.id)' sets docxMarkup but is not a DOCX case."
+    }
+
+    $candidateArgs += @("--docx-markup", $docxMarkup)
+}
+if (-not [string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
+    if ($manifest.kind -ne "docx") {
+        throw "Case '$($manifest.id)' sets docxMarkupGeometry but is not a DOCX case."
+    }
+
+    $candidateArgs += @("--docx-markup-geometry", $docxMarkupGeometry)
+}
+
+dotnet $cliDll @candidateArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $dpi
+$referenceArgs = @{
+    InputPath = $inputFull
+    OutputDirectory = $referenceDir
+    Dpi = $dpi
+}
+if ($CacheOnlyReference) {
+    $referenceArgs.CacheOnly = $true
+    if (-not [string]::IsNullOrWhiteSpace($docxMarkup) -or -not [string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
+        $referenceDocxMarkup = if ([string]::IsNullOrWhiteSpace($docxMarkup)) { "final" } else { $docxMarkup }
+        $referenceDocxMarkupGeometry = if ([string]::IsNullOrWhiteSpace($docxMarkupGeometry)) { "preserve" } else { $docxMarkupGeometry }
+        $referenceArgs.CacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $referenceDocxMarkup, $referenceDocxMarkupGeometry
+    }
+}
+& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") @referenceArgs
 & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
 
 $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
@@ -683,6 +733,52 @@ if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
             if ($LASTEXITCODE -ne 0) {
                 throw "PDF chart text structure gate failed for kind '$($entry.Name)'."
             }
+        }
+    }
+}
+
+$requiresCandidateFontInspection =
+    $manifest.expected.candidateFontsMustBeEmbedded -eq $true -or
+    $manifest.expected.candidateFontsMustHaveToUnicode -eq $true -or
+    $manifest.expected.candidateFontsMustBeSubset -eq $true
+if ($requiresCandidateFontInspection) {
+    $fontInspectRoot = Join-Path $comparisonDir "pdf-fonts"
+    $candidateFontInspect = Join-Path $fontInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $candidateFontInspect | Out-Null
+
+    $candidateFontResources = Join-Path $candidateFontInspect "font-resources.json"
+    if (-not (Test-Path -LiteralPath $candidateFontResources)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateFontInspect
+    }
+
+    $fontResources = @(Read-JsonArray $candidateFontResources)
+    if ($fontResources.Count -eq 0) {
+        throw "PDF font gate failed because the candidate PDF had no page font resources."
+    }
+
+    if ($manifest.expected.candidateFontsMustBeEmbedded -eq $true) {
+        $missingEmbeddedFonts = @($fontResources | Where-Object { $_.Embedded -ne $true })
+        if ($missingEmbeddedFonts.Count -ne 0) {
+            $names = ($missingEmbeddedFonts | ForEach-Object { "p$($_.PageNumber)/$($_.ResourceName):$($_.BaseFont)" }) -join ", "
+            throw "PDF font embedding gate failed. Non-embedded candidate fonts: $names."
+        }
+    }
+
+    if ($manifest.expected.candidateFontsMustHaveToUnicode -eq $true) {
+        $missingToUnicodeFonts = @($fontResources | Where-Object { $_.HasToUnicode -ne $true })
+        if ($missingToUnicodeFonts.Count -ne 0) {
+            $names = ($missingToUnicodeFonts | ForEach-Object { "p$($_.PageNumber)/$($_.ResourceName):$($_.BaseFont)" }) -join ", "
+            throw "PDF font ToUnicode gate failed. Candidate fonts without ToUnicode maps: $names."
+        }
+    }
+
+    if ($manifest.expected.candidateFontsMustBeSubset -eq $true) {
+        $nonSubsetFonts = @($fontResources | Where-Object { $_.IsSubset -ne $true })
+        if ($nonSubsetFonts.Count -ne 0) {
+            $names = ($nonSubsetFonts | ForEach-Object { "p$($_.PageNumber)/$($_.ResourceName):$($_.BaseFont)" }) -join ", "
+            throw "PDF font subsetting gate failed. Non-subset candidate fonts: $names."
         }
     }
 }

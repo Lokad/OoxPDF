@@ -12,11 +12,50 @@ internal sealed class DocxReader
     private const double WordSpacingTokenAutoLineSpacingFactor = 1.2d;
     private const double WordDefaultSpacingAfterPoints = 8d;
 
+    private sealed class DocxComplexFieldState
+    {
+        public DocxComplexFieldState(int sourceRunIndex, int textRunIndex, int textLengthStart, int nestingDepth)
+        {
+            SourceRunIndex = sourceRunIndex;
+            TextRunIndex = textRunIndex;
+            TextLengthStart = textLengthStart;
+            NestingDepth = nestingDepth;
+        }
+
+        public StringBuilder Instruction { get; } = new();
+        public int SourceRunIndex { get; }
+        public int InstructionSourceRunIndex { get; set; } = -1;
+        public int TextRunIndex { get; private set; }
+        public int TextLengthStart { get; private set; }
+        public int NestingDepth { get; }
+        public bool HasSeparate { get; set; }
+        public bool InResult { get; set; }
+        public bool HasCachedResult { get; set; }
+        public bool RendersCachedResult { get; set; }
+        public bool PlaceholderEmitted { get; set; }
+        public int InstructionRunCount { get; set; }
+        public int ResultRunCount { get; set; }
+
+        public void EnsureTextSpan(int textRunIndex, int textLengthStart)
+        {
+            if (ResultRunCount == 0 && !PlaceholderEmitted && !RendersCachedResult)
+            {
+                TextRunIndex = textRunIndex;
+                TextLengthStart = textLengthStart;
+            }
+        }
+    }
+
     private static readonly XNamespace WordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static readonly XNamespace WordprocessingDrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+    private static readonly XNamespace DiagramNamespace = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
     private static readonly XNamespace MathNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/math";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private static readonly XNamespace VmlNamespace = "urn:schemas-microsoft-com:vml";
+    private static readonly XNamespace Office2010WordNamespace = "http://schemas.microsoft.com/office/word/2010/wordml";
+    private static readonly XNamespace Office2012WordNamespace = "http://schemas.microsoft.com/office/word/2012/wordml";
 
     private const string MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
@@ -28,6 +67,7 @@ internal sealed class DocxReader
     private const string FontTableRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable";
     private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
     private const string CommentsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments";
+    private const string CommentsExtendedRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/commentsExtended";
     private const string FootnotesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes";
     private const string EndnotesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes";
     private const string StylesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
@@ -36,10 +76,15 @@ internal sealed class DocxReader
     private const string FontTableContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml";
     private const string ThemeContentType = "application/vnd.openxmlformats-officedocument.theme+xml";
     private const string CommentsContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml";
+    private const string CommentsExtendedContentType = "application/vnd.ms-word.commentsExtended+xml";
     private const string FootnotesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml";
     private const string EndnotesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml";
     private const double WordAutomaticParagraphSpacingPoints = 14d;
-    public DocxDocument Read(OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null, CancellationToken cancellationToken = default)
+    public DocxDocument Read(
+        OoxPackage package,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        CancellationToken cancellationToken = default,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart documentPart = FindDocumentPart(package, cancellationToken);
@@ -50,7 +95,12 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, diagnosticSink, cancellationToken);
+        XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _, cancellationToken);
+        DocxDocumentSettings documentSettings = ReadDocumentSettings(settings);
+        OoxPdfDocxMarkupMode revisionFilteringMarkupMode = ResolveRevisionFilteringMarkupMode(markupMode, documentSettings);
+        DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
+        DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
+        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, diagnosticSink, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr").LastOrDefault();
@@ -60,23 +110,21 @@ internal sealed class DocxReader
         DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name, cancellationToken);
         DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken);
         DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken);
-        XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _, cancellationToken);
-        DocxDocumentSettings documentSettings = ReadDocumentSettings(settings);
         cancellationToken.ThrowIfCancellationRequested();
         DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
             ? null
-            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, cancellationToken);
-        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, cancellationToken);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", cancellationToken);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", cancellationToken);
+            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken);
+        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken);
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ToStaticParagraphsByType(footerBodyElementsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, HeaderRelationshipType, "headerReference", cancellationToken);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, FooterRelationshipType, "footerReference", cancellationToken);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken);
         IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
         IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
-        IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, cancellationToken);
-        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, cancellationToken);
+        IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, revisionFilteringMarkupMode, cancellationToken);
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (pageSize is null)
@@ -88,7 +136,7 @@ internal sealed class DocxReader
                 72d,
                 72d,
                 72d,
-                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, cancellationToken),
+                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken),
                 floatingDrawings,
                 headers,
                 footers,
@@ -105,7 +153,10 @@ internal sealed class DocxReader
                 HeaderFloatingDrawingsByType = headerDrawingsByType,
                 FooterFloatingDrawingsByType = footerDrawingsByType,
                 RelatedStories = relatedStories,
+                PackageCommentAnchorIds = commentAnchorInventory.PackageAnchorIds,
+                HiddenCommentAnchorIds = commentAnchorInventory.HiddenAnchorIds,
                 Settings = documentSettings,
+                MarkupMode = markupMode,
                 FinalSectionBreak = finalSectionBreak
             };
         }
@@ -130,7 +181,7 @@ internal sealed class DocxReader
             right,
             top,
             bottom,
-            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, cancellationToken),
+            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken),
             floatingDrawings,
             headers,
             footers,
@@ -147,9 +198,25 @@ internal sealed class DocxReader
             HeaderFloatingDrawingsByType = headerDrawingsByType,
             FooterFloatingDrawingsByType = footerDrawingsByType,
             RelatedStories = relatedStories,
+            PackageCommentAnchorIds = commentAnchorInventory.PackageAnchorIds,
+            HiddenCommentAnchorIds = commentAnchorInventory.HiddenAnchorIds,
             Settings = documentSettings,
+            MarkupMode = markupMode,
             FinalSectionBreak = finalSectionBreak
         };
+    }
+
+    private static OoxPdfDocxMarkupMode ResolveRevisionFilteringMarkupMode(
+        OoxPdfDocxMarkupMode markupMode,
+        DocxDocumentSettings settings)
+    {
+        DocxRevisionViewSettings revisionView = settings.RevisionViewSettings;
+        if (revisionView.ShowMarkup == false || revisionView.ShowInsertionsAndDeletions == false)
+        {
+            return OoxPdfDocxMarkupMode.Final;
+        }
+
+        return markupMode;
     }
 
     private static DocxDocumentSettings ReadDocumentSettings(XDocument? settings)
@@ -162,6 +229,11 @@ internal sealed class DocxReader
 
         XElement? characterSpacingControl = root.Element(WordprocessingNamespace + "characterSpacingControl");
         XElement? defaultTabStop = root.Element(WordprocessingNamespace + "defaultTabStop");
+        XElement? revisionView = root.Element(WordprocessingNamespace + "revisionView");
+        XElement? trackRevisions = root.Element(WordprocessingNamespace + "trackRevisions");
+        XElement? doNotTrackMoves = root.Element(WordprocessingNamespace + "doNotTrackMoves");
+        XElement? doNotTrackFormatting = root.Element(WordprocessingNamespace + "doNotTrackFormatting");
+        XElement? mirrorMargins = root.Element(WordprocessingNamespace + "mirrorMargins");
         XElement? useFELayout = root.Element(WordprocessingNamespace + "compat")?.Element(WordprocessingNamespace + "useFELayout");
         DocxNoteReferenceSettings footnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "footnotePr"));
         DocxNoteReferenceSettings endnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "endnotePr"));
@@ -180,9 +252,34 @@ internal sealed class DocxReader
             ReadTwipsAttribute(defaultTabStop, WordprocessingNamespace + "val"),
             ReadOnOff(useFELayout),
             (string?)useFELayout?.Attribute(WordprocessingNamespace + "val"),
+            ReadRevisionViewSettings(revisionView),
+            new DocxTrackChangesSettings(
+                (string?)trackRevisions?.Attribute(WordprocessingNamespace + "val"),
+                ReadOnOff(trackRevisions),
+                (string?)doNotTrackMoves?.Attribute(WordprocessingNamespace + "val"),
+                ReadOnOff(doNotTrackMoves),
+                (string?)doNotTrackFormatting?.Attribute(WordprocessingNamespace + "val"),
+                ReadOnOff(doNotTrackFormatting)),
             footnoteReferenceSettings,
             endnoteReferenceSettings,
+            (string?)mirrorMargins?.Attribute(WordprocessingNamespace + "val"),
+            ReadOnOff(mirrorMargins),
             compatSettings);
+    }
+
+    private static DocxRevisionViewSettings ReadRevisionViewSettings(XElement? revisionView)
+    {
+        return new DocxRevisionViewSettings(
+            (string?)revisionView?.Attribute(WordprocessingNamespace + "markup"),
+            OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "markup"),
+            (string?)revisionView?.Attribute(WordprocessingNamespace + "comments"),
+            OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "comments"),
+            (string?)revisionView?.Attribute(WordprocessingNamespace + "insDel"),
+            OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "insDel"),
+            (string?)revisionView?.Attribute(WordprocessingNamespace + "formatting"),
+            OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "formatting"),
+            (string?)revisionView?.Attribute(WordprocessingNamespace + "inkAnnotations"),
+            OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "inkAnnotations"));
     }
 
     private static DocxNoteReferenceSettings ReadNoteReferenceSettings(XElement? properties)
@@ -200,10 +297,49 @@ internal sealed class DocxReader
             (string?)numberRestart?.Attribute(WordprocessingNamespace + "val"));
     }
 
+    private static DocxCommentAnchorInventory ReadCommentAnchorInventory(XDocument document, OoxPdfDocxMarkupMode markupMode)
+    {
+        XElement[] anchors = document
+            .Descendants()
+            .Where(IsCommentAnchorElement)
+            .ToArray();
+        string[] packageAnchorIds = anchors
+            .Select(ReadCommentAnchorId)
+            .Where(id => id is not null)
+            .Select(id => id!)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToArray();
+        string[] hiddenAnchorIds = anchors
+            .Where(anchor => IsInsideExcludedRevisionContainer(anchor, markupMode))
+            .Select(ReadCommentAnchorId)
+            .Where(id => id is not null)
+            .Select(id => id!)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToArray();
+        return new DocxCommentAnchorInventory(packageAnchorIds, hiddenAnchorIds);
+    }
+
+    private static bool IsCommentAnchorElement(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "commentReference" ||
+            element.Name == WordprocessingNamespace + "commentRangeStart" ||
+            element.Name == WordprocessingNamespace + "commentRangeEnd";
+    }
+
+    private static string? ReadCommentAnchorId(XElement element)
+    {
+        return (string?)element.Attribute(WordprocessingNamespace + "id");
+    }
+
     private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
         XDocument document,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -214,18 +350,29 @@ internal sealed class DocxReader
             .Root?
             .Element(WordprocessingNamespace + "body")?
             .Elements()
-            .Where(IsBodyBlockElement)
+            .Where(IsBodyBlockElementOrRevisionContainer)
             .ToArray() ?? [];
         var drawings = new List<DocxFloatingDrawing>();
         foreach (XElement anchor in document.Descendants(WordprocessingDrawingNamespace + "anchor"))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            DocxRevisionInfo? revision = FindInheritedRevision(anchor, markupMode);
+            if (IsInsideExcludedRevisionContainer(anchor, markupMode))
+            {
+                continue;
+            }
+
             drawings.Add(ReadFloatingDrawing(
                 anchor,
                 package,
                 relationships,
+                styles,
+                numbering,
                 FindSourceParagraphIndex(anchor, paragraphs),
-                FindSourceBlockIndex(anchor, bodyBlocks)));
+                FindSourceBlockIndex(anchor, bodyBlocks),
+                revision,
+                markupMode,
+                cancellationToken));
         }
 
         return drawings;
@@ -235,8 +382,13 @@ internal sealed class DocxReader
         XElement anchor,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
         int? sourceParagraphIndex,
-        int? sourceBlockIndex)
+        int? sourceBlockIndex,
+        DocxRevisionInfo? revision = null,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
+        CancellationToken cancellationToken = default)
     {
         XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
         XElement? positionH = anchor.Element(WordprocessingDrawingNamespace + "positionH");
@@ -247,7 +399,15 @@ internal sealed class DocxReader
             element.Name.Namespace == WordprocessingDrawingNamespace &&
             element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
         string? relationshipId = ReadDrawingImageRelationshipId(anchor);
-        DocxInlineImage? image = ReadDrawingImage(anchor, package, relationships);
+        DocxInlineImage? image = ReadDrawingImage(anchor, package, relationships, revision);
+        IReadOnlyList<DocxBodyElement> textBoxBodyElements = ReadTextBoxBodyElements(
+            anchor,
+            styles,
+            numbering,
+            package,
+            relationships,
+            markupMode,
+            cancellationToken);
 
         return new DocxFloatingDrawing(
             (string?)anchor.Attribute("distT"),
@@ -273,7 +433,39 @@ internal sealed class DocxReader
             relationshipId,
             image,
             sourceParagraphIndex,
-            sourceBlockIndex);
+            sourceBlockIndex)
+        {
+            Revisions = RevisionList(revision),
+            TextBoxBodyElements = textBoxBodyElements
+        };
+    }
+
+    private static IReadOnlyList<DocxBodyElement> ReadTextBoxBodyElements(
+        XElement anchor,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
+    {
+        XElement? textBoxContent = anchor
+            .Descendants(WordprocessingNamespace + "txbxContent")
+            .FirstOrDefault();
+        if (textBoxContent is null)
+        {
+            return [];
+        }
+
+        return ReadRelatedStoryBodyElements(
+            textBoxContent.Elements(),
+            styles,
+            numbering,
+            new Dictionary<(string NumId, int Level), int>(),
+            package,
+            relationships,
+            markupMode,
+            cancellationToken);
     }
 
     private static bool IsBodyBlockElement(XElement element)
@@ -281,6 +473,11 @@ internal sealed class DocxReader
         return element.Name == WordprocessingNamespace + "p" ||
             element.Name == WordprocessingNamespace + "tbl" ||
             element.Name == WordprocessingNamespace + "sectPr";
+    }
+
+    private static bool IsBodyBlockElementOrRevisionContainer(XElement element)
+    {
+        return IsBodyBlockElement(element) || IsRevisionContainer(element);
     }
 
     private static int? FindSourceParagraphIndex(XElement element, IReadOnlyList<XElement> paragraphs)
@@ -332,6 +529,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship>? relationships,
         DocxStyleSet? styles,
         DocxNumberingSet? numbering,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -357,6 +555,8 @@ internal sealed class DocxReader
         {
             DocGridLinePitchPoints = ReadTwipsAttribute(docGrid, WordprocessingNamespace + "linePitch"),
             DocGridLinePitchValue = (string?)docGrid?.Attribute(WordprocessingNamespace + "linePitch"),
+            GutterDistancePoints = ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "gutter"),
+            GutterDistanceValue = (string?)pageMargins?.Attribute(WordprocessingNamespace + "gutter"),
             FootnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "footnotePr")),
             EndnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "endnotePr"))
         };
@@ -373,6 +573,7 @@ internal sealed class DocxReader
             numbering,
             HeaderRelationshipType,
             "headerReference",
+            markupMode,
             cancellationToken);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(
             sectionProperties,
@@ -382,6 +583,7 @@ internal sealed class DocxReader
             numbering,
             FooterRelationshipType,
             "footerReference",
+            markupMode,
             cancellationToken);
 
         return pageSettings with
@@ -394,15 +596,21 @@ internal sealed class DocxReader
                 sectionProperties,
                 package,
                 relationships,
+                styles,
+                numbering,
                 HeaderRelationshipType,
                 "headerReference",
+                markupMode,
                 cancellationToken),
             FooterFloatingDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(
                 sectionProperties,
                 package,
                 relationships,
+                styles,
+                numbering,
                 FooterRelationshipType,
                 "footerReference",
+                markupMode,
                 cancellationToken)
         };
     }
@@ -422,6 +630,7 @@ internal sealed class DocxReader
         XDocument document,
         string partName,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken = default)
     {
@@ -432,7 +641,7 @@ internal sealed class DocxReader
 
         cancellationToken.ThrowIfCancellationRequested();
         var emitted = new HashSet<string>(StringComparer.Ordinal);
-        void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored")
+        void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored", bool approximated = false)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!emitted.Add(id))
@@ -443,7 +652,9 @@ internal sealed class DocxReader
             diagnosticSink(new OoxPdfDiagnostic(
                 id,
                 OoxPdfSeverity.Warning,
-                $"Unsupported DOCX feature '{feature}' was detected and ignored or approximated.",
+                approximated
+                    ? $"DOCX feature '{feature}' was detected and approximated."
+                    : $"Unsupported DOCX feature '{feature}' was detected and ignored or approximated.",
                 diagnosticPartName.Length == 0 ? partName : diagnosticPartName,
                 Feature: feature,
                 Fallback: fallback));
@@ -452,16 +663,52 @@ internal sealed class DocxReader
         if (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
             document.Descendants(WordprocessingNamespace + "commentReference").Any())
         {
-            Emit(
-                "DOCX_UNSUPPORTED_COMMENTS",
-                "comments",
-                ResolveRelatedPartNameOrDefault(package, partName, CommentsRelationshipType, CommentsContentType, cancellationToken));
+            string diagnosticPartName = ResolveRelatedPartNameOrDefault(package, partName, CommentsRelationshipType, CommentsContentType, cancellationToken);
+            if (markupContext.ApproximatesComments)
+            {
+                Emit(
+                    "DOCX_APPROXIMATED_COMMENTS",
+                    "comments",
+                    diagnosticPartName,
+                    fallback: "Approximated",
+                    approximated: true);
+            }
+            else
+            {
+                Emit(
+                    "DOCX_UNSUPPORTED_COMMENTS",
+                    "comments",
+                    diagnosticPartName);
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedTrackedChanges(document))
         {
-            Emit("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
+            if (markupContext.ApproximatesTrackedChanges)
+            {
+                Emit(
+                    "DOCX_APPROXIMATED_TRACKED_CHANGES",
+                    "tracked changes",
+                    fallback: "Approximated",
+                    approximated: true);
+            }
+            else
+            {
+                Emit("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (HasFormattingTrackedChanges(document))
+        {
+            Emit(
+                markupContext.ApproximatesFormattingRevisions
+                    ? "DOCX_APPROXIMATED_FORMATTING_REVISIONS"
+                    : "DOCX_UNSUPPORTED_FORMATTING_REVISIONS",
+                "formatting revisions",
+                fallback: markupContext.ApproximatesFormattingRevisions ? "Approximated" : "Ignored",
+                approximated: markupContext.ApproximatesFormattingRevisions);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -487,6 +734,30 @@ internal sealed class DocxReader
         if (document.Descendants(WordprocessingDrawingNamespace + "anchor").Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, relationships)))
         {
             Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (document.Descendants(ChartNamespace + "chart").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_CHART", "chart drawing payload");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (document.Descendants().Any(element => element.Name.Namespace == DiagramNamespace))
+        {
+            Emit("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (HasUnsupportedVml(document, relationships))
+        {
+            Emit("DOCX_UNSUPPORTED_VML", "VML drawing payload");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (HasExternalDrawingImage(document, relationships))
+        {
+            Emit("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -536,9 +807,7 @@ internal sealed class DocxReader
             if (styles.Descendants(WordprocessingNamespace + "style")
                 .Elements(WordprocessingNamespace + "pPr")
                 .Elements(WordprocessingNamespace + "spacing")
-                .Any(spacing =>
-                    spacing.Attribute(WordprocessingNamespace + "beforeAutospacing") is not null ||
-                    spacing.Attribute(WordprocessingNamespace + "afterAutospacing") is not null))
+                .Any(HasUnsupportedParagraphSpacingVariant))
             {
                 Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated");
             }
@@ -546,6 +815,11 @@ internal sealed class DocxReader
             if (HasUnsupportedTableBorderStyle(styles))
             {
                 Emit("DOCX_TABLE_BORDER_STYLE", "table border style", stylesPartName ?? partName, "Approximated");
+            }
+
+            if (HasUnsupportedTableCellTextDirection(styles))
+            {
+                Emit("DOCX_TABLE_TEXT_DIRECTION", "table cell text direction", stylesPartName ?? partName, "Approximated", approximated: true);
             }
         }
 
@@ -555,14 +829,15 @@ internal sealed class DocxReader
             Emit("DOCX_TABLE_BORDER_STYLE", "table border style", partName, "Approximated");
         }
 
+        if (HasUnsupportedTableCellTextDirection(document))
+        {
+            Emit("DOCX_TABLE_TEXT_DIRECTION", "table cell text direction", partName, "Approximated", approximated: true);
+        }
+
         XDocument? numbering = LoadRelatedXmlPart(package, partName, NumberingRelationshipType, NumberingContentType, out string? numberingPartName, cancellationToken);
         if (numbering is not null &&
             numbering.Descendants(WordprocessingNamespace + "lvl")
-                .Elements(WordprocessingNamespace + "pPr")
-                .Elements(WordprocessingNamespace + "ind")
-                .Any(ind =>
-                    ind.Attribute(WordprocessingNamespace + "firstLine") is not null ||
-                    HasCharacterUnitIndent(ind)))
+                .Any(HasUnsupportedNumberingIndent))
         {
             Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated");
         }
@@ -590,11 +865,8 @@ internal sealed class DocxReader
             return true;
         }
 
-        string? relationshipId = ReadDrawingImageRelationshipId(anchor);
-        if (relationshipId is null ||
-            !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) ||
-            relationship.IsExternal ||
-            relationship.ResolvedTarget is null)
+        if (!HasSupportedFloatingDrawingImage(anchor, relationships) &&
+            !HasTextBoxContent(anchor))
         {
             return true;
         }
@@ -602,6 +874,121 @@ internal sealed class DocxReader
         return !IsSupportedHorizontalAnchorPosition(anchor.Element(WordprocessingDrawingNamespace + "positionH")) ||
             !IsSupportedVerticalAnchorPosition(anchor.Element(WordprocessingDrawingNamespace + "positionV")) ||
             !IsSupportedFloatingWrap(anchor);
+    }
+
+    private static bool HasSupportedFloatingDrawingImage(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        string? relationshipId = ReadDrawingImageRelationshipId(anchor);
+        return relationshipId is not null &&
+            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
+            !relationship.IsExternal &&
+            relationship.ResolvedTarget is not null;
+    }
+
+    private static bool HasExternalDrawingImage(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        foreach (XElement blip in document.Descendants(DrawingNamespace + "blip"))
+        {
+            string? relationshipId =
+                (string?)blip.Attribute(RelationshipsNamespace + "link") ??
+                (string?)blip.Attribute(RelationshipsNamespace + "embed");
+            if (relationshipId is not null &&
+                relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
+                relationship.IsExternal)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasUnsupportedVml(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        foreach (XElement element in document.Descendants().Where(element => element.Name.Namespace == VmlNamespace))
+        {
+            if (!IsSupportedVmlElement(element, relationships))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSupportedVmlElement(XElement element, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        return IsSupportedVmlImageElement(element, relationships) ||
+            IsSupportedVmlTextBoxElement(element) ||
+            IsInertVmlDefinitionElement(element);
+    }
+
+    private static bool IsSupportedVmlImageElement(XElement element, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        if (element.Name == VmlNamespace + "shape")
+        {
+            return IsSupportedVmlImageShape(element, relationships);
+        }
+
+        if (element.Name == VmlNamespace + "imagedata")
+        {
+            return element.Ancestors(VmlNamespace + "shape").Any(shape => IsSupportedVmlImageShape(shape, relationships));
+        }
+
+        return false;
+    }
+
+    private static bool IsSupportedVmlTextBoxElement(XElement element)
+    {
+        if (element.Name == VmlNamespace + "shape")
+        {
+            return IsSupportedVmlTextBoxShape(element);
+        }
+
+        if (element.Name == VmlNamespace + "textbox")
+        {
+            return element.Ancestors(VmlNamespace + "shape").Any(IsSupportedVmlTextBoxShape);
+        }
+
+        return false;
+    }
+
+    private static bool IsSupportedVmlTextBoxShape(XElement shape)
+    {
+        return shape.Descendants(WordprocessingNamespace + "txbxContent").Any() &&
+            !shape.Descendants(WordprocessingNamespace + "tbl").Any() &&
+            shape
+                .Descendants()
+                .Where(element => element.Name.Namespace == VmlNamespace)
+                .All(element => element.Name == VmlNamespace + "textbox");
+    }
+
+    private static bool IsInertVmlDefinitionElement(XElement element)
+    {
+        return element.Name == VmlNamespace + "shapetype" ||
+            element.Name == VmlNamespace + "stroke" ||
+            element.Name == VmlNamespace + "path";
+    }
+
+    private static bool IsSupportedVmlImageShape(XElement shape, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        return TryReadVmlImageShape(
+                shape,
+                relationships,
+                out _,
+                out _,
+                out _) &&
+            shape
+                .Descendants()
+                .Where(element => element.Name.Namespace == VmlNamespace)
+                .All(element => element.Name == VmlNamespace + "imagedata");
+    }
+
+    private static bool HasTextBoxContent(XElement anchor)
+    {
+        return anchor
+            .Descendants(WordprocessingNamespace + "txbxContent")
+            .Any(content => content.Elements().Any());
     }
 
     private static bool IsSupportedHorizontalAnchorPosition(XElement? position)
@@ -767,6 +1154,19 @@ internal sealed class DocxReader
                 IsUnsupportedVisibleBorderStyle((string?)element.Attribute(WordprocessingNamespace + "val")));
     }
 
+    private static bool HasUnsupportedTableCellTextDirection(XDocument document)
+    {
+        return document
+            .Descendants(WordprocessingNamespace + "textDirection")
+            .Any(IsUnsupportedTableCellTextDirection);
+    }
+
+    private static bool IsUnsupportedTableCellTextDirection(XElement textDirection)
+    {
+        string? value = (string?)textDirection.Attribute(WordprocessingNamespace + "val");
+        return value is not null && !value.Equals("lrTb", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool HasUnsupportedTrackedChanges(XDocument document)
     {
         XName[] unsupportedTrackChangeContainers =
@@ -793,26 +1193,38 @@ internal sealed class DocxReader
                 container.Elements().Any(child => !IsSupportedVisibleInlineContainerChild(child))));
     }
 
+    private static bool HasFormattingTrackedChanges(XDocument document)
+    {
+        XName[] formattingRevisionElements =
+        [
+            WordprocessingNamespace + "rPrChange",
+            WordprocessingNamespace + "pPrChange",
+            WordprocessingNamespace + "tblPrChange",
+            WordprocessingNamespace + "trPrChange",
+            WordprocessingNamespace + "tcPrChange",
+            WordprocessingNamespace + "sectPrChange"
+        ];
+        return formattingRevisionElements.Any(name => document.Descendants(name).Any());
+    }
+
     private static bool HasUnsupportedComplexFields(XDocument document)
     {
+        var fields = new List<(StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult)>();
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "p"))
         {
-            if (HasUnsupportedComplexFieldInInlineContainer(paragraph))
+            if (HasUnsupportedComplexFieldInInlineChildren(paragraph, fields))
             {
                 return true;
             }
-
-            foreach (XElement container in paragraph.Descendants().Where(IsVisibleInlineContainer))
-            {
-                if (HasUnsupportedComplexFieldInInlineContainer(container))
-                {
-                    return true;
-                }
-            }
         }
 
-        return document.Descendants(WordprocessingNamespace + "fldChar").Any(fieldChar => !IsSupportedInlineRunChild(fieldChar)) ||
-            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !IsSupportedInlineRunChild(instruction));
+        if (fields.Any(IsUnsupportedUnclosedComplexField))
+        {
+            return true;
+        }
+
+        return document.Descendants(WordprocessingNamespace + "fldChar").Any(fieldChar => !IsSupportedComplexFieldRunChild(fieldChar)) ||
+            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !IsSupportedComplexFieldRunChild(instruction));
     }
 
     private static bool IsVisibleInlineContainer(XElement? element)
@@ -824,15 +1236,26 @@ internal sealed class DocxReader
             element.Name == WordprocessingNamespace + "moveTo");
     }
 
+    private static bool IsComplexFieldInlineContainer(XElement? element)
+    {
+        return IsVisibleInlineContainer(element) ||
+            element?.Name == WordprocessingNamespace + "del" ||
+            element?.Name == WordprocessingNamespace + "moveFrom" ||
+            element?.Name == WordprocessingNamespace + "sdtContent";
+    }
+
     private static bool IsSupportedInlineContainerParent(XElement? element)
     {
-        return element?.Name == WordprocessingNamespace + "p" || IsVisibleInlineContainer(element);
+        return element?.Name == WordprocessingNamespace + "p" ||
+            element?.Name == WordprocessingNamespace + "sdtContent" ||
+            IsVisibleInlineContainer(element);
     }
 
     private static bool IsSupportedVisibleInlineContainerChild(XElement element)
     {
         return element.Name == WordprocessingNamespace + "r" ||
             element.Name == WordprocessingNamespace + "bookmarkStart" ||
+            element.Name == WordprocessingNamespace + "sdt" ||
             IsVisibleInlineContainer(element);
     }
 
@@ -844,87 +1267,137 @@ internal sealed class DocxReader
             (container?.Name == WordprocessingNamespace + "p" || IsVisibleInlineContainer(container));
     }
 
-    private static bool HasUnsupportedComplexFieldInInlineContainer(XElement container)
+    private static bool IsSupportedComplexFieldRunChild(XElement element)
     {
-        bool inField = false;
-        bool inResult = false;
-        bool hasSeparate = false;
-        bool hasCachedResult = false;
-        var instruction = new StringBuilder();
+        XElement? run = element.Parent;
+        XElement? container = run?.Parent;
+        return run?.Name == WordprocessingNamespace + "r" &&
+            (container?.Name == WordprocessingNamespace + "p" || IsComplexFieldInlineContainer(container));
+    }
 
-        foreach (XElement run in container.Elements(WordprocessingNamespace + "r"))
+    private static bool IsUnsupportedUnclosedComplexField(
+        (StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult) field)
+    {
+        return ResolveFieldPlaceholder(field.Instruction.ToString()) is null &&
+            (!field.HasSeparate || !field.HasCachedResult);
+    }
+
+    private static bool HasUnsupportedComplexFieldInInlineChildren(
+        XElement container,
+        List<(StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult)> fields)
+    {
+        foreach (XElement child in container.Elements())
         {
-            foreach (XElement child in run.Elements())
+            if (child.Name == WordprocessingNamespace + "r")
             {
-                if (child.Name == WordprocessingNamespace + "fldChar")
+                foreach (XElement runChild in child.Elements())
                 {
-                    string? fieldCharType = (string?)child.Attribute(WordprocessingNamespace + "fldCharType");
-                    if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (inField)
-                        {
-                            return true;
-                        }
-
-                        inField = true;
-                        inResult = false;
-                        hasSeparate = false;
-                        hasCachedResult = false;
-                        instruction.Clear();
-                        continue;
-                    }
-
-                    if (string.Equals(fieldCharType, "separate", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!inField)
-                        {
-                            return true;
-                        }
-
-                        hasSeparate = true;
-                        inResult = true;
-                        continue;
-                    }
-
-                    if (string.Equals(fieldCharType, "end", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!inField)
-                        {
-                            return true;
-                        }
-
-                        if (ResolveFieldPlaceholder(instruction.ToString()) is null && (!hasSeparate || !hasCachedResult))
-                        {
-                            return true;
-                        }
-
-                        inField = false;
-                        inResult = false;
-                        continue;
-                    }
-
-                    return true;
-                }
-
-                if (child.Name == WordprocessingNamespace + "instrText")
-                {
-                    if (!inField || inResult)
+                    if (ProcessComplexFieldRunChild(runChild, fields))
                     {
                         return true;
                     }
-
-                    instruction.Append((string?)child);
-                    continue;
                 }
 
-                if (inResult && child.Name == WordprocessingNamespace + "t")
+                continue;
+            }
+
+            if (child.Name == WordprocessingNamespace + "sdt")
+            {
+                foreach (XElement content in child.Elements(WordprocessingNamespace + "sdtContent"))
                 {
-                    hasCachedResult = true;
+                    if (HasUnsupportedComplexFieldInInlineChildren(content, fields))
+                    {
+                        return true;
+                    }
+                }
+
+                continue;
+            }
+
+            if (IsComplexFieldInlineContainer(child) &&
+                HasUnsupportedComplexFieldInInlineChildren(child, fields))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ProcessComplexFieldRunChild(
+        XElement child,
+        List<(StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult)> fields)
+    {
+        if (child.Name == WordprocessingNamespace + "fldChar")
+        {
+            string? fieldCharType = (string?)child.Attribute(WordprocessingNamespace + "fldCharType");
+            if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
+            {
+                if (fields.Count != 0 && !fields[^1].InResult)
+                {
+                    return true;
+                }
+
+                fields.Add((new StringBuilder(), HasSeparate: false, InResult: false, HasCachedResult: false));
+                return false;
+            }
+
+            if (string.Equals(fieldCharType, "separate", StringComparison.OrdinalIgnoreCase))
+            {
+                if (fields.Count == 0)
+                {
+                    return true;
+                }
+
+                (StringBuilder instruction, _, _, bool hasCachedResult) = fields[^1];
+                fields[^1] = (instruction, HasSeparate: true, InResult: true, hasCachedResult);
+                return false;
+            }
+
+            if (string.Equals(fieldCharType, "end", StringComparison.OrdinalIgnoreCase))
+            {
+                if (fields.Count == 0)
+                {
+                    return true;
+                }
+
+                (StringBuilder instruction, bool hasSeparate, _, bool hasCachedResult) = fields[^1];
+                if (ResolveFieldPlaceholder(instruction.ToString()) is null && (!hasSeparate || !hasCachedResult))
+                {
+                    return true;
+                }
+
+                fields.RemoveAt(fields.Count - 1);
+                return false;
+            }
+
+            return true;
+        }
+
+        if (child.Name == WordprocessingNamespace + "instrText")
+        {
+            if (fields.Count == 0 || fields[^1].InResult)
+            {
+                return true;
+            }
+
+            fields[^1].Instruction.Append((string?)child);
+            return false;
+        }
+
+        if (ReadRunTextChild(child).Length != 0)
+        {
+            for (int fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
+            {
+                (StringBuilder instruction, bool hasSeparate, bool inResult, bool _) = fields[fieldIndex];
+                if (inResult)
+                {
+                    fields[fieldIndex] = (instruction, hasSeparate, inResult, HasCachedResult: true);
                 }
             }
         }
 
-        return inField;
+        return false;
     }
 
     private static bool IsTableBorderContainer(XElement? element)
@@ -938,14 +1411,42 @@ internal sealed class DocxReader
     private static bool IsUnsupportedVisibleBorderStyle(string? value)
     {
         if (string.IsNullOrWhiteSpace(value) ||
-            value.Equals("single", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("nil", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        return true;
+        return !IsSupportedVisibleBorderStyle(value);
+    }
+
+    private static bool IsSupportedVisibleBorderStyle(string value)
+    {
+        return value.Equals("single", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thick", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("double", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dotted", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dashSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dashDotStroked", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("triple", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thickThinSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickThinSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickMediumGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thickThinMediumGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickThinMediumGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickLargeGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thickThinLargeGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickThinLargeGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("threeDEmboss", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("threeDEngrave", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("wave", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("doubleWave", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("outset", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("inset", StringComparison.OrdinalIgnoreCase);
     }
 
     private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName, CancellationToken cancellationToken = default)
@@ -1015,21 +1516,29 @@ internal sealed class DocxReader
             .Descendants(DrawingNamespace + "fontScheme")
             .FirstOrDefault();
         return new DocxThemeFonts(
-            (string?)fontScheme
+            MajorLatinTypeface: (string?)fontScheme
                 ?.Element(DrawingNamespace + "majorFont")
                 ?.Element(DrawingNamespace + "latin")
                 ?.Attribute("typeface"),
-            (string?)fontScheme
+            MinorLatinTypeface: (string?)fontScheme
                 ?.Element(DrawingNamespace + "minorFont")
                 ?.Element(DrawingNamespace + "latin")
                 ?.Attribute("typeface"),
-            (string?)fontScheme
+            MajorComplexScriptTypeface: (string?)fontScheme
                 ?.Element(DrawingNamespace + "majorFont")
                 ?.Element(DrawingNamespace + "cs")
                 ?.Attribute("typeface"),
-            (string?)fontScheme
+            MinorComplexScriptTypeface: (string?)fontScheme
                 ?.Element(DrawingNamespace + "minorFont")
                 ?.Element(DrawingNamespace + "cs")
+                ?.Attribute("typeface"),
+            MajorEastAsiaTypeface: (string?)fontScheme
+                ?.Element(DrawingNamespace + "majorFont")
+                ?.Element(DrawingNamespace + "ea")
+                ?.Attribute("typeface"),
+            MinorEastAsiaTypeface: (string?)fontScheme
+                ?.Element(DrawingNamespace + "minorFont")
+                ?.Element(DrawingNamespace + "ea")
                 ?.Attribute("typeface"));
     }
 
@@ -1039,6 +1548,7 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         var paragraphs = new List<DocxParagraph>();
@@ -1047,7 +1557,7 @@ internal sealed class DocxReader
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "p"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: DocxDocumentSettings.Empty, cancellationToken: cancellationToken);
+            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: DocxDocumentSettings.Empty, markupMode: markupMode, cancellationToken: cancellationToken);
             if (parsed is not null)
             {
                 paragraphs.Add(parsed);
@@ -1067,6 +1577,8 @@ internal sealed class DocxReader
         DocxTableCellStyle? tableCellStyle = null,
         Dictionary<string, int>? inlineReferenceCounters = null,
         DocxDocumentSettings? documentSettings = null,
+        DocxRevisionInfo? inheritedRevision = null,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -1085,45 +1597,69 @@ internal sealed class DocxReader
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
         var inlineReferences = new List<DocxInlineReference>();
+        var commentRanges = new List<DocxCommentRange>();
+        var openCommentRanges = new List<DocxCommentRangeStart>();
+        var revisionRanges = new List<DocxRevisionRange>();
+        var openRevisionRanges = new List<DocxRevisionRangeStart>();
         var fieldReferences = new List<DocxFieldReference>();
         var hyperlinkSpans = new List<DocxHyperlinkSpan>();
         var bookmarkAnchors = new List<DocxBookmarkAnchor>();
+        var paragraphRevisions = new List<DocxRevisionInfo>();
+        AddRevision(paragraphRevisions, inheritedRevision);
+        AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(paragraphProperties));
+        XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
+        IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadPropertyChangeRevisions(paragraphMarkRunProperties);
+        bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == "Deletion" && revision.SourceElement == "del");
+        AddRevisions(paragraphRevisions, paragraphMarkRevisions);
         bool pageInstructionSeen = false;
+        var complexFieldStack = new List<DocxComplexFieldState>();
         int sourceRunIndex = 0;
         foreach (XElement child in paragraph.Elements())
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (child.Name == WordprocessingNamespace + "r")
             {
-                AddParagraphRun(child, ref pageInstructionSeen);
+                AddParagraphRun(child, ref pageInstructionSeen, inheritedRevision);
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
-                AddSimpleField(child);
+                AddSimpleField(child, inheritedRevision);
             }
-            else if (child.Name == WordprocessingNamespace + "ins")
+            else if (IsRevisionContainer(child))
             {
-                AddVisibleRunContainer(child);
-            }
-            else if (child.Name == WordprocessingNamespace + "moveTo")
-            {
-                AddVisibleRunContainer(child);
+                AddRevisionRunContainer(child, inheritedRevision);
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                AddHyperlinkContainer(child);
+                AddHyperlinkContainer(child, inheritedRevision);
+            }
+            else if (child.Name == WordprocessingNamespace + "sdt")
+            {
+                AddContentControl(child, inheritedRevision);
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
                 AddBookmarkAnchor(child);
             }
+            else if (child.Name == WordprocessingNamespace + "commentRangeStart")
+            {
+                AddCommentRangeStart(child);
+            }
+            else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
+            {
+                AddCommentRangeEnd(child);
+            }
+            else if (IsRevisionMarkerElement(child))
+            {
+                AddRevisionMarker(child);
+            }
         }
 
-        void AddInlineContainerChild(XElement child)
+        void AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
         {
             if (child.Name == WordprocessingNamespace + "r")
             {
-                AddParagraphRun(child, ref pageInstructionSeen);
+                AddParagraphRun(child, ref pageInstructionSeen, revision);
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
@@ -1131,33 +1667,74 @@ internal sealed class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
-                AddSimpleField(child);
+                AddSimpleField(child, revision);
             }
-            else if (child.Name == WordprocessingNamespace + "ins")
+            else if (IsRevisionContainer(child))
             {
-                AddVisibleRunContainer(child);
-            }
-            else if (child.Name == WordprocessingNamespace + "moveTo")
-            {
-                AddVisibleRunContainer(child);
+                AddRevisionRunContainer(child, inheritedRevision: revision);
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                AddHyperlinkContainer(child);
+                AddHyperlinkContainer(child, revision);
+            }
+            else if (child.Name == WordprocessingNamespace + "sdt")
+            {
+                AddContentControl(child, revision);
+            }
+            else if (child.Name == WordprocessingNamespace + "sdtContent")
+            {
+                AddVisibleRunContainer(child, revision);
+            }
+            else if (child.Name == WordprocessingNamespace + "commentRangeStart")
+            {
+                AddCommentRangeStart(child);
+            }
+            else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
+            {
+                AddCommentRangeEnd(child);
+            }
+            else if (IsRevisionMarkerElement(child))
+            {
+                AddRevisionMarker(child);
             }
         }
 
-        void AddVisibleRunContainer(XElement container)
+        void AddVisibleRunContainer(XElement container, DocxRevisionInfo? revision)
         {
             foreach (XElement containerChild in container.Elements())
             {
-                AddInlineContainerChild(containerChild);
+                AddInlineContainerChild(containerChild, revision);
             }
         }
 
+        void AddContentControl(XElement contentControl, DocxRevisionInfo? revision)
+        {
+            foreach (XElement content in contentControl.Elements(WordprocessingNamespace + "sdtContent"))
+            {
+                AddVisibleRunContainer(content, revision);
+            }
+        }
+
+        void AddRevisionRunContainer(XElement container, DocxRevisionInfo? inheritedRevision = null)
+        {
+            if (!IsIncludedRevisionContainer(container, markupMode))
+            {
+                return;
+            }
+
+            DocxRevisionInfo? revision = CreateRevisionInfo(container) ?? inheritedRevision;
+            if (revision is not null)
+            {
+                paragraphRevisions.Add(revision);
+            }
+
+            AddVisibleRunContainer(container, revision);
+        }
+
+        FinalizeOpenComplexFields();
+
         if (runs.Count == 0 && images.Count == 0)
         {
-            XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
             DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
                 paragraphMarkRunProperties,
                 paragraphStyleId,
@@ -1177,7 +1754,23 @@ internal sealed class DocxReader
                 paragraphMarkStyleResolution,
                 complexScript: false,
                 sourceRunIndex: -1,
-                sourceTextOffsetInRun: 0);
+                sourceTextOffsetInRun: 0,
+                revision: inheritedRevision,
+                revisions: MergeRevisionLists(inheritedRevision, paragraphMarkRevisions));
+        }
+
+        foreach (DocxRevisionRangeStart openRange in openRevisionRanges)
+        {
+            revisionRanges.Add(new DocxRevisionRange(
+                openRange.Kind,
+                openRange.Id,
+                openRange.Name,
+                openRange.Author,
+                openRange.Date,
+                openRange.SourceRunIndex,
+                openRange.TextOffset,
+                EndSourceRunIndex: null,
+                EndTextOffset: null));
         }
 
         double paragraphFontSize = runs.Count == 0 ? DocxDefaults.FontSizePoints : runs.Max(run => run.FontSize);
@@ -1202,11 +1795,17 @@ internal sealed class DocxReader
             TabStops = resolvedParagraph.TabStops,
             SnapToGrid = resolvedParagraph.SnapToGrid,
             SnapToGridValue = resolvedParagraph.SnapToGridValue,
+            WordWrap = resolvedParagraph.WordWrap,
+            WordWrapValue = resolvedParagraph.WordWrapValue,
             StyleResolution = styleResolution,
             InlineReferences = inlineReferences,
+            CommentRanges = commentRanges,
+            RevisionRanges = revisionRanges,
             FieldReferences = fieldReferences,
             Hyperlinks = hyperlinkSpans,
-            BookmarkAnchors = bookmarkAnchors
+            BookmarkAnchors = bookmarkAnchors,
+            Revisions = paragraphRevisions,
+            HasDeletedParagraphMark = hasDeletedParagraphMark
         };
 
         void AddBookmarkAnchor(XElement bookmarkStart)
@@ -1216,6 +1815,77 @@ internal sealed class DocxReader
                 (string?)bookmarkStart.Attribute(WordprocessingNamespace + "name"),
                 sourceRunIndex,
                 runs.Count,
+                runs.Sum(run => run.Text.Length)));
+        }
+
+        void AddCommentRangeStart(XElement rangeStart)
+        {
+            openCommentRanges.Add(new DocxCommentRangeStart(
+                (string?)rangeStart.Attribute(WordprocessingNamespace + "id"),
+                sourceRunIndex,
+                runs.Sum(run => run.Text.Length)));
+        }
+
+        void AddCommentRangeEnd(XElement rangeEnd)
+        {
+            string? id = (string?)rangeEnd.Attribute(WordprocessingNamespace + "id");
+            int startIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
+            DocxCommentRangeStart? start = startIndex < 0 ? null : openCommentRanges[startIndex];
+            if (startIndex >= 0)
+            {
+                openCommentRanges.RemoveAt(startIndex);
+            }
+
+            commentRanges.Add(new DocxCommentRange(
+                id,
+                start?.SourceRunIndex,
+                start?.TextOffset,
+                sourceRunIndex,
+                runs.Sum(run => run.Text.Length),
+                ReferenceSourceRunIndex: null,
+                ReferenceTextOffset: null));
+        }
+
+        void AddRevisionMarker(XElement marker)
+        {
+            AddRevision(paragraphRevisions, CreateRevisionInfo(marker));
+            if (!TryResolveRevisionRangeMarker(marker, out string kind, out bool isStart))
+            {
+                return;
+            }
+
+            if (isStart)
+            {
+                openRevisionRanges.Add(new DocxRevisionRangeStart(
+                    kind,
+                    (string?)marker.Attribute(WordprocessingNamespace + "id"),
+                    (string?)marker.Attribute(WordprocessingNamespace + "name"),
+                    (string?)marker.Attribute(WordprocessingNamespace + "author"),
+                    (string?)marker.Attribute(WordprocessingNamespace + "date"),
+                    sourceRunIndex,
+                    runs.Sum(run => run.Text.Length)));
+                return;
+            }
+
+            string? id = (string?)marker.Attribute(WordprocessingNamespace + "id");
+            int startIndex = openRevisionRanges.FindLastIndex(start =>
+                string.Equals(start.Kind, kind, StringComparison.Ordinal) &&
+                string.Equals(start.Id, id, StringComparison.Ordinal));
+            DocxRevisionRangeStart? startRange = startIndex < 0 ? null : openRevisionRanges[startIndex];
+            if (startIndex >= 0)
+            {
+                openRevisionRanges.RemoveAt(startIndex);
+            }
+
+            revisionRanges.Add(new DocxRevisionRange(
+                kind,
+                id,
+                startRange?.Name,
+                startRange?.Author,
+                startRange?.Date,
+                startRange?.SourceRunIndex,
+                startRange?.TextOffset,
+                sourceRunIndex,
                 runs.Sum(run => run.Text.Length)));
         }
 
@@ -1244,7 +1914,7 @@ internal sealed class DocxReader
                 textLength));
         }
 
-        void AddSimpleField(XElement field)
+        void AddSimpleField(XElement field, DocxRevisionInfo? revision)
         {
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
             string kind = ResolveFieldKind(instruction);
@@ -1252,6 +1922,7 @@ internal sealed class DocxReader
             int fieldSourceRunIndex = sourceRunIndex;
             int fieldTextRunIndex = runs.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
+            bool hasCachedResult = FieldHasCachedResultText(field);
             if (placeholder is not null)
             {
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
@@ -1259,24 +1930,55 @@ internal sealed class DocxReader
                 {
                     runs.Add(new DocxTextRun(placeholder, DocxDefaults.FontSizePoints, null, false, false, false, null, null)
                     {
-                        SourceRunIndex = fieldSourceRunIndex
+                        SourceRunIndex = fieldSourceRunIndex,
+                        Revision = revision,
+                        Revisions = RevisionList(revision)
                     });
-                    AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
+                    AddFieldReference(
+                        kind,
+                        "Simple",
+                        instruction,
+                        placeholder,
+                        fieldSourceRunIndex,
+                        fieldTextRunIndex,
+                        fieldTextLengthStart,
+                        hasCachedResult,
+                        rendersCachedResult: false,
+                        usesPlaceholder: true);
                     return;
                 }
 
-                AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex);
-                images.AddRange(ReadInlineImages(firstRun, package, relationships));
-                AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
+                AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex, revision);
+                images.AddRange(ReadInlineImages(firstRun, package, relationships, revision));
+                AddFieldReference(
+                    kind,
+                    "Simple",
+                    instruction,
+                    placeholder,
+                    fieldSourceRunIndex,
+                    fieldTextRunIndex,
+                    fieldTextLengthStart,
+                    hasCachedResult,
+                    rendersCachedResult: false,
+                    usesPlaceholder: true);
                 return;
             }
 
             foreach (XElement fieldChild in field.Elements())
             {
-                AddInlineContainerChild(fieldChild);
+                AddInlineContainerChild(fieldChild, revision);
             }
 
-            AddFieldReference(kind, "Simple", instruction, placeholder, fieldSourceRunIndex, fieldTextRunIndex, fieldTextLengthStart);
+            AddFieldReference(
+                kind,
+                "Simple",
+                instruction,
+                placeholder,
+                fieldSourceRunIndex,
+                fieldTextRunIndex,
+                fieldTextLengthStart,
+                hasCachedResult,
+                rendersCachedResult: hasCachedResult);
         }
 
         void AddFieldReference(
@@ -1286,7 +1988,14 @@ internal sealed class DocxReader
             string? placeholder,
             int fieldSourceRunIndex,
             int fieldTextRunIndex,
-            int fieldTextLengthStart)
+            int fieldTextLengthStart,
+            bool hasCachedResult = false,
+            bool rendersCachedResult = false,
+            bool usesPlaceholder = false,
+            bool hasSeparate = false,
+            int nestingDepth = 0,
+            int instructionRunCount = 0,
+            int resultRunCount = 0)
         {
             fieldReferences.Add(new DocxFieldReference(
                 kind,
@@ -1296,17 +2005,26 @@ internal sealed class DocxReader
                 fieldSourceRunIndex,
                 fieldTextRunIndex,
                 runs.Count - fieldTextRunIndex,
-                runs.Sum(run => run.Text.Length) - fieldTextLengthStart));
+                runs.Sum(run => run.Text.Length) - fieldTextLengthStart)
+            {
+                HasSeparate = hasSeparate,
+                HasCachedResult = hasCachedResult,
+                RendersCachedResult = rendersCachedResult,
+                UsesPlaceholder = usesPlaceholder,
+                NestingDepth = nestingDepth,
+                InstructionRunCount = instructionRunCount,
+                ResultRunCount = resultRunCount
+            });
         }
 
-        void AddHyperlinkContainer(XElement hyperlink)
+        void AddHyperlinkContainer(XElement hyperlink, DocxRevisionInfo? revision)
         {
             int sourceRunStartIndex = sourceRunIndex;
             int textRunStartIndex = runs.Count;
             int textLengthStart = runs.Sum(run => run.Text.Length);
             foreach (XElement hyperlinkChild in hyperlink.Elements())
             {
-                AddInlineContainerChild(hyperlinkChild);
+                AddInlineContainerChild(hyperlinkChild, revision);
             }
 
             AddHyperlinkSpan(
@@ -1318,7 +2036,7 @@ internal sealed class DocxReader
                 runs.Sum(run => run.Text.Length) - textLengthStart);
         }
 
-        void AddFieldPlaceholderRun(XElement run, string text, int sourceRunIndex)
+        void AddFieldPlaceholderRun(XElement run, string text, int sourceRunIndex, DocxRevisionInfo? revision)
         {
             XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
             string? characterStyleId = ReadCharacterStyleId(run);
@@ -1334,16 +2052,20 @@ internal sealed class DocxReader
                 characterStyleId,
                 styles,
                 tableCellStyle?.Run);
+            IReadOnlyList<DocxRevisionInfo> runRevisions = ReadPropertyChangeRevisions(runProperties);
+            AddRevisions(paragraphRevisions, runRevisions);
             AddResolvedTextRuns(
                 runs,
                 resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text,
-                resolvedRun,
+                ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode),
                 runStyleResolution,
                 sourceRunIndex,
-                sourceTextOffsetInRun: 0);
+                sourceTextOffsetInRun: 0,
+                revision,
+                MergeRevisionLists(revision, runRevisions));
         }
 
-        void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen)
+        void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen, DocxRevisionInfo? revision)
         {
             int currentSourceRunIndex = sourceRunIndex++;
             string text = ReadRunText(run);
@@ -1368,6 +2090,24 @@ internal sealed class DocxReader
                 characterStyleId,
                 styles,
                 tableCellStyle?.Run);
+            IReadOnlyList<DocxRevisionInfo> runRevisions = ReadPropertyChangeRevisions(runProperties);
+            AddRevisions(paragraphRevisions, runRevisions);
+            IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
+            resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
+
+            if (run.Elements().Any(IsComplexFieldMarkupElement))
+            {
+                AddComplexFieldAwareRun(
+                    run,
+                    currentSourceRunIndex,
+                    resolvedRun,
+                    runStyleResolution,
+                    revision,
+                    effectiveRevisions,
+                    ref currentPageInstructionSeen);
+                images.AddRange(ReadInlineImages(run, package, relationships, revision));
+                return;
+            }
 
             if (placeholder is not null)
             {
@@ -1376,6 +2116,11 @@ internal sealed class DocxReader
             }
             else if (currentPageInstructionSeen && text.Trim().All(char.IsDigit))
             {
+                foreach (DocxComplexFieldState field in ActiveComplexResultFields())
+                {
+                    field.HasCachedResult = true;
+                }
+
                 text = string.Empty;
             }
 
@@ -1383,17 +2128,22 @@ internal sealed class DocxReader
                 fieldInstruction is null &&
                 run.Elements().Any(IsInlineReferenceElement))
             {
-                AddOrderedRunTextAndReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution);
+                AddOrderedRunTextAndReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions);
             }
             else if (text.Length != 0)
             {
-                string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
-                AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffsetInRun: 0);
-                AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false);
+                AddParagraphDisplayText(text, currentSourceRunIndex, sourceTextOffset: 0, resolvedRun, runStyleResolution, revision, effectiveRevisions);
+                AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false, revision, effectiveRevisions);
             }
             else
             {
-                AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false);
+                AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false, revision, effectiveRevisions);
+            }
+
+            foreach (DocxVmlTextBoxContent textBoxContent in ReadVmlTextBoxContents(run))
+            {
+                AddRevisions(paragraphRevisions, textBoxContent.Revisions);
+                AddParagraphDisplayText(textBoxContent.Text, currentSourceRunIndex, sourceTextOffset: 0, resolvedRun, runStyleResolution, revision, effectiveRevisions);
             }
 
             if (fieldInstruction is not null)
@@ -1408,14 +2158,319 @@ internal sealed class DocxReader
                     fieldTextLengthStart);
             }
 
-            images.AddRange(ReadInlineImages(run, package, relationships));
+            images.AddRange(ReadInlineImages(run, package, relationships, revision));
+        }
+
+        void AddParagraphDisplayText(
+            string text,
+            int currentSourceRunIndex,
+            int sourceTextOffset,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution,
+            DocxRevisionInfo? revision,
+            IReadOnlyList<DocxRevisionInfo> effectiveRevisions)
+        {
+            if (text.Length == 0)
+            {
+                return;
+            }
+
+            string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
+            DocxComplexFieldState[] resultFields = ActiveComplexResultFields();
+            if (resultFields.Length != 0)
+            {
+                int activeFieldTextRunIndex = runs.Count;
+                int activeFieldTextLengthStart = runs.Sum(run => run.Text.Length);
+                foreach (DocxComplexFieldState field in resultFields)
+                {
+                    field.HasCachedResult = true;
+                    field.EnsureTextSpan(activeFieldTextRunIndex, activeFieldTextLengthStart);
+                }
+            }
+
+            int runsBefore = runs.Count;
+            AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffset, revision, effectiveRevisions);
+            int addedRuns = runs.Count - runsBefore;
+            foreach (DocxComplexFieldState field in resultFields)
+            {
+                field.RendersCachedResult = true;
+                field.ResultRunCount += addedRuns;
+            }
+        }
+
+        void AddComplexFieldAwareRun(
+            XElement run,
+            int currentSourceRunIndex,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution,
+            DocxRevisionInfo? revision,
+            IReadOnlyList<DocxRevisionInfo> revisions,
+            ref bool currentPageInstructionSeen)
+        {
+            int childIndex = 0;
+            int textOffset = 0;
+            foreach (XElement child in run.Elements())
+            {
+                if (child.Name == WordprocessingNamespace + "fldChar")
+                {
+                    ApplyComplexFieldChar(child, currentSourceRunIndex);
+                }
+                else if (child.Name == WordprocessingNamespace + "instrText")
+                {
+                    AddComplexFieldInstruction(child, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, revisions, ref currentPageInstructionSeen);
+                }
+                else if (IsInlineReferenceElement(child))
+                {
+                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions);
+                }
+                else
+                {
+                    string childText = ReadRunTextChild(child);
+                    if (childText.Length != 0)
+                    {
+                        AddComplexFieldText(
+                            childText,
+                            currentSourceRunIndex,
+                            textOffset,
+                            resolvedRun,
+                            runStyleResolution,
+                            revision,
+                            revisions,
+                            ref currentPageInstructionSeen);
+                    }
+                }
+
+                textOffset += ReadRunTextChild(child).Length;
+                childIndex++;
+            }
+        }
+
+        void ApplyComplexFieldChar(XElement fieldChar, int currentSourceRunIndex)
+        {
+            string? fieldCharType = (string?)fieldChar.Attribute(WordprocessingNamespace + "fldCharType");
+            if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
+            {
+                complexFieldStack.Add(new DocxComplexFieldState(
+                    currentSourceRunIndex,
+                    runs.Count,
+                    runs.Sum(run => run.Text.Length),
+                    complexFieldStack.Count));
+                return;
+            }
+
+            if (string.Equals(fieldCharType, "separate", StringComparison.OrdinalIgnoreCase))
+            {
+                DocxComplexFieldState? field = CurrentComplexField();
+                if (field is not null)
+                {
+                    field.HasSeparate = true;
+                    field.InResult = true;
+                    field.EnsureTextSpan(runs.Count, runs.Sum(run => run.Text.Length));
+                }
+
+                return;
+            }
+
+            if (string.Equals(fieldCharType, "end", StringComparison.OrdinalIgnoreCase))
+            {
+                DocxComplexFieldState? field = CurrentComplexField();
+                if (field is null)
+                {
+                    return;
+                }
+
+                complexFieldStack.RemoveAt(complexFieldStack.Count - 1);
+                AddComplexFieldReference(field);
+            }
+        }
+
+        void FinalizeOpenComplexFields()
+        {
+            for (int fieldIndex = complexFieldStack.Count - 1; fieldIndex >= 0; fieldIndex--)
+            {
+                DocxComplexFieldState field = complexFieldStack[fieldIndex];
+                string instruction = field.Instruction.ToString();
+                string? placeholder = ResolveFieldPlaceholder(instruction);
+                if (placeholder is null && (!field.HasSeparate || !field.HasCachedResult))
+                {
+                    continue;
+                }
+
+                AddComplexFieldReference(field, instruction, placeholder);
+            }
+
+            complexFieldStack.Clear();
+        }
+
+        void AddComplexFieldReference(DocxComplexFieldState field, string? instruction = null, string? placeholder = null)
+        {
+            instruction ??= field.Instruction.ToString();
+            placeholder ??= ResolveFieldPlaceholder(instruction);
+            int textRunIndex = field.ResultRunCount == 0 && !field.PlaceholderEmitted
+                ? runs.Count
+                : field.TextRunIndex;
+            int textLengthStart = field.ResultRunCount == 0 && !field.PlaceholderEmitted
+                ? runs.Sum(run => run.Text.Length)
+                : field.TextLengthStart;
+            AddFieldReference(
+                ResolveFieldKind(instruction),
+                "ComplexInstruction",
+                instruction,
+                placeholder,
+                field.InstructionSourceRunIndex >= 0 ? field.InstructionSourceRunIndex : field.SourceRunIndex,
+                textRunIndex,
+                textLengthStart,
+                field.HasCachedResult,
+                field.RendersCachedResult,
+                field.PlaceholderEmitted,
+                field.HasSeparate,
+                field.NestingDepth,
+                field.InstructionRunCount,
+                field.ResultRunCount);
+        }
+
+        void AddComplexFieldInstruction(
+            XElement instruction,
+            int currentSourceRunIndex,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution,
+            DocxRevisionInfo? revision,
+            IReadOnlyList<DocxRevisionInfo> revisions,
+            ref bool currentPageInstructionSeen)
+        {
+            string instructionText = (string?)instruction ?? string.Empty;
+            DocxComplexFieldState? field = CurrentComplexField();
+            if (field is null)
+            {
+                int fieldTextRunIndex = runs.Count;
+                int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
+                string? placeholder = ResolveFieldPlaceholder(instructionText);
+                if (placeholder is not null)
+                {
+                    AddResolvedTextRuns(
+                        runs,
+                        resolvedRun.AllCaps == true ? placeholder.ToUpperInvariant() : placeholder,
+                        resolvedRun,
+                        runStyleResolution,
+                        currentSourceRunIndex,
+                        sourceTextOffsetInRun: 0,
+                        revision,
+                        revisions);
+                    currentPageInstructionSeen = true;
+                }
+
+                AddFieldReference(
+                    ResolveFieldKind(instructionText),
+                    "ComplexInstruction",
+                    instructionText,
+                    placeholder,
+                    currentSourceRunIndex,
+                    fieldTextRunIndex,
+                    fieldTextLengthStart,
+                    usesPlaceholder: placeholder is not null,
+                    instructionRunCount: 1);
+                return;
+            }
+
+            if (field.InstructionSourceRunIndex < 0)
+            {
+                field.InstructionSourceRunIndex = currentSourceRunIndex;
+            }
+
+            field.Instruction.Append(instructionText);
+            field.InstructionRunCount++;
+            string? fieldPlaceholder = ResolveFieldPlaceholder(field.Instruction.ToString());
+            if (fieldPlaceholder is not null && !field.PlaceholderEmitted)
+            {
+                field.EnsureTextSpan(runs.Count, runs.Sum(run => run.Text.Length));
+                int runsBefore = runs.Count;
+                AddResolvedTextRuns(
+                    runs,
+                    resolvedRun.AllCaps == true ? fieldPlaceholder.ToUpperInvariant() : fieldPlaceholder,
+                    resolvedRun,
+                    runStyleResolution,
+                    currentSourceRunIndex,
+                    sourceTextOffsetInRun: 0,
+                    revision,
+                    revisions);
+                field.ResultRunCount += runs.Count - runsBefore;
+                field.PlaceholderEmitted = true;
+                currentPageInstructionSeen = true;
+            }
+        }
+
+        void AddComplexFieldText(
+            string text,
+            int currentSourceRunIndex,
+            int sourceTextOffset,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution,
+            DocxRevisionInfo? revision,
+            IReadOnlyList<DocxRevisionInfo> revisions,
+            ref bool currentPageInstructionSeen)
+        {
+            DocxComplexFieldState[] resultFields = complexFieldStack
+                .Where(field => field.InResult)
+                .ToArray();
+            foreach (DocxComplexFieldState field in resultFields)
+            {
+                field.HasCachedResult = true;
+            }
+
+            string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
+            bool suppressPageNumberCache = currentPageInstructionSeen && displayText.Trim().All(char.IsDigit);
+            if (suppressPageNumberCache)
+            {
+                return;
+            }
+
+            if (resultFields.Length != 0)
+            {
+                int fieldTextRunIndex = runs.Count;
+                int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
+                foreach (DocxComplexFieldState field in resultFields)
+                {
+                    field.EnsureTextSpan(fieldTextRunIndex, fieldTextLengthStart);
+                }
+            }
+
+            int runsBefore = runs.Count;
+            AddResolvedTextRuns(
+                runs,
+                displayText,
+                resolvedRun,
+                runStyleResolution,
+                currentSourceRunIndex,
+                sourceTextOffset,
+                revision,
+                revisions);
+            int addedRuns = runs.Count - runsBefore;
+            foreach (DocxComplexFieldState field in resultFields)
+            {
+                field.RendersCachedResult = true;
+                field.ResultRunCount += addedRuns;
+            }
+        }
+
+        DocxComplexFieldState? CurrentComplexField()
+        {
+            return complexFieldStack.Count == 0 ? null : complexFieldStack[^1];
+        }
+
+        DocxComplexFieldState[] ActiveComplexResultFields()
+        {
+            return complexFieldStack
+                .Where(field => field.InResult)
+                .ToArray();
         }
 
         void AddOrderedRunTextAndReferences(
             XElement run,
             int currentSourceRunIndex,
             DocxResolvedRunProperties resolvedRun,
-            DocxRunStyleResolution runStyleResolution)
+            DocxRunStyleResolution runStyleResolution,
+            DocxRevisionInfo? revision,
+            IReadOnlyList<DocxRevisionInfo> revisions)
         {
             int childIndex = 0;
             int textOffset = 0;
@@ -1423,20 +2478,41 @@ internal sealed class DocxReader
             {
                 if (IsInlineReferenceElement(child))
                 {
-                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true);
+                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions);
                 }
                 else
                 {
                     string childText = ReadRunTextChild(child);
                     if (childText.Length != 0)
                     {
+                        DocxComplexFieldState[] resultFields = ActiveComplexResultFields();
+                        if (resultFields.Length != 0)
+                        {
+                            int fieldTextRunIndex = runs.Count;
+                            int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
+                            foreach (DocxComplexFieldState field in resultFields)
+                            {
+                                field.HasCachedResult = true;
+                                field.EnsureTextSpan(fieldTextRunIndex, fieldTextLengthStart);
+                            }
+                        }
+
+                        int runsBefore = runs.Count;
                         AddResolvedTextRuns(
                             runs,
                             resolvedRun.AllCaps == true ? childText.ToUpperInvariant() : childText,
                             resolvedRun,
                             runStyleResolution,
                             currentSourceRunIndex,
-                            textOffset);
+                            textOffset,
+                            revision,
+                            revisions);
+                        int addedRuns = runs.Count - runsBefore;
+                        foreach (DocxComplexFieldState field in resultFields)
+                        {
+                            field.RendersCachedResult = true;
+                            field.ResultRunCount += addedRuns;
+                        }
                     }
 
                     textOffset += childText.Length;
@@ -1451,13 +2527,15 @@ internal sealed class DocxReader
             int currentSourceRunIndex,
             DocxResolvedRunProperties resolvedRun,
             DocxRunStyleResolution runStyleResolution,
-            bool emitDisplayRuns)
+            bool emitDisplayRuns,
+            DocxRevisionInfo? revision,
+            IReadOnlyList<DocxRevisionInfo> revisions)
         {
             int childIndex = 0;
             int textOffset = 0;
             foreach (XElement child in run.Elements())
             {
-                AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRuns);
+                AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRuns, revision, revisions);
 
                 textOffset += ReadRunTextChild(child).Length;
                 childIndex++;
@@ -1471,7 +2549,9 @@ internal sealed class DocxReader
             int textOffset,
             DocxResolvedRunProperties resolvedRun,
             DocxRunStyleResolution runStyleResolution,
-            bool emitDisplayRun)
+            bool emitDisplayRun,
+            DocxRevisionInfo? revision,
+            IReadOnlyList<DocxRevisionInfo> revisions)
         {
             string? kind = ResolveInlineReferenceKind(child);
             if (kind is null)
@@ -1490,12 +2570,61 @@ internal sealed class DocxReader
                 displayText,
                 currentSourceRunIndex,
                 childIndex,
-                textOffset));
+                textOffset)
+            {
+                Revision = revision,
+                Revisions = revisions
+            });
+            if (kind == "Comment")
+            {
+                AddCommentReferenceRange((string?)child.Attribute(WordprocessingNamespace + "id"), currentSourceRunIndex, textOffset);
+            }
 
             if (emitDisplayRun && displayText is not null)
             {
-                AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution);
+                AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution, revision);
             }
+        }
+
+        void AddCommentReferenceRange(string? id, int currentSourceRunIndex, int textOffset)
+        {
+            int rangeIndex = commentRanges.FindIndex(range =>
+                string.Equals(range.Id, id, StringComparison.Ordinal) &&
+                range.ReferenceSourceRunIndex is null);
+            if (rangeIndex >= 0)
+            {
+                commentRanges[rangeIndex] = commentRanges[rangeIndex] with
+                {
+                    ReferenceSourceRunIndex = currentSourceRunIndex,
+                    ReferenceTextOffset = textOffset
+                };
+                return;
+            }
+
+            int openRangeIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
+            if (openRangeIndex >= 0)
+            {
+                DocxCommentRangeStart start = openCommentRanges[openRangeIndex];
+                openCommentRanges.RemoveAt(openRangeIndex);
+                commentRanges.Add(new DocxCommentRange(
+                    id,
+                    start.SourceRunIndex,
+                    start.TextOffset,
+                    EndSourceRunIndex: null,
+                    EndTextOffset: null,
+                    currentSourceRunIndex,
+                    textOffset));
+                return;
+            }
+
+            commentRanges.Add(new DocxCommentRange(
+                id,
+                StartSourceRunIndex: null,
+                StartTextOffset: null,
+                EndSourceRunIndex: null,
+                EndTextOffset: null,
+                currentSourceRunIndex,
+                textOffset));
         }
 
         string? ResolveInlineReferenceDisplayText(string kind, string? customMarkFollows)
@@ -1524,7 +2653,8 @@ internal sealed class DocxReader
             int currentSourceRunIndex,
             int textOffset,
             DocxResolvedRunProperties resolvedRun,
-            DocxRunStyleResolution runStyleResolution)
+            DocxRunStyleResolution runStyleResolution,
+            DocxRevisionInfo? revision)
         {
             AddResolvedTextRuns(
                 runs,
@@ -1532,7 +2662,8 @@ internal sealed class DocxReader
                 resolvedRun with { VerticalAlignmentValue = "superscript" },
                 runStyleResolution,
                 currentSourceRunIndex,
-                textOffset);
+                textOffset,
+                revision);
         }
 
         static bool IsInlineReferenceElement(XElement element)
@@ -1671,13 +2802,21 @@ internal sealed class DocxReader
             ?.Attribute(WordprocessingNamespace + "val");
     }
 
+    private static bool IsComplexFieldMarkupElement(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "fldChar" ||
+            element.Name == WordprocessingNamespace + "instrText";
+    }
+
     private static void AddResolvedTextRuns(
         List<DocxTextRun> runs,
         string text,
         DocxResolvedRunProperties resolvedRun,
         DocxRunStyleResolution styleResolution,
         int sourceRunIndex = -1,
-        int sourceTextOffsetInRun = 0)
+        int sourceTextOffsetInRun = 0,
+        DocxRevisionInfo? revision = null,
+        IReadOnlyList<DocxRevisionInfo>? revisions = null)
     {
         var segment = new StringBuilder();
         bool? currentComplexScript = null;
@@ -1688,7 +2827,7 @@ internal sealed class DocxReader
             if (currentComplexScript is not null && currentComplexScript.Value != complexScript)
             {
                 string segmentText = segment.ToString();
-                AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset);
+                AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions);
                 segmentSourceOffset += segmentText.Length;
                 segment.Clear();
             }
@@ -1699,7 +2838,7 @@ internal sealed class DocxReader
 
         if (segment.Length != 0 && currentComplexScript is not null)
         {
-            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset);
+            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions);
         }
     }
 
@@ -1710,7 +2849,9 @@ internal sealed class DocxReader
         DocxRunStyleResolution styleResolution,
         bool complexScript,
         int sourceRunIndex,
-        int sourceTextOffsetInRun)
+        int sourceTextOffsetInRun,
+        DocxRevisionInfo? revision = null,
+        IReadOnlyList<DocxRevisionInfo>? revisions = null)
     {
         bool bold = complexScript
             ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
@@ -1744,12 +2885,15 @@ internal sealed class DocxReader
             resolvedRun.SmallCaps ?? false,
             resolvedRun.SmallCapsValue,
             resolvedRun.Hidden ?? false,
-            resolvedRun.HiddenValue)
+            resolvedRun.HiddenValue,
+            resolvedRun.UnderlineColorHex)
         {
             Fonts = resolvedRun.Fonts,
             StyleResolution = styleResolution,
             SourceRunIndex = sourceRunIndex,
-            SourceTextOffsetInRun = sourceTextOffsetInRun
+            SourceTextOffsetInRun = sourceTextOffsetInRun,
+            Revision = revision,
+            Revisions = revisions ?? RevisionList(revision)
         });
     }
 
@@ -1822,9 +2966,54 @@ internal sealed class DocxReader
         return text.ToString();
     }
 
+    private sealed record DocxVmlTextBoxContent(string Text, IReadOnlyList<DocxRevisionInfo> Revisions);
+
+    private static IEnumerable<DocxVmlTextBoxContent> ReadVmlTextBoxContents(XElement run)
+    {
+        foreach (XElement textBox in run.Descendants(VmlNamespace + "textbox"))
+        {
+            foreach (XElement content in textBox.Descendants(WordprocessingNamespace + "txbxContent"))
+            {
+                DocxVmlTextBoxContent textBoxContent = ReadTextBoxContent(content);
+                if (textBoxContent.Text.Length != 0)
+                {
+                    yield return textBoxContent;
+                }
+            }
+        }
+    }
+
+    private static DocxVmlTextBoxContent ReadTextBoxContent(XElement content)
+    {
+        var paragraphs = new List<string>();
+        var revisions = new List<DocxRevisionInfo>();
+        foreach (XElement paragraph in content.Elements(WordprocessingNamespace + "p"))
+        {
+            AddRevisions(revisions, ReadPropertyChangeRevisions(paragraph.Element(WordprocessingNamespace + "pPr")));
+            string paragraphText = string.Concat(
+                paragraph
+                    .Descendants(WordprocessingNamespace + "r")
+                    .Select(ReadRunText));
+            if (paragraphText.Length != 0)
+            {
+                paragraphs.Add(paragraphText);
+            }
+        }
+
+        return new DocxVmlTextBoxContent(string.Join("\n", paragraphs), revisions);
+    }
+
+    private static bool FieldHasCachedResultText(XElement field)
+    {
+        return field
+            .Descendants()
+            .Any(element => ReadRunTextChild(element).Length != 0);
+    }
+
     private static string ReadRunTextChild(XElement child)
     {
-        if (child.Name == WordprocessingNamespace + "t")
+        if (child.Name == WordprocessingNamespace + "t" ||
+            child.Name == WordprocessingNamespace + "delText")
         {
             return (string?)child ?? string.Empty;
         }
@@ -1873,14 +3062,18 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         XDocument? settings,
         DocxDocumentSettings documentSettings,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         var elements = new List<DocxBodyElement>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
         var inlineReferenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (XElement element in document.Descendants(WordprocessingNamespace + "body").Elements())
+        IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
+        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(bodyChildren, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            XElement element = scopedElement.Element;
+            DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
                 XElement? paragraphProperties = element.Element(WordprocessingNamespace + "pPr");
@@ -1890,53 +3083,52 @@ internal sealed class DocxReader
                     styles);
                 if (resolvedParagraph.PageBreakBefore == true)
                 {
-                    elements.Add(new DocxPageBreakElement("pageBreakBefore", resolvedParagraph.PageBreakBeforeValue));
+                    elements.Add(DocxBodyElementFactory.CreatePageBreak(
+                        "pageBreakBefore",
+                        resolvedParagraph.PageBreakBeforeValue,
+                        revisions: inheritedRevision is null ? [] : [inheritedRevision]));
                 }
 
-                if (IsRunPageBreakOnlyParagraph(element))
+                if (IsRunPageBreakOnlyParagraph(element, markupMode))
                 {
-                    elements.Add(new DocxPageBreakElement(
-                        "runBreak",
-                        "page",
-                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, cancellationToken: cancellationToken)));
+                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                    elements.Add(DocxBodyElementFactory.CreatePageBreak("runBreak", "page", breakParagraph));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, cancellationToken));
+                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
                     }
 
                     continue;
                 }
 
-                if (IsRunColumnBreakOnlyParagraph(element))
+                if (IsRunColumnBreakOnlyParagraph(element, markupMode))
                 {
-                    elements.Add(new DocxManualBreakElement(
-                        "runBreak",
-                        "column",
-                        ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, cancellationToken: cancellationToken)));
+                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                    elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column", breakParagraph));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, cancellationToken));
+                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
                     }
 
                     continue;
                 }
 
-                if (HasRunPageOrColumnBreak(element))
+                if (HasRunPageOrColumnBreak(element, markupMode))
                 {
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
                         {
                             if (string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase))
                             {
-                                elements.Add(new DocxManualBreakElement("runBreak", "column"));
+                                elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column"));
                             }
                             else
                             {
-                                elements.Add(new DocxPageBreakElement("runBreak", part.BreakValue));
+                                elements.Add(DocxBodyElementFactory.CreatePageBreak("runBreak", part.BreakValue));
                             }
 
                             continue;
@@ -1947,53 +3139,196 @@ internal sealed class DocxReader
                             continue;
                         }
 
-                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, cancellationToken: cancellationToken);
+                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                         if (splitParagraph is not null)
                         {
-                            elements.Add(new DocxParagraphElement(AdjustBreakParagraphFragment(splitParagraph, part)));
+                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part)));
                         }
                     }
 
                     XElement? splitSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (splitSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(splitSectionProperties, package, relationships, styles, numbering, settings, cancellationToken));
+                        elements.Add(ReadSectionBreak(splitSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
                     }
 
                     continue;
                 }
 
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, cancellationToken: cancellationToken);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                 if (paragraph is not null)
                 {
-                    elements.Add(new DocxParagraphElement(paragraph));
+                    elements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
                 }
 
                 XElement? sectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                 if (sectionProperties is not null)
                 {
-                    elements.Add(ReadSectionBreak(sectionProperties, package, relationships, styles, numbering, settings, cancellationToken));
+                    elements.Add(ReadSectionBreak(sectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
                 }
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, cancellationToken);
+                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, inheritedRevision);
                 if (table is not null)
                 {
-                    elements.Add(new DocxTableElement(table));
+                    elements.Add(DocxBodyElementFactory.CreateTable(table));
                 }
             }
         }
 
+        elements = NormalizeDeletedParagraphMarkElements(elements, markupMode).ToList();
         AddImplicitTerminalTableParagraph(elements);
         return elements;
     }
 
-    private static bool HasRunPageOrColumnBreak(XElement paragraph)
+    private static IReadOnlyList<DocxBodyElement> NormalizeDeletedParagraphMarkElements(
+        IReadOnlyList<DocxBodyElement> elements,
+        OoxPdfDocxMarkupMode markupMode)
+    {
+        if (DocxMarkupContext.FromMode(markupMode).IncludesDeletions || elements.Count < 2)
+        {
+            return elements;
+        }
+
+        var output = new List<DocxBodyElement>(elements.Count);
+        foreach (DocxBodyElement element in elements)
+        {
+            if (element is DocxParagraphElement paragraphElement &&
+                output.Count != 0 &&
+                output[^1] is DocxParagraphElement previousParagraphElement &&
+                previousParagraphElement.Paragraph.HasDeletedParagraphMark)
+            {
+                output[^1] = DocxBodyElementFactory.CreateParagraph(MergeParagraphsAcrossDeletedMark(
+                    previousParagraphElement.Paragraph,
+                    paragraphElement.Paragraph));
+                continue;
+            }
+
+            output.Add(element);
+        }
+
+        return output;
+    }
+
+    private static DocxParagraph MergeParagraphsAcrossDeletedMark(DocxParagraph first, DocxParagraph second)
+    {
+        int sourceRunOffset = MaxSourceRunIndex(first) + 1;
+        int textRunOffset = first.Runs.Count;
+        int textOffset = first.Runs.Sum(run => run.Text.Length);
+        return first with
+        {
+            Runs = first.Runs.Concat(second.Runs.Select(run => ShiftRun(run, sourceRunOffset))).ToArray(),
+            Images = first.Images.Concat(second.Images).ToArray(),
+            SpacingAfterPoints = second.SpacingAfterPoints,
+            InlineReferences = first.InlineReferences.Concat(second.InlineReferences.Select(reference => ShiftInlineReference(reference, sourceRunOffset))).ToArray(),
+            CommentRanges = first.CommentRanges.Concat(second.CommentRanges.Select(range => ShiftCommentRange(range, sourceRunOffset, textOffset))).ToArray(),
+            RevisionRanges = first.RevisionRanges.Concat(second.RevisionRanges.Select(range => ShiftRevisionRange(range, sourceRunOffset, textOffset))).ToArray(),
+            FieldReferences = first.FieldReferences.Concat(second.FieldReferences.Select(field => ShiftFieldReference(field, sourceRunOffset, textRunOffset))).ToArray(),
+            Hyperlinks = first.Hyperlinks.Concat(second.Hyperlinks.Select(link => ShiftHyperlink(link, sourceRunOffset, textRunOffset))).ToArray(),
+            BookmarkAnchors = first.BookmarkAnchors.Concat(second.BookmarkAnchors.Select(anchor => ShiftBookmarkAnchor(anchor, sourceRunOffset, textRunOffset, textOffset))).ToArray(),
+            Revisions = first.Revisions.Concat(second.Revisions).ToArray(),
+            HasDeletedParagraphMark = second.HasDeletedParagraphMark
+        };
+    }
+
+    private static int MaxSourceRunIndex(DocxParagraph paragraph)
+    {
+        return paragraph.Runs
+            .Select(run => run.SourceRunIndex)
+            .Concat(paragraph.InlineReferences.Select(reference => reference.SourceRunIndex))
+            .Concat(paragraph.CommentRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex, range.ReferenceSourceRunIndex }).Where(index => index is not null).Select(index => index!.Value))
+            .Concat(paragraph.RevisionRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex }).Where(index => index is not null).Select(index => index!.Value))
+            .Concat(paragraph.FieldReferences.Select(field => field.SourceRunIndex))
+            .Concat(paragraph.Hyperlinks.Select(link => link.SourceRunStartIndex))
+            .Concat(paragraph.BookmarkAnchors.Select(anchor => anchor.SourceRunIndex))
+            .Where(index => index >= 0)
+            .DefaultIfEmpty(-1)
+            .Max();
+    }
+
+    private static int ShiftSourceRunIndex(int sourceRunIndex, int offset)
+    {
+        return sourceRunIndex < 0 ? sourceRunIndex : sourceRunIndex + offset;
+    }
+
+    private static int? ShiftSourceRunIndex(int? sourceRunIndex, int offset)
+    {
+        return sourceRunIndex is null || sourceRunIndex < 0 ? sourceRunIndex : sourceRunIndex + offset;
+    }
+
+    private static int? ShiftTextOffset(int? textOffset, int offset)
+    {
+        return textOffset is null ? null : textOffset + offset;
+    }
+
+    private static DocxTextRun ShiftRun(DocxTextRun run, int sourceRunOffset)
+    {
+        return run with { SourceRunIndex = ShiftSourceRunIndex(run.SourceRunIndex, sourceRunOffset) };
+    }
+
+    private static DocxInlineReference ShiftInlineReference(DocxInlineReference reference, int sourceRunOffset)
+    {
+        return reference with { SourceRunIndex = ShiftSourceRunIndex(reference.SourceRunIndex, sourceRunOffset) };
+    }
+
+    private static DocxCommentRange ShiftCommentRange(DocxCommentRange range, int sourceRunOffset, int textOffset)
+    {
+        return range with
+        {
+            StartSourceRunIndex = ShiftSourceRunIndex(range.StartSourceRunIndex, sourceRunOffset),
+            StartTextOffset = ShiftTextOffset(range.StartTextOffset, textOffset),
+            EndSourceRunIndex = ShiftSourceRunIndex(range.EndSourceRunIndex, sourceRunOffset),
+            EndTextOffset = ShiftTextOffset(range.EndTextOffset, textOffset),
+            ReferenceSourceRunIndex = ShiftSourceRunIndex(range.ReferenceSourceRunIndex, sourceRunOffset),
+            ReferenceTextOffset = ShiftTextOffset(range.ReferenceTextOffset, textOffset)
+        };
+    }
+
+    private static DocxRevisionRange ShiftRevisionRange(DocxRevisionRange range, int sourceRunOffset, int textOffset)
+    {
+        return range with
+        {
+            StartSourceRunIndex = ShiftSourceRunIndex(range.StartSourceRunIndex, sourceRunOffset),
+            StartTextOffset = ShiftTextOffset(range.StartTextOffset, textOffset),
+            EndSourceRunIndex = ShiftSourceRunIndex(range.EndSourceRunIndex, sourceRunOffset),
+            EndTextOffset = ShiftTextOffset(range.EndTextOffset, textOffset)
+        };
+    }
+
+    private static DocxFieldReference ShiftFieldReference(DocxFieldReference field, int sourceRunOffset, int textRunOffset)
+    {
+        return field with
+        {
+            SourceRunIndex = ShiftSourceRunIndex(field.SourceRunIndex, sourceRunOffset),
+            TextRunIndex = field.TextRunIndex + textRunOffset
+        };
+    }
+
+    private static DocxHyperlinkSpan ShiftHyperlink(DocxHyperlinkSpan hyperlink, int sourceRunOffset, int textRunOffset)
+    {
+        return hyperlink with
+        {
+            SourceRunStartIndex = ShiftSourceRunIndex(hyperlink.SourceRunStartIndex, sourceRunOffset),
+            TextRunStartIndex = hyperlink.TextRunStartIndex + textRunOffset
+        };
+    }
+
+    private static DocxBookmarkAnchor ShiftBookmarkAnchor(DocxBookmarkAnchor anchor, int sourceRunOffset, int textRunOffset, int textOffset)
+    {
+        return anchor with
+        {
+            SourceRunIndex = ShiftSourceRunIndex(anchor.SourceRunIndex, sourceRunOffset),
+            TextRunIndex = anchor.TextRunIndex + textRunOffset,
+            TextOffset = anchor.TextOffset + textOffset
+        };
+    }
+
+    private static bool HasRunPageOrColumnBreak(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
     {
         return paragraph
             .Elements()
-            .Any(HasVisibleRunPageOrColumnBreak);
+            .Any(element => HasVisibleRunPageOrColumnBreak(element, markupMode));
     }
 
     private static DocxParagraph AdjustBreakParagraphFragment(DocxParagraph paragraph, ParagraphBreakPart part)
@@ -2006,7 +3341,7 @@ internal sealed class DocxReader
         };
     }
 
-    private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph)
+    private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
     {
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
@@ -2039,7 +3374,7 @@ internal sealed class DocxReader
                 continue;
             }
 
-            if (TrySplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak))
+            if (TrySplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, markupMode))
             {
                 continue;
             }
@@ -2094,14 +3429,15 @@ internal sealed class DocxReader
         List<XElement> paragraphChildren,
         Action<bool> addParagraphPart,
         List<ParagraphBreakPart> parts,
-        ref bool startsAfterBreak)
+        ref bool startsAfterBreak,
+        OoxPdfDocxMarkupMode markupMode)
     {
-        if (!IsVisibleRunContainer(child) || !HasVisibleRunPageOrColumnBreak(child))
+        if (!IsVisibleRunContainer(child, markupMode) || !HasVisibleRunPageOrColumnBreak(child, markupMode))
         {
             return false;
         }
 
-        SplitRunBreakContainer(child, paragraphChildren, addParagraphPart, parts, ref startsAfterBreak);
+        SplitRunBreakContainer(child, paragraphChildren, addParagraphPart, parts, ref startsAfterBreak, markupMode);
         return true;
     }
 
@@ -2110,7 +3446,8 @@ internal sealed class DocxReader
         List<XElement> ownerChildren,
         Action<bool> flushOwnerAndParagraph,
         List<ParagraphBreakPart> parts,
-        ref bool startsAfterBreak)
+        ref bool startsAfterBreak,
+        OoxPdfDocxMarkupMode markupMode)
     {
         var containerChildren = new List<XElement>();
 
@@ -2124,9 +3461,9 @@ internal sealed class DocxReader
         {
             if (containerChild.Name != WordprocessingNamespace + "r")
             {
-                if (IsVisibleRunContainer(containerChild) && HasVisibleRunPageOrColumnBreak(containerChild))
+                if (IsVisibleRunContainer(containerChild, markupMode) && HasVisibleRunPageOrColumnBreak(containerChild, markupMode))
                 {
-                    SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak);
+                    SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, markupMode);
                 }
                 else
                 {
@@ -2203,59 +3540,80 @@ internal sealed class DocxReader
         }
     }
 
-    private static bool IsRunPageBreakOnlyParagraph(XElement paragraph)
+    private static bool IsRunPageBreakOnlyParagraph(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
     {
-        return IsRunBreakOnlyParagraph(paragraph, IsPageBreak);
+        return IsRunBreakOnlyParagraph(paragraph, IsPageBreak, markupMode);
     }
 
-    private static bool IsRunColumnBreakOnlyParagraph(XElement paragraph)
+    private static bool IsRunColumnBreakOnlyParagraph(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
     {
-        return IsRunBreakOnlyParagraph(paragraph, IsColumnBreak);
+        return IsRunBreakOnlyParagraph(paragraph, IsColumnBreak, markupMode);
     }
 
-    private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak)
+    private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
     {
         bool hasBreak = paragraph
-            .Elements(WordprocessingNamespace + "r")
-            .SelectMany(run => run.Elements(WordprocessingNamespace + "br"))
-            .Any(isBreak);
+            .Elements()
+            .Any(element => HasVisibleRunBreak(element, isBreak, markupMode));
         if (!hasBreak)
         {
             return false;
         }
 
-        foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
-        {
-            foreach (XElement child in run.Elements())
-            {
-                if (child.Name == WordprocessingNamespace + "rPr")
-                {
-                    continue;
-                }
-
-                if (child.Name == WordprocessingNamespace + "br" && isBreak(child))
-                {
-                    continue;
-                }
-
-                return false;
-            }
-        }
-
         return paragraph.Elements().All(element =>
             element.Name == WordprocessingNamespace + "pPr" ||
-            element.Name == WordprocessingNamespace + "r");
+            IsBreakOnlyInlineElement(element, isBreak, markupMode));
     }
 
-    private static bool HasVisibleRunPageOrColumnBreak(XElement element)
+    private static bool HasVisibleRunBreak(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
+    {
+        if (element.Name == WordprocessingNamespace + "r")
+        {
+            return element.Elements(WordprocessingNamespace + "br").Any(isBreak);
+        }
+
+        return IsVisibleRunContainer(element, markupMode) &&
+            element.Elements().Any(child => HasVisibleRunBreak(child, isBreak, markupMode));
+    }
+
+    private static bool IsBreakOnlyInlineElement(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
+    {
+        if (element.Name == WordprocessingNamespace + "r")
+        {
+            return element.Elements().All(child =>
+                child.Name == WordprocessingNamespace + "rPr" ||
+                child.Name == WordprocessingNamespace + "br" && isBreak(child));
+        }
+
+        if (IsIgnorableBreakOnlyContainerChild(element))
+        {
+            return true;
+        }
+
+        return IsVisibleRunContainer(element, markupMode) &&
+            element.Elements().All(child => IsBreakOnlyInlineElement(child, isBreak, markupMode));
+    }
+
+    private static bool IsIgnorableBreakOnlyContainerChild(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "bookmarkStart" ||
+            element.Name == WordprocessingNamespace + "bookmarkEnd" ||
+            element.Name == WordprocessingNamespace + "commentRangeStart" ||
+            element.Name == WordprocessingNamespace + "commentRangeEnd" ||
+            element.Name == WordprocessingNamespace + "proofErr" ||
+            element.Name == WordprocessingNamespace + "sdtPr" ||
+            element.Name == WordprocessingNamespace + "sdtEndPr";
+    }
+
+    private static bool HasVisibleRunPageOrColumnBreak(XElement element, OoxPdfDocxMarkupMode markupMode)
     {
         if (element.Name == WordprocessingNamespace + "r")
         {
             return element.Elements(WordprocessingNamespace + "br").Any(IsPageOrColumnBreak);
         }
 
-        return IsVisibleRunContainer(element) &&
-            element.Elements().Any(HasVisibleRunPageOrColumnBreak);
+        return IsVisibleRunContainer(element, markupMode) &&
+            element.Elements().Any(child => HasVisibleRunPageOrColumnBreak(child, markupMode));
     }
 
     private static bool IsPageOrColumnBreak(XElement breakElement)
@@ -2265,10 +3623,360 @@ internal sealed class DocxReader
 
     private static bool IsVisibleRunContainer(XElement element)
     {
+        return IsVisibleRunContainer(element, OoxPdfDocxMarkupMode.Final);
+    }
+
+    private static bool IsVisibleRunContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
+    {
         return element.Name == WordprocessingNamespace + "fldSimple" ||
             element.Name == WordprocessingNamespace + "hyperlink" ||
-            element.Name == WordprocessingNamespace + "ins" ||
+            element.Name == WordprocessingNamespace + "sdt" ||
+            element.Name == WordprocessingNamespace + "sdtContent" ||
+            IsIncludedRevisionContainer(element, markupMode);
+    }
+
+    private static bool IsIncludedRevisionContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
+    {
+        DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode);
+        if (element.Name == WordprocessingNamespace + "ins" ||
+            element.Name == WordprocessingNamespace + "moveTo")
+        {
+            return element.Name == WordprocessingNamespace + "ins"
+                ? markupContext.IncludesInsertions
+                : markupContext.IncludesMoveTo;
+        }
+
+        if (element.Name == WordprocessingNamespace + "del" ||
+            element.Name == WordprocessingNamespace + "moveFrom")
+        {
+            return element.Name == WordprocessingNamespace + "del"
+                ? markupContext.IncludesDeletions
+                : markupContext.IncludesMoveFrom;
+        }
+
+        return false;
+    }
+
+    private static bool IsRevisionContainer(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "ins" ||
+            element.Name == WordprocessingNamespace + "del" ||
+            element.Name == WordprocessingNamespace + "moveFrom" ||
             element.Name == WordprocessingNamespace + "moveTo";
+    }
+
+    private static IEnumerable<DocxRevisionScopedElement> EnumerateRevisionScopedChildren(
+        IEnumerable<XElement> elements,
+        OoxPdfDocxMarkupMode markupMode,
+        params XName[] includedNames)
+    {
+        return EnumerateRevisionScopedChildren(elements, markupMode, inheritedRevision: null, includedNames);
+    }
+
+    private static IEnumerable<DocxRevisionScopedElement> EnumerateRevisionScopedChildren(
+        IEnumerable<XElement> elements,
+        OoxPdfDocxMarkupMode markupMode,
+        DocxRevisionInfo? inheritedRevision,
+        params XName[] includedNames)
+    {
+        foreach (XElement element in elements)
+        {
+            if (includedNames.Contains(element.Name))
+            {
+                yield return new DocxRevisionScopedElement(element, inheritedRevision);
+                continue;
+            }
+
+            if (element.Name == WordprocessingNamespace + "sdt")
+            {
+                foreach (XElement content in element.Elements(WordprocessingNamespace + "sdtContent"))
+                {
+                    foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(content.Elements(), markupMode, inheritedRevision, includedNames))
+                    {
+                        yield return child;
+                    }
+                }
+
+                continue;
+            }
+
+            if (element.Name == WordprocessingNamespace + "sdtContent")
+            {
+                foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, inheritedRevision, includedNames))
+                {
+                    yield return child;
+                }
+
+                continue;
+            }
+
+            if (!IsRevisionContainer(element) || !IsIncludedRevisionContainer(element, markupMode))
+            {
+                continue;
+            }
+
+            DocxRevisionInfo? revision = CreateRevisionInfo(element) ?? inheritedRevision;
+            foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, revision, includedNames))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static bool IsRevisionMarkerElement(XElement element)
+    {
+        return element.Name == WordprocessingNamespace + "moveFromRangeStart" ||
+            element.Name == WordprocessingNamespace + "moveFromRangeEnd" ||
+            element.Name == WordprocessingNamespace + "moveToRangeStart" ||
+            element.Name == WordprocessingNamespace + "moveToRangeEnd";
+    }
+
+    private static bool TryResolveRevisionRangeMarker(XElement element, out string kind, out bool isStart)
+    {
+        if (element.Name == WordprocessingNamespace + "moveFromRangeStart")
+        {
+            kind = "MoveFrom";
+            isStart = true;
+            return true;
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveFromRangeEnd")
+        {
+            kind = "MoveFrom";
+            isStart = false;
+            return true;
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveToRangeStart")
+        {
+            kind = "MoveTo";
+            isStart = true;
+            return true;
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveToRangeEnd")
+        {
+            kind = "MoveTo";
+            isStart = false;
+            return true;
+        }
+
+        kind = string.Empty;
+        isStart = false;
+        return false;
+    }
+
+    private static string? RevisionKind(XElement element)
+    {
+        if (element.Name == WordprocessingNamespace + "ins")
+        {
+            return "Insertion";
+        }
+
+        if (element.Name == WordprocessingNamespace + "del")
+        {
+            return "Deletion";
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveFrom")
+        {
+            return "MoveFrom";
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveTo")
+        {
+            return "MoveTo";
+        }
+
+        if (element.Name == WordprocessingNamespace + "rPrChange")
+        {
+            return "RunPropertiesChange";
+        }
+
+        if (element.Name == WordprocessingNamespace + "pPrChange")
+        {
+            return "ParagraphPropertiesChange";
+        }
+
+        if (element.Name == WordprocessingNamespace + "tblPrChange")
+        {
+            return "TablePropertiesChange";
+        }
+
+        if (element.Name == WordprocessingNamespace + "trPrChange")
+        {
+            return "TableRowPropertiesChange";
+        }
+
+        if (element.Name == WordprocessingNamespace + "tcPrChange")
+        {
+            return "TableCellPropertiesChange";
+        }
+
+        if (element.Name == WordprocessingNamespace + "sectPrChange")
+        {
+            return "SectionPropertiesChange";
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveFromRangeStart")
+        {
+            return "MoveFromRangeStart";
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveFromRangeEnd")
+        {
+            return "MoveFromRangeEnd";
+        }
+
+        if (element.Name == WordprocessingNamespace + "moveToRangeStart")
+        {
+            return "MoveToRangeStart";
+        }
+
+        return element.Name == WordprocessingNamespace + "moveToRangeEnd" ? "MoveToRangeEnd" : null;
+    }
+
+    private static DocxRevisionInfo? CreateRevisionInfo(XElement element)
+    {
+        string? kind = RevisionKind(element);
+        return kind is null
+            ? null
+            : new DocxRevisionInfo(
+                kind,
+                (string?)element.Attribute(WordprocessingNamespace + "id"),
+                (string?)element.Attribute(WordprocessingNamespace + "author"),
+                (string?)element.Attribute(WordprocessingNamespace + "date"),
+                element.Name.LocalName,
+                RevisionPropertyChangeFamily(element),
+                ReadRevisionPropertyElementNames(element));
+    }
+
+    private static IReadOnlyList<DocxRevisionInfo> ReadPropertyChangeRevisions(XElement? properties)
+    {
+        return properties
+            ?.Elements()
+            .Select(CreateRevisionInfo)
+            .Where(revision => revision is not null)
+            .Select(revision => revision!)
+            .ToArray() ?? [];
+    }
+
+    private static string? RevisionPropertyChangeFamily(XElement element)
+    {
+        if (element.Name == WordprocessingNamespace + "rPrChange")
+        {
+            return "Run";
+        }
+
+        if (element.Name == WordprocessingNamespace + "pPrChange")
+        {
+            return "Paragraph";
+        }
+
+        if (element.Name == WordprocessingNamespace + "tblPrChange")
+        {
+            return "Table";
+        }
+
+        if (element.Name == WordprocessingNamespace + "trPrChange")
+        {
+            return "Row";
+        }
+
+        if (element.Name == WordprocessingNamespace + "tcPrChange")
+        {
+            return "Cell";
+        }
+
+        return element.Name == WordprocessingNamespace + "sectPrChange" ? "Section" : null;
+    }
+
+    private static IReadOnlyList<string> ReadRevisionPropertyElementNames(XElement element)
+    {
+        if (RevisionPropertyChangeFamily(element) is null)
+        {
+            return [];
+        }
+
+        return element
+            .Elements()
+            .Where(child => child.Name.Namespace == WordprocessingNamespace)
+            .SelectMany(child => child.Elements().Any()
+                ? child.Elements().Where(grandchild => grandchild.Name.Namespace == WordprocessingNamespace)
+                : [child])
+            .Select(child => child.Name.LocalName)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static void AddRevision(List<DocxRevisionInfo> revisions, DocxRevisionInfo? revision)
+    {
+        if (revision is not null)
+        {
+            revisions.Add(revision);
+        }
+    }
+
+    private static void AddRevisions(List<DocxRevisionInfo> revisions, IReadOnlyList<DocxRevisionInfo> added)
+    {
+        if (added.Count != 0)
+        {
+            revisions.AddRange(added);
+        }
+    }
+
+    private static IReadOnlyList<DocxRevisionInfo> RevisionList(DocxRevisionInfo? revision)
+    {
+        return revision is null ? [] : [revision];
+    }
+
+    private static IReadOnlyList<DocxRevisionInfo> MergeRevisionLists(DocxRevisionInfo? primary, IReadOnlyList<DocxRevisionInfo> secondary)
+    {
+        if (primary is null)
+        {
+            return secondary;
+        }
+
+        return secondary.Count == 0
+            ? [primary]
+            : [primary, .. secondary];
+    }
+
+    private static DocxRevisionInfo? FindInheritedRevision(XElement element, OoxPdfDocxMarkupMode markupMode)
+    {
+        XElement? revisionContainer = element.Ancestors().FirstOrDefault(IsRevisionContainer);
+        return revisionContainer is not null && IsIncludedRevisionContainer(revisionContainer, markupMode)
+            ? CreateRevisionInfo(revisionContainer)
+            : null;
+    }
+
+    private static bool IsInsideExcludedRevisionContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
+    {
+        return element
+            .Ancestors()
+            .Any(ancestor => IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, markupMode));
+    }
+
+    private static DocxResolvedRunProperties ApplyMarkupRevisionStyle(
+        DocxResolvedRunProperties run,
+        DocxRevisionInfo? revision,
+        OoxPdfDocxMarkupMode markupMode)
+    {
+        DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode);
+        if (!markupContext.AppliesInlineRevisionStyle || revision is null)
+        {
+            return run;
+        }
+
+        return revision.Kind switch
+        {
+            "Insertion" => run with { ColorHex = run.ColorHex ?? "0000FF", Underline = true, UnderlineValue = run.UnderlineValue ?? "single" },
+            "Deletion" => run with { ColorHex = run.ColorHex ?? "C00000", Strike = true, StrikeValue = run.StrikeValue ?? "true" },
+            "MoveFrom" => run with { ColorHex = run.ColorHex ?? "C00000", DoubleStrike = true, DoubleStrikeValue = run.DoubleStrikeValue ?? "true" },
+            "MoveTo" => run with { ColorHex = run.ColorHex ?? "008000", Underline = true, UnderlineValue = run.UnderlineValue ?? "single" },
+            _ => run
+        };
     }
 
     private static bool IsPageBreak(XElement breakElement)
@@ -2288,7 +3996,9 @@ internal sealed class DocxReader
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         XDocument? settings,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
+        CancellationToken cancellationToken = default,
+        DocxRevisionInfo? inheritedRevision = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? columns = sectionProperties.Element(WordprocessingNamespace + "cols");
@@ -2302,6 +4012,7 @@ internal sealed class DocxReader
                 relationships,
                 styles,
                 numbering,
+                markupMode,
                 cancellationToken),
             (string?)sectionProperties
                 .Element(WordprocessingNamespace + "type")
@@ -2309,7 +4020,10 @@ internal sealed class DocxReader
             (string?)columns?.Attribute(WordprocessingNamespace + "num"),
             (string?)columns?.Attribute(WordprocessingNamespace + "equalWidth"),
             (string?)columns?.Attribute(WordprocessingNamespace + "space"),
-            ReadSectionColumns(columns));
+            ReadSectionColumns(columns))
+        {
+            Revisions = MergeRevisionLists(inheritedRevision, ReadPropertyChangeRevisions(sectionProperties))
+        };
     }
 
     private static IReadOnlyList<DocxSectionColumn> ReadSectionColumns(XElement? columns)
@@ -2330,6 +4044,7 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         string relationshipType,
         string referenceElementName,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
@@ -2361,6 +4076,7 @@ internal sealed class DocxReader
                 new Dictionary<(string NumId, int Level), int>(),
                 package,
                 partRelationships,
+                markupMode,
                 cancellationToken);
         }
 
@@ -2380,8 +4096,11 @@ internal sealed class DocxReader
         XContainer referenceRoot,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
         string relationshipType,
         string referenceElementName,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         var drawings = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
@@ -2406,7 +4125,7 @@ internal sealed class DocxReader
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
-            drawings[type] = ReadFloatingDrawings(partXml, package, partRelationships, cancellationToken);
+            drawings[type] = ReadFloatingDrawings(partXml, package, partRelationships, styles, numbering, markupMode, cancellationToken);
         }
 
         return drawings;
@@ -2424,12 +4143,38 @@ internal sealed class DocxReader
         string documentPartName,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
-        return ReadRelatedStories(package, documentPartName, styles, numbering, CommentsRelationshipType, CommentsContentType, "Comment", "comment", cancellationToken)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, "Footnote", "footnote", cancellationToken))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, "Endnote", "endnote", cancellationToken))
+        return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken)
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, "Footnote", "footnote", markupMode, cancellationToken))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, "Endnote", "endnote", markupMode, cancellationToken))
             .ToArray();
+    }
+
+    private static IReadOnlyList<DocxRelatedStory> ReadCommentStories(
+        OoxPackage package,
+        string documentPartName,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyDictionary<string, DocxCommentThreadMetadata> threadMetadataByParagraphId =
+            ReadCommentThreadMetadata(package, documentPartName, cancellationToken);
+        IReadOnlyList<DocxRelatedStory> stories = ReadRelatedStories(
+            package,
+            documentPartName,
+            styles,
+            numbering,
+            CommentsRelationshipType,
+            CommentsContentType,
+            "Comment",
+            "comment",
+            markupMode,
+            cancellationToken,
+            threadMetadataByParagraphId);
+        return ResolveCommentThreadParents(stories);
     }
 
     private static IReadOnlyList<DocxRelatedStory> ReadRelatedStories(
@@ -2441,7 +4186,9 @@ internal sealed class DocxReader
         string contentType,
         string kind,
         string storyElementName,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
@@ -2459,7 +4206,7 @@ internal sealed class DocxReader
         foreach (XElement storyElement in partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DocxRelatedStory story = ReadRelatedStory(kind, part.Name, storyElement, styles, numbering, numberingCounters, package, relationships, cancellationToken);
+            DocxRelatedStory story = ReadRelatedStory(kind, part.Name, storyElement, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
             if (story.BodyElements.Count > 0)
             {
                 stories.Add(story);
@@ -2478,7 +4225,9 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxBodyElement> bodyElements = ReadRelatedStoryBodyElements(
@@ -2488,8 +4237,13 @@ internal sealed class DocxReader
             numberingCounters,
             package,
             relationships,
+            markupMode,
             cancellationToken);
-        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships, cancellationToken);
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships, styles, numbering, markupMode, cancellationToken);
+        string? paragraphId = kind == "Comment" ? ReadCommentParagraphId(story) : null;
+        DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
+            ? metadata
+            : null;
         return new DocxRelatedStory(
             kind,
             partName,
@@ -2499,14 +4253,91 @@ internal sealed class DocxReader
             [],
             (string?)story.Attribute(WordprocessingNamespace + "type"))
         {
-            FloatingDrawings = floatingDrawings
+            FloatingDrawings = floatingDrawings,
+            CommentMetadata = kind == "Comment"
+                ? new DocxCommentMetadata(
+                    (string?)story.Attribute(WordprocessingNamespace + "author"),
+                    (string?)story.Attribute(WordprocessingNamespace + "initials"),
+                    (string?)story.Attribute(WordprocessingNamespace + "date"),
+                    paragraphId,
+                    threadMetadata?.ParentParagraphId,
+                    null,
+                    threadMetadata?.IsResolved)
+                : null
         };
+    }
+
+    private static IReadOnlyDictionary<string, DocxCommentThreadMetadata> ReadCommentThreadMetadata(
+        OoxPackage package,
+        string documentPartName,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxPart? part = FindRelatedPart(package, documentPartName, CommentsExtendedRelationshipType, CommentsExtendedContentType, cancellationToken);
+        if (part is null)
+        {
+            return new Dictionary<string, DocxCommentThreadMetadata>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        using Stream stream = part.OpenRead();
+        XDocument document = SafeXml.Load(stream, cancellationToken);
+        var metadataByParagraphId = new Dictionary<string, DocxCommentThreadMetadata>(StringComparer.OrdinalIgnoreCase);
+        foreach (XElement element in document.Root?.Elements(Office2012WordNamespace + "commentEx") ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string? paragraphId = (string?)element.Attribute(Office2012WordNamespace + "paraId");
+            if (string.IsNullOrWhiteSpace(paragraphId))
+            {
+                continue;
+            }
+
+            metadataByParagraphId[paragraphId] = new DocxCommentThreadMetadata(
+                (string?)element.Attribute(Office2012WordNamespace + "paraIdParent"),
+                element.Attribute(Office2012WordNamespace + "done") is { } done ? OoxBoolean.IsTrue(done.Value) : null);
+        }
+
+        return metadataByParagraphId;
+    }
+
+    private static IReadOnlyList<DocxRelatedStory> ResolveCommentThreadParents(IReadOnlyList<DocxRelatedStory> stories)
+    {
+        Dictionary<string, string> commentIdByParagraphId = stories
+            .Where(story => story.CommentMetadata?.ParagraphId is not null && story.Id is not null)
+            .GroupBy(story => story.CommentMetadata!.ParagraphId!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Id!, StringComparer.OrdinalIgnoreCase);
+        return stories
+            .Select(story =>
+            {
+                DocxCommentMetadata? metadata = story.CommentMetadata;
+                if (metadata?.ParentParagraphId is null ||
+                    !commentIdByParagraphId.TryGetValue(metadata.ParentParagraphId, out string? parentCommentId))
+                {
+                    return story;
+                }
+
+                return story with
+                {
+                    CommentMetadata = metadata with { ParentCommentId = parentCommentId }
+                };
+            })
+            .ToArray();
+    }
+
+    private static string? ReadCommentParagraphId(XElement story)
+    {
+        return story
+            .Descendants(WordprocessingNamespace + "p")
+            .Select(paragraph => (string?)paragraph.Attribute(Office2010WordNamespace + "paraId"))
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 
     private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
         XElement story,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -2521,12 +4352,23 @@ internal sealed class DocxReader
         foreach (XElement anchor in story.Descendants(WordprocessingDrawingNamespace + "anchor"))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            DocxRevisionInfo? revision = FindInheritedRevision(anchor, markupMode);
+            if (IsInsideExcludedRevisionContainer(anchor, markupMode))
+            {
+                continue;
+            }
+
             drawings.Add(ReadFloatingDrawing(
                 anchor,
                 package,
                 relationships,
+                styles,
+                numbering,
                 FindSourceParagraphIndex(anchor, paragraphs),
-                FindSourceBlockIndex(anchor, bodyBlocks)));
+                FindSourceBlockIndex(anchor, bodyBlocks),
+                revision,
+                markupMode,
+                cancellationToken));
         }
 
         return drawings;
@@ -2539,31 +4381,34 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         var bodyElements = new List<DocxBodyElement>();
-        foreach (XElement element in elements)
+        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(elements, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            XElement element = scopedElement.Element;
+            DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, cancellationToken: cancellationToken);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                 if (paragraph is not null)
                 {
-                    bodyElements.Add(new DocxParagraphElement(paragraph));
+                    bodyElements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
                 }
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, cancellationToken: cancellationToken);
+                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, markupMode: markupMode, cancellationToken: cancellationToken, inheritedRevision: inheritedRevision);
                 if (table is not null)
                 {
-                    bodyElements.Add(new DocxTableElement(table));
+                    bodyElements.Add(DocxBodyElementFactory.CreateTable(table));
                 }
             }
         }
 
-        return bodyElements;
+        return NormalizeDeletedParagraphMarkElements(bodyElements, markupMode);
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphElements(
@@ -2572,10 +4417,11 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
         CancellationToken cancellationToken = default)
     {
         var wrapper = new XDocument(new XElement(WordprocessingNamespace + "document", new XElement(WordprocessingNamespace + "body", paragraphElements)));
-        return ReadParagraphs(wrapper, styles, numbering, package, relationships, cancellationToken);
+        return ReadParagraphs(wrapper, styles, numbering, package, relationships, markupMode, cancellationToken);
     }
 
     private static DocxTable? ReadTable(
@@ -2587,7 +4433,9 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         Dictionary<string, int>? inlineReferenceCounters = null,
         DocxDocumentSettings? documentSettings = null,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
+        CancellationToken cancellationToken = default,
+        DocxRevisionInfo? inheritedRevision = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? tableProperties = table.Element(WordprocessingNamespace + "tblPr");
@@ -2603,6 +4451,9 @@ internal sealed class DocxReader
             ?.Element(WordprocessingNamespace + "tblInd");
         XElement? tableCellSpacing = tableProperties
             ?.Element(WordprocessingNamespace + "tblCellSpacing");
+        var tableRevisions = new List<DocxRevisionInfo>();
+        AddRevision(tableRevisions, inheritedRevision);
+        AddRevisions(tableRevisions, ReadPropertyChangeRevisions(tableProperties));
         DocxTableLook tableLook = ReadTableLook(tableProperties);
         IReadOnlyList<DocxTableCellBorder> tableBorders = ReadTableBorders(tableProperties);
         DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
@@ -2616,20 +4467,28 @@ internal sealed class DocxReader
             .ToArray() ?? [];
         bool hasExplicitGrid = columns.Count != 0;
         var rows = new List<DocxTableRow>();
-        XElement[] rowElements = table.Elements(WordprocessingNamespace + "tr").ToArray();
+        DocxRevisionScopedElement[] rowElements = EnumerateRevisionScopedChildren(table.Elements(), markupMode, WordprocessingNamespace + "tr").ToArray();
         for (int rowIndex = 0; rowIndex < rowElements.Length; rowIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            XElement row = rowElements[rowIndex];
+            XElement row = rowElements[rowIndex].Element;
+            XElement? rowProperties = row.Element(WordprocessingNamespace + "trPr");
+            var rowRevisions = new List<DocxRevisionInfo>();
+            AddRevision(rowRevisions, rowElements[rowIndex].Revision);
+            AddRevisions(rowRevisions, ReadPropertyChangeRevisions(rowProperties));
             DocxTableCellMargins rowExceptionMargins = ReadTablePropertyExceptionCellMargins(row);
             DocxTableCellMargins rowInheritedMargins = MergeTableCellMargins(rowExceptionMargins, MergeTableCellMargins(tableCellMargins, tableStyle.Cell.Margins));
             var cells = new List<DocxTableCell>();
-            XElement[] cellElements = row.Elements(WordprocessingNamespace + "tc").ToArray();
+            DocxRevisionScopedElement[] cellElements = EnumerateRevisionScopedChildren(row.Elements(), markupMode, WordprocessingNamespace + "tc").ToArray();
             for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                XElement cell = cellElements[cellIndex];
+                XElement cell = cellElements[cellIndex].Element;
+                DocxRevisionInfo? inheritedCellRevision = cellElements[cellIndex].Revision ?? rowElements[rowIndex].Revision;
                 XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
+                var cellRevisions = new List<DocxRevisionInfo>();
+                AddRevision(cellRevisions, cellElements[cellIndex].Revision);
+                AddRevisions(cellRevisions, ReadPropertyChangeRevisions(cellProperties));
                 DocxTableCellConditionalFormat? conditionalFormat = ReadTableCellConditionalFormat(cellProperties);
                 DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, tableLook, conditionalFormat, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
                 IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
@@ -2642,7 +4501,9 @@ internal sealed class DocxReader
                     conditionalStyle,
                     inlineReferenceCounters,
                     documentSettings,
-                    cancellationToken);
+                    markupMode,
+                    cancellationToken,
+                    inheritedCellRevision);
                 IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
                 string text = string.Join(" ", paragraphs
                     .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
@@ -2657,6 +4518,23 @@ internal sealed class DocxReader
                     ?? conditionalStyle.VerticalAlignmentValue;
                 XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
                 XElement? verticalMerge = cellProperties?.Element(WordprocessingNamespace + "vMerge");
+                XElement? noWrap = cellProperties?.Element(WordprocessingNamespace + "noWrap");
+                XElement? fitText = cellProperties?.Element(WordprocessingNamespace + "tcFitText");
+                string? textDirectionValue = cellProperties?.Element(WordprocessingNamespace + "textDirection") is { } textDirection
+                    ? (string?)textDirection.Attribute(WordprocessingNamespace + "val")
+                    : conditionalStyle.TextDirectionValue;
+                bool resolvedNoWrap = noWrap is not null
+                    ? ReadOnOff(noWrap) == true
+                    : conditionalStyle.NoWrap == true;
+                string? resolvedNoWrapValue = noWrap is not null
+                    ? (string?)noWrap.Attribute(WordprocessingNamespace + "val")
+                    : conditionalStyle.NoWrapValue;
+                bool resolvedFitText = fitText is not null
+                    ? ReadOnOff(fitText) == true
+                    : conditionalStyle.FitText == true;
+                string? resolvedFitTextValue = fitText is not null
+                    ? (string?)fitText.Attribute(WordprocessingNamespace + "val")
+                    : conditionalStyle.FitTextValue;
                 IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
                 IReadOnlyList<DocxTableCellBorder> borders = ResolveTableCellBorders(
                     directBorders,
@@ -2687,23 +4565,23 @@ internal sealed class DocxReader
                         ?.Attribute(WordprocessingNamespace + "val"),
                     conditionalFormat,
                     verticalMerge is not null,
-                    (string?)verticalMerge?.Attribute(WordprocessingNamespace + "val"))
+                    (string?)verticalMerge?.Attribute(WordprocessingNamespace + "val"),
+                    resolvedNoWrap,
+                    resolvedNoWrapValue,
+                    resolvedFitText,
+                    resolvedFitTextValue,
+                    textDirectionValue)
                 {
-                    BodyElements = cellBodyElements
+                    BodyElements = cellBodyElements,
+                    Revisions = cellRevisions
                 });
             }
 
             if (cells.Count > 0)
             {
-                XElement? header = row
-                    .Element(WordprocessingNamespace + "trPr")
-                    ?.Element(WordprocessingNamespace + "tblHeader");
-                XElement? cantSplit = row
-                    .Element(WordprocessingNamespace + "trPr")
-                    ?.Element(WordprocessingNamespace + "cantSplit");
-                XElement? rowHeight = row
-                    .Element(WordprocessingNamespace + "trPr")
-                    ?.Element(WordprocessingNamespace + "trHeight");
+                XElement? header = rowProperties?.Element(WordprocessingNamespace + "tblHeader");
+                XElement? cantSplit = rowProperties?.Element(WordprocessingNamespace + "cantSplit");
+                XElement? rowHeight = rowProperties?.Element(WordprocessingNamespace + "trHeight");
                 rows.Add(new DocxTableRow(
                     cells,
                     ReadTableRowHeight(rowHeight),
@@ -2713,7 +4591,10 @@ internal sealed class DocxReader
                     (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule"),
                     HasAnyTableCellMargin(rowExceptionMargins) ? rowExceptionMargins : null,
                     ReadOnOff(cantSplit) == true,
-                    (string?)cantSplit?.Attribute(WordprocessingNamespace + "val")));
+                    (string?)cantSplit?.Attribute(WordprocessingNamespace + "val"))
+                {
+                    Revisions = rowRevisions
+                });
             }
         }
 
@@ -2746,7 +4627,10 @@ internal sealed class DocxReader
             tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.CellSpacingValue,
             tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.CellSpacingType,
             tableLook,
-            hasExplicitGrid);
+            hasExplicitGrid)
+        {
+            Revisions = tableRevisions
+        };
     }
 
     private static double? ReadDxaWidth(XElement? width)
@@ -2780,12 +4664,16 @@ internal sealed class DocxReader
         DocxTableCellStyle tableCellStyle,
         Dictionary<string, int>? inlineReferenceCounters = null,
         DocxDocumentSettings? documentSettings = null,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
+        CancellationToken cancellationToken = default,
+        DocxRevisionInfo? inheritedRevision = null)
     {
         var elements = new List<DocxBodyElement>();
-        foreach (XElement child in cell.Elements())
+        foreach (DocxRevisionScopedElement scopedChild in EnumerateRevisionScopedChildren(cell.Elements(), markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            XElement child = scopedChild.Element;
+            DocxRevisionInfo? childRevision = scopedChild.Revision ?? inheritedRevision;
             if (child.Name == WordprocessingNamespace + "tcPr")
             {
                 continue;
@@ -2793,7 +4681,7 @@ internal sealed class DocxReader
 
             if (child.Name == WordprocessingNamespace + "p")
             {
-                if (IsRunColumnBreakOnlyParagraph(child))
+                if (IsRunColumnBreakOnlyParagraph(child, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(
                         child,
@@ -2805,21 +4693,23 @@ internal sealed class DocxReader
                         tableCellStyle,
                         inlineReferenceCounters: inlineReferenceCounters,
                         documentSettings: documentSettings,
+                        inheritedRevision: childRevision,
+                        markupMode: markupMode,
                         cancellationToken: cancellationToken);
-                    elements.Add(new DocxManualBreakElement("runBreak", "column", breakParagraph));
+                    elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column", breakParagraph));
                     continue;
                 }
 
-                if (HasRunPageOrColumnBreak(child))
+                if (HasRunPageOrColumnBreak(child, markupMode))
                 {
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
                         {
                             elements.Add(string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase)
-                                ? new DocxManualBreakElement("runBreak", "column")
-                                : new DocxPageBreakElement("runBreak", part.BreakValue));
+                                ? DocxBodyElementFactory.CreateManualBreak("runBreak", "column")
+                                : DocxBodyElementFactory.CreatePageBreak("runBreak", part.BreakValue));
                             continue;
                         }
 
@@ -2838,10 +4728,12 @@ internal sealed class DocxReader
                             tableCellStyle,
                             inlineReferenceCounters: inlineReferenceCounters,
                             documentSettings: documentSettings,
+                            inheritedRevision: childRevision,
+                            markupMode: markupMode,
                             cancellationToken: cancellationToken);
                         if (splitParagraph is not null)
                         {
-                            elements.Add(new DocxParagraphElement(AdjustBreakParagraphFragment(splitParagraph, part)));
+                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part)));
                         }
                     }
 
@@ -2858,23 +4750,25 @@ internal sealed class DocxReader
                     tableCellStyle,
                     inlineReferenceCounters: inlineReferenceCounters,
                     documentSettings: documentSettings,
+                    inheritedRevision: childRevision,
+                    markupMode: markupMode,
                     cancellationToken: cancellationToken);
                 if (parsed is not null)
                 {
-                    elements.Add(new DocxParagraphElement(parsed));
+                    elements.Add(DocxBodyElementFactory.CreateParagraph(parsed));
                 }
             }
             else if (child.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? nestedTable = ReadTable(child, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, cancellationToken);
+                DocxTable? nestedTable = ReadTable(child, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, childRevision);
                 if (nestedTable is not null)
                 {
-                    elements.Add(new DocxTableElement(nestedTable));
+                    elements.Add(DocxBodyElementFactory.CreateTable(nestedTable));
                 }
             }
         }
 
-        return elements;
+        return NormalizeDeletedParagraphMarkElements(elements, markupMode);
     }
 
     private static void AddImplicitTerminalTableParagraph(List<DocxBodyElement> elements)
@@ -3138,12 +5032,27 @@ internal sealed class DocxReader
         return OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture));
     }
 
-    private static IReadOnlyList<DocxInlineImage> ReadInlineImages(XElement run, OoxPackage package, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    private static IReadOnlyList<DocxInlineImage> ReadInlineImages(
+        XElement run,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxRevisionInfo? revision = null)
     {
         var images = new List<DocxInlineImage>();
         foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
         {
-            DocxInlineImage? image = ReadDrawingImage(inline, package, relationships);
+            DocxInlineImage? image = ReadDrawingImage(inline, package, relationships, revision);
+            if (image is null)
+            {
+                continue;
+            }
+
+            images.Add(image);
+        }
+
+        foreach (XElement shape in run.Descendants(VmlNamespace + "shape"))
+        {
+            DocxInlineImage? image = ReadVmlInlineImage(shape, package, relationships, revision);
             if (image is null)
             {
                 continue;
@@ -3155,7 +5064,11 @@ internal sealed class DocxReader
         return images;
     }
 
-    private static DocxInlineImage? ReadDrawingImage(XElement drawing, OoxPackage package, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    private static DocxInlineImage? ReadDrawingImage(
+        XElement drawing,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxRevisionInfo? revision = null)
     {
         XElement? extent = drawing.Element(WordprocessingDrawingNamespace + "extent");
         string? relationshipId = ReadDrawingImageRelationshipId(drawing);
@@ -3175,7 +5088,10 @@ internal sealed class DocxReader
             OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cy")),
             imagePart.ContentType,
             imagePart.Bytes,
-            imagePart.Name);
+            imagePart.Name)
+        {
+            Revisions = RevisionList(revision)
+        };
     }
 
     private static string? ReadDrawingImageRelationshipId(XElement drawing)
@@ -3184,6 +5100,157 @@ internal sealed class DocxReader
             .Descendants(DrawingNamespace + "blip")
             .FirstOrDefault()
             ?.Attribute(RelationshipsNamespace + "embed");
+    }
+
+    private static DocxInlineImage? ReadVmlInlineImage(
+        XElement shape,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxRevisionInfo? revision = null)
+    {
+        if (!TryReadVmlImageShape(
+                shape,
+                relationships,
+                out OoxRelationship? relationship,
+                out double widthPoints,
+                out double heightPoints) ||
+            relationship is null ||
+            relationship.ResolvedTarget is null)
+        {
+            return null;
+        }
+
+        OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+        if (imagePart is null)
+        {
+            return null;
+        }
+
+        return new DocxInlineImage(
+            widthPoints,
+            heightPoints,
+            imagePart.ContentType,
+            imagePart.Bytes,
+            imagePart.Name)
+        {
+            Revisions = RevisionList(revision)
+        };
+    }
+
+    private static bool TryReadVmlImageShape(
+        XElement shape,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        out OoxRelationship? relationship,
+        out double widthPoints,
+        out double heightPoints)
+    {
+        relationship = null;
+        widthPoints = 0d;
+        heightPoints = 0d;
+        XElement? imageData = shape.Descendants(VmlNamespace + "imagedata").FirstOrDefault();
+        string? relationshipId = (string?)imageData?.Attribute(RelationshipsNamespace + "id");
+        if (relationshipId is null ||
+            !relationships.TryGetValue(relationshipId, out OoxRelationship? resolvedRelationship) ||
+            resolvedRelationship.IsExternal ||
+            resolvedRelationship.ResolvedTarget is null ||
+            !TryReadVmlShapeSizePoints(shape, out widthPoints, out heightPoints))
+        {
+            return false;
+        }
+
+        relationship = resolvedRelationship;
+        return true;
+    }
+
+    private static bool TryReadVmlShapeSizePoints(XElement shape, out double widthPoints, out double heightPoints)
+    {
+        widthPoints = 0d;
+        heightPoints = 0d;
+        double? width = null;
+        double? height = null;
+        string? style = (string?)shape.Attribute("style");
+        if (!string.IsNullOrWhiteSpace(style))
+        {
+            foreach (string declaration in style.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                int separator = declaration.IndexOf(':');
+                if (separator <= 0 || separator == declaration.Length - 1)
+                {
+                    continue;
+                }
+
+                string name = declaration[..separator].Trim();
+                string value = declaration[(separator + 1)..].Trim();
+                if (name.Equals("width", StringComparison.OrdinalIgnoreCase) &&
+                    TryParseVmlLengthPoints(value, out double parsedWidth))
+                {
+                    width = parsedWidth;
+                }
+                else if (name.Equals("height", StringComparison.OrdinalIgnoreCase) &&
+                    TryParseVmlLengthPoints(value, out double parsedHeight))
+                {
+                    height = parsedHeight;
+                }
+            }
+        }
+
+        if (width is null &&
+            shape.Attribute("width") is { } widthAttribute &&
+            TryParseVmlLengthPoints(widthAttribute.Value, out double attributeWidth))
+        {
+            width = attributeWidth;
+        }
+
+        if (height is null &&
+            shape.Attribute("height") is { } heightAttribute &&
+            TryParseVmlLengthPoints(heightAttribute.Value, out double attributeHeight))
+        {
+            height = attributeHeight;
+        }
+
+        if (width is not > 0d || height is not > 0d)
+        {
+            return false;
+        }
+
+        widthPoints = width.Value;
+        heightPoints = height.Value;
+        return true;
+    }
+
+    private static bool TryParseVmlLengthPoints(string value, out double points)
+    {
+        points = 0d;
+        string trimmed = value.Trim().ToLowerInvariant();
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        int unitStart = trimmed.Length;
+        while (unitStart > 0 && char.IsLetter(trimmed[unitStart - 1]))
+        {
+            unitStart--;
+        }
+
+        string numberText = trimmed[..unitStart].Trim();
+        string unit = trimmed[unitStart..];
+        if (!double.TryParse(numberText, NumberStyles.Float, CultureInfo.InvariantCulture, out double numeric))
+        {
+            return false;
+        }
+
+        points = unit switch
+        {
+            "" or "pt" => numeric,
+            "in" => numeric * 72d,
+            "cm" => numeric * 72d / 2.54d,
+            "mm" => numeric * 72d / 25.4d,
+            "pc" => numeric * 12d,
+            "px" => numeric * 0.75d,
+            _ => 0d
+        };
+        return points > 0d;
     }
 
     private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)
@@ -3642,6 +5709,7 @@ internal sealed class DocxReader
         IReadOnlyList<DocxTabStop> tabStops = ReadParagraphTabStops(properties);
         XElement? snapToGrid = properties?.Element(WordprocessingNamespace + "snapToGrid");
         XElement? pageBreakBefore = properties?.Element(WordprocessingNamespace + "pageBreakBefore");
+        XElement? wordWrap = properties?.Element(WordprocessingNamespace + "wordWrap");
 
         return new DocxResolvedParagraphProperties(
             alignment,
@@ -3657,7 +5725,9 @@ internal sealed class DocxReader
             ReadOnOff(snapToGrid),
             (string?)snapToGrid?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(pageBreakBefore),
-            (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val"));
+            (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val"),
+            ReadOnOff(wordWrap),
+            (string?)wordWrap?.Attribute(WordprocessingNamespace + "val"));
     }
 
     private static IReadOnlyList<DocxTabStop> ReadParagraphTabStops(XElement? properties)
@@ -3747,13 +5817,13 @@ internal sealed class DocxReader
         string? shadingFill = (string?)shading?.Attribute(WordprocessingNamespace + "fill");
         string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val");
         string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color");
-        string? underlineValue = (string?)properties?
-            .Element(WordprocessingNamespace + "u")
-            ?.Attribute(WordprocessingNamespace + "val");
-        bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
+        XElement? underlineElement = properties?.Element(WordprocessingNamespace + "u");
+        string? underlineValue = (string?)underlineElement?.Attribute(WordprocessingNamespace + "val");
+        string? underlineColor = (string?)underlineElement?.Attribute(WordprocessingNamespace + "color");
+        bool? underline = underlineElement is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue, highlightValue, shadingFill, shadingValue, shadingColor, smallCaps, smallCapsValue, hidden, hiddenValue);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue, highlightValue, shadingFill, shadingValue, shadingColor, smallCaps, smallCapsValue, hidden, hiddenValue, underlineColor);
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -3843,6 +5913,23 @@ internal sealed class DocxReader
             indent.Attribute(WordprocessingNamespace + "hangingChars") is not null;
     }
 
+    private static bool HasUnsupportedNumberingIndent(XElement level)
+    {
+        XElement? indent = level
+            .Element(WordprocessingNamespace + "pPr")
+            ?.Element(WordprocessingNamespace + "ind");
+        return indent is not null && HasCharacterUnitIndent(indent);
+    }
+
+    private static bool HasUnsupportedParagraphSpacingVariant(XElement spacing)
+    {
+        string? lineRule = (string?)spacing.Attribute(WordprocessingNamespace + "lineRule");
+        return lineRule is not null &&
+            !lineRule.Equals("auto", StringComparison.OrdinalIgnoreCase) &&
+            !lineRule.Equals("exact", StringComparison.OrdinalIgnoreCase) &&
+            !lineRule.Equals("atLeast", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static int? ReadPositiveIntAttribute(XElement? element, XName name)
     {
         if (element?.Attribute(name) is not { } value ||
@@ -3898,7 +5985,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxTableStyle>(),
@@ -3984,7 +6071,12 @@ internal sealed class DocxReader
         string? ShadingColor,
         string? VerticalAlignmentValue,
         IReadOnlyList<DocxTableCellBorder> Borders,
-        DocxTableCellMargins Margins)
+        DocxTableCellMargins Margins,
+        bool? NoWrap = null,
+        string? NoWrapValue = null,
+        bool? FitText = null,
+        string? FitTextValue = null,
+        string? TextDirectionValue = null)
     {
         public static DocxTableCellStyle Empty { get; } = new(DocxResolvedParagraphProperties.Empty, DocxResolvedRunProperties.Empty, null, null, null, null, [], DocxTableCellMargins.Empty);
 
@@ -3998,7 +6090,12 @@ internal sealed class DocxReader
                 other.ShadingColor ?? ShadingColor,
                 other.VerticalAlignmentValue ?? VerticalAlignmentValue,
                 other.Borders.Count == 0 ? Borders : other.Borders,
-                MergeTableCellMargins(other.Margins, Margins));
+                MergeTableCellMargins(other.Margins, Margins),
+                other.NoWrap ?? NoWrap,
+                other.NoWrapValue ?? NoWrapValue,
+                other.FitText ?? FitText,
+                other.FitTextValue ?? FitTextValue,
+                other.TextDirectionValue ?? TextDirectionValue);
         }
     }
 
@@ -4096,6 +6193,8 @@ internal sealed class DocxReader
         XElement? runProperties = null)
     {
         XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
+        XElement? noWrap = cellProperties?.Element(WordprocessingNamespace + "noWrap");
+        XElement? fitText = cellProperties?.Element(WordprocessingNamespace + "tcFitText");
         return new DocxTableCellStyle(
             ReadParagraphProperties(paragraphProperties),
             ReadRunProperties(runProperties),
@@ -4106,7 +6205,14 @@ internal sealed class DocxReader
                 ?.Element(WordprocessingNamespace + "vAlign")
                 ?.Attribute(WordprocessingNamespace + "val"),
             ReadTableCellBorders(cellProperties),
-            DocxTableCellMargins.Empty);
+            DocxTableCellMargins.Empty,
+            ReadOnOff(noWrap),
+            (string?)noWrap?.Attribute(WordprocessingNamespace + "val"),
+            ReadOnOff(fitText),
+            (string?)fitText?.Attribute(WordprocessingNamespace + "val"),
+            (string?)cellProperties
+                ?.Element(WordprocessingNamespace + "textDirection")
+                ?.Attribute(WordprocessingNamespace + "val"));
     }
 
     private static DocxTableCellStyle ResolveTableCellStyle(
@@ -4318,7 +6424,8 @@ internal sealed class DocxReader
             run.SmallCaps,
             run.SmallCapsValue,
             run.Hidden,
-            run.HiddenValue);
+            run.HiddenValue,
+            run.UnderlineColorHex);
     }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
@@ -4362,9 +6469,11 @@ internal sealed class DocxReader
         bool? SnapToGrid,
         string? SnapToGridValue,
         bool? PageBreakBefore,
-        string? PageBreakBeforeValue)
+        string? PageBreakBeforeValue,
+        bool? WordWrap,
+        string? WordWrapValue)
     {
-        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null);
+        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null);
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -4384,7 +6493,9 @@ internal sealed class DocxReader
                 other.SnapToGrid ?? SnapToGrid,
                 other.SnapToGridValue ?? SnapToGridValue,
                 other.PageBreakBefore ?? PageBreakBefore,
-                other.PageBreakBeforeValue ?? PageBreakBeforeValue);
+                other.PageBreakBeforeValue ?? PageBreakBeforeValue,
+                other.WordWrap ?? WordWrap,
+                other.WordWrapValue ?? WordWrapValue);
         }
     }
 
@@ -4468,9 +6579,10 @@ internal sealed class DocxReader
         bool? SmallCaps = null,
         string? SmallCapsValue = null,
         bool? Hidden = null,
-        string? HiddenValue = null)
+        string? HiddenValue = null,
+        string? UnderlineColorHex = null)
     {
-        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -4499,7 +6611,27 @@ internal sealed class DocxReader
                 other.SmallCaps ?? SmallCaps,
                 other.SmallCapsValue ?? SmallCapsValue,
                 other.Hidden ?? Hidden,
-                other.HiddenValue ?? HiddenValue);
+                other.HiddenValue ?? HiddenValue,
+                other.UnderlineColorHex ?? UnderlineColorHex);
         }
     }
+
+    private sealed record DocxRevisionScopedElement(XElement Element, DocxRevisionInfo? Revision);
+
+    private sealed record DocxCommentRangeStart(string? Id, int SourceRunIndex, int TextOffset);
+
+    private sealed record DocxCommentAnchorInventory(
+        IReadOnlyList<string> PackageAnchorIds,
+        IReadOnlyList<string> HiddenAnchorIds);
+
+    private sealed record DocxRevisionRangeStart(
+        string Kind,
+        string? Id,
+        string? Name,
+        string? Author,
+        string? Date,
+        int SourceRunIndex,
+        int TextOffset);
+
+    private sealed record DocxCommentThreadMetadata(string? ParentParagraphId, bool? IsResolved);
 }

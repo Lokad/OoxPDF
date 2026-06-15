@@ -1,0 +1,13 @@
+{
+  "id": "docx-private-grounded-comment-anchors",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-private-grounded-review.docx",
+  "docxMarkup": "all",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "private-grounded", "comment-anchors", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

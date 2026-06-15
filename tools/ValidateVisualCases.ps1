@@ -9,6 +9,8 @@ $caseRoot = Join-Path $repoRoot "visual-cases/cases"
 $familyRoot = Join-Path $repoRoot "visual-cases/families"
 $idPattern = "^[a-z0-9]+(-[a-z0-9]+)*$"
 $classificationTags = @("locked", "locked-text-ops", "approximate", "needs-review")
+$docxMarkupModes = @("final", "original", "simple", "simple-markup", "all", "all-markup")
+$docxMarkupGeometryModes = @("preserve", "preserve-layout", "preserve-document-layout", "reserve", "reserve-margin", "markup-margin", "reserve-markup-margin", "word", "word-compatible", "word-compatible-all-markup", "office", "office-compatible", "office-compatible-all-markup")
 
 function Add-Issue([System.Collections.Generic.List[string]] $issues, [string] $message) {
     $issues.Add($message) | Out-Null
@@ -21,6 +23,19 @@ function Read-JsonFile([string] $path) {
     catch {
         throw "Invalid JSON in $path. $($_.Exception.Message)"
     }
+}
+
+function Get-NormalizedDocxMarkupMode([string] $value) {
+    $normalized = $value.Trim().ToLowerInvariant()
+    if ($normalized -eq "simple-markup") {
+        return "simple"
+    }
+
+    if ($normalized -eq "all-markup") {
+        return "all"
+    }
+
+    return $normalized
 }
 
 $issues = [System.Collections.Generic.List[string]]::new()
@@ -67,6 +82,26 @@ foreach ($caseDirectory in $caseDirectories) {
         Add-Issue $issues "Case '$($manifest.id)' has unsupported kind '$($manifest.kind)'."
     }
 
+    if ($manifest.PSObject.Properties.Name -contains "docxMarkup" -and $manifest.docxMarkup -ne $null) {
+        $docxMarkup = ([string]$manifest.docxMarkup).Trim().ToLowerInvariant()
+        if ($manifest.kind -ne "docx") {
+            Add-Issue $issues "Case '$($manifest.id)' sets docxMarkup but is not a DOCX case."
+        }
+        elseif ($docxMarkupModes -notcontains $docxMarkup) {
+            Add-Issue $issues "Case '$($manifest.id)' has unsupported docxMarkup '$($manifest.docxMarkup)'."
+        }
+    }
+
+    if ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and $manifest.docxMarkupGeometry -ne $null) {
+        $docxMarkupGeometry = ([string]$manifest.docxMarkupGeometry).Trim().ToLowerInvariant()
+        if ($manifest.kind -ne "docx") {
+            Add-Issue $issues "Case '$($manifest.id)' sets docxMarkupGeometry but is not a DOCX case."
+        }
+        elseif ($docxMarkupGeometryModes -notcontains $docxMarkupGeometry) {
+            Add-Issue $issues "Case '$($manifest.id)' has unsupported docxMarkupGeometry '$($manifest.docxMarkupGeometry)'."
+        }
+    }
+
     if ([string]::IsNullOrWhiteSpace($manifest.input)) {
         Add-Issue $issues "Case '$($manifest.id)' has no input path."
     }
@@ -84,6 +119,26 @@ foreach ($caseDirectory in $caseDirectories) {
     foreach ($tag in @($manifest.tags)) {
         if ($tag -is [string] -and $tag.Length -ne 0 -and $tag -notmatch $idPattern) {
             Add-Issue $issues "Case '$($manifest.id)' tag '$tag' is not normalized kebab-case."
+        }
+    }
+}
+
+$docxMarkupCases = @($caseById.Values | Where-Object { @($_.Manifest.tags) -contains "docx-markup" })
+if ($docxMarkupCases.Count -ne 0) {
+    foreach ($case in $docxMarkupCases) {
+        if ($case.Manifest.PSObject.Properties.Name -notcontains "docxMarkup" -or [string]::IsNullOrWhiteSpace([string]$case.Manifest.docxMarkup)) {
+            Add-Issue $issues "DOCX markup case '$($case.Id)' must set docxMarkup."
+        }
+    }
+
+    $coveredMarkupModes = @($docxMarkupCases | ForEach-Object {
+        if ($_.Manifest.PSObject.Properties.Name -contains "docxMarkup" -and $_.Manifest.docxMarkup -ne $null) {
+            Get-NormalizedDocxMarkupMode ([string]$_.Manifest.docxMarkup)
+        }
+    } | Sort-Object -Unique)
+    foreach ($requiredMarkupMode in @("final", "original", "simple", "all")) {
+        if ($coveredMarkupModes -notcontains $requiredMarkupMode) {
+            Add-Issue $issues "DOCX markup visual coverage is missing '$requiredMarkupMode' mode."
         }
     }
 }
@@ -108,6 +163,7 @@ foreach ($familyFile in $familyFiles) {
     }
 
     $patterns = @($family.casePatterns | Where-Object { $_ -is [string] -and $_.Length -ne 0 })
+    $excludePatterns = @($family.excludePatterns | Where-Object { $_ -is [string] -and $_.Length -ne 0 })
     if ($patterns.Count -eq 0) {
         Add-Issue $issues "Family '$($family.id)' has no casePatterns."
     }
@@ -117,6 +173,7 @@ foreach ($familyFile in $familyFiles) {
         Kind = [string]$family.kind
         Path = $familyFile.FullName
         Patterns = $patterns
+        ExcludePatterns = $excludePatterns
     }
 }
 
@@ -130,7 +187,11 @@ foreach ($case in $caseById.Values) {
 
         foreach ($pattern in $family.Patterns) {
             if ($case.Id -like $pattern) {
-                $matches += $family.Id
+                $excluded = @($family.ExcludePatterns | Where-Object { $case.Id -like $_ }).Count -ne 0
+                if (-not $excluded) {
+                    $matches += $family.Id
+                }
+
                 break
             }
         }
@@ -148,7 +209,10 @@ foreach ($case in $caseById.Values) {
 foreach ($family in $families) {
     foreach ($pattern in $family.Patterns) {
         $matched = @($caseById.Values | Where-Object {
-            $_.Manifest.kind -eq $family.Kind -and $_.Id -like $pattern
+            $case = $_
+            $_.Manifest.kind -eq $family.Kind -and
+                $_.Id -like $pattern -and
+                @($family.ExcludePatterns | Where-Object { $case.Id -like $_ }).Count -eq 0
         })
         if ($matched.Count -eq 0) {
             Add-Issue $issues "Family '$($family.Id)' pattern '$pattern' matches no $($family.Kind) cases."

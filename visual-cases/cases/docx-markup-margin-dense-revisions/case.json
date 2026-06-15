@@ -1,0 +1,14 @@
+{
+  "id": "docx-markup-margin-dense-revisions",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-markup-margin-dense-revisions.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "markup-margin", "dense-revisions", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

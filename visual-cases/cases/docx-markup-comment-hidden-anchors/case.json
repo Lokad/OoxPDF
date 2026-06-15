@@ -1,0 +1,13 @@
+{
+  "id": "docx-markup-comment-hidden-anchors",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-markup-comment-hidden-anchors.docx",
+  "docxMarkup": "final",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "comments", "hidden-anchors", "orphaned-comments", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

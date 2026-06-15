@@ -65,6 +65,16 @@ $inputPath = Join-Path $caseDirectory $manifest.input
 $inputFull = (Resolve-Path -LiteralPath $inputPath).Path
 Assert-PrivateUntracked $inputFull "Private case input"
 
+$docxMarkup = if ($manifest.PSObject.Properties.Name -contains "docxMarkup" -and $manifest.docxMarkup -ne $null) { [string]$manifest.docxMarkup } else { $null }
+$docxMarkupGeometry = if ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and $manifest.docxMarkupGeometry -ne $null) { [string]$manifest.docxMarkupGeometry } else { $null }
+if (-not [string]::IsNullOrWhiteSpace($docxMarkup) -and $manifest.kind -ne "docx") {
+    throw "Private case '$caseId' sets docxMarkup but is not a DOCX case."
+}
+
+if (-not [string]::IsNullOrWhiteSpace($docxMarkupGeometry) -and $manifest.kind -ne "docx") {
+    throw "Private case '$caseId' sets docxMarkupGeometry but is not a DOCX case."
+}
+
 if ($ValidateOnly) {
     Write-Host "Private case validation passed: $caseFull"
     Write-Host "Private input: $inputFull"
@@ -89,12 +99,31 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
-dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnostics
+$candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
+if (-not [string]::IsNullOrWhiteSpace($docxMarkup)) {
+    $candidateArgs += @("--docx-markup", $docxMarkup)
+}
+
+if (-not [string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
+    $candidateArgs += @("--docx-markup-geometry", $docxMarkupGeometry)
+}
+
+dotnet $cliDll @candidateArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $dpi
+$referenceArgs = @("-InputPath", $inputFull, "-OutputDirectory", $referenceDir, "-Dpi", $dpi)
+if (-not [string]::IsNullOrWhiteSpace($docxMarkup) -or -not [string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
+    $referenceDocxMarkup = if ([string]::IsNullOrWhiteSpace($docxMarkup)) { "final" } else { $docxMarkup }
+    $referenceDocxMarkupGeometry = if ([string]::IsNullOrWhiteSpace($docxMarkupGeometry)) { "preserve" } else { $docxMarkupGeometry }
+    $referenceArgs += @(
+        "-CacheOnly",
+        "-CacheVariant",
+        ("docxMarkup={0};docxMarkupGeometry={1}" -f $referenceDocxMarkup, $referenceDocxMarkupGeometry))
+}
+
+& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") @referenceArgs
 & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
 
 dotnet build (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") --nologo

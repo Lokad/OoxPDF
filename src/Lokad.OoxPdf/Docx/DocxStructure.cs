@@ -3,6 +3,7 @@ using System.Globalization;
 namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxStructureSnapshot(
+    string MarkupMode,
     int BlockCount,
     int ParagraphBlockCount,
     int TableBlockCount,
@@ -14,8 +15,15 @@ internal sealed record DocxStructureSnapshot(
     int DefaultSectionBreakBlockCount,
     int ColumnSectionBreakBlockCount,
     int BodyTextLength,
+    int RevisionCount,
+    int InsertionRevisionCount,
+    int DeletionRevisionCount,
+    int MoveFromRevisionCount,
+    int MoveToRevisionCount,
+    int OtherRevisionCount,
     int InlineImageCount,
     int InlineReferenceCount,
+    int CommentReferenceCount,
     int AnchoredInlineReferenceCount,
     int ResolvedInlineReferenceCount,
     int MaxInlineReferenceTextOffsetInRun,
@@ -23,6 +31,11 @@ internal sealed record DocxStructureSnapshot(
     int PageFieldReferenceCount,
     int NumPagesFieldReferenceCount,
     int OtherFieldReferenceCount,
+    int ComplexFieldReferenceCount,
+    int CachedResultFieldReferenceCount,
+    int RenderedCachedResultFieldReferenceCount,
+    int PlaceholderFieldReferenceCount,
+    int NestedFieldReferenceCount,
     int BookmarkAnchorCount,
     int HyperlinkCount,
     int ExternalHyperlinkCount,
@@ -36,7 +49,28 @@ internal sealed record DocxStructureSnapshot(
     IReadOnlyList<DocxStructureStyleUsageSnapshot> StyleUsages,
     IReadOnlyList<DocxStructureListUsageSnapshot> ListUsages,
     IReadOnlyList<DocxStructureTableSnapshot> Tables,
-    IReadOnlyList<DocxStructureTableAdjacencySnapshot> TableAdjacency)
+    IReadOnlyList<DocxStructureTableAdjacencySnapshot> TableAdjacency,
+    IReadOnlyList<DocxStructureCommentRangeSnapshot>? CommentRanges = null,
+    IReadOnlyList<DocxStructureRevisionRangeSnapshot>? RevisionRanges = null,
+    int FormattingRevisionCount = 0,
+    int RunFormattingRevisionCount = 0,
+    int ParagraphFormattingRevisionCount = 0,
+    int TableFormattingRevisionCount = 0,
+    int RowFormattingRevisionCount = 0,
+    int CellFormattingRevisionCount = 0,
+    int SectionFormattingRevisionCount = 0,
+    IReadOnlyList<DocxStructureFormattingRevisionPropertySnapshot>? FormattingRevisionProperties = null,
+    int PackageCommentAnchorIdCount = 0,
+    int HiddenCommentAnchorIdCount = 0,
+    int ResolvedCommentStoryAnchorCount = 0,
+    int HiddenCommentStoryAnchorCount = 0,
+    int OrphanedCommentStoryAnchorCount = 0,
+    int UnsupportedCommentStoryAnchorCount = 0,
+    IReadOnlyList<DocxStructureCommentStoryAnchorSnapshot>? CommentStoryAnchors = null,
+    int DynamicFieldReferenceCount = 0,
+    int DynamicPlaceholderFieldReferenceCount = 0,
+    int DynamicComplexWithoutCachedResultFieldReferenceCount = 0,
+    int DynamicCachedResultNotRenderedFieldReferenceCount = 0)
 {
     public static DocxStructureSnapshot FromDocument(DocxDocument document)
     {
@@ -79,7 +113,10 @@ internal sealed record DocxStructureSnapshot(
         }
 
         DocxParagraph[] allParagraphs = EnumerateParagraphs(document).ToArray();
+        DocxRevisionInfo[] documentRevisions = EnumerateDocumentRevisions(document).ToArray();
+        DocxStructureCommentStoryAnchorSnapshot[] commentStoryAnchors = ToCommentStoryAnchorSnapshots(document).ToArray();
         return new DocxStructureSnapshot(
+            document.MarkupMode.ToString(),
             document.BodyElements.Count,
             blocks.Count(block => block.Kind == "Paragraph"),
             tables.Count,
@@ -91,8 +128,15 @@ internal sealed record DocxStructureSnapshot(
             blocks.Count(block => block.Kind == "SectionBreak" && block.SectionBreakTypeValue is null),
             blocks.Count(block => block.Kind == "SectionBreak" && HasSectionColumns(block)),
             blocks.Sum(block => block.TextLength),
+            blocks.Sum(block => block.RevisionCount),
+            blocks.Sum(block => block.InsertionRevisionCount),
+            blocks.Sum(block => block.DeletionRevisionCount),
+            blocks.Sum(block => block.MoveFromRevisionCount),
+            blocks.Sum(block => block.MoveToRevisionCount),
+            blocks.Sum(block => block.OtherRevisionCount),
             blocks.Sum(block => block.InlineImageCount),
             blocks.Sum(block => block.InlineReferenceCount),
+            blocks.Sum(block => block.CommentReferenceCount),
             blocks.Sum(block => block.AnchoredInlineReferenceCount),
             blocks.Sum(block => block.ResolvedInlineReferenceCount),
             blocks.Select(block => block.MaxInlineReferenceTextOffsetInRun).DefaultIfEmpty(0).Max(),
@@ -100,6 +144,11 @@ internal sealed record DocxStructureSnapshot(
             allParagraphs.Sum(ParagraphPageFieldReferenceCount),
             allParagraphs.Sum(ParagraphNumPagesFieldReferenceCount),
             allParagraphs.Sum(ParagraphOtherFieldReferenceCount),
+            allParagraphs.Sum(ParagraphComplexFieldReferenceCount),
+            allParagraphs.Sum(ParagraphCachedResultFieldReferenceCount),
+            allParagraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
+            allParagraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
+            allParagraphs.Sum(ParagraphNestedFieldReferenceCount),
             allParagraphs.Sum(ParagraphBookmarkAnchorCount),
             blocks.Sum(block => block.HyperlinkCount),
             blocks.Sum(block => block.ExternalHyperlinkCount),
@@ -113,7 +162,28 @@ internal sealed record DocxStructureSnapshot(
             ToStyleUsages(document),
             ToListUsages(document),
             tables,
-            adjacency);
+            adjacency,
+            ToCommentRangeSnapshots(document),
+            ToRevisionRangeSnapshots(document),
+            FormattingRevisionCount: CountFormattingRevisions(documentRevisions),
+            RunFormattingRevisionCount: CountFormattingRevisions(documentRevisions, "Run"),
+            ParagraphFormattingRevisionCount: CountFormattingRevisions(documentRevisions, "Paragraph"),
+            TableFormattingRevisionCount: CountFormattingRevisions(documentRevisions, "Table"),
+            RowFormattingRevisionCount: CountFormattingRevisions(documentRevisions, "Row"),
+            CellFormattingRevisionCount: CountFormattingRevisions(documentRevisions, "Cell"),
+            SectionFormattingRevisionCount: CountFormattingRevisions(documentRevisions, "Section"),
+            FormattingRevisionProperties: ToFormattingRevisionPropertySnapshots(documentRevisions),
+            PackageCommentAnchorIdCount: document.PackageCommentAnchorIds.Count,
+            HiddenCommentAnchorIdCount: document.HiddenCommentAnchorIds.Count,
+            ResolvedCommentStoryAnchorCount: commentStoryAnchors.Count(anchor => anchor.Status == "Visible"),
+            HiddenCommentStoryAnchorCount: commentStoryAnchors.Count(anchor => anchor.Status == "HiddenByMarkupMode"),
+            OrphanedCommentStoryAnchorCount: commentStoryAnchors.Count(anchor => anchor.Status == "Orphaned"),
+            UnsupportedCommentStoryAnchorCount: commentStoryAnchors.Count(anchor => anchor.Status == "Unsupported"),
+            CommentStoryAnchors: commentStoryAnchors,
+            DynamicFieldReferenceCount: allParagraphs.Sum(ParagraphDynamicFieldReferenceCount),
+            DynamicPlaceholderFieldReferenceCount: allParagraphs.Sum(ParagraphDynamicPlaceholderFieldReferenceCount),
+            DynamicComplexWithoutCachedResultFieldReferenceCount: allParagraphs.Sum(ParagraphDynamicComplexWithoutCachedResultFieldReferenceCount),
+            DynamicCachedResultNotRenderedFieldReferenceCount: allParagraphs.Sum(ParagraphDynamicCachedResultNotRenderedFieldReferenceCount));
     }
 
     private static bool IsContinuousSectionBreak(string? typeValue)
@@ -141,6 +211,7 @@ internal sealed record DocxStructureSnapshot(
         DocxDocument document,
         IReadOnlyList<DocxStructureBlockSnapshot> bodyBlocks)
     {
+        DocxParagraph[] bodyParagraphs = DocxBlockTraversal.EnumerateBodyParagraphs(document).ToArray();
         var stories = new List<DocxStructureStorySnapshot>
         {
             new(
@@ -152,11 +223,23 @@ internal sealed record DocxStructureSnapshot(
                 bodyBlocks.Count(block => block.Kind == "Paragraph"),
                 bodyBlocks.Count(block => block.Kind == "Table"),
                 bodyBlocks.Sum(block => block.TextLength),
+                bodyBlocks.Sum(block => block.RevisionCount),
+                bodyBlocks.Sum(block => block.InsertionRevisionCount),
+                bodyBlocks.Sum(block => block.DeletionRevisionCount),
+                bodyBlocks.Sum(block => block.MoveFromRevisionCount),
+                bodyBlocks.Sum(block => block.MoveToRevisionCount),
+                bodyBlocks.Sum(block => block.OtherRevisionCount),
                 bodyBlocks.Sum(block => block.InlineImageCount),
                 bodyBlocks.Sum(block => block.InlineReferenceCount),
+                bodyBlocks.Sum(block => block.CommentReferenceCount),
                 bodyBlocks.Sum(block => block.ResolvedInlineReferenceCount),
-                DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(ParagraphFieldReferenceCount),
-                DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(ParagraphBookmarkAnchorCount),
+                bodyParagraphs.Sum(ParagraphFieldReferenceCount),
+                bodyParagraphs.Sum(ParagraphComplexFieldReferenceCount),
+                bodyParagraphs.Sum(ParagraphCachedResultFieldReferenceCount),
+                bodyParagraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
+                bodyParagraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
+                bodyParagraphs.Sum(ParagraphNestedFieldReferenceCount),
+                bodyParagraphs.Sum(ParagraphBookmarkAnchorCount),
                 bodyBlocks.Sum(block => block.HyperlinkCount),
                 bodyBlocks.Sum(block => block.ExternalHyperlinkCount),
                 bodyBlocks.Sum(block => block.InternalHyperlinkCount),
@@ -215,10 +298,22 @@ internal sealed record DocxStructureSnapshot(
                 directParagraphCount,
                 tableCount,
                 paragraphs.Sum(TextLength),
+                paragraphs.Sum(CountRevisions),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "Insertion")),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "Deletion")),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "MoveFrom")),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "MoveTo")),
+                paragraphs.Sum(CountOtherRevisions),
                 paragraphs.Sum(paragraph => paragraph.Images.Count),
                 paragraphs.Sum(ParagraphInlineReferenceCount),
+                paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == "Comment")),
                 paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
                 paragraphs.Sum(ParagraphFieldReferenceCount),
+                paragraphs.Sum(ParagraphComplexFieldReferenceCount),
+                paragraphs.Sum(ParagraphCachedResultFieldReferenceCount),
+                paragraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
+                paragraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
+                paragraphs.Sum(ParagraphNestedFieldReferenceCount),
                 paragraphs.Sum(ParagraphBookmarkAnchorCount),
                 paragraphs.Sum(ParagraphHyperlinkCount),
                 paragraphs.Sum(ParagraphExternalHyperlinkCount),
@@ -246,15 +341,34 @@ internal sealed record DocxStructureSnapshot(
                 directParagraphCount,
                 tables.Length,
                 paragraphs.Sum(TextLength),
+                paragraphs.Sum(CountRevisions),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "Insertion")),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "Deletion")),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "MoveFrom")),
+                paragraphs.Sum(paragraph => CountRevisions(paragraph, "MoveTo")),
+                paragraphs.Sum(CountOtherRevisions),
                 paragraphs.Sum(paragraph => paragraph.Images.Count),
                 paragraphs.Sum(ParagraphInlineReferenceCount),
+                paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == "Comment")),
                 paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
                 paragraphs.Sum(ParagraphFieldReferenceCount),
+                paragraphs.Sum(ParagraphComplexFieldReferenceCount),
+                paragraphs.Sum(ParagraphCachedResultFieldReferenceCount),
+                paragraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
+                paragraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
+                paragraphs.Sum(ParagraphNestedFieldReferenceCount),
                 paragraphs.Sum(ParagraphBookmarkAnchorCount),
                 paragraphs.Sum(ParagraphHyperlinkCount),
                 paragraphs.Sum(ParagraphExternalHyperlinkCount),
                 paragraphs.Sum(ParagraphInternalHyperlinkCount),
-                story.FloatingDrawings.Count));
+                story.FloatingDrawings.Count,
+                HasCommentAuthor: !string.IsNullOrWhiteSpace(story.CommentMetadata?.Author),
+                HasCommentInitials: !string.IsNullOrWhiteSpace(story.CommentMetadata?.Initials),
+                HasCommentDate: !string.IsNullOrWhiteSpace(story.CommentMetadata?.Date),
+                CommentParagraphId: story.CommentMetadata?.ParagraphId,
+                CommentParentParagraphId: story.CommentMetadata?.ParentParagraphId,
+                CommentParentId: story.CommentMetadata?.ParentCommentId,
+                CommentResolved: story.CommentMetadata?.IsResolved));
         }
     }
 
@@ -287,11 +401,166 @@ internal sealed record DocxStructureSnapshot(
                     story?.PartName,
                     story?.Id,
                     story?.BodyElements.Count,
-                    story is null ? null : DocxBlockTraversal.EnumerateBodyParagraphs(story).Sum(TextLength)));
+                    story is null ? null : DocxBlockTraversal.EnumerateBodyParagraphs(story).Sum(TextLength),
+                    reference.Revisions.Count,
+                    reference.Revision?.Kind,
+                    reference.Revision?.SourceElement));
             }
         }
 
         return references;
+    }
+
+    private static IReadOnlyList<DocxStructureCommentRangeSnapshot> ToCommentRangeSnapshots(DocxDocument document)
+    {
+        DocxRelatedStory[] relatedStories = document.RelatedStories
+            .OrderBy(story => story.Kind, StringComparer.Ordinal)
+            .ThenBy(story => story.PartName, StringComparer.Ordinal)
+            .ThenBy(story => story.Id, StringComparer.Ordinal)
+            .ToArray();
+        var ranges = new List<DocxStructureCommentRangeSnapshot>();
+        foreach ((int blockIndex, string blockKind, int paragraphIndex, DocxParagraph paragraph) in EnumerateBodyReferenceParagraphs(document.BodyElements))
+        {
+            foreach (DocxCommentRange range in paragraph.CommentRanges)
+            {
+                (int? storyIndex, DocxRelatedStory? story) = ResolveRelatedStory("Comment", range.Id, relatedStories);
+                ranges.Add(new DocxStructureCommentRangeSnapshot(
+                    blockIndex,
+                    blockKind,
+                    paragraphIndex,
+                    range.Id,
+                    range.StartSourceRunIndex,
+                    range.StartTextOffset,
+                    range.EndSourceRunIndex,
+                    range.EndTextOffset,
+                    range.ReferenceSourceRunIndex,
+                    range.ReferenceTextOffset,
+                    storyIndex,
+                    story?.PartName,
+                    story?.Id,
+                    story?.BodyElements.Count,
+                    story is null ? null : DocxBlockTraversal.EnumerateBodyParagraphs(story).Sum(TextLength)));
+            }
+        }
+
+        return ranges;
+    }
+
+    private static IReadOnlyList<DocxStructureCommentStoryAnchorSnapshot> ToCommentStoryAnchorSnapshots(DocxDocument document)
+    {
+        Dictionary<string, int> visibleInlineCounts = EnumerateParagraphs(document)
+            .SelectMany(paragraph => paragraph.InlineReferences)
+            .Where(reference => reference.Kind == "Comment" && !string.IsNullOrWhiteSpace(reference.Id))
+            .GroupBy(reference => reference.Id!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        Dictionary<string, int> visibleRangeCounts = EnumerateParagraphs(document)
+            .SelectMany(paragraph => paragraph.CommentRanges)
+            .Where(range => !string.IsNullOrWhiteSpace(range.Id))
+            .GroupBy(range => range.Id!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var packageAnchorIds = new HashSet<string>(document.PackageCommentAnchorIds, StringComparer.Ordinal);
+        var hiddenAnchorIds = new HashSet<string>(document.HiddenCommentAnchorIds, StringComparer.Ordinal);
+        return document.RelatedStories
+            .Where(story => story.Kind == "Comment")
+            .OrderBy(story => story.Id, StringComparer.Ordinal)
+            .Select(story =>
+            {
+                string? id = story.Id;
+                bool hasId = !string.IsNullOrWhiteSpace(id);
+                int inlineCount = hasId && visibleInlineCounts.TryGetValue(id!, out int foundInlineCount) ? foundInlineCount : 0;
+                int rangeCount = hasId && visibleRangeCounts.TryGetValue(id!, out int foundRangeCount) ? foundRangeCount : 0;
+                bool hasPackageAnchor = hasId && packageAnchorIds.Contains(id!);
+                bool hasHiddenAnchor = hasId && hiddenAnchorIds.Contains(id!);
+                string status = !hasId
+                    ? "Unsupported"
+                    : inlineCount != 0 || rangeCount != 0
+                        ? "Visible"
+                        : hasHiddenAnchor ? "HiddenByMarkupMode" : "Orphaned";
+                return new DocxStructureCommentStoryAnchorSnapshot(
+                    id,
+                    status,
+                    hasPackageAnchor,
+                    hasHiddenAnchor,
+                    inlineCount,
+                    rangeCount);
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<DocxStructureRevisionRangeSnapshot> ToRevisionRangeSnapshots(DocxDocument document)
+    {
+        var ranges = new List<DocxStructureRevisionRangeSnapshot>();
+        foreach ((int blockIndex, string blockKind, int paragraphIndex, DocxParagraph paragraph) in EnumerateBodyReferenceParagraphs(document.BodyElements))
+        {
+            foreach (DocxRevisionRange range in paragraph.RevisionRanges)
+            {
+                ranges.Add(new DocxStructureRevisionRangeSnapshot(
+                    blockIndex,
+                    blockKind,
+                    paragraphIndex,
+                    range.Kind,
+                    range.Id,
+                    !string.IsNullOrWhiteSpace(range.Name),
+                    !string.IsNullOrWhiteSpace(range.Author),
+                    !string.IsNullOrWhiteSpace(range.Date),
+                    range.StartSourceRunIndex,
+                    range.StartTextOffset,
+                    range.EndSourceRunIndex,
+                    range.EndTextOffset,
+                    range.StartSourceRunIndex is not null && range.EndSourceRunIndex is not null));
+            }
+        }
+
+        return LinkCrossBlockRevisionRanges(ranges);
+    }
+
+    private static IReadOnlyList<DocxStructureRevisionRangeSnapshot> LinkCrossBlockRevisionRanges(IReadOnlyList<DocxStructureRevisionRangeSnapshot> ranges)
+    {
+        if (ranges.Count == 0)
+        {
+            return ranges;
+        }
+
+        DocxStructureRevisionRangeSnapshot[] linked = ranges.ToArray();
+        var openStarts = new Dictionary<(string Kind, string? Id), int>();
+        for (int index = 0; index < linked.Length; index++)
+        {
+            DocxStructureRevisionRangeSnapshot range = linked[index];
+            if (range.IsClosed || string.IsNullOrWhiteSpace(range.Id))
+            {
+                continue;
+            }
+
+            var key = (range.Kind, range.Id);
+            if (range.StartSourceRunIndex is not null && range.EndSourceRunIndex is null)
+            {
+                openStarts[key] = index;
+                continue;
+            }
+
+            if (range.StartSourceRunIndex is not null || range.EndSourceRunIndex is null ||
+                !openStarts.TryGetValue(key, out int startIndex))
+            {
+                continue;
+            }
+
+            DocxStructureRevisionRangeSnapshot start = linked[startIndex];
+            linked[startIndex] = start with
+            {
+                IsLinkedAcrossBlocks = true,
+                LinkedSourceBlockIndex = range.SourceBlockIndex,
+                LinkedSourceParagraphIndex = range.SourceParagraphIndex
+            };
+            linked[index] = range with
+            {
+                IsLinkedAcrossBlocks = true,
+                LinkedSourceBlockIndex = start.SourceBlockIndex,
+                LinkedSourceParagraphIndex = start.SourceParagraphIndex
+            };
+            openStarts.Remove(key);
+        }
+
+        return linked;
     }
 
     private static IEnumerable<(int BlockIndex, string BlockKind, int ParagraphIndex, DocxParagraph Paragraph)> EnumerateBodyReferenceParagraphs(IReadOnlyList<DocxBodyElement> elements)
@@ -319,7 +588,15 @@ internal sealed record DocxStructureSnapshot(
         DocxInlineReference reference,
         IReadOnlyList<DocxRelatedStory> relatedStories)
     {
-        if (reference.Id is null)
+        return ResolveRelatedStory(reference.Kind, reference.Id, relatedStories);
+    }
+
+    private static (int? Index, DocxRelatedStory? Story) ResolveRelatedStory(
+        string kind,
+        string? id,
+        IReadOnlyList<DocxRelatedStory> relatedStories)
+    {
+        if (id is null)
         {
             return (null, null);
         }
@@ -327,8 +604,8 @@ internal sealed record DocxStructureSnapshot(
         for (int index = 0; index < relatedStories.Count; index++)
         {
             DocxRelatedStory story = relatedStories[index];
-            if (string.Equals(story.Kind, reference.Kind, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(story.Id, reference.Id, StringComparison.Ordinal))
+            if (string.Equals(story.Kind, kind, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(story.Id, id, StringComparison.Ordinal))
             {
                 return (index, story);
             }
@@ -359,6 +636,13 @@ internal sealed record DocxStructureSnapshot(
             RunCount: paragraph.Runs.Count,
             TextLength: TextLength(paragraph),
             HasVisibleText: HasVisibleText(paragraph),
+            RevisionCount: CountRevisions(paragraph),
+            InsertionRevisionCount: CountRevisions(paragraph, "Insertion"),
+            DeletionRevisionCount: CountRevisions(paragraph, "Deletion"),
+            MoveFromRevisionCount: CountRevisions(paragraph, "MoveFrom"),
+            MoveToRevisionCount: CountRevisions(paragraph, "MoveTo"),
+            OtherRevisionCount: CountOtherRevisions(paragraph),
+            RevisionRangeCount: paragraph.RevisionRanges.Count,
             ListFormatValue: paragraph.ListLabel?.FormatValue,
             InlineImageCount: paragraph.Images.Count,
             InlineReferenceCount: paragraph.InlineReferences.Count,
@@ -369,6 +653,11 @@ internal sealed record DocxStructureSnapshot(
             PageFieldReferenceCount: paragraph.FieldReferences.Count(reference => reference.Kind == "Page"),
             NumPagesFieldReferenceCount: paragraph.FieldReferences.Count(reference => reference.Kind == "NumPages"),
             OtherFieldReferenceCount: paragraph.FieldReferences.Count(reference => reference.Kind == "Other"),
+            ComplexFieldReferenceCount: ParagraphComplexFieldReferenceCount(paragraph),
+            CachedResultFieldReferenceCount: ParagraphCachedResultFieldReferenceCount(paragraph),
+            RenderedCachedResultFieldReferenceCount: ParagraphRenderedCachedResultFieldReferenceCount(paragraph),
+            PlaceholderFieldReferenceCount: ParagraphPlaceholderFieldReferenceCount(paragraph),
+            NestedFieldReferenceCount: ParagraphNestedFieldReferenceCount(paragraph),
             BookmarkAnchorCount: paragraph.BookmarkAnchors.Count,
             CommentReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Comment"),
             FootnoteReferenceCount: paragraph.InlineReferences.Count(reference => reference.Kind == "Footnote"),
@@ -388,6 +677,8 @@ internal sealed record DocxStructureSnapshot(
             KeepNext: effective.KeepRules.KeepNext,
             KeepLines: effective.KeepRules.KeepLines,
             WidowControl: effective.KeepRules.WidowControl,
+            WordWrap: effective.WordWrap,
+            WordWrapValue: effective.WordWrapValue,
             ParagraphIndentLeftPoints: effective.Indent.LeftPoints,
             ParagraphIndentRightPoints: effective.Indent.RightPoints,
             ParagraphIndentFirstLinePoints: effective.Indent.FirstLinePoints,
@@ -414,11 +705,19 @@ internal sealed record DocxStructureSnapshot(
         IReadOnlyList<DocxRelatedStory> relatedStories)
     {
         DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateTableParagraphs(table).ToArray();
+        DocxRevisionInfo[] revisions = EnumerateTableRevisions(table).ToArray();
         return new DocxStructureBlockSnapshot(
             blockIndex,
             "Table",
             previousKind,
             nextKind,
+            RevisionCount: CountRevisions(revisions),
+            InsertionRevisionCount: CountRevisions(revisions, "Insertion"),
+            DeletionRevisionCount: CountRevisions(revisions, "Deletion"),
+            MoveFromRevisionCount: CountRevisions(revisions, "MoveFrom"),
+            MoveToRevisionCount: CountRevisions(revisions, "MoveTo"),
+            OtherRevisionCount: CountOtherRevisions(revisions),
+            RevisionRangeCount: paragraphs.Sum(paragraph => paragraph.RevisionRanges.Count),
             InlineReferenceCount: paragraphs.Sum(ParagraphInlineReferenceCount),
             AnchoredInlineReferenceCount: paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(HasInlineReferenceAnchor)),
             ResolvedInlineReferenceCount: paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
@@ -430,6 +729,11 @@ internal sealed record DocxStructureSnapshot(
             PageFieldReferenceCount: paragraphs.Sum(ParagraphPageFieldReferenceCount),
             NumPagesFieldReferenceCount: paragraphs.Sum(ParagraphNumPagesFieldReferenceCount),
             OtherFieldReferenceCount: paragraphs.Sum(ParagraphOtherFieldReferenceCount),
+            ComplexFieldReferenceCount: paragraphs.Sum(ParagraphComplexFieldReferenceCount),
+            CachedResultFieldReferenceCount: paragraphs.Sum(ParagraphCachedResultFieldReferenceCount),
+            RenderedCachedResultFieldReferenceCount: paragraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
+            PlaceholderFieldReferenceCount: paragraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
+            NestedFieldReferenceCount: paragraphs.Sum(ParagraphNestedFieldReferenceCount),
             BookmarkAnchorCount: paragraphs.Sum(ParagraphBookmarkAnchorCount),
             HyperlinkCount: paragraphs.Sum(ParagraphHyperlinkCount),
             ExternalHyperlinkCount: paragraphs.Sum(ParagraphExternalHyperlinkCount),
@@ -489,6 +793,12 @@ internal sealed record DocxStructureSnapshot(
             "SectionBreak",
             previousKind,
             nextKind,
+            RevisionCount: CountRevisions(sectionBreak.Revisions),
+            InsertionRevisionCount: CountRevisions(sectionBreak.Revisions, "Insertion"),
+            DeletionRevisionCount: CountRevisions(sectionBreak.Revisions, "Deletion"),
+            MoveFromRevisionCount: CountRevisions(sectionBreak.Revisions, "MoveFrom"),
+            MoveToRevisionCount: CountRevisions(sectionBreak.Revisions, "MoveTo"),
+            OtherRevisionCount: CountOtherRevisions(sectionBreak.Revisions),
             SectionBreakTypeValue: sectionBreak.TypeValue,
             SectionColumnCountValue: sectionBreak.ColumnCountValue,
             SectionColumnEqualWidthValue: sectionBreak.ColumnEqualWidthValue,
@@ -502,6 +812,8 @@ internal sealed record DocxStructureSnapshot(
     {
         int cellCount = table.Rows.Sum(row => row.Cells.Count);
         DocxParagraph[] tableParagraphs = DocxBlockTraversal.EnumerateTableParagraphs(table).ToArray();
+        DocxRevisionInfo[] tableRevisions = EnumerateTableRevisions(table).ToArray();
+        DocxTableCellBorder[] tableCellBorders = table.Rows.SelectMany(row => row.Cells.SelectMany(cell => cell.Borders)).ToArray();
         int paragraphCount = tableParagraphs.Length;
         return new DocxStructureTableSnapshot(
             tableIndex,
@@ -535,10 +847,33 @@ internal sealed record DocxStructureSnapshot(
             table.Rows.Sum(row => row.Cells.Count(cell => cell.FillHex is not null || cell.ShadingValue is not null)),
             table.Rows.Sum(row => row.Cells.Count(cell => cell.VerticalAlignmentValue is not null)),
             table.Rows.Sum(row => row.Cells.Count(cell => cell.PreferredWidthPoints is not null || cell.PreferredWidthValue is not null)),
-            table.Rows.Sum(row => row.Cells.Sum(cell => cell.Borders.Count(border => !string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) && !string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase)))),
+            tableCellBorders.Count(IsVisibleBorder),
+            tableCellBorders.Count(border => IsBorderStyle(border, "single")),
+            tableCellBorders.Count(border => IsBorderStyle(border, "thick")),
+            tableCellBorders.Count(border => IsBorderStyle(border, "double")),
+            tableCellBorders.Count(border => IsBorderStyle(border, "dotted")),
+            tableCellBorders.Count(IsDashedBorderStyle),
+            tableCellBorders.Count(IsSuppressedBorder),
+            tableCellBorders.Count(border => IsVisibleBorder(border) &&
+                !IsBorderStyle(border, "single") &&
+                !IsBorderStyle(border, "thick") &&
+                !IsBorderStyle(border, "double") &&
+                !IsBorderStyle(border, "triple") &&
+                !IsBorderStyle(border, "dotted") &&
+                !IsDashedBorderStyle(border) &&
+                !IsCompoundBorderStyle(border) &&
+                !IsThreeDBorderStyle(border) &&
+                !IsWaveBorderStyle(border) &&
+                !IsSupportedSolidBorderStyle(border)),
             paragraphCount,
             tableParagraphs.Sum(paragraph => paragraph.Runs.Count),
             tableParagraphs.Sum(paragraph => TextLength(paragraph)),
+            CountRevisions(tableRevisions),
+            CountRevisions(tableRevisions, "Insertion"),
+            CountRevisions(tableRevisions, "Deletion"),
+            CountRevisions(tableRevisions, "MoveFrom"),
+            CountRevisions(tableRevisions, "MoveTo"),
+            CountOtherRevisions(tableRevisions),
             tableParagraphs.Sum(paragraph => CountWhitespaceDelimitedTokens(paragraph)),
             tableParagraphs.Select(paragraph => LongestWhitespaceDelimitedTokenLength(paragraph)).DefaultIfEmpty(0).Max(),
             tableParagraphs.Sum(paragraph => paragraph.Images.Count),
@@ -555,9 +890,84 @@ internal sealed record DocxStructureSnapshot(
             table.Rows.Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex)).ToArray());
     }
 
+    private static bool IsVisibleBorder(DocxTableCellBorder border)
+    {
+        return !IsSuppressedBorder(border);
+    }
+
+    private static bool IsSuppressedBorder(DocxTableCellBorder border)
+    {
+        return string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBorderStyle(DocxTableCellBorder border, string value)
+    {
+        return string.Equals(border.Value ?? "single", value, StringComparison.OrdinalIgnoreCase) &&
+            !IsSuppressedBorder(border);
+    }
+
+    private static bool IsDashedBorderStyle(DocxTableCellBorder border)
+    {
+        if (IsSuppressedBorder(border))
+        {
+            return false;
+        }
+
+        string value = border.Value ?? "single";
+        return value.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dashSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dashDotStroked", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSupportedSolidBorderStyle(DocxTableCellBorder border)
+    {
+        return !IsSuppressedBorder(border) &&
+            (string.Equals(border.Value, "outset", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(border.Value, "inset", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsThreeDBorderStyle(DocxTableCellBorder border)
+    {
+        return !IsSuppressedBorder(border) &&
+            (string.Equals(border.Value, "threeDEmboss", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(border.Value, "threeDEngrave", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsWaveBorderStyle(DocxTableCellBorder border)
+    {
+        return !IsSuppressedBorder(border) &&
+            (string.Equals(border.Value, "wave", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(border.Value, "doubleWave", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCompoundBorderStyle(DocxTableCellBorder border)
+    {
+        if (IsSuppressedBorder(border))
+        {
+            return false;
+        }
+
+        string value = border.Value ?? "single";
+        return value.Equals("thinThickSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thickThinSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickThinSmallGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickMediumGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thickThinMediumGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickThinMediumGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickLargeGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thickThinLargeGap", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("thinThickThinLargeGap", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static DocxStructureTableRowSnapshot ToTableRowSnapshot(DocxTableRow row, int rowIndex)
     {
         DocxStructureTableCellSnapshot[] cells = row.Cells.Select(ToTableCellSnapshot).ToArray();
+        DocxRevisionInfo[] rowRevisions = row.Revisions
+            .Concat(row.Cells.SelectMany(EnumerateTableCellRevisions))
+            .ToArray();
         return new DocxStructureTableRowSnapshot(
             rowIndex,
             row.Cells.Count,
@@ -580,6 +990,12 @@ internal sealed record DocxStructureSnapshot(
             cells.Sum(cell => cell.ParagraphCount),
             cells.Sum(cell => cell.RunCount),
             cells.Sum(cell => cell.TextLength),
+            CountRevisions(rowRevisions),
+            CountRevisions(rowRevisions, "Insertion"),
+            CountRevisions(rowRevisions, "Deletion"),
+            CountRevisions(rowRevisions, "MoveFrom"),
+            CountRevisions(rowRevisions, "MoveTo"),
+            CountOtherRevisions(rowRevisions),
             cells.Sum(cell => cell.WhitespaceDelimitedTokenCount),
             cells.Select(cell => cell.LongestWhitespaceDelimitedTokenLength).DefaultIfEmpty(0).Max(),
             cells.Sum(cell => cell.InlineImageCount),
@@ -600,6 +1016,9 @@ internal sealed record DocxStructureSnapshot(
         DocxParagraph[] paragraphs = DocxBlockTraversal
             .EnumerateBodyParagraphs(DocxTableCellContent.GetBodyElements(cell))
             .ToArray();
+        DocxRevisionInfo[] cellRevisions = cell.Revisions
+            .Concat(paragraphs.SelectMany(paragraph => paragraph.Revisions))
+            .ToArray();
         return new DocxStructureTableCellSnapshot(
             cellIndex,
             Math.Max(1, cell.GridSpan),
@@ -617,6 +1036,12 @@ internal sealed record DocxStructureSnapshot(
             paragraphs.Length,
             paragraphs.Sum(paragraph => paragraph.Runs.Count),
             paragraphs.Sum(paragraph => TextLength(paragraph)),
+            CountRevisions(cellRevisions),
+            CountRevisions(cellRevisions, "Insertion"),
+            CountRevisions(cellRevisions, "Deletion"),
+            CountRevisions(cellRevisions, "MoveFrom"),
+            CountRevisions(cellRevisions, "MoveTo"),
+            CountOtherRevisions(cellRevisions),
             paragraphs.Sum(paragraph => CountWhitespaceDelimitedTokens(paragraph)),
             paragraphs.Select(paragraph => LongestWhitespaceDelimitedTokenLength(paragraph)).DefaultIfEmpty(0).Max(),
             paragraphs.Sum(paragraph => paragraph.Images.Count),
@@ -671,7 +1096,16 @@ internal sealed record DocxStructureSnapshot(
             drawing.Image?.WidthPoints,
             drawing.Image?.HeightPoints,
             drawing.SourceParagraphIndex,
-            drawing.SourceBlockIndex);
+            drawing.SourceBlockIndex,
+            drawing.TextBoxBodyElements.Count,
+            DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements).Count(),
+            DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements).Sum(TextLength),
+            CountRevisions(drawing.Revisions),
+            CountRevisions(drawing.Revisions, "Insertion"),
+            CountRevisions(drawing.Revisions, "Deletion"),
+            CountRevisions(drawing.Revisions, "MoveFrom"),
+            CountRevisions(drawing.Revisions, "MoveTo"),
+            CountOtherRevisions(drawing.Revisions));
     }
 
     private static bool HasEffectiveKeepConstraint(DocxParagraph paragraph)
@@ -690,7 +1124,18 @@ internal sealed record DocxStructureSnapshot(
                 group.Count(),
                 group.Count(),
                 0,
-                group.Sum(TextLength)))
+                group.Sum(TextLength),
+                group.Count(paragraph => HasBeforeSpacingToken(paragraph.EffectiveProperties.Spacing)),
+                group.Count(paragraph => HasAfterSpacingToken(paragraph.EffectiveProperties.Spacing)),
+                group.Count(paragraph => paragraph.EffectiveProperties.Spacing.BeforeAutoSpacingValue is not null),
+                group.Count(paragraph => paragraph.EffectiveProperties.Spacing.AfterAutoSpacingValue is not null),
+                group.Count(paragraph => paragraph.EffectiveProperties.Spacing.BeforeLinesValue is not null),
+                group.Count(paragraph => paragraph.EffectiveProperties.Spacing.AfterLinesValue is not null),
+                group.Count(paragraph => paragraph.EffectiveProperties.Spacing.ContextualSpacing == true),
+                group.Count(paragraph => IsExactLineSpacing(paragraph.EffectiveProperties.Spacing)),
+                group.Count(paragraph => IsAtLeastLineSpacing(paragraph.EffectiveProperties.Spacing)),
+                group.Count(paragraph => IsAutoLineSpacing(paragraph.EffectiveProperties.Spacing)),
+                group.Count(paragraph => paragraph.EffectiveProperties.StyleResolution.HasTableStyleParagraphProperties)))
             .ToArray();
         DocxStructureStyleUsageSnapshot[] tableStyles = DocxBlockTraversal.EnumerateBodyTables(document)
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyTables))
@@ -701,9 +1146,38 @@ internal sealed record DocxStructureSnapshot(
                 group.Count(),
                 0,
                 group.Count(),
-                group.Sum(table => DocxBlockTraversal.EnumerateTableParagraphs(table).Sum(paragraph => TextLength(paragraph)))))
+                group.Sum(table => DocxBlockTraversal.EnumerateTableParagraphs(table).Sum(paragraph => TextLength(paragraph))),
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0))
             .ToArray();
         return paragraphStyles.Concat(tableStyles).ToArray();
+    }
+
+    private static bool IsExactLineSpacing(DocxParagraphSpacing spacing)
+    {
+        return spacing.LineValue is not null &&
+            string.Equals(spacing.LineRuleValue, "exact", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAtLeastLineSpacing(DocxParagraphSpacing spacing)
+    {
+        return spacing.LineValue is not null &&
+            string.Equals(spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAutoLineSpacing(DocxParagraphSpacing spacing)
+    {
+        return spacing.LineValue is not null &&
+            (spacing.LineRuleValue is null || string.Equals(spacing.LineRuleValue, "auto", StringComparison.OrdinalIgnoreCase));
     }
 
     private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
@@ -723,8 +1197,27 @@ internal sealed record DocxStructureSnapshot(
                 group.Key.FormatValue,
                 group.Key.SuffixValue,
                 group.Count(),
-                group.Sum(TextLength)))
+                group.Sum(TextLength),
+                group.Count(paragraph => paragraph.ListLabel!.Indent.LeftPoints is not null),
+                group.Count(paragraph => paragraph.ListLabel!.Indent.RightPoints is not null),
+                group.Count(paragraph => paragraph.ListLabel!.Indent.FirstLinePoints is not null),
+                group.Count(paragraph => paragraph.ListLabel!.Indent.HangingPoints is not null),
+                group.Count(paragraph => paragraph.ListLabel!.Indent.NumberingTabPositionPoints is not null),
+                group.Count(paragraph => HasParagraphIndentOverride(paragraph.EffectiveProperties.Indent)),
+                group.Count(paragraph => paragraph.EffectiveProperties.TabStops.Any(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase)))))
             .ToArray();
+    }
+
+    private static bool HasParagraphIndentOverride(DocxParagraphIndent indent)
+    {
+        return indent.LeftPoints is not null ||
+            indent.RightPoints is not null ||
+            indent.FirstLinePoints is not null ||
+            indent.HangingPoints is not null ||
+            indent.LeftValue is not null ||
+            indent.RightValue is not null ||
+            indent.FirstLineValue is not null ||
+            indent.HangingValue is not null;
     }
 
     private static IEnumerable<DocxParagraph> EnumerateParagraphs(DocxDocument document)
@@ -742,6 +1235,284 @@ internal sealed record DocxStructureSnapshot(
     private static int ParagraphInlineReferenceCount(DocxParagraph paragraph)
     {
         return paragraph.InlineReferences.Count;
+    }
+
+    private static int CountRevisions(DocxParagraph paragraph)
+    {
+        return paragraph.Revisions.Count;
+    }
+
+    private static int CountRevisions(IEnumerable<DocxRevisionInfo> revisions)
+    {
+        return revisions.Count();
+    }
+
+    private static int CountRevisions(DocxParagraph paragraph, string kind)
+    {
+        return paragraph.Revisions.Count(revision => string.Equals(revision.Kind, kind, StringComparison.Ordinal));
+    }
+
+    private static int CountRevisions(IEnumerable<DocxRevisionInfo> revisions, string kind)
+    {
+        return revisions.Count(revision => string.Equals(revision.Kind, kind, StringComparison.Ordinal));
+    }
+
+    private static int CountOtherRevisions(DocxParagraph paragraph)
+    {
+        return paragraph.Revisions.Count(revision =>
+            !string.Equals(revision.Kind, "Insertion", StringComparison.Ordinal) &&
+            !string.Equals(revision.Kind, "Deletion", StringComparison.Ordinal) &&
+            !string.Equals(revision.Kind, "MoveFrom", StringComparison.Ordinal) &&
+            !string.Equals(revision.Kind, "MoveTo", StringComparison.Ordinal));
+    }
+
+    private static int CountOtherRevisions(IEnumerable<DocxRevisionInfo> revisions)
+    {
+        return revisions.Count(revision =>
+            !string.Equals(revision.Kind, "Insertion", StringComparison.Ordinal) &&
+            !string.Equals(revision.Kind, "Deletion", StringComparison.Ordinal) &&
+            !string.Equals(revision.Kind, "MoveFrom", StringComparison.Ordinal) &&
+            !string.Equals(revision.Kind, "MoveTo", StringComparison.Ordinal));
+    }
+
+    private static int CountFormattingRevisions(IEnumerable<DocxRevisionInfo> revisions)
+    {
+        return revisions.Count(revision => revision.PropertyChangeFamily is not null);
+    }
+
+    private static int CountFormattingRevisions(IEnumerable<DocxRevisionInfo> revisions, string family)
+    {
+        return revisions.Count(revision => string.Equals(revision.PropertyChangeFamily, family, StringComparison.Ordinal));
+    }
+
+    private static IReadOnlyList<DocxStructureFormattingRevisionPropertySnapshot> ToFormattingRevisionPropertySnapshots(IEnumerable<DocxRevisionInfo> revisions)
+    {
+        return revisions
+            .Where(revision => revision.PropertyChangeFamily is not null)
+            .SelectMany(revision => revision.PropertyElementNames.Select(name => new
+            {
+                Family = revision.PropertyChangeFamily!,
+                revision.SourceElement,
+                PropertyElementName = name
+            }))
+            .GroupBy(item => (item.Family, item.SourceElement, item.PropertyElementName))
+            .Select(group => new DocxStructureFormattingRevisionPropertySnapshot(
+                group.Key.Family,
+                group.Key.SourceElement,
+                group.Key.PropertyElementName,
+                group.Count()))
+            .OrderBy(snapshot => snapshot.Family, StringComparer.Ordinal)
+            .ThenBy(snapshot => snapshot.SourceElement, StringComparer.Ordinal)
+            .ThenBy(snapshot => snapshot.PropertyElementName, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static IEnumerable<DocxRevisionInfo> EnumerateDocumentRevisions(DocxDocument document)
+    {
+        foreach (DocxRevisionInfo revision in EnumerateBodyElementRevisions(document.BodyElements))
+        {
+            yield return revision;
+        }
+
+        foreach (DocxFloatingDrawing drawing in document.FloatingDrawings)
+        {
+            foreach (DocxRevisionInfo revision in EnumerateFloatingDrawingRevisions(drawing))
+            {
+                yield return revision;
+            }
+        }
+
+        foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
+            document.HeaderBodyElementsByType,
+            document.HeaderParagraphsByType,
+            document.HeaderFloatingDrawingsByType))
+        {
+            yield return revision;
+        }
+
+        foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
+            document.FooterBodyElementsByType,
+            document.FooterParagraphsByType,
+            document.FooterFloatingDrawingsByType))
+        {
+            yield return revision;
+        }
+
+        foreach (DocxRevisionInfo revision in EnumeratePageSettingsRevisions(document.PageSettings))
+        {
+            yield return revision;
+        }
+
+        foreach (DocxSectionBreakElement sectionBreak in document.BodyElements.OfType<DocxSectionBreakElement>())
+        {
+            foreach (DocxRevisionInfo revision in EnumeratePageSettingsRevisions(sectionBreak.PageSettings))
+            {
+                yield return revision;
+            }
+        }
+
+        foreach (DocxRelatedStory story in document.RelatedStories)
+        {
+            foreach (DocxRevisionInfo revision in EnumerateBodyElementRevisions(story.BodyElements))
+            {
+                yield return revision;
+            }
+
+            foreach (DocxFloatingDrawing drawing in story.FloatingDrawings)
+            {
+                foreach (DocxRevisionInfo revision in EnumerateFloatingDrawingRevisions(drawing))
+                {
+                    yield return revision;
+                }
+            }
+        }
+
+        if (document.FinalSectionBreak is { } finalSectionBreak)
+        {
+            foreach (DocxRevisionInfo revision in finalSectionBreak.Revisions)
+            {
+                yield return revision;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxRevisionInfo> EnumeratePageSettingsRevisions(DocxPageSettings settings)
+    {
+        foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
+            settings.HeaderBodyElementsByType,
+            settings.HeaderParagraphsByType,
+            settings.HeaderFloatingDrawingsByType))
+        {
+            yield return revision;
+        }
+
+        foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
+            settings.FooterBodyElementsByType,
+            settings.FooterParagraphsByType,
+            settings.FooterFloatingDrawingsByType))
+        {
+            yield return revision;
+        }
+    }
+
+    private static IEnumerable<DocxRevisionInfo> EnumerateStaticStoryRevisions(
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> floatingDrawingsByType)
+    {
+        if (bodyElementsByType.Count == 0)
+        {
+            foreach (DocxParagraph paragraph in fallbackParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
+            {
+                foreach (DocxRevisionInfo revision in paragraph.Revisions)
+                {
+                    yield return revision;
+                }
+            }
+        }
+        else
+        {
+            foreach (IReadOnlyList<DocxBodyElement> bodyElements in bodyElementsByType.Values)
+            {
+                foreach (DocxRevisionInfo revision in EnumerateBodyElementRevisions(bodyElements))
+                {
+                    yield return revision;
+                }
+            }
+        }
+
+        foreach (DocxFloatingDrawing drawing in floatingDrawingsByType.Values.SelectMany(drawings => drawings))
+        {
+            foreach (DocxRevisionInfo revision in EnumerateFloatingDrawingRevisions(drawing))
+            {
+                yield return revision;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxRevisionInfo> EnumerateFloatingDrawingRevisions(DocxFloatingDrawing drawing)
+    {
+        foreach (DocxRevisionInfo revision in drawing.Revisions)
+        {
+            yield return revision;
+        }
+
+        foreach (DocxRevisionInfo revision in EnumerateBodyElementRevisions(drawing.TextBoxBodyElements))
+        {
+            yield return revision;
+        }
+    }
+
+    private static IEnumerable<DocxRevisionInfo> EnumerateBodyElementRevisions(IEnumerable<DocxBodyElement> bodyElements)
+    {
+        foreach (DocxBodyElement element in bodyElements)
+        {
+            switch (element)
+            {
+                case DocxParagraphElement paragraph:
+                    foreach (DocxRevisionInfo revision in paragraph.Paragraph.Revisions)
+                    {
+                        yield return revision;
+                    }
+
+                    break;
+                case DocxTableElement table:
+                    foreach (DocxRevisionInfo revision in EnumerateTableRevisions(table.Table))
+                    {
+                        yield return revision;
+                    }
+
+                    break;
+                case DocxSectionBreakElement sectionBreak:
+                    foreach (DocxRevisionInfo revision in sectionBreak.Revisions)
+                    {
+                        yield return revision;
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxRevisionInfo> EnumerateTableRevisions(DocxTable table)
+    {
+        foreach (DocxRevisionInfo revision in table.Revisions)
+        {
+            yield return revision;
+        }
+
+        foreach (DocxTableRow row in table.Rows)
+        {
+            foreach (DocxRevisionInfo revision in row.Revisions)
+            {
+                yield return revision;
+            }
+
+            foreach (DocxTableCell cell in row.Cells)
+            {
+                foreach (DocxRevisionInfo revision in EnumerateTableCellRevisions(cell))
+                {
+                    yield return revision;
+                }
+            }
+        }
+
+    }
+
+    private static IEnumerable<DocxRevisionInfo> EnumerateTableCellRevisions(DocxTableCell cell)
+    {
+        foreach (DocxRevisionInfo revision in cell.Revisions)
+        {
+            yield return revision;
+        }
+
+        foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(DocxTableCellContent.GetBodyElements(cell)))
+        {
+            foreach (DocxRevisionInfo revision in paragraph.Revisions)
+            {
+                yield return revision;
+            }
+        }
     }
 
     private static int ParagraphResolvedInlineReferenceCount(DocxParagraph paragraph, IReadOnlyList<DocxRelatedStory> relatedStories)
@@ -767,6 +1538,56 @@ internal sealed record DocxStructureSnapshot(
     private static int ParagraphOtherFieldReferenceCount(DocxParagraph paragraph)
     {
         return paragraph.FieldReferences.Count(reference => reference.Kind == "Other");
+    }
+
+    private static int ParagraphDynamicFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(IsDynamicFieldReference);
+    }
+
+    private static int ParagraphDynamicPlaceholderFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => IsDynamicFieldReference(reference) && reference.UsesPlaceholder);
+    }
+
+    private static int ParagraphDynamicComplexWithoutCachedResultFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => IsDynamicFieldReference(reference) && reference.SourceKind == "ComplexInstruction" && !reference.HasCachedResult);
+    }
+
+    private static int ParagraphDynamicCachedResultNotRenderedFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => IsDynamicFieldReference(reference) && reference.HasCachedResult && !reference.RendersCachedResult);
+    }
+
+    private static bool IsDynamicFieldReference(DocxFieldReference reference)
+    {
+        return reference.Kind is "Page" or "NumPages";
+    }
+
+    private static int ParagraphComplexFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.SourceKind == "ComplexInstruction");
+    }
+
+    private static int ParagraphCachedResultFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.HasCachedResult);
+    }
+
+    private static int ParagraphRenderedCachedResultFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.RendersCachedResult);
+    }
+
+    private static int ParagraphPlaceholderFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.UsesPlaceholder);
+    }
+
+    private static int ParagraphNestedFieldReferenceCount(DocxParagraph paragraph)
+    {
+        return paragraph.FieldReferences.Count(reference => reference.NestingDepth > 0);
     }
 
     private static int ParagraphBookmarkAnchorCount(DocxParagraph paragraph)
@@ -946,6 +1767,13 @@ internal sealed record DocxStructureBlockSnapshot(
     int RunCount = 0,
     int TextLength = 0,
     bool HasVisibleText = false,
+    int RevisionCount = 0,
+    int InsertionRevisionCount = 0,
+    int DeletionRevisionCount = 0,
+    int MoveFromRevisionCount = 0,
+    int MoveToRevisionCount = 0,
+    int OtherRevisionCount = 0,
+    int RevisionRangeCount = 0,
     string? ListFormatValue = null,
     int InlineImageCount = 0,
     int InlineReferenceCount = 0,
@@ -959,6 +1787,11 @@ internal sealed record DocxStructureBlockSnapshot(
     int PageFieldReferenceCount = 0,
     int NumPagesFieldReferenceCount = 0,
     int OtherFieldReferenceCount = 0,
+    int ComplexFieldReferenceCount = 0,
+    int CachedResultFieldReferenceCount = 0,
+    int RenderedCachedResultFieldReferenceCount = 0,
+    int PlaceholderFieldReferenceCount = 0,
+    int NestedFieldReferenceCount = 0,
     int BookmarkAnchorCount = 0,
     int HyperlinkCount = 0,
     int ExternalHyperlinkCount = 0,
@@ -977,6 +1810,8 @@ internal sealed record DocxStructureBlockSnapshot(
     bool? KeepNext = null,
     bool? KeepLines = null,
     bool? WidowControl = null,
+    bool? WordWrap = null,
+    string? WordWrapValue = null,
     int? TableMaxColumnCount = null,
     double? TablePreferredWidthPoints = null,
     string? TablePreferredWidthType = null,
@@ -1026,15 +1861,34 @@ internal sealed record DocxStructureStorySnapshot(
     int ParagraphCount,
     int TableCount,
     int TextLength,
+    int RevisionCount,
+    int InsertionRevisionCount,
+    int DeletionRevisionCount,
+    int MoveFromRevisionCount,
+    int MoveToRevisionCount,
+    int OtherRevisionCount,
     int InlineImageCount,
     int InlineReferenceCount,
+    int CommentReferenceCount,
     int ResolvedInlineReferenceCount,
     int FieldReferenceCount,
+    int ComplexFieldReferenceCount,
+    int CachedResultFieldReferenceCount,
+    int RenderedCachedResultFieldReferenceCount,
+    int PlaceholderFieldReferenceCount,
+    int NestedFieldReferenceCount,
     int BookmarkAnchorCount,
     int HyperlinkCount,
     int ExternalHyperlinkCount,
     int InternalHyperlinkCount,
-    int FloatingDrawingCount);
+    int FloatingDrawingCount,
+    bool HasCommentAuthor = false,
+    bool HasCommentInitials = false,
+    bool HasCommentDate = false,
+    string? CommentParagraphId = null,
+    string? CommentParentParagraphId = null,
+    string? CommentParentId = null,
+    bool? CommentResolved = null);
 
 internal sealed record DocxStructureInlineReferenceSnapshot(
     int SourceBlockIndex,
@@ -1052,7 +1906,61 @@ internal sealed record DocxStructureInlineReferenceSnapshot(
     string? ResolvedStoryPartName,
     string? ResolvedStoryId,
     int? ResolvedStoryBlockCount,
+    int? ResolvedStoryTextLength,
+    int RevisionCount = 0,
+    string? RevisionKind = null,
+    string? RevisionSourceElement = null);
+
+internal sealed record DocxStructureCommentRangeSnapshot(
+    int SourceBlockIndex,
+    string SourceBlockKind,
+    int SourceParagraphIndex,
+    string? Id,
+    int? StartSourceRunIndex,
+    int? StartTextOffset,
+    int? EndSourceRunIndex,
+    int? EndTextOffset,
+    int? ReferenceSourceRunIndex,
+    int? ReferenceTextOffset,
+    int? ResolvedStoryIndex,
+    string? ResolvedStoryPartName,
+    string? ResolvedStoryId,
+    int? ResolvedStoryBlockCount,
     int? ResolvedStoryTextLength);
+
+internal sealed record DocxStructureCommentStoryAnchorSnapshot(
+    string? Id,
+    string Status,
+    bool HasPackageAnchor,
+    bool HasHiddenAnchor,
+    int VisibleInlineReferenceCount,
+    int VisibleRangeCount);
+
+internal sealed record DocxStructureRevisionRangeSnapshot(
+    int SourceBlockIndex,
+    string SourceBlockKind,
+    int SourceParagraphIndex,
+    string Kind,
+    string? Id,
+    bool HasName,
+    bool HasAuthor,
+    bool HasDate,
+    int? StartSourceRunIndex,
+    int? StartTextOffset,
+    int? EndSourceRunIndex,
+    int? EndTextOffset,
+    bool IsClosed)
+{
+    public bool IsLinkedAcrossBlocks { get; init; }
+    public int? LinkedSourceBlockIndex { get; init; }
+    public int? LinkedSourceParagraphIndex { get; init; }
+}
+
+internal sealed record DocxStructureFormattingRevisionPropertySnapshot(
+    string Family,
+    string SourceElement,
+    string PropertyElementName,
+    int Count);
 
 internal sealed record DocxStructureFloatingDrawingSnapshot(
     int Index,
@@ -1082,7 +1990,16 @@ internal sealed record DocxStructureFloatingDrawingSnapshot(
     double? ImageWidthPoints,
     double? ImageHeightPoints,
     int? SourceParagraphIndex,
-    int? SourceBlockIndex);
+    int? SourceBlockIndex,
+    int TextBoxBlockCount = 0,
+    int TextBoxParagraphCount = 0,
+    int TextBoxTextLength = 0,
+    int RevisionCount = 0,
+    int InsertionRevisionCount = 0,
+    int DeletionRevisionCount = 0,
+    int MoveFromRevisionCount = 0,
+    int MoveToRevisionCount = 0,
+    int OtherRevisionCount = 0);
 
 internal sealed record DocxStructureStyleUsageSnapshot(
     string Kind,
@@ -1090,7 +2007,18 @@ internal sealed record DocxStructureStyleUsageSnapshot(
     int Count,
     int ParagraphCount,
     int TableCount,
-    int TextLength);
+    int TextLength,
+    int BeforeSpacingTokenParagraphCount,
+    int AfterSpacingTokenParagraphCount,
+    int BeforeAutoSpacingParagraphCount,
+    int AfterAutoSpacingParagraphCount,
+    int BeforeLinesSpacingParagraphCount,
+    int AfterLinesSpacingParagraphCount,
+    int ContextualSpacingParagraphCount,
+    int ExactLineSpacingParagraphCount,
+    int AtLeastLineSpacingParagraphCount,
+    int AutoLineSpacingParagraphCount,
+    int TableStyleParagraphPropertiesCount);
 
 internal sealed record DocxStructureListUsageSnapshot(
     string NumberId,
@@ -1098,7 +2026,14 @@ internal sealed record DocxStructureListUsageSnapshot(
     string FormatValue,
     string SuffixValue,
     int ParagraphCount,
-    int TextLength);
+    int TextLength,
+    int LeftIndentParagraphCount,
+    int RightIndentParagraphCount,
+    int FirstLineIndentParagraphCount,
+    int HangingIndentParagraphCount,
+    int NumberingTabParagraphCount,
+    int ParagraphIndentOverrideCount,
+    int ParagraphNumberingTabStopCount);
 
 internal sealed record DocxStructureTableSnapshot(
     int TableIndex,
@@ -1133,9 +2068,22 @@ internal sealed record DocxStructureTableSnapshot(
     int VerticalAlignmentCellCount,
     int PreferredWidthCellCount,
     int VisibleBorderCount,
+    int SingleBorderCount,
+    int ThickBorderCount,
+    int DoubleBorderCount,
+    int DottedBorderCount,
+    int DashedBorderCount,
+    int SuppressedBorderCount,
+    int OtherBorderStyleCount,
     int ParagraphCount,
     int RunCount,
     int TextLength,
+    int RevisionCount,
+    int InsertionRevisionCount,
+    int DeletionRevisionCount,
+    int MoveFromRevisionCount,
+    int MoveToRevisionCount,
+    int OtherRevisionCount,
     int WhitespaceDelimitedTokenCount,
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
@@ -1173,6 +2121,12 @@ internal sealed record DocxStructureTableRowSnapshot(
     int ParagraphCount,
     int RunCount,
     int TextLength,
+    int RevisionCount,
+    int InsertionRevisionCount,
+    int DeletionRevisionCount,
+    int MoveFromRevisionCount,
+    int MoveToRevisionCount,
+    int OtherRevisionCount,
     int WhitespaceDelimitedTokenCount,
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,
@@ -1204,6 +2158,12 @@ internal sealed record DocxStructureTableCellSnapshot(
     int ParagraphCount,
     int RunCount,
     int TextLength,
+    int RevisionCount,
+    int InsertionRevisionCount,
+    int DeletionRevisionCount,
+    int MoveFromRevisionCount,
+    int MoveToRevisionCount,
+    int OtherRevisionCount,
     int WhitespaceDelimitedTokenCount,
     int LongestWhitespaceDelimitedTokenLength,
     int InlineImageCount,

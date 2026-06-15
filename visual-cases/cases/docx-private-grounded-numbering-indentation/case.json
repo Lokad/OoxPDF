@@ -1,0 +1,15 @@
+{
+  "id": "docx-private-grounded-numbering-indentation",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-private-grounded-review.docx",
+  "docxMarkup": "all",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "private-grounded", "numbering-indentation", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "candidateFontsMustBeEmbedded": true,
+    "candidateFontsMustHaveToUnicode": true
+  },
+  "allowedUnsupportedFeatures": []
+}

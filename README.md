@@ -59,7 +59,8 @@ OoxPdfConverter.Convert(
     "output.pdf",
     new OoxPdfOptions
     {
-        DiagnosticSink = diagnostics.Add
+        DiagnosticSink = diagnostics.Add,
+        DocxMarkupMode = OoxPdfDocxMarkupMode.Final
     });
 ```
 
@@ -133,6 +134,7 @@ OoxPdfConverter.Convert(
 ```powershell
 dotnet build src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj
 dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert input.pptx output.pdf --diagnostics diagnostics.json
+dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert input.docx output.pdf --docx-markup all --diagnostics diagnostics.json
 ```
 
 Add `--strict` to make the command return exit code `3` when conversion succeeds but warnings or errors were emitted.
@@ -161,6 +163,8 @@ The validation tools require Windows with Office installed for reference renderi
 See [docs/Capabilities.md](docs/Capabilities.md) for the supported, partial, approximated, and unsupported PPTX/DOCX feature set.
 
 See [docs/Diagnostics.md](docs/Diagnostics.md) for diagnostic code conventions and emitted unsupported-feature warnings.
+
+See [docs/DocxMarkupModes.md](docs/DocxMarkupModes.md) for DOCX final/original/simple/all markup mode semantics, CLI usage, and current approximations.
 
 See [docs/RenderingModel.md](docs/RenderingModel.md) for the package, layout, page, and PDF writer architecture.
 

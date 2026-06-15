@@ -1,0 +1,16 @@
+{
+  "id": "docx-markup-comment-long",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-markup-comment-long.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "comments", "long-comments", "balloon-overflow", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "candidateFontsMustBeEmbedded": true,
+    "candidateFontsMustHaveToUnicode": true
+  },
+  "allowedUnsupportedFeatures": []
+}

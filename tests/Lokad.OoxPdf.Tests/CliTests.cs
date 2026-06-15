@@ -46,6 +46,83 @@ internal static class CliTests
         TestAssert.Contains("DOCX_UNSUPPORTED_COMMENTS", File.ReadAllText(diagnostics));
     }
 
+    public static void CliAcceptsDocxMarkupArgumentForDocxInput()
+    {
+        string input = WriteBasicDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        CliResult result = RunCli("convert", input, output, "--docx-markup", "all");
+
+        TestAssert.Equal(0, result.ExitCode);
+        TestAssert.True(File.Exists(output), "CLI should write the output PDF when DOCX markup mode is supplied.");
+    }
+
+    public static void CliAcceptsDocxMarkupGeometryArgumentForDocxInput()
+    {
+        string input = WriteBasicDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        CliResult result = RunCli("convert", input, output, "--docx-markup", "all", "--docx-markup-geometry", "reserve-margin");
+
+        TestAssert.Equal(0, result.ExitCode);
+        TestAssert.True(File.Exists(output), "CLI should write the output PDF when DOCX markup geometry is supplied.");
+    }
+
+    public static void CliAcceptsDocxWordCompatibleMarkupGeometryArgumentForDocxInput()
+    {
+        string input = WriteBasicDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        CliResult result = RunCli("convert", input, output, "--docx-markup", "all", "--docx-markup-geometry", "word-compatible");
+
+        TestAssert.Equal(0, result.ExitCode);
+        TestAssert.True(File.Exists(output), "CLI should write the output PDF when Word-compatible DOCX markup geometry is supplied.");
+    }
+
+    public static void CliRejectsInvalidDocxMarkupArgument()
+    {
+        string input = WriteBasicDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        CliResult result = RunCli("convert", input, output, "--docx-markup", "invalid");
+
+        TestAssert.Equal(2, result.ExitCode);
+        TestAssert.Contains("Invalid DOCX markup mode", result.Error);
+    }
+
+    public static void CliRejectsInvalidDocxMarkupGeometryArgument()
+    {
+        string input = WriteBasicDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        CliResult result = RunCli("convert", input, output, "--docx-markup-geometry", "invalid");
+
+        TestAssert.Equal(2, result.ExitCode);
+        TestAssert.Contains("Invalid DOCX markup geometry mode", result.Error);
+    }
+
+    public static void CliRejectsDocxMarkupArgumentForPptxInput()
+    {
+        string input = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        CliResult result = RunCli("convert", input, output, "--docx-markup", "simple");
+
+        TestAssert.Equal(2, result.ExitCode);
+        TestAssert.Contains("--docx-markup can only be used with DOCX input.", result.Error);
+    }
+
+    public static void CliRejectsDocxMarkupGeometryArgumentForPptxInput()
+    {
+        string input = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        CliResult result = RunCli("convert", input, output, "--docx-markup-geometry", "reserve-margin");
+
+        TestAssert.Equal(2, result.ExitCode);
+        TestAssert.Contains("--docx-markup-geometry can only be used with DOCX input.", result.Error);
+    }
+
     private static CliResult RunCli(params string[] args)
     {
         var start = new ProcessStartInfo("dotnet")

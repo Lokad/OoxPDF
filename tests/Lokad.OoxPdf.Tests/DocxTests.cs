@@ -110,7 +110,7 @@ internal static class DocxTests
                     <w:p/>
                     <w:sectPr>
                       <w:pgSz w:w="16840" w:h="11900" w:orient="landscape"/>
-                      <w:pgMar w:top="720" w:right="1440" w:bottom="1080" w:left="1800" w:header="1440" w:footer="1080"/>
+                      <w:pgMar w:top="720" w:right="1440" w:bottom="1080" w:left="1800" w:header="1440" w:footer="1080" w:gutter="360"/>
                       <w:docGrid w:linePitch="326"/>
                       <w:footnotePr><w:pos w:val="beneathText"/><w:numStart w:val="3"/></w:footnotePr>
                       <w:endnotePr><w:pos w:val="sectEnd"/><w:numRestart w:val="eachSect"/></w:endnotePr>
@@ -136,6 +136,8 @@ internal static class DocxTests
         TestAssert.Equal("1080", settings.FooterDistanceValue ?? string.Empty);
         TestAssert.Equal(72d, settings.HeaderDistancePoints ?? 0d);
         TestAssert.Equal(54d, settings.FooterDistancePoints ?? 0d);
+        TestAssert.Equal("360", settings.GutterDistanceValue ?? string.Empty);
+        TestAssert.Equal(18d, settings.GutterDistancePoints ?? 0d);
         TestAssert.Equal("326", settings.DocGridLinePitchValue ?? string.Empty);
         TestAssert.Equal(16.3d, settings.DocGridLinePitchPoints ?? 0d);
         TestAssert.Equal("beneathText", settings.FootnoteReferenceSettings.PositionValue ?? string.Empty);
@@ -143,6 +145,8 @@ internal static class DocxTests
         TestAssert.Equal("sectEnd", settings.EndnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal("eachSect", settings.EndnoteReferenceSettings.NumberRestartValue ?? string.Empty);
         DocxLayoutPageSnapshot pageSnapshot = new DocxRenderer().InspectLayout(document).Pages.Single();
+        TestAssert.Equal(108d, pageSnapshot.MarginLeft);
+        TestAssert.Equal(72d, pageSnapshot.MarginRight);
         TestAssert.Equal("beneathText", pageSnapshot.SectionFootnotePositionValue ?? string.Empty);
         TestAssert.Equal("sectEnd", pageSnapshot.SectionEndnotePositionValue ?? string.Empty);
         TestAssert.Equal("eachSect", pageSnapshot.SectionEndnoteNumberRestartValue ?? string.Empty);
@@ -739,6 +743,7 @@ internal static class DocxTests
                       <w:keepLines w:val="0"/>
                       <w:widowControl w:val="1"/>
                       <w:contextualSpacing/>
+                      <w:wordWrap w:val="0"/>
                       <w:ind w:left="720" w:start="960" w:right="240" w:end="480" w:hanging="360"/>
                       <w:spacing w:beforeAutospacing="1" w:afterLines="240" w:lineRule="exact"/>
                     </w:pPr>
@@ -779,8 +784,21 @@ internal static class DocxTests
         DocxStructureBlockSnapshot block = DocxStructureSnapshot.FromDocument(document).Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal("1", block.AfterAutoSpacingValue ?? string.Empty);
         TestAssert.Equal(string.Empty, block.BeforeAutoSpacingValue ?? string.Empty);
+        TestAssert.True(block.WordWrap == false, "Structure snapshots should expose paragraph wordWrap without document text.");
+        TestAssert.Equal("0", block.WordWrapValue ?? string.Empty);
         TestAssert.Equal("480", paragraph.Spacing.LineValue ?? string.Empty);
         TestAssert.Equal("exact", paragraph.Spacing.LineRuleValue ?? string.Empty);
+        DocxStructureStyleUsageSnapshot styleUsage = DocxStructureSnapshot.FromDocument(document).StyleUsages.Single(usage => usage.Kind == "Paragraph");
+        TestAssert.Equal(1, styleUsage.BeforeSpacingTokenParagraphCount);
+        TestAssert.Equal(1, styleUsage.AfterSpacingTokenParagraphCount);
+        TestAssert.Equal(0, styleUsage.BeforeAutoSpacingParagraphCount);
+        TestAssert.Equal(1, styleUsage.AfterAutoSpacingParagraphCount);
+        TestAssert.Equal(0, styleUsage.BeforeLinesSpacingParagraphCount);
+        TestAssert.Equal(0, styleUsage.AfterLinesSpacingParagraphCount);
+        TestAssert.Equal(1, styleUsage.ContextualSpacingParagraphCount);
+        TestAssert.Equal(1, styleUsage.ExactLineSpacingParagraphCount);
+        TestAssert.Equal(0, styleUsage.AtLeastLineSpacingParagraphCount);
+        TestAssert.Equal(0, styleUsage.AutoLineSpacingParagraphCount);
         TestAssert.Equal(48d, paragraph.Indent.LeftPoints ?? 0d);
         TestAssert.Equal(24d, paragraph.Indent.RightPoints ?? 0d);
         TestAssert.Equal(6d, paragraph.Indent.FirstLinePoints ?? 0d);
@@ -792,6 +810,8 @@ internal static class DocxTests
         TestAssert.True(paragraph.KeepRules.KeepNext == true, "Style keepNext should survive the paragraph cascade.");
         TestAssert.True(paragraph.KeepRules.KeepLines == false, "Explicit off keepLines should survive the paragraph cascade.");
         TestAssert.True(paragraph.KeepRules.WidowControl == true, "Style widowControl should survive the paragraph cascade.");
+        TestAssert.True(paragraph.WordWrap == false, "Style wordWrap off should survive the paragraph cascade.");
+        TestAssert.Equal("0", paragraph.WordWrapValue ?? string.Empty);
     }
 
     public static void DocxReaderCascadesParagraphSpacingAndRunSizeThroughBasedOnStyles()
@@ -1027,6 +1047,11 @@ internal static class DocxTests
                 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:defaultTabStop w:val="720"/>
                   <w:characterSpacingControl w:val="doNotCompress"/>
+                  <w:revisionView w:markup="1" w:comments="0" w:insDel="1" w:formatting="0" w:inkAnnotations="1"/>
+                  <w:trackRevisions/>
+                  <w:doNotTrackMoves w:val="0"/>
+                  <w:doNotTrackFormatting w:val="1"/>
+                  <w:mirrorMargins/>
                   <w:footnotePr>
                     <w:pos w:val="pageBottom"/>
                     <w:numFmt w:val="lowerRoman"/>
@@ -1063,6 +1088,20 @@ internal static class DocxTests
         TestAssert.Equal("720", document.Settings.DefaultTabStopValue ?? string.Empty);
         TestAssert.Equal(36d, document.Settings.DefaultTabStopPoints ?? 0d);
         TestAssert.True(document.Settings.UseFELayout == true, "Empty useFELayout should opt in.");
+        TestAssert.Equal("1", document.Settings.RevisionViewSettings.MarkupValue ?? string.Empty);
+        TestAssert.True(document.Settings.RevisionViewSettings.ShowMarkup == true, "revisionView markup=1 should opt in.");
+        TestAssert.Equal("0", document.Settings.RevisionViewSettings.CommentsValue ?? string.Empty);
+        TestAssert.True(document.Settings.RevisionViewSettings.ShowComments == false, "revisionView comments=0 should opt out.");
+        TestAssert.True(document.Settings.RevisionViewSettings.ShowInsertionsAndDeletions == true, "revisionView insDel=1 should opt in.");
+        TestAssert.True(document.Settings.RevisionViewSettings.ShowFormatting == false, "revisionView formatting=0 should opt out.");
+        TestAssert.True(document.Settings.RevisionViewSettings.ShowInkAnnotations == true, "revisionView inkAnnotations=1 should opt in.");
+        TestAssert.True(document.Settings.TrackChangesSettings.TrackRevisions == true, "Empty trackRevisions should opt in.");
+        TestAssert.Equal("0", document.Settings.TrackChangesSettings.DoNotTrackMovesValue ?? string.Empty);
+        TestAssert.True(document.Settings.TrackChangesSettings.DoNotTrackMoves == false, "doNotTrackMoves val=0 should opt out.");
+        TestAssert.Equal("1", document.Settings.TrackChangesSettings.DoNotTrackFormattingValue ?? string.Empty);
+        TestAssert.True(document.Settings.TrackChangesSettings.DoNotTrackFormatting == true, "doNotTrackFormatting val=1 should opt in.");
+        TestAssert.True(document.Settings.MirrorMargins == true, "Empty mirrorMargins should opt in.");
+        TestAssert.True(document.Settings.MirrorMarginsValue is null, "Val-less mirrorMargins should keep a null source token.");
         TestAssert.Equal("pageBottom", document.Settings.FootnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal("lowerRoman", document.Settings.FootnoteReferenceSettings.NumberFormatValue ?? string.Empty);
         TestAssert.Equal(4, document.Settings.FootnoteReferenceSettings.NumberStart ?? 0);
@@ -1304,8 +1343,8 @@ internal static class DocxTests
                 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office">
                   <a:themeElements>
                     <a:fontScheme name="Office">
-                      <a:majorFont><a:latin typeface="Aptos Display"/></a:majorFont>
-                      <a:minorFont><a:latin typeface="Aptos"/></a:minorFont>
+                      <a:majorFont><a:latin typeface="Aptos Display"/><a:ea typeface="Yu Gothic"/><a:cs typeface="Arial"/></a:majorFont>
+                      <a:minorFont><a:latin typeface="Aptos"/><a:ea typeface="Meiryo"/><a:cs typeface="Arial"/></a:minorFont>
                     </a:fontScheme>
                   </a:themeElements>
                 </a:theme>
@@ -1325,6 +1364,10 @@ internal static class DocxTests
         TestAssert.Equal("00", entry.CharsetValue ?? string.Empty);
         TestAssert.Equal("Aptos Display", document.FontCatalog.ThemeFonts.MajorLatinTypeface ?? string.Empty);
         TestAssert.Equal("Aptos", document.FontCatalog.ThemeFonts.MinorLatinTypeface ?? string.Empty);
+        TestAssert.Equal("Yu Gothic", document.FontCatalog.ThemeFonts.MajorEastAsiaTypeface ?? string.Empty);
+        TestAssert.Equal("Meiryo", document.FontCatalog.ThemeFonts.MinorEastAsiaTypeface ?? string.Empty);
+        TestAssert.Equal("Arial", document.FontCatalog.ThemeFonts.MajorComplexScriptTypeface ?? string.Empty);
+        TestAssert.Equal("Arial", document.FontCatalog.ThemeFonts.MinorComplexScriptTypeface ?? string.Empty);
     }
 
     public static void DocxReaderPreservesRunFontTokens()
@@ -1554,6 +1597,35 @@ internal static class DocxTests
         TestAssert.Equal("Aptos", candidates.Theme ?? string.Empty);
     }
 
+    public static void DocxFontResolverBuildsEastAsianTypefaceCandidatesFromCatalogAndTheme()
+    {
+        var catalog = new DocxFontCatalog(
+            [new DocxFontTableEntry("Corporate East", "Installed East", "modern", "variable", null, "80")],
+            new DocxThemeFonts(
+                "Theme Display",
+                "Theme Sans",
+                MajorEastAsiaTypeface: "Theme East Display",
+                MinorEastAsiaTypeface: "Theme East"));
+        var run = new DocxTextRun("\u6f22\u5b57", 11d, null, false, false, false, null, "Latin Sans")
+        {
+            Fonts = new DocxRunFonts(
+                Ascii: "Latin Sans",
+                HighAnsi: null,
+                EastAsia: "Corporate East",
+                ComplexScript: null,
+                AsciiTheme: "majorHAnsi",
+                HighAnsiTheme: null,
+                EastAsiaTheme: "minorEastAsia",
+                ComplexScriptTheme: null)
+        };
+
+        DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, catalog);
+
+        TestAssert.Equal("Corporate East", candidates.Primary ?? string.Empty);
+        TestAssert.Equal("Installed East", candidates.Alternate ?? string.Empty);
+        TestAssert.Equal("Theme East", candidates.Theme ?? string.Empty);
+    }
+
     public static void DocxFontPlanResolvesRunTypefaceFromFontTableAlternate()
     {
         var run = new DocxTextRun("Text", 11d, null, false, false, false, null, "Corporate Sans")
@@ -1581,6 +1653,58 @@ internal static class DocxTests
         TestAssert.Equal("Installed Sans", resolved.RequestedFamily ?? string.Empty);
         TestAssert.Equal("Installed Sans", resolved.ResolvedFamily ?? string.Empty);
         TestAssert.Equal("Corporate Sans|Installed Sans|Theme Sans", string.Join("|", resolved.CandidateFamilies));
+    }
+
+    public static void DocxFontPlanResolvesEastAsianAndComplexScriptThemeTypefaces()
+    {
+        var eastAsianRun = new DocxTextRun("\u6f22\u5b57", 11d, null, false, false, false, null, "Latin Sans")
+        {
+            Fonts = new DocxRunFonts(
+                Ascii: "Latin Sans",
+                HighAnsi: null,
+                EastAsia: "Corporate East",
+                ComplexScript: null,
+                AsciiTheme: null,
+                HighAnsiTheme: null,
+                EastAsiaTheme: "minorEastAsia",
+                ComplexScriptTheme: null)
+        };
+        var complexScriptRun = new DocxTextRun("\u0633\u0644\u0627\u0645", 11d, null, false, false, false, null, "Latin Sans")
+        {
+            Fonts = new DocxRunFonts(
+                Ascii: "Latin Sans",
+                HighAnsi: null,
+                EastAsia: null,
+                ComplexScript: "Corporate Bidi",
+                AsciiTheme: null,
+                HighAnsiTheme: null,
+                EastAsiaTheme: null,
+                ComplexScriptTheme: "minorBidi")
+        };
+        DocxDocument document = CreateFontPlanDocument(
+            [eastAsianRun, complexScriptRun],
+            new DocxFontCatalog(
+                [
+                    new DocxFontTableEntry("Corporate East", "Installed East", "modern", null, null, "80"),
+                    new DocxFontTableEntry("Corporate Bidi", "Installed Bidi", "roman", null, null, "B2")
+                ],
+                new DocxThemeFonts(
+                    "Theme Display",
+                    "Theme Sans",
+                    MinorComplexScriptTypeface: "Theme Bidi",
+                    MinorEastAsiaTypeface: "Theme East")));
+        var resolver = new MapFontResolver(["Theme East", "Theme Bidi"], "Resolver Fallback");
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver);
+
+        DocxResolvedRunTypeface eastAsian = fontPlan.Runs.Single(run => run.Run.Text == "\u6f22\u5b57");
+        DocxResolvedRunTypeface complexScript = fontPlan.Runs.Single(run => run.Run.Text == "\u0633\u0644\u0627\u0645");
+
+        TestAssert.Equal(DocxTypefaceResolutionSource.Theme, eastAsian.Source);
+        TestAssert.Equal("Theme East", eastAsian.RequestedFamily ?? string.Empty);
+        TestAssert.Equal("Corporate East|Installed East|Theme East", string.Join("|", eastAsian.CandidateFamilies));
+        TestAssert.Equal(DocxTypefaceResolutionSource.Theme, complexScript.Source);
+        TestAssert.Equal("Theme Bidi", complexScript.RequestedFamily ?? string.Empty);
+        TestAssert.Equal("Corporate Bidi|Installed Bidi|Theme Bidi", string.Join("|", complexScript.CandidateFamilies));
     }
 
     public static void DocxFontPlanKeepsPrimaryBeforeAlternateAndTheme()
@@ -1621,8 +1745,36 @@ internal static class DocxTests
         DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
 
         TestAssert.Equal("Cell text", resolved.Run.Text);
-        TestAssert.Equal(DocxTypefaceResolutionSource.Missing, resolved.Source);
+        TestAssert.Equal(DocxTypefaceResolutionSource.ResolverFallback, resolved.Source);
         TestAssert.Equal(0, resolved.CandidateFamilies.Count);
+        TestAssert.Equal(DocxRenderer.DefaultDocumentTypefaceRequest, resolved.RequestedFamily ?? string.Empty);
+    }
+
+    public static void DocxFontPlanResolvesImplicitDefaultTypefaceWithRunStyle()
+    {
+        var run = new DocxTextRun("Styled default", 11d, null, true, true, false, null, null);
+        DocxDocument document = CreateFontPlanDocument(run, DocxFontCatalog.Empty);
+        var resolver = new MapFontResolver([DocxRenderer.DefaultDocumentTypefaceRequest], "Resolver Fallback");
+
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+
+        TestAssert.Equal(DocxTypefaceResolutionSource.ResolverFallback, resolved.Source);
+        TestAssert.Equal(DocxRenderer.DefaultDocumentTypefaceRequest, resolved.RequestedFamily ?? string.Empty);
+        TestAssert.True(resolved.Resolution?.Bold == true && resolved.Resolution?.Italic == true, "Implicit default runs should preserve requested bold and italic in the fallback font request.");
+    }
+
+    public static void DocxFontPlanPrefersOfficeBodyFontForImplicitDefaultTypeface()
+    {
+        var run = new DocxTextRun("Office default", 11d, null, true, false, false, null, null);
+        DocxDocument document = CreateFontPlanDocument(run, DocxFontCatalog.Empty);
+        var resolver = new MapFontResolver(["Aptos", "Calibri", "Arial"], "Resolver Fallback");
+
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+
+        TestAssert.Equal(DocxTypefaceResolutionSource.ResolverFallback, resolved.Source);
+        TestAssert.Equal(DocxRenderer.DefaultDocumentTypefaceRequest, resolved.RequestedFamily ?? string.Empty);
+        TestAssert.Equal("Aptos", resolved.ResolvedFamily ?? string.Empty);
+        TestAssert.True(resolved.Resolution?.Bold == true, "Implicit default runs should preserve requested style when resolving the Office body fallback.");
     }
 
     public static void DocxFontPlanUsesBodyElementInventoryAsCanonicalSource()
@@ -1853,10 +2005,10 @@ internal static class DocxTests
         TestAssert.Equal(1, snapshot.PrimaryCount);
         TestAssert.Equal(1, snapshot.FontTableAlternateCount);
         TestAssert.Equal(0, snapshot.ThemeCount);
-        TestAssert.Equal(0, snapshot.ResolverFallbackCount);
-        TestAssert.Equal(1, snapshot.MissingCount);
+        TestAssert.Equal(1, snapshot.ResolverFallbackCount);
+        TestAssert.Equal(0, snapshot.MissingCount);
         TestAssert.Equal(3, snapshot.DistinctCandidateFamilyCount);
-        TestAssert.Equal(2, snapshot.DistinctResolvedFamilyCount);
+        TestAssert.Equal(3, snapshot.DistinctResolvedFamilyCount);
     }
 
     public static void DocxFontPlanSnapshotReportsPrivateSafeOpenTypeMetrics()
@@ -1909,12 +2061,14 @@ internal static class DocxTests
             "tab",
             "7",
             0,
-            DocxNumberingIndent.Empty,
+            new DocxNumberingIndent(36d, null, 6d, 18d, 54d, "720", null, "120", "360", "num", "1080"),
             DocxTextRunStyle.Empty);
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Cell 42", fontSize: 9d, lineSpacingPoints: 10d) with
         {
             StyleId = "CellStyle",
-            ListLabel = listLabel
+            ListLabel = listLabel,
+            Indent = new DocxParagraphIndent(48d, null, null, 24d, "960", null, null, "480"),
+            TabStops = [new DocxTabStop(72d, "1440", "num", null)]
         };
         var restartCell = new DocxTableCell(
             string.Empty,
@@ -2056,6 +2210,13 @@ internal static class DocxTests
         TestAssert.Equal("7", listUsage.NumberId);
         TestAssert.Equal("decimal", listUsage.FormatValue);
         TestAssert.Equal(1, listUsage.ParagraphCount);
+        TestAssert.Equal(1, listUsage.LeftIndentParagraphCount);
+        TestAssert.Equal(0, listUsage.RightIndentParagraphCount);
+        TestAssert.Equal(1, listUsage.FirstLineIndentParagraphCount);
+        TestAssert.Equal(1, listUsage.HangingIndentParagraphCount);
+        TestAssert.Equal(1, listUsage.NumberingTabParagraphCount);
+        TestAssert.Equal(1, listUsage.ParagraphIndentOverrideCount);
+        TestAssert.Equal(1, listUsage.ParagraphNumberingTabStopCount);
         DocxStructureFloatingDrawingSnapshot drawingSnapshot = snapshot.FloatingDrawings.Single();
         TestAssert.Equal("square", drawingSnapshot.WrapKind ?? string.Empty);
         TestAssert.Equal("column", drawingSnapshot.HorizontalRelativeFromValue ?? string.Empty);
@@ -2190,6 +2351,249 @@ internal static class DocxTests
         TestAssert.True(annotation.Height > 0d, "The annotation should use font metrics for a non-empty rectangle.");
     }
 
+    public static void DocxRendererUsesSourceRunIndexesForHyperlinkAnnotations()
+    {
+        var runs = new[]
+        {
+            new DocxTextRun("Before ", 10d, null, false, false, false, null, null)
+            {
+                SourceRunIndex = 10
+            },
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+            {
+                SourceRunIndex = 42
+            }
+        };
+        var paragraph = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/source-run", "External", null, 42, 1, 1, 1, 4)
+            ]
+        };
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/source-run", annotation.Uri);
+        TestAssert.True(annotation.X > document.MarginLeftPoints, "Hyperlink annotations should match rendered source-run indexes after filtering changes text-run positions.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover the rendered source-run hyperlink text.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesEmittedAdvanceForHyperlinkAnnotations()
+    {
+        const string linkText = "LinkedWords";
+        var runs = new[]
+        {
+            new DocxTextRun("Before ", 10d, null, false, false, false, null, null),
+            new DocxTextRun(linkText, 10d, null, false, false, false, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/docx", "External", null, 1, 1, 1, 1, linkText.Length)
+            ]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxTextEmissionSegmentSnapshot linkSegment = renderer
+            .InspectTextEmission(document)
+            .Lines
+            .SelectMany(line => line.Segments)
+            .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            "Word-compatible all-markup hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
+            "The regression should exercise a link whose emitted advance differs from the layout segment width.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesEmittedAdvanceForFloatingTextBoxHyperlinkAnnotations()
+    {
+        const string linkText = "LinkedWords";
+        DocxParagraph textBoxParagraph = new(
+            [
+                new DocxTextRun("Before ", 10d, null, false, false, false, null, null),
+                new DocxTextRun(linkText, 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdTextBoxLink", null, null, null, "https://example.invalid/textbox-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
+            ]
+        };
+        DocxFloatingDrawing drawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [drawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxTextEmissionSegmentSnapshot linkSegment = renderer
+            .InspectTextEmission(document)
+            .Lines
+            .Single(line => line.StoryKind == "TextBox" && line.ContainerStoryKind == "Body")
+            .Segments
+            .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+
+        TestAssert.True(
+            Math.Abs(annotation.X - linkSegment.X) < 0.001d,
+            "Word-compatible all-markup floating text-box hyperlink annotations should use emitted text-box segment x coordinates.");
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            "Word-compatible all-markup floating text-box hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
+            "The regression should exercise a floating text-box link whose emitted advance differs from the layout segment width.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesEmittedAdvanceForStaticTextBoxHyperlinkAnnotations()
+    {
+        const string linkText = "LinkedWords";
+        DocxParagraph textBoxParagraph = new(
+            [
+                new DocxTextRun("Header ", 10d, null, false, false, false, null, null),
+                new DocxTextRun(linkText, 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdStaticTextBoxLink", null, null, null, "https://example.invalid/static-textbox-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
+            ]
+        };
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])]
+            }
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxTextEmissionSegmentSnapshot linkSegment = renderer
+            .InspectTextEmission(document)
+            .Lines
+            .Single(line => line.IsStaticStory && line.StoryKind == "TextBox" && line.ContainerStoryKind == "Header")
+            .Segments
+            .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+
+        TestAssert.True(
+            Math.Abs(annotation.X - linkSegment.X) < 0.001d,
+            "Word-compatible all-markup static text-box hyperlink annotations should use emitted text-box segment x coordinates.");
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            "Word-compatible all-markup static text-box hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
+            "The regression should exercise a static text-box link whose emitted advance differs from the layout segment width.");
+    }
+
     public static void DocxRendererDoesNotEmitUriAnnotationsForInternalHyperlinks()
     {
         DocxParagraph paragraph = CreateDocxLayoutParagraph("Internal", 10d, 12d) with
@@ -2251,6 +2655,134 @@ internal static class DocxTests
         TestAssert.True(annotation.Width > 0d, "The clickable rectangle should still cover the rendered internal-link text.");
     }
 
+    public static void DocxRendererUsesSourceRunIndexesForBookmarkDestinations()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Go ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "SparseBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+            ]
+        };
+        var targetRuns = new[]
+        {
+            new DocxTextRun("Before ", 10d, null, false, false, false, null, null)
+            {
+                SourceRunIndex = 10
+            },
+            new DocxTextRun("Target", 10d, null, false, false, false, null, null)
+            {
+                SourceRunIndex = 42
+            }
+        };
+        var targetParagraph = new DocxParagraph(
+            targetRuns,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("4", "SparseBookmarkTarget", 42, 1, 0)
+            ]
+        };
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to a PDF page destination.");
+        TestAssert.True(
+            annotation.Destination?.Left > document.MarginLeftPoints,
+            "Bookmark destinations should match rendered source-run indexes after filtering changes text-run positions.");
+    }
+
+    public static void DocxRendererUsesSourceTextOffsetsForBookmarkDestinations()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Go ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "OffsetBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+            ]
+        };
+        DocxTextRun targetRun = new("Before Target", 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 42,
+            SourceTextOffsetInRun = 0
+        };
+        var targetParagraph = new DocxParagraph(
+            [targetRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("5", "OffsetBookmarkTarget", 42, 0, "Before ".Length)
+            ]
+        };
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to a PDF page destination.");
+        TestAssert.True(
+            annotation.Destination?.Left > document.MarginLeftPoints,
+            "Bookmark destinations should honor the source text offset when the bookmark starts inside a rendered run.");
+    }
+
     public static void DocxRendererEmitsTableCellExternalHyperlinkAnnotations()
     {
         var runs = new[]
@@ -2289,6 +2821,128 @@ internal static class DocxTests
         TestAssert.Equal("https://example.invalid/cell", annotation.Uri);
         TestAssert.True(annotation.X > document.MarginLeftPoints, "The annotation should be anchored to the placed table-cell hyperlink run.");
         TestAssert.True(annotation.Width > 0d, "The annotation should cover table-cell hyperlink text.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesEmittedAdvanceForTableCellHyperlinkAnnotations()
+    {
+        const string linkText = "LinkedWords";
+        var runs = new[]
+        {
+            new DocxTextRun("Cell ", 10d, null, false, false, false, null, null),
+            new DocxTextRun(linkText, 10d, null, false, false, false, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdCell", null, null, null, "https://example.invalid/cell-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
+            ]
+        };
+        var table = new DocxTable(
+            null,
+            [160d],
+            [new DocxTableRow([new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxTextEmissionSegmentSnapshot linkSegment = renderer
+            .InspectTextEmission(document)
+            .Lines
+            .SelectMany(line => line.Segments)
+            .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+
+        TestAssert.True(
+            Math.Abs(annotation.X - linkSegment.X) < 0.001d,
+            "Word-compatible all-markup table-cell hyperlink annotations should use emitted table-cell segment x coordinates.");
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            "Word-compatible all-markup table-cell hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
+        TestAssert.True(
+            Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
+            "The regression should exercise a table-cell link whose emitted advance differs from the layout segment width.");
+    }
+
+    public static void DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment()
+    {
+        DocxParagraph before = CreateDocxLayoutParagraph("Before", 10d, 10d);
+        var afterRuns = new[]
+        {
+            new DocxTextRun("After ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var after = new DocxParagraph(
+            afterRuns,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdSplitCell", null, null, null, "https://example.invalid/split-cell", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(before),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(after)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var renderer = new DocxRenderer();
+
+        PdfPage[] pages = renderer.RenderBlankPages(document).ToArray();
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, pages.Length);
+        TestAssert.Equal(0, pages[0].Annotations.Count);
+        PdfLinkAnnotation annotation = pages[1].Annotations.Single();
+        TestAssert.Equal("https://example.invalid/split-cell", annotation.Uri);
+        TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "The visible split fragment should keep a non-empty hyperlink annotation.");
+        TestAssert.Equal("Before", layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("After Link", layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().Text);
     }
 
     public static void DocxRendererEmitsPlacedFootnoteExternalHyperlinkAnnotations()
@@ -2348,8 +3002,440 @@ internal static class DocxTests
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/footnote", annotation.Uri);
+        TestAssert.True(annotation.X >= document.MarginLeftPoints, "The footnote annotation should use placed note x coordinates.");
         TestAssert.True(annotation.Y >= document.MarginBottomPoints, "The footnote annotation should be anchored inside the placed note region.");
         TestAssert.True(annotation.Width > 0d, "The annotation should cover placed footnote hyperlink text.");
+    }
+
+    public static void DocxRendererEmitsPlacedEndnoteExternalHyperlinkAnnotations()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "11",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        var endnoteRuns = new[]
+        {
+            new DocxTextRun("Endnote ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var endnoteParagraph = new DocxParagraph(
+            endnoteRuns,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdEndnoteLink", null, null, null, "https://example.invalid/endnote", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "11",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [endnoteStory]
+            };
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/endnote", annotation.Uri);
+        TestAssert.True(annotation.X >= document.MarginLeftPoints, "The endnote annotation should use placed note x coordinates.");
+        TestAssert.True(annotation.Y >= document.MarginBottomPoints, "The endnote annotation should be anchored inside the placed note region.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover placed endnote hyperlink text.");
+    }
+
+    public static void DocxRendererEmitsPlacedFootnoteInternalHyperlinkDestinations()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Go ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Footnote target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "FootnoteBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 15)
+            ]
+        };
+        DocxParagraph markerParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "12",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph targetParagraph = CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("12", "FootnoteBookmarkTarget", 0, 0, 0)
+            ]
+        };
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "12",
+            [new DocxParagraphElement(targetParagraph)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument(
+                [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(markerParagraph)],
+                [])
+            with
+            {
+                RelatedStories = [footnoteStory]
+            };
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Uri is null, "Internal placed-footnote links should not be emitted as URI actions.");
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to placed footnote bookmark destinations.");
+        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed footnote x coordinates.");
+        TestAssert.True(annotation.Destination?.Top >= document.MarginBottomPoints, "The destination should use placed footnote y coordinates.");
+        TestAssert.True(annotation.Width > 0d, "The clickable rectangle should cover the rendered body internal-link text.");
+    }
+
+    public static void DocxRendererEmitsPlacedEndnoteInternalHyperlinkDestinations()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Go ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Endnote target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "EndnoteBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 14)
+            ]
+        };
+        DocxParagraph markerParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "13",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph targetParagraph = CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("13", "EndnoteBookmarkTarget", 0, 0, 0)
+            ]
+        };
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "13",
+            [new DocxParagraphElement(targetParagraph)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument(
+                [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(markerParagraph)],
+                [])
+            with
+            {
+                RelatedStories = [endnoteStory]
+            };
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Uri is null, "Internal placed-endnote links should not be emitted as URI actions.");
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to placed endnote bookmark destinations.");
+        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed endnote x coordinates.");
+        TestAssert.True(annotation.Destination?.Top >= document.MarginBottomPoints, "The destination should use placed endnote y coordinates.");
+        TestAssert.True(annotation.Width > 0d, "The clickable rectangle should cover the rendered body internal-link text.");
+    }
+
+    public static void DocxRendererEmitsFloatingTextBoxExternalHyperlinkAnnotations()
+    {
+        var runs = new[]
+        {
+            new DocxTextRun("Before ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var textBoxParagraph = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdTextBox", null, null, null, "https://example.invalid/textbox", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            [],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/textbox", annotation.Uri);
+        TestAssert.True(annotation.X > document.MarginLeftPoints, "Floating text-box annotation should be anchored to the placed text-box line, not the page origin.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover floating text-box hyperlink text.");
+    }
+
+    public static void DocxRendererEmitsStaticFloatingTextBoxExternalHyperlinkAnnotations()
+    {
+        var runs = new[]
+        {
+            new DocxTextRun("Header ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Link", 10d, null, false, false, false, null, null)
+        };
+        var textBoxParagraph = new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan("rIdStaticTextBox", null, null, null, "https://example.invalid/static-textbox", "External", null, 1, 1, 1, 1, 4)
+            ]
+        };
+        DocxFloatingDrawing headerDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [headerDrawing]
+            }
+        };
+        DocxParagraph body = CreateDocxLayoutParagraph("Body", 10d, 12d);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/static-textbox", annotation.Uri);
+        TestAssert.True(annotation.X > 70d, "Static floating text-box annotation should be anchored to the placed header drawing.");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover static floating text-box hyperlink text.");
+    }
+
+    public static void DocxRendererEmitsFloatingTextBoxInternalHyperlinkDestinations()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Go ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Drawing target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "TextBoxBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 14)
+            ]
+        };
+        DocxParagraph targetParagraph = CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("8", "TextBoxBookmarkTarget", 0, 0, 0)
+            ]
+        };
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(targetParagraph)]);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(linkParagraph)],
+            [],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Uri is null, "Internal floating text-box links should not be emitted as URI actions.");
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to floating text-box bookmark destinations.");
+        TestAssert.True(annotation.Destination?.Left > 70d, "The destination should use placed floating text-box x coordinates.");
+        TestAssert.True(annotation.Destination?.Top > 70d, "The destination should use placed floating text-box y coordinates.");
+        TestAssert.True(annotation.Width > 0d, "The clickable rectangle should cover the rendered body internal-link text.");
+    }
+
+    public static void DocxRendererEmitsStaticFloatingTextBoxInternalHyperlinkDestinations()
+    {
+        DocxParagraph linkParagraph = new(
+            [
+                new DocxTextRun("Go ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Header target", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks =
+            [
+                new DocxHyperlinkSpan(null, "StaticTextBoxBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 13)
+            ]
+        };
+        DocxParagraph targetParagraph = CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with
+        {
+            BookmarkAnchors =
+            [
+                new DocxBookmarkAnchor("13", "StaticTextBoxBookmarkTarget", 0, 0, 0)
+            ]
+        };
+        DocxFloatingDrawing headerDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(targetParagraph)]);
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [headerDrawing]
+            }
+        };
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(linkParagraph)],
+            [linkParagraph],
+            []);
+
+        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+
+        PdfLinkAnnotation annotation = page.Annotations.Single();
+        TestAssert.True(annotation.Uri is null, "Internal static floating text-box links should not be emitted as URI actions.");
+        TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to static floating text-box bookmark destinations.");
+        TestAssert.True(annotation.Destination?.Left > 70d, "The destination should use placed static floating text-box x coordinates.");
+        TestAssert.True(annotation.Destination?.Top > 70d, "The destination should use placed static floating text-box y coordinates.");
+        TestAssert.True(annotation.Width > 0d, "The clickable rectangle should cover the rendered body internal-link text.");
     }
 
     public static void DocxRendererEmitsTableCellInternalHyperlinkDestinations()
@@ -3338,6 +4424,54 @@ internal static class DocxTests
         TestAssert.Equal(2, CountPdfTextShows(pdf));
     }
 
+    public static void DocxRendererDoesNotSynthesizeBoldForImplicitDefaultBoldFace()
+    {
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:rPr><w:b/></w:rPr>
+                        <w:t>Default bold face</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var resolver = new SingleResolutionFontResolver(font.Value.Resolution);
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Equal(2, CountPdfTextShows(pdf));
+    }
+
     public static void DocxReaderPreservesParagraphRunUnderlineTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -3367,7 +4501,7 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:style w:type="character" w:styleId="WaveUnderline">
-                    <w:rPr><w:u w:val="wave"/></w:rPr>
+                    <w:rPr><w:u w:val="wave" w:color="00AA00"/></w:rPr>
                   </w:style>
                 </w:styles>
                 """,
@@ -3376,7 +4510,7 @@ internal static class DocxTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:rPr><w:u w:val="single"/></w:rPr><w:t>Single</w:t></w:r>
+                      <w:r><w:rPr><w:u w:val="single" w:color="0000FF"/></w:rPr><w:t>Single</w:t></w:r>
                       <w:r><w:rPr><w:u w:val="none"/></w:rPr><w:t>None</w:t></w:r>
                       <w:r><w:rPr><w:rStyle w:val="WaveUnderline"/></w:rPr><w:t>Wave</w:t></w:r>
                       <w:r><w:t>Default</w:t></w:r>
@@ -3394,11 +4528,14 @@ internal static class DocxTests
 
         TestAssert.True(runs[0].Underline, "Expected w:u single to keep underline enabled.");
         TestAssert.Equal("single", runs[0].UnderlineValue ?? string.Empty);
+        TestAssert.Equal("0000FF", runs[0].UnderlineColorHex ?? string.Empty);
         TestAssert.True(!runs[1].Underline, "Expected w:u none to disable underline.");
         TestAssert.Equal("none", runs[1].UnderlineValue ?? string.Empty);
         TestAssert.True(runs[2].Underline, "Expected inherited w:u wave to keep underline enabled.");
         TestAssert.Equal("wave", runs[2].UnderlineValue ?? string.Empty);
+        TestAssert.Equal("00AA00", runs[2].UnderlineColorHex ?? string.Empty);
         TestAssert.True(runs[3].UnderlineValue is null, "Expected missing underline to keep a null source token.");
+        TestAssert.True(runs[3].UnderlineColorHex is null, "Expected missing underline color to keep a null source token.");
     }
 
     public static void DocxReaderPreservesParagraphRunVerticalAlignmentTokens()
@@ -3555,6 +4692,7 @@ internal static class DocxTests
                   <w:body>
                     <w:p>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="single"/></w:rPr><w:t>Under</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="double"/></w:rPr><w:t> DoubleUnder</w:t></w:r>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:strike/></w:rPr><w:t> Strike</w:t></w:r>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:dstrike/></w:rPr><w:t> Double</w:t></w:r>
                     </w:p>
@@ -3569,7 +4707,285 @@ internal static class DocxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int filledRectangles = pdf.Split(" re f", StringSplitOptions.None).Length - 1;
-        TestAssert.True(filledRectangles >= 4, $"Expected underline, strike, and double-strike to render as filled metric rectangles; found {filledRectangles}.");
+        TestAssert.True(filledRectangles >= 6, $"Expected underline, double-underline, strike, and double-strike to render as filled metric rectangles; found {filledRectangles}.");
+    }
+
+    public static void DocxParagraphRendererUsesUnderlineColorToken()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:color w:val="FF0000"/><w:u w:val="single" w:color="0000FF"/></w:rPr><w:t>Under</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        int underlineColorIndex = pdf.IndexOf("0 0 1 rg", StringComparison.Ordinal);
+        int underlineRectangleIndex = underlineColorIndex < 0 ? -1 : pdf.IndexOf(" re f", underlineColorIndex, StringComparison.Ordinal);
+        TestAssert.True(underlineColorIndex >= 0 && underlineRectangleIndex > underlineColorIndex, "Underline decorations should use the w:u color token instead of the run text color.");
+    }
+
+    public static void DocxParagraphRendererDrawsWaveUnderlineAsStrokedSegments()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="wave"/></w:rPr><w:t>Wavy underline</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(CountOccurrences(pdf, " l S") >= 2, "Expected w:u wave to render as repeated stroked underline segments instead of a single filled rectangle.");
+    }
+
+    public static void DocxParagraphRendererDrawsSegmentedUnderlineStylesAsFragments()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dash"/></w:rPr><w:t>Dash style</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotted"/></w:rPr><w:t> Dotted style</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotDash"/></w:rPr><w:t> Dot dash style</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotDotDash"/></w:rPr><w:t> Dot dot dash style</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        int filledRectangles = CountOccurrences(pdf, " re f");
+        TestAssert.True(filledRectangles >= 12, $"Expected segmented underline styles to render as repeated filled fragments; found {filledRectangles}.");
+    }
+
+    public static void DocxParagraphRendererDrawsThickUnderlineWithHeavierStroke()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="single"/></w:rPr><w:t>Single</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="thick"/></w:rPr><w:t> Thick</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        double[] heights = Regex.Matches(pdf, @"(?<x>-?\d+(?:\.\d+)?) (?<y>-?\d+(?:\.\d+)?) (?<width>\d+(?:\.\d+)?) (?<height>\d+(?:\.\d+)?) re f")
+            .Select(match => double.Parse(match.Groups["height"].Value, CultureInfo.InvariantCulture))
+            .ToArray();
+        TestAssert.True(heights.Length >= 2, "Expected single and thick underlines to emit filled rectangles.");
+        TestAssert.True(heights.Max() > heights.Min() * 1.2d, "Expected w:u thick to emit a visibly heavier underline rectangle than w:u single.");
+    }
+
+    public static void DocxParagraphRendererDrawsOfficialHeavyDashUnderlineTokensAsFragments()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dashDotHeavy"/></w:rPr><w:t>Dash dot heavy</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dashDotDotHeavy"/></w:rPr><w:t> Dash dot dot heavy</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        int filledRectangles = CountOccurrences(pdf, " re f");
+        TestAssert.True(filledRectangles >= 6, $"Expected official heavy dash underline tokens to render as repeated filled fragments; found {filledRectangles}.");
+    }
+
+    public static void DocxParagraphRendererDrawsWordsUnderlineOnlyUnderWords()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="words"/></w:rPr><w:t>Alpha Beta</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        int filledRectangles = CountOccurrences(pdf, " re f");
+        TestAssert.True(filledRectangles >= 2, $"Expected w:u words to emit separate underline rectangles around spaces; found {filledRectangles}.");
     }
 
     public static void DocxReaderPreservesParagraphRunHighlightAndShadingTokens()
@@ -3866,6 +5282,541 @@ internal static class DocxTests
         TestAssert.Equal("Shown", line.Segments[1].Text);
     }
 
+    public static void DocxLayoutUsesResolvedBodyPageFieldForLineBreaking()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("A {PAGE} B", 10d, 10d);
+        var document = new DocxDocument(
+            45d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.Equal("A 1 B", lines[0].Text);
+    }
+
+    public static void DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("A {NUMPAGES} B", 10d, 10d);
+        var document = new DocxDocument(
+            45d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.Equal("A {NUMPAGES} B", lines[0].Text);
+    }
+
+    public static void DocxLayoutRightAlignsBodyNumPagesUsingCompactFieldWidth()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("A {NUMPAGES} B", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Right,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.True(line.X > 60d, "Right alignment should use the compact dynamic-field width, not the literal NUMPAGES placeholder width.");
+        TestAssert.True(line.Width < 30d, "Line width should reflect the compact layout-time NUMPAGES proxy.");
+        TestAssert.Equal("A {NUMPAGES} B", line.Text);
+    }
+
+    public static void DocxLayoutRightAlignsFloatingTextBoxNumPagesUsingCompactFieldWidth()
+    {
+        var textBoxParagraph = new DocxParagraph(
+            [new DocxTextRun("A {NUMPAGES} B", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Right,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            [],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTextLineLayout line = layout.FloatingDrawings.Single().TextBoxLayout!.TextLines.Single();
+
+        TestAssert.True(line.X > 70d, "Floating text-box right alignment should use the compact dynamic-field width, not the literal NUMPAGES placeholder width.");
+        TestAssert.True(line.Width < 30d, "Floating text-box line width should reflect the compact layout-time NUMPAGES proxy.");
+        TestAssert.Equal("A {NUMPAGES} B", line.Text);
+    }
+
+    public static void DocxTextEmissionResolvesFloatingTextBoxPageFieldsAtEmission()
+    {
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        var textBoxParagraph = new DocxParagraph(
+            [
+                new DocxTextRun("Box ", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun(" of ", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxParagraph firstPage = CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
+        DocxParagraph secondPage = CreateDocxLayoutParagraph("Second page", 10d, 12d);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(firstPage), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondPage)],
+            [firstPage, secondPage],
+            []);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionLineSnapshot textBoxLine = renderer.InspectTextEmission(document).Lines
+            .Single(line => line.StoryKind == "TextBox");
+        DocxTextEmissionSegmentSnapshot[] visibleSegments = textBoxLine.Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot[] digitSegments = visibleSegments
+            .Where(segment => segment.TextLength == 1 && segment.CharacterProfile.DigitCount == 1)
+            .ToArray();
+
+        TestAssert.Equal(0, textBoxLine.PageIndex);
+        TestAssert.Equal("Body", textBoxLine.ContainerStoryKind ?? string.Empty);
+        TestAssert.Equal(10, visibleSegments.Sum(segment => segment.TextLength));
+        TestAssert.Equal(2, digitSegments.Length);
+        TestAssert.True(Math.Abs(digitSegments[1].Width - digitSegments[1].AdvanceProfile.NaturalPdfWidth) < 0.5d, "Resolved floating text-box NUMPAGES should use the emitted digit advance instead of the literal placeholder advance.");
+    }
+
+    public static void DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("A {PAGE} B", 10d, 10d);
+        var cell = new DocxTableCell("A {PAGE} B", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [25d], [new DocxTableRow([cell], null)]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        DocxTextLineLayout line = row.Cells.Single().TextLines.Single();
+        TestAssert.Equal("A 1 B", line.Text);
+    }
+
+    public static void DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("A {NUMPAGES} B", 10d, 10d);
+        var cell = new DocxTableCell("A {NUMPAGES} B", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [25d], [new DocxTableRow([cell], null)]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        DocxTextLineLayout line = row.Cells.Single().TextLines.Single();
+        TestAssert.Equal("A {NUMPAGES} B", line.Text);
+    }
+
+    public static void DocxLayoutUsesResolvedPageFieldForKeepEstimate()
+    {
+        DocxParagraph filler = CreateDocxLayoutParagraph("Fill", 20d, 20d);
+        DocxParagraph kept = CreateDocxLayoutParagraph(
+            "A {PAGE} B",
+            10d,
+            10d,
+            keepRules: new DocxParagraphKeepRules(null, null, true, null, null, null));
+        var document = new DocxDocument(
+            45d,
+            60d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(filler), new DocxParagraphElement(kept)],
+            [],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(1, layout.Pages.Count);
+        DocxTextLineLayout keptLine = layout.Pages[0].Items
+            .OfType<DocxTextLineLayout>()
+            .Single(line => line.SourceParagraph == kept);
+        TestAssert.Equal("A 1 B", keptLine.Text);
+    }
+
+    public static void DocxTextEmissionCompactsResolvedNumPagesFieldAdvance()
+    {
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        var paragraph = new DocxParagraph(
+            [
+                new DocxTextRun("A", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("B", 10d, null, false, false, false, null, familyName)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph secondPage = CreateDocxLayoutParagraph("Second", 10d, 10d);
+        var document = new DocxDocument(
+            200d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(paragraph),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(secondPage)
+            ],
+            [paragraph, secondPage],
+            []);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionSegmentSnapshot[] visibleSegments = renderer.InspectTextEmission(document)
+            .Lines
+            .First(line => line.SourceBlockIndex == 0)
+            .Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+
+        TestAssert.Equal(3, visibleSegments.Length);
+        TestAssert.Equal(1, visibleSegments[1].TextLength);
+        TestAssert.True(Math.Abs(visibleSegments[1].Width - visibleSegments[1].AdvanceProfile.NaturalPdfWidth) < 0.5d, "Resolved NUMPAGES should use the emitted digit advance instead of the literal placeholder advance.");
+        TestAssert.True(Math.Abs(visibleSegments[2].X - (visibleSegments[1].X + visibleSegments[1].Width)) < 0.5d, "Runs after NUMPAGES should start after the compact emitted field advance.");
+    }
+
+    public static void DocxTextEmissionResolvesPlacedFootnotePageFieldsAtEmission()
+    {
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "9",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        var footnoteParagraph = new DocxParagraph(
+            [
+                new DocxTextRun("Note ", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun(" of ", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "9",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        DocxParagraph secondPage = CreateDocxLayoutParagraph("Second page", 10d, 12d);
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(bodyParagraph),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(secondPage)
+            ],
+            [bodyParagraph, secondPage],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionLineSnapshot footnoteLine = renderer.InspectTextEmission(document).Lines
+            .Single(line => line.StoryKind == "Footnote");
+        DocxTextEmissionSegmentSnapshot[] visibleSegments = footnoteLine.Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot[] digitSegments = visibleSegments
+            .Where(segment => segment.TextLength == 1 && segment.CharacterProfile.DigitCount == 1)
+            .ToArray();
+
+        TestAssert.Equal(0, footnoteLine.PageIndex);
+        TestAssert.True(!footnoteLine.IsStaticStory, "Placed footnote lines should be emitted as page-owned related story content.");
+        TestAssert.Equal(11, visibleSegments.Sum(segment => segment.TextLength));
+        TestAssert.Equal(2, digitSegments.Length);
+        TestAssert.True(digitSegments[0].CharacterProfile.OtherCount == 0, "PAGE should emit the owning page digit.");
+        TestAssert.True(digitSegments[1].CharacterProfile.OtherCount == 0, "NUMPAGES should emit the final page-count digit for placed footnotes.");
+        TestAssert.True(Math.Abs(digitSegments[1].Width - digitSegments[1].AdvanceProfile.NaturalPdfWidth) < 0.5d, "Resolved footnote NUMPAGES should use the emitted digit advance instead of the literal placeholder advance.");
+    }
+
+    public static void DocxTextEmissionResolvesPlacedEndnotePageFieldsAtEmission()
+    {
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        string familyName = font.Value.Resolution.FamilyName;
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "11",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        var endnoteParagraph = new DocxParagraph(
+            [
+                new DocxTextRun("Note ", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun(" of ", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "11",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        DocxParagraph secondPage = CreateDocxLayoutParagraph("Second page", 10d, 12d);
+        var document = new DocxDocument(
+            200d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(bodyParagraph),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(secondPage)
+            ],
+            [bodyParagraph, secondPage],
+            [])
+        {
+            RelatedStories = [endnoteStory]
+        };
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+
+        DocxTextEmissionLineSnapshot endnoteLine = renderer.InspectTextEmission(document).Lines
+            .Single(line => line.StoryKind == "Endnote");
+        DocxTextEmissionSegmentSnapshot[] visibleSegments = endnoteLine.Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot[] digitSegments = visibleSegments
+            .Where(segment => segment.TextLength == 1 && segment.CharacterProfile.DigitCount == 1)
+            .ToArray();
+
+        TestAssert.Equal(1, endnoteLine.PageIndex);
+        TestAssert.True(!endnoteLine.IsStaticStory, "Placed endnote lines should be emitted as page-owned related story content.");
+        TestAssert.Equal(11, visibleSegments.Sum(segment => segment.TextLength));
+        TestAssert.Equal(2, digitSegments.Length);
+        TestAssert.True(digitSegments[0].CharacterProfile.OtherCount == 0, "PAGE should emit the owning page digit.");
+        TestAssert.True(digitSegments[1].CharacterProfile.OtherCount == 0, "NUMPAGES should emit the final page-count digit for placed endnotes.");
+        TestAssert.True(Math.Abs(digitSegments[1].Width - digitSegments[1].AdvanceProfile.NaturalPdfWidth) < 0.5d, "Resolved endnote NUMPAGES should use the emitted digit advance instead of the literal placeholder advance.");
+    }
+
     public static void DocxReaderPreservesParagraphSimpleFieldCachedResultRunsInOrder()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -3976,6 +5927,9 @@ internal static class DocxTests
         TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Kind == "Other"));
         TestAssert.Equal(3, paragraph.FieldReferences.Count(field => field.SourceKind == "Simple"));
         TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.SourceKind == "ComplexInstruction"));
+        TestAssert.Equal(3, paragraph.FieldReferences.Count(field => field.UsesPlaceholder));
+        TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.HasCachedResult));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.HasSeparate));
         TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.Placeholder == "{PAGE}"));
         TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Placeholder == "{NUMPAGES}"));
         TestAssert.True(paragraph.FieldReferences.Single(field => field.Instruction?.Contains("PAGEREF", StringComparison.Ordinal) == true).Placeholder is null, "PAGEREF should not be treated as a PAGE placeholder.");
@@ -3995,6 +5949,11 @@ internal static class DocxTests
         TestAssert.Equal(3, complexPage.TextRunIndex);
         TestAssert.Equal(1, complexPage.TextRunCount);
         TestAssert.Equal(6, complexPage.TextLength);
+        TestAssert.True(complexPage.UsesPlaceholder, "Complex PAGE fields should render the dynamic page placeholder.");
+        TestAssert.True(complexPage.HasCachedResult, "Complex PAGE fields should record that a cached source result was present.");
+        TestAssert.True(!complexPage.RendersCachedResult, "Complex PAGE fields should not report that the cached page number was rendered.");
+        TestAssert.Equal(1, complexPage.InstructionRunCount);
+        TestAssert.Equal(1, complexPage.ResultRunCount);
         TestAssert.Equal("{PAGE}{NUMPAGES}TargetValue{PAGE}", string.Concat(paragraph.Runs.Select(run => run.Text)));
 
         DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
@@ -4004,11 +5963,180 @@ internal static class DocxTests
         TestAssert.Equal(2, snapshot.PageFieldReferenceCount);
         TestAssert.Equal(1, snapshot.NumPagesFieldReferenceCount);
         TestAssert.Equal(1, snapshot.OtherFieldReferenceCount);
+        TestAssert.Equal(1, snapshot.ComplexFieldReferenceCount);
+        TestAssert.Equal(2, snapshot.CachedResultFieldReferenceCount);
+        TestAssert.Equal(1, snapshot.RenderedCachedResultFieldReferenceCount);
+        TestAssert.Equal(3, snapshot.PlaceholderFieldReferenceCount);
+        TestAssert.Equal(3, snapshot.DynamicFieldReferenceCount);
+        TestAssert.Equal(3, snapshot.DynamicPlaceholderFieldReferenceCount);
+        TestAssert.Equal(0, snapshot.DynamicComplexWithoutCachedResultFieldReferenceCount);
+        TestAssert.Equal(1, snapshot.DynamicCachedResultNotRenderedFieldReferenceCount);
+        TestAssert.Equal(0, snapshot.NestedFieldReferenceCount);
         TestAssert.Equal(4, block.FieldReferenceCount);
         TestAssert.Equal(2, block.PageFieldReferenceCount);
         TestAssert.Equal(1, block.NumPagesFieldReferenceCount);
         TestAssert.Equal(1, block.OtherFieldReferenceCount);
+        TestAssert.Equal(1, block.ComplexFieldReferenceCount);
+        TestAssert.Equal(2, block.CachedResultFieldReferenceCount);
         TestAssert.Equal(4, bodyStory.FieldReferenceCount);
+        TestAssert.Equal(1, bodyStory.ComplexFieldReferenceCount);
+    }
+
+    public static void DocxReaderPreservesDynamicFieldReferencesInsideNoteStories()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
+                  <Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
+                  <Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Markers</w:t></w:r>
+                      <w:r><w:footnoteReference w:id="5"/></w:r>
+                      <w:r><w:endnoteReference w:id="7"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/footnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:footnote w:id="5">
+                    <w:p>
+                      <w:r><w:t>Foot </w:t></w:r>
+                      <w:fldSimple w:instr=" PAGE "/>
+                      <w:r><w:t> of </w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> NUMPAGES </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:r><w:t>9</w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                    </w:p>
+                  </w:footnote>
+                </w:footnotes>
+                """,
+            ["word/endnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:endnote w:id="7">
+                    <w:p>
+                      <w:r><w:t>End </w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> PAGE </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:r><w:t>3</w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                      <w:r><w:t> of </w:t></w:r>
+                      <w:fldSimple w:instr=" NUMPAGES "/>
+                    </w:p>
+                  </w:endnote>
+                </w:endnotes>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxRelatedStory footnoteStory = document.RelatedStories.Single(story => story.Kind == "Footnote" && story.Id == "5");
+        DocxRelatedStory endnoteStory = document.RelatedStories.Single(story => story.Kind == "Endnote" && story.Id == "7");
+        DocxParagraph footnote = footnoteStory.Paragraphs.Single();
+        DocxParagraph endnote = endnoteStory.Paragraphs.Single();
+
+        TestAssert.Equal("Foot {PAGE} of {NUMPAGES}", string.Concat(footnote.Runs.Select(run => run.Text)));
+        TestAssert.Equal("End {PAGE} of {NUMPAGES}", string.Concat(endnote.Runs.Select(run => run.Text)));
+        TestAssert.Equal(2, footnote.FieldReferences.Count);
+        TestAssert.Equal(2, endnote.FieldReferences.Count);
+        DocxFieldReference footnotePage = footnote.FieldReferences.Single(field => field.Kind == "Page");
+        DocxFieldReference footnoteNumPages = footnote.FieldReferences.Single(field => field.Kind == "NumPages");
+        DocxFieldReference endnotePage = endnote.FieldReferences.Single(field => field.Kind == "Page");
+        DocxFieldReference endnoteNumPages = endnote.FieldReferences.Single(field => field.Kind == "NumPages");
+        TestAssert.True(footnotePage.SourceKind == "Simple" && footnotePage.UsesPlaceholder && !footnotePage.HasCachedResult, "Simple PAGE fields in footnotes should remain dynamic placeholders.");
+        TestAssert.True(footnoteNumPages.SourceKind == "ComplexInstruction" && footnoteNumPages.HasSeparate && footnoteNumPages.HasCachedResult && !footnoteNumPages.RendersCachedResult && footnoteNumPages.UsesPlaceholder, "Complex NUMPAGES fields in footnotes should keep metadata without rendering stale cached results.");
+        TestAssert.True(endnotePage.SourceKind == "ComplexInstruction" && endnotePage.HasSeparate && endnotePage.HasCachedResult && !endnotePage.RendersCachedResult && endnotePage.UsesPlaceholder, "Complex PAGE fields in endnotes should keep metadata without rendering stale cached results.");
+        TestAssert.True(endnoteNumPages.SourceKind == "Simple" && endnoteNumPages.UsesPlaceholder && !endnoteNumPages.HasCachedResult, "Simple NUMPAGES fields in endnotes should remain dynamic placeholders.");
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        TestAssert.Equal(4, snapshot.FieldReferenceCount);
+        TestAssert.Equal(2, snapshot.PageFieldReferenceCount);
+        TestAssert.Equal(2, snapshot.NumPagesFieldReferenceCount);
+        TestAssert.Equal(2, snapshot.ComplexFieldReferenceCount);
+        TestAssert.Equal(2, snapshot.CachedResultFieldReferenceCount);
+        TestAssert.Equal(0, snapshot.RenderedCachedResultFieldReferenceCount);
+        TestAssert.Equal(4, snapshot.PlaceholderFieldReferenceCount);
+        TestAssert.Equal(4, snapshot.DynamicFieldReferenceCount);
+        TestAssert.Equal(4, snapshot.DynamicPlaceholderFieldReferenceCount);
+        TestAssert.Equal(2, snapshot.DynamicCachedResultNotRenderedFieldReferenceCount);
+        DocxStructureStorySnapshot footnoteSnapshot = snapshot.Stories.Single(story => story.Kind == "Footnote" && story.VariantType == "5");
+        DocxStructureStorySnapshot endnoteSnapshot = snapshot.Stories.Single(story => story.Kind == "Endnote" && story.VariantType == "7");
+        TestAssert.True(footnoteSnapshot.FieldReferenceCount == 2 && footnoteSnapshot.ComplexFieldReferenceCount == 1 && footnoteSnapshot.PlaceholderFieldReferenceCount == 2, "Footnote story snapshots should expose dynamic field ownership.");
+        TestAssert.True(endnoteSnapshot.FieldReferenceCount == 2 && endnoteSnapshot.ComplexFieldReferenceCount == 1 && endnoteSnapshot.PlaceholderFieldReferenceCount == 2, "Endnote story snapshots should expose dynamic field ownership.");
+    }
+
+    public static void DocxMarkupNoteLinksFieldsFixturePreservesPlacedNoteLinksAndFields()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-markup-note-links-fields.docx"));
+        DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxRelatedStory footnoteStory = document.RelatedStories.Single(story => story.Kind == "Footnote" && story.Id == "5");
+        DocxRelatedStory endnoteStory = document.RelatedStories.Single(story => story.Kind == "Endnote" && story.Id == "7");
+        DocxParagraph footnote = footnoteStory.Paragraphs.Single();
+        DocxParagraph endnote = endnoteStory.Paragraphs.Single();
+
+        TestAssert.Equal(2, footnote.FieldReferences.Count);
+        TestAssert.Equal(2, endnote.FieldReferences.Count);
+        TestAssert.Equal("https://example.invalid/markup-footnote", footnote.Hyperlinks.Single().Target ?? string.Empty);
+        TestAssert.Equal("https://example.invalid/markup-endnote", endnote.Hyperlinks.Single().Target ?? string.Empty);
+        TestAssert.True(footnote.FieldReferences.Any(field => field.Kind == "Page" && field.SourceKind == "Simple" && field.UsesPlaceholder), "The fixture should keep a dynamic footnote PAGE placeholder.");
+        TestAssert.True(footnote.FieldReferences.Any(field => field.Kind == "NumPages" && field.SourceKind == "ComplexInstruction" && field.HasCachedResult && !field.RendersCachedResult), "The fixture should keep complex footnote NUMPAGES metadata.");
+        TestAssert.True(endnote.FieldReferences.Any(field => field.Kind == "Page" && field.SourceKind == "ComplexInstruction" && field.HasCachedResult && !field.RendersCachedResult), "The fixture should keep complex endnote PAGE metadata.");
+        TestAssert.True(endnote.FieldReferences.Any(field => field.Kind == "NumPages" && field.SourceKind == "Simple" && field.UsesPlaceholder), "The fixture should keep a dynamic endnote NUMPAGES placeholder.");
+
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxTextEmissionLineSnapshot[] noteLines = renderer.InspectTextEmission(document).Lines
+            .Where(line => line.StoryKind == "Footnote" || line.StoryKind == "Endnote")
+            .ToArray();
+        PdfLinkAnnotation[] annotations = renderer.RenderBlankPages(document)
+            .SelectMany(page => page.Annotations)
+            .ToArray();
+
+        TestAssert.True(noteLines.Any(line => line.StoryKind == "Footnote" && line.PageIndex == 0), "The fixture should place footnote fields on the marker page.");
+        TestAssert.True(noteLines.Any(line => line.StoryKind == "Endnote" && line.PageIndex == 1), "The fixture should place endnote fields on the document-end page after pagination.");
+        TestAssert.True(
+            annotations.Any(annotation => annotation.Uri == "https://example.invalid/markup-footnote" && annotation.X >= document.MarginLeftPoints && annotation.Width > 0d),
+            "The fixture should render an external footnote hyperlink annotation in page coordinates.");
+        TestAssert.True(
+            annotations.Any(annotation => annotation.Uri == "https://example.invalid/markup-endnote" && annotation.X >= document.MarginLeftPoints && annotation.Width > 0d),
+            "The fixture should render an external endnote hyperlink annotation in page coordinates.");
     }
 
     public static void DocxComplexFieldWithCachedResultDoesNotEmitUnsupportedDiagnostic()
@@ -4062,7 +6190,7 @@ internal static class DocxTests
         TestAssert.Equal(" After", runs[2].Text);
     }
 
-    public static void DocxComplexFieldCachedResultInsideHyperlinkDoesNotEmitUnsupportedDiagnostic()
+    public static void DocxCrossReferenceComplexFieldCachedResultInsideHyperlinkDoesNotEmitUnsupportedDiagnostic()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -4094,9 +6222,9 @@ internal static class DocxTests
                       <w:r><w:t>Before </w:t></w:r>
                       <w:hyperlink r:id="rIdLink">
                         <w:r><w:fldChar w:fldCharType="begin"/></w:r>
-                        <w:r><w:instrText> DATE \@ &quot;yyyy&quot; </w:instrText></w:r>
+                        <w:r><w:instrText> PAGEREF Target \h </w:instrText></w:r>
                         <w:r><w:fldChar w:fldCharType="separate"/></w:r>
-                        <w:r><w:t>2026</w:t></w:r>
+                        <w:r><w:t>section 2</w:t></w:r>
                         <w:r><w:fldChar w:fldCharType="end"/></w:r>
                       </w:hyperlink>
                       <w:r><w:t> After</w:t></w:r>
@@ -4117,11 +6245,383 @@ internal static class DocxTests
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
         TestAssert.Equal("Before ", paragraph.Runs[0].Text);
-        TestAssert.Equal("2026", paragraph.Runs[1].Text);
+        TestAssert.Equal("section 2", paragraph.Runs[1].Text);
         TestAssert.Equal(" After", paragraph.Runs[2].Text);
         TestAssert.Equal(1, paragraph.Hyperlinks.Count);
         TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunStartIndex);
         TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunCount);
+        DocxFieldReference field = paragraph.FieldReferences.Single();
+        TestAssert.Equal("Other", field.Kind);
+        TestAssert.True(field.HasCachedResult, "Cross-reference fields should record cached result availability.");
+        TestAssert.True(field.RendersCachedResult, "Cross-reference fields should render their cached result.");
+        TestAssert.True(!field.UsesPlaceholder, "Cross-reference fields should not use PAGE placeholders.");
+        TestAssert.Equal(1, field.TextRunCount);
+        TestAssert.Equal("section 2".Length, field.TextLength);
+    }
+
+    public static void DocxNestedComplexFieldsUseCachedResultsAndInspectionCounters()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> REF Outer </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:r><w:t>Outer </w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> DATE \@ &quot;yyyy&quot; </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:r><w:t>2026</w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                      <w:r><w:t> Done</w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Equal("Before Outer 2026 Done After", string.Concat(paragraph.Runs.Select(run => run.Text)));
+        TestAssert.Equal(2, paragraph.FieldReferences.Count);
+
+        DocxFieldReference outer = paragraph.FieldReferences.Single(field => field.Instruction?.Contains("REF Outer", StringComparison.Ordinal) == true);
+        DocxFieldReference inner = paragraph.FieldReferences.Single(field => field.Instruction?.Contains("DATE", StringComparison.Ordinal) == true);
+        TestAssert.True(outer.HasCachedResult && outer.RendersCachedResult, "Outer field should render its cached result span.");
+        TestAssert.True(inner.HasCachedResult && inner.RendersCachedResult, "Nested field should render its cached result span.");
+        TestAssert.Equal(0, outer.NestingDepth);
+        TestAssert.Equal(1, inner.NestingDepth);
+        TestAssert.Equal(3, outer.TextRunCount);
+        TestAssert.Equal("Outer 2026 Done".Length, outer.TextLength);
+        TestAssert.Equal(1, inner.TextRunCount);
+        TestAssert.Equal("2026".Length, inner.TextLength);
+
+        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        TestAssert.Equal(2, snapshot.ComplexFieldReferenceCount);
+        TestAssert.Equal(2, snapshot.CachedResultFieldReferenceCount);
+        TestAssert.Equal(2, snapshot.RenderedCachedResultFieldReferenceCount);
+        TestAssert.Equal(0, snapshot.PlaceholderFieldReferenceCount);
+        TestAssert.Equal(1, snapshot.NestedFieldReferenceCount);
+    }
+
+    public static void DocxComplexFieldsWithCachedResultsInsideDeletedAndMovedFromContentDoNotEmitUnsupportedDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:del w:id="41" w:author="A" w:date="2026-06-10T00:00:00Z">
+                        <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                        <w:r><w:instrText> REF DeletedTarget </w:instrText></w:r>
+                        <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                        <w:r><w:delText>deleted-field </w:delText></w:r>
+                        <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                      </w:del>
+                      <w:moveFrom w:id="42" w:author="B" w:date="2026-06-10T00:00:00Z">
+                        <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                        <w:r><w:instrText> REF MoveTarget </w:instrText></w:r>
+                        <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                        <w:r><w:t>moved-field</w:t></w:r>
+                        <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                      </w:moveFrom>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup,
+            DiagnosticSink = diagnostics.Add
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxParagraph paragraph = new DocxReader().Read(package, markupMode: OoxPdfDocxMarkupMode.AllMarkup).Paragraphs.Single();
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Equal("Before deleted-field moved-field After", string.Concat(paragraph.Runs.Select(run => run.Text)));
+        TestAssert.Equal(2, paragraph.FieldReferences.Count);
+        TestAssert.True(paragraph.FieldReferences.All(field => field.HasCachedResult && field.RendersCachedResult), "Cached complex fields in review containers should render their stored results.");
+        TestAssert.True(paragraph.FieldReferences.All(field => field.Kind == "Other"), "Cached REF fields should not be treated as dynamic PAGE placeholders.");
+        TestAssert.True(paragraph.Runs.Any(run => run.Revision?.Kind == "Deletion"), "Deleted field result runs should keep deletion provenance.");
+        TestAssert.True(paragraph.Runs.Any(run => run.Revision?.Kind == "MoveFrom"), "Moved-from field result runs should keep move-from provenance.");
+    }
+
+    public static void DocxComplexFieldWithCachedResultInsideInlineContentControlDoesNotEmitUnsupportedDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:sdt>
+                        <w:sdtPr><w:alias w:val="Synthetic content control"/></w:sdtPr>
+                        <w:sdtContent>
+                          <w:r><w:t>control </w:t></w:r>
+                          <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                          <w:r><w:instrText> REF ControlTarget </w:instrText></w:r>
+                          <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                          <w:r><w:t>cached-ref</w:t></w:r>
+                          <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                        </w:sdtContent>
+                      </w:sdt>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs.Single();
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Equal("Before control cached-ref After", string.Concat(paragraph.Runs.Select(run => run.Text)));
+        DocxFieldReference field = paragraph.FieldReferences.Single();
+        TestAssert.Equal("Other", field.Kind);
+        TestAssert.True(field.HasCachedResult && field.RendersCachedResult, "Cached complex fields inside inline content controls should render their stored result.");
+        TestAssert.Equal(1, field.TextRunCount);
+        TestAssert.Equal("cached-ref".Length, field.TextLength);
+    }
+
+    public static void DocxComplexFieldSpanningInlineContentControlUsesCachedResult()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> REF ControlTarget </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:sdt>
+                        <w:sdtPr><w:tag w:val="synthetic-field-result"/></w:sdtPr>
+                        <w:sdtContent>
+                          <w:r><w:t>cached-ref</w:t></w:r>
+                        </w:sdtContent>
+                      </w:sdt>
+                      <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs.Single();
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Equal("Before cached-ref After", string.Concat(paragraph.Runs.Select(run => run.Text)));
+        DocxFieldReference field = paragraph.FieldReferences.Single();
+        TestAssert.True(field.HasCachedResult && field.RendersCachedResult, "Complex fields spanning inline content controls should keep their cached result span.");
+        TestAssert.Equal(1, field.TextRunCount);
+        TestAssert.Equal("cached-ref".Length, field.TextLength);
+    }
+
+    public static void DocxMultiBlockComplexFieldWithCachedResultDoesNotEmitUnsupportedDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> TOC \o &quot;1-2&quot; </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:r><w:t>Entry one</w:t></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:r><w:t>Entry two</w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="end"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Equal("Entry one|Entry two", string.Join("|", document.Paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))));
+    }
+
+    public static void DocxMalformedComplexFieldWithCachedResultKeepsRenderedResultMetadata()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+                      <w:r><w:instrText> REF BrokenTarget </w:instrText></w:r>
+                      <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+                      <w:r><w:t>cached-ref</w:t></w:r>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
+        TestAssert.Equal("Before cached-ref After", string.Concat(paragraph.Runs.Select(run => run.Text)));
+        DocxFieldReference field = paragraph.FieldReferences.Single();
+        TestAssert.Equal("Other", field.Kind);
+        TestAssert.True(field.HasSeparate, "Malformed cached fields should record the separate marker.");
+        TestAssert.True(field.HasCachedResult && field.RendersCachedResult, "Malformed cached fields should retain rendered-result metadata even without an end marker.");
+        TestAssert.Equal(2, field.TextRunCount);
+        TestAssert.Equal("cached-ref After".Length, field.TextLength);
     }
 
     public static void DocxReaderUsesFinalViewForSimpleTrackedParagraphRuns()
@@ -4804,6 +7304,205 @@ internal static class DocxTests
         TestAssert.Equal(77d, line.Width);
     }
 
+    public static void DocxParagraphLayoutUsesAuthoredRightTabStops()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:tabs><w:tab w:val="right" w:pos="1440"/></w:tabs></w:pPr>
+                      <w:r><w:t>A</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t>BB</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal("A", line.Segments[0].Text);
+        TestAssert.Equal("BB", line.Segments[1].Text);
+        TestAssert.Equal(62d, line.Segments[1].X - line.X);
+        TestAssert.Equal(72d, line.Width);
+    }
+
+    public static void DocxParagraphLayoutUsesAuthoredCenterTabStops()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:tabs><w:tab w:val="center" w:pos="1440"/></w:tabs></w:pPr>
+                      <w:r><w:t>A</w:t><w:tab/><w:t>BB</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal("A", line.Segments[0].Text);
+        TestAssert.Equal("BB", line.Segments[1].Text);
+        TestAssert.Equal(67d, line.Segments[1].X - line.X);
+        TestAssert.Equal(77d, line.Width);
+    }
+
+    public static void DocxParagraphLayoutUsesAuthoredDecimalTabStops()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:tabs><w:tab w:val="decimal" w:pos="1440"/></w:tabs></w:pPr>
+                      <w:r><w:t>A</w:t><w:tab/><w:t>12.3</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal("A", line.Segments[0].Text);
+        TestAssert.Equal("12.3", line.Segments[1].Text);
+        TestAssert.Equal(62d, line.Segments[1].X - line.X);
+        TestAssert.Equal(82d, line.Width);
+    }
+
+    public static void DocxParagraphLayoutRightAlignsDecimalTabsWithoutDecimalSeparator()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:tabs><w:tab w:val="decimal" w:pos="1440"/></w:tabs></w:pPr>
+                      <w:r><w:t>A</w:t><w:tab/><w:t>123</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(2, line.Segments.Count);
+        TestAssert.Equal("123", line.Segments[1].Text);
+        TestAssert.Equal(57d, line.Segments[1].X - line.X);
+        TestAssert.Equal(72d, line.Width);
+    }
+
     public static void DocxParagraphLayoutDoesNotUseBarOrClearTabsAsPositioningStops()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -4935,6 +7634,279 @@ internal static class DocxTests
         TestAssert.Equal(2, lines.Length);
         TestAssert.Equal("Alpha\u00A0Beta ", lines[0].Text);
         TestAssert.Equal("Gamma", lines[1].Text);
+    }
+
+    public static void DocxParagraphLayoutBreaksOverwideSoftHyphenatedTokens()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABC\u00ADDEFG", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            45d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("ABC\u00AD", lines[0].Text);
+        TestAssert.Equal("DEFG", lines[1].Text);
+        TestAssert.True(lines[0].EndsWithIntraTokenBreak, "Soft-hyphen body splits should be marked as intra-token line endings.");
+    }
+
+    public static void DocxParagraphLayoutSuppressesUnbrokenSoftHyphens()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABC\u00ADDEFG", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            67d,
+            200d,
+            15d,
+            15d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal("ABCDEFG", line.Text);
+        TestAssert.Equal("ABCDEFG", string.Concat(line.Segments.Select(segment => segment.Text)));
+        TestAssert.True(!line.EndsWithIntraTokenBreak, "A discretionary soft hyphen should stay hidden when the token fits without breaking.");
+        TestAssert.True(Math.Abs(line.Width - 35d) < 0.001d, "Unbroken soft hyphens should not consume layout width.");
+    }
+
+    public static void DocxParagraphLayoutPreservesSourceOffsetsAfterHiddenSoftHyphens()
+    {
+        var run = new DocxTextRun("AB\u00ADCD", 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 7,
+            SourceTextOffsetInRun = 0
+        };
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            75d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal("ABCD", line.Text);
+        TestAssert.True(
+            line.Segments.Any(segment => segment.SourceTextRunIndex == 7 && segment.SourceTextOffsetInRun == 3 && segment.Text == "CD"),
+            "Hidden soft hyphens should not shift source offsets for later rendered text in the same run.");
+    }
+
+    public static void DocxParagraphLayoutBreaksAtHiddenZeroWidthSpaces()
+    {
+        var run = new DocxTextRun("ABC\u200BDEFG", 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 8,
+            SourceTextOffsetInRun = 0
+        };
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            40d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("ABC", lines[0].Text);
+        TestAssert.Equal("DEFG", lines[1].Text);
+        TestAssert.True(lines[0].EndsWithIntraTokenBreak, "Zero-width spaces should be preferred hidden break opportunities inside overwide tokens.");
+        TestAssert.True(
+            lines[1].Segments.Any(segment => segment.SourceTextRunIndex == 8 && segment.SourceTextOffsetInRun == 4 && segment.Text == "DEFG"),
+            "Hidden zero-width spaces should not shift source offsets for later rendered text in the same run.");
+    }
+
+    public static void DocxParagraphLayoutDoesNotBreakAtNoBreakHyphen()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABC\u2011DEFG", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            45d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.Equal("ABC\u2011DEFG", lines[0].Text);
+    }
+
+    public static void DocxParagraphLayoutWordWrapOffBreaksOverwideLatinTokens()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABCDEFGH", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            WordWrap = false,
+            WordWrapValue = "0"
+        };
+        var document = new DocxDocument(
+            45d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("ABCDE", lines[0].Text);
+        TestAssert.Equal("FGH", lines[1].Text);
+        TestAssert.True(lines[0].EndsWithIntraTokenBreak, "wordWrap off should permit safe character-level line breaks for overwide Latin tokens.");
     }
 
     public static void DocxParagraphLayoutPreservesAuthoredSpaces()
@@ -6192,6 +9164,42 @@ internal static class DocxTests
         TestAssert.True(lines[1].ContextualSpacingSuppressed == true, "The second same-style paragraph should expose the contextual spacing suppression decision.");
     }
 
+    public static void DocxSyntheticContextualSpacingSuppressesDefaultStyleGap()
+    {
+        var spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, null, true);
+        var first = new DocxParagraph(
+            [new DocxTextRun("First", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            10d,
+            10d,
+            1d,
+            10d,
+            spacing,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var second = first with { Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, null)] };
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(10d, Math.Round(lines[0].BaselineY - lines[1].BaselineY, 3));
+        TestAssert.Equal(10d, lines[1].PendingAfterSpacing ?? -1d);
+        TestAssert.Equal(10d, lines[1].ParagraphBeforeSpacing ?? -1d);
+        TestAssert.Equal(0d, lines[1].AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(lines[1].ContextualSpacingSuppressed == true, "Default-style paragraphs should be treated as same-style paragraphs for contextual spacing.");
+    }
+
     public static void DocxSyntheticContextualSpacingKeepsDifferentStyleGap()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -6248,6 +9256,52 @@ internal static class DocxTests
         TestAssert.Equal(10d, lines[1].ParagraphBeforeSpacing ?? -1d);
         TestAssert.Equal(10d, lines[1].AppliedBeforeSpacing ?? -1d);
         TestAssert.True(lines[1].ContextualSpacingSuppressed == false, "Different styles should keep the authored boundary gap even when contextual spacing is enabled.");
+    }
+
+    public static void DocxSyntheticAtLeastLineSpacingUsesMinimumAndNaturalLineHeight()
+    {
+        var smallMinimum = new DocxParagraph(
+            [new DocxTextRun("Small", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            6d,
+            new DocxParagraphSpacing(null, null, null, null, null, null, "120", "atLeast", null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        var largeMinimum = new DocxParagraph(
+            [new DocxTextRun("Large", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            16d,
+            new DocxParagraphSpacing(null, null, null, null, null, null, "320", "atLeast", null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(smallMinimum), new DocxParagraphElement(largeMinimum)],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(10d, lines[0].LineHeight);
+        TestAssert.Equal("AtLeastLineSpacing", lines[0].LineHeightSource?.ToString() ?? string.Empty);
+        TestAssert.Equal(16d, lines[1].LineHeight);
+        TestAssert.Equal("AtLeastLineSpacing", lines[1].LineHeightSource?.ToString() ?? string.Empty);
     }
 
     public static void DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage()
@@ -6340,6 +9394,62 @@ internal static class DocxTests
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(4, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
         TestAssert.Equal(2, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
+    }
+
+    public static void DocxSyntheticParagraphKeepNextEstimateHonorsContextualSpacing()
+    {
+        var contextualSpacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, null, true);
+        DocxParagraph CreateBodyParagraph(string text, double before, double after, bool keepNext = false)
+        {
+            return new DocxParagraph(
+                [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+                [],
+                "Body",
+                DocxTextAlignment.Left,
+                null,
+                before,
+                after,
+                1d,
+                10d,
+                contextualSpacing,
+                keepNext ? new DocxParagraphKeepRules(true, null, null, null, null, null) : DocxParagraphKeepRules.Empty,
+                null);
+        }
+
+        DocxParagraph[] fillers =
+        [
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
+            CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
+        ];
+        DocxParagraph keepNext = CreateBodyParagraph("Keep", before: 0d, after: 12d, keepNext: true);
+        DocxParagraph next = CreateBodyParagraph("Next", before: 12d, after: 0d);
+        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
+            .Concat([new DocxParagraphElement(keepNext), new DocxParagraphElement(next)])
+            .ToArray();
+        var document = new DocxDocument(
+            160d,
+            81d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            body,
+            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxTextLineLayout[] lines = layout.Pages.Single().Items.OfType<DocxTextLineLayout>().ToArray();
+
+        TestAssert.Equal(6, lines.Length);
+        TestAssert.Equal("Keep", lines[4].Text);
+        TestAssert.Equal("Next", lines[5].Text);
+        TestAssert.True(lines[5].ContextualSpacingSuppressed == true, "The kept pair should use the same contextual spacing collapse as normal paragraph layout.");
     }
 
     public static void DocxSyntheticPageKeepNextEstimatesIndentedBlockTarget()
@@ -7145,6 +10255,150 @@ internal static class DocxTests
         TestAssert.Equal(108d, line.Segments[2].X);
     }
 
+    public static void DocxSyntheticNumberingTabBeyondIndentMovesTextOnly()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                </Relationships>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="7">
+                    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:pPr><w:ind w:left="720" w:hanging="360"/><w:tabs><w:tab w:val="num" w:pos="1440"/></w:tabs></w:pPr></w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="3"><w:abstractNumId w:val="7"/></w:num>
+                </w:numbering>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr><w:r><w:t>Indented</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="10000" w:h="4000"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(90d, line.X);
+        TestAssert.Equal(3, line.Segments.Count);
+        TestAssert.Equal("1.", line.Segments[0].Text);
+        TestAssert.Equal(90d, line.Segments[0].X);
+        TestAssert.Equal(" ", line.Segments[1].Text);
+        TestAssert.Equal("Indented", line.Segments[2].Text);
+        TestAssert.Equal(144d, line.Segments[2].X);
+    }
+
+    public static void DocxSyntheticNumberingParagraphIndentOverridesLevelIndent()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                </Relationships>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="7">
+                    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="3"><w:abstractNumId w:val="7"/></w:num>
+                </w:numbering>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr><w:ind w:left="1440" w:hanging="720"/></w:pPr><w:r><w:t>Indented</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="10000" w:h="4000"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value));
+
+        DocxTextLineLayout line = new DocxLayoutEngine()
+            .Create(document, embedded)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.Equal(108d, line.X);
+        TestAssert.Equal(3, line.Segments.Count);
+        TestAssert.Equal("1.", line.Segments[0].Text);
+        TestAssert.Equal(108d, line.Segments[0].X);
+        TestAssert.Equal(" ", line.Segments[1].Text);
+        TestAssert.Equal("Indented", line.Segments[2].Text);
+        TestAssert.Equal(144d, line.Segments[2].X);
+    }
+
     public static void DocxSyntheticNumberingSpaceSuffixPlacesTextAfterLabel()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -7344,6 +10598,115 @@ internal static class DocxTests
         }
     }
 
+    public static void DocxWordCompatibleAllMarkupPositionsNumberingInNarrowedBodyFrame()
+    {
+        var numberingRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "41",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["numberingChange", "numPr", "ilvl"]);
+        var label = new DocxListLabel(
+            "12.",
+            "decimal",
+            "%1.",
+            "tab",
+            "7",
+            0,
+            new DocxNumberingIndent(72d, null, null, 36d, 84d, "1440", null, null, "720", "num", "1680"),
+            new DocxTextRunStyle(
+                11d,
+                "C00000",
+                true,
+                null,
+                null,
+                null,
+                "LabelFace",
+                new DocxRunFonts("LabelFace", null, null, null, null, null, null, null)));
+        var bodyRun = new DocxTextRun(
+            "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta",
+            10d,
+            null,
+            false,
+            false,
+            false,
+            null,
+            "BodyFace")
+        {
+            Fonts = new DocxRunFonts("BodyFace", null, null, null, null, null, null, null)
+        };
+        var paragraph = new DocxParagraph(
+            [bodyRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            label)
+        {
+            Revisions = [numberingRevision],
+            TabStops = [new DocxTabStop(96d, "1920", "num", null)]
+        };
+        DocxDocument document = new(
+            360d,
+            300d,
+            36d,
+            36d,
+            36d,
+            36d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [paragraph],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxLayoutPage page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .Single();
+        DocxTextLineLayout[] lines = page.Items.OfType<DocxTextLineLayout>().ToArray();
+        DocxTextLineLayout firstLine = lines[0];
+        DocxTextSegmentLayout labelSegment = firstLine.Segments[0];
+        DocxTextSegmentLayout separatorSegment = firstLine.Segments[1];
+        DocxTextSegmentLayout bodySegment = firstLine.Segments[2];
+
+        TestAssert.Equal(216d, page.ColumnFrames.Single().Width);
+        TestAssert.True(lines.Length > 1, "The narrowed all-markup body frame should wrap the numbered paragraph.");
+        TestAssert.Equal(72d, firstLine.X);
+        TestAssert.Equal(DocxTextSegmentRole.ListLabel, labelSegment.Role);
+        TestAssert.Equal("12.", labelSegment.Text);
+        TestAssert.Equal(72d, labelSegment.X);
+        TestAssert.Equal(15d, labelSegment.Width);
+        TestAssert.Equal(11d, labelSegment.FontSize ?? 0d);
+        TestAssert.Equal("LabelFace", labelSegment.StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
+        TestAssert.Equal("C00000", labelSegment.StyleRun.EffectiveProperties.ColorHex ?? string.Empty);
+        TestAssert.True(labelSegment.StyleRun.EffectiveProperties.Bold, "Numbering label style should apply to the marker run.");
+        TestAssert.Equal(DocxTextSegmentRole.ListSeparator, separatorSegment.Role);
+        TestAssert.Equal(" ", separatorSegment.Text);
+        TestAssert.Equal(87d, separatorSegment.X);
+        TestAssert.Equal("BodyFace", separatorSegment.StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
+        TestAssert.Equal(DocxTextSegmentRole.Text, bodySegment.Role);
+        TestAssert.Equal(132d, bodySegment.X);
+        TestAssert.Equal("BodyFace", bodySegment.StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
+        TestAssert.Equal(108d, lines[1].X);
+        TestAssert.True(lines.Skip(1).All(line => line.X == 108d), "Continuation lines should use the hanging indent text start.");
+        TestAssert.True(
+            firstLine.SourceParagraph?.Revisions.Single().PropertyElementNames.Contains("numberingChange") == true,
+            "Revised numbering properties should stay attached to the numbered paragraph layout line.");
+    }
+
     public static void DocxSyntheticInlinePngRendersImageXObject()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
@@ -7406,6 +10769,141 @@ internal static class DocxTests
         TestAssert.Contains("/XObject", pdf);
         TestAssert.Contains("/Im1 Do", pdf);
         TestAssert.Contains("/Width 2 /Height 1", pdf);
+    }
+
+    public static void DocxSyntheticVmlInlinePngRendersImageXObject()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                            xmlns:v="urn:schemas-microsoft-com:vml">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:pict>
+                          <v:shape id="vml-image" style="width:72pt;height:36pt">
+                            <v:imagedata r:id="rIdImage1"/>
+                          </v:shape>
+                        </w:pict>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """),
+            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [32, 64, 96, 128, 160, 192])
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_VML", ids);
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.Contains("/Im1 Do", pdf);
+        TestAssert.Contains("/Width 2 /Height 1", pdf);
+    }
+
+    public static void DocxSyntheticVmlInlineTextboxRendersTextWithoutUnsupportedDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:v="urn:schemas-microsoft-com:vml">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r>
+                        <w:pict>
+                          <v:shapetype id="_x0000_t202" coordsize="21600,21600" o:spt="202" path="m,l,21600r21600,l21600,xe"
+                                       xmlns:o="urn:schemas-microsoft-com:office:office">
+                            <v:stroke joinstyle="miter"/>
+                            <v:path gradientshapeok="t" o:connecttype="rect"/>
+                          </v:shapetype>
+                          <v:shape id="vml-textbox" type="#_x0000_t202" style="width:144pt;height:36pt">
+                            <v:textbox>
+                              <w:txbxContent>
+                                <w:p>
+                                  <w:pPr>
+                                    <w:pPrChange w:id="7" w:author="A" w:date="2026-06-10T00:00:00Z">
+                                      <w:pPr><w:pStyle w:val="TextboxChanged"/></w:pPr>
+                                    </w:pPrChange>
+                                  </w:pPr>
+                                  <w:r><w:t>VML note one</w:t></w:r>
+                                </w:p>
+                                <w:p><w:r><w:t>VML note two</w:t></w:r></w:p>
+                              </w:txbxContent>
+                            </v:textbox>
+                          </v:shape>
+                        </w:pict>
+                      </w:r>
+                      <w:r><w:t> After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_UNSUPPORTED_VML", ids);
+        TestAssert.Equal("Before VML note one\nVML note two After", string.Concat(paragraph.Runs.Select(run => run.Text)));
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.PropertyElementNames.Contains("pStyle")), "VML textbox paragraph formatting revisions should be retained as private-safe provenance.");
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        TestAssert.Equal(1, structure.FormattingRevisionCount);
+        TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(CountPdfTextShows(pdf) >= 3, "VML textbox text should be emitted as paragraph text.");
     }
 
     public static void DocxSyntheticTableCellInlinePngRendersImageXObject()
@@ -7519,6 +11017,72 @@ internal static class DocxTests
 
         TestAssert.True(File.Exists(output), "Unsupported DOCX image should not fail the whole conversion.");
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "IMAGE_UNSUPPORTED_FORMAT" && d.Severity == OoxPdfSeverity.Error && d.PartName == "/word/media/image1.png"), "Unsupported DOCX image should emit a release-blocking diagnostic.");
+    }
+
+    public static void DocxMarkupModesFilterRevisedImagesAndFloatingDrawings()
+    {
+        string input = WriteImageRevisionProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal(1, finalDocument.Paragraphs.Single().Images.Count);
+        TestAssert.Equal("/word/media/inline-inserted.png", finalDocument.Paragraphs.Single().Images.Single().PartName ?? string.Empty);
+        TestAssert.Equal(1, finalDocument.FloatingDrawings.Count);
+        TestAssert.Equal("/word/media/floating-inserted.png", finalDocument.FloatingDrawings.Single().Image?.PartName ?? string.Empty);
+        TestAssert.Equal("Insertion", finalDocument.Paragraphs.Single().Images.Single().Revisions.Single().Kind);
+        TestAssert.Equal("Insertion", finalDocument.FloatingDrawings.Single().Revisions.Single().Kind);
+
+        TestAssert.Equal(1, originalDocument.Paragraphs.Single().Images.Count);
+        TestAssert.Equal("/word/media/inline-deleted.png", originalDocument.Paragraphs.Single().Images.Single().PartName ?? string.Empty);
+        TestAssert.Equal(1, originalDocument.FloatingDrawings.Count);
+        TestAssert.Equal("/word/media/floating-deleted.png", originalDocument.FloatingDrawings.Single().Image?.PartName ?? string.Empty);
+        TestAssert.Equal("Deletion", originalDocument.Paragraphs.Single().Images.Single().Revisions.Single().Kind);
+        TestAssert.Equal("Deletion", originalDocument.FloatingDrawings.Single().Revisions.Single().Kind);
+
+        TestAssert.Equal(2, allDocument.Paragraphs.Single().Images.Count);
+        TestAssert.Equal(2, allDocument.FloatingDrawings.Count);
+        TestAssert.True(allDocument.Paragraphs.Single().Images.Any(image => image.Revisions.Single().Kind == "Insertion") && allDocument.Paragraphs.Single().Images.Any(image => image.Revisions.Single().Kind == "Deletion"), "All-markup inline images should retain inserted and deleted image provenance.");
+        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Revisions.Single().Kind == "Insertion") && allDocument.FloatingDrawings.Any(drawing => drawing.Revisions.Single().Kind == "Deletion"), "All-markup floating drawings should retain inserted and deleted drawing provenance.");
+    }
+
+    public static void DocxMarkupModesFilterMovedAndCommentedImagesAndDrawings()
+    {
+        string input = WriteMovedCommentedImageProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        AssertInlineImageParts(finalDocument, ["/word/media/body-commented.png", "/word/media/inline-move-to.png"], ["/word/media/inline-move-from.png"]);
+        AssertInlineImageParts(originalDocument, ["/word/media/body-commented.png", "/word/media/inline-move-from.png"], ["/word/media/inline-move-to.png"]);
+        AssertInlineImageParts(allDocument, ["/word/media/body-commented.png", "/word/media/inline-move-from.png", "/word/media/inline-move-to.png"], []);
+        TestAssert.True(allDocument.Paragraphs.Single().CommentRanges.Any(range => range.Id == "1") && allDocument.Paragraphs.Single().InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1"), "Commented inline images should keep their body comment anchor metadata.");
+
+        TestAssert.True(finalDocument.FloatingDrawings.Single().Image?.PartName == "/word/media/floating-move-to.png", "Final view should keep moved-to floating drawings.");
+        TestAssert.True(originalDocument.FloatingDrawings.Single().Image?.PartName == "/word/media/floating-move-from.png", "Original view should keep moved-from floating drawings.");
+        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-from.png" && drawing.Revisions.Single().Kind == "MoveFrom"), "All-markup should retain moved-from floating drawing provenance.");
+        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-to.png" && drawing.Revisions.Single().Kind == "MoveTo" && drawing.BehindDocumentValue == "1"), "All-markup should retain moved-to behind-document floating drawing provenance.");
+
+        DocxRelatedStory commentStory = allDocument.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "1");
+        DocxFloatingDrawing commentDrawing = commentStory.FloatingDrawings.Single();
+        TestAssert.True(commentDrawing.ImageRelationshipId == "rIdCommentAnchor" && commentDrawing.Image?.PartName == "/word/media/comment-anchor.png", "Comment story anchored drawings should resolve through comment-part relationships.");
+        TestAssert.True(commentDrawing.Revisions.Single().Kind == "MoveTo" && commentDrawing.BehindDocumentValue == "1", "Revised behind-document anchored drawings inside comment stories should retain revision and geometry provenance.");
+
+        static void AssertInlineImageParts(DocxDocument document, IReadOnlyList<string> expected, IReadOnlyList<string> unexpected)
+        {
+            string[] parts = document.Paragraphs.Single().Images.Select(image => image.PartName ?? string.Empty).ToArray();
+            foreach (string part in expected)
+            {
+                TestAssert.True(parts.Contains(part, StringComparer.Ordinal), "Expected inline image part was not visible in the selected markup view: " + part);
+            }
+
+            foreach (string part in unexpected)
+            {
+                TestAssert.True(!parts.Contains(part, StringComparer.Ordinal), "Unexpected inline image part survived markup filtering: " + part);
+            }
+        }
     }
 
     public static void DocxReaderPreservesFloatingDrawingWrapTokens()
@@ -7671,6 +11235,338 @@ internal static class DocxTests
             CultureInfo.InvariantCulture,
             $"{layoutSnapshot.ExtentWidthPoints ?? 0d:0.###} 0 0 {layoutSnapshot.ExtentHeightPoints ?? 0d:0.###} {layoutSnapshot.PlacedX ?? 0d:0.###} {placedImageY:0.###} cm");
         TestAssert.Contains(imageTransform, pdf);
+    }
+
+    public static void DocxFloatingTextBoxAnchorRendersTextAndDoesNotEmitUnsupportedDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:drawing>
+                          <wp:anchor simplePos="0" relativeHeight="251658241" behindDoc="0" layoutInCell="1" allowOverlap="1">
+                            <wp:extent cx="2743200" cy="914400"/>
+                            <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                            <wp:positionV relativeFrom="page"><wp:posOffset>1828800</wp:posOffset></wp:positionV>
+                            <wp:wrapNone/>
+                            <a:graphic>
+                              <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                                <wps:wsp>
+                                  <wps:txbx>
+                                    <w:txbxContent>
+                                      <w:p><w:r><w:t>Floating review note</w:t></w:r></w:p>
+                                    </w:txbxContent>
+                                  </wps:txbx>
+                                </wps:wsp>
+                              </a:graphicData>
+                            </a:graphic>
+                          </wp:anchor>
+                        </w:drawing>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
+        DocxParagraph textBoxParagraph = DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements).Single();
+        TestAssert.Equal("Floating review note", string.Concat(textBoxParagraph.Runs.Select(run => run.Text)));
+
+        DocxStructureFloatingDrawingSnapshot structure = new DocxRenderer().InspectStructure(document).FloatingDrawings.Single();
+        TestAssert.Equal(1, structure.TextBoxBlockCount);
+        TestAssert.Equal(1, structure.TextBoxParagraphCount);
+        TestAssert.Equal("Floating review note".Length, structure.TextBoxTextLength);
+
+        DocxFloatingDrawingLayoutSnapshot layout = new DocxRenderer().InspectLayout(document).FloatingDrawings.Single();
+        TestAssert.Equal(1, layout.TextBoxTextLineCount);
+        TestAssert.True(layout.TextBoxContentHeight > 0d, "Floating text box layout should measure text content height.");
+        TestAssert.Equal("Offset", layout.HorizontalPlacementSource ?? string.Empty);
+        TestAssert.Equal("Offset", layout.VerticalPlacementSource ?? string.Empty);
+
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        TestAssert.True(
+            !diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_FLOATING_DRAWING"),
+            "Supported anchored text boxes should not emit unsupported-floating diagnostics.");
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("BT", pdf);
+        TestAssert.Contains("ET", pdf);
+        TestAssert.DoesNotContain("/Subtype /Image", pdf);
+    }
+
+    public static void DocxWordCompatibleAllMarkupPlacesFloatingDrawingAnchors()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body anchor", 10d, 12d);
+        DocxParagraph tableParagraph = CreateDocxLayoutParagraph("Table anchor", 10d, 12d);
+        DocxTableCell tableCell = new("Table anchor", [tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable anchorTable = new(null, [120d], [new DocxTableRow([tableCell], 30d)]);
+        DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph(
+            "Floating text box wraps inside the placed extent",
+            10d,
+            10d);
+        var textBoxDrawing = new DocxFloatingDrawing(
+            DistanceTopValue: "0",
+            DistanceBottomValue: "0",
+            DistanceLeftValue: "0",
+            DistanceRightValue: "0",
+            SimplePositionValue: "0",
+            RelativeHeightValue: "2",
+            BehindDocumentValue: "0",
+            LockedValue: "0",
+            LayoutInCellValue: "1",
+            AllowOverlapValue: "1",
+            ExtentCxValue: "914400",
+            ExtentCyValue: "457200",
+            HorizontalRelativeFromValue: "page",
+            HorizontalAlignValue: null,
+            HorizontalOffsetValue: "914400",
+            VerticalRelativeFromValue: "page",
+            VerticalAlignValue: null,
+            VerticalOffsetValue: "914400",
+            WrapKind: "wrapNone",
+            WrapTextValue: null,
+            SourceParagraphIndex: 0,
+            SourceBlockIndex: 0)
+        {
+            TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        var tableAnchorImage = new DocxInlineImage(
+            36d,
+            18d,
+            "image/png",
+            TestFixtures.CreateRgbPng(1, 1, [24, 96, 168]),
+            "/word/media/table-anchor.png");
+        var tableAnchorDrawing = new DocxFloatingDrawing(
+            DistanceTopValue: "38100",
+            DistanceBottomValue: "76200",
+            DistanceLeftValue: "114300",
+            DistanceRightValue: "228600",
+            SimplePositionValue: "0",
+            RelativeHeightValue: "9",
+            BehindDocumentValue: "1",
+            LockedValue: "1",
+            LayoutInCellValue: "0",
+            AllowOverlapValue: "0",
+            ExtentCxValue: "457200",
+            ExtentCyValue: "228600",
+            HorizontalRelativeFromValue: "column",
+            HorizontalAlignValue: "right",
+            HorizontalOffsetValue: null,
+            VerticalRelativeFromValue: "paragraph",
+            VerticalAlignValue: null,
+            VerticalOffsetValue: "0",
+            WrapKind: "wrapSquare",
+            WrapTextValue: "bothSides",
+            ImageRelationshipId: "rIdTableAnchor",
+            Image: tableAnchorImage,
+            SourceParagraphIndex: 0,
+            SourceBlockIndex: 1);
+        DocxDocument document = new(
+            360d,
+            300d,
+            36d,
+            36d,
+            36d,
+            36d,
+            DocxPageSettings.Empty,
+            [textBoxDrawing, tableAnchorDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(anchorTable)],
+            [bodyParagraph],
+            [anchorTable])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer());
+        DocxLayoutPage page = layout.Pages.Single();
+        DocxFloatingDrawingLayout textBoxLayout = layout.FloatingDrawings.Single(drawing => drawing.TextBoxLayout is not null);
+        DocxFloatingDrawingLayout tableImageLayout = layout.FloatingDrawings
+            .Single(drawing => drawing.Drawing.ImageRelationshipId == "rIdTableAnchor");
+
+        TestAssert.Equal(216d, page.ColumnFrames.Single().Width);
+        TestAssert.Equal("0", textBoxLayout.Drawing.BehindDocumentValue ?? string.Empty);
+        TestAssert.Equal("2", textBoxLayout.Drawing.RelativeHeightValue ?? string.Empty);
+        TestAssert.Equal(0, textBoxLayout.AnchorPageIndex ?? -1);
+        TestAssert.Equal(0d, textBoxLayout.HorizontalReferenceX ?? -1d);
+        TestAssert.Equal(360d, textBoxLayout.HorizontalReferenceWidth ?? -1d);
+        TestAssert.Equal(72d, textBoxLayout.PlacedX ?? -1d);
+        TestAssert.Equal(228d, textBoxLayout.PlacedTop ?? -1d);
+        TestAssert.Equal(DocxAnchorPlacementSource.Offset, textBoxLayout.HorizontalPlacementSource);
+        TestAssert.Equal(DocxAnchorPlacementSource.Offset, textBoxLayout.VerticalPlacementSource);
+        TestAssert.True(textBoxLayout.TextBoxLayout!.TextLines.Count > 1, "Floating text box content should wrap inside the drawing extent.");
+        TestAssert.True(textBoxLayout.WrapExclusionX is null, "wrapNone drawings should not create a text wrap exclusion frame.");
+
+        TestAssert.Equal("1", tableImageLayout.Drawing.BehindDocumentValue ?? string.Empty);
+        TestAssert.Equal("9", tableImageLayout.Drawing.RelativeHeightValue ?? string.Empty);
+        TestAssert.Equal("0", tableImageLayout.Drawing.LayoutInCellValue ?? string.Empty);
+        TestAssert.Equal("0", tableImageLayout.Drawing.AllowOverlapValue ?? string.Empty);
+        TestAssert.Equal(0, tableImageLayout.AnchorPageIndex ?? -1);
+        TestAssert.Equal(0, tableImageLayout.AnchorColumnIndex ?? -1);
+        TestAssert.Equal(1, tableImageLayout.Drawing.SourceBlockIndex ?? -1);
+        TestAssert.Equal(36d, tableImageLayout.HorizontalReferenceX ?? -1d);
+        TestAssert.Equal(216d, tableImageLayout.HorizontalReferenceWidth ?? -1d);
+        TestAssert.Equal(216d, tableImageLayout.PlacedX ?? -1d);
+        TestAssert.Equal(tableImageLayout.AnchorBlockVerticalTop ?? -1d, tableImageLayout.VerticalReferenceTop ?? -2d);
+        TestAssert.Equal(
+            tableImageLayout.AnchorBlockVerticalBottom ?? -1d,
+            tableImageLayout.VerticalReferenceBottom ?? -2d);
+        TestAssert.Equal(tableImageLayout.VerticalReferenceTop ?? -1d, tableImageLayout.PlacedTop ?? -2d);
+        TestAssert.Equal(DocxAnchorPlacementSource.Align, tableImageLayout.HorizontalPlacementSource);
+        TestAssert.Equal(DocxAnchorPlacementSource.Offset, tableImageLayout.VerticalPlacementSource);
+        TestAssert.Equal(207d, tableImageLayout.WrapExclusionX ?? -1d);
+        TestAssert.Equal((tableImageLayout.PlacedTop ?? 0d) + 3d, tableImageLayout.WrapExclusionTop ?? -1d);
+        TestAssert.Equal(63d, tableImageLayout.WrapExclusionWidth ?? -1d);
+        TestAssert.Equal(27d, tableImageLayout.WrapExclusionHeight ?? -1d);
+    }
+
+    public static void DocxRendererEmitsFloatingTextBoxTableRows()
+    {
+        DocxTable table = CreateTextBoxProbeTable("Text box table cell", "00B0F0");
+        DocxFloatingDrawing drawing = CreateFloatingTextBoxDrawing([new DocxTableElement(table)]);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [drawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            [],
+            []);
+        var renderer = new DocxRenderer();
+
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.Equal(1, layout.FloatingDrawings.Single().TextBoxTableRowCount);
+        TestAssert.Contains(FormatPdfRgb(((byte)0, (byte)176, (byte)240), "rg"), page.Content);
+    }
+
+    public static void DocxRendererEmitsStaticFloatingTextBoxTableRows()
+    {
+        DocxTable table = CreateTextBoxProbeTable("Static text box table cell", "92D050");
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxTableElement(table)])]
+            }
+        };
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            []);
+        var renderer = new DocxRenderer();
+
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.Equal(1, layout.StaticFloatingDrawings.Single().TextBoxTableRowCount);
+        TestAssert.Contains(FormatPdfRgb(((byte)146, (byte)208, (byte)80), "rg"), page.Content);
+    }
+
+    public static void DocxRendererEmitsPlacedFootnoteFloatingTextBoxTableRows()
+    {
+        DocxParagraph body = CreateDocxLayoutParagraph("Body footnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "51",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 5)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote drawing anchor", 10d, 12d);
+        DocxTable table = CreateTextBoxProbeTable("Footnote text box table cell", "FFC000");
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "51",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            [])
+        {
+            FloatingDrawings = [CreateFloatingTextBoxDrawing([new DocxTableElement(table)])]
+        };
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(body)],
+            [body],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+        var renderer = new DocxRenderer();
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.StoryLayout.Story.Id == "51");
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.Equal(1, placedStory.FloatingDrawings.Single().TextBoxLayout!.TableRows.Count);
+        TestAssert.Contains(FormatPdfRgb(((byte)255, (byte)192, (byte)0), "rg"), page.Content);
     }
 
     public static void DocxSyntheticTableRendersCellsAndText()
@@ -7939,7 +11835,7 @@ internal static class DocxTests
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:style w:type="table" w:styleId="ShadedTable">
                     <w:tblPr><w:tblCellMar><w:left w:w="240" w:type="dxa"/></w:tblCellMar></w:tblPr>
-                    <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9EAD3"/></w:tcPr>
+                    <w:tcPr><w:noWrap/><w:tcFitText/><w:textDirection w:val="tbRl"/><w:shd w:val="clear" w:color="auto" w:fill="D9EAD3"/></w:tcPr>
                     <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CFE2F3"/><w:tcBorders><w:top w:val="single" w:color="FF0000" w:sz="16"/></w:tcBorders></w:tcPr></w:tblStylePr>
                   </w:style>
                 </w:styles>
@@ -7953,7 +11849,7 @@ internal static class DocxTests
                       <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr>
                         <w:tc><w:p><w:r><w:t>Styled</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:fill="FCE5CD"/></w:tcPr><w:p><w:r><w:t>Direct</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:noWrap w:val="0"/><w:tcFitText w:val="0"/><w:textDirection w:val="lrTb"/><w:shd w:fill="FCE5CD"/></w:tcPr><w:p><w:r><w:t>Direct</w:t></w:r></w:p></w:tc>
                       </w:tr>
                       <w:tr>
                         <w:tc><w:p><w:r><w:t>Base</w:t></w:r></w:p></w:tc>
@@ -7978,8 +11874,19 @@ internal static class DocxTests
         TestAssert.Equal("16", document.Tables[0].Rows[0].Cells[0].Borders.Single().SizeValue ?? string.Empty);
         TestAssert.Equal("240", document.Tables[0].Rows[0].Cells[0].Margins.LeftValue ?? string.Empty);
         TestAssert.Equal(12d, document.Tables[0].Rows[0].Cells[0].Margins.LeftPoints ?? 0d);
+        TestAssert.True(document.Tables[0].Rows[0].Cells[0].NoWrap, "Conditional cell styles should retain base style no-wrap.");
+        TestAssert.True(document.Tables[0].Rows[0].Cells[0].FitText, "Conditional cell styles should retain base style fit-text.");
+        TestAssert.Equal("tbRl", document.Tables[0].Rows[0].Cells[0].TextDirectionValue ?? string.Empty);
         TestAssert.Equal("FCE5CD", document.Tables[0].Rows[0].Cells[1].FillHex ?? string.Empty);
+        TestAssert.True(!document.Tables[0].Rows[0].Cells[1].NoWrap, "Direct no-wrap off should override table style no-wrap.");
+        TestAssert.Equal("0", document.Tables[0].Rows[0].Cells[1].NoWrapValue ?? string.Empty);
+        TestAssert.True(!document.Tables[0].Rows[0].Cells[1].FitText, "Direct fit-text off should override table style fit-text.");
+        TestAssert.Equal("0", document.Tables[0].Rows[0].Cells[1].FitTextValue ?? string.Empty);
+        TestAssert.Equal("lrTb", document.Tables[0].Rows[0].Cells[1].TextDirectionValue ?? string.Empty);
         TestAssert.Equal("D9EAD3", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
+        TestAssert.True(document.Tables[0].Rows[1].Cells[0].NoWrap, "Base table cell style should apply no-wrap to body cells.");
+        TestAssert.True(document.Tables[0].Rows[1].Cells[0].FitText, "Base table cell style should apply fit-text to body cells.");
+        TestAssert.Equal("tbRl", document.Tables[0].Rows[1].Cells[0].TextDirectionValue ?? string.Empty);
     }
 
     public static void DocxReaderAppliesDefaultTableStyleCellMargins()
@@ -8351,6 +12258,85 @@ internal static class DocxTests
         TestAssert.True(secondParagraph.EffectiveProperties.StyleResolution.HasDirectParagraphProperties == false, "Effective inherited table-cell properties should not pretend to be direct overrides.");
         TestAssert.Equal(0d, secondParagraph.EffectiveProperties.SpacingAfterPoints);
         TestAssert.Equal(11d, secondParagraph.Runs.Single().FontSize);
+    }
+
+    public static void DocxTableStyleParagraphSpacingCollapsesInCellLayout()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:styleId="CellText">
+                    <w:pPr>
+                      <w:spacing w:before="240" w:after="120"/>
+                      <w:contextualSpacing/>
+                    </w:pPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="CellText"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:p><w:r><w:t>First styled cell paragraph</w:t></w:r></w:p>
+                          <w:p><w:r><w:t>Second styled cell paragraph</w:t></w:r></w:p>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxParagraph[] paragraphs = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.ToArray();
+        TestAssert.True(paragraphs.All(paragraph => paragraph.EffectiveProperties.StyleResolution.HasTableStyleParagraphProperties), "Table style paragraph spacing should remain visible in the effective cell paragraph model.");
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells.Single()
+            .TextLines.ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal(12d, lines[0].ParagraphBeforeSpacing ?? -1d);
+        TestAssert.Equal(12d, lines[0].AppliedBeforeSpacing ?? -1d);
+        TestAssert.Equal(6d, lines[0].ParagraphAfterSpacing ?? -1d);
+        TestAssert.Equal(6d, lines[1].PendingAfterSpacing ?? -1d);
+        TestAssert.Equal(12d, lines[1].ParagraphBeforeSpacing ?? -1d);
+        TestAssert.Equal(0d, lines[1].AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(lines[1].ContextualSpacingSuppressed == true, "Same-style table-cell paragraphs should collapse table-style contextual spacing before layout.");
     }
 
     public static void DocxReaderTableStyleAppliesComplexScriptRunPropertiesByScriptSlot()
@@ -8989,6 +12975,554 @@ internal static class DocxTests
         TestAssert.Equal(2, pdf.Split("0 0 1 rg", StringSplitOptions.None).Length - 1);
     }
 
+    public static void DocxSyntheticCommonTableBorderStylesRenderAndInspect()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="double" w:color="FF0000" w:sz="18"/>
+                              <w:bottom w:val="single" w:color="111111" w:sz="8"/>
+                              <w:left w:val="dotted" w:color="00AA00" w:sz="8"/>
+                              <w:right w:val="dashed" w:color="0000FF" w:sz="8"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("0 0.667 0 rg", pdf);
+        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 7, "Common border styles should render as filled strip geometry, including segmented and double-strip variants.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(4, table.VisibleBorderCount);
+        TestAssert.Equal(1, table.SingleBorderCount);
+        TestAssert.Equal(1, table.DoubleBorderCount);
+        TestAssert.Equal(1, table.DottedBorderCount);
+        TestAssert.Equal(1, table.DashedBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
+    public static void DocxSyntheticDotDashTableBorderStylesEmitPatternedSegments()
+    {
+        int dashedRectangles = RenderBorderRectangleCount("dashed");
+        int dotDashRectangles = RenderBorderRectangleCount("dotDash");
+        int dotDotDashRectangles = RenderBorderRectangleCount("dotDotDash");
+
+        TestAssert.True(dotDashRectangles > dashedRectangles, "dotDash should emit dash and dot segments, not plain dash repetition.");
+        TestAssert.True(dotDotDashRectangles > dotDashRectangles, "dotDotDash should emit an extra dot segment in each pattern cycle.");
+
+        static int RenderBorderRectangleCount(string borderStyle)
+        {
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = $"""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body>
+                        <w:tbl>
+                          <w:tblGrid><w:gridCol w:w="7200"/></w:tblGrid>
+                          <w:tr>
+                            <w:tc>
+                              <w:tcPr>
+                                <w:tcBorders>
+                                  <w:top w:val="{borderStyle}" w:color="336699" w:sz="8"/>
+                                </w:tcBorders>
+                              </w:tcPr>
+                              <w:p/>
+                            </w:tc>
+                          </w:tr>
+                        </w:tbl>
+                        <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                      </w:body>
+                    </w:document>
+                    """
+            });
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+            string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+            TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            return pdf.Split(" re f", StringSplitOptions.None).Length - 1;
+        }
+    }
+
+    public static void DocxSyntheticDashDotStrokedTableBorderStyleRendersWithoutDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="3600"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="dashDotStroked" w:color="336699" w:sz="12"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 3, "dashDotStroked borders should render dash-dot segments plus a center stroke.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(1, table.VisibleBorderCount);
+        TestAssert.Equal(1, table.DashedBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
+    public static void DocxSyntheticOutsetTableBorderStyleRendersWithoutDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="outset" w:color="336699" w:sz="12"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
+        TestAssert.Contains(" re f", pdf);
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(1, table.VisibleBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
+    public static void DocxSyntheticInsetTableBorderStyleRendersWithoutDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="inset" w:color="663399" w:sz="12"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.4 0.2 0.6 rg", pdf);
+        TestAssert.Contains(" re f", pdf);
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(1, table.VisibleBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
+    public static void DocxSyntheticThreeDTableBorderStylesRenderWithoutDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="threeDEmboss" w:color="336699" w:sz="16"/>
+                              <w:bottom w:val="threeDEngrave" w:color="336699" w:sz="16"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 4, "3D table borders should render light/dark relief strips instead of flattening to one solid fill.");
+        TestAssert.True(pdf.Split(" rg", StringSplitOptions.None).Length - 1 >= 4, "3D table borders should emit separate light and dark fill colors.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(2, table.VisibleBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
+    public static void DocxSyntheticWaveTableBorderStylesRenderWithoutDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="wave" w:color="336699" w:sz="16"/>
+                              <w:bottom w:val="doubleWave" w:color="336699" w:sz="16"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(CountOccurrences(pdf, " l S") >= 8, "Wave table borders should render as repeated stroked wave segments.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(2, table.VisibleBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
+    public static void DocxSyntheticTripleTableBorderStyleRendersWithoutDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="triple" w:color="993333" w:sz="18"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.6 0.2 0.2 rg", pdf);
+        TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 3, "Triple borders should render as three filled strips.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(1, table.VisibleBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
+    public static void DocxSyntheticCompoundTableBorderStylesRenderWithoutDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="thinThickSmallGap" w:color="225588" w:sz="24"/>
+                              <w:bottom w:val="thickThinSmallGap" w:color="225588" w:sz="24"/>
+                              <w:left w:val="thinThickThinSmallGap" w:color="225588" w:sz="24"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="thinThickMediumGap" w:color="225588" w:sz="24"/>
+                              <w:bottom w:val="thickThinMediumGap" w:color="225588" w:sz="24"/>
+                              <w:left w:val="thinThickThinMediumGap" w:color="225588" w:sz="24"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="thinThickLargeGap" w:color="225588" w:sz="24"/>
+                              <w:bottom w:val="thickThinLargeGap" w:color="225588" w:sz="24"/>
+                              <w:right w:val="thinThickThinLargeGap" w:color="225588" w:sz="24"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p/>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 18, "Compound table borders should render as separate thin/thick filled strips.");
+
+        using FileStream stream = File.OpenRead(input);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        TestAssert.Equal(9, table.VisibleBorderCount);
+        TestAssert.Equal(0, table.OtherBorderStyleCount);
+    }
+
     public static void DocxReaderTablePreservesHeaderRowToken()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -9076,6 +13610,142 @@ internal static class DocxTests
         TestAssert.Equal("top", cells[0].VerticalAlignmentValue ?? string.Empty);
         TestAssert.Equal("center", cells[1].VerticalAlignmentValue ?? string.Empty);
         TestAssert.True(cells[2].VerticalAlignmentValue is null, "Expected missing cell vertical alignment to keep a null source token.");
+    }
+
+    public static void DocxReaderTableCellPreservesTextDirectionToken()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:textDirection w:val="tbRl"/></w:tcPr><w:p><w:r><w:t>Rotated</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Default</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
+
+        TestAssert.Equal("tbRl", cells[0].TextDirectionValue ?? string.Empty);
+        TestAssert.True(cells[1].TextDirectionValue is null, "Expected missing cell text direction to keep a null source token.");
+    }
+
+    public static void DocxReaderTableCellPreservesNoWrapToken()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:noWrap/></w:tcPr><w:p><w:r><w:t>Kept</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:noWrap w:val="0"/></w:tcPr><w:p><w:r><w:t>Wrapped</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
+
+        TestAssert.True(cells[0].NoWrap, "Expected implicit w:noWrap to disable automatic cell text wrapping.");
+        TestAssert.True(cells[0].NoWrapValue is null, "Expected implicit w:noWrap to preserve a null source token.");
+        TestAssert.True(!cells[1].NoWrap, "Expected w:noWrap w:val=\"0\" to allow automatic cell text wrapping.");
+        TestAssert.Equal("0", cells[1].NoWrapValue ?? string.Empty);
+    }
+
+    public static void DocxReaderTableCellPreservesFitTextToken()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:tcFitText/></w:tcPr><w:p><w:r><w:t>Fit</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:tcFitText w:val="0"/></w:tcPr><w:p><w:r><w:t>Plain</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
+
+        TestAssert.True(cells[0].FitText, "Expected implicit w:tcFitText to fit cell text to its extents.");
+        TestAssert.True(cells[0].FitTextValue is null, "Expected implicit w:tcFitText to preserve a null source token.");
+        TestAssert.True(!cells[1].FitText, "Expected w:tcFitText w:val=\"0\" to disable cell text fitting.");
+        TestAssert.Equal("0", cells[1].FitTextValue ?? string.Empty);
     }
 
     public static void DocxReaderTableCellPreservesMarginTokens()
@@ -12462,6 +17132,86 @@ internal static class DocxTests
         TestAssert.True(row.Cells[0].TextLines.Count >= 2, "Expected the narrow cell to wrap content into multiple layout-owned text lines.");
     }
 
+    public static void DocxTableLayoutStageHonorsCellNoWrap()
+    {
+        const string text = "First Second Third";
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty, NoWrap: true);
+        var table = new DocxTable(
+            null,
+            [34d],
+            [new DocxTableRow([cell], 10d)],
+            PreferredWidthPoints: 34d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        DocxTextLineLayout line = cellLayout.TextLines.Single();
+        TestAssert.Equal(text, line.Text);
+        TestAssert.True(line.Width > cellLayout.Width + 0.001d, "No-wrap cell text should remain on one overwide line instead of splitting to fit the cell frame.");
+    }
+
+    public static void DocxTableLayoutStageFitsCellTextToWidth()
+    {
+        const string text = "First Second Third";
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty, FitText: true);
+        var table = new DocxTable(
+            null,
+            [34d],
+            [new DocxTableRow([cell], 10d)],
+            PreferredWidthPoints: 34d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        DocxTextLineLayout line = cellLayout.TextLines.Single();
+        DocxTextSegmentLayout segment = line.Segments.Single();
+        TestAssert.Equal(text, line.Text);
+        TestAssert.True(Math.Abs(line.Width - cellLayout.Width) < 0.001d, "Fit-text cell lines should target the cell text extents instead of keeping the natural overwide advance.");
+        TestAssert.True(segment.PdfCharacterSpacing < 0d, "Fitting overwide text should reduce inter-character spacing.");
+        TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, segment.PdfCharacterSpacingSource);
+        TestAssert.True(!segment.CompensatePdfCharacterSpacing, "Fit-text advance targets should add a text-state spacing delta instead of compensating it away.");
+    }
+
     public static void DocxTableLayoutStageSplitsOverwideCellTokensAtSafeCharacterBoundaries()
     {
         var paragraph = new DocxParagraph(
@@ -12503,6 +17253,119 @@ internal static class DocxTests
         TestAssert.True(cellLayout.TextLines[2].EndsWithIntraTokenBreak, "Every non-final split fragment should keep its intra-token break reason.");
         TestAssert.True(!cellLayout.TextLines.Last().EndsWithIntraTokenBreak, "The final token fragment should not be marked as a line-end intra-token break.");
         TestAssert.True(cellLayout.TextLines.All(line => line.Width <= cellLayout.Width + 0.001d), "Split token fragments should stay inside the cell frame.");
+    }
+
+    public static void DocxTableLayoutStagePrefersSoftHyphenTokenBreaks()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABC\u00ADDEFG", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("ABC\u00ADDEFG", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            null,
+            [25d],
+            [new DocxTableRow([cell], 10d)],
+            PreferredWidthPoints: 25d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.True(cellLayout.TextLines.Count >= 2, "Expected the soft-hyphenated token to split inside the narrow cell.");
+        TestAssert.Equal("ABC\u00AD", cellLayout.TextLines[0].Text);
+        TestAssert.Equal("DEFG", cellLayout.TextLines[1].Text);
+        TestAssert.True(cellLayout.TextLines[0].EndsWithIntraTokenBreak, "Soft-hyphen splits should remain visible as intra-token breaks.");
+    }
+
+    public static void DocxTableLayoutStageDoesNotPreferNoBreakHyphenTokenBreaks()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABC\u2011DEFG", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("ABC\u2011DEFG", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            null,
+            [25d],
+            [new DocxTableRow([cell], 10d)],
+            PreferredWidthPoints: 25d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.True(cellLayout.TextLines.Count >= 2, "Expected the overwide no-break-hyphenated token to split only by emergency fallback.");
+        TestAssert.Equal("ABC\u2011D", cellLayout.TextLines[0].Text);
+        TestAssert.True(!cellLayout.TextLines[0].Text.EndsWith('\u2011'), "No-break hyphen should not be selected as the preferred line-ending break.");
+    }
+
+    public static void DocxTableLayoutStageDoesNotEmergencyBreakAroundNoBreakSpaces()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("ABC\u00A0DEFG", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell("ABC\u00A0DEFG", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            null,
+            [20d],
+            [new DocxTableRow([cell], 10d)],
+            PreferredWidthPoints: 20d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single()
+            .Cells
+            .Single();
+
+        TestAssert.True(cellLayout.TextLines.Count >= 2, "Expected the overwide no-break-space token to split only by emergency fallback.");
+        TestAssert.True(
+            cellLayout.TextLines.All(line => !line.Text.EndsWith('\u00A0') && !line.Text.StartsWith('\u00A0')),
+            "Emergency token splitting should not leave no-break spaces dangling at line edges.");
     }
 
     public static void DocxTextEmissionOmitsTerminalSpacesAfterIntraTokenBreaks()
@@ -12769,7 +17632,12 @@ internal static class DocxTests
             GridSpanValue: "2",
             ConditionalFormat: new DocxTableCellConditionalFormat("100000000000", true, "1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
             HasVerticalMerge: true,
-            VerticalMergeValue: "restart");
+            VerticalMergeValue: "restart",
+            NoWrap: true,
+            NoWrapValue: "1",
+            FitText: true,
+            FitTextValue: "1",
+            TextDirectionValue: "tbRl");
         DocxTable table = new(
             null,
             [40d, 40d],
@@ -12861,6 +17729,11 @@ internal static class DocxTests
         TestAssert.Equal(42d, tableCell.PreferredWidthPoints ?? 0d);
         TestAssert.Equal("dxa", tableCell.PreferredWidthType ?? string.Empty);
         TestAssert.Equal("center", tableCell.VerticalAlignmentValue ?? string.Empty);
+        TestAssert.True(tableCell.NoWrap, "Snapshot should expose cell no-wrap without document text.");
+        TestAssert.Equal("1", tableCell.NoWrapValue ?? string.Empty);
+        TestAssert.True(tableCell.FitText, "Snapshot should expose cell fit-text without document text.");
+        TestAssert.Equal("1", tableCell.FitTextValue ?? string.Empty);
+        TestAssert.Equal("tbRl", tableCell.TextDirectionValue ?? string.Empty);
         TestAssert.Equal(2d, tableCell.MarginTopPoints ?? 0d);
         TestAssert.Equal(3d, tableCell.MarginRightPoints ?? 0d);
         TestAssert.Equal(4d, tableCell.MarginBottomPoints ?? 0d);
@@ -12908,6 +17781,17 @@ internal static class DocxTests
         TestAssert.Equal(0, cell.ManualBreakElementCount);
         TestAssert.Equal(0, cell.PageBreakElementCount);
         TestAssert.Equal(0, cell.NestedTableElementCount);
+    }
+
+    public static void DocxLayoutSnapshotReportsBreakableTokenLengthWithHiddenBreaks()
+    {
+        DocxTable table = CreateSingleCellTable("Alpha\u00ADBeta Gamma\u200BDelta", 20d);
+        DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+
+        DocxTableCellSnapshot cell = snapshot.Pages[0].TableRows.Single().Cells.Single();
+        TestAssert.Equal(5, cell.LongestBreakableTokenLength);
     }
 
     public static void DocxLayoutSnapshotReportsTableCellBodyFlowCounts()
@@ -13065,6 +17949,78 @@ internal static class DocxTests
         TestAssert.Equal(0, lines[1].SourceLineIndex ?? -1);
         TestAssert.True(lines[0].Segments.All(segment => segment.SourceParagraphIndex == 0), "First table-cell paragraph ownership should survive to emission segments.");
         TestAssert.True(lines[1].Segments.All(segment => segment.SourceParagraphIndex == 1), "Second table-cell paragraph ownership should survive to emission segments.");
+    }
+
+    public static void DocxTextEmissionSnapshotIncludesFloatingTextBoxLines()
+    {
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = FindUsableInstalledFont();
+        if (font is null)
+        {
+            return;
+        }
+
+        var insertion = new DocxRevisionInfo("Insertion", "8", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var revisedRun = new DocxTextRun("Text box emission", 10d, null, false, false, false, null, null)
+        {
+            Revision = insertion
+        };
+        var textBoxParagraph = new DocxParagraph(
+            [revisedRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Comment",
+                    "8",
+                    CustomMarkFollowsValue: null,
+                    SourceRunIndex: 0,
+                    RunChildIndex: 0,
+                    TextOffsetInRun: 0)
+            ],
+            Revisions = [insertion]
+        };
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
+        DocxTextEmissionLineSnapshot textBoxLine = snapshot.Lines.Single(line => line.CommentReferenceCount == 1);
+
+        TestAssert.True(!textBoxLine.IsStaticStory, "Body-anchored floating text-box lines should be reported as rendered non-static lines.");
+        TestAssert.Equal("TextBox", textBoxLine.StoryKind);
+        TestAssert.Equal("Body", textBoxLine.ContainerStoryKind ?? string.Empty);
+        TestAssert.True(textBoxLine.RevisionSegmentCount >= 1, "Text-emission inspection should expose floating text-box revision segments.");
+        TestAssert.True(snapshot.CommentReferenceCount >= 1, "Text-emission inspection should include floating text-box comment-reference ownership.");
+        TestAssert.True(
+            textBoxLine.Segments.Any(segment => segment.X > 70d && segment.BaselineY > 70d),
+            "Floating text-box emission segments should be translated from text-box-local coordinates into page coordinates.");
     }
 
     public static void DocxLayoutSnapshotReportsPrivateSafeSourceLineIndexes()
@@ -13844,6 +18800,115 @@ internal static class DocxTests
         TestAssert.True(tableSnapshot.StoryKind == "Header" && tableSnapshot.StoryVariantType == "default" && tableSnapshot.RowCount == 1 && tableSnapshot.LaidOutRowCount == 1, "Static header tables should participate in table-level ownership snapshots without colliding with body table ordinals.");
     }
 
+    public static void DocxLayoutStageResolvesStaticHeaderTablePageFieldsPerPage()
+    {
+        DocxParagraph headerCellParagraph = CreateDocxLayoutParagraph("Header {PAGE}", 10d, 10d);
+        DocxTableCell headerCell = new("Header {PAGE}", [headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable headerTable = new(null, [80d], [new DocxTableRow([headerCell], 18d)]);
+        DocxParagraph firstBody = CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph secondBody = CreateDocxLayoutParagraph("Second", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(headerTable)]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [firstBody, secondBody],
+            [headerTable]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal("Header 1", layout.Pages[0].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Header 2", layout.Pages[1].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
+    }
+
+    public static void DocxLayoutStageResolvesStaticHeaderTableNumPagesFieldFromPageCount()
+    {
+        DocxParagraph headerCellParagraph = CreateDocxLayoutParagraph("Total {NUMPAGES}", 10d, 10d);
+        DocxTableCell headerCell = new("Total {NUMPAGES}", [headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable headerTable = new(null, [80d], [new DocxTableRow([headerCell], 18d)]);
+        DocxParagraph firstBody = CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph secondBody = CreateDocxLayoutParagraph("Second", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(headerTable)]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [firstBody, secondBody],
+            [headerTable]);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal("Total 2", layout.Pages[0].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Total 2", layout.Pages[1].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
+    }
+
+    public static void DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPagesFieldFromPageCount()
+    {
+        DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Total {NUMPAGES}", 10d, 10d);
+        DocxFloatingDrawing headerDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxParagraph firstBody = CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph secondBody = CreateDocxLayoutParagraph("Second", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [headerDrawing]
+            }
+        };
+        DocxDocument document = new(
+            200d,
+            200d,
+            10d,
+            10d,
+            20d,
+            20d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [firstBody, secondBody],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        DocxFloatingDrawingLayout[] staticDrawings = layout.StaticFloatingDrawings.OrderBy(drawing => drawing.AnchorPageIndex).ToArray();
+        TestAssert.Equal(2, staticDrawings.Length);
+        TestAssert.Equal("Total 2", staticDrawings[0].TextBoxLayout!.TextLines.Single().Text);
+        TestAssert.Equal("Total 2", staticDrawings[1].TextBoxLayout!.TextLines.Single().Text);
+    }
+
     public static void DocxRendererTreatsStaticHeaderBodyElementsAsRenderableContent()
     {
         DocxParagraph headerCellParagraph = CreateDocxLayoutParagraph("HT", 10d, 10d);
@@ -14001,9 +19066,12 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
-        DocxPlacedRelatedStoryLayoutSnapshot placedStory = snapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 1).PlacedRelatedStories.Single();
-        TestAssert.Equal(1, placedStory.FloatingDrawingCount);
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.StoryLayout.Story.Id == "42");
+        DocxFloatingDrawingLayout placedDrawing = placedStory.FloatingDrawings.Single();
+        TestAssert.True(placedDrawing.PlacedX >= document.MarginLeftPoints, "Placed footnote floating drawings should be translated from note-local coordinates into the page margin frame.");
 
         PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
 
@@ -14983,11 +20051,23 @@ internal static class DocxTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
                 </Relationships>
                 """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdExternalImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="https://example.invalid/private-safe-image.png" TargetMode="External"/>
+                  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="charts/chart1.xml"/>
+                </Relationships>
+                """,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
                             xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-                            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                            xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram"
+                            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                            xmlns:v="urn:schemas-microsoft-com:vml">
                   <w:body>
                     <w:p>
                       <w:pPr>
@@ -15007,6 +20087,10 @@ internal static class DocxTests
                       <w:r><w:instrText> DATE </w:instrText></w:r>
                       <w:r><w:object/></w:r>
                       <w:r><w:drawing><wp:anchor/></w:drawing></w:r>
+                      <w:r><w:drawing><wp:inline><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rIdChart"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
+                      <w:r><w:drawing><wp:inline><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram"><dgm:relIds/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
+                      <w:r><w:drawing><wp:inline><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><a:blip r:link="rIdExternalImage"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
+                      <w:r><w:pict><v:shape id="vml-shape"/></w:pict></w:r>
                       <w:r><w:footnoteReference w:id="2"/></w:r>
                       <w:r><w:endnoteReference w:id="3"/></w:r>
                       <w:r><w:br w:type="column"/></w:r>
@@ -15038,14 +20122,18 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_COMMENTS", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_CHART", ids);
         TestAssert.Contains("DOCX_APPROXIMATED_ENDNOTE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_EQUATION", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_FLOATING_DRAWING", ids);
         TestAssert.Contains("DOCX_APPROXIMATED_FOOTNOTE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_MACRO", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_OLE_OBJECT", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_SECTION_BREAK", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_SMARTART", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_TRACKED_CHANGES", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_VML", ids);
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", ids);
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.PartName == "/word/document.xml"), "Unsupported DOCX diagnostics should be document-scoped warnings.");
     }
@@ -15247,6 +20335,7851 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal("Before Moved after", string.Concat(paragraph.Runs.Select(run => run.Text)));
+    }
+
+    public static void DocxMarkupModesFilterTrackedChangeText()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+
+        DocxParagraph finalParagraph = ReadTrackedChangeModeProbe(input, OoxPdfDocxMarkupMode.Final);
+        DocxParagraph originalParagraph = ReadTrackedChangeModeProbe(input, OoxPdfDocxMarkupMode.Original);
+        DocxParagraph simpleParagraph = ReadTrackedChangeModeProbe(input, OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxParagraph allParagraph = ReadTrackedChangeModeProbe(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("Before Inserted MovedTo After", string.Concat(finalParagraph.Runs.Select(run => run.Text)));
+        TestAssert.Equal("Before Deleted MovedFrom After", string.Concat(originalParagraph.Runs.Select(run => run.Text)));
+        TestAssert.Equal("Before Inserted MovedTo After", string.Concat(simpleParagraph.Runs.Select(run => run.Text)));
+        TestAssert.Equal("Before Inserted Deleted MovedFrom MovedTo After", string.Concat(allParagraph.Runs.Select(run => run.Text)));
+        TestAssert.True(finalParagraph.Revisions.Count == 2, "Final view should preserve inserted and moved-to revision provenance.");
+        TestAssert.True(originalParagraph.Revisions.Count == 2, "Original view should preserve deleted and moved-from revision provenance.");
+        TestAssert.True(allParagraph.Revisions.Count == 4, "All markup should preserve every visible revision provenance record.");
+    }
+
+    public static void DocxRevisionViewSettingsFilterRevisionsBeforeLayout()
+    {
+        string input = WriteTrackedChangeRevisionViewProbeDocx("w:insDel=\"0\"");
+
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        string text = ParagraphTexts(allDocument);
+        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(allDocument)
+            .Where(placement => placement.Kind == "Revision")
+            .ToArray();
+
+        TestAssert.Equal(OoxPdfDocxMarkupMode.AllMarkup, allDocument.MarkupMode);
+        TestAssert.Contains("Inserted", text);
+        TestAssert.Contains("MovedTo", text);
+        TestAssert.DoesNotContain("Deleted", text);
+        TestAssert.DoesNotContain("MovedFrom", text);
+        TestAssert.Equal(0, revisionBalloons.Length);
+    }
+
+    public static void DocxMarkupModesPreserveDeletedRunParagraphMarkAndTableContent()
+    {
+        string input = WriteDeletedContentProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("Before After", ParagraphTexts(finalDocument));
+        TestAssert.Equal("Before deleted-run After", string.Concat(originalDocument.BodyElements.OfType<DocxParagraphElement>().First().Paragraph.Runs.Select(run => run.Text)));
+        TestAssert.Equal("Before deleted-run After", string.Concat(allDocument.BodyElements.OfType<DocxParagraphElement>().First().Paragraph.Runs.Select(run => run.Text)));
+
+        DocxParagraph allParagraph = allDocument.BodyElements.OfType<DocxParagraphElement>().First().Paragraph;
+        TestAssert.True(allParagraph.Revisions.Any(revision => revision.Kind == "Deletion" && revision.Id == "202" && revision.SourceElement == "del"), "Deleted paragraph-mark revisions on non-empty paragraphs should be preserved as paragraph provenance.");
+
+        TestAssert.True(!finalDocument.BodyElements.OfType<DocxTableElement>().Any(), "Final view should not keep a table that exists only inside a deletion container.");
+        DocxTable originalDeletedTable = originalDocument.BodyElements.OfType<DocxTableElement>().Single().Table;
+        DocxTable allDeletedTable = allDocument.BodyElements.OfType<DocxTableElement>().Single().Table;
+        TestAssert.Equal("Deleted table text", RowTexts(originalDeletedTable));
+        TestAssert.Equal("Deleted table text", RowTexts(allDeletedTable));
+        TestAssert.True(allDeletedTable.Revisions.Single().Kind == "Deletion" && allDeletedTable.Revisions.Single().Id == "203", "Deleted whole-table content should retain table-level deletion provenance.");
+    }
+
+    public static void DocxMarkupFinalViewMergesDeletedParagraphMarksAndKeepsSpans()
+    {
+        string input = WriteDeletedParagraphMarkMarkupProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument simpleDocument = ReadDocx(input, OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("FirstSecond link field [c]|Visible list item", ParagraphTexts(finalDocument));
+        TestAssert.Equal("FirstSecond link field [c]|Visible list item", ParagraphTexts(simpleDocument));
+        TestAssert.Equal("First|Second link field [c]|Deleted list item|Visible list item", ParagraphTexts(originalDocument));
+        TestAssert.Equal("First|Second link field [c]|Deleted list item|Visible list item", ParagraphTexts(allDocument));
+        TestAssert.True(originalDocument.Paragraphs[0].HasDeletedParagraphMark && allDocument.Paragraphs[0].HasDeletedParagraphMark, "Original and all-markup views should preserve the deleted paragraph mark as a visible review artifact.");
+        TestAssert.True(!finalDocument.Paragraphs[0].HasDeletedParagraphMark && !simpleDocument.Paragraphs[0].HasDeletedParagraphMark, "Final-style views should consume the deleted paragraph mark after merging the following paragraph.");
+        TestAssert.Equal("1.", finalDocument.Paragraphs[1].ListLabel?.Text ?? string.Empty);
+        TestAssert.Equal("1.", originalDocument.Paragraphs[2].ListLabel?.Text ?? string.Empty);
+        TestAssert.Equal("2.", originalDocument.Paragraphs[3].ListLabel?.Text ?? string.Empty);
+
+        DocxParagraph merged = finalDocument.Paragraphs[0];
+        TestAssert.Equal(1, merged.Hyperlinks.Count);
+        TestAssert.Equal(1, merged.FieldReferences.Count);
+        TestAssert.Equal(1, merged.InlineReferences.Count(reference => reference.Kind == "Comment"));
+        TestAssert.True(merged.Hyperlinks.Single().TextRunStartIndex > 0 && merged.Hyperlinks.Single().SourceRunStartIndex > 0, "Merged hyperlinks should be shifted after the first paragraph's runs.");
+        TestAssert.True(merged.FieldReferences.Single().TextRunIndex > 0 && merged.FieldReferences.Single().SourceRunIndex > 0, "Merged field references should be shifted after the first paragraph's runs.");
+        TestAssert.True(merged.InlineReferences.Single(reference => reference.Kind == "Comment").SourceRunIndex > 0, "Merged comment anchors should keep a source run after index shifting.");
+        TestAssert.True(new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(simpleDocument).RevisionItemCount >= 1, "Simple markup should still expose a change bar candidate for the consumed deleted paragraph mark.");
+    }
+
+    public static void DocxMarkupModesCollapseRevisedParagraphSpacingBeforeLayout()
+    {
+        string input = WriteRevisedParagraphSpacingCollapseProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("Before|Inserted spacing|After", ParagraphTexts(finalDocument));
+        TestAssert.Equal("Before|Deleted spacing|After", ParagraphTexts(originalDocument));
+        TestAssert.Equal("Before|Inserted spacing|Deleted spacing|After", ParagraphTexts(allDocument));
+
+        AssertRevisedSpacing(finalDocument, OoxPdfDocxMarkupMode.Final, expectedLineCount: 3, revisedLineIndexes: [1], afterLineIndex: 2);
+        AssertRevisedSpacing(originalDocument, OoxPdfDocxMarkupMode.Original, expectedLineCount: 3, revisedLineIndexes: [1], afterLineIndex: 2);
+        AssertRevisedSpacing(allDocument, OoxPdfDocxMarkupMode.AllMarkup, expectedLineCount: 4, revisedLineIndexes: [1, 2], afterLineIndex: 3);
+
+        DocxDocument deletedMarkFinal = ReadDocx(WriteDeletedParagraphMarkMarkupProbeDocx(), OoxPdfDocxMarkupMode.Final);
+        DocxLayoutItemSnapshot[] deletedMarkLines = TextLineSnapshots(deletedMarkFinal, OoxPdfDocxMarkupMode.Final);
+        TestAssert.Equal(2, deletedMarkLines.Length);
+        TestAssert.Equal(6d, deletedMarkLines[0].ParagraphAfterSpacingPoints ?? -1d);
+        TestAssert.Equal(6d, deletedMarkLines[1].PendingAfterSpacingPoints ?? -1d);
+        TestAssert.Equal(6d, deletedMarkLines[1].AppliedBeforeSpacingPoints ?? -1d);
+
+        static void AssertRevisedSpacing(
+            DocxDocument document,
+            OoxPdfDocxMarkupMode mode,
+            int expectedLineCount,
+            IReadOnlyList<int> revisedLineIndexes,
+            int afterLineIndex)
+        {
+            DocxLayoutItemSnapshot[] lines = TextLineSnapshots(document, mode);
+            TestAssert.Equal(expectedLineCount, lines.Length);
+            foreach (int lineIndex in revisedLineIndexes)
+            {
+                double expectedPending = lineIndex == revisedLineIndexes[0] ? 24d : 6d;
+                TestAssert.Equal(expectedPending, lines[lineIndex].PendingAfterSpacingPoints ?? -1d);
+                TestAssert.Equal(24d, lines[lineIndex].ParagraphBeforeSpacingPoints ?? -1d);
+                TestAssert.Equal(0d, lines[lineIndex].AppliedBeforeSpacingPoints ?? -1d);
+                TestAssert.Equal(6d, lines[lineIndex].ParagraphAfterSpacingPoints ?? -1d);
+                TestAssert.True(lines[lineIndex].ContextualSpacingSuppressed == true, "Revised same-style paragraphs should suppress the before gap when contextual spacing is selected.");
+            }
+
+            TestAssert.Equal(6d, lines[afterLineIndex].PendingAfterSpacingPoints ?? -1d);
+            TestAssert.Equal(6d, lines[afterLineIndex].AppliedBeforeSpacingPoints ?? -1d);
+        }
+
+        static DocxLayoutItemSnapshot[] TextLineSnapshots(DocxDocument document, OoxPdfDocxMarkupMode mode)
+        {
+            return new DocxRenderer(markupMode: mode)
+                .InspectLayout(document)
+                .Pages.SelectMany(page => page.Items)
+                .Where(item => item.Kind == "TextLine")
+                .ToArray();
+        }
+    }
+
+    public static void DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout()
+    {
+        string input = WriteHyperlinkFieldRevisionProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument simpleDocument = ReadDocx(input, OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("Before Link new field-new After", ParagraphTexts(finalDocument));
+        TestAssert.Equal("Before Link old field-old After", ParagraphTexts(originalDocument));
+        TestAssert.Equal("Before Link new field-new After", ParagraphTexts(simpleDocument));
+        TestAssert.Equal("Before Link old new field-old field-new After", ParagraphTexts(allDocument));
+
+        AssertHyperlinkAndFieldSpan(finalDocument.Paragraphs.Single(), expectedHyperlinkTextLength: "Link new ".Length, expectedHyperlinkTextRunCount: 2, expectedFieldTextLength: "field-new ".Length, expectedFieldTextRunCount: 1);
+        AssertHyperlinkAndFieldSpan(originalDocument.Paragraphs.Single(), expectedHyperlinkTextLength: "Link old ".Length, expectedHyperlinkTextRunCount: 2, expectedFieldTextLength: "field-old ".Length, expectedFieldTextRunCount: 1);
+        AssertHyperlinkAndFieldSpan(allDocument.Paragraphs.Single(), expectedHyperlinkTextLength: "Link old new ".Length, expectedHyperlinkTextRunCount: 3, expectedFieldTextLength: "field-old field-new ".Length, expectedFieldTextRunCount: 2);
+        TestAssert.True(allDocument.Paragraphs.Single().Hyperlinks.Single().SourceRunCount == 3, "All-markup hyperlink source span should cover each visible revised run inside the hyperlink.");
+        TestAssert.True(finalDocument.Paragraphs.Single().Hyperlinks.Single().SourceRunCount == 2, "Final hyperlink source span should stay valid after deleted hyperlink content is filtered.");
+        TestAssert.True(originalDocument.Paragraphs.Single().Hyperlinks.Single().SourceRunCount == 2, "Original hyperlink source span should stay valid after inserted hyperlink content is filtered.");
+
+        static void AssertHyperlinkAndFieldSpan(
+            DocxParagraph paragraph,
+            int expectedHyperlinkTextLength,
+            int expectedHyperlinkTextRunCount,
+            int expectedFieldTextLength,
+            int expectedFieldTextRunCount)
+        {
+            DocxHyperlinkSpan hyperlink = paragraph.Hyperlinks.Single();
+            DocxFieldReference field = paragraph.FieldReferences.Single();
+            TestAssert.Equal(expectedHyperlinkTextLength, hyperlink.TextLength);
+            TestAssert.Equal(expectedHyperlinkTextRunCount, hyperlink.TextRunCount);
+            TestAssert.Equal(expectedFieldTextLength, field.TextLength);
+            TestAssert.Equal(expectedFieldTextRunCount, field.TextRunCount);
+        }
+    }
+
+    public static void DocxMarkupFilteringPreservesSourceIndexesForAnchorsNotesAndTables()
+    {
+        string input = WriteSourceIndexMarkupProbeDocx();
+
+        DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxParagraph paragraph = document.Paragraphs.First();
+        string visibleText = string.Concat(paragraph.Runs.Select(run => run.Text));
+
+        TestAssert.Contains("Target", visibleText);
+        TestAssert.Contains("External", visibleText);
+        TestAssert.Contains("Foot", visibleText);
+        TestAssert.Contains("End", visibleText);
+        TestAssert.DoesNotContain("Hidden", visibleText);
+        TestAssert.DoesNotContain("Old link", visibleText);
+
+        DocxBookmarkAnchor bookmark = paragraph.BookmarkAnchors.Single();
+        AssertSourceRunIndex(paragraph, bookmark.SourceRunIndex, "Bookmark source run index should survive final-view filtering.");
+        TestAssert.True(bookmark.TextRunIndex >= 0 && bookmark.TextRunIndex < paragraph.Runs.Count, "Bookmark text run index should point to a visible run.");
+
+        DocxHyperlinkSpan internalLink = paragraph.Hyperlinks.Single(link => link.Anchor == "Target");
+        DocxHyperlinkSpan externalLink = paragraph.Hyperlinks.Single(link => link.Target == "https://example.invalid/source-index");
+        AssertSourceSpan(paragraph, internalLink.SourceRunStartIndex, internalLink.SourceRunCount, "Internal hyperlink source span should survive final-view filtering.");
+        AssertSourceSpan(paragraph, externalLink.SourceRunStartIndex, externalLink.SourceRunCount, "External hyperlink source span should survive final-view filtering.");
+        AssertTextSpan(paragraph, internalLink.TextRunStartIndex, internalLink.TextRunCount, "Internal hyperlink text span should point to visible text runs.");
+        AssertTextSpan(paragraph, externalLink.TextRunStartIndex, externalLink.TextRunCount, "External hyperlink text span should point to visible text runs.");
+
+        DocxInlineReference footnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Footnote");
+        DocxInlineReference endnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Endnote");
+        AssertSourceRunIndex(paragraph, footnote.SourceRunIndex, "Footnote reference source index should survive final-view filtering.");
+        AssertSourceRunIndex(paragraph, endnote.SourceRunIndex, "Endnote reference source index should survive final-view filtering.");
+        TestAssert.True(footnote.Revision?.Kind == "Insertion", "Inserted footnote references should retain revision provenance after filtering.");
+
+        DocxTable table = document.Tables.Single();
+        TestAssert.Equal(1, table.Rows.Count);
+        TestAssert.Equal("Visible row", RowTexts(table));
+
+        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final);
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        TestAssert.True(layout.SourceBlocks.Any(block => block.SourceBlockIndex == 1 && block.Kind == "Table"), "Layout source-block snapshots should retain the visible table block after filtering.");
+        TestAssert.True(layout.Tables.Single().RowCount == 1, "Table layout snapshots should report only the visible row after final-view filtering.");
+        TestAssert.True(layout.Pages.SelectMany(page => page.TableRows).Single().SourceBlockIndex == 1, "Table pagination snapshots should keep the visible table source block index after deleted rows are filtered.");
+        TestAssert.True(layout.Pages.Any(page => page.PlacedFootnoteStoryCount == 1), "Footnote placement should still resolve the filtered inline reference source index.");
+        TestAssert.True(layout.Pages.Any(page => page.PlacedEndnoteStoryCount == 1), "Endnote placement should still resolve the filtered inline reference source index.");
+
+        PdfPage[] pages = renderer.RenderBlankPages(document).ToArray();
+        TestAssert.True(pages.SelectMany(page => page.Annotations).Any(annotation => annotation.Uri == "https://example.invalid/source-index"), "External hyperlink annotations should still be emitted after revision filtering.");
+        TestAssert.True(pages.SelectMany(page => page.Annotations).Any(annotation => annotation.Destination is { PageIndex: 0 }), "Internal hyperlink destinations should still resolve from filtered bookmark anchors.");
+
+        static void AssertSourceRunIndex(DocxParagraph paragraph, int sourceRunIndex, string message)
+        {
+            TestAssert.True(sourceRunIndex >= 0 && sourceRunIndex < paragraph.Runs.Count, message);
+        }
+
+        static void AssertSourceSpan(DocxParagraph paragraph, int sourceRunStartIndex, int sourceRunCount, string message)
+        {
+            TestAssert.True(sourceRunStartIndex >= 0 && sourceRunCount > 0 && sourceRunStartIndex + sourceRunCount <= paragraph.Runs.Count, message);
+        }
+
+        static void AssertTextSpan(DocxParagraph paragraph, int textRunStartIndex, int textRunCount, string message)
+        {
+            TestAssert.True(textRunStartIndex >= 0 && textRunCount > 0 && textRunStartIndex + textRunCount <= paragraph.Runs.Count, message);
+        }
+    }
+
+    public static void DocxWordCompatibleAllMarkupPreservesRevisedHyperlinkAnnotations()
+    {
+        string input = WriteSourceIndexMarkupProbeDocx();
+        DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage[] pages = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .ToArray();
+
+        PdfLinkAnnotation[] externalLinks = pages
+            .SelectMany(page => page.Annotations)
+            .Where(annotation => annotation.Uri == "https://example.invalid/source-index")
+            .ToArray();
+        PdfLinkAnnotation[] internalLinks = pages
+            .SelectMany(page => page.Annotations)
+            .Where(annotation => annotation.Destination is not null)
+            .ToArray();
+
+        TestAssert.True(externalLinks.Length >= 1, "The all-markup fixture should expose at least one rendered external-link annotation.");
+        TestAssert.True(internalLinks.Length >= 1, "The all-markup fixture should expose at least one rendered internal-link annotation.");
+        TestAssert.True(externalLinks.All(annotation => annotation.Width > 0d && annotation.Height > 0d), "Word-compatible all-markup should keep clickable external-link rectangles after revision filtering and body-frame shrink.");
+        TestAssert.True(internalLinks.All(annotation => annotation.Width > 0d && annotation.Height > 0d), "Word-compatible all-markup should keep clickable internal-link rectangles after revision filtering and body-frame shrink.");
+        TestAssert.True(internalLinks.All(annotation => annotation.Destination is { PageIndex: 0 }), "Word-compatible all-markup should preserve bookmark destinations after revision filtering and body-frame shrink.");
+        TestAssert.True(internalLinks.All(annotation => annotation.Destination?.Left > 0d && annotation.Destination?.Top > 0d), "Word-compatible all-markup bookmark destinations should retain concrete page coordinates.");
+    }
+
+    public static void DocxMarkupModesFilterBlockRevisionParagraphs()
+    {
+        string input = WriteBlockRevisionParagraphProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument simpleDocument = ReadDocx(input, OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("Before|Inserted paragraph|Moved to paragraph|After", ParagraphTexts(finalDocument));
+        TestAssert.Equal("Before|Deleted paragraph|Moved from paragraph|After", ParagraphTexts(originalDocument));
+        TestAssert.Equal("Before|Inserted paragraph|Moved to paragraph|After", ParagraphTexts(simpleDocument));
+        TestAssert.Equal("Before|Inserted paragraph|Deleted paragraph|Moved from paragraph|Moved to paragraph|After", ParagraphTexts(allDocument));
+        TestAssert.True(allDocument.Paragraphs.Any(paragraph => paragraph.Revisions.Any(revision => revision.Kind == "Deletion")), "Block-level deletion revisions should be retained on paragraphs that survive the selected view.");
+        TestAssert.True(allDocument.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Revision?.Kind == "MoveFrom")), "Inherited block-level move revisions should reach paragraph runs.");
+    }
+
+    public static void DocxMarkupModesFilterRevisedParagraphKeepRulesAndPageBreakBefore()
+    {
+        string input = WriteBlockRevisionParagraphPropertiesProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument simpleDocument = ReadDocx(input, OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("Before|Inserted keep|Moved to keep|After", ParagraphTexts(finalDocument));
+        TestAssert.Equal("Before|Deleted keep|Moved from keep|After", ParagraphTexts(originalDocument));
+        TestAssert.Equal("Before|Inserted keep|Moved to keep|After", ParagraphTexts(simpleDocument));
+        TestAssert.Equal("Before|Inserted keep|Deleted keep|Moved from keep|Moved to keep|After", ParagraphTexts(allDocument));
+
+        AssertKeepRules(finalDocument, "Inserted keep", "Insertion", "611", expectedWidowControl: false);
+        AssertKeepRules(finalDocument, "Moved to keep", "MoveTo", "614", expectedWidowControl: true);
+        AssertKeepRules(originalDocument, "Deleted keep", "Deletion", "612", expectedWidowControl: false);
+        AssertKeepRules(originalDocument, "Moved from keep", "MoveFrom", "613", expectedWidowControl: true);
+        AssertKeepRules(allDocument, "Inserted keep", "Insertion", "611", expectedWidowControl: false);
+        AssertKeepRules(allDocument, "Deleted keep", "Deletion", "612", expectedWidowControl: false);
+        AssertKeepRules(allDocument, "Moved from keep", "MoveFrom", "613", expectedWidowControl: true);
+        AssertKeepRules(allDocument, "Moved to keep", "MoveTo", "614", expectedWidowControl: true);
+
+        AssertPageBreakRevisions(finalDocument, ["Insertion:611"]);
+        AssertPageBreakRevisions(originalDocument, ["Deletion:612"]);
+        AssertPageBreakRevisions(simpleDocument, ["Insertion:611"]);
+        AssertPageBreakRevisions(allDocument, ["Insertion:611", "Deletion:612"]);
+
+        TestAssert.Equal(2, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final).InspectLayout(finalDocument).Pages.Count);
+        TestAssert.Equal(2, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Original).InspectLayout(originalDocument).Pages.Count);
+        TestAssert.Equal(2, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(simpleDocument).Pages.Count);
+        TestAssert.Equal(3, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectLayout(allDocument).Pages.Count);
+
+        static void AssertKeepRules(
+            DocxDocument document,
+            string text,
+            string expectedRevisionKind,
+            string expectedRevisionId,
+            bool expectedWidowControl)
+        {
+            DocxParagraph paragraph = document.Paragraphs.Single(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)) == text);
+            TestAssert.True(
+                paragraph.Revisions.Any(revision => revision.Kind == expectedRevisionKind && revision.Id == expectedRevisionId),
+                "Filtered revised paragraphs should retain block-level revision provenance.");
+            TestAssert.True(
+                paragraph.KeepRules.KeepNext == true &&
+                paragraph.KeepRules.KeepLines == true &&
+                paragraph.KeepRules.WidowControl == expectedWidowControl,
+                "Filtered revised paragraphs should retain their paragraph keep and widow/orphan rules.");
+        }
+
+        static void AssertPageBreakRevisions(DocxDocument document, IReadOnlyList<string> expected)
+        {
+            string actual = string.Join(
+                "|",
+                document.BodyElements
+                    .OfType<DocxPageBreakElement>()
+                    .Select(element => $"{element.Revisions.Single().Kind}:{element.Revisions.Single().Id}"));
+            TestAssert.Equal(string.Join("|", expected), actual);
+        }
+    }
+
+    public static void DocxMarkupModesFilterBlockRevisionTableRows()
+    {
+        string input = WriteBlockRevisionTableProbeDocx();
+
+        DocxTable finalTable = ReadSingleTable(input, OoxPdfDocxMarkupMode.Final);
+        DocxTable originalTable = ReadSingleTable(input, OoxPdfDocxMarkupMode.Original);
+        DocxTable allTable = ReadSingleTable(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal("Base|Inserted row|Moved to row", RowTexts(finalTable));
+        TestAssert.Equal("Base|Deleted row|Moved from row", RowTexts(originalTable));
+        TestAssert.Equal("Base|Inserted row|Deleted row|Moved from row|Moved to row", RowTexts(allTable));
+        TestAssert.True(allTable.Rows.Any(row => row.Revisions.Any(revision => revision.Kind == "Deletion")), "Block-level row deletions should be retained on rows that survive the selected view.");
+        TestAssert.True(allTable.Rows.Any(row => row.Cells.Any(cell => cell.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Revision?.Kind == "MoveTo")))), "Inherited row revisions should reach cell paragraph runs.");
+    }
+
+    public static void DocxMarkupModesFilterTableCellAndNestedTableRevisions()
+    {
+        string input = WriteTableMarkupScenarioProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        string finalText = BodyText(finalDocument);
+        string originalText = BodyText(originalDocument);
+        string allText = BodyText(allDocument);
+
+        AssertContainsAll(finalText, ["Header", "Commented cell", "Base cell", "Inserted cell", "Moved nested new"]);
+        AssertContainsNone(finalText, ["Deleted cell", "Deleted cell paragraph", "Moved nested old"]);
+        AssertContainsAll(originalText, ["Header", "Commented cell", "Base cell", "Deleted cell", "Deleted cell paragraph", "Moved nested old"]);
+        AssertContainsNone(originalText, ["Inserted cell", "Moved nested new"]);
+        AssertContainsAll(allText, ["Header", "Commented cell", "Base cell", "Inserted cell", "Deleted cell", "Deleted cell paragraph", "Moved nested old", "Moved nested new"]);
+
+        DocxTable allTable = allDocument.BodyElements.OfType<DocxTableElement>().Single().Table;
+        TestAssert.True(allTable.Rows[0].IsHeader, "Markup table fixtures should keep repeated header-row metadata.");
+        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.HasVerticalMerge && string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase)), "Markup table fixtures should keep vertical merge restart metadata.");
+        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.HasVerticalMerge && cell.VerticalMergeValue is null), "Markup table fixtures should keep vertical merge continuation metadata.");
+        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.Revisions.Any(revision => revision.Kind == "Insertion")), "Inserted table cells should retain revision provenance.");
+        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.Revisions.Any(revision => revision.Kind == "Deletion")), "Deleted table cells should retain revision provenance.");
+        TestAssert.True(DocxBlockTraversal.EnumerateTableParagraphs(allTable).Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1")), "Comment anchors inside table cells should survive table markup filtering.");
+        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.BodyElements.OfType<DocxTableElement>().Any()), "Nested tables inside moved cell content should remain structured body elements.");
+
+        static string BodyText(DocxDocument document)
+        {
+            return string.Join("|", DocxBlockTraversal
+                .EnumerateBodyParagraphs(document.BodyElements)
+                .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text))));
+        }
+
+        static void AssertContainsAll(string text, IReadOnlyList<string> expected)
+        {
+            foreach (string value in expected)
+            {
+                TestAssert.Contains(value, text);
+            }
+        }
+
+        static void AssertContainsNone(string text, IReadOnlyList<string> unexpected)
+        {
+            foreach (string value in unexpected)
+            {
+                TestAssert.DoesNotContain(value, text);
+            }
+        }
+    }
+
+    public static void DocxBodyElementsRetainRevisionProvenance()
+    {
+        string input = WriteBodyElementRevisionProbeDocx();
+
+        DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        DocxParagraphElement[] revisedParagraphs = document.BodyElements
+            .OfType<DocxParagraphElement>()
+            .Where(element => element.Revisions.Count != 0)
+            .ToArray();
+        DocxTableElement[] revisedTables = document.BodyElements
+            .OfType<DocxTableElement>()
+            .Where(element => element.Revisions.Count != 0)
+            .ToArray();
+
+        TestAssert.Equal("Insertion:101|Deletion:102", string.Join("|", revisedParagraphs.Select(element => $"{element.Revisions.Single().Kind}:{element.Revisions.Single().Id}")));
+        TestAssert.Equal("Insertion:103|Deletion:104", string.Join("|", revisedTables.Select(element => $"{element.Revisions.Single().Kind}:{element.Revisions.Single().Id}")));
+        TestAssert.Equal("Insertion:101|Deletion:102", string.Join("|", revisedParagraphs.Select(element => $"{element.Paragraph.Revisions.Single().Kind}:{element.Paragraph.Revisions.Single().Id}")));
+        TestAssert.Equal("Insertion:103|Deletion:104", string.Join("|", revisedTables.Select(element => $"{element.Table.Revisions.Single().Kind}:{element.Table.Revisions.Single().Id}")));
+
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        TestAssert.True(structure.Blocks.Count(block => block.RevisionCount != 0) >= 4, "Structure inspection should continue to see block revision provenance after body-element wrappers retain it.");
+    }
+
+    public static void DocxBlockContentControlsRetainFormattingRevisions()
+    {
+        string input = WriteBlockContentControlFormattingRevisionProbeDocx();
+
+        DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxParagraph[] paragraphs = document.BodyElements
+            .OfType<DocxParagraphElement>()
+            .Select(element => element.Paragraph)
+            .ToArray();
+        DocxParagraph controlledParagraph = paragraphs.Single(paragraph => ParagraphText(paragraph) == "Controlled paragraph");
+
+        TestAssert.Equal("Before|Controlled paragraph|After", string.Join("|", paragraphs.Select(ParagraphText)));
+        TestAssert.True(controlledParagraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.PropertyElementNames.Contains("pStyle")), "Block content controls should expose paragraph formatting revisions to markup inspection.");
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        TestAssert.Equal(1, structure.FormattingRevisionCount);
+        TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
+        TestAssert.Equal(3, structure.ParagraphBlockCount);
+
+        static string ParagraphText(DocxParagraph paragraph)
+        {
+            return string.Concat(paragraph.Runs.Select(run => run.Text));
+        }
+    }
+
+    public static void DocxMarkupModesFilterStaticAndRelatedStoryRevisions()
+    {
+        string input = WriteStaticAndRelatedStoryRevisionProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        AssertMarkupStoryText(
+            StaticStoryText(finalDocument) + "|" + RelatedStoryText(finalDocument),
+            visible: ["Header inserted", "Footer inserted", "Comment inserted", "Footnote inserted", "Endnote inserted"],
+            hidden: ["Header deleted", "Footer deleted", "Comment deleted", "Footnote deleted", "Endnote deleted"]);
+        AssertMarkupStoryText(
+            StaticStoryText(originalDocument) + "|" + RelatedStoryText(originalDocument),
+            visible: ["Header deleted", "Footer deleted", "Comment deleted", "Footnote deleted", "Endnote deleted"],
+            hidden: ["Header inserted", "Footer inserted", "Comment inserted", "Footnote inserted", "Endnote inserted"]);
+        AssertMarkupStoryText(
+            StaticStoryText(allDocument) + "|" + RelatedStoryText(allDocument),
+            visible: ["Header inserted", "Header deleted", "Footer inserted", "Footer deleted", "Comment inserted", "Comment deleted", "Footnote inserted", "Footnote deleted", "Endnote inserted", "Endnote deleted"],
+            hidden: []);
+
+        TestAssert.True(allDocument.RelatedStories.All(story => story.Paragraphs.All(paragraph => paragraph.Revisions.Count != 0 || paragraph.Runs.Any(run => run.Revision is not null))), "All-markup related story revisions should preserve private-safe provenance after filtering.");
+
+        static string StaticStoryText(DocxDocument document)
+        {
+            IEnumerable<DocxParagraph> headers = DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType);
+            IEnumerable<DocxParagraph> footers = DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType);
+            return string.Join("|", headers.Concat(footers).Select(ParagraphText));
+        }
+
+        static string RelatedStoryText(DocxDocument document)
+        {
+            return string.Join("|", document.RelatedStories.SelectMany(story => DocxBlockTraversal.EnumerateBodyParagraphs(story)).Select(ParagraphText));
+        }
+
+        static string ParagraphText(DocxParagraph paragraph)
+        {
+            return string.Concat(paragraph.Runs.Select(run => run.Text));
+        }
+
+        static void AssertMarkupStoryText(string text, IReadOnlyList<string> visible, IReadOnlyList<string> hidden)
+        {
+            foreach (string expected in visible)
+            {
+                TestAssert.Contains(expected, text);
+            }
+
+            foreach (string unexpected in hidden)
+            {
+                TestAssert.DoesNotContain(unexpected, text);
+            }
+        }
+    }
+
+    public static void DocxMarkupModesFilterSectionHeaderFooterAndBreakRevisions()
+    {
+        string input = WriteSectionHeaderFooterMarkupProbeDocx();
+
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument originalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Original);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        string finalStaticText = StaticStoryText(finalDocument);
+        string originalStaticText = StaticStoryText(originalDocument);
+        string allStaticText = StaticStoryText(allDocument);
+
+        AssertMarkupStoryText(
+            finalStaticText,
+            visible: ["Default header inserted", "Even header inserted", "First header inserted", "Default footer inserted", "Even footer inserted", "First footer inserted"],
+            hidden: ["Default header deleted", "Even header deleted", "First header deleted", "Default footer deleted", "Even footer deleted", "First footer deleted"]);
+        AssertMarkupStoryText(
+            originalStaticText,
+            visible: ["Default header deleted", "Even header deleted", "First header deleted", "Default footer deleted", "Even footer deleted", "First footer deleted"],
+            hidden: ["Default header inserted", "Even header inserted", "First header inserted", "Default footer inserted", "Even footer inserted", "First footer inserted"]);
+        AssertMarkupStoryText(
+            allStaticText,
+            visible: ["Default header inserted", "Default header deleted", "Even header inserted", "Even header deleted", "First header inserted", "First header deleted", "Default footer inserted", "Default footer deleted", "Even footer inserted", "Even footer deleted", "First footer inserted", "First footer deleted"],
+            hidden: []);
+
+        TestAssert.True(StaticStoryParagraphs(allDocument).Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1")), "Comments anchored in first/even/default static stories should survive all-markup filtering.");
+        TestAssert.True(finalDocument.BodyElements.OfType<DocxPageBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == "Insertion" && revision.Id == "801")), "Inserted run page breaks should survive final view as revision-provenance break elements.");
+        TestAssert.True(!finalDocument.BodyElements.OfType<DocxManualBreakElement>().Any(element => element.Value == "column" && element.Revisions.Any(revision => revision.Id == "802")), "Deleted column breaks should be hidden from final view.");
+        TestAssert.True(originalDocument.BodyElements.OfType<DocxManualBreakElement>().Any(element => element.Value == "column" && element.Revisions.Any(revision => revision.Kind == "Deletion" && revision.Id == "802")), "Deleted run column breaks should survive original view as revision-provenance break elements.");
+        TestAssert.True(!originalDocument.BodyElements.OfType<DocxSectionBreakElement>().Any(element => element.Revisions.Any(revision => revision.Id == "803")), "Inserted section breaks should be hidden from original view.");
+        TestAssert.True(allDocument.BodyElements.OfType<DocxSectionBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == "Insertion" && revision.Id == "803")), "Inserted section breaks should retain inherited revision provenance in all-markup view.");
+
+        static string StaticStoryText(DocxDocument document)
+        {
+            return string.Join("|", StaticStoryParagraphs(document).Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text))));
+        }
+
+        static IEnumerable<DocxParagraph> StaticStoryParagraphs(DocxDocument document)
+        {
+            return DocxBlockTraversal
+                .EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType)
+                .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType));
+        }
+
+        static void AssertMarkupStoryText(string text, IReadOnlyList<string> visible, IReadOnlyList<string> hidden)
+        {
+            foreach (string expected in visible)
+            {
+                TestAssert.Contains(expected, text);
+            }
+
+            foreach (string unexpected in hidden)
+            {
+                TestAssert.DoesNotContain(unexpected, text);
+            }
+        }
+    }
+
+    public static void DocxReaderPreservesMoveRevisionRanges()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:moveFromRangeStart w:id="7" w:name="move-from" w:author="A" w:date="2026-06-05T00:00:00Z"/>
+                      <w:r><w:delText>Moved from</w:delText></w:r>
+                      <w:moveFromRangeEnd w:id="7"/>
+                      <w:moveToRangeStart w:id="8" w:name="move-to" w:author="B" w:date="2026-06-06T00:00:00Z"/>
+                      <w:r><w:t>Moved to</w:t></w:r>
+                      <w:moveToRangeEnd w:id="8"/>
+                    </w:p>
+                  </w:body>
+                </w:document>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        TestAssert.Equal(2, paragraph.RevisionRanges.Count);
+        DocxRevisionRange moveFrom = paragraph.RevisionRanges.Single(range => range.Kind == "MoveFrom");
+        DocxRevisionRange moveTo = paragraph.RevisionRanges.Single(range => range.Kind == "MoveTo");
+        TestAssert.True(moveFrom.Id == "7" && moveFrom.Name == "move-from" && moveFrom.Author == "A" && moveFrom.Date == "2026-06-05T00:00:00Z" && moveFrom.StartSourceRunIndex == 0 && moveFrom.EndSourceRunIndex == 1, "Move-from range markers should preserve metadata and source coordinates.");
+        TestAssert.True(moveTo.Id == "8" && moveTo.Name == "move-to" && moveTo.Author == "B" && moveTo.Date == "2026-06-06T00:00:00Z" && moveTo.StartSourceRunIndex == 1 && moveTo.EndSourceRunIndex == 2, "Move-to range markers should preserve metadata and source coordinates.");
+
+        DocxStructureSnapshot snapshot = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        TestAssert.Equal(2, snapshot.Blocks.Single().RevisionRangeCount);
+        DocxStructureRevisionRangeSnapshot[] ranges = snapshot.RevisionRanges!.ToArray();
+        TestAssert.Equal(2, ranges.Length);
+        TestAssert.True(ranges.Any(range => range.Kind == "MoveFrom" && range.Id == "7" && range.HasName && range.HasAuthor && range.HasDate && range.IsClosed), "Structure snapshots should expose private-safe move-from range provenance.");
+        TestAssert.True(ranges.Any(range => range.Kind == "MoveTo" && range.Id == "8" && range.HasName && range.HasAuthor && range.HasDate && range.IsClosed), "Structure snapshots should expose private-safe move-to range provenance.");
+    }
+
+    public static void DocxStructureSnapshotLinksCrossBlockMoveRevisionRanges()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:moveFromRangeStart w:id="301" w:name="from-split" w:author="A" w:date="2026-06-10T00:00:00Z"/>
+                      <w:r><w:delText>Moved from start</w:delText></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:r><w:delText>Moved from end</w:delText></w:r>
+                      <w:moveFromRangeEnd w:id="301"/>
+                    </w:p>
+                    <w:tbl>
+                      <w:tr><w:tc><w:p>
+                        <w:moveToRangeStart w:id="302" w:name="to-split" w:author="B" w:date="2026-06-10T00:00:00Z"/>
+                        <w:r><w:t>Moved to table start</w:t></w:r>
+                      </w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:p>
+                      <w:r><w:t>Moved to body end</w:t></w:r>
+                      <w:moveToRangeEnd w:id="302"/>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxStructureRevisionRangeSnapshot[] ranges = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectStructure(document)
+            .RevisionRanges!
+            .ToArray();
+
+        TestAssert.Equal(4, ranges.Length);
+        TestAssert.Equal(4, ranges.Count(range => range.IsLinkedAcrossBlocks));
+        TestAssert.True(ranges.All(range => !range.IsClosed), "Cross-block move range fragments should remain locally open while being linked at the document level.");
+
+        DocxStructureRevisionRangeSnapshot moveFromStart = ranges.Single(range => range.Kind == "MoveFrom" && range.Id == "301" && range.StartSourceRunIndex is not null);
+        DocxStructureRevisionRangeSnapshot moveFromEnd = ranges.Single(range => range.Kind == "MoveFrom" && range.Id == "301" && range.EndSourceRunIndex is not null);
+        TestAssert.True(moveFromStart.SourceBlockIndex == 0 && moveFromStart.LinkedSourceBlockIndex == 1 && moveFromStart.LinkedSourceParagraphIndex == 0, "Move-from start fragments should point to their cross-block end fragment.");
+        TestAssert.True(moveFromEnd.SourceBlockIndex == 1 && moveFromEnd.LinkedSourceBlockIndex == 0 && moveFromEnd.LinkedSourceParagraphIndex == 0, "Move-from end fragments should point back to their start fragment.");
+
+        DocxStructureRevisionRangeSnapshot moveToStart = ranges.Single(range => range.Kind == "MoveTo" && range.Id == "302" && range.StartSourceRunIndex is not null);
+        DocxStructureRevisionRangeSnapshot moveToEnd = ranges.Single(range => range.Kind == "MoveTo" && range.Id == "302" && range.EndSourceRunIndex is not null);
+        TestAssert.True(moveToStart.SourceBlockKind == "Table" && moveToStart.SourceBlockIndex == 2 && moveToStart.LinkedSourceBlockIndex == 3, "Move-to start fragments inside tables should link to a later body paragraph end fragment.");
+        TestAssert.True(moveToEnd.SourceBlockKind == "Paragraph" && moveToEnd.SourceBlockIndex == 3 && moveToEnd.LinkedSourceBlockIndex == 2 && moveToEnd.LinkedSourceParagraphIndex == 0, "Move-to end fragments should link back into the source table paragraph.");
+    }
+
+    public static void DocxMarkupContextMapsModesToRenderingKnobs()
+    {
+        DocxMarkupContext final = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.Final);
+        DocxMarkupContext original = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.Original);
+        DocxMarkupContext simple = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxMarkupContext all = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup);
+        DocxMarkupContext allReserve = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
+        DocxMarkupContext allWord = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        TestAssert.True(final.IncludesInsertions && final.IncludesMoveTo && !final.IncludesDeletions && !final.DrawsChangeBars, "Final mode should render final text without markup indicators.");
+        TestAssert.True(original.IncludesDeletions && original.IncludesMoveFrom && !original.IncludesInsertions && original.ApproximatesTrackedChanges, "Original mode should render original text and report tracked-change approximation.");
+        TestAssert.True(simple.IncludesInsertions && simple.DrawsChangeBars && simple.DrawsCommentMarkers && simple.ApproximatesComments, "Simple markup should render final text with lightweight markup indicators.");
+        TestAssert.True(all.IncludesInsertions && all.IncludesDeletions && all.IncludesMoveFrom && all.IncludesMoveTo && all.AppliesInlineRevisionStyle, "All markup should include and style all inline revision text.");
+        TestAssert.True(all.RendersCommentBalloons && all.RendersRevisionBalloons && !all.ExpandsMarkupMargin, "All markup should render first-pass comment and revision balloons while markup-margin expansion remains explicit pending future support.");
+        TestAssert.True(allReserve.RendersCommentBalloons && allReserve.RendersRevisionBalloons && allReserve.ExpandsMarkupMargin, "Reserve-margin geometry should opt all-markup rendering into a Word-like review margin.");
+        TestAssert.True(allWord.RendersCommentBalloons && allWord.RendersRevisionBalloons && allWord.ExpandsMarkupMargin, "Word-compatible all-markup geometry should opt into review-margin expansion through the current fallback profile.");
+    }
+
+    public static void DocxMarkupContextAppliesRevisionViewSettings()
+    {
+        DocxMarkupContext allReserve = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
+        DocxDocumentSettings hideComments = DocxDocumentSettings.Empty with
+        {
+            RevisionViewSettings = DocxRevisionViewSettings.Empty with
+            {
+                CommentsValue = "0",
+                ShowComments = false
+            }
+        };
+        DocxDocumentSettings hideInsertionsAndDeletions = DocxDocumentSettings.Empty with
+        {
+            RevisionViewSettings = DocxRevisionViewSettings.Empty with
+            {
+                InsertionsAndDeletionsValue = "0",
+                ShowInsertionsAndDeletions = false
+            }
+        };
+        DocxDocumentSettings hideMarkup = DocxDocumentSettings.Empty with
+        {
+            RevisionViewSettings = DocxRevisionViewSettings.Empty with
+            {
+                MarkupValue = "0",
+                ShowMarkup = false
+            }
+        };
+
+        DocxMarkupContext withoutComments = allReserve.ApplyDocumentSettings(hideComments);
+        DocxMarkupContext withoutInsertionDeletionMarkup = allReserve.ApplyDocumentSettings(hideInsertionsAndDeletions);
+        DocxMarkupContext withoutMarkup = allReserve.ApplyDocumentSettings(hideMarkup);
+
+        TestAssert.True(!withoutComments.DrawsCommentMarkers && !withoutComments.RendersCommentBalloons && withoutComments.RendersRevisionBalloons, "revisionView comments=0 should suppress comment markers and balloons without suppressing revision balloons.");
+        TestAssert.True(!withoutInsertionDeletionMarkup.DrawsChangeBars && !withoutInsertionDeletionMarkup.RendersRevisionBalloons && withoutInsertionDeletionMarkup.RendersCommentBalloons, "revisionView insDel=0 should suppress change bars and revision balloons without suppressing comments.");
+        TestAssert.True(!withoutMarkup.DrawsChangeBars && !withoutMarkup.DrawsCommentMarkers && !withoutMarkup.RendersCommentBalloons && !withoutMarkup.RendersRevisionBalloons && !withoutMarkup.ExpandsMarkupMargin, "revisionView markup=0 should suppress rendered markup UI and markup margin expansion.");
+    }
+
+    public static void DocxRendererAppliesRevisionViewSettingsToMarkupUi()
+    {
+        DocxDocument commentDocument = ReadDocx(WriteCommentMarkerProbeDocx(), OoxPdfDocxMarkupMode.AllMarkup) with
+        {
+            Settings = DocxDocumentSettings.Empty with
+            {
+                RevisionViewSettings = DocxRevisionViewSettings.Empty with
+                {
+                    CommentsValue = "0",
+                    ShowComments = false
+                }
+            }
+        };
+        DocxDocument revisionDocument = ReadDocx(WriteTrackedChangeModeProbeDocx(), OoxPdfDocxMarkupMode.AllMarkup) with
+        {
+            Settings = DocxDocumentSettings.Empty with
+            {
+                RevisionViewSettings = DocxRevisionViewSettings.Empty with
+                {
+                    InsertionsAndDeletionsValue = "0",
+                    ShowInsertionsAndDeletions = false
+                }
+            }
+        };
+        DocxDocument hideMarkupDocument = ReadDocx(WriteCommentMarkerProbeDocx(), OoxPdfDocxMarkupMode.AllMarkup) with
+        {
+            Settings = DocxDocumentSettings.Empty with
+            {
+                RevisionViewSettings = DocxRevisionViewSettings.Empty with
+                {
+                    MarkupValue = "0",
+                    ShowMarkup = false
+                }
+            }
+        };
+
+        var allMarkupRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxMarkupBalloonPlacementSnapshot[] commentPlacements = allMarkupRenderer.InspectMarkupBalloons(commentDocument).ToArray();
+        DocxMarkupBalloonPlacementSnapshot[] revisionPlacements = allMarkupRenderer.InspectMarkupBalloons(revisionDocument).ToArray();
+        DocxLayoutSnapshot layout = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup, markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin).InspectLayout(hideMarkupDocument);
+
+        TestAssert.True(commentPlacements.All(placement => placement.Kind != "Comment"), "revisionView comments=0 should suppress comment balloons in all-markup inspection.");
+        TestAssert.True(revisionPlacements.All(placement => placement.Kind != "Revision"), "revisionView insDel=0 should suppress revision balloons in all-markup inspection.");
+        TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout.ToString(), layout.MarkupGeometryMode);
+        TestAssert.Equal(0d, layout.MarkupMarginReservePoints);
+    }
+
+    public static void DocxMarkupGeometryKeepsAuthoredMediaBox()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var finalRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final);
+        var allRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage finalPage = finalRenderer.RenderBlankPages(finalDocument).Single();
+        PdfPage allPage = allRenderer.RenderBlankPages(allDocument).Single();
+        DocxLayoutPageSnapshot finalLayoutPage = finalRenderer.InspectLayout(finalDocument).Pages.Single();
+        DocxLayoutPageSnapshot allLayoutPage = allRenderer.InspectLayout(allDocument).Pages.Single();
+
+        TestAssert.Equal(finalDocument.PageWidthPoints, finalPage.Width);
+        TestAssert.Equal(finalDocument.PageHeightPoints, finalPage.Height);
+        TestAssert.Equal(finalPage.Width, allPage.Width);
+        TestAssert.Equal(finalPage.Height, allPage.Height);
+        TestAssert.Equal(finalLayoutPage.Width, allLayoutPage.Width);
+        TestAssert.Equal(finalLayoutPage.Height, allLayoutPage.Height);
+        TestAssert.Equal(finalLayoutPage.ColumnFrameWidthSum, allLayoutPage.ColumnFrameWidthSum);
+        TestAssert.Equal(finalLayoutPage.ColumnGutterWidthSum, allLayoutPage.ColumnGutterWidthSum);
+        TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout.ToString(), allRenderer.InspectLayout(allDocument).MarkupGeometryMode);
+        TestAssert.Equal(0d, allLayoutPage.MarkupMarginReservePoints);
+    }
+
+    public static void DocxMarkupReserveMarginGeometryShrinksBodyAndPreservesMediaBox()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var preserveRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var reserveRenderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
+
+        PdfPage preservePage = preserveRenderer.RenderBlankPages(allDocument).Single();
+        PdfPage reservePage = reserveRenderer.RenderBlankPages(allDocument).Single();
+        DocxLayoutSnapshot preserveLayout = preserveRenderer.InspectLayout(allDocument);
+        DocxLayoutSnapshot reserveLayout = reserveRenderer.InspectLayout(allDocument);
+        DocxLayoutPageSnapshot preserveLayoutPage = preserveLayout.Pages.Single();
+        DocxLayoutPageSnapshot reserveLayoutPage = reserveLayout.Pages.Single();
+
+        TestAssert.Equal(preservePage.Width, reservePage.Width);
+        TestAssert.Equal(preservePage.Height, reservePage.Height);
+        TestAssert.Equal(preserveLayoutPage.Width, reserveLayoutPage.Width);
+        TestAssert.Equal(preserveLayoutPage.Height, reserveLayoutPage.Height);
+        TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin.ToString(), reserveLayout.MarkupGeometryMode);
+        TestAssert.True(reserveLayout.MarkupMarginReservePoints > 0d, "Reserve-margin geometry should report the amount reserved for review balloons.");
+        TestAssert.True(reserveLayoutPage.MarginRight > preserveLayoutPage.MarginRight, "Reserve-margin geometry should increase the effective right margin.");
+        TestAssert.True(Math.Abs(reserveLayoutPage.MarginRight - 207d) < 0.001d, "Reserve-margin geometry should use the current Word-like Letter review margin target.");
+        TestAssert.True(reserveLayoutPage.ColumnFrameWidthSum < preserveLayoutPage.ColumnFrameWidthSum, "Reserve-margin geometry should shrink the body column frame.");
+        TestAssert.True(reserveRenderer.InspectMarkupBalloons(allDocument).All(placement => placement.X >= reserveLayoutPage.Width - reserveLayoutPage.MarginRight), "Right-side balloons should live in the reserved review margin.");
+        TestAssert.True(reserveRenderer.InspectMarkupBalloons(allDocument).All(placement => placement.X > reserveLayoutPage.Width - reserveLayoutPage.MarginRight + 4d), "Right-side balloon bodies should leave a connector stem inside the reserved review margin.");
+    }
+
+    public static void DocxMarkupBalloonAreaClampsImpossibleReviewLaneInsideMediaBox()
+    {
+        const double nominalMinimumBalloonBodyWidth = 24d;
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Tight", fontSize: 6d, lineSpacingPoints: 7d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "tiny", "Reviewer", "2026-06-12T00:00:00Z", "ins")
+            ]
+        };
+        DocxDocument document = new(
+            20d,
+            80d,
+            6d,
+            6d,
+            6d,
+            6d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot placement = renderer
+            .InspectMarkupBalloons(document)
+            .Single(placement => !placement.IsOverflowSummary);
+
+        TestAssert.True(
+            placement.X >= 0d && placement.X + placement.Width <= document.PageWidthPoints,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Impossible review lanes should clamp balloon bodies inside the page media box. X={placement.X}, Width={placement.Width}, PageWidth={document.PageWidthPoints}."));
+        TestAssert.True(
+            placement.Width < nominalMinimumBalloonBodyWidth,
+            "Pages narrower than the nominal review-lane minimum should shrink the fallback balloon body instead of emitting negative coordinates.");
+        TestAssert.True(
+            placement.BalloonConnectorX >= 0d && placement.BalloonConnectorX <= document.PageWidthPoints,
+            "Impossible review lanes should keep the balloon connector inside the page media box.");
+    }
+
+    public static void DocxMarkupReserveMarginUsesSectionSpecificPageGeometry()
+    {
+        DocxPageSettings firstSectionSettings = new(
+            "8000",
+            "12000",
+            null,
+            "720",
+            "720",
+            "720",
+            "720",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        DocxPageSettings finalSectionSettings = new(
+            "12240",
+            "15840",
+            null,
+            "1440",
+            "1440",
+            "1440",
+            "1440",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            finalSectionSettings,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(CreateDocxLayoutParagraph("Narrow first section", 10d, 12d)),
+                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []),
+                new DocxParagraphElement(CreateDocxLayoutParagraph("Wide final section", 10d, 12d))
+            ],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxLayoutSnapshot layout = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .InspectLayout(document);
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.True(Math.Abs(layout.Pages[0].Width - 400d) < 0.001d, "The first section should own its authored narrow page width.");
+        TestAssert.True(Math.Abs(layout.Pages[0].MarginRight - 148d) < 0.001d, "The narrow first section should cap the reserved markup margin at the minimum body width.");
+        TestAssert.True(Math.Abs(layout.Pages[0].MarkupMarginReservePoints - 112d) < 0.001d, "The narrow first section should report only the reserve added beyond its own authored margin.");
+        TestAssert.True(Math.Abs(layout.Pages[1].Width - 612d) < 0.001d, "The final section should own its authored Letter page width.");
+        TestAssert.True(Math.Abs(layout.Pages[1].MarginRight - 207d) < 0.001d, "The wider final section should reach the preferred review margin target.");
+        TestAssert.True(Math.Abs(layout.Pages[1].MarkupMarginReservePoints - 135d) < 0.001d, "The final section should report the reserve added beyond its own authored margin.");
+    }
+
+    public static void DocxMarkupReserveMarginMirrorsLaneOnEvenPages()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-markup-margin-mirrored.docx"));
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var preserveRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var reserveRenderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
+
+        DocxLayoutSnapshot preserveLayout = preserveRenderer.InspectLayout(allDocument);
+        DocxLayoutSnapshot reserveLayout = reserveRenderer.InspectLayout(allDocument);
+        DocxMarkupBalloonPlacementSnapshot[] placements = reserveRenderer.InspectMarkupBalloons(allDocument).ToArray();
+
+        TestAssert.True(allDocument.Settings.MirrorMargins == true, "The mirrored-margin fixture should expose the modeled document setting.");
+        TestAssert.True(reserveLayout.Pages.Count >= 2, "The mirrored-margin fixture should cover odd and even pages.");
+        TestAssert.True(reserveLayout.Pages[0].MarginRight > preserveLayout.Pages[0].MarginRight, "Odd mirrored pages should keep the reserved markup lane on the right.");
+        TestAssert.Equal(preserveLayout.Pages[0].MarginLeft, reserveLayout.Pages[0].MarginLeft);
+        TestAssert.True(reserveLayout.Pages[1].MarginLeft > preserveLayout.Pages[1].MarginLeft, "Even mirrored pages should reserve the markup lane on the left.");
+        TestAssert.Equal(preserveLayout.Pages[1].MarginRight, reserveLayout.Pages[1].MarginRight);
+        TestAssert.True(placements.Any(placement => placement.PageIndex == 0 && placement.Side == "Right"), "Odd-page balloons should use the right mirrored lane.");
+        TestAssert.True(placements.Any(placement => placement.PageIndex == 1 && placement.Side == "Left"), "Even-page balloons should use the left mirrored lane.");
+        TestAssert.True(
+            placements.Where(placement => placement.Side == "Right").All(placement => placement.BalloonConnectorX < placement.X),
+            "Right-lane connector stems should stay between the body frame and balloon body.");
+        TestAssert.True(
+            placements.Where(placement => placement.Side == "Left").All(placement => placement.BalloonConnectorX > placement.X + placement.Width),
+            "Left-lane connector stems should stay between the body frame and balloon body.");
+    }
+
+    public static void DocxMarkupReserveMarginKeepsMirroredGutterInside()
+    {
+        DocxParagraph first = CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
+        DocxParagraph second = first with
+        {
+            Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, null)]
+        };
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "12000",
+            HeightValue = "6000",
+            MarginLeftValue = "360",
+            MarginRightValue = "360",
+            MarginTopValue = "360",
+            MarginBottomValue = "360",
+            GutterDistanceValue = "240",
+            GutterDistancePoints = 12d
+        };
+        var document = new DocxDocument(
+            600d,
+            300d,
+            18d,
+            18d,
+            18d,
+            18d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxPageBreakElement("runBreak", "page"),
+                new DocxParagraphElement(second)
+            ],
+            [first, second],
+            [])
+        {
+            Settings = DocxDocumentSettings.Empty with
+            {
+                MirrorMargins = true
+            }
+        };
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin).Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.Equal(30d, layout.Pages[0].MarginLeft);
+        TestAssert.Equal(207d, layout.Pages[0].MarginRight);
+        TestAssert.Equal(207d, layout.Pages[1].MarginLeft);
+        TestAssert.Equal(30d, layout.Pages[1].MarginRight);
+        TestAssert.Equal(189d, layout.Pages[0].MarkupMarginReservePoints);
+        TestAssert.Equal(189d, layout.Pages[1].MarkupMarginReservePoints);
+        TestAssert.Equal(30d, layout.Pages[0].ColumnFrames[0].X);
+        TestAssert.Equal(207d, layout.Pages[1].ColumnFrames[0].X);
+        TestAssert.Equal(layout.Pages[0].ColumnFrames[0].Width, layout.Pages[1].ColumnFrames[0].Width);
+    }
+
+    public static void DocxMarkupReserveMarginModelsLandscapeColumnsAndWideTables()
+    {
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
+
+        DocxLayoutPageSnapshot landscapePage = renderer
+            .InspectLayout(ReadMarkupMarginFixture("docx-markup-margin-landscape.docx"))
+            .Pages
+            .Single();
+        TestAssert.True(landscapePage.Width > landscapePage.Height, "Landscape markup-margin fixtures should preserve landscape page geometry.");
+        TestAssert.True(landscapePage.MarkupMarginReservePoints > 0d, "Landscape pages should still reserve a review lane.");
+        TestAssert.True(Math.Abs(landscapePage.MarginRight - 207d) < 0.001d, "Landscape pages should use the same preferred review margin target when the body frame can afford it.");
+
+        DocxLayoutPageSnapshot columnPage = renderer
+            .InspectLayout(ReadMarkupMarginFixture("docx-markup-margin-multi-column.docx"))
+            .Pages
+            .Single();
+        TestAssert.True(columnPage.ColumnFrameCount > 1, "Multi-column markup-margin fixtures should retain multiple body columns after the review lane is reserved.");
+        TestAssert.True(columnPage.ColumnGutterWidthSum > 0d, "Multi-column markup-margin fixtures should preserve authored column gutters.");
+        TestAssert.True(
+            columnPage.ColumnFrames.All(frame => frame.X >= columnPage.MarginLeft - 0.001d && frame.X + frame.Width <= columnPage.Width - columnPage.MarginRight + 0.001d),
+            "Reserved-margin column frames should stay inside the narrowed body frame.");
+
+        DocxLayoutPageSnapshot tablePage = renderer
+            .InspectLayout(ReadMarkupMarginFixture("docx-markup-margin-table-heavy.docx"))
+            .Pages
+            .Single(page => page.TableRows.Count != 0);
+        TestAssert.True(tablePage.TableRows.Count >= 2, "The table-heavy fixture should expose table rows in the layout snapshot.");
+        TestAssert.True(
+            tablePage.TableRows.All(row => Math.Abs(row.X - tablePage.MarginLeft) < 0.001d),
+            "Wide tables should remain anchored to the narrowed markup-margin body frame.");
+        TestAssert.True(
+            tablePage.TableRows.All(row => row.ResolvedTableWidth > tablePage.ColumnFrameWidthSum && row.X + row.Width > tablePage.Width - tablePage.MarginRight),
+            "Explicit wide tables should retain their resolved width and expose overflow into the reserved review lane.");
+
+        static DocxDocument ReadMarkupMarginFixture(string fileName)
+        {
+            string input = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "Cases",
+                fileName));
+            return ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        }
+    }
+
+    public static void DocxMarkupWordCompatibleGeometryUsesReserveMarginFallback()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var reserveRenderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
+        var wordRenderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxLayoutSnapshot reserveLayout = reserveRenderer.InspectLayout(allDocument);
+        DocxLayoutSnapshot wordLayout = wordRenderer.InspectLayout(allDocument);
+        DocxTextEmissionSnapshot reserveEmission = reserveRenderer.InspectTextEmission(allDocument);
+        DocxTextEmissionSnapshot wordEmission = wordRenderer.InspectTextEmission(allDocument);
+        DocxLayoutPageSnapshot reserveLayoutPage = reserveLayout.Pages.Single();
+        DocxLayoutPageSnapshot wordLayoutPage = wordLayout.Pages.Single();
+
+        TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup.ToString(), wordLayout.MarkupGeometryMode);
+        TestAssert.Equal(reserveLayout.MarkupMarginReservePoints, wordLayout.MarkupMarginReservePoints);
+        TestAssert.Equal(reserveLayoutPage.MarginRight, wordLayoutPage.MarginRight);
+        TestAssert.Equal(reserveLayoutPage.ColumnFrameWidthSum, wordLayoutPage.ColumnFrameWidthSum);
+        TestAssert.True(wordLayoutPage.TextLineHeightSum <= reserveLayoutPage.TextLineHeightSum + 0.001d, "Word-compatible all-markup should not increase aggregate text line metrics when the print-scale profile is active.");
+        TestAssert.True(
+            wordEmission.Lines.SelectMany(line => line.Segments).Max(segment => segment.PdfFontSize) <
+            reserveEmission.Lines.SelectMany(line => line.Segments).Max(segment => segment.PdfFontSize),
+            "Word-compatible all-markup should apply the current print-scale profile to emitted PDF font sizes.");
+    }
+
+    public static void DocxMarkupWordCompatibleGeometryHasNoEffectOutsideAllMarkup()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxDocument simpleDocument = ReadDocx(input, OoxPdfDocxMarkupMode.SimpleMarkup);
+        var finalRenderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.Final,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var simpleRenderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.SimpleMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxLayoutSnapshot finalLayout = finalRenderer.InspectLayout(finalDocument);
+        DocxLayoutSnapshot simpleLayout = simpleRenderer.InspectLayout(simpleDocument);
+
+        TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout.ToString(), finalLayout.MarkupGeometryMode);
+        TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout.ToString(), simpleLayout.MarkupGeometryMode);
+        TestAssert.Equal(0d, finalLayout.MarkupMarginReservePoints);
+        TestAssert.Equal(0d, simpleLayout.MarkupMarginReservePoints);
+    }
+
+    public static void DocxWordCompatibleAllMarkupWrapsSpecialTokensInNarrowedBodyFrame()
+    {
+        DocxParagraph softHyphen = CreateDocxLayoutParagraph("ABCDEFGHIJKLMNOPQRST\u00ADUVWXYZABCDEFGHIJKLMNOPQRSTUV", 10d, 12d);
+        DocxDocument softHyphenDocument = CreateAllMarkupWrapProbeDocument([softHyphen]);
+        DocxTextLineLayout[] preserveSoftHyphen = new DocxLayoutEngine()
+            .Create(softHyphenDocument, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .ToArray();
+        DocxTextLineLayout[] wordSoftHyphen = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(softHyphenDocument, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(1, preserveSoftHyphen.Length);
+        TestAssert.Equal(2, wordSoftHyphen.Length);
+        TestAssert.True(wordSoftHyphen[0].Text.EndsWith('\u00AD'), "Word-compatible all-markup should use the hidden soft hyphen when the review margin narrows an otherwise fitting token.");
+        TestAssert.True(wordSoftHyphen[0].EndsWithIntraTokenBreak, "Soft-hyphen wraps in the narrowed review body should keep intra-token provenance.");
+
+        DocxParagraph nonbreaking = CreateDocxLayoutParagraph("Alpha\u00A0Beta Gamma Delta Epsilon Zeta Eta Theta Iota Kappa", 10d, 12d);
+        DocxDocument nonbreakingDocument = CreateAllMarkupWrapProbeDocument([nonbreaking]);
+        DocxTextLineLayout[] preserveNonbreaking = new DocxLayoutEngine()
+            .Create(nonbreakingDocument, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .ToArray();
+        DocxTextLineLayout[] wordNonbreaking = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(nonbreakingDocument, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(1, preserveNonbreaking.Length);
+        TestAssert.Equal(2, wordNonbreaking.Length);
+        TestAssert.True(wordNonbreaking[0].Text.Contains("Alpha\u00A0Beta", StringComparison.Ordinal), "The narrowed review body should not split a nonbreaking-space token.");
+        TestAssert.True(wordNonbreaking[1].Text.StartsWith("Theta", StringComparison.Ordinal), "The narrowed review body should wrap at the following breakable space.");
+
+        DocxParagraph tabs = CreateDocxLayoutParagraph("Alpha\tBeta Gamma Delta Epsilon Zeta Eta Theta Iota", 10d, 12d);
+        DocxDocument tabDocument = CreateAllMarkupWrapProbeDocument([tabs]);
+        DocxTextLineLayout[] preserveTabs = new DocxLayoutEngine()
+            .Create(tabDocument, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .ToArray();
+        DocxTextLineLayout[] wordTabs = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(tabDocument, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(1, preserveTabs.Length);
+        TestAssert.Equal(2, wordTabs.Length);
+        TestAssert.True(wordTabs[0].Text.Contains('\t'), "The first narrowed review line should retain the authored tab field.");
+        TestAssert.True(wordTabs[1].Text.StartsWith("Theta", StringComparison.Ordinal), "The narrowed review body should wrap after the tab field without losing following text.");
+        TestAssert.True(
+            Math.Abs(wordTabs[0].Segments[1].X - (wordTabs[0].Segments[0].X + 36d)) < 0.001d,
+            "Tab field text should keep the default-tab stop origin after all-markup narrowing.");
+
+        DocxParagraph punctuation = CreateDocxLayoutParagraph("Alpha, beta; gamma: delta. Epsilon zeta eta theta iota kappa lambda.", 10d, 12d);
+        DocxDocument punctuationDocument = CreateAllMarkupWrapProbeDocument([punctuation]);
+        DocxTextLineLayout[] wordPunctuation = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(punctuationDocument, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.True(wordPunctuation.Length >= 2, "The punctuation fixture should wrap in the narrowed all-markup review body.");
+        TestAssert.True(
+            wordPunctuation.Take(wordPunctuation.Length - 1).All(line => line.Width >= wordPunctuation.Last().Width),
+            "Final narrowed all-markup lines should keep natural width while earlier punctuation-wrapped lines fill more of the body frame.");
+        TestAssert.True(
+            wordPunctuation.Any(line => line.Text.EndsWith('.') || line.Text.EndsWith(';') || line.Text.EndsWith(':') || line.Text.EndsWith(',')),
+            "The narrowed review body should retain punctuation at line boundaries instead of dropping it during wrapping.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupCapsLargeBodyTextAndTerminalAdvance()
+    {
+        DocxParagraph title = new(
+            [new DocxTextRun("One-page markup margin geometry", 15d, null, true, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(title)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        DocxTextEmissionSnapshot preserve = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectTextEmission(document);
+        DocxTextEmissionSnapshot wordCompatible = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document);
+
+        DocxTextEmissionSegmentSnapshot[] preserveSegments = preserve.Lines.Single().Segments.ToArray();
+        DocxTextEmissionSegmentSnapshot[] wordSegments = wordCompatible.Lines.Single().Segments.ToArray();
+        double preserveVisibleFontSize = preserveSegments.Where(segment => !segment.IsTerminalLineSpace).Max(segment => segment.PdfFontSize);
+        double wordVisibleFontSize = wordSegments.Where(segment => !segment.IsTerminalLineSpace).Max(segment => segment.PdfFontSize);
+        DocxTextEmissionSegmentSnapshot preserveTerminal = preserveSegments.Single(segment => segment.IsTerminalLineSpace);
+        DocxTextEmissionSegmentSnapshot wordTerminal = wordSegments.Single(segment => segment.IsTerminalLineSpace);
+
+        TestAssert.True(
+            wordVisibleFontSize < preserveVisibleFontSize - 1d,
+            "Word-compatible all-markup should cap oversized body text to the Office-like heading font size.");
+        TestAssert.True(
+            wordTerminal.PdfFontSize < wordVisibleFontSize - 1d,
+            "Word-compatible all-markup should emit terminal paragraph marks at body text size for capped heading lines.");
+        TestAssert.True(
+            wordTerminal.X < preserveTerminal.X - 25d,
+            "Word-compatible all-markup should place terminal paragraph marks at the capped emitted text advance.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupScalesBodySpacing()
+    {
+        DocxParagraph first = new(
+            [new DocxTextRun("First paragraph", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph second = CreateDocxLayoutParagraph("Second paragraph", 11d, 13.2d);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxLayoutItemSnapshot reserveSecond = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .InspectLayout(document)
+            .Pages.Single()
+            .Items.Where(item => item.Kind == "TextLine")
+            .Skip(1)
+            .First();
+        DocxLayoutItemSnapshot wordSecond = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectLayout(document)
+            .Pages.Single()
+            .Items.Where(item => item.Kind == "TextLine")
+            .Skip(1)
+            .First();
+
+        TestAssert.Equal(8d, reserveSecond.AppliedBeforeSpacingPoints ?? -1d);
+        TestAssert.True(
+            Math.Abs((wordSecond.AppliedBeforeSpacingPoints ?? 0d) - 6.739d) < 0.001d,
+            "Word-compatible all-markup should scale paragraph spacing with the print profile.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupScalesFloatingTextBoxSpacing()
+    {
+        DocxParagraph first = new(
+            [new DocxTextRun("Text box first", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph second = CreateDocxLayoutParagraph("Text box second", 11d, 13.2d);
+        DocxFloatingDrawing drawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(first), new DocxParagraphElement(second)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [drawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Anchor", 11d, 13.2d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTextLineLayout reserveSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .FloatingDrawings.Single()
+            .TextBoxLayout!.TextLines.Skip(1).First();
+        DocxTextLineLayout wordSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .FloatingDrawings.Single()
+            .TextBoxLayout!.TextLines.Skip(1).First();
+
+        TestAssert.Equal(8d, reserveSecond.AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(
+            Math.Abs((wordSecond.AppliedBeforeSpacing ?? 0d) - 6.739d) < 0.001d,
+            "Word-compatible all-markup should scale floating text-box paragraph spacing with the print profile.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupScalesStaticTextBoxSpacing()
+    {
+        DocxParagraph first = new(
+            [new DocxTextRun("Static text box first", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph second = CreateDocxLayoutParagraph("Static text box second", 11d, 13.2d);
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(first), new DocxParagraphElement(second)])]
+            }
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 11d, 13.2d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTextLineLayout reserveSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .StaticFloatingDrawings.Single()
+            .TextBoxLayout!.TextLines.Skip(1).First();
+        DocxTextLineLayout wordSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .StaticFloatingDrawings.Single()
+            .TextBoxLayout!.TextLines.Skip(1).First();
+
+        TestAssert.Equal(8d, reserveSecond.AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(
+            Math.Abs((wordSecond.AppliedBeforeSpacing ?? 0d) - 6.739d) < 0.001d,
+            "Word-compatible all-markup should scale static text-box paragraph spacing with the print profile.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupScalesTableCellSpacing()
+    {
+        DocxParagraph first = new(
+            [new DocxTextRun("Table cell first", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph second = CreateDocxLayoutParagraph("Table cell second", 11d, 13.2d);
+        var cell = new DocxTableCell(string.Empty, [first, second], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [120d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTableRowLayout reserveRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single();
+        DocxTableRowLayout wordRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single();
+        DocxTextLineLayout reserveSecond = reserveRow.Cells.Single().TextLines.Skip(1).First();
+        DocxTextLineLayout wordSecond = wordRow.Cells.Single().TextLines.Skip(1).First();
+
+        TestAssert.Equal(8d, reserveSecond.AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(
+            Math.Abs((wordSecond.AppliedBeforeSpacing ?? 0d) - 6.739d) < 0.001d,
+            "Word-compatible all-markup should scale table-cell paragraph spacing with the print profile.");
+        TestAssert.True(
+            Math.Abs((reserveRow.Height - wordRow.Height) - 1.261d) < 0.001d,
+            "Auto-height table rows should measure scaled table-cell spacing consistently with emitted cell lines.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupScalesNestedTableCellSpacing()
+    {
+        DocxParagraph nestedFirst = new(
+            [new DocxTextRun("Nested cell first", 11d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph nestedSecond = CreateDocxLayoutParagraph("Nested cell second", 11d, 13.2d);
+        var nestedCell = new DocxTableCell(string.Empty, [nestedFirst, nestedSecond], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var nestedTable = new DocxTable(null, [100d], [new DocxTableRow([nestedCell], null)]);
+        var outerCell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxTableElement(nestedTable)]
+        };
+        var outerTable = new DocxTable(null, [140d], [new DocxTableRow([outerCell], null)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(outerTable)],
+            [],
+            [outerTable, nestedTable])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTableRowLayout reserveOuterRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single();
+        DocxTableRowLayout wordOuterRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single();
+        DocxTableRowLayout reserveNestedRow = reserveOuterRow.Cells.Single().NestedRows.Single();
+        DocxTableRowLayout wordNestedRow = wordOuterRow.Cells.Single().NestedRows.Single();
+        DocxTextLineLayout reserveNestedSecond = reserveNestedRow.Cells.Single().TextLines.Skip(1).First();
+        DocxTextLineLayout wordNestedSecond = wordNestedRow.Cells.Single().TextLines.Skip(1).First();
+
+        TestAssert.Equal(8d, reserveNestedSecond.AppliedBeforeSpacing ?? -1d);
+        TestAssert.True(
+            Math.Abs((wordNestedSecond.AppliedBeforeSpacing ?? 0d) - 6.739d) < 0.001d,
+            "Word-compatible all-markup should scale nested table-cell paragraph spacing with the print profile.");
+        TestAssert.True(
+            Math.Abs((reserveOuterRow.Height - wordOuterRow.Height) - 1.261d) < 0.001d,
+            "Outer auto-height table rows should measure nested scaled spacing consistently.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupLaysOutIndentedNestedTableInNarrowedBody()
+    {
+        DocxParagraph firstCellParagraph = CreateDocxLayoutParagraph("Alpha beta gamma delta epsilon zeta eta theta", 10d, 10d);
+        DocxParagraph secondCellParagraph = CreateDocxLayoutParagraph("Lead text wraps before the nested table", 10d, 10d);
+        DocxParagraph nestedParagraph = CreateDocxLayoutParagraph("Nested table text wraps inside narrowed cell", 10d, 10d);
+        var nestedCell = new DocxTableCell(
+            "Nested table text wraps inside narrowed cell",
+            [nestedParagraph],
+            null,
+            null,
+            null,
+            null,
+            [],
+            new DocxTableCellMargins(2d, 5d, 2d, 5d, "40", "100", "40", "100"));
+        var nestedTable = new DocxTable(
+            "autofit",
+            [50d, 60d],
+            [new DocxTableRow([
+                nestedCell with
+                {
+                    PreferredWidthPoints = 110d,
+                    PreferredWidthValue = "2200",
+                    PreferredWidthType = "dxa",
+                    GridSpan = 2,
+                    GridSpanValue = "2"
+                }
+            ], null)],
+            PreferredWidthPoints: 110d,
+            PreferredWidthValue: "2200",
+            PreferredWidthType: "dxa",
+            IndentPoints: 5d,
+            IndentValue: "100",
+            IndentType: "dxa");
+        var firstCell = new DocxTableCell(
+            "Alpha beta gamma delta epsilon zeta eta theta",
+            [firstCellParagraph],
+            null,
+            null,
+            null,
+            null,
+            [],
+            new DocxTableCellMargins(4d, 10d, 4d, 8d, "80", "200", "80", "160"),
+            PreferredWidthPoints: 96d,
+            PreferredWidthValue: "1920",
+            PreferredWidthType: "dxa");
+        var secondCell = new DocxTableCell(
+            string.Empty,
+            [secondCellParagraph],
+            null,
+            null,
+            null,
+            null,
+            [],
+            new DocxTableCellMargins(4d, 12d, 4d, 12d, "80", "240", "80", "240"),
+            PreferredWidthPoints: 144d,
+            PreferredWidthValue: "2880",
+            PreferredWidthType: "dxa")
+        {
+            BodyElements = [new DocxParagraphElement(secondCellParagraph), new DocxTableElement(nestedTable)]
+        };
+        var outerTable = new DocxTable(
+            "fixed",
+            [100d, 140d],
+            [new DocxTableRow([firstCell, secondCell], null)],
+            PreferredWidthPoints: 240d,
+            PreferredWidthValue: "4800",
+            PreferredWidthType: "dxa",
+            IndentPoints: 18d,
+            IndentValue: "360",
+            IndentType: "dxa",
+            CellSpacingPoints: 6d,
+            CellSpacingValue: "120",
+            CellSpacingType: "dxa");
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(outerTable)],
+            [],
+            [outerTable, nestedTable])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxLayoutPage page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer())
+            .Pages
+            .Single();
+        DocxTableRowLayout outerRow = page.Items.OfType<DocxTableRowLayout>().Single();
+        DocxTableCellLayout firstCellLayout = outerRow.Cells[0];
+        DocxTableCellLayout secondCellLayout = outerRow.Cells[1];
+        DocxTableRowLayout nestedRow = secondCellLayout.NestedRows.Single();
+        DocxTableCellLayout nestedCellLayout = nestedRow.Cells.Single();
+
+        TestAssert.Equal(333d, page.ColumnFrames.Single().Width);
+        TestAssert.Equal(90d, outerRow.Table.TableX);
+        TestAssert.Equal(240d, outerRow.Table.ResolvedTableWidth);
+        TestAssert.Equal("fixed", outerRow.Table.LayoutValue ?? string.Empty);
+        TestAssert.Equal(18d, outerRow.Table.IndentPoints ?? -1d);
+        TestAssert.Equal(6d, outerRow.Table.CellSpacingPoints ?? -1d);
+        TestAssert.Equal(96d, outerRow.Table.ResolvedColumnWidths[0]);
+        TestAssert.Equal(144d, outerRow.Table.ResolvedColumnWidths[1]);
+        TestAssert.Equal(90d, firstCellLayout.X);
+        TestAssert.Equal(192d, secondCellLayout.X);
+        TestAssert.Equal(8d, firstCellLayout.ContentPaddingLeft);
+        TestAssert.Equal(10d, firstCellLayout.ContentPaddingRight);
+        TestAssert.True(firstCellLayout.TextLines.Count > 1, "The first cell should wrap inside its margin-adjusted table-cell text frame.");
+        TestAssert.True(secondCellLayout.TextLines.Count > 1, "The second cell paragraph should wrap before the nested table consumes cell body flow.");
+        TestAssert.Equal("autofit", nestedRow.Table.LayoutValue ?? string.Empty);
+        TestAssert.Equal(209d, nestedRow.Table.TableX);
+        TestAssert.Equal(110d, nestedRow.Table.ResolvedTableWidth);
+        TestAssert.True(
+            nestedRow.Y >= secondCellLayout.Y &&
+                nestedRow.Y + nestedRow.Height <= secondCellLayout.Y + secondCellLayout.Height + 0.001d,
+            "Nested table rows should stay inside the parent table cell fragment.");
+        TestAssert.True(nestedCellLayout.TextLines.Count > 1, "Nested table-cell text should wrap inside the nested preferred width.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate()
+    {
+        DocxTable filler = CreateSingleCellTable("Filler", 53d);
+        DocxParagraph keep = new(
+            [new DocxTextRun("Keep", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty with { KeepNext = true },
+            null);
+        DocxParagraph targetParagraph = CreateDocxLayoutParagraph("Target", 10d, 10d);
+        var targetCell = new DocxTableCell("Target", [targetParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable target = new(null, [80d], [new DocxTableRow([targetCell], 10d)]);
+        DocxDocument document = new(
+            300d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(filler), new DocxParagraphElement(keep), new DocxTableElement(target)],
+            [keep, targetParagraph],
+            [filler, target])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer());
+
+        TestAssert.Equal(2, reserve.Pages.Count);
+        TestAssert.Equal(1, reserve.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+        TestAssert.Equal(2, wordCompatible.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+        TestAssert.Equal("Keep", wordCompatible.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+    }
+
+    public static void DocxWordCompatibleAllMarkupScalesKeepNextParagraphEstimate()
+    {
+        DocxParagraph filler = CreateDocxLayoutParagraph("Filler", 10d, 53d);
+        DocxParagraph keep = new(
+            [new DocxTextRun("Keep", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            1d,
+            10d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty with { KeepNext = true },
+            null);
+        DocxParagraph next = CreateDocxLayoutParagraph("Next", 10d, 10d);
+        DocxDocument document = new(
+            300d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(filler), new DocxParagraphElement(keep), new DocxParagraphElement(next)],
+            [filler, keep, next],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new FamilyWidthTextMeasurer());
+        DocxTextLineLayout[] wordLines = wordCompatible.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+
+        TestAssert.Equal(2, reserve.Pages.Count);
+        TestAssert.Equal(1, wordCompatible.Pages.Count);
+        TestAssert.Equal(3, wordLines.Length);
+        TestAssert.Equal("Filler", wordLines[0].Text);
+        TestAssert.Equal("Keep", wordLines[1].Text);
+        TestAssert.Equal("Next", wordLines[2].Text);
+    }
+
+    public static void DocxWordCompatibleAllMarkupAddsBodyPositioningSpacing()
+    {
+        DocxParagraph paragraph = new(
+            [
+                new DocxTextRun("Body text ", 11d, null, false, false, false, null, null),
+                new DocxTextRun("operation spacing", 11d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTextEmissionSegmentSnapshot[] preserveVisible = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectTextEmission(document)
+            .Lines.Single()
+            .Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot[] wordVisible = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document)
+            .Lines.Single()
+            .Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot preserveSegment = preserveVisible[0];
+        DocxTextEmissionSegmentSnapshot wordSegment = wordVisible[0];
+
+        TestAssert.True(Math.Abs(preserveSegment.PositioningCharacterSpacing) < 0.0001d, "Preserve layout should not invent positioned body tracking.");
+        TestAssert.Equal("None", wordSegment.PdfCharacterSpacingSource);
+        TestAssert.True(Math.Abs(wordSegment.PdfCharacterSpacing) < 0.0001d, "Word-compatible body tracking should stay out of PDF Tc.");
+        TestAssert.True(
+            Math.Abs(wordSegment.PositioningCharacterSpacing - 0.071d) < 0.0001d,
+            "Word-compatible all-markup should emit the Office-like body tracking through positioned glyph advances.");
+        TestAssert.True(
+            wordSegment.AdvanceProfile.PositioningCharacterSpacingGapTotal > 0.5d,
+            "Text-emission snapshots should expose the positioned body tracking contribution.");
+        TestAssert.True(
+            Math.Abs(wordSegment.AdvanceProfile.TextStateCharacterSpacingGapTotal) < 0.0001d,
+            "Word-compatible body tracking should not become PDF text-state spacing.");
+        TestAssert.True(
+            wordVisible[1].X - wordVisible[0].X < preserveVisible[1].X - preserveVisible[0].X - 0.2d,
+            "Word-compatible all-markup should shift later body text operations toward Office-like emitted x origins.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfile()
+    {
+        var deletionRevision = new DocxRevisionInfo("Deletion", "3", "Reviewer", "2026-06-10T00:00:00Z", "del");
+        var moveFromRevision = new DocxRevisionInfo("MoveFrom", "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
+        var insertionRevision = new DocxRevisionInfo("Insertion", "4", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var moveToRevision = new DocxRevisionInfo("MoveTo", "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        DocxParagraph deletedParagraph = CreateRevisedParagraph("ChangedFrom", deletionRevision);
+        DocxParagraph movedFromParagraph = CreateRevisedParagraph("ChangedFrom", moveFromRevision);
+        DocxParagraph insertedParagraph = CreateRevisedParagraph("ChangedTo", insertionRevision);
+        DocxParagraph movedToParagraph = CreateRevisedParagraph("ChangedTo", moveToRevision);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(deletedParagraph),
+                new DocxParagraphElement(movedFromParagraph),
+                new DocxParagraphElement(insertedParagraph),
+                new DocxParagraphElement(movedToParagraph)
+            ],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTextEmissionLineSnapshot[] wordLines = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document)
+            .Lines
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot wordDeletion = RevisionSegment(wordLines, "Deletion");
+        DocxTextEmissionSegmentSnapshot wordMoveFrom = RevisionSegment(wordLines, "MoveFrom");
+        DocxTextEmissionSegmentSnapshot wordInsertion = RevisionSegment(wordLines, "Insertion");
+        DocxTextEmissionSegmentSnapshot wordMoveTo = RevisionSegment(wordLines, "MoveTo");
+
+        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing - 0.060d) < 0.0001d, "Word-compatible moved-from text should use the deleted-text positioning profile.");
+        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing - 0.126d) < 0.0001d, "Word-compatible moved-to text should use the inserted-text positioning profile.");
+        TestAssert.True(Math.Abs(wordMoveFrom.X - wordDeletion.X) < 0.001d, "Word-compatible moved-from text should share the deleted-text X positioning branch.");
+        TestAssert.True(Math.Abs(wordMoveTo.X - wordInsertion.X) < 0.001d, "Word-compatible moved-to text should share the inserted-text X positioning branch.");
+
+        static DocxParagraph CreateRevisedParagraph(string revisedText, DocxRevisionInfo revision)
+        {
+            return new DocxParagraph(
+                [
+                    new DocxTextRun("Prefix ", 10d, null, false, false, false, null, null),
+                    new DocxTextRun(revisedText, 10d, null, false, false, false, null, null)
+                    {
+                        Revision = revision
+                    }
+                ],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                0d,
+                1.2d,
+                null,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty,
+                null);
+        }
+
+        static DocxTextEmissionSegmentSnapshot RevisionSegment(
+            IEnumerable<DocxTextEmissionLineSnapshot> lines,
+            string revisionKind)
+        {
+            return lines
+                .SelectMany(line => line.Segments)
+                .Single(segment => segment.RevisionKind == revisionKind && !segment.IsTerminalLineSpace);
+        }
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfileInTableCells()
+    {
+        var deletionRevision = new DocxRevisionInfo("Deletion", "3", "Reviewer", "2026-06-10T00:00:00Z", "del");
+        var moveFromRevision = new DocxRevisionInfo("MoveFrom", "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
+        var insertionRevision = new DocxRevisionInfo("Insertion", "4", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var moveToRevision = new DocxRevisionInfo("MoveTo", "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        DocxTable table = new(
+            null,
+            [170d],
+            [
+                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedFrom", deletionRevision))], 24d),
+                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedFrom", moveFromRevision))], 24d),
+                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedTo", insertionRevision))], 24d),
+                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedTo", moveToRevision))], 24d)
+            ]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTextEmissionLineSnapshot[] wordLines = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document)
+            .Lines
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot wordDeletion = RevisionSegment(wordLines, "Deletion");
+        DocxTextEmissionSegmentSnapshot wordMoveFrom = RevisionSegment(wordLines, "MoveFrom");
+        DocxTextEmissionSegmentSnapshot wordInsertion = RevisionSegment(wordLines, "Insertion");
+        DocxTextEmissionSegmentSnapshot wordMoveTo = RevisionSegment(wordLines, "MoveTo");
+
+        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing - 0.060d) < 0.0001d, "Word-compatible moved-from table text should use the deleted-text positioning profile.");
+        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing - 0.126d) < 0.0001d, "Word-compatible moved-to table text should use the inserted-text positioning profile.");
+        TestAssert.True(Math.Abs(wordMoveFrom.X - wordDeletion.X) < 0.001d, "Word-compatible moved-from table text should share the deleted-text X positioning branch.");
+        TestAssert.True(Math.Abs(wordMoveTo.X - wordInsertion.X) < 0.001d, "Word-compatible moved-to table text should share the inserted-text X positioning branch.");
+
+        static DocxTableCell CreateCell(DocxParagraph paragraph)
+        {
+            return new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        }
+
+        static DocxParagraph CreateRevisedParagraph(string revisedText, DocxRevisionInfo revision)
+        {
+            return new DocxParagraph(
+                [
+                    new DocxTextRun("Prefix ", 10d, null, false, false, false, null, null),
+                    new DocxTextRun(revisedText, 10d, null, false, false, false, null, null)
+                    {
+                        Revision = revision
+                    }
+                ],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                0d,
+                1.2d,
+                null,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty,
+                null);
+        }
+
+        static DocxTextEmissionSegmentSnapshot RevisionSegment(
+            IEnumerable<DocxTextEmissionLineSnapshot> lines,
+            string revisionKind)
+        {
+            return lines
+                .SelectMany(line => line.Segments)
+                .Single(segment => segment.RevisionKind == revisionKind && !segment.IsTerminalLineSpace);
+        }
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfileAcrossTextFlows()
+    {
+        DocxParagraph floatingTextBoxParagraph = CreateMoveRevisionParagraph();
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(floatingTextBoxParagraph)]);
+        DocxDocument floatingDocument = CreateLayoutTestDocument(
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            []) with
+        {
+            FloatingDrawings = [floatingDrawing],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        AssertMoveRevisionStoryProfile(
+            floatingDocument,
+            line => line.StoryKind == "TextBox" && line.ContainerStoryKind == "Body",
+            "body-anchored floating text box");
+
+        DocxParagraph staticTextBoxParagraph = CreateMoveRevisionParagraph();
+        DocxPageSettings staticSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(staticTextBoxParagraph)])]
+            }
+        };
+        DocxDocument staticDocument = CreateLayoutTestDocument(
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            []) with
+        {
+            PageSettings = staticSettings,
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        AssertMoveRevisionStoryProfile(
+            staticDocument,
+            line => line.IsStaticStory && line.StoryKind == "TextBox" && line.ContainerStoryKind == "Header",
+            "static header text box");
+
+        DocxParagraph footnoteAnchor = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "91",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "91",
+            [new DocxParagraphElement(CreateMoveRevisionParagraph())],
+            [],
+            []);
+        DocxDocument footnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(footnoteAnchor)], [])
+            with
+            {
+                RelatedStories = [footnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+        AssertMoveRevisionStoryProfile(
+            footnoteDocument,
+            line => line.StoryKind == "Footnote",
+            "placed footnote");
+
+        DocxParagraph endnoteAnchor = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "92",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "92",
+            [new DocxParagraphElement(CreateMoveRevisionParagraph())],
+            [],
+            []);
+        DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+            with
+            {
+                RelatedStories = [endnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+        AssertMoveRevisionStoryProfile(
+            endnoteDocument,
+            line => line.StoryKind == "Endnote",
+            "placed endnote");
+
+        static DocxParagraph CreateMoveRevisionParagraph()
+        {
+            var moveFromRevision = new DocxRevisionInfo("MoveFrom", "11", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
+            var moveToRevision = new DocxRevisionInfo("MoveTo", "12", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+            return new DocxParagraph(
+                [
+                    new DocxTextRun("Before ", 10d, null, false, false, false, null, null),
+                    new DocxTextRun("MovedFrom", 10d, null, false, false, false, null, null)
+                    {
+                        Revision = moveFromRevision
+                    },
+                    new DocxTextRun(" After ", 10d, null, false, false, false, null, null),
+                    new DocxTextRun("ChangedTo", 10d, null, false, false, false, null, null)
+                    {
+                        Revision = moveToRevision
+                    }
+                ],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                0d,
+                1.2d,
+                null,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty,
+                null);
+        }
+
+        static void AssertMoveRevisionStoryProfile(
+            DocxDocument document,
+            Func<DocxTextEmissionLineSnapshot, bool> linePredicate,
+            string flowName)
+        {
+            DocxTextEmissionSegmentSnapshot[] segments = new DocxRenderer(
+                    markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                    markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .InspectTextEmission(document)
+                .Lines
+                .Where(linePredicate)
+                .SelectMany(line => line.Segments)
+                .Where(segment => !segment.IsTerminalLineSpace)
+                .ToArray();
+            DocxTextEmissionSegmentSnapshot moveFrom = segments.Single(segment => segment.RevisionKind == "MoveFrom");
+            DocxTextEmissionSegmentSnapshot moveTo = segments.Single(segment => segment.RevisionKind == "MoveTo");
+
+            TestAssert.True(
+                Math.Abs(moveFrom.PositioningCharacterSpacing - 0.060d) < 0.0001d,
+                "Word-compatible moved-from text should use the deleted-text positioning profile in " + flowName + ".");
+            TestAssert.True(
+                Math.Abs(moveTo.PositioningCharacterSpacing - 0.126d) < 0.0001d,
+                "Word-compatible moved-to text should use the inserted-text positioning profile in " + flowName + ".");
+        }
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsReviewLaneBackground()
+    {
+        string input = WriteCommentMarkerProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0.949 g", page.Content);
+        TestAssert.Contains("411.93 89.475 199.7 614.25 re f", page.Content);
+    }
+
+    public static void DocxWordCompatibleAllMarkupMirrorsReviewLaneBackground()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-markup-margin-mirrored.docx"));
+        DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage[] pages = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .ToArray();
+
+        TestAssert.True(pages.Length >= 2, "The mirrored-margin fixture should render odd and even review pages.");
+        TestAssert.Contains("411.93 89.475 199.7 614.25 re f", pages[0].Content);
+        TestAssert.Contains("0.37 89.475 199.7 614.25 re f", pages[1].Content);
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBar()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Revision bar public probe", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+            ]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0 g", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.True(
+            !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
+            "Word-compatible all-markup should use a single page revision bar instead of legacy per-line change bars.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForRunRevisions()
+    {
+        var revision = new DocxRevisionInfo("Insertion", "11", "Reviewer", "2026-06-01T00:00:00Z", "inserted");
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Revision bar run probe", 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun("Revision ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("run", 10d, null, false, false, false, null, null)
+                {
+                    Revision = revision
+                },
+                new DocxTextRun(" probe", 10d, null, false, false, false, null, null)
+            ]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0 g", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains(" 0.475 ", page.Content);
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForTableRevisions()
+    {
+        var revision = new DocxRevisionInfo("TableRowPropertiesChange", "12", "Reviewer", "2026-06-01T00:00:00Z", "trPrChange");
+        DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Revision bar table probe", 10d, 12d);
+        var cell = new DocxTableCell(
+            "Revision bar table probe",
+            [cellParagraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            LayoutValue: null,
+            ColumnWidthsPoints: [120d],
+            Rows:
+            [
+                new DocxTableRow([cell], HeightPoints: 24d)
+                {
+                    Revisions = [revision]
+                }
+            ]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0 g", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains(" 0.475 ", page.Content);
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForPlacedFootnoteRevisions()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "27",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote revised text", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "27", "Reviewer", "2026-06-10T00:00:00Z", "inserted")
+            ]
+        };
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "27",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [footnoteStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0 g", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.True(
+            !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
+            "Word-compatible all-markup should keep placed footnote revisions on the shared page revision bar path.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForPlacedEndnoteRevisions()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "28",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote revised text", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "28", "Reviewer", "2026-06-10T00:00:00Z", "inserted")
+            ]
+        };
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "28",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [endnoteStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0 g", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.True(
+            !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
+            "Word-compatible all-markup should keep placed endnote revisions on the shared page revision bar path.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForFloatingTextBoxRunRevisions()
+    {
+        var revision = new DocxRevisionInfo("Insertion", "37", "Reviewer", "2026-06-10T00:00:00Z", "inserted");
+        DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Text box revised run", 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun("Text box ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("revised", 10d, null, false, false, false, null, null)
+                {
+                    Revision = revision
+                },
+                new DocxTextRun(" run", 10d, null, false, false, false, null, null)
+            ]
+        };
+        DocxFloatingDrawing drawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [drawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0 g", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains(" 0.475 ", page.Content);
+    }
+
+    public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForStaticFloatingTextBoxRunRevisions()
+    {
+        var revision = new DocxRevisionInfo("Insertion", "38", "Reviewer", "2026-06-10T00:00:00Z", "inserted");
+        DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Static text box revised run", 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun("Static text box ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("revised", 10d, null, false, false, false, null, null)
+                {
+                    Revision = revision
+                },
+                new DocxTextRun(" run", 10d, null, false, false, false, null, null)
+            ]
+        };
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])]
+            }
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0 g", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains(" 0.475 ", page.Content);
+    }
+
+    public static void DocxAllMarkupStylesTrackedChangeRuns()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+
+        DocxParagraph paragraph = ReadTrackedChangeModeProbe(input, OoxPdfDocxMarkupMode.AllMarkup);
+
+        DocxTextRun inserted = paragraph.Runs.Single(run => run.Text.Trim() == "Inserted");
+        DocxTextRun deleted = paragraph.Runs.Single(run => run.Text.Trim() == "Deleted");
+        DocxTextRun movedFrom = paragraph.Runs.Single(run => run.Text.Trim() == "MovedFrom");
+        DocxTextRun movedTo = paragraph.Runs.Single(run => run.Text.Trim() == "MovedTo");
+        TestAssert.True(inserted.Revision?.Kind == "Insertion" && inserted.Underline && inserted.ColorHex == "0000FF", "All-markup insertions should carry revision provenance and inline inserted styling.");
+        TestAssert.True(deleted.Revision?.Kind == "Deletion" && deleted.Strike && deleted.ColorHex == "C00000", "All-markup deletions should carry revision provenance and inline deleted styling.");
+        TestAssert.True(movedFrom.Revision?.Kind == "MoveFrom" && movedFrom.DoubleStrike && movedFrom.ColorHex == "C00000", "All-markup moved-from text should carry revision provenance and inline moved-from styling.");
+        TestAssert.True(movedTo.Revision?.Kind == "MoveTo" && movedTo.Underline && movedTo.ColorHex == "008000", "All-markup moved-to text should carry revision provenance and inline moved-to styling.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0.82 0.204 0.22 rg", page.Content);
+        TestAssert.Contains("0.475 re f", page.Content);
+    }
+
+    public static void DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory()
+    {
+        var insertion = new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "ins");
+        DocxTextRun commentRun = new("Commented", 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = 0
+        };
+        DocxParagraph markupParagraph = new(
+            [
+                commentRun,
+                new DocxTextRun(" inserted", 10d, null, false, false, true, "single", null) { Revision = insertion },
+                new DocxTextRun(" double", 10d, null, false, false, true, "double", null),
+                new DocxTextRun(" strike", 10d, null, false, false, false, null, null, Strike: true),
+                new DocxTextRun(" double-strike", 10d, null, false, false, false, null, null, DoubleStrike: true)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0)
+            ],
+            CommentRanges =
+            [
+                new DocxCommentRange("1", 0, 0, 1, commentRun.Text.Length, 1, 0)
+            ],
+            Revisions = [insertion]
+        };
+        DocxParagraph tableParagraph = CreateDocxLayoutParagraph("Bordered", 10d, 12d);
+        var cell = new DocxTableCell(
+            "Bordered",
+            [tableParagraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders:
+            [
+                new DocxTableCellBorder("top", "single", "0000FF", "8"),
+                new DocxTableCellBorder("bottom", "double", "0000FF", "8")
+            ],
+            DocxTableCellMargins.Empty);
+        var table = new DocxTable(LayoutValue: null, ColumnWidthsPoints: [120d], Rows: [new DocxTableRow([cell], HeightPoints: 24d)]);
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
+            [],
+            [])
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", "2026-06-01T00:00:00Z", null, null, null, null)
+        };
+        var document = new DocxDocument(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(markupParagraph), new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
+        TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
+        TestAssert.Contains("0.475 w", page.Content);
+        TestAssert.Contains("[0.475 0.475] 0 d", page.Content);
+        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains("0 0 1 rg", page.Content);
+        TestAssert.True(CountOccurrences(page.Content, " re B*") >= 1, "Markup balloons should render as fill/stroke rectangle primitives.");
+        TestAssert.True(CountOccurrences(page.Content, " l S") >= 6, "Comment ranges and balloon connectors should render stroked line primitives.");
+        TestAssert.True(CountOccurrences(page.Content, " re f") >= 8, "Decorations, change bars, comment markers, and table borders should render filled rectangle primitives.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersRevisionBalloonTextWithOfficeFont()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.True(
+            CountOccurrences(page.Content, "6.975 Tf") >= 2,
+            "Word-compatible revision balloons should render Office-sized title and body text.");
+        TestAssert.True(
+            !page.Content.Contains(" 5.5 Tf", StringComparison.Ordinal),
+            "Word-compatible revision balloons should not use the legacy summary title font size.");
+        TestAssert.True(
+            !page.Content.Contains(" 5 Tf", StringComparison.Ordinal),
+            "Word-compatible revision balloons should not use the legacy summary body font size.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupWrapsLongRevisionBalloonBody()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Long revision summary anchor", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(
+                    "ParagraphPropertiesChange",
+                    "1",
+                    "Reviewer",
+                    "2026-06-01T00:00:00Z",
+                    "pPr",
+                    propertyElementNames:
+                    [
+                        "keepNext",
+                        "keepLines",
+                        "pageBreakBefore",
+                        "widowControl",
+                        "contextualSpacing",
+                        "spacing",
+                        "ind",
+                        "jc",
+                        "tabs"
+                    ]),
+                new DocxRevisionInfo("Deletion", "2", "Reviewer", "2026-06-01T00:00:00Z", "del"),
+                new DocxRevisionInfo("MoveFrom", "3", "Reviewer", "2026-06-01T00:00:00Z", "moveFrom")
+            ]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Revision");
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.Equal(1, placement.WordCompatibleBodySummaryPartCount);
+        TestAssert.True(
+            CountOccurrences(page.Content, "6.975 Tf") >= 4,
+            "Long Word-compatible revision balloons should render title, first body line, continuation line, and terminal spacing at the Office-sized font.");
+        TestAssert.True(
+            CountOccurrences(page.Content, "] TJ") >= 2,
+            "Long Word-compatible revision balloons should use positioned glyph arrays for the title and wrapped continuation body line.");
+        TestAssert.True(
+            !page.Content.Contains(" 5.5 Tf", StringComparison.Ordinal) &&
+            !page.Content.Contains(" 5 Tf", StringComparison.Ordinal),
+            "Wrapped Word-compatible revision balloons should stay on the Office text profile instead of the legacy fallback.");
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsChangeBars()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "rg"), page.Content);
+        TestAssert.Contains(" 1.5 ", page.Content);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsChangeBarsForRunRevisions()
+    {
+        var revision = new DocxRevisionInfo("Insertion", "13", "Reviewer", "2026-06-01T00:00:00Z", "ins");
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Simple run revision", 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun("Simple ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("run", 10d, null, false, false, false, null, null)
+                {
+                    Revision = revision
+                },
+                new DocxTextRun(" revision", 10d, null, false, false, false, null, null)
+            ]
+        };
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []) with
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+        };
+
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(" 1.5 ", page.Content);
+    }
+
+    public static void DocxSimpleMarkupSuppressesDeletedTextAndBalloons()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
+        DocxMarkupBalloonPlacementSnapshot[] balloons = renderer.InspectMarkupBalloons(document).ToArray();
+
+        TestAssert.Equal("Before Inserted MovedTo After", string.Concat(document.Paragraphs.Single().Runs.Select(run => run.Text)));
+        TestAssert.True(layout.RevisionItemCount >= 1, "Simple markup should retain changed-line candidates for margin change bars.");
+        TestAssert.True(textEmission.InsertionRevisionSegmentCount >= 1, "Simple markup should keep inserted final-view text emission provenance.");
+        TestAssert.True(textEmission.MoveToRevisionSegmentCount >= 1, "Simple markup should keep moved-to final-view text emission provenance.");
+        TestAssert.Equal(0, textEmission.DeletionRevisionSegmentCount);
+        TestAssert.Equal(0, textEmission.MoveFromRevisionSegmentCount);
+        TestAssert.Equal(0, balloons.Length);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsTableRowChangeBars()
+    {
+        string input = WriteTableFormattingRevisionProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+
+        DocxLayoutSnapshot layout = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(document);
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.True(layout.Pages.SelectMany(page => page.Items).Any(item => item.Kind == "TableRow" && item.RevisionCount != 0), "Simple-markup layout should treat structural table-row revisions as changed items.");
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Tables.Single().Rows.Single().Revisions), "rg"), page.Content);
+        TestAssert.Contains(" 1.5 ", page.Content);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsTableRowChangeBarsAcrossStories()
+    {
+        DocxTable floatingTable = CreateTableRevisionBalloonProbeTable("Floating text box table", "sf");
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxTableElement(floatingTable)]);
+        DocxDocument floatingDocument = CreateLayoutTestDocument(
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            []) with
+        {
+            FloatingDrawings = [floatingDrawing],
+            MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+        };
+        AssertSimpleMarkupTableRowChangeBarRendered(floatingDocument, floatingTable, "floating text-box table");
+
+        DocxTable staticTable = CreateTableRevisionBalloonProbeTable("Static header table", "ss");
+        DocxPageSettings staticSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(staticTable)]
+            }
+        };
+        DocxDocument staticDocument = CreateLayoutTestDocument(
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            []) with
+        {
+            PageSettings = staticSettings,
+            MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+        };
+        AssertSimpleMarkupTableRowChangeBarRendered(staticDocument, staticTable, "static header table");
+
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "37",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxTable footnoteTable = CreateTableRevisionBalloonProbeTable("Footnote table", "sn");
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "37",
+            [new DocxTableElement(footnoteTable)],
+            [],
+            []);
+        DocxDocument footnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [footnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+            };
+        AssertSimpleMarkupTableRowChangeBarRendered(footnoteDocument, footnoteTable, "placed footnote table");
+
+        DocxParagraph endnoteAnchor = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "38",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "i",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxTable endnoteTable = CreateTableRevisionBalloonProbeTable("Endnote table", "se");
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "38",
+            [new DocxTableElement(endnoteTable)],
+            [],
+            []);
+        DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+            with
+            {
+                RelatedStories = [endnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+            };
+        AssertSimpleMarkupTableRowChangeBarRendered(endnoteDocument, endnoteTable, "placed endnote table");
+    }
+
+    private static void AssertSimpleMarkupTableRowChangeBarRendered(DocxDocument document, DocxTable table, string flowName)
+    {
+        string content = string.Concat(new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup)
+            .RenderBlankPages(document)
+            .Select(page => page.Content));
+        string color = FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(table.Rows.Single().Revisions), "rg");
+        TestAssert.True(content.Contains(color, StringComparison.Ordinal), "Simple-markup should draw a row revision color for " + flowName + ".");
+        TestAssert.True(content.Contains(" 1.5 ", StringComparison.Ordinal), "Simple-markup should draw a narrow row change bar for " + flowName + ".");
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsPlacedFootnoteChangeBars()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "19",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        var revision = new DocxRevisionInfo("Insertion", "19", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote inserted text", 10d, 12d) with
+        {
+            Revisions = [revision]
+        };
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "19",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [footnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+            };
+        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.True(
+            layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
+            "Simple-markup layout should retain placed footnote revision candidates for margin change bars.");
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(" 1.5 ", page.Content);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsPlacedEndnoteChangeBars()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "29",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        var revision = new DocxRevisionInfo("Insertion", "29", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote inserted text", 10d, 12d) with
+        {
+            Revisions = [revision]
+        };
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "29",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [endnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+            };
+        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.True(
+            layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
+            "Simple-markup layout should retain placed endnote revision candidates for margin change bars.");
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(" 1.5 ", page.Content);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsFloatingTextBoxChangeBars()
+    {
+        var revision = new DocxRevisionInfo("Insertion", "31", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Floating text box revision", 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun("Floating ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("revision", 10d, null, false, false, false, null, null)
+                {
+                    Revision = revision
+                }
+            ]
+        };
+        DocxFloatingDrawing drawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxDocument document = CreateLayoutTestDocument(
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            []) with
+        {
+            FloatingDrawings = [drawing],
+            MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+        };
+
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(" 1.5 ", page.Content);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsStaticFloatingTextBoxChangeBars()
+    {
+        var revision = new DocxRevisionInfo("Insertion", "32", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Static text box revision", 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun("Static ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("revision", 10d, null, false, false, false, null, null)
+                {
+                    Revision = revision
+                }
+            ]
+        };
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])]
+            }
+        };
+        DocxDocument document = CreateLayoutTestDocument([], []) with
+        {
+            PageSettings = settings,
+            MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+        };
+
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(" 1.5 ", page.Content);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsCommentMarkers()
+    {
+        string input = WriteCommentMarkerProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.Contains("1 0.753 0 rg", page.Content);
+        TestAssert.Contains("0.851 0.592 0 RG", page.Content);
+        TestAssert.Contains(" re f", page.Content);
+        TestAssert.Contains(" re S", page.Content);
+        TestAssert.Contains(" Tj", page.Content);
+    }
+
+    public static void DocxSimpleMarkupRendererDrawsCommentMarkersAcrossTextFlows()
+    {
+        DocxParagraph bodyParagraph = CreateCommentMarkerParagraph("Body marker", "1");
+        AssertSimpleMarkupCommentMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(bodyParagraph)], [], DocxPageSettings.Empty, []),
+            "body text");
+
+        DocxParagraph tableParagraph = CreateCommentMarkerParagraph("Table marker", "2");
+        var tableCell = new DocxTableCell(
+            "Table marker",
+            [tableParagraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            LayoutValue: null,
+            ColumnWidthsPoints: [100d],
+            Rows: [new DocxTableRow([tableCell], HeightPoints: 18d)]);
+        AssertSimpleMarkupCommentMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxTableElement(table)], [], DocxPageSettings.Empty, []),
+            "table cell text");
+
+        DocxParagraph headerParagraph = CreateCommentMarkerParagraph("Header marker", "3");
+        DocxPageSettings headerSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(headerParagraph)]
+            }
+        };
+        AssertSimpleMarkupCommentMarkerRendered(
+            CreateCommentMarkerFlowDocument([], [], headerSettings, []),
+            "static header text");
+
+        DocxParagraph drawingAnchor = CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
+        DocxParagraph textBoxParagraph = CreateCommentMarkerParagraph("Text box marker", "4");
+        var floatingDrawing = new DocxFloatingDrawing(
+            DistanceTopValue: "0",
+            DistanceBottomValue: "0",
+            DistanceLeftValue: "0",
+            DistanceRightValue: "0",
+            SimplePositionValue: "0",
+            RelativeHeightValue: "0",
+            BehindDocumentValue: "0",
+            LockedValue: "0",
+            LayoutInCellValue: "1",
+            AllowOverlapValue: "1",
+            ExtentCxValue: "1371600",
+            ExtentCyValue: "457200",
+            HorizontalRelativeFromValue: "page",
+            HorizontalAlignValue: null,
+            HorizontalOffsetValue: "914400",
+            VerticalRelativeFromValue: "page",
+            VerticalAlignValue: null,
+            VerticalOffsetValue: "3657600",
+            WrapKind: "wrapNone",
+            WrapTextValue: null,
+            SourceParagraphIndex: 0,
+            SourceBlockIndex: 0)
+        {
+            TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        AssertSimpleMarkupCommentMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(drawingAnchor)], [floatingDrawing], DocxPageSettings.Empty, []),
+            "floating text-box text");
+
+        DocxParagraph staticTextBoxParagraph = CreateCommentMarkerParagraph("Static text box marker", "5");
+        DocxPageSettings staticFloatingSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(staticTextBoxParagraph)])]
+            }
+        };
+        AssertSimpleMarkupCommentMarkerRendered(
+            CreateCommentMarkerFlowDocument([], [], staticFloatingSettings, []),
+            "static floating text-box text");
+
+        DocxParagraph footnoteAnchor = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "21",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateCommentMarkerParagraph("Footnote marker", "6");
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "21",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        AssertSimpleMarkupCommentMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
+            {
+                RelatedStories = [footnoteStory]
+            },
+            "placed footnote text");
+
+        DocxParagraph endnoteAnchor = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "22",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "i",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph endnoteParagraph = CreateCommentMarkerParagraph("Endnote marker", "7");
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "22",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        AssertSimpleMarkupCommentMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(endnoteAnchor)], [], DocxPageSettings.Empty, []) with
+            {
+                RelatedStories = [endnoteStory]
+            },
+            "placed endnote text");
+    }
+
+    private static DocxDocument CreateCommentMarkerFlowDocument(
+        IReadOnlyList<DocxBodyElement> bodyElements,
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings,
+        DocxPageSettings settings,
+        IReadOnlyList<DocxTable> fallbackTables)
+    {
+        return new DocxDocument(
+            300d,
+            300d,
+            30d,
+            30d,
+            45d,
+            30d,
+            settings,
+            floatingDrawings,
+            [],
+            [],
+            bodyElements,
+            [],
+            fallbackTables)
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
+        };
+    }
+
+    private static void AssertSimpleMarkupCommentMarkerRendered(DocxDocument document, string flowName)
+    {
+        DocxLayoutSnapshot layout = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(document);
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.True(CountOccurrences(page.Content, "1 0.753 0 rg") >= 1, "Comment markers should use the expected marker fill color for " + flowName + ".");
+        TestAssert.True(CountOccurrences(page.Content, "0.851 0.592 0 RG") >= 1, "Comment markers should use the expected marker outline color for " + flowName + ".");
+        TestAssert.True(CountOccurrences(page.Content, " re f") >= 1, "Simple-markup rendering should emit a filled comment marker rectangle for " + flowName + ".");
+        TestAssert.True(CountOccurrences(page.Content, " re S") >= 1, "Simple-markup rendering should emit a stroked comment marker outline for " + flowName + ".");
+        TestAssert.True(
+            layout.Pages[0].TextLineCount +
+            layout.Pages[0].StaticTextLineCount +
+            layout.Pages[0].StaticTableRowCount +
+            layout.Pages[0].PlacedRelatedStoryTextLineCount +
+            layout.Pages[0].PlacedRelatedStoryTableRowCount +
+            layout.Pages[0].TableRows.Sum(row => row.TextLineCount) +
+            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) +
+            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
+            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
+            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) > 0,
+            "The " + flowName + " fixture should include a laid-out text line.");
+    }
+
+    private static void AssertWordCompatibleCommentRangeMarkerRendered(DocxDocument document, string flowName)
+    {
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.True(
+            CountOccurrences(page.Content, " 11.625 re f") >= 1,
+            "Word-compatible all-markup should emit comment range fill geometry for " + flowName + ".");
+        TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
+        TestAssert.True(
+            layout.Pages[0].TextLineCount +
+            layout.Pages[0].StaticTextLineCount +
+            layout.Pages[0].StaticTableRowCount +
+            layout.Pages[0].PlacedRelatedStoryTextLineCount +
+            layout.Pages[0].PlacedRelatedStoryTableRowCount +
+            layout.Pages[0].TableRows.Sum(row => row.TextLineCount) +
+            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) +
+            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
+            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
+            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) > 0,
+            "The " + flowName + " fixture should include a laid-out text line.");
+    }
+
+    private static DocxTable CreateCommentRangeTable(string text, string commentId)
+    {
+        DocxParagraph paragraph = CreateCommentRangeParagraph(text, commentId);
+        var cell = new DocxTableCell(
+            text,
+            [paragraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        return new DocxTable(
+            LayoutValue: null,
+            ColumnWidthsPoints: [100d],
+            Rows: [new DocxTableRow([cell], HeightPoints: 18d)]);
+    }
+
+    private static DocxParagraph CreateCommentRangeParagraph(string text, string commentId)
+    {
+        DocxTextRun run = new(text, 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = 0
+        };
+        return new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Comment",
+                    commentId,
+                    CustomMarkFollowsValue: null,
+                    SourceRunIndex: 1,
+                    RunChildIndex: 0,
+                    TextOffsetInRun: 0)
+            ],
+            CommentRanges =
+            [
+                new DocxCommentRange(commentId, 0, 0, 1, text.Length, 1, 0)
+            ]
+        };
+    }
+
+    private static DocxParagraph CreateCommentMarkerParagraph(string text, string commentId)
+    {
+        return CreateDocxLayoutParagraph(text, 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Comment",
+                    commentId,
+                    CustomMarkFollowsValue: null,
+                    SourceRunIndex: 0,
+                    RunChildIndex: 0,
+                    TextOffsetInRun: 0)
+            ]
+        };
+    }
+
+    public static void DocxAllMarkupRendererDrawsCommentBalloons()
+    {
+        string input = WriteCommentMarkerProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.Contains("0.5 w", page.Content);
+        TestAssert.Contains(" re B*", page.Content);
+        TestAssert.Contains(" l S", page.Content);
+    }
+
+    public static void DocxAllMarkupRendererPlacesStaticStoryCommentBalloons()
+    {
+        DocxParagraph headerParagraph = CreateCommentMarkerParagraph("Header review anchor", "1");
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [headerParagraph]
+            }
+        };
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Header comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            240d,
+            200d,
+            10d,
+            80d,
+            10d,
+            10d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+
+        TestAssert.True(
+            placements.Any(placement => placement.Kind == "Comment"),
+            "All-markup comment balloons should be anchored from rendered static header/footer story lines.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesRelatedStoryCommentBalloons()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "9",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateCommentMarkerParagraph("Footnote review anchor", "2");
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "9",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "2",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Footnote comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [footnoteStory, commentStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+        DocxMarkupBalloonPlacementSnapshot commentPlacement = placements.Single(placement => placement.Kind == "Comment");
+
+        TestAssert.True(commentPlacement.AnchorConnectorX >= document.MarginLeftPoints, "All-markup comment balloons should be anchored from placed footnote/endnote story lines in page coordinates.");
+
+        DocxParagraph endnoteAnchor = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "11",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "i",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph endnoteParagraph = CreateCommentMarkerParagraph("Endnote review anchor", "12");
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "11",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        DocxRelatedStory endnoteCommentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "12",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Endnote comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+            with
+            {
+                RelatedStories = [endnoteStory, endnoteCommentStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+
+        DocxMarkupBalloonPlacementSnapshot endnoteCommentPlacement = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(endnoteDocument)
+            .Single(placement => placement.Kind == "Comment");
+
+        TestAssert.True(endnoteCommentPlacement.AnchorConnectorX >= endnoteDocument.MarginLeftPoints, "All-markup comment balloons should be anchored from placed endnote story lines in page coordinates.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesRelatedStoryRevisionBalloons()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "10",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote revised anchor", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "10", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+            ]
+        };
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "10",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [footnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+        DocxMarkupBalloonPlacementSnapshot revisionPlacement = placements.Single(placement => placement.Kind == "Revision");
+
+        TestAssert.Equal(1, revisionPlacement.RevisionCandidateCount);
+        TestAssert.True(revisionPlacement.AnchorConnectorX >= document.MarginLeftPoints, "All-markup revision balloons should be anchored from placed footnote/endnote story lines in page coordinates.");
+
+        DocxParagraph endnoteAnchor = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "11",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "i",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote revised anchor", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "11", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+            ]
+        };
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "11",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+            with
+            {
+                RelatedStories = [endnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+
+        DocxMarkupBalloonPlacementSnapshot endnoteRevisionPlacement = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(endnoteDocument)
+            .Single(placement => placement.Kind == "Revision");
+
+        TestAssert.Equal(1, endnoteRevisionPlacement.RevisionCandidateCount);
+        TestAssert.True(endnoteRevisionPlacement.AnchorConnectorX >= endnoteDocument.MarginLeftPoints, "All-markup revision balloons should be anchored from placed endnote story lines in page coordinates.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesFloatingTextBoxMarkupBalloons()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
+        DocxParagraph textBoxParagraph = CreateCommentMarkerParagraph("Text box review anchor", "5") with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "5", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+            ]
+        };
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "5",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Text box comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .ToArray();
+
+        TestAssert.True(
+            placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
+            "All-markup comment and revision balloon candidates should be anchored from floating text-box lines before same-anchor grouping.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesStaticFloatingTextBoxMarkupBalloons()
+    {
+        DocxParagraph textBoxParagraph = CreateCommentMarkerParagraph("Static text box review anchor", "6") with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "6", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+            ]
+        };
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])]
+            }
+        };
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "6",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Static text box comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .ToArray();
+
+        TestAssert.True(
+            placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
+            "All-markup comment and revision balloon candidates should be anchored from static floating text-box lines before same-anchor grouping.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesFloatingTextBoxTableRevisionBalloons()
+    {
+        DocxTable textBoxTable = CreateTableRevisionBalloonProbeTable("Text box table revision", "x");
+        DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxTableElement(textBoxTable)]);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+
+        TestAssert.True(
+            CountRevisionBalloonCandidates(placements) >= 3,
+            "All-markup table formatting revisions should place table/row/cell revision balloon candidates from floating text-box table rows.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesStaticFloatingTextBoxTableRevisionBalloons()
+    {
+        DocxTable textBoxTable = CreateTableRevisionBalloonProbeTable("Static text box table revision", "s");
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxTableElement(textBoxTable)])]
+            }
+        };
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+
+        TestAssert.True(
+            CountRevisionBalloonCandidates(placements) >= 3,
+            "All-markup table formatting revisions should place table/row/cell revision balloon candidates from static floating text-box table rows.");
+    }
+
+    private static DocxFloatingDrawing CreateFloatingTextBoxDrawing(IReadOnlyList<DocxBodyElement> textBoxBodyElements)
+    {
+        return new DocxFloatingDrawing(
+            DistanceTopValue: "0",
+            DistanceBottomValue: "0",
+            DistanceLeftValue: "0",
+            DistanceRightValue: "0",
+            SimplePositionValue: "0",
+            RelativeHeightValue: "0",
+            BehindDocumentValue: "0",
+            LockedValue: "0",
+            LayoutInCellValue: "1",
+            AllowOverlapValue: "1",
+            ExtentCxValue: "1371600",
+            ExtentCyValue: "457200",
+            HorizontalRelativeFromValue: "page",
+            HorizontalAlignValue: null,
+            HorizontalOffsetValue: "914400",
+            VerticalRelativeFromValue: "page",
+            VerticalAlignValue: null,
+            VerticalOffsetValue: "914400",
+            WrapKind: "wrapNone",
+            WrapTextValue: null,
+            SourceParagraphIndex: 0,
+            SourceBlockIndex: 0)
+        {
+            TextBoxBodyElements = textBoxBodyElements
+        };
+    }
+
+    private static DocxTable CreateTextBoxProbeTable(string text, string fillHex)
+    {
+        DocxParagraph cellParagraph = CreateDocxLayoutParagraph(text, 10d, 12d);
+        var cell = new DocxTableCell(
+            text,
+            [cellParagraph],
+            FillHex: fillHex,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        return new DocxTable(
+            LayoutValue: null,
+            ColumnWidthsPoints: [100d],
+            Rows: [new DocxTableRow([cell], HeightPoints: 24d)]);
+    }
+
+    public static void DocxAllMarkupRendererPlacesStaticStoryTableRevisionBalloons()
+    {
+        DocxTable headerTable = CreateTableRevisionBalloonProbeTable("Header table revision", "h");
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(headerTable)]
+            }
+        };
+        DocxDocument document = new(
+            240d,
+            200d,
+            10d,
+            80d,
+            20d,
+            10d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [headerTable])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+
+        TestAssert.True(
+            CountRevisionBalloonCandidates(placements) >= 3,
+            "All-markup table formatting revisions should place table/row/cell revision balloon candidates from rendered static header/footer table rows.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesNestedTableRevisionBalloons()
+    {
+        DocxTable nestedTable = CreateTableRevisionBalloonProbeTable("Nested table revision", "z");
+        var outerCell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements = [new DocxTableElement(nestedTable)]
+        };
+        var outerTable = new DocxTable(null, [130d], [new DocxTableRow([outerCell], null)]);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(outerTable)],
+            [],
+            [outerTable, nestedTable])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+
+        TestAssert.True(
+            CountRevisionBalloonCandidates(placements) >= 3,
+            "All-markup table formatting revisions should place table/row/cell revision balloon candidates from nested table rows.");
+    }
+
+    public static void DocxAllMarkupRendererPlacesRelatedStoryTableRevisionBalloons()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "9",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxTable footnoteTable = CreateTableRevisionBalloonProbeTable("Footnote table revision", "n");
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "9",
+            [new DocxTableElement(footnoteTable)],
+            [],
+            []);
+        DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+            with
+            {
+                RelatedStories = [footnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document);
+
+        TestAssert.True(
+            CountRevisionBalloonCandidates(placements) >= 3,
+            "All-markup table formatting revisions should place table/row/cell revision balloon candidates from placed footnote/endnote table rows.");
+
+        DocxParagraph endnoteAnchor = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "10",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "i",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxTable endnoteTable = CreateTableRevisionBalloonProbeTable("Endnote table revision", "e");
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "10",
+            [new DocxTableElement(endnoteTable)],
+            [],
+            []);
+        DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+            with
+            {
+                RelatedStories = [endnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> endnotePlacements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(endnoteDocument);
+
+        TestAssert.True(
+            CountRevisionBalloonCandidates(endnotePlacements) >= 3,
+            "All-markup table formatting revisions should place table/row/cell revision balloon candidates from placed endnote table rows.");
+    }
+
+    private static DocxTable CreateTableRevisionBalloonProbeTable(string text, string idPrefix)
+    {
+        DocxTableCell cell = new(text, [CreateDocxLayoutParagraph(text, 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(
+                    "TableCellPropertiesChange",
+                    idPrefix + "c",
+                    "Reviewer",
+                    "2026-06-10T00:00:00Z",
+                    "tcPrChange",
+                    "Cell",
+                    ["tcW"])
+            ]
+        };
+        DocxTableRow row = new([cell], 18d)
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(
+                    "TableRowPropertiesChange",
+                    idPrefix + "r",
+                    "Reviewer",
+                    "2026-06-10T00:00:00Z",
+                    "trPrChange",
+                    "Row",
+                    ["trHeight"])
+            ]
+        };
+        return new DocxTable(null, [90d], [row])
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(
+                    "TablePropertiesChange",
+                    idPrefix + "t",
+                    "Reviewer",
+                    "2026-06-10T00:00:00Z",
+                    "tblPrChange",
+                    "Table",
+                    ["tblBorders"])
+            ]
+        };
+    }
+
+    private static int CountRevisionBalloonCandidates(IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements)
+    {
+        return placements
+            .Where(placement => placement.Kind == "Revision")
+            .Sum(placement => placement.CandidateCount);
+    }
+
+    public static void DocxWordCompatibleAllMarkupOmitsInlineCommentMarkerLabels()
+    {
+        string input = WriteCommentMarkerProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage preservePage = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).RenderBlankPages(document).Single();
+        PdfPage wordPage = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.True(
+            CountPdfTextShows(wordPage.Content) < CountPdfTextShows(preservePage.Content),
+            "Word-compatible all-markup should keep comment marker graphics without emitting inline marker label glyphs.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker()
+    {
+        string input = WriteCommentMarkerProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
+        TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
+        int strokeCount = CountOccurrences(page.Content, " l S");
+        TestAssert.True(
+            strokeCount >= 6,
+            "Word-compatible all-markup should draw a point marker for bare commentReference anchors without explicit range bounds; observed " + strokeCount + " stroke-line operations.");
+        TestAssert.True(
+            !page.Content.Contains("1 0.753 0 rg", StringComparison.Ordinal),
+            "Word-compatible all-markup should not fall back to legacy yellow marker boxes for bare commentReference anchors.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersCommentRangeBrackets()
+    {
+        const string commentText = "Review note";
+        DocxTextRun commentRun = new(commentText, 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = 0
+        };
+        DocxParagraph paragraph = new(
+            [commentRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0)
+            ],
+            CommentRanges =
+            [
+                new DocxCommentRange("1", 0, 0, 1, commentText.Length, 1, 0)
+            ]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document)
+            .Single();
+
+        TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
+        TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
+        TestAssert.True(
+            CountOccurrences(page.Content, " l S") >= 6,
+            "Word-compatible all-markup should draw comment range brackets as stroke segments.");
+        TestAssert.True(
+            !page.Content.Contains("1 0.753 0 rg", StringComparison.Ordinal),
+            "Word-compatible all-markup should not draw legacy yellow comment marker boxes.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersCommentRangeBracketsAcrossTextFlows()
+    {
+        DocxParagraph bodyParagraph = CreateCommentRangeParagraph("Body range", "1");
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(bodyParagraph)], [], DocxPageSettings.Empty, []) with
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "body text");
+
+        DocxParagraph tableParagraph = CreateCommentRangeParagraph("Table range", "2");
+        var tableCell = new DocxTableCell(
+            "Table range",
+            [tableParagraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            LayoutValue: null,
+            ColumnWidthsPoints: [100d],
+            Rows: [new DocxTableRow([tableCell], HeightPoints: 18d)]);
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxTableElement(table)], [], DocxPageSettings.Empty, []) with
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "table cell text");
+
+        DocxParagraph headerParagraph = CreateCommentRangeParagraph("Header range", "3");
+        DocxPageSettings headerSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(headerParagraph)]
+            }
+        };
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([], [], headerSettings, []) with
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "static header text");
+
+        DocxParagraph drawingAnchor = CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
+        DocxParagraph textBoxParagraph = CreateCommentRangeParagraph("Text box range", "4");
+        var floatingDrawing = new DocxFloatingDrawing(
+            DistanceTopValue: "0",
+            DistanceBottomValue: "0",
+            DistanceLeftValue: "0",
+            DistanceRightValue: "0",
+            SimplePositionValue: "0",
+            RelativeHeightValue: "0",
+            BehindDocumentValue: "0",
+            LockedValue: "0",
+            LayoutInCellValue: "1",
+            AllowOverlapValue: "1",
+            ExtentCxValue: "1371600",
+            ExtentCyValue: "457200",
+            HorizontalRelativeFromValue: "page",
+            HorizontalAlignValue: null,
+            HorizontalOffsetValue: "914400",
+            VerticalRelativeFromValue: "page",
+            VerticalAlignValue: null,
+            VerticalOffsetValue: "3657600",
+            WrapKind: "wrapNone",
+            WrapTextValue: null,
+            SourceParagraphIndex: 0,
+            SourceBlockIndex: 0)
+        {
+            TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(drawingAnchor)], [floatingDrawing], DocxPageSettings.Empty, []) with
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "floating text-box text");
+
+        DocxParagraph staticTextBoxParagraph = CreateCommentRangeParagraph("Static text box range", "5");
+        DocxPageSettings staticFloatingSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([new DocxParagraphElement(staticTextBoxParagraph)])]
+            }
+        };
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([], [], staticFloatingSettings, []) with
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "static floating text-box text");
+
+        DocxParagraph footnoteAnchor = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "21",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph footnoteRangeParagraph = CreateCommentRangeParagraph("Footnote range", "6");
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "21",
+            [new DocxParagraphElement(footnoteRangeParagraph)],
+            [],
+            []);
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
+            {
+                RelatedStories = [footnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "placed footnote text");
+
+        DocxParagraph endnoteAnchor = CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "22",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "i",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraph endnoteRangeParagraph = CreateCommentRangeParagraph("Endnote range", "7");
+        DocxRelatedStory endnoteStory = new(
+            "Endnote",
+            "/word/endnotes.xml",
+            "22",
+            [new DocxParagraphElement(endnoteRangeParagraph)],
+            [],
+            []);
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(endnoteAnchor)], [], DocxPageSettings.Empty, []) with
+            {
+                RelatedStories = [endnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "placed endnote text");
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersCommentRangeBracketsInStoryTables()
+    {
+        DocxTable staticTable = CreateCommentRangeTable("Static table range", "8");
+        DocxPageSettings staticSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(staticTable)]
+            }
+        };
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([], [], staticSettings, []) with
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "static header table cell text");
+
+        DocxParagraph footnoteAnchor = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "23",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxTable footnoteTable = CreateCommentRangeTable("Footnote table range", "9");
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "23",
+            [new DocxTableElement(footnoteTable)],
+            [],
+            []);
+        AssertWordCompatibleCommentRangeMarkerRendered(
+            CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
+            {
+                RelatedStories = [footnoteStory],
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            },
+            "placed footnote table cell text");
+    }
+
+    public static void DocxWordCompatibleAllMarkupAnchorsStoryTableCommentConnectorsAtCellRangeEnd()
+    {
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxTable staticTable = CreateCommentRangeTable("Static table range", "8");
+        DocxPageSettings staticSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxTableElement(staticTable)]
+            }
+        };
+        DocxDocument staticDocument = CreateCommentMarkerFlowDocument([], [], staticSettings, []) with
+        {
+            RelatedStories =
+            [
+                new DocxRelatedStory(
+                    "Comment",
+                    "/word/comments.xml",
+                    "8",
+                    [new DocxParagraphElement(CreateDocxLayoutParagraph("Public static table comment", 10d, 12d))],
+                    [],
+                    [])
+            ],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        AssertStoryTableCommentConnectorAnchoredAtRangeEnd(renderer, staticDocument, "static header table");
+
+        DocxParagraph footnoteAnchor = CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "23",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxTable footnoteTable = CreateCommentRangeTable("Footnote table range", "9");
+        DocxRelatedStory footnoteStory = new(
+            "Footnote",
+            "/word/footnotes.xml",
+            "23",
+            [new DocxTableElement(footnoteTable)],
+            [],
+            []);
+        DocxDocument footnoteDocument = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(footnoteAnchor)],
+            [],
+            [])
+        {
+            RelatedStories =
+            [
+                footnoteStory,
+                new DocxRelatedStory(
+                    "Comment",
+                    "/word/comments.xml",
+                    "9",
+                    [new DocxParagraphElement(CreateDocxLayoutParagraph("Public footnote table comment", 10d, 12d))],
+                    [],
+                    [])
+            ],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        AssertStoryTableCommentConnectorAnchoredAtRangeEnd(renderer, footnoteDocument, "placed footnote table");
+
+        static void AssertStoryTableCommentConnectorAnchoredAtRangeEnd(
+            DocxRenderer renderer,
+            DocxDocument document,
+            string flowName)
+        {
+            DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
+                .Single(item => item.Kind == "Comment");
+            DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines
+                .Single(item => item.CommentReferenceCount == 1 && item.Segments.Any(segment => !segment.IsTerminalLineSpace));
+            DocxTextEmissionSegmentSnapshot[] visibleSegments = line.Segments
+                .Where(segment => !segment.IsTerminalLineSpace)
+                .ToArray();
+            double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].AdvanceProfile.PlannedEmittedAdvance;
+            double baselineY = visibleSegments[0].BaselineY;
+            double anchorDelta = baselineY - placement.AnchorY;
+
+            if (baselineY < document.MarginBottomPoints)
+            {
+                TestAssert.True(
+                    Math.Abs(placement.AnchorY - document.MarginBottomPoints) < 0.001d,
+                    string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"Word-compatible all-markup should clamp {flowName} comment connector Y to the page bottom margin when the placed story table line is below the usable page. AnchorY={placement.AnchorY}, BaselineY={baselineY}, MarginBottom={document.MarginBottomPoints}."));
+            }
+            else
+            {
+                TestAssert.True(
+                    anchorDelta > 10d && anchorDelta < 20d,
+                    string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"Word-compatible all-markup should anchor {flowName} comment connector Y to the story table-cell line. AnchorY={placement.AnchorY}, BaselineY={baselineY}."));
+            }
+
+            TestAssert.True(
+                placement.AnchorConnectorX < rangeEndX - 3d &&
+                placement.AnchorConnectorX > rangeEndX - 7d,
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Word-compatible all-markup should anchor {flowName} comment connector X near the emitted story table range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
+        }
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers()
+    {
+        const string startText = "Start ";
+        const string continuedText = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega alpha beta gamma delta epsilon";
+        DocxTextRun startRun = new(startText, 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = 0
+        };
+        DocxTextRun continuedRun = new(continuedText, 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 1,
+            SourceTextOffsetInRun = 0
+        };
+        DocxParagraph paragraph = new(
+            [startRun, continuedRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0)
+            ],
+            CommentRanges =
+            [
+                new DocxCommentRange("1", 0, 0, 2, 0, 2, 0)
+            ]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        TestAssert.True(
+            textEmission.Lines.Count(line => !line.IsStaticStory && line.TextLength != 0) >= 2,
+            "The public comment range fixture should wrap across multiple body lines.");
+        TestAssert.True(
+            CountOccurrences(page.Content, " 11.625 re f") >= 2,
+            "Word-compatible all-markup should draw comment range fill markers on wrapped continuation lines, not only on the line containing the range start.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersGroupedCommentTextWithOfficeBalloonFont()
+    {
+        DocxParagraph boldSeedParagraph = new(
+            [new DocxTextRun("Bold label seed", 10d, null, true, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Grouped anchor text", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 8)
+            ],
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+            ]
+        };
+        DocxParagraph commentParagraph = CreateDocxLayoutParagraph("Public comment alpha beta gamma delta epsilon for wrapping", 10d, 12d);
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(commentParagraph)],
+            [],
+            [])
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", "2026-06-01T00:00:00Z", null, null, null, null)
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(boldSeedParagraph), new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = renderer.InspectMarkupBalloons(document).ToArray();
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        DocxMarkupBalloonPlacementSnapshot mixedPlacement = placements.Single(placement => placement.Kind == "Markup");
+        TestAssert.True(
+            mixedPlacement.CandidateCount == 2 && mixedPlacement.CommentCandidateCount == 1 && mixedPlacement.RevisionCandidateCount == 1,
+            "Same-anchor comment and revision candidates should retain grouped private-safe geometry and candidate classes.");
+        TestAssert.True(
+            mixedPlacement.BodySummaryPartCount == 2 && mixedPlacement.WordCompatibleBodySummaryPartCount == 2,
+            "Grouped comment/revision balloons should retain both private-safe summary parts in Word-compatible body text.");
+        TestAssert.True(
+            CountOccurrences(page.Content, "6.975 Tf") >= 3,
+            "Word-compatible grouped comment balloons should render Office-sized title and wrapped body text.");
+        TestAssert.True(
+            page.Content.Contains("-4.813", StringComparison.Ordinal),
+            "Word-compatible grouped comment balloon titles should use positioned glyph advances.");
+        TestAssert.True(
+            CountOccurrences(page.Content, "/F1 6.975 Tf") >= 1 && CountOccurrences(page.Content, "/F2 6.975 Tf") >= 2,
+            "Word-compatible grouped comment balloons should keep the title on the label font resource and body text on the regular body resource.");
+        TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
+        TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
+        TestAssert.True(
+            !page.Content.Contains("0.851 0.592 0 RG", StringComparison.Ordinal),
+            "Word-compatible grouped comment balloons should use the Office review palette instead of the author-bucket outline color.");
+        TestAssert.True(
+            !page.Content.Contains(" 5.5 Tf", StringComparison.Ordinal),
+            "Word-compatible grouped comment balloons should not use the legacy summary title font size.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupRendersThreadedCommentSeparators()
+    {
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Threaded comment anchor", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 9)
+            ]
+        };
+        DocxRelatedStory parentComment = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Parent threaded comment body", 10d, 12d))],
+            [],
+            [])
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer One", "RO", "2024-01-02T03:04:05Z", "11111111", null, null, true)
+        };
+        DocxRelatedStory firstReply = new(
+            "Comment",
+            "/word/comments.xml",
+            "2",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("First reply body", 10d, 12d))],
+            [],
+            [])
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer Two", "RT", "2024-01-03T03:04:05Z", "22222222", "11111111", "1", false)
+        };
+        DocxRelatedStory secondReply = new(
+            "Comment",
+            "/word/comments.xml",
+            "3",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Second reply body", 10d, 12d))],
+            [],
+            [])
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer Three", "R3", "2024-01-04T03:04:05Z", "33333333", "11111111", "1", false)
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [parentComment, firstReply, secondReply],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+        PdfPage page = renderer.RenderBlankPages(document).Single();
+
+        int renderedSeparatorLines = Regex.Matches(page.Content, @"(?<x1>-?[0-9.]+) (?<y>-?[0-9.]+) m (?<x2>-?[0-9.]+) \k<y> l S")
+            .Cast<Match>()
+            .Count(match =>
+            {
+                double x1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture);
+                double x2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture);
+                double y = double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture);
+                return x1 >= placement.X &&
+                    x2 <= placement.X + placement.Width &&
+                    x2 - x1 > placement.Width - 8d &&
+                    y > placement.Y &&
+                    y < placement.Y + placement.Height;
+            });
+
+        TestAssert.Equal(2, placement.CommentReplyCount);
+        TestAssert.Equal(2, placement.CommentSeparatorLineCount);
+        TestAssert.True(
+            placement.Height > 36d && placement.Height < 38d,
+            string.Create(CultureInfo.InvariantCulture, $"Threaded comment balloons should expand within the capped Word-compatible height band. Height={placement.Height}."));
+        TestAssert.True(
+            renderedSeparatorLines >= placement.CommentSeparatorLineCount,
+            "Word-compatible threaded comment balloons should emit internal separator strokes for visible reply boundaries.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd()
+    {
+        const string beforeText = "Before anchor ";
+        const string rangeText = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega";
+        DocxTextRun beforeRun = new(beforeText, 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = 0
+        };
+        DocxTextRun rangeRun = new(rangeText, 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 1,
+            SourceTextOffsetInRun = 0
+        };
+        DocxParagraph paragraph = new(
+            [beforeRun, rangeRun],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0)
+            ],
+            CommentRanges =
+            [
+                new DocxCommentRange("1", 1, 0, 1, rangeText.Length, 2, 0)
+            ],
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+            ]
+        };
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+        DocxTextEmissionLineSnapshot[] commentLines = renderer.InspectTextEmission(document).Lines
+            .Where(item => item.CommentReferenceCount == 1 && item.Segments.Any(segment => !segment.IsTerminalLineSpace))
+            .ToArray();
+        TestAssert.True(commentLines.Length >= 2, "The connector fixture should wrap the comment range across multiple emitted lines.");
+        DocxTextEmissionSegmentSnapshot firstVisibleSegment = commentLines[0].Segments.First(segment => !segment.IsTerminalLineSpace);
+        DocxTextEmissionSegmentSnapshot[] visibleSegments = commentLines[^1].Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        DocxTextEmissionSegmentSnapshot lastVisibleSegment = visibleSegments[^1];
+        double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].AdvanceProfile.PlannedEmittedAdvance;
+        double lastLineAnchorDelta = lastVisibleSegment.BaselineY - placement.AnchorY;
+        double firstLineAnchorDelta = firstVisibleSegment.BaselineY - placement.AnchorY;
+
+        TestAssert.Equal(1, placement.CandidateCount);
+        TestAssert.True(
+            lastLineAnchorDelta > 10d && lastLineAnchorDelta < 20d && firstLineAnchorDelta > lastLineAnchorDelta + 8d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Word-compatible all-markup should anchor comment connector Y to the wrapped range end line. AnchorY={placement.AnchorY}, FirstBaselineY={firstVisibleSegment.BaselineY}, LastBaselineY={lastVisibleSegment.BaselineY}."));
+        TestAssert.True(
+            placement.AnchorConnectorX < rangeEndX - 3d &&
+            placement.AnchorConnectorX > rangeEndX - 7d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Word-compatible all-markup should anchor comment connectors near the emitted comment range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
+    }
+
+    public static void DocxWordCompatibleAllMarkupAnchorsTableCommentConnectorsAtCellRangeEnd()
+    {
+        const string tableText = "Second cell range anchor";
+        DocxParagraph firstCellParagraph = CreateDocxLayoutParagraph("First cell", 10d, 12d);
+        DocxParagraph secondCellParagraph = CreateCommentRangeParagraph(tableText, "1");
+        var firstCell = new DocxTableCell(
+            "First cell",
+            [firstCellParagraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        var secondCell = new DocxTableCell(
+            tableText,
+            [secondCellParagraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            LayoutValue: null,
+            ColumnWidthsPoints: [96d, 180d],
+            Rows: [new DocxTableRow([firstCell, secondCell], HeightPoints: null)]);
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Public table comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+        DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines
+            .Single(item => item.CommentReferenceCount == 1 && item.Segments.Any(segment => !segment.IsTerminalLineSpace));
+        DocxTextEmissionSegmentSnapshot[] visibleSegments = line.Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].AdvanceProfile.PlannedEmittedAdvance;
+        double baselineY = visibleSegments[0].BaselineY;
+        double tableLineAnchorDelta = baselineY - placement.AnchorY;
+
+        TestAssert.True(
+            tableLineAnchorDelta > 10d && tableLineAnchorDelta < 20d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Word-compatible all-markup should anchor table comment connector Y to the table-cell line after the Office-compatible vertical offset. AnchorY={placement.AnchorY}, BaselineY={baselineY}."));
+        TestAssert.True(
+            placement.AnchorConnectorX > 72d + 96d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Table comment connector should anchor inside the second table cell, not at the first cell or body fallback. AnchorX={placement.AnchorConnectorX}."));
+        TestAssert.True(
+            placement.AnchorConnectorX < rangeEndX - 3d &&
+            placement.AnchorConnectorX > rangeEndX - 7d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Word-compatible all-markup should anchor table comment connectors near the emitted cell range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
+    }
+
+    public static void DocxWordCompatibleAllMarkupClampsCommentConnectorAnchorsAtPageEdge()
+    {
+        DocxTextRun run = new("Edge anchor", 10d, null, false, false, false, null, null)
+        {
+            SourceRunIndex = 0,
+            SourceTextOffsetInRun = 0
+        };
+        DocxParagraph paragraph = new(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0)
+            ],
+            CommentRanges =
+            [
+                new DocxCommentRange("1", 0, 0, 0, 0, 1, 0)
+            ]
+        };
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Public edge comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            200d,
+            240d,
+            10d,
+            120d,
+            20d,
+            20d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+
+        TestAssert.True(
+            placement.AnchorConnectorX >= 0.5d &&
+            placement.AnchorConnectorX < 1d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Word-compatible all-markup should clamp near-edge comment connector anchors inside the page media box. AnchorX={placement.AnchorConnectorX}."));
+        TestAssert.True(placement.AnchorConnectorClamped, "Near-edge connector placement snapshots should expose that the anchor was clamped.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupSuppressesCommentReferenceSpacerTextOperation()
+    {
+        DocxParagraph paragraph = new(
+            [
+                new DocxTextRun("Review note", 10d, null, false, false, false, null, null),
+                new DocxTextRun(" for measurement.", 10d, null, false, false, false, null, null)
+            ],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 11)
+            ]
+        };
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTextEmissionSnapshot preserve = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectTextEmission(document);
+        DocxTextEmissionSnapshot wordCompatible = new DocxRenderer(
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document);
+
+        TestAssert.True(
+            HasCommentReferenceSpacerTextOperation(preserve),
+            "The fixture should expose a standalone comment-reference spacer before Word-compatible filtering.");
+        TestAssert.True(
+            !HasCommentReferenceSpacerTextOperation(wordCompatible),
+            "Word-compatible all-markup should keep the visual gap without emitting a separate spacer text operation.");
+        TestAssert.True(
+            FirstTextEmissionX(wordCompatible) < FirstTextEmissionX(preserve) - 10d,
+            "Word-compatible all-markup should apply the Office-compatible body text x offset.");
+    }
+
+    public static void DocxAllMarkupRendererDrawsRevisionBalloons()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).RenderBlankPages(document).Single();
+
+        TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "RG"), page.Content);
+        TestAssert.Contains(" re B*", page.Content);
+        TestAssert.Contains(" l S", page.Content);
+        TestAssert.Contains("Inserted text", DocxRenderer.BuildRevisionBalloonPreview(document.Paragraphs.Single().Revisions));
+        TestAssert.Contains("Deleted text", DocxRenderer.BuildRevisionBalloonPreview(document.Paragraphs.Single().Revisions));
+        TestAssert.Contains("Moved from", DocxRenderer.BuildRevisionBalloonPreview(document.Paragraphs.Single().Revisions));
+        TestAssert.Contains("Moved to", DocxRenderer.BuildRevisionBalloonPreview(document.Paragraphs.Single().Revisions));
+        TestAssert.Contains("4 reviewers", DocxRenderer.BuildRevisionBalloonTitle(document.Paragraphs.Single().Revisions));
+        TestAssert.Contains("Deleted: \"Deleted\"", DocxRenderer.BuildRevisionBalloonPreview(document.Paragraphs.Single()));
+        TestAssert.Contains("Moved from: \"MovedFrom\"", DocxRenderer.BuildRevisionBalloonPreview(document.Paragraphs.Single()));
+    }
+
+    public static void DocxAllMarkupRendererPlacesMoveRevisionBalloonsWithConnectors()
+    {
+        var moveFrom = new DocxRevisionInfo("MoveFrom", "701", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
+        var moveTo = new DocxRevisionInfo("MoveTo", "702", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        DocxParagraph movedFrom = CreateMovedParagraph("Moved from text", moveFrom);
+        DocxParagraph filler = CreateDocxLayoutParagraph("Neutral paragraph", 10d, 12d);
+        DocxParagraph movedTo = CreateMovedParagraph("Moved to text", moveTo);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(movedFrom),
+                new DocxParagraphElement(filler),
+                new DocxParagraphElement(movedTo)
+            ],
+            [movedFrom, filler, movedTo],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] revisionPlacements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.RevisionCandidateCount != 0)
+            .ToArray();
+
+        TestAssert.True(revisionPlacements.Length >= 1, "Moved-from and moved-to revisions should produce markup balloon placements.");
+        TestAssert.Equal(2, revisionPlacements.Sum(placement => placement.RevisionCandidateCount));
+        TestAssert.True(
+            revisionPlacements.All(placement =>
+                placement.AnchorConnectorX > 0d &&
+                placement.BalloonConnectorX > 0d &&
+                placement.AnchorY > 0d &&
+                placement.Width > 0d &&
+                placement.Height > 0d),
+            "Moved-from and moved-to revision balloons should expose concrete connector geometry.");
+        TestAssert.Contains("Moved from: \"Moved from text\"", DocxRenderer.BuildRevisionBalloonPreview(movedFrom));
+        TestAssert.Contains("Moved to: \"Moved to text\"", DocxRenderer.BuildRevisionBalloonPreview(movedTo));
+
+        static DocxParagraph CreateMovedParagraph(string text, DocxRevisionInfo revision)
+        {
+            return CreateDocxLayoutParagraph(text, 10d, 12d) with
+            {
+                Runs =
+                [
+                    new DocxTextRun(text, 10d, null, false, false, false, null, null)
+                    {
+                        Revision = revision
+                    }
+                ],
+                Revisions = [revision]
+            };
+        }
+    }
+
+    public static void DocxAllMarkupRevisionBalloonPreviewUsesAggregateRunProvenance()
+    {
+        var insertion = new DocxRevisionInfo("Insertion", "4", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var deletion = new DocxRevisionInfo("Deletion", "1", "Reviewer", "2026-06-10T00:00:00Z", "del");
+        var moveFrom = new DocxRevisionInfo("MoveFrom", "2", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
+        var moveTo = new DocxRevisionInfo("MoveTo", "3", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        DocxParagraph paragraph = CreateDocxLayoutParagraph("Deleted MovedFrom MovedTo Inserted", 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun("Deleted", 10d, null, false, false, false, null, null)
+                {
+                    Revisions = [deletion]
+                },
+                new DocxTextRun(" ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("MovedFrom", 10d, null, false, false, false, null, null)
+                {
+                    Revisions = [moveFrom]
+                },
+                new DocxTextRun(" ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("MovedTo", 10d, null, false, false, false, null, null)
+                {
+                    Revisions = [moveTo]
+                },
+                new DocxTextRun(" ", 10d, null, false, false, false, null, null),
+                new DocxTextRun("Inserted", 10d, null, false, false, false, null, null)
+                {
+                    Revisions = [insertion]
+                }
+            ],
+            Revisions = [moveTo, deletion, insertion, moveFrom]
+        };
+
+        string preview = DocxRenderer.BuildRevisionBalloonPreview(paragraph);
+
+        TestAssert.Equal(
+            "Inserted text, Deleted text, Moved from, Moved to, Deleted: \"Deleted\", Moved from: \"MovedFrom\", Moved to: \"MovedTo\"",
+            preview);
+    }
+
+    public static void DocxAllMarkupRevisionBalloonPreviewSummarizesLongDeletedText()
+    {
+        var deletion = new DocxRevisionInfo("Deletion", "1", "Reviewer", "2026-06-10T00:00:00Z", "del");
+        const string longDeletedText = "Deleted content that is intentionally too long for an inline balloon quote";
+        DocxParagraph paragraph = CreateDocxLayoutParagraph(longDeletedText, 10d, 12d) with
+        {
+            Runs =
+            [
+                new DocxTextRun(longDeletedText, 10d, null, false, false, false, null, null)
+                {
+                    Revisions = [deletion]
+                }
+            ],
+            Revisions = [deletion]
+        };
+
+        string preview = DocxRenderer.BuildRevisionBalloonPreview(paragraph);
+
+        TestAssert.Contains("Deleted text", preview);
+        TestAssert.DoesNotContain("Deleted: \"", preview);
+        TestAssert.DoesNotContain(longDeletedText, preview);
+    }
+
+    public static void DocxMarkupRevisionColorsUseStableAuthorBuckets()
+    {
+        (byte Red, byte Green, byte Blue) first = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        [
+            new DocxRevisionInfo("Insertion", "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins")
+        ]);
+        (byte Red, byte Green, byte Blue) firstAgain = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        [
+            new DocxRevisionInfo("Deletion", "2", "Reviewer A", "2026-06-11T00:00:00Z", "del")
+        ]);
+        (byte Red, byte Green, byte Blue) second = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        [
+            new DocxRevisionInfo("Insertion", "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins")
+        ]);
+        (byte Red, byte Green, byte Blue) firstWithEquivalentWhitespace = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        [
+            new DocxRevisionInfo("Deletion", "4", "  reviewer\t  a  ", "2026-06-12T00:00:00Z", "del")
+        ]);
+        (byte Red, byte Green, byte Blue) composedUnicode = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        [
+            new DocxRevisionInfo("Insertion", "5", "JOS\u00c9", "2026-06-12T00:00:00Z", "ins")
+        ]);
+        (byte Red, byte Green, byte Blue) decomposedUnicode = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        [
+            new DocxRevisionInfo("Deletion", "6", "Jose\u0301", "2026-06-12T00:00:00Z", "del")
+        ]);
+        (byte Red, byte Green, byte Blue) fallback = DocxRenderer.ResolveRevisionAuthorColorSnapshot([]);
+
+        TestAssert.Equal(first, firstAgain);
+        TestAssert.Equal(first, firstWithEquivalentWhitespace);
+        TestAssert.Equal(composedUnicode, decomposedUnicode);
+        TestAssert.True(!first.Equals(second), "Different reviewer buckets should usually receive different revision colors in the built-in palette.");
+        TestAssert.True(fallback.Red != 0 || fallback.Green != 0 || fallback.Blue != 0, "Authorless revisions should still receive a visible deterministic color.");
+    }
+
+    public static void DocxMarkupRevisionColorsUseDominantAuthorBucketIndependentOfOrder()
+    {
+        var reviewerAInsertion = new DocxRevisionInfo("Insertion", "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins");
+        var reviewerADeletion = new DocxRevisionInfo("Deletion", "2", "Reviewer A", "2026-06-11T00:00:00Z", "del");
+        var reviewerBInsertion = new DocxRevisionInfo("Insertion", "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins");
+        (byte Red, byte Green, byte Blue) reviewerA = DocxRenderer.ResolveRevisionAuthorColorSnapshot([reviewerAInsertion]);
+        (byte Red, byte Green, byte Blue) dominantA = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+            [reviewerBInsertion, reviewerAInsertion, reviewerADeletion]);
+        (byte Red, byte Green, byte Blue) dominantAReordered = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+            [reviewerADeletion, reviewerBInsertion, reviewerAInsertion]);
+        (byte Red, byte Green, byte Blue) tiedAuthors = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+            [reviewerBInsertion, reviewerAInsertion]);
+        (byte Red, byte Green, byte Blue) tiedAuthorsReordered = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+            [reviewerAInsertion, reviewerBInsertion]);
+
+        TestAssert.Equal(reviewerA, dominantA);
+        TestAssert.Equal(dominantA, dominantAReordered);
+        TestAssert.Equal(tiedAuthors, tiedAuthorsReordered);
+        TestAssert.Equal(reviewerA, tiedAuthors);
+    }
+
+    private static string FormatPdfRgb((byte Red, byte Green, byte Blue) color, string operatorName)
+    {
+        return FormatPdfColor(color.Red) + " " + FormatPdfColor(color.Green) + " " + FormatPdfColor(color.Blue) + " " + operatorName;
+    }
+
+    private static string FormatPdfColor(byte value)
+    {
+        return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    public static void DocxMarkupBalloonLayoutSelectsSideStacksAnchorsAndHandlesOverflow()
+    {
+        var bodyElements = new List<DocxBodyElement>();
+        var relatedStories = new List<DocxRelatedStory>();
+        for (int i = 0; i < 12; i++)
+        {
+            string id = (i + 1).ToString(CultureInfo.InvariantCulture);
+            DocxParagraph paragraph = CreateDocxLayoutParagraph("Anchor " + id, 10d, 12d) with
+            {
+                InlineReferences =
+                [
+                    new DocxInlineReference("Comment", id, null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0)
+                ],
+                Revisions =
+                [
+                    new DocxRevisionInfo("Insertion", id, "A", "2026-06-10T00:00:00Z", "ins")
+                ]
+            };
+            bodyElements.Add(new DocxParagraphElement(paragraph));
+
+            DocxParagraph commentParagraph = CreateDocxLayoutParagraph("Comment body " + id, 10d, 12d);
+            relatedStories.Add(new DocxRelatedStory(
+                "Comment",
+                "/word/comments.xml",
+                id,
+                [new DocxParagraphElement(commentParagraph)],
+                [],
+                []));
+        }
+
+        var document = new DocxDocument(
+            200d,
+            185d,
+            50d,
+            15d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            bodyElements,
+            [],
+            [])
+        {
+            RelatedStories = relatedStories,
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .ToArray();
+        DocxMarkupBalloonPlacementSnapshot[] balloons = placements
+            .Where(placement => !placement.IsOverflowSummary)
+            .ToArray();
+
+        TestAssert.True(balloons.Length > 1, "The fixture should place multiple markup balloons before overflowing.");
+        TestAssert.True(placements.Any(placement => placement.IsOverflowSummary), "Overflowing markup should be summarized instead of overlapping at the margin bottom.");
+        TestAssert.True(placements.Length < 24, "Overflow handling should suppress balloons that do not fit on the page.");
+        TestAssert.True(placements.Where(placement => placement.IsOverflowSummary).All(placement => placement.CandidateCount > 0 && placement.OverflowStartIndex is not null && placement.OverflowEndIndex is not null), "Overflow summaries should expose private-safe continuation ranges.");
+        TestAssert.Equal(24, placements.Sum(placement => placement.CandidateCount));
+        DocxMarkupBalloonPlacementSnapshot[] overflowSummaries = placements
+            .Where(placement => placement.IsOverflowSummary)
+            .OrderBy(placement => placement.OverflowStartIndex)
+            .ToArray();
+        int nextOverflowStartIndex = 1;
+        foreach (DocxMarkupBalloonPlacementSnapshot overflowSummary in overflowSummaries)
+        {
+            TestAssert.Equal(nextOverflowStartIndex, overflowSummary.OverflowStartIndex ?? 0);
+            TestAssert.True(
+                overflowSummary.OverflowEndIndex >= overflowSummary.OverflowStartIndex,
+                "Overflow continuation ranges should be non-empty.");
+            nextOverflowStartIndex = (overflowSummary.OverflowEndIndex ?? nextOverflowStartIndex) + 1;
+        }
+
+        TestAssert.True(placements.All(placement => placement.Side == "Left"), "A wider left margin should be selected for markup balloons.");
+        TestAssert.True(placements.All(placement => placement.X >= 0d && placement.X + placement.Width <= document.MarginLeftPoints + 0.001d), "Left-side balloons should stay inside the available margin area.");
+        TestAssert.True(
+            balloons.Any(placement => placement.Kind == "Markup" && placement.CandidateCount > 1),
+            "Same-anchor comment/revision markup should be grouped into a single private-safe markup balloon.");
+
+        for (int i = 0; i < balloons.Length - 1; i++)
+        {
+            TestAssert.True(balloons[i].AnchorY >= balloons[i + 1].AnchorY, "Balloon placements should stay ordered by anchor position from top to bottom.");
+        }
+
+        DocxMarkupBalloonPlacementSnapshot[] byVerticalPosition = balloons
+            .OrderByDescending(placement => placement.Y)
+            .ToArray();
+        for (int i = 0; i < byVerticalPosition.Length - 1; i++)
+        {
+            TestAssert.True(
+                byVerticalPosition[i].Y >= byVerticalPosition[i + 1].Y + byVerticalPosition[i + 1].Height,
+                "Balloon placements should not collide vertically.");
+        }
+    }
+
+    public static void DocxMarkupBalloonLayoutGroupsNearbyRevisionAnchors()
+    {
+        var bodyElements = new List<DocxBodyElement>();
+        for (int i = 0; i < 4; i++)
+        {
+            string id = (i + 1).ToString(CultureInfo.InvariantCulture);
+            DocxParagraph paragraph = CreateDocxLayoutParagraph("Dense " + id, 5d, 5d) with
+            {
+                Revisions =
+                [
+                    new DocxRevisionInfo("Insertion", id, "A", "2026-06-10T00:00:00Z", "ins")
+                ]
+            };
+            bodyElements.Add(new DocxParagraphElement(paragraph));
+        }
+
+        var document = new DocxDocument(
+            220d,
+            240d,
+            55d,
+            15d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            bodyElements,
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Revision")
+            .ToArray();
+
+        TestAssert.True(revisionBalloons.Any(placement => placement.CandidateCount > 1), "Nearby dense revision anchors should be grouped into a single private-safe markup balloon.");
+        TestAssert.True(revisionBalloons.Length < 4, "Grouping should reduce one-balloon-per-revision churn in dense review pages.");
+        TestAssert.True(revisionBalloons.Any(placement => placement.CandidateCount == 3), "Nearby dense revision anchors should group into capped chunks before starting a new balloon.");
+        TestAssert.True(revisionBalloons.All(placement => placement.CandidateCount <= 3), "Nearby revision grouping should cap dense chunks instead of hiding too many edits behind one balloon.");
+    }
+
+    public static void DocxMarkupBalloonLayoutOffsetsNearbyMixedConnectorAnchors()
+    {
+        DocxParagraph commentParagraph = CreateDocxLayoutParagraph("Shared width", 10d, 8d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0)
+            ]
+        };
+        DocxParagraph revisionParagraph = CreateDocxLayoutParagraph("Shared width", 10d, 8d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+            ]
+        };
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Public collision comment", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            260d,
+            240d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(commentParagraph), new DocxParagraphElement(revisionParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => !placement.IsOverflowSummary)
+            .OrderByDescending(placement => placement.AnchorY)
+            .ToArray();
+
+        TestAssert.Equal(2, placements.Length);
+        TestAssert.True(
+            placements.Any(placement => placement.CommentCandidateCount == 1) &&
+            placements.Any(placement => placement.RevisionCandidateCount == 1),
+            "The collision fixture should keep separate nearby comment and revision balloons.");
+        TestAssert.True(
+            Math.Abs(placements[0].AnchorY - placements[1].AnchorY) < 9d,
+            "The collision fixture should place mixed connector anchors inside the near-anchor collision band.");
+        TestAssert.True(
+            Math.Abs(placements[0].AnchorConnectorX - placements[1].AnchorConnectorX) >= 1d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Nearby mixed comment/revision connector anchors should be offset horizontally. FirstX={placements[0].AnchorConnectorX}, SecondX={placements[1].AnchorConnectorX}."));
+    }
+
+    public static void DocxMarkupBalloonLayoutPrioritizesCommentsOverNearbyRevisions()
+    {
+        DocxParagraph revisionParagraph = CreateDocxLayoutParagraph("Priority revision", 10d, 8d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+            ]
+        };
+        DocxParagraph commentParagraph = CreateDocxLayoutParagraph("Priority comment", 10d, 8d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0)
+            ]
+        };
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(CreateDocxLayoutParagraph("Public priority comment", 10d, 12d))],
+            [],
+            []);
+        DocxDocument document = new(
+            260d,
+            240d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(revisionParagraph), new DocxParagraphElement(commentParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => !placement.IsOverflowSummary)
+            .ToArray();
+
+        TestAssert.Equal(2, placements.Length);
+        TestAssert.True(
+            placements[1].AnchorY > placements[0].AnchorY &&
+            placements[1].AnchorY - placements[0].AnchorY < 9d,
+            "The fixture should put the revision anchor slightly above the comment anchor inside one competition band.");
+        TestAssert.Equal("Comment", placements[0].Kind);
+        TestAssert.Equal("Revision", placements[1].Kind);
+    }
+
+    public static void DocxMarkupBalloonLayoutSeparatesDistantAnchorsIntoLaneBands()
+    {
+        DocxParagraph upperParagraph = CreateDocxLayoutParagraph("Upper revision", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Insertion", "upper", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+            ]
+        };
+        DocxParagraph spacerParagraph = CreateDocxLayoutParagraph("Spacer", 1d, 80d);
+        DocxParagraph lowerParagraph = CreateDocxLayoutParagraph("Lower revision", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo("Deletion", "lower", "Reviewer", "2026-06-01T00:00:00Z", "deleted")
+            ]
+        };
+        DocxDocument document = new(
+            260d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(upperParagraph),
+                new DocxParagraphElement(spacerParagraph),
+                new DocxParagraphElement(lowerParagraph)
+            ],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => !placement.IsOverflowSummary)
+            .OrderBy(placement => placement.LaneBandIndex)
+            .ToArray();
+
+        TestAssert.Equal(2, placements.Length);
+        TestAssert.Equal(0, placements[0].LaneBandIndex);
+        TestAssert.Equal(1, placements[1].LaneBandIndex);
+        TestAssert.True(
+            placements.All(placement => placement.LaneBandCandidateCount == placement.CandidateCount),
+            "Separated lane bands should expose private-safe candidate counts independently.");
+        TestAssert.True(
+            placements[0].Y >= placements[1].Y + placements[1].Height + 18d,
+            "Distant review-anchor lane bands should remain visually separated instead of being treated as one collision band.");
+    }
+
+    public static void DocxCommentBalloonPreviewFallsBackForImageAndTableStories()
+    {
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Comment anchor", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Comment",
+                    "9",
+                    CustomMarkFollowsValue: null,
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 14)
+            ]
+        };
+        DocxInlineImage storyImage = new(48d, 24d, "image/png", [1, 2, 3], "/word/media/comment.png");
+        DocxParagraph imageParagraph = CreateDocxLayoutParagraph(string.Empty, 10d, 12d) with
+        {
+            Images = [storyImage]
+        };
+        DocxParagraph tableParagraph = CreateDocxLayoutParagraph(string.Empty, 10d, 12d);
+        var tableCell = new DocxTableCell(
+            string.Empty,
+            [tableParagraph],
+            FillHex: null,
+            ShadingValue: null,
+            ShadingColor: null,
+            VerticalAlignmentValue: null,
+            Borders: [],
+            DocxTableCellMargins.Empty);
+        var table = new DocxTable(
+            LayoutValue: null,
+            ColumnWidthsPoints: [72d],
+            Rows: [new DocxTableRow([tableCell], HeightPoints: null)]);
+        DocxRelatedStory commentStory = new(
+            "Comment",
+            "/word/comments.xml",
+            "9",
+            [new DocxParagraphElement(imageParagraph), new DocxTableElement(table)],
+            [],
+            []);
+        DocxDocument document = new(612d, 792d)
+        {
+            BodyElements = [new DocxParagraphElement(bodyParagraph)],
+            RelatedStories = [commentStory]
+        };
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+
+        string preview = DocxRenderer.BuildCommentBalloonPreview(layout.RelatedStories.Single());
+
+        TestAssert.Contains("[table]", preview);
+        TestAssert.Contains("[image]", preview);
+    }
+
+    public static void DocxMarkupInspectionSnapshotsExposePrivateSafeRevisionCounts()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        DocxStructureSnapshot structure = renderer.InspectStructure(document);
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
+
+        TestAssert.Equal("AllMarkup", structure.MarkupMode);
+        TestAssert.Equal(4, structure.RevisionCount);
+        TestAssert.Equal(1, structure.InsertionRevisionCount);
+        TestAssert.Equal(1, structure.DeletionRevisionCount);
+        TestAssert.Equal(1, structure.MoveFromRevisionCount);
+        TestAssert.Equal(1, structure.MoveToRevisionCount);
+        TestAssert.Equal(0, structure.OtherRevisionCount);
+
+        DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Paragraph");
+        TestAssert.Equal(4, block.RevisionCount);
+        TestAssert.Equal("AllMarkup", layout.MarkupMode);
+        TestAssert.True(layout.RevisionCount >= 4, "Layout inspection should expose visible revision ownership without document text.");
+        TestAssert.True(layout.InsertionRevisionCount >= 1 && layout.DeletionRevisionCount >= 1, "Layout inspection should preserve revision kind counts.");
+        TestAssert.True(layout.Pages.Single().RevisionCount >= 4, "Page layout inspection should expose page-local revision counts.");
+
+        TestAssert.Equal("AllMarkup", textEmission.MarkupMode);
+        TestAssert.True(textEmission.RevisionSegmentCount >= 4, "Text emission inspection should expose revised emitted segments without their text.");
+        TestAssert.True(textEmission.InsertionRevisionSegmentCount >= 1 && textEmission.DeletionRevisionSegmentCount >= 1, "Text emission inspection should preserve revision kind counts.");
+        TestAssert.True(textEmission.Lines.Any(line => line.RevisionSegmentCount >= 4), "Line inspection should expose line-local revision segment counts.");
+        TestAssert.True(textEmission.Lines.SelectMany(line => line.Segments).Any(segment => segment.RevisionKind == "MoveTo"), "Segment inspection should expose private-safe revision kinds.");
+    }
+
+    public static void DocxMarkupInspectionSnapshotsExposePrivateSafeCommentCounts()
+    {
+        string input = WriteCommentMarkerProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+
+        DocxStructureSnapshot structure = renderer.InspectStructure(document);
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
+
+        TestAssert.Equal("SimpleMarkup", structure.MarkupMode);
+        TestAssert.Equal(1, structure.CommentReferenceCount);
+        TestAssert.Equal(1, structure.Blocks.Single(block => block.Kind == "Paragraph").CommentReferenceCount);
+        TestAssert.Equal("SimpleMarkup", layout.MarkupMode);
+        TestAssert.True(layout.CommentReferenceCount >= 1, "Layout inspection should expose visible comment-reference ownership without comment text.");
+        TestAssert.Equal("SimpleMarkup", textEmission.MarkupMode);
+        TestAssert.True(textEmission.CommentReferenceCount >= 1, "Text emission inspection should expose comment-reference ownership without comment text.");
+    }
+
+    public static void DocxMarkupInspectionClassifiesCommentStoryAnchors()
+    {
+        string input = WriteCommentAnchorAccountingProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.Final);
+
+        TestAssert.Equal("1|2", string.Join("|", document.PackageCommentAnchorIds));
+        TestAssert.Equal("2", string.Join("|", document.HiddenCommentAnchorIds));
+
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final).InspectStructure(document);
+        TestAssert.Equal(2, structure.PackageCommentAnchorIdCount);
+        TestAssert.Equal(1, structure.HiddenCommentAnchorIdCount);
+        TestAssert.Equal(1, structure.ResolvedCommentStoryAnchorCount);
+        TestAssert.Equal(1, structure.HiddenCommentStoryAnchorCount);
+        TestAssert.Equal(1, structure.OrphanedCommentStoryAnchorCount);
+        TestAssert.Equal(1, structure.UnsupportedCommentStoryAnchorCount);
+
+        DocxStructureCommentStoryAnchorSnapshot visible = structure.CommentStoryAnchors!.Single(anchor => anchor.Id == "1");
+        DocxStructureCommentStoryAnchorSnapshot hidden = structure.CommentStoryAnchors!.Single(anchor => anchor.Id == "2");
+        DocxStructureCommentStoryAnchorSnapshot orphaned = structure.CommentStoryAnchors!.Single(anchor => anchor.Id == "3");
+        DocxStructureCommentStoryAnchorSnapshot unsupported = structure.CommentStoryAnchors!.Single(anchor => anchor.Status == "Unsupported");
+        TestAssert.True(visible.Status == "Visible" && visible.VisibleInlineReferenceCount == 1 && visible.HasPackageAnchor, "Visible comment bodies should be tied to a visible anchor.");
+        TestAssert.True(hidden.Status == "HiddenByMarkupMode" && hidden.HasHiddenAnchor && hidden.VisibleInlineReferenceCount == 0, "Comment bodies anchored only in filtered revisions should be classified as hidden by the selected markup mode.");
+        TestAssert.True(orphaned.Status == "Orphaned" && !orphaned.HasPackageAnchor, "Comment bodies without package anchors should be classified as orphaned without exposing body text.");
+        TestAssert.True(unsupported.Id is null && !unsupported.HasPackageAnchor && unsupported.VisibleInlineReferenceCount == 0, "Comment bodies without usable ids should be classified as unsupported.");
+    }
+
+    public static void DocxMarkupInspectionClassifiesDeletedCommentAnchorsByMode()
+    {
+        string input = WriteCommentAnchorAccountingProbeDocx();
+        DocxStructureCommentStoryAnchorSnapshot FinalAnchor(string id, OoxPdfDocxMarkupMode mode)
+        {
+            using FileStream stream = File.OpenRead(input);
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: mode);
+            return new DocxRenderer(markupMode: mode)
+                .InspectStructure(document)
+                .CommentStoryAnchors!
+                .Single(anchor => anchor.Id == id);
+        }
+
+        DocxStructureCommentStoryAnchorSnapshot finalDeletedAnchor = FinalAnchor("2", OoxPdfDocxMarkupMode.Final);
+        DocxStructureCommentStoryAnchorSnapshot simpleDeletedAnchor = FinalAnchor("2", OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxStructureCommentStoryAnchorSnapshot originalDeletedAnchor = FinalAnchor("2", OoxPdfDocxMarkupMode.Original);
+        DocxStructureCommentStoryAnchorSnapshot allDeletedAnchor = FinalAnchor("2", OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.True(finalDeletedAnchor.Status == "HiddenByMarkupMode" && finalDeletedAnchor.VisibleInlineReferenceCount == 0, "Final view should classify comments anchored only in deleted content as hidden by mode.");
+        TestAssert.True(simpleDeletedAnchor.Status == "HiddenByMarkupMode" && simpleDeletedAnchor.VisibleInlineReferenceCount == 0, "Simple markup should classify comments anchored only in deleted content as hidden by mode.");
+        TestAssert.True(originalDeletedAnchor.Status == "Visible" && originalDeletedAnchor.VisibleInlineReferenceCount == 1, "Original view should classify comments anchored in deleted content as visible.");
+        TestAssert.True(allDeletedAnchor.Status == "Visible" && allDeletedAnchor.VisibleInlineReferenceCount == 1, "All markup should classify comments anchored in deleted content as visible.");
+    }
+
+    public static void DocxMarkupRenderingTreatsDeletedCommentAnchorsByMode()
+    {
+        string input = WriteCommentAnchorAccountingProbeDocx();
+
+        (int StructureReferences, int LayoutReferences, int TextReferences, int RenderedCommentCandidates) Counts(OoxPdfDocxMarkupMode mode)
+        {
+            using FileStream stream = File.OpenRead(input);
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: mode);
+            var renderer = new DocxRenderer(markupMode: mode);
+            return (
+                renderer.InspectStructure(document).CommentReferenceCount,
+                renderer.InspectLayout(document).CommentReferenceCount,
+                renderer.InspectTextEmission(document).CommentReferenceCount,
+                renderer.InspectMarkupBalloons(document).Sum(placement => placement.CommentCandidateCount));
+        }
+
+        TestAssert.Equal((1, 1, 1, 0), Counts(OoxPdfDocxMarkupMode.Final));
+        TestAssert.Equal((1, 1, 1, 0), Counts(OoxPdfDocxMarkupMode.SimpleMarkup));
+        TestAssert.Equal((2, 2, 2, 0), Counts(OoxPdfDocxMarkupMode.Original));
+        TestAssert.Equal((2, 2, 2, 2), Counts(OoxPdfDocxMarkupMode.AllMarkup));
+    }
+
+    public static void DocxReaderPreservesCommentMetadataAndThreading()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                  <Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.ms-word.commentsExtended+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                  <Relationship Id="rIdCommentsExtended" Type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended" Target="commentsExtended.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:commentRangeStart w:id="1"/>
+                      <w:r><w:t>Reviewed text</w:t></w:r>
+                      <w:commentRangeEnd w:id="1"/>
+                      <w:r><w:commentReference w:id="1"/></w:r>
+                    </w:p>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml">
+                  <w:comment w:id="1" w:author="Reviewer One" w:initials="RO" w:date="2024-01-02T03:04:05Z">
+                    <w:p w14:paraId="11111111"><w:r><w:t>Parent comment</w:t></w:r></w:p>
+                  </w:comment>
+                  <w:comment w:id="2" w:author="Reviewer Two" w:initials="RT" w:date="2024-01-03T03:04:05Z">
+                    <w:p w14:paraId="22222222"><w:r><w:t>Reply comment</w:t></w:r></w:p>
+                  </w:comment>
+                  <w:comment w:id="3" w:author="Reviewer Three" w:initials="R3" w:date="2024-01-04T03:04:05Z">
+                    <w:p w14:paraId="33333333"><w:r><w:t>Second reply</w:t></w:r></w:p>
+                  </w:comment>
+                </w:comments>
+                """,
+            ["word/commentsExtended.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml">
+                  <w15:commentEx w15:paraId="11111111" w15:done="1"/>
+                  <w15:commentEx w15:paraId="22222222" w15:paraIdParent="11111111" w15:done="0"/>
+                  <w15:commentEx w15:paraId="33333333" w15:paraIdParent="11111111" w15:done="0"/>
+                </w15:commentsEx>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.Equal(3, document.RelatedStories.Count(story => story.Kind == "Comment"));
+        DocxRelatedStory parent = document.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "1");
+        DocxRelatedStory reply = document.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "2");
+        DocxRelatedStory secondReply = document.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "3");
+        TestAssert.True(parent.CommentMetadata?.Author == "Reviewer One" && parent.CommentMetadata.Initials == "RO" && parent.CommentMetadata.Date == "2024-01-02T03:04:05Z", "Classic comment author, initials, and date metadata should survive reading.");
+        TestAssert.True(parent.CommentMetadata?.ParagraphId == "11111111" && parent.CommentMetadata.ParentParagraphId is null && parent.CommentMetadata.ParentCommentId is null && parent.CommentMetadata.IsResolved == true, "Parent comment extension metadata should preserve paragraph id and resolved state.");
+        TestAssert.True(reply.CommentMetadata?.Author == "Reviewer Two" && reply.CommentMetadata.Initials == "RT" && reply.CommentMetadata.Date == "2024-01-03T03:04:05Z", "Reply comment classic metadata should survive reading.");
+        TestAssert.True(reply.CommentMetadata?.ParagraphId == "22222222" && reply.CommentMetadata.ParentParagraphId == "11111111" && reply.CommentMetadata.ParentCommentId == "1" && reply.CommentMetadata.IsResolved == false, "Reply comment extension metadata should resolve the parent comment id through the parent paragraph id.");
+        TestAssert.True(secondReply.CommentMetadata?.ParagraphId == "33333333" && secondReply.CommentMetadata.ParentParagraphId == "11111111" && secondReply.CommentMetadata.ParentCommentId == "1" && secondReply.CommentMetadata.IsResolved == false, "Second reply metadata should resolve to the same parent comment thread.");
+
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureStorySnapshot parentSnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "1");
+        DocxStructureStorySnapshot replySnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "2");
+        DocxStructureStorySnapshot secondReplySnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "3");
+        TestAssert.True(parentSnapshot.HasCommentAuthor && parentSnapshot.HasCommentInitials && parentSnapshot.HasCommentDate && parentSnapshot.CommentParagraphId == "11111111" && parentSnapshot.CommentResolved == true, "Structure snapshots should expose private-safe parent comment metadata presence and resolved state.");
+        TestAssert.True(replySnapshot.HasCommentAuthor && replySnapshot.HasCommentInitials && replySnapshot.HasCommentDate && replySnapshot.CommentParagraphId == "22222222" && replySnapshot.CommentParentParagraphId == "11111111" && replySnapshot.CommentParentId == "1" && replySnapshot.CommentResolved == false, "Structure snapshots should expose private-safe threaded reply ownership.");
+        TestAssert.True(secondReplySnapshot.HasCommentAuthor && secondReplySnapshot.CommentParagraphId == "33333333" && secondReplySnapshot.CommentParentParagraphId == "11111111" && secondReplySnapshot.CommentParentId == "1", "Structure snapshots should expose private-safe ownership for every reply in the thread.");
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxRelatedStoryLayout parentLayout = layout.RelatedStories.Single(story => story.Story.Id == "1");
+        DocxRelatedStoryLayout replyLayout = layout.RelatedStories.Single(story => story.Story.Id == "2");
+        DocxRelatedStoryLayout secondReplyLayout = layout.RelatedStories.Single(story => story.Story.Id == "3");
+        TestAssert.Equal("Reviewer One (RO) #1 2024-01-02 resolved", DocxRenderer.BuildCommentBalloonTitle(parent, "1"));
+        TestAssert.Equal("Reply Reviewer Two (RT) #2 2024-01-03 open", DocxRenderer.BuildCommentBalloonTitle(reply, "2"));
+        TestAssert.Equal("Reply Reviewer Three (R3) #3 2024-01-04 open", DocxRenderer.BuildCommentBalloonTitle(secondReply, "3"));
+        string threadedPreview = DocxRenderer.BuildCommentBalloonPreview(parentLayout, [replyLayout, secondReplyLayout]);
+        TestAssert.Contains("2 replies", threadedPreview);
+        TestAssert.Contains("Reply: Reply comment", threadedPreview);
+        TestAssert.Contains("Reply: Second reply", threadedPreview);
+        string wordCompatibleThreadedPreview = DocxRenderer.BuildWordCompatibleCommentBalloonPreview(parentLayout, [replyLayout, secondReplyLayout]);
+        TestAssert.Contains("2024-01-02 resolved Parent comment", wordCompatibleThreadedPreview);
+        TestAssert.Contains("2 replies", wordCompatibleThreadedPreview);
+        TestAssert.Contains("Reply 2024-01-03 open Reply comment", wordCompatibleThreadedPreview);
+        TestAssert.Contains("Reply 2024-01-04 open Second reply", wordCompatibleThreadedPreview);
+
+        DocxMarkupBalloonPlacementSnapshot parentBalloon = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectMarkupBalloons(document)
+            .Single(placement => placement.Kind == "Comment");
+        TestAssert.True(
+            parentBalloon.CommentWithDateCount == 3 &&
+            parentBalloon.CommentResolvedCount == 1 &&
+            parentBalloon.CommentOpenCount == 2 &&
+            parentBalloon.CommentReplyCount == 2,
+            "Comment balloon placement snapshots should expose private-safe thread metadata counts for dated, resolved/open, and reply comments.");
+    }
+
+    public static void DocxInlineReferencesRetainRevisionProvenance()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Text</w:t></w:r>
+                      <w:ins w:id="9" w:author="A" w:date="2026-06-04T00:00:00Z">
+                        <w:r><w:commentReference w:id="1"/></w:r>
+                      </w:ins>
+                    </w:p>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1"><w:p><w:r><w:t>Comment</w:t></w:r></w:p></w:comment>
+                </w:comments>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        DocxInlineReference reference = document.Paragraphs.Single().InlineReferences.Single();
+        TestAssert.True(reference.Revision?.Kind == "Insertion" && reference.Revision.Author == "A" && reference.Revision.Date == "2026-06-04T00:00:00Z" && reference.Revision.SourceElement == "ins", "Inline references inside revision containers should retain direct revision metadata.");
+        TestAssert.Equal(1, reference.Revisions.Count);
+
+        DocxStructureInlineReferenceSnapshot snapshot = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+            .InspectStructure(document)
+            .InlineReferences
+            .Single();
+        TestAssert.True(snapshot.RevisionCount == 1 && snapshot.RevisionKind == "Insertion" && snapshot.RevisionSourceElement == "ins", "Structure snapshots should expose private-safe inline-reference revision provenance.");
+    }
+
+    public static void DocxMarkupDiagnosticsApproximateCommentsInMarkupModes()
+    {
+        string input = WriteCommentMarkerProbeDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            DocxMarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup,
+            DiagnosticSink = diagnostics.Add
+        });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_COMMENTS" && d.Fallback == "Approximated"), "Markup modes should report comments as approximated instead of broadly unsupported.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_COMMENTS"), "Markup modes should not emit the broad unsupported comment diagnostic.");
+    }
+
+    public static void DocxMarkupDiagnosticsApproximateTrackedChangesInMarkupModes()
+    {
+        string input = WriteTrackedChangeModeProbeDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup,
+            DiagnosticSink = diagnostics.Add
+        });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_TRACKED_CHANGES" && d.Fallback == "Approximated"), "Markup modes should report tracked changes as approximated instead of broadly unsupported.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_TRACKED_CHANGES"), "Markup modes should not emit the broad unsupported tracked-change diagnostic.");
+    }
+
+    public static void DocxMarkupDiagnosticsCoverFormattingRevisions()
+    {
+        string input = WriteFormattingRevisionProbeDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup,
+            DiagnosticSink = diagnostics.Add
+        });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_FORMATTING_REVISIONS" && d.Fallback == "Approximated"), "Markup modes should report formatting revisions as approximated while full formatting balloons are pending.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_FORMATTING_REVISIONS"), "Markup modes should not emit the unsupported formatting-revision diagnostic.");
+    }
+
+    public static void DocxFormattingRevisionBalloonLabelsPrioritizeVisibleProperties()
+    {
+        var runRevision = new DocxRevisionInfo(
+            "RunPropertiesChange",
+            "1",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "rPrChange",
+            "Run",
+            ["bCs", "highlight", "iCs", "rFonts", "szCs", "sz", "color"]);
+        var paragraphRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "2",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["keepNext", "pStyle", "tabs", "spacing", "jc"]);
+
+        TestAssert.Equal(
+            "Formatted run: font, font size, color, highlight, +3 more",
+            DocxRenderer.BuildRevisionBalloonPreview([runRevision]));
+        TestAssert.Equal(
+            "Formatted paragraph: paragraph style, alignment, spacing, tab stops, +1 more",
+            DocxRenderer.BuildRevisionBalloonPreview([paragraphRevision]));
+    }
+
+    public static void DocxFormattingRevisionBalloonLabelsGroupSameFamilyProperties()
+    {
+        var paragraphStyleRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "1",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["pStyle", "spacing"]);
+        var paragraphLayoutRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "2",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["tabs", "jc", "keepNext"]);
+        var runFontRevision = new DocxRevisionInfo(
+            "RunPropertiesChange",
+            "3",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "rPrChange",
+            "Run",
+            ["rFonts"]);
+        var runColorRevision = new DocxRevisionInfo(
+            "RunPropertiesChange",
+            "4",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "rPrChange",
+            "Run",
+            ["highlight", "color"]);
+
+        TestAssert.Equal(
+            "Formatted paragraph: paragraph style, alignment, spacing, tab stops, +1 more, Formatted run: font, color, highlight",
+            DocxRenderer.BuildRevisionBalloonPreview([paragraphLayoutRevision, runColorRevision, paragraphStyleRevision, runFontRevision]));
+    }
+
+    public static void DocxFormattingRevisionBalloonLabelsOrderFamiliesByScopeSeverity()
+    {
+        var runRevision = new DocxRevisionInfo("RunPropertiesChange", "1", "Reviewer", "2026-06-10T00:00:00Z", "rPrChange", "Run", ["color"]);
+        var paragraphRevision = new DocxRevisionInfo("ParagraphPropertiesChange", "2", "Reviewer", "2026-06-10T00:00:00Z", "pPrChange", "Paragraph", ["jc"]);
+        var cellRevision = new DocxRevisionInfo("TableCellPropertiesChange", "3", "Reviewer", "2026-06-10T00:00:00Z", "tcPrChange", "Cell", ["tcW"]);
+        var rowRevision = new DocxRevisionInfo("TableRowPropertiesChange", "4", "Reviewer", "2026-06-10T00:00:00Z", "trPrChange", "Row", ["trHeight"]);
+        var tableRevision = new DocxRevisionInfo("TablePropertiesChange", "5", "Reviewer", "2026-06-10T00:00:00Z", "tblPrChange", "Table", ["tblW"]);
+        var sectionRevision = new DocxRevisionInfo("SectionPropertiesChange", "6", "Reviewer", "2026-06-10T00:00:00Z", "sectPrChange", "Section", ["pgMar"]);
+
+        TestAssert.Equal(
+            "Formatted section: page margins, Formatted table: table width, Formatted row: row height, Formatted cell: cell width, Formatted paragraph: alignment, Formatted run: color",
+            DocxRenderer.BuildRevisionBalloonPreview([runRevision, cellRevision, sectionRevision, paragraphRevision, tableRevision, rowRevision]));
+    }
+
+    public static void DocxFormattingRevisionBalloonLabelsNameCommonWordProperties()
+    {
+        var runRevision = new DocxRevisionInfo(
+            "RunPropertiesChange",
+            "1",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "rPrChange",
+            "Run",
+            ["iCs", "webHidden", "outline", "rtl", "vertAlign", "kern"]);
+        var paragraphRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "2",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["textAlignment", "outlineLvl", "pageBreakBefore", "pBdr", "bidi", "framePr", "wordWrap"]);
+        var tableRevision = new DocxRevisionInfo(
+            "TablePropertiesChange",
+            "3",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "tblPrChange",
+            "Table",
+            ["bidiVisual", "tblCellSpacing", "shd", "jc", "tblLook"]);
+        var rowRevision = new DocxRevisionInfo(
+            "TableRowPropertiesChange",
+            "4",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "trPrChange",
+            "Row",
+            ["tblCellSpacing", "jc", "cantSplit"]);
+        var cellRevision = new DocxRevisionInfo(
+            "TableCellPropertiesChange",
+            "5",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "tcPrChange",
+            "Cell",
+            ["noWrap", "textDirection", "shd", "tcFitText"]);
+        var sectionRevision = new DocxRevisionInfo(
+            "SectionPropertiesChange",
+            "6",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "sectPrChange",
+            "Section",
+            ["lnNumType", "footnotePr", "pgNumType", "docGrid", "endnotePr"]);
+
+        TestAssert.Equal(
+            "Formatted run: vertical position, right-to-left, kerning, outline, +2 more",
+            DocxRenderer.BuildRevisionBalloonPreview([runRevision]));
+        TestAssert.Equal(
+            "Formatted paragraph: page break before, outline level, borders, word wrap, +3 more",
+            DocxRenderer.BuildRevisionBalloonPreview([paragraphRevision]));
+        TestAssert.Equal(
+            "Formatted table: table look, alignment, cell spacing, shading, +1 more",
+            DocxRenderer.BuildRevisionBalloonPreview([tableRevision]));
+        TestAssert.Equal(
+            "Formatted row: row split, alignment, cell spacing",
+            DocxRenderer.BuildRevisionBalloonPreview([rowRevision]));
+        TestAssert.Equal(
+            "Formatted cell: shading, text direction, fit text, no wrap",
+            DocxRenderer.BuildRevisionBalloonPreview([cellRevision]));
+        TestAssert.Equal(
+            "Formatted section: page numbering, document grid, line numbering, footnotes, +1 more",
+            DocxRenderer.BuildRevisionBalloonPreview([sectionRevision]));
+    }
+
+    public static void DocxFormattingRevisionBalloonLabelsNameAdditionalWordProperties()
+    {
+        var runRevision = new DocxRevisionInfo(
+            "RunPropertiesChange",
+            "1",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "rPrChange",
+            "Run",
+            ["oMath", "noProof", "snapToGrid", "spacing", "eastAsianLayout"]);
+        var paragraphRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "2",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["mirrorIndents", "suppressAutoHyphens", "autoSpaceDE", "suppressOverlap"]);
+        var tableRevision = new DocxRevisionInfo(
+            "TablePropertiesChange",
+            "3",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "tblPrChange",
+            "Table",
+            ["tblpPr", "tblOverlap", "tblCaption", "tblStyleColBandSize"]);
+        var rowRevision = new DocxRevisionInfo(
+            "TableRowPropertiesChange",
+            "4",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "trPrChange",
+            "Row",
+            ["gridBefore", "gridAfter", "wBefore", "tblPrEx"]);
+        var cellRevision = new DocxRevisionInfo(
+            "TableCellPropertiesChange",
+            "5",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "tcPrChange",
+            "Cell",
+            ["hideMark", "hMerge", "cellIns", "cellMerge"]);
+        var sectionRevision = new DocxRevisionInfo(
+            "SectionPropertiesChange",
+            "6",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "sectPrChange",
+            "Section",
+            ["pgBorders", "titlePg", "vAlign", "rtlGutter"]);
+        var fallbackRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "7",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["customXmlPr"]);
+        var numberingRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "8",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["numberingChange", "numId", "ilvl", "numPr"]);
+
+        TestAssert.Equal(
+            "Formatted run: East Asian layout, character spacing, snap to grid, proofing, +1 more",
+            DocxRenderer.BuildRevisionBalloonPreview([runRevision]));
+        TestAssert.Equal(
+            "Formatted paragraph: East Asian auto spacing, auto hyphenation, mirror indents, overlap suppression",
+            DocxRenderer.BuildRevisionBalloonPreview([paragraphRevision]));
+        TestAssert.Equal(
+            "Formatted table: floating table position, table overlap, table caption, column band size",
+            DocxRenderer.BuildRevisionBalloonPreview([tableRevision]));
+        TestAssert.Equal(
+            "Formatted row: grid before, grid after, width before, table property exceptions",
+            DocxRenderer.BuildRevisionBalloonPreview([rowRevision]));
+        TestAssert.Equal(
+            "Formatted cell: end mark, horizontal merge, inserted cell, cell merge",
+            DocxRenderer.BuildRevisionBalloonPreview([cellRevision]));
+        TestAssert.Equal(
+            "Formatted section: page borders, different first page, vertical alignment, right-to-left gutter",
+            DocxRenderer.BuildRevisionBalloonPreview([sectionRevision]));
+        TestAssert.Equal(
+            "Formatted paragraph: custom xml properties",
+            DocxRenderer.BuildRevisionBalloonPreview([fallbackRevision]));
+        TestAssert.Equal(
+            "Formatted paragraph: numbering, list level, numbering id, numbering change",
+            DocxRenderer.BuildRevisionBalloonPreview([numberingRevision]));
+    }
+
+    public static void DocxMarkupInspectionSnapshotsExposeFormattingRevisionProvenance()
+    {
+        string input = WriteFormattingRevisionProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.SourceElement == "pPrChange"), "Paragraph formatting revisions should retain private-safe provenance.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "RunPropertiesChange" && revision.SourceElement == "rPrChange"), "Run formatting revisions should be lifted into paragraph-level revision counts.");
+        TestAssert.True(paragraph.Runs.Single(run => run.Text == "Formatting revision").Revisions.Any(revision => revision.Kind == "RunPropertiesChange"), "Runs should retain their own formatting-revision provenance.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.PropertyChangeFamily == "Paragraph" && revision.PropertyElementNames.Contains("jc")), "Paragraph formatting revisions should expose private-safe changed property names.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.PropertyChangeFamily == "Run" && revision.PropertyElementNames.Contains("b")), "Run formatting revisions should expose private-safe changed property names.");
+        string revisionPreview = DocxRenderer.BuildRevisionBalloonPreview(paragraph.Revisions);
+        TestAssert.Contains("Formatted paragraph: alignment", revisionPreview);
+        TestAssert.Contains("Formatted run: color, bold", revisionPreview);
+
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        TestAssert.Equal(3, structure.RevisionCount);
+        TestAssert.Equal(3, structure.OtherRevisionCount);
+        TestAssert.Equal(3, structure.FormattingRevisionCount);
+        TestAssert.Equal(1, structure.RunFormattingRevisionCount);
+        TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
+        TestAssert.Equal(1, structure.SectionFormattingRevisionCount);
+        TestAssert.True((structure.FormattingRevisionProperties ?? []).Any(property => property.Family == "Paragraph" && property.PropertyElementName == "jc" && property.Count == 1), "Formatting revision property snapshots should count paragraph property names without text.");
+        TestAssert.True((structure.FormattingRevisionProperties ?? []).Any(property => property.Family == "Section" && property.PropertyElementName == "pgMar" && property.Count == 1), "Formatting revision property snapshots should count section property names without text.");
+        TestAssert.Equal(2, structure.Blocks.Single(block => block.Kind == "Paragraph").OtherRevisionCount);
+    }
+
+    public static void DocxMarkupInspectionSnapshotsCountStoryFormattingRevisions()
+    {
+        var bodyRevision = new DocxRevisionInfo(
+            "ParagraphPropertiesChange",
+            "1",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "pPrChange",
+            "Paragraph",
+            ["jc"]);
+        var headerRevision = new DocxRevisionInfo(
+            "RunPropertiesChange",
+            "2",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "rPrChange",
+            "Run",
+            ["highlight"]);
+        var textBoxRevision = new DocxRevisionInfo(
+            "RunPropertiesChange",
+            "3",
+            "Reviewer",
+            "2026-06-10T00:00:00Z",
+            "rPrChange",
+            "Run",
+            ["b"]);
+        DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body", 10d, 12d) with
+        {
+            Revisions = [bodyRevision]
+        };
+        DocxParagraph headerParagraph = CreateDocxLayoutParagraph("Header", 10d, 12d) with
+        {
+            Revisions = [headerRevision]
+        };
+        DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Text box", 10d, 12d) with
+        {
+            Revisions = [textBoxRevision]
+        };
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(headerParagraph)]
+            }
+        };
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            pageSettings,
+            [CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+
+        TestAssert.Equal(3, structure.FormattingRevisionCount);
+        TestAssert.Equal(2, structure.RunFormattingRevisionCount);
+        TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
+        TestAssert.True((structure.FormattingRevisionProperties ?? []).Any(property => property.Family == "Run" && property.PropertyElementName == "highlight" && property.Count == 1), "Static-story formatting revision properties should be counted without text.");
+        TestAssert.True((structure.FormattingRevisionProperties ?? []).Any(property => property.Family == "Run" && property.PropertyElementName == "b" && property.Count == 1), "Floating text-box formatting revision properties should be counted without text.");
+    }
+
+    public static void DocxMarkupInspectionSnapshotsExposeTableFormattingRevisionProvenance()
+    {
+        string input = WriteTableFormattingRevisionProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxTable table = document.BodyElements.OfType<DocxTableElement>().Single().Table;
+        DocxTableRow row = table.Rows.Single();
+        DocxTableCell cell = row.Cells.Single();
+
+        TestAssert.True(table.Revisions.Any(revision => revision.Kind == "TablePropertiesChange" && revision.SourceElement == "tblPrChange"), "Table formatting revisions should retain private-safe provenance.");
+        TestAssert.True(row.Revisions.Any(revision => revision.Kind == "TableRowPropertiesChange" && revision.SourceElement == "trPrChange"), "Row formatting revisions should retain private-safe provenance.");
+        TestAssert.True(cell.Revisions.Any(revision => revision.Kind == "TableCellPropertiesChange" && revision.SourceElement == "tcPrChange"), "Cell formatting revisions should retain private-safe provenance.");
+        TestAssert.Contains("Formatted table: borders", DocxRenderer.BuildRevisionBalloonPreview(table.Revisions));
+        TestAssert.Contains("Formatted row: row height", DocxRenderer.BuildRevisionBalloonPreview(row.Revisions));
+        TestAssert.Contains("Formatted cell: cell width", DocxRenderer.BuildRevisionBalloonPreview(cell.Revisions));
+
+        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Table");
+        DocxStructureTableSnapshot tableSnapshot = structure.Tables.Single();
+        DocxStructureTableRowSnapshot rowSnapshot = tableSnapshot.Rows.Single();
+        DocxStructureTableCellSnapshot cellSnapshot = rowSnapshot.Cells.Single();
+
+        TestAssert.Equal(3, block.RevisionCount);
+        TestAssert.Equal(3, block.OtherRevisionCount);
+        TestAssert.Equal(3, tableSnapshot.RevisionCount);
+        TestAssert.Equal(2, rowSnapshot.RevisionCount);
+        TestAssert.Equal(1, cellSnapshot.RevisionCount);
+        TestAssert.Equal(3, structure.FormattingRevisionCount);
+        TestAssert.Equal(1, structure.TableFormattingRevisionCount);
+        TestAssert.Equal(1, structure.RowFormattingRevisionCount);
+        TestAssert.Equal(1, structure.CellFormattingRevisionCount);
+        TestAssert.True((structure.FormattingRevisionProperties ?? []).Any(property => property.Family == "Table" && property.PropertyElementName == "tblBorders"), "Table formatting revision property snapshots should count table borders.");
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectMarkupBalloons(document);
+        int revisionCandidateCount = placements
+            .Where(placement => placement.Kind == "Revision")
+            .Sum(placement => placement.CandidateCount);
+        TestAssert.True(revisionCandidateCount >= 3, "All-markup table formatting revisions should place table/row/cell revision balloon candidates.");
+    }
+
+    private static DocxParagraph ReadTrackedChangeModeProbe(string input, OoxPdfDocxMarkupMode mode)
+    {
+        return ReadDocx(input, mode).Paragraphs.Single();
+    }
+
+    private static DocxDocument ReadDocx(string input, OoxPdfDocxMarkupMode mode)
+    {
+        using FileStream stream = File.OpenRead(input);
+        return new DocxReader().Read(OoxPackage.Open(stream), markupMode: mode);
+    }
+
+    private static DocxTable ReadSingleTable(string input, OoxPdfDocxMarkupMode mode)
+    {
+        return ReadDocx(input, mode).BodyElements.OfType<DocxTableElement>().Single().Table;
+    }
+
+    private static string ParagraphTexts(DocxDocument document)
+    {
+        return string.Join("|", document.Paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text))));
+    }
+
+    private static string RowTexts(DocxTable table)
+    {
+        return string.Join("|", table.Rows.Select(row => string.Join(" ", row.Cells.Select(cell => cell.Text))));
+    }
+
+    private static string WriteTrackedChangeModeProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:ins w:id="1" w:author="A" w:date="2026-06-01T00:00:00Z"><w:r><w:t>Inserted </w:t></w:r></w:ins>
+                      <w:del w:id="2" w:author="B" w:date="2026-06-02T00:00:00Z"><w:r><w:delText>Deleted </w:delText></w:r></w:del>
+                      <w:moveFrom w:id="3" w:author="C" w:date="2026-06-03T00:00:00Z"><w:r><w:delText>MovedFrom </w:delText></w:r></w:moveFrom>
+                      <w:moveTo w:id="4" w:author="D" w:date="2026-06-04T00:00:00Z"><w:r><w:t>MovedTo </w:t></w:r></w:moveTo>
+                      <w:r><w:t>After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteTrackedChangeRevisionViewProbeDocx(string revisionViewAttributes)
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:ins w:id="1" w:author="A" w:date="2026-06-01T00:00:00Z"><w:r><w:t>Inserted </w:t></w:r></w:ins>
+                      <w:del w:id="2" w:author="B" w:date="2026-06-02T00:00:00Z"><w:r><w:delText>Deleted </w:delText></w:r></w:del>
+                      <w:moveFrom w:id="3" w:author="C" w:date="2026-06-03T00:00:00Z"><w:r><w:delText>MovedFrom </w:delText></w:r></w:moveFrom>
+                      <w:moveTo w:id="4" w:author="D" w:date="2026-06-04T00:00:00Z"><w:r><w:t>MovedTo </w:t></w:r></w:moveTo>
+                      <w:r><w:t>After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/settings.xml"] = $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:revisionView {revisionViewAttributes}/>
+                </w:settings>
+                """
+        });
+    }
+
+    private static string WriteBlockRevisionParagraphProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Before</w:t></w:r></w:p>
+                    <w:ins w:id="31" w:author="A" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:t>Inserted paragraph</w:t></w:r></w:p>
+                    </w:ins>
+                    <w:del w:id="32" w:author="B" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:delText>Deleted paragraph</w:delText></w:r></w:p>
+                    </w:del>
+                    <w:moveFrom w:id="33" w:author="C" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:delText>Moved from paragraph</w:delText></w:r></w:p>
+                    </w:moveFrom>
+                    <w:moveTo w:id="34" w:author="D" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:t>Moved to paragraph</w:t></w:r></w:p>
+                    </w:moveTo>
+                    <w:p><w:r><w:t>After</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteBlockRevisionParagraphPropertiesProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Before</w:t></w:r></w:p>
+                    <w:ins w:id="611" w:author="A" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr>
+                          <w:pageBreakBefore/>
+                          <w:keepNext/>
+                          <w:keepLines/>
+                          <w:widowControl w:val="0"/>
+                        </w:pPr>
+                        <w:r><w:t>Inserted keep</w:t></w:r>
+                      </w:p>
+                    </w:ins>
+                    <w:del w:id="612" w:author="B" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr>
+                          <w:pageBreakBefore/>
+                          <w:keepNext/>
+                          <w:keepLines/>
+                          <w:widowControl w:val="0"/>
+                        </w:pPr>
+                        <w:r><w:delText>Deleted keep</w:delText></w:r>
+                      </w:p>
+                    </w:del>
+                    <w:moveFrom w:id="613" w:author="C" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr>
+                          <w:keepNext/>
+                          <w:keepLines/>
+                          <w:widowControl/>
+                        </w:pPr>
+                        <w:r><w:delText>Moved from keep</w:delText></w:r>
+                      </w:p>
+                    </w:moveFrom>
+                    <w:moveTo w:id="614" w:author="D" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr>
+                          <w:keepNext/>
+                          <w:keepLines/>
+                          <w:widowControl/>
+                        </w:pPr>
+                        <w:r><w:t>Moved to keep</w:t></w:r>
+                      </w:p>
+                    </w:moveTo>
+                    <w:p><w:r><w:t>After</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteRevisedParagraphSpacingCollapseProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="BodySpacing"/>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="BodySpacing"/>
+                        <w:spacing w:after="480"/>
+                      </w:pPr>
+                      <w:r><w:t>Before</w:t></w:r>
+                    </w:p>
+                    <w:ins w:id="621" w:author="A" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr>
+                          <w:pStyle w:val="BodySpacing"/>
+                          <w:spacing w:before="480" w:after="120"/>
+                          <w:contextualSpacing/>
+                        </w:pPr>
+                        <w:r><w:t>Inserted spacing</w:t></w:r>
+                      </w:p>
+                    </w:ins>
+                    <w:del w:id="622" w:author="B" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr>
+                          <w:pStyle w:val="BodySpacing"/>
+                          <w:spacing w:before="480" w:after="120"/>
+                          <w:contextualSpacing/>
+                        </w:pPr>
+                        <w:r><w:delText>Deleted spacing</w:delText></w:r>
+                      </w:p>
+                    </w:del>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="BodySpacing"/>
+                      </w:pPr>
+                      <w:r><w:t>After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteDeletedContentProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr>
+                        <w:rPr>
+                          <w:del w:id="202" w:author="B" w:date="2026-06-10T00:00:00Z"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:del w:id="201" w:author="A" w:date="2026-06-10T00:00:00Z">
+                        <w:r><w:t>deleted-run </w:t></w:r>
+                      </w:del>
+                      <w:r><w:t>After</w:t></w:r>
+                    </w:p>
+                    <w:del w:id="203" w:author="C" w:date="2026-06-10T00:00:00Z">
+                      <w:tbl>
+                        <w:tr><w:tc><w:p><w:r><w:t>Deleted table text</w:t></w:r></w:p></w:tc></w:tr>
+                      </w:tbl>
+                    </w:del>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteDeletedParagraphMarkMarkupProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/deleted-paragraph-mark" TargetMode="External"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:pPr>
+                        <w:spacing w:after="480"/>
+                        <w:rPr><w:del w:id="501" w:author="A" w:date="2026-06-10T00:00:00Z"/></w:rPr>
+                      </w:pPr>
+                      <w:r><w:t>First</w:t></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr><w:spacing w:before="480" w:after="120"/></w:pPr>
+                      <w:r><w:t>Second </w:t></w:r>
+                      <w:hyperlink r:id="rIdLink"><w:r><w:t>link </w:t></w:r></w:hyperlink>
+                      <w:fldSimple w:instr=" REF SyntheticTarget "><w:r><w:t>field </w:t></w:r></w:fldSimple>
+                      <w:r><w:t>[c]</w:t><w:commentReference w:id="1"/></w:r>
+                    </w:p>
+                    <w:del w:id="502" w:author="B" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>
+                        <w:r><w:delText>Deleted list item</w:delText></w:r>
+                      </w:p>
+                    </w:del>
+                    <w:p>
+                      <w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>
+                      <w:r><w:t>Visible list item</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="1">
+                    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/></w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>
+                </w:numbering>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1"><w:p><w:r><w:t>Synthetic comment</w:t></w:r></w:p></w:comment>
+                </w:comments>
+                """
+        });
+    }
+
+    private static string WriteHyperlinkFieldRevisionProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/revisions" TargetMode="External"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:hyperlink r:id="rIdLink">
+                        <w:r><w:t>Link </w:t></w:r>
+                        <w:del w:id="301" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>old </w:delText></w:r></w:del>
+                        <w:ins w:id="302" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:t>new </w:t></w:r></w:ins>
+                      </w:hyperlink>
+                      <w:fldSimple w:instr=" DATE ">
+                        <w:del w:id="303" w:author="C" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>field-old </w:delText></w:r></w:del>
+                        <w:ins w:id="304" w:author="D" w:date="2026-06-10T00:00:00Z"><w:r><w:t>field-new </w:t></w:r></w:ins>
+                      </w:fldSimple>
+                      <w:r><w:t>After</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteSourceIndexMarkupProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
+                  <Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/source-index" TargetMode="External"/>
+                  <Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
+                  <Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before </w:t></w:r>
+                      <w:del w:id="401" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Hidden </w:delText></w:r></w:del>
+                      <w:ins w:id="402" w:author="A" w:date="2026-06-10T00:00:00Z">
+                        <w:bookmarkStart w:id="9" w:name="Target"/>
+                        <w:r><w:t>Target </w:t></w:r>
+                        <w:bookmarkEnd w:id="9"/>
+                      </w:ins>
+                      <w:hyperlink w:anchor="Target"><w:r><w:t>Jump </w:t></w:r></w:hyperlink>
+                      <w:hyperlink r:id="rIdLink">
+                        <w:del w:id="403" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Old link </w:delText></w:r></w:del>
+                        <w:ins w:id="404" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>External </w:t></w:r></w:ins>
+                      </w:hyperlink>
+                      <w:ins w:id="405" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Foot</w:t><w:footnoteReference w:id="2"/></w:r></w:ins>
+                      <w:r><w:t> End</w:t><w:endnoteReference w:id="3"/></w:r>
+                    </w:p>
+                    <w:tbl>
+                      <w:del w:id="406" w:author="A" w:date="2026-06-10T00:00:00Z">
+                        <w:tr><w:tc><w:p><w:r><w:delText>Deleted row</w:delText></w:r></w:p></w:tc></w:tr>
+                      </w:del>
+                      <w:tr><w:tc><w:p><w:r><w:t>Visible row</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/footnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:footnote w:id="2"><w:p><w:r><w:t>Footnote body</w:t></w:r></w:p></w:footnote>
+                </w:footnotes>
+                """,
+            ["word/endnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:endnote w:id="3"><w:p><w:r><w:t>Endnote body</w:t></w:r></w:p></w:endnote>
+                </w:endnotes>
+                """
+        });
+    }
+
+    private static string WriteBlockRevisionTableProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tr><w:tc><w:p><w:r><w:t>Base</w:t></w:r></w:p></w:tc></w:tr>
+                      <w:ins w:id="41" w:author="A" w:date="2026-06-10T00:00:00Z">
+                        <w:tr><w:tc><w:p><w:r><w:t>Inserted row</w:t></w:r></w:p></w:tc></w:tr>
+                      </w:ins>
+                      <w:del w:id="42" w:author="B" w:date="2026-06-10T00:00:00Z">
+                        <w:tr><w:tc><w:p><w:r><w:delText>Deleted row</w:delText></w:r></w:p></w:tc></w:tr>
+                      </w:del>
+                      <w:moveFrom w:id="43" w:author="C" w:date="2026-06-10T00:00:00Z">
+                        <w:tr><w:tc><w:p><w:r><w:delText>Moved from row</w:delText></w:r></w:p></w:tc></w:tr>
+                      </w:moveFrom>
+                      <w:moveTo w:id="44" w:author="D" w:date="2026-06-10T00:00:00Z">
+                        <w:tr><w:tc><w:p><w:r><w:t>Moved to row</w:t></w:r></w:p></w:tc></w:tr>
+                      </w:moveTo>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteTableMarkupScenarioProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="2400"/><w:gridCol w:w="2400"/></w:tblGrid>
+                      <w:tr>
+                        <w:trPr><w:tblHeader/></w:trPr>
+                        <w:tc><w:p><w:r><w:t>Header</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Header two</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr><w:vMerge w:val="restart"/></w:tcPr>
+                          <w:p>
+                            <w:commentRangeStart w:id="1"/>
+                            <w:r><w:t>Commented cell</w:t></w:r>
+                            <w:commentRangeEnd w:id="1"/>
+                            <w:r><w:commentReference w:id="1"/></w:r>
+                          </w:p>
+                        </w:tc>
+                        <w:tc><w:p><w:r><w:t>Base cell</w:t></w:r></w:p></w:tc>
+                        <w:ins w:id="401" w:author="A" w:date="2026-06-10T00:00:00Z">
+                          <w:tc><w:p><w:r><w:t>Inserted cell</w:t></w:r></w:p></w:tc>
+                        </w:ins>
+                        <w:del w:id="402" w:author="B" w:date="2026-06-10T00:00:00Z">
+                          <w:tc><w:p><w:r><w:delText>Deleted cell</w:delText></w:r></w:p></w:tc>
+                        </w:del>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr><w:vMerge/></w:tcPr>
+                          <w:p><w:r><w:t>Continuation cell</w:t></w:r></w:p>
+                          <w:del w:id="403" w:author="C" w:date="2026-06-10T00:00:00Z">
+                            <w:p><w:r><w:delText>Deleted cell paragraph</w:delText></w:r></w:p>
+                          </w:del>
+                        </w:tc>
+                        <w:moveFrom w:id="404" w:author="D" w:date="2026-06-10T00:00:00Z">
+                          <w:tc>
+                            <w:tbl>
+                              <w:tr><w:tc><w:p><w:r><w:delText>Moved nested old</w:delText></w:r></w:p></w:tc></w:tr>
+                            </w:tbl>
+                          </w:tc>
+                        </w:moveFrom>
+                        <w:moveTo w:id="405" w:author="E" w:date="2026-06-10T00:00:00Z">
+                          <w:tc>
+                            <w:tbl>
+                              <w:tr><w:tc><w:p><w:r><w:t>Moved nested new</w:t></w:r></w:p></w:tc></w:tr>
+                            </w:tbl>
+                          </w:tc>
+                        </w:moveTo>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1" w:author="Reviewer" w:date="2026-06-10T00:00:00Z">
+                    <w:p><w:r><w:t>Table comment</w:t></w:r></w:p>
+                  </w:comment>
+                </w:comments>
+                """
+        });
+    }
+
+    private static string WriteBodyElementRevisionProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:ins w:id="101" w:author="A" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:t>Inserted body paragraph</w:t></w:r></w:p>
+                    </w:ins>
+                    <w:del w:id="102" w:author="B" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:delText>Deleted body paragraph</w:delText></w:r></w:p>
+                    </w:del>
+                    <w:ins w:id="103" w:author="C" w:date="2026-06-10T00:00:00Z">
+                      <w:tbl>
+                        <w:tr><w:tc><w:p><w:r><w:t>Inserted body table</w:t></w:r></w:p></w:tc></w:tr>
+                      </w:tbl>
+                    </w:ins>
+                    <w:del w:id="104" w:author="D" w:date="2026-06-10T00:00:00Z">
+                      <w:tbl>
+                        <w:tr><w:tc><w:p><w:r><w:delText>Deleted body table</w:delText></w:r></w:p></w:tc></w:tr>
+                      </w:tbl>
+                    </w:del>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteBlockContentControlFormattingRevisionProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Before</w:t></w:r></w:p>
+                    <w:sdt>
+                      <w:sdtPr><w:alias w:val="Synthetic block control"/></w:sdtPr>
+                      <w:sdtContent>
+                        <w:p>
+                          <w:pPr>
+                            <w:pPrChange w:id="201" w:author="A" w:date="2026-06-10T00:00:00Z">
+                              <w:pPr><w:pStyle w:val="ControlledStyle"/></w:pPr>
+                            </w:pPrChange>
+                          </w:pPr>
+                          <w:r><w:t>Controlled paragraph</w:t></w:r>
+                        </w:p>
+                      </w:sdtContent>
+                    </w:sdt>
+                    <w:p><w:r><w:t>After</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteStaticAndRelatedStoryRevisionProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                  <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
+                  <Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                  <Relationship Id="rIdFooter" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                  <Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
+                  <Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Body</w:t></w:r>
+                      <w:r><w:commentReference w:id="1"/></w:r>
+                      <w:r><w:footnoteReference w:id="2"/></w:r>
+                      <w:r><w:endnoteReference w:id="3"/></w:r>
+                    </w:p>
+                    <w:sectPr>
+                      <w:headerReference w:type="default" r:id="rIdHeader"/>
+                      <w:footerReference w:type="default" r:id="rIdFooter"/>
+                      <w:pgSz w:w="12240" w:h="15840"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/header1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:p>
+                    <w:r><w:t>Header base </w:t></w:r>
+                    <w:ins w:id="11" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Header inserted</w:t></w:r></w:ins>
+                    <w:del w:id="12" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Header deleted</w:delText></w:r></w:del>
+                  </w:p>
+                </w:hdr>
+                """,
+            ["word/footer1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:p>
+                    <w:r><w:t>Footer base </w:t></w:r>
+                    <w:ins w:id="21" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Footer inserted</w:t></w:r></w:ins>
+                    <w:del w:id="22" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Footer deleted</w:delText></w:r></w:del>
+                  </w:p>
+                </w:ftr>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1">
+                    <w:p>
+                      <w:r><w:t>Comment base </w:t></w:r>
+                      <w:ins w:id="31" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Comment inserted</w:t></w:r></w:ins>
+                      <w:del w:id="32" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Comment deleted</w:delText></w:r></w:del>
+                    </w:p>
+                  </w:comment>
+                </w:comments>
+                """,
+            ["word/footnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:footnote w:id="2">
+                    <w:p>
+                      <w:r><w:t>Footnote base </w:t></w:r>
+                      <w:ins w:id="41" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Footnote inserted</w:t></w:r></w:ins>
+                      <w:del w:id="42" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Footnote deleted</w:delText></w:r></w:del>
+                    </w:p>
+                  </w:footnote>
+                </w:footnotes>
+                """,
+            ["word/endnotes.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:endnote w:id="3">
+                    <w:p>
+                      <w:r><w:t>Endnote base </w:t></w:r>
+                      <w:ins w:id="51" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Endnote inserted</w:t></w:r></w:ins>
+                      <w:del w:id="52" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Endnote deleted</w:delText></w:r></w:del>
+                    </w:p>
+                  </w:endnote>
+                </w:endnotes>
+                """
+        });
+    }
+
+    private static string WriteSectionHeaderFooterMarkupProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+                  <Override PartName="/word/headerDefault.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/headerEven.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/headerFirst.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                  <Override PartName="/word/footerDefault.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+                  <Override PartName="/word/footerEven.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+                  <Override PartName="/word/footerFirst.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+                  <Relationship Id="rIdHeaderDefault" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="headerDefault.xml"/>
+                  <Relationship Id="rIdHeaderEven" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="headerEven.xml"/>
+                  <Relationship Id="rIdHeaderFirst" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="headerFirst.xml"/>
+                  <Relationship Id="rIdFooterDefault" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footerDefault.xml"/>
+                  <Relationship Id="rIdFooterEven" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footerEven.xml"/>
+                  <Relationship Id="rIdFooterFirst" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footerFirst.xml"/>
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                </Relationships>
+                """,
+            ["word/settings.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:evenAndOddHeaders/>
+                </w:settings>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p><w:r><w:t>Before</w:t></w:r></w:p>
+                    <w:ins w:id="801" w:author="A" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:br w:type="page"/></w:r></w:p>
+                    </w:ins>
+                    <w:del w:id="802" w:author="B" w:date="2026-06-10T00:00:00Z">
+                      <w:p><w:r><w:br w:type="column"/></w:r></w:p>
+                    </w:del>
+                    <w:ins w:id="803" w:author="C" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:pPr>
+                          <w:sectPr>
+                            <w:type w:val="nextPage"/>
+                            <w:headerReference w:type="default" r:id="rIdHeaderDefault"/>
+                            <w:headerReference w:type="even" r:id="rIdHeaderEven"/>
+                            <w:headerReference w:type="first" r:id="rIdHeaderFirst"/>
+                            <w:footerReference w:type="default" r:id="rIdFooterDefault"/>
+                            <w:footerReference w:type="even" r:id="rIdFooterEven"/>
+                            <w:footerReference w:type="first" r:id="rIdFooterFirst"/>
+                          </w:sectPr>
+                        </w:pPr>
+                      </w:p>
+                    </w:ins>
+                    <w:p><w:r><w:t>After</w:t></w:r></w:p>
+                    <w:sectPr>
+                      <w:headerReference w:type="default" r:id="rIdHeaderDefault"/>
+                      <w:headerReference w:type="even" r:id="rIdHeaderEven"/>
+                      <w:headerReference w:type="first" r:id="rIdHeaderFirst"/>
+                      <w:footerReference w:type="default" r:id="rIdFooterDefault"/>
+                      <w:footerReference w:type="even" r:id="rIdFooterEven"/>
+                      <w:footerReference w:type="first" r:id="rIdFooterFirst"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/headerDefault.xml"] = StaticStoryPartXml("hdr", "Default header"),
+            ["word/headerEven.xml"] = StaticStoryPartXml("hdr", "Even header"),
+            ["word/headerFirst.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:p>
+                    <w:ins w:id="811" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>First header inserted</w:t></w:r></w:ins>
+                    <w:del w:id="812" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>First header deleted</w:delText></w:r></w:del>
+                  </w:p>
+                  <w:p>
+                    <w:commentRangeStart w:id="1"/>
+                    <w:r><w:t>First header comment anchor</w:t></w:r>
+                    <w:commentRangeEnd w:id="1"/>
+                    <w:r><w:commentReference w:id="1"/></w:r>
+                  </w:p>
+                </w:hdr>
+                """,
+            ["word/footerDefault.xml"] = StaticStoryPartXml("ftr", "Default footer"),
+            ["word/footerEven.xml"] = StaticStoryPartXml("ftr", "Even footer"),
+            ["word/footerFirst.xml"] = StaticStoryPartXml("ftr", "First footer"),
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1" w:author="Reviewer" w:date="2026-06-10T00:00:00Z">
+                    <w:p><w:r><w:t>Static story comment</w:t></w:r></w:p>
+                  </w:comment>
+                </w:comments>
+                """
+        });
+
+        static string StaticStoryPartXml(string root, string label)
+        {
+            return $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:{{root}} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:p>
+                    <w:ins w:id="810" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>{{label}} inserted</w:t></w:r></w:ins>
+                    <w:del w:id="820" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>{{label}} deleted</w:delText></w:r></w:del>
+                  </w:p>
+                </w:{{root}}>
+                """;
+        }
+    }
+
+    private static string WriteImageRevisionProbeDocx()
+    {
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [16, 32, 48]);
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdInlineInserted" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/inline-inserted.png"/>
+                  <Relationship Id="rIdInlineDeleted" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/inline-deleted.png"/>
+                  <Relationship Id="rIdFloatingInserted" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/floating-inserted.png"/>
+                  <Relationship Id="rIdFloatingDeleted" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/floating-deleted.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:ins w:id="61" w:author="A" w:date="2026-06-10T00:00:00Z">
+                        <w:r>
+                          <w:drawing>
+                            <wp:inline>
+                              <wp:extent cx="914400" cy="914400"/>
+                              <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic><pic:blipFill><a:blip r:embed="rIdInlineInserted"/></pic:blipFill></pic:pic>
+                              </a:graphicData></a:graphic>
+                            </wp:inline>
+                          </w:drawing>
+                        </w:r>
+                      </w:ins>
+                      <w:del w:id="62" w:author="B" w:date="2026-06-10T00:00:00Z">
+                        <w:r>
+                          <w:drawing>
+                            <wp:inline>
+                              <wp:extent cx="914400" cy="914400"/>
+                              <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic><pic:blipFill><a:blip r:embed="rIdInlineDeleted"/></pic:blipFill></pic:pic>
+                              </a:graphicData></a:graphic>
+                            </wp:inline>
+                          </w:drawing>
+                        </w:r>
+                      </w:del>
+                      <w:ins w:id="63" w:author="C" w:date="2026-06-10T00:00:00Z">
+                        <w:r>
+                          <w:drawing>
+                            <wp:anchor distT="0" distB="0" distL="0" distR="0" behindDoc="0">
+                              <wp:extent cx="914400" cy="914400"/>
+                              <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                              <wp:positionV relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionV>
+                              <wp:wrapNone/>
+                              <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic><pic:blipFill><a:blip r:embed="rIdFloatingInserted"/></pic:blipFill></pic:pic>
+                              </a:graphicData></a:graphic>
+                            </wp:anchor>
+                          </w:drawing>
+                        </w:r>
+                      </w:ins>
+                      <w:del w:id="64" w:author="D" w:date="2026-06-10T00:00:00Z">
+                        <w:r>
+                          <w:drawing>
+                            <wp:anchor distT="0" distB="0" distL="0" distR="0" behindDoc="0">
+                              <wp:extent cx="914400" cy="914400"/>
+                              <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                              <wp:positionV relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionV>
+                              <wp:wrapNone/>
+                              <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic><pic:blipFill><a:blip r:embed="rIdFloatingDeleted"/></pic:blipFill></pic:pic>
+                              </a:graphicData></a:graphic>
+                            </wp:anchor>
+                          </w:drawing>
+                        </w:r>
+                      </w:del>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """),
+            ["word/media/inline-inserted.png"] = png,
+            ["word/media/inline-deleted.png"] = png,
+            ["word/media/floating-inserted.png"] = png,
+            ["word/media/floating-deleted.png"] = png
+        });
+    }
+
+    private static string WriteMovedCommentedImageProbeDocx()
+    {
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [80, 96, 112]);
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                  <Relationship Id="rIdBodyCommented" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/body-commented.png"/>
+                  <Relationship Id="rIdInlineMoveFrom" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/inline-move-from.png"/>
+                  <Relationship Id="rIdInlineMoveTo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/inline-move-to.png"/>
+                  <Relationship Id="rIdFloatingMoveFrom" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/floating-move-from.png"/>
+                  <Relationship Id="rIdFloatingMoveTo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/floating-move-to.png"/>
+                </Relationships>
+                """),
+            ["word/_rels/comments.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdCommentAnchor" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/comment-anchor.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8($$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:commentRangeStart w:id="1"/>
+                      {{InlineDrawingXml("rIdBodyCommented")}}
+                      <w:commentRangeEnd w:id="1"/>
+                      <w:r><w:commentReference w:id="1"/></w:r>
+                      <w:moveFrom w:id="701" w:author="A" w:date="2026-06-10T00:00:00Z">
+                        {{InlineDrawingXml("rIdInlineMoveFrom")}}
+                      </w:moveFrom>
+                      <w:moveTo w:id="702" w:author="B" w:date="2026-06-10T00:00:00Z">
+                        {{InlineDrawingXml("rIdInlineMoveTo")}}
+                      </w:moveTo>
+                      <w:moveFrom w:id="703" w:author="C" w:date="2026-06-10T00:00:00Z">
+                        {{AnchorDrawingXml("rIdFloatingMoveFrom", "0")}}
+                      </w:moveFrom>
+                      <w:moveTo w:id="704" w:author="D" w:date="2026-06-10T00:00:00Z">
+                        {{AnchorDrawingXml("rIdFloatingMoveTo", "1")}}
+                      </w:moveTo>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """),
+            ["word/comments.xml"] = TestFixtures.Utf8($$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:comment w:id="1" w:author="Reviewer" w:date="2026-06-10T00:00:00Z">
+                    <w:p>
+                      <w:moveTo w:id="705" w:author="E" w:date="2026-06-10T00:00:00Z">
+                        {{AnchorDrawingXml("rIdCommentAnchor", "1")}}
+                      </w:moveTo>
+                    </w:p>
+                  </w:comment>
+                </w:comments>
+                """),
+            ["word/media/body-commented.png"] = png,
+            ["word/media/inline-move-from.png"] = png,
+            ["word/media/inline-move-to.png"] = png,
+            ["word/media/floating-move-from.png"] = png,
+            ["word/media/floating-move-to.png"] = png,
+            ["word/media/comment-anchor.png"] = png
+        });
+
+        static string InlineDrawingXml(string relationshipId)
+        {
+            return $$"""
+                <w:r>
+                  <w:drawing>
+                    <wp:inline>
+                      <wp:extent cx="914400" cy="914400"/>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                        <pic:pic><pic:blipFill><a:blip r:embed="{{relationshipId}}"/></pic:blipFill></pic:pic>
+                      </a:graphicData></a:graphic>
+                    </wp:inline>
+                  </w:drawing>
+                </w:r>
+                """;
+        }
+
+        static string AnchorDrawingXml(string relationshipId, string behindDocumentValue)
+        {
+            return $$"""
+                <w:r>
+                  <w:drawing>
+                    <wp:anchor distT="0" distB="0" distL="0" distR="0" behindDoc="{{behindDocumentValue}}">
+                      <wp:extent cx="914400" cy="914400"/>
+                      <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                      <wp:positionV relativeFrom="paragraph"><wp:posOffset>914400</wp:posOffset></wp:positionV>
+                      <wp:wrapNone/>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                        <pic:pic><pic:blipFill><a:blip r:embed="{{relationshipId}}"/></pic:blipFill></pic:pic>
+                      </a:graphicData></a:graphic>
+                    </wp:anchor>
+                  </w:drawing>
+                </w:r>
+                """;
+        }
+    }
+
+    private static string WriteCommentMarkerProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Commented</w:t></w:r>
+                      <w:r><w:commentReference w:id="1"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteCommentAnchorAccountingProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Visible anchor</w:t></w:r>
+                      <w:r><w:commentReference w:id="1"/></w:r>
+                    </w:p>
+                    <w:del w:id="10" w:author="A" w:date="2026-06-10T00:00:00Z">
+                      <w:p>
+                        <w:r><w:delText>Hidden anchor</w:delText></w:r>
+                        <w:r><w:commentReference w:id="2"/></w:r>
+                      </w:p>
+                    </w:del>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1"><w:p><w:r><w:t>Visible body</w:t></w:r></w:p></w:comment>
+                  <w:comment w:id="2"><w:p><w:r><w:t>Hidden body</w:t></w:r></w:p></w:comment>
+                  <w:comment w:id="3"><w:p><w:r><w:t>Orphan body</w:t></w:r></w:p></w:comment>
+                  <w:comment><w:p><w:r><w:t>Unsupported body</w:t></w:r></w:p></w:comment>
+                </w:comments>
+                """
+        });
+    }
+
+    private static string WriteFormattingRevisionProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr>
+                        <w:pPrChange w:id="10" w:author="A" w:date="2026-06-05T00:00:00Z">
+                          <w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr>
+                        </w:pPrChange>
+                        <w:sectPr>
+                          <w:pgSz w:w="12240" w:h="15840"/>
+                          <w:sectPrChange w:id="12" w:author="C" w:date="2026-06-07T00:00:00Z">
+                            <w:sectPr><w:pgMar w:left="1440" w:right="1440"/><w:cols w:num="2"/></w:sectPr>
+                          </w:sectPrChange>
+                        </w:sectPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rPrChange w:id="11" w:author="B" w:date="2026-06-06T00:00:00Z">
+                            <w:rPr><w:b/><w:color w:val="FF0000"/></w:rPr>
+                          </w:rPrChange>
+                        </w:rPr>
+                        <w:t>Formatting revision</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+    }
+
+    private static string WriteTableFormattingRevisionProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr>
+                        <w:tblW w:w="0" w:type="auto"/>
+                        <w:tblPrChange w:id="20" w:author="A" w:date="2026-06-07T00:00:00Z">
+                          <w:tblPr>
+                            <w:tblW w:w="2400" w:type="dxa"/>
+                            <w:tblBorders><w:top w:val="single"/></w:tblBorders>
+                          </w:tblPr>
+                        </w:tblPrChange>
+                      </w:tblPr>
+                      <w:tr>
+                        <w:trPr>
+                          <w:trHeight w:val="360"/>
+                          <w:trPrChange w:id="21" w:author="B" w:date="2026-06-08T00:00:00Z">
+                            <w:trPr><w:trHeight w:val="720"/><w:cantSplit/></w:trPr>
+                          </w:trPrChange>
+                        </w:trPr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcW w:w="2400" w:type="dxa"/>
+                            <w:tcPrChange w:id="22" w:author="C" w:date="2026-06-09T00:00:00Z">
+                              <w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:shd w:fill="FFFF00"/></w:tcPr>
+                            </w:tcPrChange>
+                          </w:tcPr>
+                          <w:p><w:r><w:t>Cell</w:t></w:r></w:p>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
     }
 
     public static void DocxReaderSplitsNestedVisibleInlineContainerPageBreaks()
@@ -15646,6 +28579,8 @@ internal static class DocxTests
         TestAssert.Equal(1, commentReference.SourceRunIndex);
         TestAssert.Equal(0, commentReference.RunChildIndex);
         TestAssert.Equal(0, commentReference.TextOffsetInRun);
+        DocxCommentRange commentRange = referenceParagraph.CommentRanges.Single();
+        TestAssert.True(commentRange.Id == "1" && commentRange.StartSourceRunIndex == 0 && commentRange.StartTextOffset == 0 && commentRange.ReferenceSourceRunIndex == 1 && commentRange.ReferenceTextOffset == 0, "Comment range starts and marker anchors should be preserved without exposing body text.");
         TestAssert.Equal(2, footnoteReference.SourceRunIndex);
         TestAssert.Equal(1, footnoteReference.RunChildIndex);
         TestAssert.Equal(6, footnoteReference.TextOffsetInRun);
@@ -15681,6 +28616,9 @@ internal static class DocxTests
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Footnote" && story.Scope == "/word/footnotes.xml" && story.VariantType == "2" && story.TextLength == 13), "Structure snapshots should expose footnote story text metrics.");
         TestAssert.True(snapshot.Stories.Any(story => story.Kind == "Endnote" && story.Scope == "/word/endnotes.xml" && story.VariantType == "3" && story.TextLength == 12), "Structure snapshots should expose endnote story text metrics.");
         TestAssert.Equal(3, snapshot.InlineReferences.Count);
+        DocxStructureCommentRangeSnapshot commentRangeSnapshot = snapshot.CommentRanges!.Single();
+        TestAssert.True(commentRangeSnapshot.SourceBlockIndex == 0 && commentRangeSnapshot.SourceBlockKind == "Paragraph" && commentRangeSnapshot.Id == "1" && commentRangeSnapshot.StartSourceRunIndex == 0 && commentRangeSnapshot.ReferenceSourceRunIndex == 1, "Comment range snapshots should preserve private-safe source coordinates.");
+        TestAssert.True(commentRangeSnapshot.ResolvedStoryPartName == "/word/comments.xml" && commentRangeSnapshot.ResolvedStoryId == "1" && commentRangeSnapshot.ResolvedStoryBlockCount == 3 && commentRangeSnapshot.ResolvedStoryTextLength == 37, "Comment range snapshots should resolve to the comment story body.");
         DocxStructureInlineReferenceSnapshot commentReferenceSnapshot = snapshot.InlineReferences.Single(reference => reference.Kind == "Comment");
         TestAssert.True(commentReferenceSnapshot.SourceBlockIndex == 0 && commentReferenceSnapshot.SourceBlockKind == "Paragraph" && commentReferenceSnapshot.SourceRunIndex == 1 && commentReferenceSnapshot.TextOffsetInRun == 0, "Comment reference snapshot should preserve the source marker coordinates.");
         TestAssert.True(commentReferenceSnapshot.ResolvedStoryKind == "Comment" && commentReferenceSnapshot.ResolvedStoryPartName == "/word/comments.xml" && commentReferenceSnapshot.ResolvedStoryId == "1" && commentReferenceSnapshot.ResolvedStoryBlockCount == 3 && commentReferenceSnapshot.ResolvedStoryTextLength == 37, "Comment reference snapshot should resolve to the comment story body.");
@@ -15826,6 +28764,153 @@ internal static class DocxTests
 
         TestAssert.True(footnotePage.PlacedRelatedStoryTextLineCount >= 1, "Resolved footnote story text should be placed on the body-reference page.");
         TestAssert.True(bodyBottom >= footnoteTop, $"Body layout should reserve page space above placed footnotes; body bottom {bodyBottom} footnote top {footnoteTop}.");
+    }
+
+    public static void DocxLayoutPlacesFootnoteTableRowsAtPageMargin()
+    {
+        DocxParagraph anchor = CreateDocxLayoutParagraph("Anchor paragraph", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "17",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 6)
+            ]
+        };
+        DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Footnote table cell", 10d, 12d);
+        var cell = new DocxTableCell("Footnote table cell", [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var footnoteTable = new DocxTable(null, [90d], [new DocxTableRow([cell], 24d)]);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "17",
+            [new DocxTableElement(footnoteTable)],
+            [],
+            [footnoteTable]);
+        var document = new DocxDocument(
+            220d,
+            140d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(anchor)],
+            [anchor],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.StoryLayout.Story.Id == "17");
+        DocxTableRowLayout row = placedStory.TableRows.Single();
+        DocxTableCellLayout placedCell = row.Cells.Single();
+        DocxTextLineLayout[] lines = placedCell.TextLines.ToArray();
+
+        TestAssert.True(row.Table.TableX >= document.MarginLeftPoints, "Placed footnote table rows should be translated into the page margin frame.");
+        TestAssert.True(placedCell.X >= document.MarginLeftPoints, "Placed footnote table cells should use page coordinates.");
+        TestAssert.True(lines.Length >= 1 && lines.All(line => line.X >= document.MarginLeftPoints), "Placed footnote table text should use page coordinates.");
+        TestAssert.True(lines.SelectMany(line => line.Segments).All(segment => segment.X >= document.MarginLeftPoints), "Placed footnote table text segments should use page coordinates.");
+    }
+
+    public static void DocxLayoutWrapsPlacedFootnoteUsingOwningSectionWidth()
+    {
+        DocxPageSettings wideFirstSection = new(
+            "12240",
+            "12000",
+            null,
+            "1440",
+            "1440",
+            "1440",
+            "1440",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        DocxPageSettings narrowFinalSection = new(
+            "4400",
+            "6000",
+            null,
+            "200",
+            "200",
+            "200",
+            "200",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        DocxParagraph anchor = CreateDocxLayoutParagraph("Narrow note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Footnote",
+                    "23",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 7)
+            ]
+        };
+        DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
+        var footnoteStory = new DocxRelatedStory(
+            "Footnote",
+            "/word/footnotes.xml",
+            "23",
+            [new DocxParagraphElement(footnoteParagraph)],
+            [],
+            []);
+        var document = new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            narrowFinalSection,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
+                new DocxSectionBreakElement(wideFirstSection, "nextPage", null, null, null, []),
+                new DocxParagraphElement(anchor)
+            ],
+            [],
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.StoryLayout.Story.Id == "23");
+        DocxTextLineLayout[] lines = placedStory.TextLines.ToArray();
+
+        TestAssert.True(Math.Abs(placedStory.Width - 200d) < 0.001d, "The placed footnote should inherit the narrow final section body width.");
+        TestAssert.True(lines.Length >= 2, "The placed footnote should wrap using the owning section width, not the wider first section width.");
+        TestAssert.True(lines.All(line => line.Width <= placedStory.Width + 0.001d), "Placed footnote lines should not exceed the owning section body width.");
     }
 
     public static void DocxLayoutStacksMultipleFootnotesOnOnePage()
@@ -16345,6 +29430,189 @@ internal static class DocxTests
         TestAssert.True(endnotePage.PlacedRelatedStories.Any(story => story.Kind == "Endnote" && story.SourceBlockIndex == 0), "A sectEnd endnote should be owned by the source section end page, not rewritten as a document-end story.");
     }
 
+    public static void DocxLayoutWrapsDocumentEndEndnoteUsingFinalSectionPageWidth()
+    {
+        DocxPageSettings wideFirstSection = new(
+            "12240",
+            "12000",
+            null,
+            "1440",
+            "1440",
+            "1440",
+            "1440",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        DocxPageSettings narrowFinalSection = new(
+            "4400",
+            "6000",
+            null,
+            "200",
+            "200",
+            "200",
+            "200",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        DocxParagraph anchor = CreateDocxLayoutParagraph("Narrow document-end endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "25",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 7)
+            ]
+        };
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "25",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        var document = new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            narrowFinalSection,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
+                new DocxSectionBreakElement(wideFirstSection, "nextPage", null, null, null, []),
+                new DocxParagraphElement(anchor)
+            ],
+            [],
+            [])
+        {
+            RelatedStories = [endnoteStory]
+        };
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.StoryLayout.Story.Id == "25");
+        DocxTextLineLayout[] lines = placedStory.TextLines.ToArray();
+
+        TestAssert.Equal(-1, placedStory.SourceBlockIndex);
+        TestAssert.True(Math.Abs(placedStory.Width - 200d) < 0.001d, "The document-end endnote should inherit the final section body width.");
+        TestAssert.True(lines.Length >= 2, "Document-end endnotes should wrap using the target page width, not the first section width.");
+        TestAssert.True(lines.All(line => line.Width <= placedStory.Width + 0.001d), "Document-end endnote lines should not exceed the final section body width.");
+    }
+
+    public static void DocxLayoutWrapsSectEndEndnoteUsingOwningSectionPageWidth()
+    {
+        DocxPageSettings wideFirstSection = new(
+            "12240",
+            "12000",
+            null,
+            "1440",
+            "1440",
+            "1440",
+            "1440",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+        DocxPageSettings narrowFinalSection = new(
+            "4400",
+            "6000",
+            null,
+            "200",
+            "200",
+            "200",
+            "200",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null)
+        {
+            EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
+        };
+        DocxParagraph anchor = CreateDocxLayoutParagraph("Narrow section-end endnote marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    "Endnote",
+                    "26",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 7)
+            ]
+        };
+        DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
+        var endnoteStory = new DocxRelatedStory(
+            "Endnote",
+            "/word/endnotes.xml",
+            "26",
+            [new DocxParagraphElement(endnoteParagraph)],
+            [],
+            []);
+        var document = new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            narrowFinalSection,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
+                new DocxSectionBreakElement(wideFirstSection, "nextPage", null, null, null, []),
+                new DocxParagraphElement(anchor)
+            ],
+            [],
+            [])
+        {
+            RelatedStories = [endnoteStory]
+        };
+
+        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.StoryLayout.Story.Id == "26");
+        DocxTextLineLayout[] lines = placedStory.TextLines.ToArray();
+
+        TestAssert.Equal(2, placedStory.SourceBlockIndex);
+        TestAssert.True(Math.Abs(placedStory.Width - 200d) < 0.001d, "The section-end endnote should inherit the owning section body width.");
+        TestAssert.True(lines.Length >= 2, "Section-end endnotes should wrap using the target section width, not the first section width.");
+        TestAssert.True(lines.All(line => line.Width <= placedStory.Width + 0.001d), "Section-end endnote lines should not exceed the owning section body width.");
+    }
+
     public static void DocxLayoutKeepsSectEndEndnoteOverflowPageBeforeFollowingSection()
     {
         DocxParagraph firstSectionParagraph = CreateDocxLayoutParagraph("first section endnote marker", 10d, 18d) with
@@ -16545,7 +29813,7 @@ internal static class DocxTests
                     <w:pPr>
                       <w:keepNext/>
                       <w:contextualSpacing/>
-                      <w:spacing w:beforeAutospacing="1"/>
+                      <w:spacing w:line="240" w:lineRule="mystery"/>
                     </w:pPr>
                   </w:style>
                   <w:style w:type="table" w:styleId="StyledTable">
@@ -16561,7 +29829,7 @@ internal static class DocxTests
                   <w:abstractNum w:abstractNumId="1">
                     <w:lvl w:ilvl="0">
                       <w:numFmt w:val="bullet"/>
-                      <w:pPr><w:ind w:left="720" w:firstLine="120"/></w:pPr>
+                      <w:pPr><w:ind w:left="720" w:firstLineChars="120"/></w:pPr>
                       <w:rPr><w:rFonts w:ascii="Marker Sans"/></w:rPr>
                     </w:lvl>
                   </w:abstractNum>
@@ -16634,7 +29902,7 @@ internal static class DocxTests
                   <w:style w:type="table" w:styleId="StyledTable">
                     <w:tblPr>
                       <w:tblBorders>
-                        <w:bottom w:val="double" w:sz="12"/>
+                        <w:bottom w:val="zigZag" w:sz="12"/>
                       </w:tblBorders>
                     </w:tblPr>
                   </w:style>
@@ -16649,6 +29917,49 @@ internal static class DocxTests
         TestAssert.True(
             diagnostics.Any(d => d.Id == "DOCX_TABLE_BORDER_STYLE" && d.PartName == "/word/styles.xml" && d.Fallback == "Approximated"),
             "Unsupported DOCX table border styles should emit a style-part diagnostic instead of being silently flattened to solid borders.");
+    }
+
+    public static void DocxUnsupportedTableCellTextDirectionEmitsDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:tcPr><w:textDirection w:val="tbRl"/></w:tcPr><w:p><w:r><w:t>Rotated</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(
+            diagnostics.Any(d => d.Id == "DOCX_TABLE_TEXT_DIRECTION" && d.PartName == "/word/document.xml" && d.Fallback == "Approximated"),
+            "Unsupported DOCX table cell text directions should emit a diagnostic while layout support is still approximate.");
     }
 
     public static void DocxSupportedTableStyleAtomsDoNotEmitBroadTableStyleDiagnostic()
@@ -16760,6 +30071,66 @@ internal static class DocxTests
                       <w:pPr>
                         <w:tabs><w:tab w:val="num" w:pos="720"/></w:tabs>
                         <w:ind w:left="720" w:hanging="360"/>
+                      </w:pPr>
+                    </w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>
+                </w:numbering>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
+        TestAssert.DoesNotContain("DOCX_NUMBERING_INDENT", ids);
+        TestAssert.DoesNotContain("DOCX_NUMBERING_MARKER_FONT", ids);
+    }
+
+    public static void DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>Item</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="1">
+                    <w:lvl w:ilvl="0">
+                      <w:numFmt w:val="decimal"/>
+                      <w:pPr>
+                        <w:tabs><w:tab w:val="num" w:pos="840"/></w:tabs>
+                        <w:ind w:left="720" w:firstLine="120"/>
                       </w:pPr>
                     </w:lvl>
                   </w:abstractNum>
@@ -16911,7 +30282,7 @@ internal static class DocxTests
                   <w:style w:type="paragraph" w:styleId="SupportedSpacing">
                     <w:pPr>
                       <w:contextualSpacing/>
-                      <w:spacing w:beforeLines="120" w:afterLines="240"/>
+                      <w:spacing w:beforeAutospacing="1" w:afterAutospacing="1" w:beforeLines="120" w:afterLines="240" w:line="260" w:lineRule="atLeast"/>
                     </w:pPr>
                   </w:style>
                 </w:styles>
@@ -16924,6 +30295,18 @@ internal static class DocxTests
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_STYLE_PARAGRAPH_SPACING", ids);
+
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxStructureStyleUsageSnapshot styleUsage = DocxStructureSnapshot.FromDocument(document).StyleUsages.Single(usage => usage.Kind == "Paragraph");
+        TestAssert.Equal(2, styleUsage.BeforeSpacingTokenParagraphCount);
+        TestAssert.Equal(2, styleUsage.AfterSpacingTokenParagraphCount);
+        TestAssert.Equal(2, styleUsage.BeforeAutoSpacingParagraphCount);
+        TestAssert.Equal(2, styleUsage.AfterAutoSpacingParagraphCount);
+        TestAssert.Equal(2, styleUsage.BeforeLinesSpacingParagraphCount);
+        TestAssert.Equal(2, styleUsage.AfterLinesSpacingParagraphCount);
+        TestAssert.Equal(2, styleUsage.ContextualSpacingParagraphCount);
+        TestAssert.Equal(2, styleUsage.AtLeastLineSpacingParagraphCount);
     }
 
     private static DocxDocument CreateFontPlanDocument(DocxTextRun run, DocxFontCatalog fontCatalog)
@@ -17175,6 +30558,27 @@ internal static class DocxTests
             tables);
     }
 
+    private static DocxDocument CreateAllMarkupWrapProbeDocument(IReadOnlyList<DocxParagraph> paragraphs)
+    {
+        return new DocxDocument(
+            360d,
+            300d,
+            36d,
+            36d,
+            36d,
+            36d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            paragraphs.Select(paragraph => new DocxParagraphElement(paragraph)).ToArray(),
+            paragraphs,
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+    }
+
     private static DocxParagraph CreateDocxLayoutParagraph(
         string text,
         double fontSize,
@@ -17220,6 +30624,27 @@ internal static class DocxTests
     private static int CountPdfTextShows(string pdf)
     {
         return CountOccurrences(pdf, "> Tj") + CountOccurrences(pdf, "] TJ");
+    }
+
+    private static bool HasCommentReferenceSpacerTextOperation(DocxTextEmissionSnapshot snapshot)
+    {
+        return snapshot.Lines
+            .Where(line => line.CommentReferenceCount != 0)
+            .SelectMany(line => line.Segments)
+            .Any(segment =>
+                !segment.IsTerminalLineSpace &&
+                segment.Width > 0d &&
+                segment.TextLength != 0 &&
+                segment.CharacterProfile.WhitespaceCount == segment.TextLength);
+    }
+
+    private static double FirstTextEmissionX(DocxTextEmissionSnapshot snapshot)
+    {
+        return snapshot.Lines
+            .SelectMany(line => line.Segments)
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .Select(segment => segment.X)
+            .First();
     }
 
     private static int FirstPdfTextShowIndex(string pdf)

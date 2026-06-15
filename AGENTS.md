@@ -11,7 +11,6 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `private-cases/`: ignored local-only private manifests and inputs.
 - `artifacts/`: ignored generated validation output.
 - `docs/`: public documentation.
-- `EXECPLAN.md`: active execution plan and validation log.
 
 ## Tools
 
@@ -19,6 +18,10 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
 - `tools/CompareVisualReports.ps1`: compare two visual family reports for regressions.
 - `tools/ValidateVisualCases.ps1`: validate public visual case/family naming, coverage, and manifest integrity.
+- `tools/NewDocxMarkupReferenceRequest.ps1`: create public/private-safe DOCX markup reference request bundles and import templates.
+- `tools/ImportDocxMarkupReferenceCache.ps1`: import trusted DOCX markup Office reference PDFs into the ignored reference cache.
+- `tools/RunDocxMarkupReferenceGate.ps1`: audit or run cached Office-reference gates for DOCX markup visual cases.
+- `tools/CompareCachedDocxMarkupReference.ps1`: compare DOCX markup candidate PDFs against cached Office references.
 - `tools/CheckPrivateCase.ps1`: run a private, ignored visual case.
 - `tools/SummarizePrivateCase.ps1`: summarize ignored private-case metrics without document content.
 - `tools/InventoryPptxSlides.ps1`: produce private-safe PPTX slide feature counts.

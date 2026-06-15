@@ -1,17 +1,19 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Lokad.OoxPdf.VisualDiff;
 
-if (args.Length != 3)
+if (args.Length is not 3 and not 4)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.VisualDiff <reference-png-directory> <candidate-png-directory> <output-directory>");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.VisualDiff <reference-png-directory> <candidate-png-directory> <output-directory> [region-specs.json]");
     return 2;
 }
 
 string referenceDirectory = Path.GetFullPath(args[0]);
 string candidateDirectory = Path.GetFullPath(args[1]);
 string outputDirectory = Path.GetFullPath(args[2]);
+string? regionSpecsPath = args.Length == 4 ? Path.GetFullPath(args[3]) : null;
 
 if (!Directory.Exists(referenceDirectory))
 {
@@ -41,6 +43,13 @@ for (int i = 0; i < pageCount; i++)
 
 var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
 File.WriteAllText(Path.Combine(outputDirectory, "metrics.json"), JsonSerializer.Serialize(metrics, jsonOptions));
+if (regionSpecsPath is not null)
+{
+    RegionSpec[] regionSpecs = JsonSerializer.Deserialize<RegionSpec[]>(File.ReadAllText(regionSpecsPath), jsonOptions) ?? [];
+    RegionMetric[] regionMetrics = MeasureRegions(regionSpecs, referenceFiles, candidateFiles).ToArray();
+    File.WriteAllText(Path.Combine(outputDirectory, "region-metrics.json"), JsonSerializer.Serialize(regionMetrics, jsonOptions));
+}
+
 File.WriteAllText(Path.Combine(outputDirectory, "index.html"), BuildIndexHtml(metrics, referenceDirectory, candidateDirectory, outputDirectory));
 
 Console.WriteLine($"Wrote {metrics.Count} visual comparison entries to {outputDirectory}");
@@ -126,6 +135,11 @@ static PageMetric MeasurePage(int page, string? referenceFile, string? candidate
 
 static PixelMetric MeasurePixels(PngImage reference, PngImage candidate, int width, int height)
 {
+    return MeasurePixelsInRegion(reference, candidate, 0, 0, width, height);
+}
+
+static PixelMetric MeasurePixelsInRegion(PngImage reference, PngImage candidate, int startX, int startY, int width, int height)
+{
     long absoluteError = 0;
     double squaredError = 0;
     int changed16 = 0;
@@ -145,8 +159,10 @@ static PixelMetric MeasurePixels(PngImage reference, PngImage candidate, int wid
     {
         for (int x = 0; x < width; x++)
         {
-            int referenceOffset = (y * reference.Width + x) * 4;
-            int candidateOffset = (y * candidate.Width + x) * 4;
+            int sourceX = startX + x;
+            int sourceY = startY + y;
+            int referenceOffset = (sourceY * reference.Width + sourceX) * 4;
+            int candidateOffset = (sourceY * candidate.Width + sourceX) * 4;
             int maxChannelDelta = 0;
             int referenceRed = reference.Rgba[referenceOffset];
             int referenceGreen = reference.Rgba[referenceOffset + 1];
@@ -201,6 +217,75 @@ static PixelMetric MeasurePixels(PngImage reference, PngImage candidate, int wid
         changed32 / (double)pixelCount,
         ComputeStructuralSimilarity(pixelCount, referenceLumaSum, candidateLumaSum, referenceLumaSquaredSum, candidateLumaSquaredSum, lumaProductSum),
         ComputeHistogramCorrelation(referenceHistogram, candidateHistogram, referenceForeground, candidateForeground, pixelCount));
+}
+
+static IEnumerable<RegionMetric> MeasureRegions(IReadOnlyList<RegionSpec> specs, string[] referenceFiles, string[] candidateFiles)
+{
+    var referenceCache = new Dictionary<int, PngImage>();
+    var candidateCache = new Dictionary<int, PngImage>();
+    foreach (RegionSpec spec in specs.OrderBy(spec => spec.Page).ThenBy(spec => spec.Region, StringComparer.Ordinal))
+    {
+        int pageIndex = spec.Page - 1;
+        if (pageIndex < 0 || pageIndex >= referenceFiles.Length || pageIndex >= candidateFiles.Length)
+        {
+            continue;
+        }
+
+        if (!referenceCache.TryGetValue(pageIndex, out PngImage? reference))
+        {
+            reference = PngImage.Load(referenceFiles[pageIndex]);
+            referenceCache[pageIndex] = reference;
+        }
+
+        if (!candidateCache.TryGetValue(pageIndex, out PngImage? candidate))
+        {
+            candidate = PngImage.Load(candidateFiles[pageIndex]);
+            candidateCache[pageIndex] = candidate;
+        }
+
+        bool dimensionsMatch = reference.Width == candidate.Width && reference.Height == candidate.Height;
+        ResolvedRegion? region = ResolveRegion(spec, Math.Min(reference.Width, candidate.Width), Math.Min(reference.Height, candidate.Height));
+        if (region is null)
+        {
+            continue;
+        }
+
+        PixelMetric metric = MeasurePixelsInRegion(reference, candidate, region.X, region.Y, region.Width, region.Height);
+        yield return new RegionMetric(
+            spec.Page,
+            spec.Region,
+            region.X,
+            region.Y,
+            region.Width,
+            region.Height,
+            region.Width * region.Height,
+            metric.MeanAbsoluteError,
+            metric.RootMeanSquaredError,
+            metric.ChangedPixelRatioAtThreshold16,
+            metric.ChangedPixelRatioAtThreshold32,
+            metric.StructuralSimilarity,
+            metric.ForegroundColorHistogramCorrelation,
+            dimensionsMatch);
+    }
+}
+
+static ResolvedRegion? ResolveRegion(RegionSpec spec, int pageWidth, int pageHeight)
+{
+    int x = spec.X ?? (int)Math.Floor(ClampRatio(spec.XRatio) * pageWidth);
+    int y = spec.Y ?? (int)Math.Floor(ClampRatio(spec.YRatio) * pageHeight);
+    int width = spec.Width ?? (int)Math.Ceiling(ClampRatio(spec.WidthRatio) * pageWidth);
+    int height = spec.Height ?? (int)Math.Ceiling(ClampRatio(spec.HeightRatio) * pageHeight);
+
+    x = Math.Clamp(x, 0, pageWidth);
+    y = Math.Clamp(y, 0, pageHeight);
+    width = Math.Clamp(width, 0, pageWidth - x);
+    height = Math.Clamp(height, 0, pageHeight - y);
+    return width <= 0 || height <= 0 ? null : new ResolvedRegion(x, y, width, height);
+}
+
+static double ClampRatio(double? value)
+{
+    return Math.Clamp(value ?? 0d, 0d, 1d);
 }
 
 static double Luma(int red, int green, int blue)
@@ -274,3 +359,17 @@ static double ComputeHistogramCorrelation(int[] reference, int[] candidate, int 
     double denominator = Math.Sqrt(referenceDenominator * candidateDenominator);
     return denominator <= 0d ? 1d : Math.Clamp(numerator / denominator, -1d, 1d);
 }
+
+internal sealed record RegionSpec(
+    [property: JsonPropertyName("page")] int Page,
+    [property: JsonPropertyName("region")] string Region,
+    [property: JsonPropertyName("x")] int? X = null,
+    [property: JsonPropertyName("y")] int? Y = null,
+    [property: JsonPropertyName("width")] int? Width = null,
+    [property: JsonPropertyName("height")] int? Height = null,
+    [property: JsonPropertyName("xRatio")] double? XRatio = null,
+    [property: JsonPropertyName("yRatio")] double? YRatio = null,
+    [property: JsonPropertyName("widthRatio")] double? WidthRatio = null,
+    [property: JsonPropertyName("heightRatio")] double? HeightRatio = null);
+
+internal sealed record ResolvedRegion(int X, int Y, int Width, int Height);

@@ -303,7 +303,8 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaMinY) -le $boundsToleranceForKind -and
         [Math]::Abs($deltaMaxX) -le $boundsToleranceForKind -and
         [Math]::Abs($deltaMaxY) -le $boundsToleranceForKind)
-    $widthOk = [Math]::Abs($deltaWidth) -le $LineWidthTolerance
+    $lineWidthRelevant = [string]$ref.Kind -in @("Stroke", "FillStroke") -or [string]$cand.Kind -in @("Stroke", "FillStroke")
+    $widthOk = (-not $lineWidthRelevant) -or ([Math]::Abs($deltaWidth) -le $LineWidthTolerance)
     $kindOk = [string]$ref.Kind -eq [string]$cand.Kind
     $operatorOk = (-not $MatchOperator) -or (OperationSourceOperator $ref) -eq (OperationSourceOperator $cand)
     $segmentCountOk = (-not $MatchSegmentCount) -or [int]$ref.SegmentCount -eq [int]$cand.SegmentCount
@@ -382,6 +383,7 @@ foreach ($pair in $pairs) {
         RefLineJoin = $ref.LineJoin
         CandLineJoin = $cand.LineJoin
         LineJoinOk = $lineJoinOk
+        LineWidthRelevant = $lineWidthRelevant
         RefTextHash = $ref.TextHash
         CandTextHash = $cand.TextHash
         TextHashOk = $textHashOk
@@ -425,3 +427,5 @@ if ($MatchByBounds) {
 if ($failures -ne 0) {
     exit 1
 }
+
+exit 0

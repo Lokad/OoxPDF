@@ -491,6 +491,125 @@ New-ZipPackage -Path (Join-Path $cases "docx-blank.docx") -Entries @{
 '@
 }
 
+New-ZipPackage -Path (Join-Path $cases "docx-markup-review.docx") -Entries @{
+    "[Content_Types].xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+</Types>
+'@
+    "_rels/.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+    "word/_rels/document.xml.rels" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+</Relationships>
+'@
+    "word/document.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:r><w:rPr><w:b/><w:sz w:val="30"/></w:rPr><w:t>DOCX markup review fixture</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:rPr>
+          <w:rPrChange w:id="21" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"/>
+        </w:rPr>
+      </w:pPr>
+      <w:bookmarkStart w:id="4" w:name="ReviewAnchor"/>
+      <w:r><w:t>The reviewed sentence keeps </w:t></w:r>
+      <w:del w:id="1" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:delText>old wording </w:delText></w:r></w:del>
+      <w:ins w:id="2" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:t>new wording </w:t></w:r></w:ins>
+      <w:r><w:t>and a </w:t></w:r>
+      <w:commentRangeStart w:id="1"/>
+      <w:r><w:t>comment anchor</w:t></w:r>
+      <w:commentRangeEnd w:id="1"/>
+      <w:r><w:commentReference w:id="1"/></w:r>
+      <w:r><w:t>.</w:t></w:r>
+      <w:bookmarkEnd w:id="4"/>
+    </w:p>
+    <w:p>
+      <w:r><w:t>Move tracking shows </w:t></w:r>
+      <w:moveFrom w:id="3" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:delText>the source phrase </w:delText></w:r></w:moveFrom>
+      <w:moveTo w:id="4" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:t>the destination phrase </w:t></w:r></w:moveTo>
+      <w:r><w:t>without private content.</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:r><w:t>Internal link: </w:t></w:r>
+      <w:hyperlink w:anchor="ReviewAnchor">
+        <w:r><w:t>review anchor</w:t></w:r>
+      </w:hyperlink>
+      <w:r><w:t>; field result: </w:t></w:r>
+      <w:fldSimple w:instr=" DATE ">
+        <w:del w:id="5" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:delText>old date </w:delText></w:r></w:del>
+        <w:ins w:id="6" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:t>new date </w:t></w:r></w:ins>
+      </w:fldSimple>
+    </w:p>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="7200" w:type="dxa"/>
+        <w:tblBorders>
+          <w:top w:val="single" w:sz="6" w:color="808080"/>
+          <w:left w:val="single" w:sz="6" w:color="808080"/>
+          <w:bottom w:val="single" w:sz="6" w:color="808080"/>
+          <w:right w:val="single" w:sz="6" w:color="808080"/>
+          <w:insideH w:val="single" w:sz="6" w:color="808080"/>
+          <w:insideV w:val="single" w:sz="6" w:color="808080"/>
+        </w:tblBorders>
+      </w:tblPr>
+      <w:tblGrid><w:gridCol w:w="3600"/><w:gridCol w:w="3600"/></w:tblGrid>
+      <w:tr>
+        <w:trPr><w:tblHeader/></w:trPr>
+        <w:tc><w:p><w:r><w:t>Review area</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Markup content</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc>
+          <w:p>
+            <w:commentRangeStart w:id="2"/>
+            <w:r><w:t>Table comment</w:t></w:r>
+            <w:commentRangeEnd w:id="2"/>
+            <w:r><w:commentReference w:id="2"/></w:r>
+          </w:p>
+        </w:tc>
+        <w:tc>
+          <w:p>
+            <w:del w:id="7" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:delText>removed cell text</w:delText></w:r></w:del>
+            <w:ins w:id="8" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:t>added cell text</w:t></w:r></w:ins>
+          </w:p>
+        </w:tc>
+      </w:tr>
+    </w:tbl>
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1800" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+'@
+    "word/comments.xml" = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:comment w:id="1" w:author="Reviewer" w:initials="RV" w:date="2026-06-01T00:00:00Z">
+    <w:p><w:r><w:t>Generic body comment for markup rendering.</w:t></w:r></w:p>
+  </w:comment>
+  <w:comment w:id="2" w:author="Reviewer" w:initials="RV" w:date="2026-06-01T00:00:00Z">
+    <w:p><w:r><w:t>Generic table comment for markup rendering.</w:t></w:r></w:p>
+  </w:comment>
+</w:comments>
+'@
+}
+
 New-ZipPackage -Path (Join-Path $cases "docx-ladder-02-table-explicit-font.docx") -Entries @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>

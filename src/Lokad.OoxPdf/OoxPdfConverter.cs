@@ -115,7 +115,7 @@ public static class OoxPdfConverter
         return inputKind switch
         {
             OoxPdfInputKind.Pptx => new PptxRenderer(options.FontResolver).RenderPages(new PptxReader().Read(package, cancellationToken), package, options.DiagnosticSink, cancellationToken),
-            OoxPdfInputKind.Docx => new DocxRenderer(options.FontResolver).RenderBlankPages(new DocxReader().Read(package, options.DiagnosticSink, cancellationToken), options.DiagnosticSink, cancellationToken),
+            OoxPdfInputKind.Docx => new DocxRenderer(options.FontResolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderBlankPages(new DocxReader().Read(package, options.DiagnosticSink, cancellationToken, options.DocxMarkupMode), options.DiagnosticSink, cancellationToken),
             _ => throw new NotSupportedException($"Unsupported input kind '{inputKind}'.")
         };
     }

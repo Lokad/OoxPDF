@@ -11,13 +11,18 @@ internal static class DocxFontResolver
     {
         DocxEffectiveRunProperties effective = run.EffectiveProperties;
         bool complexScript = DocxScriptClassifier.IsComplexScriptText(run.Text);
+        bool eastAsian = !complexScript && DocxScriptClassifier.IsEastAsianText(run.Text);
         string? primary = complexScript
             ? FirstNonEmpty(effective.Fonts.ComplexScript, effective.FontFamily, effective.Fonts.Ascii, effective.Fonts.HighAnsi)
-            : FirstNonEmpty(effective.Fonts.Ascii, effective.Fonts.HighAnsi, effective.FontFamily);
+            : eastAsian
+                ? FirstNonEmpty(effective.Fonts.EastAsia, effective.FontFamily, effective.Fonts.HighAnsi, effective.Fonts.Ascii)
+                : FirstNonEmpty(effective.Fonts.Ascii, effective.Fonts.HighAnsi, effective.FontFamily);
         string? alternate = ResolveAlternate(primary, catalog);
         string? theme = complexScript
             ? ResolveThemeTypeface(FirstNonEmpty(effective.Fonts.ComplexScriptTheme, effective.Fonts.AsciiTheme, effective.Fonts.HighAnsiTheme), catalog.ThemeFonts)
-            : ResolveThemeTypeface(FirstNonEmpty(effective.Fonts.AsciiTheme, effective.Fonts.HighAnsiTheme), catalog.ThemeFonts);
+            : eastAsian
+                ? ResolveThemeTypeface(FirstNonEmpty(effective.Fonts.EastAsiaTheme, effective.Fonts.AsciiTheme, effective.Fonts.HighAnsiTheme), catalog.ThemeFonts)
+                : ResolveThemeTypeface(FirstNonEmpty(effective.Fonts.AsciiTheme, effective.Fonts.HighAnsiTheme), catalog.ThemeFonts);
         return new DocxTypefaceCandidates(primary, alternate, theme);
     }
 
@@ -41,6 +46,8 @@ internal static class DocxFontResolver
             "minorAscii" or "minorHAnsi" => themeFonts.MinorLatinTypeface,
             "majorBidi" => themeFonts.MajorComplexScriptTypeface,
             "minorBidi" => themeFonts.MinorComplexScriptTypeface,
+            "majorEastAsia" => themeFonts.MajorEastAsiaTypeface,
+            "minorEastAsia" => themeFonts.MinorEastAsiaTypeface,
             _ => null
         };
     }

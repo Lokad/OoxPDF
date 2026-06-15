@@ -43,30 +43,38 @@ Supported:
 - Basic page size extraction.
 - Page margin extraction.
 - Basic body paragraphs and text runs.
-- Document defaults, paragraph styles, and character styles for common run and paragraph properties.
+- Document defaults, paragraph styles, and character styles for common run and paragraph properties, including paragraph spacing inheritance, contextual spacing, line-unit spacing, automatic before/after spacing, and exact/at-least line heights.
 - Simple paragraph page breaking.
-- Simple decimal and bullet list labels from `numbering.xml`.
+- Simple decimal and bullet list labels from `numbering.xml`, including twip-based left, right, first-line, hanging, and numbering-tab indentation.
 - Inline JPEG and PNG images.
-- Fixed-width tables with cell fills, black borders, and cell text.
+- Anchored floating images and text boxes with page/margin/column/paragraph positioning, z-order, behind-document rendering, clipping, and first-pass wrap exclusion geometry.
+- Fixed-width tables with cell fills, common collapsed border styles, conflict resolution, nil/none suppression, inside/outer table borders, repeated headers, split rows, and cell text.
 - Default headers and footers with simple text and `PAGE` field approximation.
+- DOCX markup mode selection for final, original, simple markup, and all markup views.
+- Simple fields and complex fields with cached results, including nested cached-result fields and cached cross-references inside hyperlinks.
 
 Partial or approximated:
 
 - Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
 - Bold and italic are PDF drawing approximations and do not yet select matching font faces.
-- List indentation, hanging indents, tab stops, and advanced numbering formats are approximate.
+- Advanced numbering formats, character-unit list indents, and complex bidirectional list layout are approximate.
 - Inline images are rendered as block-level content at the paragraph cursor; surrounding text flow is approximate.
-- Table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
-- Header/footer distance, odd/even variants, first-page variants, and complex fields are approximate or unsupported.
+- Floating drawing wrap effects on nearby body text are still approximate even when anchor placement and exclusion geometry are inspected.
+- Some decorative table border styles, table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
+- Header/footer distance, odd/even variants, first-page variants, and dynamic field evaluation are approximate or unsupported.
+- `Final` and `Original` DOCX markup modes filter inserted/deleted and moved content before layout.
+- `SimpleMarkup` renders final text with page-margin change bars and compact comment markers.
+- `AllMarkup` renders inline revision styling plus first-pass comment and tracked-change balloons with metadata or revision-kind summaries, preview text, table/image fallback markers, and connectors.
+- Markup modes keep the authored PDF media box and text-column geometry; no expanded review-pane margin is created.
 
 Unsupported or ignored:
 
-- Tracked-change rendering as revision markup.
-- Floating image wrapping, anchored text boxes, charts, SmartArt, equations, live OLE content, comments, footnote/endnote bodies, multi-column layout, and macros.
+- Full Word-style tracked-change balloon content and collision-aware markup margin pagination.
+- Floating charts, SmartArt, equations, live OLE content, footnote/endnote bodies, multi-column layout, macros, and full Word-style text reflow around floating objects.
 - Section variants beyond the simple page setup used by the current renderer.
 - Complex scripts, bidirectional text, text shaping, fallback font selection, and OpenType layout features.
 
-Comments, tracked changes, complex fields, equations, OLE objects, floating drawings, footnotes, endnotes, multi-column sections, and macros produce stable warning diagnostics when detected.
+Comments, tracked changes, formatting revisions, complex fields, equations, OLE objects, floating drawings, footnotes, endnotes, multi-column sections, and macros produce stable warning or approximation diagnostics when detected.
 
 ## PDF Output
 

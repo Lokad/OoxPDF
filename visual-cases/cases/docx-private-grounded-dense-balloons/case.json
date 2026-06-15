@@ -1,0 +1,13 @@
+{
+  "id": "docx-private-grounded-dense-balloons",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-private-grounded-review.docx",
+  "docxMarkup": "all",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "private-grounded", "dense-balloons", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

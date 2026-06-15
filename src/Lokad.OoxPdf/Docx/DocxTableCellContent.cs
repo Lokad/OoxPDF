@@ -7,7 +7,7 @@ internal static class DocxTableCellContent
         return cell.BodyElements.Count != 0
             ? cell.BodyElements
             : GetParagraphs(cell)
-                .Select(paragraph => new DocxParagraphElement(paragraph))
+                .Select(DocxBodyElementFactory.CreateParagraph)
                 .Cast<DocxBodyElement>()
                 .ToArray();
     }

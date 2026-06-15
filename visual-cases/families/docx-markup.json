@@ -1,0 +1,13 @@
+{
+  "id": "docx-markup",
+  "kind": "docx",
+  "description": "DOCX review markup modes, markup-margin geometry, comments, revision balloons, and private-grounded synthetic probes.",
+  "support": {
+    "minStructuralSimilarity": 0.990,
+    "minForegroundColorHistogramCorrelation": 0.95
+  },
+  "casePatterns": [
+    "docx-markup-*",
+    "docx-private-grounded-*"
+  ]
+}

@@ -10,6 +10,8 @@ param(
 
     [switch] $UpdateCatalog,
 
+    [switch] $CacheOnlyReference,
+
     [string[]] $CasePattern = @(),
 
     [string[]] $Tag = @(),
@@ -173,6 +175,17 @@ function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
         id = $caseManifest.id
         family = $Family
         kind = $caseManifest.kind
+        docxMarkup = if ($caseManifest.kind -eq "docx") {
+            if ($caseManifest.PSObject.Properties.Name -contains "docxMarkup" -and -not [string]::IsNullOrWhiteSpace([string]$caseManifest.docxMarkup)) {
+                [string]$caseManifest.docxMarkup
+            }
+            else {
+                "final"
+            }
+        }
+        else {
+            $null
+        }
         classification = Get-CaseClassification $caseManifest
         passed = $passed
         status = $status
@@ -192,11 +205,13 @@ function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
 }
 
 $patterns = @($familyManifest.casePatterns)
+$excludePatterns = @($familyManifest.excludePatterns | Where-Object { $_ -is [string] -and $_.Length -ne 0 })
 $cases = @(
     Get-ChildItem -LiteralPath $caseRoot -Directory |
         Where-Object {
             $caseName = $_.Name
-            $patterns | Where-Object { $caseName -like $_ }
+            ($patterns | Where-Object { $caseName -like $_ }) -and
+                -not ($excludePatterns | Where-Object { $caseName -like $_ })
         } |
         Sort-Object Name
 )
@@ -257,7 +272,14 @@ foreach ($case in $cases) {
     $passed = $true
     $errorMessage = ""
     try {
-        & (Join-Path $PSScriptRoot "CheckVisualCase.ps1") -Case $manifest
+        $caseArgs = @{
+            Case = $manifest
+        }
+        if ($CacheOnlyReference) {
+            $caseArgs.CacheOnlyReference = $true
+        }
+
+        & (Join-Path $PSScriptRoot "CheckVisualCase.ps1") @caseArgs
     }
     catch {
         $passed = $false

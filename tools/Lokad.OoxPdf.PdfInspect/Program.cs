@@ -25,6 +25,7 @@ byte[] bytes = File.ReadAllBytes(inputPath);
 string pdf = Encoding.Latin1.GetString(bytes);
 var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
+IReadOnlyList<PdfFontResource> fontResources = BuildFontResources(objects);
 Dictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
 Dictionary<string, PdfFontWidthMap> fontWidthMaps = BuildFontWidthMaps(objects);
 HashSet<int>? filteredContentObjects = pageFilter is null
@@ -104,6 +105,17 @@ if (outputDirectory is not null && graphicsOperations.Count != 0)
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
     File.WriteAllText(graphicsOperationsPath, JsonSerializer.Serialize(graphicsOperations, jsonOptions), Encoding.UTF8);
+}
+
+if (outputDirectory is not null)
+{
+    string fontResourcesPath = Path.Combine(outputDirectory, "font-resources.json");
+    var jsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+    File.WriteAllText(fontResourcesPath, JsonSerializer.Serialize(fontResources, jsonOptions), Encoding.UTF8);
 }
 
 return 0;
@@ -376,6 +388,143 @@ static IReadOnlyDictionary<int, int> ParseCidWidths(string widths)
     }
 
     return map;
+}
+
+static IReadOnlyList<PdfFontResource> BuildFontResources(IReadOnlyList<PdfObject> objects)
+{
+    var objectByNumber = objects.ToDictionary(item => item.Number);
+    var resources = new List<PdfFontResource>();
+    int pageNumber = 0;
+    foreach (PdfObject page in objects.Where(item => IsPageObject(item.Body)))
+    {
+        pageNumber++;
+        foreach ((string resourceName, int fontObjectNumber) in ReadPageFontResources(page.Body))
+        {
+            if (!objectByNumber.TryGetValue(fontObjectNumber, out PdfObject? fontObject))
+            {
+                continue;
+            }
+
+            PdfObject? descendantFont = ReadType0DescendantFont(fontObject, objectByNumber, out int? descendantFontObjectNumber);
+            PdfObject effectiveFont = descendantFont ?? fontObject;
+            int? fontDescriptorObjectNumber = ReadReferenceNumber(effectiveFont.Body, "FontDescriptor");
+            PdfObject? fontDescriptor = fontDescriptorObjectNumber is { } descriptorNumber &&
+                objectByNumber.TryGetValue(descriptorNumber, out PdfObject? descriptor)
+                    ? descriptor
+                    : null;
+            (string? fontFileKind, int? fontFileObjectNumber, int? rawLength, int? decodedLength) = ReadFontFile(fontDescriptor, objectByNumber);
+            string? baseFont = ReadName(fontObject.Body, "BaseFont") ?? ReadName(effectiveFont.Body, "BaseFont");
+            string? subtype = ReadName(fontObject.Body, "Subtype");
+            string? descendantSubtype = descendantFont is null ? null : ReadName(descendantFont.Body, "Subtype");
+            string widths = descendantFont is null
+                ? ReadReferencedArray(fontObject.Body, "Widths", objectByNumber)
+                : ReadReferencedArray(descendantFont.Body, "W", objectByNumber);
+            int widthCount = descendantFont is null
+                ? Regex.Matches(widths, @"-?\d+", RegexOptions.CultureInvariant).Count
+                : ParseCidWidths(widths).Count;
+            int defaultWidth = descendantFont is null ? 0 : ReadDictionaryInt(descendantFont.Body, "DW");
+
+            resources.Add(new PdfFontResource(
+                pageNumber,
+                resourceName,
+                fontObjectNumber,
+                subtype,
+                descendantFontObjectNumber,
+                descendantSubtype,
+                baseFont,
+                ReadName(fontObject.Body, "Encoding") ?? ReadName(effectiveFont.Body, "Encoding"),
+                ReadReferenceNumber(fontObject.Body, "ToUnicode"),
+                ReadReferenceNumber(fontObject.Body, "ToUnicode") is not null,
+                fontDescriptorObjectNumber,
+                fontFileObjectNumber,
+                fontFileKind,
+                fontFileObjectNumber is not null,
+                rawLength,
+                decodedLength,
+                IsSubsetFontName(baseFont),
+                widthCount,
+                defaultWidth));
+        }
+    }
+
+    return resources;
+}
+
+static PdfObject? ReadType0DescendantFont(PdfObject fontObject, IReadOnlyDictionary<int, PdfObject> objectByNumber, out int? descendantFontObjectNumber)
+{
+    descendantFontObjectNumber = null;
+    Match inlineDescendant = Regex.Match(fontObject.Body, @"/DescendantFonts\s*\[\s*(?<number>\d+)\s+\d+\s+R\s*\]", RegexOptions.CultureInvariant);
+    if (inlineDescendant.Success)
+    {
+        int inlineObjectNumber = int.Parse(inlineDescendant.Groups["number"].Value, CultureInfo.InvariantCulture);
+        descendantFontObjectNumber = inlineObjectNumber;
+        return objectByNumber.TryGetValue(inlineObjectNumber, out PdfObject? inlineDescendantObject) ? inlineDescendantObject : null;
+    }
+
+    Match descendantFonts = Regex.Match(fontObject.Body, @"/DescendantFonts\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant);
+    if (!descendantFonts.Success ||
+        !objectByNumber.TryGetValue(int.Parse(descendantFonts.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? descendantArray))
+    {
+        return null;
+    }
+
+    Match descendantRef = Regex.Match(descendantArray.Body, @"\[\s*(?<number>\d+)\s+\d+\s+R\s*\]", RegexOptions.CultureInvariant);
+    if (!descendantRef.Success)
+    {
+        return null;
+    }
+
+    int objectNumber = int.Parse(descendantRef.Groups["number"].Value, CultureInfo.InvariantCulture);
+    descendantFontObjectNumber = objectNumber;
+    return objectByNumber.TryGetValue(objectNumber, out PdfObject? descendant) ? descendant : null;
+}
+
+static (string? Kind, int? ObjectNumber, int? RawLength, int? DecodedLength) ReadFontFile(PdfObject? fontDescriptor, IReadOnlyDictionary<int, PdfObject> objectByNumber)
+{
+    if (fontDescriptor is null)
+    {
+        return (null, null, null, null);
+    }
+
+    foreach (string key in new[] { "FontFile", "FontFile2", "FontFile3" })
+    {
+        int? objectNumber = ReadReferenceNumber(fontDescriptor.Body, key);
+        if (objectNumber is null)
+        {
+            continue;
+        }
+
+        PdfStream? stream = objectByNumber.TryGetValue(objectNumber.Value, out PdfObject? fontFileObject)
+            ? fontFileObject.Stream
+            : null;
+        return (key, objectNumber, stream?.RawLength, stream?.DecodedLength);
+    }
+
+    return (null, null, null, null);
+}
+
+static string? ReadName(string dictionary, string key)
+{
+    Match match = Regex.Match(dictionary, @"/" + Regex.Escape(key) + @"/(?<value>[^\s\[\]()<>{}%/]+)", RegexOptions.CultureInvariant);
+    if (match.Success)
+    {
+        return match.Groups["value"].Value;
+    }
+
+    match = Regex.Match(dictionary, @"/" + Regex.Escape(key) + @"\s*/(?<value>[^\s\[\]()<>{}%/]+)", RegexOptions.CultureInvariant);
+    return match.Success ? match.Groups["value"].Value : null;
+}
+
+static int? ReadReferenceNumber(string dictionary, string key)
+{
+    Match match = Regex.Match(dictionary, @"/" + Regex.Escape(key) + @"\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant);
+    return match.Success ? int.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture) : null;
+}
+
+static bool IsSubsetFontName(string? baseFont)
+{
+    return baseFont is not null &&
+        Regex.IsMatch(baseFont, @"^[A-Z]{6}\+", RegexOptions.CultureInvariant);
 }
 
 static int ReadDictionaryInt(string dictionary, string key)
@@ -1088,6 +1237,27 @@ internal sealed record PdfTextPayloadWidthSignature(
     int PairLeftWidthMaxUnits,
     int PairRightWidthMinUnits,
     int PairRightWidthMaxUnits);
+
+internal sealed record PdfFontResource(
+    int PageNumber,
+    string ResourceName,
+    int FontObjectNumber,
+    string? Subtype,
+    int? DescendantFontObjectNumber,
+    string? DescendantSubtype,
+    string? BaseFont,
+    string? Encoding,
+    int? ToUnicodeObjectNumber,
+    bool HasToUnicode,
+    int? FontDescriptorObjectNumber,
+    int? FontFileObjectNumber,
+    string? FontFileKind,
+    bool Embedded,
+    int? FontFileRawLength,
+    int? FontFileDecodedLength,
+    bool IsSubset,
+    int WidthCount,
+    int DefaultWidth);
 
 internal sealed record PdfFontWidthMap(int DefaultWidth, IReadOnlyDictionary<int, int> Widths);
 

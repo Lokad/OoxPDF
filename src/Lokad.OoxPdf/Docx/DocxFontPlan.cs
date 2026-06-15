@@ -33,6 +33,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
                 .OfType<DocxSectionBreakElement>()
                 .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
+            .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document))
             .SelectMany(GetParagraphFontRuns)
             .Concat(document.BodyElements
                 .OfType<DocxImplicitParagraphElement>()
@@ -49,6 +50,26 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return new DocxFontPlan(resolvedRuns);
     }
 
+    private static IEnumerable<DocxParagraph> EnumerateFloatingDrawingTextBoxParagraphs(DocxDocument document)
+    {
+        return EnumerateFloatingDrawingTextBoxParagraphs(document.FloatingDrawings)
+            .Concat(document.HeaderFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.FooterFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.PageSettings.HeaderFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.PageSettings.FooterFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.BodyElements
+                .OfType<DocxSectionBreakElement>()
+                .SelectMany(sectionBreak => sectionBreak.PageSettings.HeaderFloatingDrawingsByType.Values
+                    .Concat(sectionBreak.PageSettings.FooterFloatingDrawingsByType.Values)
+                    .SelectMany(EnumerateFloatingDrawingTextBoxParagraphs)))
+            .Concat(document.RelatedStories.SelectMany(story => EnumerateFloatingDrawingTextBoxParagraphs(story.FloatingDrawings)));
+    }
+
+    private static IEnumerable<DocxParagraph> EnumerateFloatingDrawingTextBoxParagraphs(IEnumerable<DocxFloatingDrawing> drawings)
+    {
+        return drawings.SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements));
+    }
+
     private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -57,7 +78,14 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         IReadOnlyList<string> families = DistinctFamilies(candidates.Primary, candidates.Alternate, candidates.Theme);
         if (families.Count == 0)
         {
-            return new DocxResolvedRunTypeface(run, families, null, null, DocxTypefaceResolutionSource.Missing, null);
+            FontFaceResolution resolution = DocxFontFallbackRules.ResolveDefaultDocumentTypeface(fontResolver, effective.Bold, effective.Italic);
+            return new DocxResolvedRunTypeface(
+                run,
+                families,
+                DocxFontFallbackRules.DefaultDocumentTypefaceRequest,
+                resolution.FamilyName,
+                DocxTypefaceResolutionSource.ResolverFallback,
+                resolution);
         }
 
         for (int i = 0; i < families.Count; i++)

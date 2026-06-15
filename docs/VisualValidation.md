@@ -58,4 +58,23 @@ Pixel metrics are advisory. Office and PDFium can differ in antialiasing, font h
 - `1`: severe; page or slide mostly wrong.
 - `0`: conversion failed or page missing.
 
-Do not commit generated visual artifacts unless they are intentionally small fixtures. Record durable results in `EXECPLAN.md`.
+Do not commit generated visual artifacts unless they are intentionally small fixtures.
+
+## Cached DOCX Markup References
+
+DOCX markup parity work uses cache-only reference comparisons so autonomous runs do not launch Word or COM. Generate a reference request for the public DOCX markup cases:
+
+```powershell
+pwsh tools/NewDocxMarkupReferenceRequest.ps1 -OutputDirectory artifacts/docx-markup-reference-requests/public
+```
+
+Use `-MissingOnly` when refreshing the handoff after some cached references already exist; the request summary records ready and missing counts without launching Office.
+
+After trusted Office PDFs have been produced on a controlled setup, import them with `tools/ImportDocxMarkupReferenceCache.ps1`. Then audit or run the cached gate:
+
+```powershell
+pwsh tools/RunDocxMarkupReferenceGate.ps1 -CacheStatusOnly
+pwsh tools/RunDocxMarkupReferenceGate.ps1 -FailOnDeltas
+```
+
+The cache-status output includes `missing-import-commands.ps1`, which lists only the references still absent from `artifacts/reference-cache/`.

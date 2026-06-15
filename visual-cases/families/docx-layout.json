@@ -8,5 +8,9 @@
   },
   "casePatterns": [
     "docx-*"
+  ],
+  "excludePatterns": [
+    "docx-markup-*",
+    "docx-private-grounded-*"
   ]
 }

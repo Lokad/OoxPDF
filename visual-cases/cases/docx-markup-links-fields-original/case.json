@@ -1,0 +1,15 @@
+{
+  "id": "docx-markup-links-fields-original",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-markup-links-fields.docx",
+  "docxMarkup": "original",
+  "dpi": 144,
+  "tags": ["docx", "docx-markup", "links-fields", "hyperlinks", "fields", "original-mode", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "candidateFontsMustBeEmbedded": true,
+    "candidateFontsMustHaveToUnicode": true
+  },
+  "allowedUnsupportedFeatures": []
+}
