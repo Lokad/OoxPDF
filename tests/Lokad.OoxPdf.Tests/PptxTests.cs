@@ -508,7 +508,7 @@ internal static class PptxTests
                   <p:cSld>
                     <p:bg><p:bgPr><a:solidFill><a:srgbClr val="123456"><a:alpha val="80000"/></a:srgbClr></a:solidFill></p:bgPr></p:bg>
                     <p:spTree>
-                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"><a:hlinkClick r:id="rIdShapeHyperlink" action="ppaction://hlinkshowjump"/></p:cNvPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:solidFill><a:srgbClr val="CCDD11"><a:alpha val="75000"/></a:srgbClr></a:solidFill><a:effectLst><a:glow rad="91440"><a:srgbClr val="0000FF"><a:alpha val="25000"/></a:srgbClr></a:glow><a:outerShdw dist="91440" dir="0"><a:srgbClr val="000000"><a:alpha val="50000"/></a:srgbClr></a:outerShdw><a:reflection blurRad="6350"/></a:effectLst><a:effectDag/></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr u="sng"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"><a:hlinkClick r:id="rIdShapeHyperlink" action="ppaction://hlinkshowjump"/></p:cNvPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:solidFill><a:srgbClr val="CCDD11"><a:alpha val="75000"/></a:srgbClr></a:solidFill><a:effectLst><a:glow rad="91440"><a:srgbClr val="0000FF"><a:alpha val="25000"/></a:srgbClr></a:glow><a:outerShdw dist="91440" dir="0"><a:srgbClr val="000000"><a:alpha val="50000"/></a:srgbClr></a:outerShdw><a:reflection blurRad="6350"/></a:effectLst><a:effectDag/></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr u="sng"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
                     <p:pic><p:nvPicPr><p:cNvPr id="5" name="Picture"/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rIdImage"><a:alphaModFix amt="50000"/><a:lum bright="25000" contrast="-15000"/></a:blip><a:srcRect l="10000" t="20000" r="30000" b="40000"/><a:stretch><a:fillRect l="5000" r="10000"/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:pic>
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1" bandRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr><a:tblGrid><a:gridCol w="914400"/><a:gridCol w="914400"/></a:tblGrid><a:tr h="914400"><a:tc gridSpan="2"><a:txBody><a:bodyPr lIns="91440" tIns="45720"/><a:lstStyle/><a:p/></a:txBody><a:tcPr marL="182880" anchor="ctr"><a:solidFill><a:srgbClr val="445566"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:lnL w="50800" cap="rnd" cmpd="dbl"><a:solidFill><a:srgbClr val="778899"><a:alpha val="60000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:lnL></a:tcPr></a:tc><a:tc hMerge="1"/></a:tr></a:tbl></a:graphicData></a:graphic></p:graphicFrame>
                     <p:cxnSp><p:nvCxnSpPr><p:cNvPr id="8" name="Connector"/><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="0" y="2743200"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="straightConnector1"><a:avLst><a:gd name="adj1" fmla="val 50000"/></a:avLst></a:prstGeom><a:ln w="25400" cap="rnd" cmpd="dbl"><a:solidFill><a:srgbClr val="336699"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/><a:headEnd type="arrow" w="lg"/><a:tailEnd type="triangle" len="sm"/></a:ln></p:spPr></p:cxnSp>
@@ -1239,7 +1239,7 @@ internal static class PptxTests
         TestAssert.Equal("xMid", slide.LayoutNodes[0].Shape?.CustomGeometry.Paths[0].Commands[1].Points[0].X);
         TestAssert.True(slide.LayoutNodes[0].Shape?.CustomGeometry.Paths[0].AllowsStroke == false, "Expected custom path stroke=\"0\" to disable stroke in the scene model.");
         TestAssert.True(slide.LayoutNodes[1].IsPlaceholder, "Expected layout placeholder metadata in the scene model.");
-        TestAssert.Equal(72d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
+        TestAssert.Equal(144d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
         PptxSceneTextBody textBody = TestAssert.NotNull(slide.SlideNodes[0].TextBody);
         TestAssert.Equal(1, textBody.Paragraphs.Count);
         TestAssert.Equal(1, textBody.Paragraphs[0].Level);
@@ -1260,16 +1260,29 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(255, 255, 0), textBody.Paragraphs[0].Runs[0].ResolvedStyle.Highlight ?? default);
 
         IReadOnlyList<PptxTextRunSnapshot> directTextRuns = PptxRenderer.InspectTextRuns(document, package, 0);
+        TestAssert.True(
+            directTextRuns.Any(run => run.Text == "Hello"),
+            "Expected direct text inspection to include Hello. Runs: " + string.Join("|", directTextRuns.Select(run => run.Text)));
         PptxTextRunSnapshot directHello = directTextRuns.First(run => run.Text == "Hello");
         TestAssert.Equal(26d, directHello.FontSize);
         TestAssert.True(directHello.Underline, "Expected direct renderer inspection to expose run underline.");
         TestAssert.Equal(new RgbColor(255, 255, 0), directHello.Highlight ?? default);
 
-        PptxTextGlyphRunSnapshot glyphHello = PptxRenderer.InspectTextGlyphRuns(document, package, 0).First(run => run.Text == "Hello");
-        TestAssert.True(glyphHello.UnderlineWidth is not null && glyphHello.UnderlineHeight is not null, "Expected glyph-run inspection to expose underline geometry.");
-        TestAssert.True(Math.Abs(glyphHello.UnderlineWidth.GetValueOrDefault() - glyphHello.Width) < 0.01d, "Expected underline geometry to be owned by the emitted glyph-run width.");
+        PptxTextGlyphRunSnapshot[] glyphHelloRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+            .Where(run => run.FrameIndex == 0 && run.ParagraphIndex == 0 && run.SourceRunIndex == 0)
+            .ToArray();
+        TestAssert.Equal("Hello", string.Concat(glyphHelloRuns.Select(run => run.Text)));
+        TestAssert.True(
+            glyphHelloRuns.All(run => run.UnderlineWidth is not null && run.UnderlineHeight is not null),
+            "Expected glyph-run inspection to expose underline geometry for each emitted source-run segment.");
+        TestAssert.True(
+            glyphHelloRuns.All(run => Math.Abs(run.UnderlineWidth.GetValueOrDefault() - run.Width) < 0.01d),
+            "Expected underline geometry to be owned by each emitted glyph-run segment width.");
 
         IReadOnlyList<PptxTextFrameModelSnapshot> textFrames = PptxRenderer.InspectTextFrameModels(document, package, 0);
+        TestAssert.True(
+            textFrames.Any(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello"))),
+            "Expected text-frame model inspection to include Hello. Runs: " + string.Join("|", textFrames.SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Runs).Select(run => run.Text)));
         PptxTextFrameModelSnapshot textFrame = textFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello")));
         TestAssert.True(textFrame.InheritedPlaceholderCount >= 1, "Expected text model to expose inherited placeholder participation.");
         TestAssert.True(textFrame.HasInheritedTextBody, "Expected text model to expose inherited placeholder text body participation.");
@@ -1325,11 +1338,14 @@ internal static class PptxTests
         TestAssert.True(flowFrame.TextWidth > 0d, "Expected text flow box to own text bounds before line layout.");
 
         PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, 0);
-        PptxTextFrameLayoutSnapshot layoutFrame = textLayout.Frames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Lines.Any(line => line.Spans.Any(span => span.Text == "Hello"))));
+        PptxTextFrameLayoutSnapshot layoutFrame = textLayout.Frames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Lines.Any(line => line.Spans.Any(span => span.SourceText == "Hello"))));
         TestAssert.Equal(1, layoutFrame.Paragraphs.Count);
         TestAssert.Equal(2, layoutFrame.Paragraphs[0].Lines.Count);
-        TestAssert.Equal("Hello", layoutFrame.Paragraphs[0].Lines[0].Spans[0].Text);
-        TestAssert.Equal("Hello", layoutFrame.Paragraphs[0].Lines[0].Spans[0].SourceText);
+        PptxTextSpanLayoutSnapshot[] layoutHelloSpans = layoutFrame.Paragraphs[0].Lines[0].Spans
+            .Where(span => span.SourceText == "Hello")
+            .ToArray();
+        TestAssert.Equal("Hello", string.Concat(layoutHelloSpans.Select(span => span.Text)));
+        TestAssert.True(layoutHelloSpans.All(span => span.SourceText == "Hello"), "Expected split layout spans to retain source-run text ownership.");
         TestAssert.Equal("1", layoutFrame.Paragraphs[0].Lines[1].Spans[0].Text);
         TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].EndX > layoutFrame.Paragraphs[0].Lines[0].StartX, "Expected layout line to own measured advance before PDF emission.");
         TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].TopY > layoutFrame.Paragraphs[0].Lines[0].BaselineY, "Expected layout line boxes to expose top-to-baseline geometry before PDF emission.");
