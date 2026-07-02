@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -577,6 +579,182 @@ internal static class FontTests
 
         TestAssert.Equal("Cambria Math", font.FamilyName);
         TestAssert.True(font.GlyphCount > 0, "Expected glyphs from the selected TTC face.");
+    }
+
+    public static void FontPackResolverDownloadsManifestOnlyOnCreate()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes);
+
+        OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes: null, out StubHttpMessageHandler handler);
+
+        TestAssert.Equal("test-pack", resolver.PackId);
+        TestAssert.Equal("https://example.test/ooxpdf-fonts/test-pack/", resolver.PackRootUri.AbsoluteUri);
+        TestAssert.Equal(1, handler.Requests.Count);
+        TestAssert.Equal("ooxpdf-fonts/test-pack/manifest.json", handler.Requests[0]);
+    }
+
+    public static void FontPackResolverDownloadsSelectedFontAndValidatesHash()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes);
+        OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out StubHttpMessageHandler handler);
+
+        FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
+        ReadOnlyMemory<byte> loaded = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        ReadOnlyMemory<byte> cached = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+
+        TestAssert.Equal("Aptos", resolution.RequestedFamily);
+        TestAssert.Equal("Aptos", resolution.ResolvedFamily);
+        TestAssert.True(!resolution.IsFallback, "Expected exact font pack resolution not to be marked as fallback.");
+        TestAssert.True(loaded.ToArray().SequenceEqual(fontBytes), "Expected font pack source to return downloaded font bytes.");
+        TestAssert.True(cached.ToArray().SequenceEqual(fontBytes), "Expected cached font pack bytes to remain stable.");
+        TestAssert.Equal(2, handler.Requests.Count);
+        TestAssert.Equal("ooxpdf-fonts/test-pack/files/aptos.ttf", handler.Requests[1]);
+    }
+
+    public static void FontPackResolverRejectsHashMismatch()
+    {
+        byte[] expectedFontBytes = [1, 2, 3, 4];
+        byte[] servedFontBytes = [1, 2, 3, 5];
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", expectedFontBytes);
+        OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, servedFontBytes, out _);
+        FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
+
+        OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(
+            () => resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult());
+
+        TestAssert.Equal(OoxPdfFontPackDiagnosticIds.FontPackHashMismatch, ex.DiagnosticId);
+    }
+
+    public static void FontPackResolverRejectsUnsafeRelativePath()
+    {
+        byte[] manifest = Encoding.UTF8.GetBytes("""
+            {
+              "packId": "test-pack",
+              "files": [
+                { "relativePath": "%2e%2e/aptos.ttf", "byteSize": 4, "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+              ],
+              "families": [
+                { "requestedFamily": "Aptos", "resolvedFamily": "Aptos", "relativeFontFile": "%2e%2e/aptos.ttf" }
+              ]
+            }
+            """);
+
+        OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(
+            () => CreateFontPackResolver(manifest, fontBytes: null, out _));
+
+        TestAssert.Equal(OoxPdfFontPackDiagnosticIds.FontPackInvalid, ex.DiagnosticId);
+    }
+
+    public static void FontPackResolverUsesConfiguredFallbackFamilies()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest(
+            "test-pack",
+            "files/fallback.ttf",
+            fontBytes,
+            requestedFamily: "Fallback Sans",
+            resolvedFamily: "Fallback Sans",
+            fallbackFamily: "Fallback Sans");
+        OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out _);
+
+        FontFaceResolution resolution = resolver.Resolve(new FontRequest("Missing Sans"));
+
+        TestAssert.Equal("Missing Sans", resolution.RequestedFamily);
+        TestAssert.Equal("Fallback Sans", resolution.ResolvedFamily);
+        TestAssert.True(resolution.IsFallback, "Expected missing font requests to use the configured font pack fallback.");
+    }
+
+    public static void PresentationFontResolverUsesFontPackCatalog()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes);
+        OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out _);
+        var presentationResolver = new PresentationFontResolver(resolver);
+
+        IReadOnlyList<FontFaceResolution> fonts = presentationResolver.GetDiscoveredFonts();
+
+        TestAssert.Equal(1, fonts.Count);
+        TestAssert.Equal("Aptos", fonts[0].ResolvedFamily);
+        TestAssert.True(
+            fonts[0].Source.StableId.StartsWith("ooxpdf-font-pack:test-pack:", StringComparison.Ordinal),
+            "Expected presentation font discovery to expose font pack sources.");
+    }
+
+    private static OoxPdfFontPackResolver CreateFontPackResolver(byte[] manifest, byte[]? fontBytes, out StubHttpMessageHandler handler)
+    {
+        var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal)
+        {
+            ["ooxpdf-fonts/test-pack/manifest.json"] = manifest
+        };
+        if (fontBytes is not null)
+        {
+            responses["ooxpdf-fonts/test-pack/files/aptos.ttf"] = fontBytes;
+            responses["ooxpdf-fonts/test-pack/files/fallback.ttf"] = fontBytes;
+        }
+
+        handler = new StubHttpMessageHandler(responses);
+        var httpClient = new HttpClient(handler);
+        return OoxPdfFontPackResolver.CreateHttpAsync(
+            "test-pack",
+            new Uri("https://example.test/ooxpdf-fonts"),
+            httpClient,
+            CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    private static byte[] BuildFontPackManifest(
+        string packId,
+        string relativeFontPath,
+        byte[] fontBytes,
+        string requestedFamily = "Aptos",
+        string resolvedFamily = "Aptos",
+        string fallbackFamily = "Aptos")
+    {
+        string sha256 = Convert.ToHexString(SHA256.HashData(fontBytes));
+        return Encoding.UTF8.GetBytes($$"""
+            {
+              "packId": "{{packId}}",
+              "files": [
+                { "relativePath": "{{relativeFontPath}}", "byteSize": {{fontBytes.Length}}, "sha256": "{{sha256}}" }
+              ],
+              "families": [
+                {
+                  "requestedFamily": "{{requestedFamily}}",
+                  "resolvedFamily": "{{resolvedFamily}}",
+                  "relativeFontFile": "{{relativeFontPath}}",
+                  "weight": 400,
+                  "italic": false,
+                  "faceIndex": 0,
+                  "hasMathTable": false
+                }
+              ],
+              "fallbacks": [
+                { "family": "{{fallbackFamily}}" }
+              ]
+            }
+            """);
+    }
+
+    private sealed class StubHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses) : HttpMessageHandler
+    {
+        public List<string> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string path = request.RequestUri?.AbsolutePath.TrimStart('/') ?? "";
+            Requests.Add(path);
+            if (!responses.TryGetValue(path, out byte[]? bytes))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(bytes)
+            });
+        }
     }
 
     private sealed class SingleFontResolver(FontFaceResolution resolution) : IFontResolver

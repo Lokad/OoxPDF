@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added a built-in HTTP(S) font pack resolver for deterministic packaged font resolution outside local Windows font directories.
+
 ## 0.1.3 - 2026-06-15
 
 - Added DOCX markup printing support for comments, insertions, deletions, and move revisions.

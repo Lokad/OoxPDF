@@ -4,12 +4,14 @@ internal sealed class PresentationFontResolver
 {
     private readonly IFontResolver primary;
     private readonly WindowsFontResolver windowsCatalog;
+    private readonly IFontCatalog fontCatalog;
     private readonly Dictionary<string, OpenTypeFont?> openTypeFonts = new(StringComparer.OrdinalIgnoreCase);
 
     public PresentationFontResolver(IFontResolver? primary = null)
     {
         this.primary = primary ?? new WindowsFontResolver();
         windowsCatalog = this.primary as WindowsFontResolver ?? new WindowsFontResolver();
+        fontCatalog = this.primary as IFontCatalog ?? windowsCatalog;
     }
 
     public FontFaceResolution Resolve(FontRequest request)
@@ -34,7 +36,7 @@ internal sealed class PresentationFontResolver
 
     public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
-        return windowsCatalog.GetDiscoveredFonts();
+        return fontCatalog.GetDiscoveredFonts();
     }
 
     private OpenTypeFont? LoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken = default)
