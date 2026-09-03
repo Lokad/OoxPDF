@@ -108,6 +108,7 @@ if (-not [string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
     $candidateArgs += @("--docx-markup-geometry", $docxMarkupGeometry)
 }
 
+Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Converting candidate PDF...";
 dotnet $cliDll @candidateArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
@@ -123,7 +124,9 @@ if (-not [string]::IsNullOrWhiteSpace($docxMarkup) -or -not [string]::IsNullOrWh
         ("docxMarkup={0};docxMarkupGeometry={1}" -f $referenceDocxMarkup, $referenceDocxMarkupGeometry))
 }
 
+Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rendering reference...";
 & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") @referenceArgs
+Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rasterizing candidate...";
 & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
 
 dotnet build (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") --nologo
@@ -132,6 +135,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
+Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Comparing pages...";
 dotnet $visualDiffDll $referenceDir $candidateDir $comparisonDir
 if ($LASTEXITCODE -ne 0) {
     throw "VisualDiff failed with exit code $LASTEXITCODE."
