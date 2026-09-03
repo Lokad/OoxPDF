@@ -10,11 +10,28 @@ Unsupported feature warnings:
 
 - `PPTX_UNSUPPORTED_ANIMATION`: slide timing or animation content was detected and ignored.
 - `PPTX_UNSUPPORTED_AUDIO`: audio content was detected and ignored.
-- `PPTX_UNSUPPORTED_CHART`: chart content was detected and ignored.
+- `PPTX_UNSUPPORTED_CHART`: an unsupported chart kind was detected, a chart part was missing/unresolvable, or a supported chart referenced formula-only data without cached numeric values (see also `PPTX_CHART_MISSING_CACHED_DATA`). Native rendering covers bar/column, line, area, pie/doughnut, scatter, bubble, and radar charts with cached values.
 - `PPTX_UNSUPPORTED_OLE_OBJECT`: embedded OLE content was detected and ignored.
 - `PPTX_UNSUPPORTED_SMARTART`: SmartArt or DrawingML diagram content was detected and ignored.
 - `PPTX_UNSUPPORTED_TRANSITION`: slide transition content was detected and ignored.
 - `PPTX_UNSUPPORTED_VIDEO`: video content was detected and ignored.
+- `PPTX_CHART_MISSING_CACHED_DATA`: a supported chart referenced formula-only data without chart-side cached numeric values; workbook provenance is preserved but not used for layout.
+- `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`: default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.
+- `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION`: a default-placement chart axis title has an unsupported or missing axis kind/position.
+- `PPTX_UNSUPPORTED_GRAPHIC_FRAME`: an unsupported graphic frame was detected and ignored.
+- `PPTX_UNSUPPORTED_GRADIENT_FILL`: an unsupported gradient fill was detected and ignored.
+- `PPTX_UNSUPPORTED_PATTERN_FILL`: an unsupported pattern fill was detected and ignored.
+- `PPTX_UNSUPPORTED_TEXT_ORIENTATION`: vertical text orientation was detected and ignored.
+- `PPTX_UNSUPPORTED_TEXT_OVERFLOW`: text vertical overflow uses ellipsis; local clipping was applied but the ellipsis marker is not rendered.
+- `PPTX_UNSUPPORTED_PICTURE_FILL`: an unsupported picture fill was detected and ignored.
+- `PPTX_UNSUPPORTED_IMAGE_TILE`: a tiled image fill was detected and ignored.
+- `PPTX_UNSUPPORTED_IMAGE_RECOLOR`: an unsupported image recolor was detected.
+- `PPTX_UNSUPPORTED_TRANSPARENCY`: unsupported transparency was detected and ignored.
+- `PPTX_UNSUPPORTED_EFFECT`: an unsupported effect was detected and ignored.
+- `PPTX_UNSUPPORTED_CUSTOM_GEOMETRY`: unsupported custom geometry was detected and ignored.
+- `PPTX_UNSUPPORTED_CALLOUT`: a callout shape was detected and ignored.
+- `PPTX_UNSUPPORTED_TABLE_STYLE`: an unsupported table style was detected.
+- `PPTX_NODE_RENDER_FAILED`: a slide node failed to render.
 
 These warnings are slide-scoped when a slide index is available. Duplicate occurrences of the same unsupported feature on one slide are aggregated into one warning for that slide.
 

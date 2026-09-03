@@ -24,6 +24,13 @@ This audit tracks the shift to Office-PDF-first fidelity work. Unit tests remain
 
 Implication: the public visual gate is the right lock for this feature. Unit tests should verify that text renders and fonts are embedded, but should avoid treating the candidate's current exact text matrix as the source of truth.
 
+## Quantified Inventory (2026-09-03, Debug binary ~804 tests, 797 passed / 0 failed / 7 skipped with --skip-slow)
+
+- `PptxTests.cs`: 63 ` Tm`/`Tj`/`TJ` assertion hits; `DocxTests.cs`: 12. These are the freeze-risk surface.
+- Pilot conversion pattern (do not bulk-rewrite yet): replace `AssertContainsTextMatrixAtX(pdf, 72d)`-style exact-matrix checks with smoke assertions (page count, media box, `Tf` font resource present, `Tj`/`TJ` text drawn, diagnostics empty) and rely on the matching `visual-cases/` lock (e.g. ladder typography ports, `pptx-ladder-02-plain-text` MAE 0.028749 precedent).
+- `TestCatalog.cs` name-substring classification and the hand-maintained 7-entry slow list in `TestRunner.cs` stay as-is until a grouped-attribute pass (tracked in PLAN.md E2).
+- Code edits that touch tests or `src/` are currently blocked on network-restore (`NU1301` socket-forbidden on `api.nuget.org`, `NU1101` for `Microsoft.SourceLink.GitHub` despite the 8.0.0 cache entry); prebuilt Debug dlls verify green but rebuilds cannot be confirmed offline. Unblock by restoring on a networked setup, then execute the rewrite list.
+
 ## First Rewrite Candidates
 
 - PPTX text layout tests with exact `Tm` expectations: body insets, line breaks, tabs, explicit tab stops, large-text baseline, mixed-run centering/wrapping, list-style defaults, empty paragraphs, vertical anchoring, placeholder bounds.
