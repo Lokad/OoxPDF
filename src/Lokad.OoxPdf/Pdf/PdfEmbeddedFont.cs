@@ -30,6 +30,7 @@ internal sealed class PdfEmbeddedFont
         }
 
         UnicodeByCid = BuildUnicodeByCid();
+        CodepointSetHash = ComputeCodepointSetHash(unicodeByOriginalGlyph);
     }
 
     public OpenTypeFont Font { get; }
@@ -44,7 +45,12 @@ internal sealed class PdfEmbeddedFont
 
     public bool UsesSubsetFontProgram => subsetFontBytes is not null;
 
-    public string ResourceKey => BaseFontName;
+    // Subset CID assignment is a dense remap of exactly this codepoint set, so two
+    // subsets of one file are mutually unintelligible unless their sets match.
+    // Keying resources by set keeps Merge to identical sets, where the remap agrees.
+    public string CodepointSetHash { get; }
+
+    public string ResourceKey => BaseFontName + "-U" + CodepointSetHash;
 
     public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken = default)
     {
@@ -276,6 +282,21 @@ internal sealed class PdfEmbeddedFont
 
         builder.Append('<').Append(glyphChunk).Append('>');
         glyphChunk.Clear();
+    }
+
+    private static string ComputeCodepointSetHash(IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph)
+    {
+        int[] codePoints = unicodeByOriginalGlyph.Values.Distinct().OrderBy(codePoint => codePoint).ToArray();
+        byte[] bytes = new byte[codePoints.Length * 4];
+        for (int i = 0; i < codePoints.Length; i++)
+        {
+            bytes[i * 4] = (byte)codePoints[i];
+            bytes[i * 4 + 1] = (byte)(codePoints[i] >> 8);
+            bytes[i * 4 + 2] = (byte)(codePoints[i] >> 16);
+            bytes[i * 4 + 3] = (byte)(codePoints[i] >> 24);
+        }
+
+        return Convert.ToHexString(SHA256.HashData(bytes)).Substring(0, 12);
     }
 
     private IReadOnlyDictionary<ushort, int> BuildUnicodeByCid()

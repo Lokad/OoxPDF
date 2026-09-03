@@ -736,6 +736,42 @@ internal static class FontTests
             """);
     }
 
+
+    public static void PdfEmbeddedFontSubsetsWithDifferentCodepointsDoNotShareResourceKey()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c));
+        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c));
+
+        TestAssert.True(first.ResourceKey != second.ResourceKey, "Subsets over different codepoint sets must not merge: subset CID assignment is only valid for its own set.");
+    }
+
+    public static void PdfEmbeddedFontSubsetsWithSameCodepointsShareResourceKey()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c));
+        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c));
+
+        TestAssert.Equal(first.ResourceKey, second.ResourceKey);
+        PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second]);
+        TestAssert.Equal(first.ResourceKey, merged.ResourceKey);
+        TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), merged.EncodeGlyphHex("ABCDEF"));
+        TestAssert.Equal(first.BuildWidthArray(), merged.BuildWidthArray());
+    }
     private sealed class StubHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses) : HttpMessageHandler
     {
         public List<string> Requests { get; } = [];
