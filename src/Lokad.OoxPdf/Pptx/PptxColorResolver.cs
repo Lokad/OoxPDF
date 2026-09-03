@@ -214,4 +214,48 @@ internal static class PptxColorResolver
         return new RgbColor(ToByte((r1 + match) * 255d), ToByte((g1 + match) * 255d), ToByte((b1 + match) * 255d));
     }
 
+    // Shared gradient-stop alpha checks. The scene builder, the diagnostics pass,
+    // and shape rendering each carried their own uniform-alpha copy over the same
+    // Office 0-100000 alpha scale, so the tolerance below covers all three callers.
+    public static bool IsDrawingColorElement(XElement element)
+    {
+        if (element.Name.Namespace != DrawingNamespace)
+        {
+            return false;
+        }
+
+        return element.Name.LocalName is "srgbClr" or "schemeClr" or "scrgbClr" or "prstClr" or "sysClr" or "hslClr";
+    }
+
+    public static int ReadGradientStopAlpha(XElement stop)
+    {
+        XElement? alpha = stop
+            .Elements()
+            .FirstOrDefault(IsDrawingColorElement)
+            ?.Element(DrawingNamespace + "alpha");
+        return alpha?.Attribute("val") is { } value &&
+            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+            ? Math.Clamp(parsed, 0, 100000)
+            : 100000;
+    }
+
+    public static bool HasSupportedGradientStopAlpha(IReadOnlyList<XElement> stops)
+    {
+        int first = ReadGradientStopAlpha(stops[0]);
+        return stops.All(stop => Math.Abs(ReadGradientStopAlpha(stop) - first) <= 100);
+    }
+
+    public static bool HasUniformGradientAlpha<T>(IReadOnlyList<T> stops, Func<T, double> alpha)
+    {
+        double first = alpha(stops[0]);
+        return stops.All(stop => Math.Abs(alpha(stop) - first) <= 0.001d);
+    }
+
+    public static bool TryGetUniformGradientAlpha<T>(IReadOnlyList<T> stops, Func<T, double> selector, out double alpha)
+    {
+        double first = selector(stops[0]);
+        bool uniform = stops.All(stop => Math.Abs(selector(stop) - first) <= 0.001d);
+        alpha = first;
+        return uniform;
+    }
 }

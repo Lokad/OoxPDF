@@ -916,7 +916,7 @@ internal sealed partial class PptxRenderer
         double half = Math.Abs(dx) * width / 2d + Math.Abs(dy) * height / 2d;
         double centerX = x + width / 2d;
         double centerY = y + height / 2d;
-        bool alphaState = TryGetUniformGradientAlpha(gradient.Stops, out double alpha) && alpha < 0.999d;
+        bool alphaState = PptxColorResolver.TryGetUniformGradientAlpha(gradient.Stops, static stop => stop.Alpha, out double alpha) && alpha < 0.999d;
         if (alphaState)
         {
             graphics.SaveState();
@@ -933,13 +933,6 @@ internal sealed partial class PptxRenderer
         {
             graphics.RestoreState();
         }
-    }
-
-    private static bool TryGetUniformGradientAlpha(IReadOnlyList<GradientStop> stops, out double alpha)
-    {
-        double candidate = stops[0].Alpha;
-        alpha = candidate;
-        return stops.All(stop => Math.Abs(stop.Alpha - candidate) <= 0.001d);
     }
 
     private static void DrawPresetArcStroke(

@@ -294,8 +294,8 @@ internal sealed partial class PptxRenderer
             ?.Elements(DrawingNamespace + "gs")
             .ToArray() ?? [];
         return stops.Length < 2 ||
-            stops.Any(stop => stop.Elements().FirstOrDefault(IsGradientColorElement) is null) ||
-            !HasSupportedGradientStopAlpha(stops);
+            stops.Any(stop => stop.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement) is null) ||
+            !PptxColorResolver.HasSupportedGradientStopAlpha(stops);
     }
 
     private static bool HasUnsupportedGradientFill(PptxSceneSlide sceneSlide, XDocument slideXml)
@@ -356,29 +356,6 @@ internal sealed partial class PptxRenderer
     {
         return gradientFill.Parent?.Name != PresentationNamespace + "spPr" &&
             IsUnsupportedGradientFill(gradientFill);
-    }
-
-    private static bool IsGradientColorElement(XElement color)
-    {
-        return color.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr" or "sysClr" or "scrgbClr" or "hslClr";
-    }
-
-    private static bool HasSupportedGradientStopAlpha(IReadOnlyList<XElement> stops)
-    {
-        int first = ReadGradientStopAlpha(stops[0]);
-        return stops.All(stop => Math.Abs(ReadGradientStopAlpha(stop) - first) <= 100);
-    }
-
-    private static int ReadGradientStopAlpha(XElement stop)
-    {
-        XElement? alpha = stop
-            .Elements()
-            .FirstOrDefault(IsGradientColorElement)
-            ?.Element(DrawingNamespace + "alpha");
-        return alpha?.Attribute("val") is { } value &&
-            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
-            ? Math.Clamp(parsed, 0, 100000)
-            : 100000;
     }
 
     private static bool HasUnsupportedEffect(PptxSceneSlide sceneSlide)

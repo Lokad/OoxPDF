@@ -4120,7 +4120,7 @@ internal sealed class PptxSceneBuilder
         }
 
         return document.Root.Elements()
-            .Where(IsDrawingColorElement)
+            .Where(PptxColorResolver.IsDrawingColorElement)
             .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex: null))
             .ToArray();
     }
@@ -4137,7 +4137,7 @@ internal sealed class PptxSceneBuilder
         int variationIndex = 0;
         foreach (XElement variation in document.Root.Elements().Where(IsChartColorStyleVariationElement))
         {
-            foreach (XElement colorElement in variation.Descendants().Where(IsDrawingColorElement))
+            foreach (XElement colorElement in variation.Descendants().Where(PptxColorResolver.IsDrawingColorElement))
             {
                 declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex));
             }
@@ -4161,7 +4161,7 @@ internal sealed class PptxSceneBuilder
         {
             IReadOnlyList<PptxSceneChartColorDeclaration> declarations = variation
                 .Descendants()
-                .Where(IsDrawingColorElement)
+                .Where(PptxColorResolver.IsDrawingColorElement)
                 .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex))
                 .ToArray();
             variations.Add(new PptxSceneChartColorVariation(
@@ -4192,16 +4192,6 @@ internal sealed class PptxSceneBuilder
     private static bool IsChartColorStyleVariationElement(XElement element)
     {
         return element.Name.LocalName == "variation";
-    }
-
-    private static bool IsDrawingColorElement(XElement element)
-    {
-        if (element.Name.Namespace != DrawingNamespace)
-        {
-            return false;
-        }
-
-        return element.Name.LocalName is "srgbClr" or "schemeClr" or "scrgbClr" or "prstClr" or "sysClr" or "hslClr";
     }
 
     private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken = default)
@@ -5006,26 +4996,8 @@ internal sealed class PptxSceneBuilder
             .Elements(DrawingNamespace + "gs")
             .ToArray();
         return stops.Length >= 2 &&
-            stops.All(stop => stop.Elements().FirstOrDefault(IsDrawingColorElement) is not null) &&
-            HasSupportedGradientStopAlpha(stops);
-    }
-
-    private static bool HasSupportedGradientStopAlpha(IReadOnlyList<XElement> stops)
-    {
-        int first = ReadGradientStopAlpha(stops[0]);
-        return stops.All(stop => Math.Abs(ReadGradientStopAlpha(stop) - first) <= 100);
-    }
-
-    private static int ReadGradientStopAlpha(XElement stop)
-    {
-        XElement? alpha = stop
-            .Elements()
-            .FirstOrDefault(IsDrawingColorElement)
-            ?.Element(DrawingNamespace + "alpha");
-        return alpha?.Attribute("val") is { } value &&
-            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
-            ? Math.Clamp(parsed, 0, 100000)
-            : 100000;
+            stops.All(stop => stop.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement) is not null) &&
+            PptxColorResolver.HasSupportedGradientStopAlpha(stops);
     }
 
     private static PptxSceneShapeEffectFamily ReadShapeEffects(XElement? shapeProperties)
@@ -5094,15 +5066,9 @@ internal sealed class PptxSceneBuilder
         double angleDegrees = OoxXml.ParseOptionalLong(linear, "ang", 0) / 60000d;
         bool hasUnsupportedGradient =
             stops.Length != rawStops.Length ||
-            !HasSupportedGradientStopAlpha(stops);
+            !PptxColorResolver.HasUniformGradientAlpha(stops, static stop => stop.Alpha);
         fill = new PptxSceneGradientFill(true, true, hasUnsupportedGradient, angleDegrees, stops);
         return true;
-    }
-
-    private static bool HasSupportedGradientStopAlpha(IReadOnlyList<PptxSceneGradientStop> stops)
-    {
-        double alpha = stops[0].Alpha;
-        return stops.All(stop => Math.Abs(stop.Alpha - alpha) <= 0.001d);
     }
 
     private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)
