@@ -51,6 +51,11 @@ else {
     $runDirectory = Get-Item -LiteralPath (Join-Path $caseArtifactRoot $Run)
 }
 
+if ([string]::IsNullOrWhiteSpace($Run) -and ((Get-Date).ToUniversalTime() - $runDirectory.LastWriteTimeUtc).TotalDays -gt 7)
+{
+    Write-Warning ("Summarizing run '{0}' from {1:yyyy-MM-dd}; pass -Run <run-id> to pin a specific run." -f $runDirectory.Name, $runDirectory.LastWriteTimeUtc)
+}
+
 $runRoot = $runDirectory.FullName
 if (-not (Test-UnderDirectory $runRoot $artifactRoot)) {
     throw "Run directory must be under $artifactRoot."
