@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -1769,11 +1770,6 @@ internal enum PptxSceneNodeKind
 
 internal sealed class PptxSceneBuilder
 {
-    private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
-    private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
-    private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-    private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-
     internal static PptxSceneChartMarkerSymbol ParseChartMarkerSymbol(string? symbol)
     {
         return symbol switch
@@ -2432,13 +2428,13 @@ internal sealed class PptxSceneBuilder
         }
 
         return new PptxSceneBounds(
-            ReadLong(offset, "x"),
-            ReadLong(offset, "y"),
-            ReadLong(extents, "cx"),
-            ReadLong(extents, "cy"),
+            OoxXml.ParseOptionalLong(offset, "x"),
+            OoxXml.ParseOptionalLong(offset, "y"),
+            OoxXml.ParseOptionalLong(extents, "cx"),
+            OoxXml.ParseOptionalLong(extents, "cy"),
             transform.Attribute("rot") is { } rotation ? long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d : 0d,
-            ReadBool(transform, "flipH"),
-            ReadBool(transform, "flipV"));
+            OoxXml.ReadBool(transform, "flipH"),
+            OoxXml.ReadBool(transform, "flipV"));
     }
 
     internal static string? ReadPictureRelationshipId(XElement picture)
@@ -4250,20 +4246,20 @@ internal sealed class PptxSceneBuilder
                 .Descendants()
                 .FirstOrDefault(element => element.Name.LocalName == "lnRef");
             string lineReferenceIndexRaw = (string?)lineReference?.Attribute("idx") ?? string.Empty;
-            int lineReferenceIndexValue = lineReference is null ? 0 : ParseOptionalIntAttribute(lineReference, "idx", 0);
+            int lineReferenceIndexValue = lineReference is null ? 0 : OoxXml.ReadOptionalInt(lineReference, "idx", 0);
             int? lineReferenceIndex = lineReferenceIndexValue > 0 ? lineReferenceIndexValue : null;
             XElement? fillReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "fillRef");
             string fillReferenceIndexRaw = (string?)fillReference?.Attribute("idx") ?? string.Empty;
-            int fillReferenceIndexValue = fillReference is null ? 0 : ParseOptionalIntAttribute(fillReference, "idx", 0);
+            int fillReferenceIndexValue = fillReference is null ? 0 : OoxXml.ReadOptionalInt(fillReference, "idx", 0);
             int? fillReferenceIndex = fillReferenceIndexValue > 0 ? fillReferenceIndexValue : null;
             PptxSceneFillStyle fillReferenceFill = ReadChartStyleFillReference(fillReference, theme, colorMap);
             XElement? effectReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "effectRef");
             string effectReferenceIndexRaw = (string?)effectReference?.Attribute("idx") ?? string.Empty;
-            int effectReferenceIndexValue = effectReference is null ? 0 : ParseOptionalIntAttribute(effectReference, "idx", 0);
+            int effectReferenceIndexValue = effectReference is null ? 0 : OoxXml.ReadOptionalInt(effectReference, "idx", 0);
             int? effectReferenceIndex = effectReferenceIndexValue > 0 ? effectReferenceIndexValue : null;
             PptxSceneChartEffectFamily effectReferenceEffects = ReadChartStyleEffectReference(effectReference, theme);
             string fontReferenceIndex = (string?)roleElement
@@ -4484,7 +4480,7 @@ internal sealed class PptxSceneBuilder
         return table
             ?.Element(DrawingNamespace + "tblGrid")
             ?.Elements(DrawingNamespace + "gridCol")
-            .Select(column => Math.Max(1d, ReadLong(column, "w", 1)))
+            .Select(column => Math.Max(1d, OoxXml.ParseOptionalLong(column, "w", 1)))
             .ToArray() ?? [];
     }
 
@@ -4492,7 +4488,7 @@ internal sealed class PptxSceneBuilder
     {
         return table
             ?.Elements(DrawingNamespace + "tr")
-            .Select(row => Math.Max(1d, ReadLong(row, "h", 1)))
+            .Select(row => Math.Max(1d, OoxXml.ParseOptionalLong(row, "h", 1)))
             .ToArray() ?? [];
     }
 
@@ -4659,7 +4655,7 @@ internal sealed class PptxSceneBuilder
 
     internal static bool IsMergedTableCellContinuation(XElement cell)
     {
-        return ReadBool(cell, "hMerge") || ReadBool(cell, "vMerge");
+        return OoxXml.ReadBool(cell, "hMerge") || OoxXml.ReadBool(cell, "vMerge");
     }
 
     internal static int ReadTableCellColumnSpan(XElement cell)
@@ -4874,22 +4870,22 @@ internal sealed class PptxSceneBuilder
             return PptxSceneGroupTransform.Identity;
         }
 
-        long width = ReadLong(extents, "cx");
-        long height = ReadLong(extents, "cy");
-        long childWidth = Math.Max(1, ReadLong(childExtents, "cx"));
-        long childHeight = Math.Max(1, ReadLong(childExtents, "cy"));
+        long width = OoxXml.ParseOptionalLong(extents, "cx");
+        long height = OoxXml.ParseOptionalLong(extents, "cy");
+        long childWidth = Math.Max(1, OoxXml.ParseOptionalLong(childExtents, "cx"));
+        long childHeight = Math.Max(1, OoxXml.ParseOptionalLong(childExtents, "cy"));
         return new PptxSceneGroupTransform(
-            ReadLong(offset, "x"),
-            ReadLong(offset, "y"),
+            OoxXml.ParseOptionalLong(offset, "x"),
+            OoxXml.ParseOptionalLong(offset, "y"),
             width,
             height,
-            ReadLong(childOffset, "x"),
-            ReadLong(childOffset, "y"),
+            OoxXml.ParseOptionalLong(childOffset, "x"),
+            OoxXml.ParseOptionalLong(childOffset, "y"),
             width / (double)childWidth,
             height / (double)childHeight,
             transform!.Attribute("rot") is { } rotation ? long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d : 0d,
-            ReadBool(transform, "flipH"),
-            ReadBool(transform, "flipV"));
+            OoxXml.ReadBool(transform, "flipH"),
+            OoxXml.ReadBool(transform, "flipV"));
     }
 
     private static PptxSceneShape ReadShape(
@@ -5095,7 +5091,7 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        double angleDegrees = ReadLong(linear, "ang", 0) / 60000d;
+        double angleDegrees = OoxXml.ParseOptionalLong(linear, "ang", 0) / 60000d;
         bool hasUnsupportedGradient =
             stops.Length != rawStops.Length ||
             !HasSupportedGradientStopAlpha(stops);
@@ -5194,10 +5190,10 @@ internal sealed class PptxSceneBuilder
         }
 
         return new PptxSceneCustomPath(
-            ParseOptionalDoubleAttribute(path, "w", 21600d),
-            ParseOptionalDoubleAttribute(path, "h", 21600d),
+            OoxXml.ReadOptionalDouble(path, "w", 21600d),
+            OoxXml.ReadOptionalDouble(path, "h", 21600d),
             !string.Equals((string?)path.Attribute("fill"), "none", StringComparison.Ordinal),
-            ParseBoolAttribute(path, "stroke", defaultValue: true),
+            OoxXml.ParseBoolOrDefault(path, "stroke", defaultValue: true),
             commands
                 .Cast<PptxSceneCustomCommand>()
                 .ToArray());
@@ -5349,7 +5345,7 @@ internal sealed class PptxSceneBuilder
         if (colorElement is not null &&
             TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
         {
-            double radius = OoxUnits.EmuToPoints(ReadLong(glowElement, "rad", 0));
+            double radius = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(glowElement, "rad", 0));
             glow = new PptxSceneGlow(
                 true,
                 color,
@@ -5384,9 +5380,9 @@ internal sealed class PptxSceneBuilder
             TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
         {
             double alpha = ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
-            double blurRadius = OoxUnits.EmuToPoints(ReadLong(outerShadow, "blurRad", 0));
-            double distance = OoxUnits.EmuToPoints(ReadLong(outerShadow, "dist", 0));
-            double direction = ReadLong(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
+            double blurRadius = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(outerShadow, "blurRad", 0));
+            double distance = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(outerShadow, "dist", 0));
+            double direction = OoxXml.ParseOptionalLong(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
             shadow = new PptxSceneOuterShadow(
                 true,
                 color,
@@ -6146,8 +6142,8 @@ internal sealed class PptxSceneBuilder
             alpha,
             typeface.Typeface,
             typeface.Source,
-            ParseOptionalBoolAttribute(defaultRunProperties, "b"),
-            ParseOptionalBoolAttribute(defaultRunProperties, "i"),
+            OoxXml.ParseOptionalBool(defaultRunProperties, "b"),
+            OoxXml.ParseOptionalBool(defaultRunProperties, "i"),
             ReadCharacterSpacing(defaultRunProperties, null));
     }
 
@@ -6178,9 +6174,9 @@ internal sealed class PptxSceneBuilder
         PptxThemeTypefaceResolution? typeface = string.IsNullOrWhiteSpace(requestedTypeface)
             ? null
             : theme.ResolveTypefaceWithSource(requestedTypeface);
-        bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
+        bool bold = OoxXml.ParseOptionalBool(runProperties, "b") ||
             (runProperties?.Attribute("b") is null && paragraphStyle.Bold);
-        bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
+        bool italic = OoxXml.ParseOptionalBool(runProperties, "i") ||
             (runProperties?.Attribute("i") is null && paragraphStyle.Italic);
         string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
         string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
@@ -6266,32 +6262,6 @@ internal sealed class PptxSceneBuilder
         return (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));
     }
 
-    private static bool ParseOptionalBoolAttribute(XElement? element, string attributeName)
-    {
-        return ParseBoolAttribute(element, attributeName, defaultValue: false);
-    }
-
-    private static bool ParseBoolAttribute(XElement? element, string attributeName, bool defaultValue)
-    {
-        return OoxBoolean.ParseAttribute(element, attributeName, defaultValue);
-    }
-
-    private static int ParseOptionalIntAttribute(XElement? element, string attributeName, int defaultValue)
-    {
-        return element?.Attribute(attributeName) is { } attribute &&
-            int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
-            ? value
-            : defaultValue;
-    }
-
-    private static double ParseOptionalDoubleAttribute(XElement element, string attributeName, double defaultValue)
-    {
-        return element.Attribute(attributeName) is { } attribute &&
-            double.TryParse(attribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
-            ? value
-            : defaultValue;
-    }
-
     private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)
     {
         XElement? highlight = runProperties?.Element(DrawingNamespace + "highlight");
@@ -6332,23 +6302,4 @@ internal sealed class PptxSceneBuilder
         return PptxColorResolver.ReadAlpha(colorContainer);
     }
 
-    private static long ReadLong(XElement element, string name)
-    {
-        return element.Attribute(name) is { } attribute
-            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
-            : 0L;
-    }
-
-    private static long ReadLong(XElement element, string name, long defaultValue)
-    {
-        return element.Attribute(name) is { } attribute
-            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
-            : defaultValue;
-    }
-
-    private static bool ReadBool(XElement element, string name)
-    {
-        string? value = (string?)element.Attribute(name);
-        return value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
-    }
 }

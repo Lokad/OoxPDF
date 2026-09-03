@@ -1,11 +1,11 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
 internal sealed class PptxTheme
 {
-    private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
 

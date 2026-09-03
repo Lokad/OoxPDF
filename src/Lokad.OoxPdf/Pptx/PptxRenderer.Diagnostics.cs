@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 

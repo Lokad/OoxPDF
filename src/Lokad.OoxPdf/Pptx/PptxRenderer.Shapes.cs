@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -1494,7 +1495,7 @@ internal sealed partial class PptxRenderer
 
     private static bool CustomGeometryPathAllowsStroke(XElement path)
     {
-        return ParseBoolAttribute(path, "stroke", defaultValue: true);
+        return OoxXml.ParseBoolOrDefault(path, "stroke", defaultValue: true);
     }
 
     private static bool TryFillCustomGeometryOpenLineEndPath(
@@ -1572,8 +1573,8 @@ internal sealed partial class PptxRenderer
         double height,
         out List<BezierSegment> segments)
     {
-        double coordinateWidth = Math.Max(1d, ParseOptionalDoubleAttribute(path, "w", 21600d));
-        double coordinateHeight = Math.Max(1d, ParseOptionalDoubleAttribute(path, "h", 21600d));
+        double coordinateWidth = Math.Max(1d, OoxXml.ReadOptionalDouble(path, "w", 21600d));
+        double coordinateHeight = Math.Max(1d, OoxXml.ReadOptionalDouble(path, "h", 21600d));
         IReadOnlyDictionary<string, double> guides = BuildCustomGeometryGuides(
             path.Parent?.Parent,
             coordinateWidth,
@@ -1727,8 +1728,8 @@ internal sealed partial class PptxRenderer
 
     private static void AppendCustomGeometryPath(PdfGraphicsBuilder graphics, XElement path, double x, double y, double width, double height)
     {
-        double coordinateWidth = Math.Max(1d, ParseOptionalDoubleAttribute(path, "w", 21600d));
-        double coordinateHeight = Math.Max(1d, ParseOptionalDoubleAttribute(path, "h", 21600d));
+        double coordinateWidth = Math.Max(1d, OoxXml.ReadOptionalDouble(path, "w", 21600d));
+        double coordinateHeight = Math.Max(1d, OoxXml.ReadOptionalDouble(path, "h", 21600d));
         IReadOnlyDictionary<string, double> guides = BuildCustomGeometryGuides(
             path.Parent?.Parent,
             coordinateWidth,
@@ -2137,14 +2138,6 @@ internal sealed partial class PptxRenderer
     private static double DegreesToRadians(double degrees)
     {
         return degrees * Math.PI / 180d;
-    }
-
-    private static double ParseOptionalDoubleAttribute(XElement element, string name, double defaultValue)
-    {
-        return element.Attribute(name) is { } value &&
-            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? parsed
-            : defaultValue;
     }
 
     private static bool TryReadShapePictureFill(

@@ -1,5 +1,6 @@
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Diagnostics;
@@ -11,10 +12,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
-    private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
-    private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-    private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private readonly PresentationFontResolver fontResolver;
 
     public PptxRenderer(IFontResolver? fontResolver = null)
@@ -175,14 +172,14 @@ internal sealed partial class PptxRenderer
         double rotationDegrees = transform.Attribute("rot") is { } rotationAttribute
             ? long.Parse(rotationAttribute.Value, CultureInfo.InvariantCulture) / 60000d
             : 0d;
-        bool flipHorizontal = ParseBoolAttribute(transform, "flipH");
-        bool flipVertical = ParseBoolAttribute(transform, "flipV");
+        bool flipHorizontal = OoxXml.ParseOptionalBool(transform, "flipH");
+        bool flipVertical = OoxXml.ParseOptionalBool(transform, "flipV");
 
         return new ShapeBounds(
-            ParseLongAttribute(offset, "x"),
-            ParseLongAttribute(offset, "y"),
-            ParseLongAttribute(extents, "cx"),
-            ParseLongAttribute(extents, "cy"),
+            OoxXml.ParseRequiredLong(offset, "x", "PPTX shape"),
+            OoxXml.ParseRequiredLong(offset, "y", "PPTX shape"),
+            OoxXml.ParseRequiredLong(extents, "cx", "PPTX shape"),
+            OoxXml.ParseRequiredLong(extents, "cy", "PPTX shape"),
             rotationDegrees,
             flipHorizontal,
             flipVertical);
@@ -194,42 +191,6 @@ internal sealed partial class PptxRenderer
             .Element(PresentationNamespace + "nvSpPr")
             ?.Element(PresentationNamespace + "nvPr")
             ?.Element(PresentationNamespace + "ph") is not null;
-    }
-
-    private static long ParseLongAttribute(XElement element, string name)
-    {
-        string value = (string?)element.Attribute(name)
-            ?? throw new InvalidDataException($"Missing required PPTX shape attribute '{name}'.");
-        return long.Parse(value, CultureInfo.InvariantCulture);
-    }
-
-    private static long ParseOptionalLongAttribute(XElement element, string name, long defaultValue)
-    {
-        return element.Attribute(name) is { } value
-            ? long.Parse(value.Value, CultureInfo.InvariantCulture)
-            : defaultValue;
-    }
-
-    private static int ParseOptionalIntAttribute(XElement? element, string name, int defaultValue)
-    {
-        return element?.Attribute(name) is { } value
-            ? int.Parse(value.Value, CultureInfo.InvariantCulture)
-            : defaultValue;
-    }
-
-    private static bool ParseBoolAttribute(XElement element, string name)
-    {
-        return ParseBoolAttribute(element, name, defaultValue: false);
-    }
-
-    private static bool ParseBoolAttribute(XElement element, string name, bool defaultValue)
-    {
-        return OoxBoolean.ParseAttribute(element, name, defaultValue);
-    }
-
-    private static bool ParseOptionalBoolAttribute(XElement? element, string name)
-    {
-        return element is not null && ParseBoolAttribute(element, name);
     }
 
     private static TextAlignment ReadAlignment(XElement paragraph, XElement? defaultParagraphProperties)

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Xml.Linq;
 
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -871,10 +872,10 @@ internal sealed partial class PptxRenderer
     {
         double fontSize = ReadFontSize(endRunProperties, defaultRunProperties) * fontScale;
         string? typeface = ReadTypeface(endRunProperties) ?? ReadTypeface(defaultRunProperties);
-        bool bold = ParseOptionalBoolAttribute(endRunProperties, "b") ||
-            (endRunProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
-        bool italic = ParseOptionalBoolAttribute(endRunProperties, "i") ||
-            (endRunProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
+        bool bold = OoxXml.ParseOptionalBool(endRunProperties, "b") ||
+            (endRunProperties?.Attribute("b") is null && OoxXml.ParseOptionalBool(defaultRunProperties, "b"));
+        bool italic = OoxXml.ParseOptionalBool(endRunProperties, "i") ||
+            (endRunProperties?.Attribute("i") is null && OoxXml.ParseOptionalBool(defaultRunProperties, "i"));
         return new ResolvedEndParagraphTextStyle(fontSize, typeface, bold, italic);
     }
 

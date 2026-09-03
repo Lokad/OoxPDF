@@ -1,12 +1,13 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
 internal static class PptxColorResolver
 {
-    private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
     public static bool TryReadSolidColor(XElement? element, PptxTheme theme, out RgbColor color)
     {
@@ -161,7 +162,7 @@ internal static class PptxColorResolver
         double blue = color.Blue;
         foreach (XElement transform in colorElement.Elements())
         {
-            double value = ReadLong(transform, "val", 100000) / 100000d;
+            double value = OoxXml.ReadOptionalLong(transform, "val", 100000) / 100000d;
             switch (transform.Name.LocalName)
             {
                 case "lumMod":
@@ -188,15 +189,15 @@ internal static class PptxColorResolver
 
     private static byte ReadPercentageByte(XElement element, string attributeName)
     {
-        double ratio = ReadLong(element, attributeName, 0) / 100000d;
+        double ratio = OoxXml.ReadOptionalLong(element, attributeName, 0) / 100000d;
         return ToByte(255d * ratio);
     }
 
     private static RgbColor ReadHslColor(XElement element)
     {
-        double hue = (ReadLong(element, "hue", 0) / 60000d) % 360d;
-        double saturation = Math.Clamp(ReadLong(element, "sat", 0) / 100000d, 0d, 1d);
-        double luminosity = Math.Clamp(ReadLong(element, "lum", 0) / 100000d, 0d, 1d);
+        double hue = (OoxXml.ReadOptionalLong(element, "hue", 0) / 60000d) % 360d;
+        double saturation = Math.Clamp(OoxXml.ReadOptionalLong(element, "sat", 0) / 100000d, 0d, 1d);
+        double luminosity = Math.Clamp(OoxXml.ReadOptionalLong(element, "lum", 0) / 100000d, 0d, 1d);
         double chroma = (1d - Math.Abs(2d * luminosity - 1d)) * saturation;
         double segment = hue / 60d;
         double second = chroma * (1d - Math.Abs(segment % 2d - 1d));
@@ -211,14 +212,6 @@ internal static class PptxColorResolver
         };
         double match = luminosity - chroma / 2d;
         return new RgbColor(ToByte((r1 + match) * 255d), ToByte((g1 + match) * 255d), ToByte((b1 + match) * 255d));
-    }
-
-    private static long ReadLong(XElement? element, string attributeName, long defaultValue)
-    {
-        return element?.Attribute(attributeName) is { } attribute &&
-            long.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long value)
-            ? value
-            : defaultValue;
     }
 
 }

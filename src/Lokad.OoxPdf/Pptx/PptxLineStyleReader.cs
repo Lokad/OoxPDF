@@ -1,13 +1,13 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
 internal static class PptxLineStyleReader
 {
-    private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private const double OfficeDefaultLineWidthPoints = 0.75d;
 
     public static bool TryReadLineWithAlpha(

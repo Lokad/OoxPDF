@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
 
@@ -45,17 +46,6 @@ internal sealed class DocxReader
             }
         }
     }
-
-    private static readonly XNamespace WordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-    private static readonly XNamespace WordprocessingDrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
-    private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
-    private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-    private static readonly XNamespace DiagramNamespace = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
-    private static readonly XNamespace MathNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/math";
-    private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-    private static readonly XNamespace VmlNamespace = "urn:schemas-microsoft-com:vml";
-    private static readonly XNamespace Office2010WordNamespace = "http://schemas.microsoft.com/office/word/2010/wordml";
-    private static readonly XNamespace Office2012WordNamespace = "http://schemas.microsoft.com/office/word/2012/wordml";
 
     private const string MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
@@ -161,8 +151,8 @@ internal sealed class DocxReader
             };
         }
 
-        double width = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "w"));
-        double height = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "h"));
+        double width = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "w", "DOCX"));
+        double height = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "h", "DOCX"));
         (width, height) = NormalizePageSize(width, height);
         string? orientation = (string?)pageSize.Attribute(WordprocessingNamespace + "orient");
         if (orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
@@ -5084,8 +5074,8 @@ internal sealed class DocxReader
         }
 
         return new DocxInlineImage(
-            OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cx")),
-            OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cy")),
+            OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cx", "DOCX")),
+            OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cy", "DOCX")),
             imagePart.ContentType,
             imagePart.Bytes,
             imagePart.Name)
@@ -5965,13 +5955,6 @@ internal sealed class DocxReader
 
         OoxPart? contentTypePart = package.Parts.FirstOrDefault(p => p.ContentType == MainDocumentContentType);
         return contentTypePart ?? throw new InvalidDataException("DOCX package does not contain a main document part.");
-    }
-
-    private static long ParseLongAttribute(XElement element, XName name)
-    {
-        string value = (string?)element.Attribute(name)
-            ?? throw new InvalidDataException($"Missing required DOCX attribute '{name.LocalName}'.");
-        return long.Parse(value, CultureInfo.InvariantCulture);
     }
 
     private sealed record DocxStyleSet(

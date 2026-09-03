@@ -4,6 +4,7 @@ using System.Xml.Linq;
 
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -2786,11 +2787,11 @@ internal sealed partial class PptxRenderer
         }
 
         PptxThemeTypefaceResolution typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
-        bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
+        bool bold = OoxXml.ParseOptionalBool(runProperties, "b") ||
             (runProperties?.Attribute("b") is null && tableStyleTextStyle.Bold) ||
-            (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
-        bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
-            (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
+            (runProperties?.Attribute("b") is null && OoxXml.ParseOptionalBool(defaultRunProperties, "b"));
+        bool italic = OoxXml.ParseOptionalBool(runProperties, "i") ||
+            (runProperties?.Attribute("i") is null && OoxXml.ParseOptionalBool(defaultRunProperties, "i"));
         bool hasHyperlinkClick = HasHyperlinkClick(runProperties);
         string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
         string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);

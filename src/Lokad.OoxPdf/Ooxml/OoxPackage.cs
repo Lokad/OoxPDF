@@ -105,11 +105,11 @@ internal sealed class OoxPackage
 
     public static IReadOnlyList<OoxRelationship> ParseRelationships(Stream stream, string sourcePartName, CancellationToken cancellationToken = default)
     {
-        XNamespace relationshipsNamespace = "http://schemas.openxmlformats.org/package/2006/relationships";
+
         XDocument document = SafeXml.Load(stream, cancellationToken);
         var relationships = new List<OoxRelationship>();
 
-        foreach (XElement element in document.Root?.Elements(relationshipsNamespace + "Relationship") ?? [])
+        foreach (XElement element in document.Root?.Elements(OoxNamespaces.PackageRelationshipsNamespace + "Relationship") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
             string id = RequiredAttribute(element, "Id");

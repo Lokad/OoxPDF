@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -22,7 +23,6 @@ internal sealed partial class PptxRenderer
     private const double ChartSeriesInheritedStrokeWidth = 3d;
     private const double ChartFilledSeriesInheritedStrokeWidth = 0.75d;
     private const double ChartMarkerInheritedStrokeWidth = 0.75d;
-    private static readonly XNamespace SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 
     private static void RenderChartFrame(
         PptxRenderContext context,

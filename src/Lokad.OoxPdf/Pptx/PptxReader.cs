@@ -1,14 +1,12 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
 internal sealed class PptxReader
 {
-    private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
-    private static readonly XNamespace RelationshipsDocumentNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-
     private const string PresentationContentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml";
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     private const string SlideRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
@@ -21,8 +19,8 @@ internal sealed class PptxReader
         XDocument document = SafeXml.Load(stream, cancellationToken);
 
         XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");
-        double width = size is null ? 720d : OoxUnits.EmuToPoints(ParseLongAttribute(size, "cx"));
-        double height = size is null ? 540d : OoxUnits.EmuToPoints(ParseLongAttribute(size, "cy"));
+        double width = size is null ? 720d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cx", "PPTX"));
+        double height = size is null ? 540d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cy", "PPTX"));
 
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(presentationPart.Name, cancellationToken)
             .Where(r => !r.IsExternal && r.Type == SlideRelationshipType && r.ResolvedTarget is not null)
@@ -36,7 +34,7 @@ internal sealed class PptxReader
         foreach (XElement slideId in slideIds)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string? relationshipId = (string?)slideId.Attribute(RelationshipsDocumentNamespace + "id");
+            string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
             if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
             {
                 slides.Add(new PptxSlide(relationship.ResolvedTarget!, slides.Count));
@@ -69,10 +67,4 @@ internal sealed class PptxReader
         return contentTypePart ?? throw new InvalidDataException("PPTX package does not contain a presentation part.");
     }
 
-    private static long ParseLongAttribute(XElement element, string name)
-    {
-        string value = (string?)element.Attribute(name)
-            ?? throw new InvalidDataException($"Missing required PPTX attribute '{name}'.");
-        return long.Parse(value, CultureInfo.InvariantCulture);
-    }
 }

@@ -4,7 +4,6 @@ namespace Lokad.OoxPdf.Ooxml;
 
 internal sealed class OoxContentTypes
 {
-    private static readonly XNamespace ContentTypesNamespace = "http://schemas.openxmlformats.org/package/2006/content-types";
 
     private readonly Dictionary<string, string> defaults;
     private readonly Dictionary<string, string> overrides;
@@ -24,12 +23,12 @@ internal sealed class OoxContentTypes
         foreach (XElement element in document.Root?.Elements() ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (element.Name == ContentTypesNamespace + "Default")
+            if (element.Name == OoxNamespaces.ContentTypesNamespace + "Default")
             {
                 string extension = RequiredAttribute(element, "Extension");
                 defaults[extension.TrimStart('.')] = RequiredAttribute(element, "ContentType");
             }
-            else if (element.Name == ContentTypesNamespace + "Override")
+            else if (element.Name == OoxNamespaces.ContentTypesNamespace + "Override")
             {
                 string partName = OoxPath.NormalizePartName(RequiredAttribute(element, "PartName"));
                 overrides[partName] = RequiredAttribute(element, "ContentType");
