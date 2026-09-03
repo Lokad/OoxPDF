@@ -8,6 +8,8 @@ Visual validation exists because a valid PDF structure does not prove visual fid
 - PowerShell.
 - .NET SDK.
 - `tools/vendor/pdfium/win-x64/bin/pdfium.dll`.
+- .NET restore needs network access to nuget.org (or a local feed such as the ignored `artifacts/localfeed/` workaround); without it only prebuilt binaries under `bin/` can run.
+- Reference rendering drives Office through COM: PowerPoint closes other presentations and Word runs headless (`DisplayAlerts = 0`); large decks export silently for many minutes with no progress output, and a missing `artifacts/reference-cache/` entry fails cache-only private runs instead of invoking Office.
 
 Retrieve PDFium from:
 
