@@ -38,6 +38,26 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/NewOfficeVisualFixtures.ps1`: regenerate Office-authored public fixtures.
 - `tools/NewSyntheticFixtures.ps1`: regenerate synthetic fixtures.
 - `tools/NewVisualCase.ps1`: scaffold a visual case.
+- `tools/CheckPrivateDocxMarkup.ps1`: candidate-only DOCX markup check for private cases (no Office/COM).
+- `tools/InspectDocx.ps1`: dump DOCX layout/mode inspection JSON (helper for markup triage).
+- `tools/ComparePdfTextLineStarts.ps1`: compare PDF text line starts (helper used by CheckVisualCase).
+- `tools/RenderCachedReference.ps1`: render cached Office reference PDFs (helper for cache-only gates).
+- `tools/CompareDocxLayoutPdfFlow.ps1`: compare a DOCX layout snapshot against PDF text flow for one run directory.
+- `tools/SummarizeDocxTextState.ps1`: summarize DOCX text-state deltas across run directories.
+- `tools/SummarizeDocxRowBoundary.ps1`: summarize DOCX table row-boundary/page-break behavior for one run.
+- `tools/SummarizePdfTextPageDeltas.ps1`: summarize PDF text page deltas across runs.
+- `tools/SummarizePdfGraphicsOperations.ps1`: summarize PDF graphics-operation rollups across runs.
+- `tools/SummarizeChartDataLabelLayout.ps1`: summarize chart data-label layout across runs.
+- `tools/SummarizeChartStructureDeltas.ps1`: summarize chart graphics-structure deltas per case/kind.
+- `tools/SummarizePptxTextEmissionBranchFamily.ps1`: summarize PPTX text-emission branch-family reports.
+- `tools/SummarizePptxTextStateDeltas.ps1`: summarize PPTX text-state deltas across runs.
+- `tools/SummarizePptxFontEmissionHeightScan.ps1`: scan PPTX font-emission heights across runs.
+- `tools/NewChartProbeFixtures.ps1`: generate chart probe fixtures (doughnut/sparse/labels/axis-titles/legends).
+- `tools/NewTypographyProbeFixtures.ps1`: generate typography probe fixtures.
+- `tools/NewDocxMarkupCommentFixtures.ps1`: generate DOCX markup comment fixtures.
+- `tools/NewDocxMarkupLinkFieldFixtures.ps1`: generate DOCX markup link/field fixtures.
+- `tools/NewDocxMarkupMarginFixtures.ps1`: generate DOCX markup margin fixtures.
+- `tools/NewDocxPrivateGroundedFixture.ps1`: generate a public synthetic fixture grounded in a private case (anonymized).
 - `tools/Lokad.OoxPdf.VisualDiff`: compare reference and candidate PNGs.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: dependency-free PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspector.
