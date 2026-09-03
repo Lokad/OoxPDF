@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed garbled subset-font text when one typeface is used with different character sets across a document: embedded font resources are now keyed by codepoint set so merged subsets keep valid CID mappings.
+
 ## 0.1.4 - 2026-07-02
 
 - Added a built-in HTTP(S) font pack resolver for deterministic packaged font resolution outside local Windows font directories.
