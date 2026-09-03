@@ -60,7 +60,9 @@ $completeMarker = Join-Path $cacheDir "complete.txt"
 if (-not (Test-Path -LiteralPath $completeMarker)) {
     if ($CacheOnly) {
         $variantMessage = if ([string]::IsNullOrWhiteSpace($CacheVariant)) { "" } else { " for variant '$CacheVariant'" }
-        throw "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI. Cache-only mode refuses to invoke Office/COM reference rendering. Expected cache directory: $cacheDir"
+        $populate = "pwsh tools/RenderCachedReference.ps1 -InputPath '$inputFull' -OutputDirectory <output-dir> -Dpi $Dpi" +
+            $(if ([string]::IsNullOrWhiteSpace($CacheVariant)) { "" } else { " -CacheVariant '$CacheVariant'" })
+        throw "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI. Cache-only mode refuses to invoke Office/COM reference rendering. Expected cache directory: $cacheDir. To populate it on an Office setup, run: $populate"
     }
 
     $tempDir = Join-Path $cacheRoot ("_tmp-" + [System.Guid]::NewGuid().ToString("N"))
