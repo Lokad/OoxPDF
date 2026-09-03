@@ -17,6 +17,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "ReferenceCache.ps1")
+
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
@@ -26,35 +28,15 @@ if (-not $CacheOnly -and -not [string]::IsNullOrWhiteSpace($CacheVariant)) {
 
 $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
 $renderReference = Join-Path $PSScriptRoot "RenderReference.ps1"
-$rasterizePdf = Join-Path $PSScriptRoot "RasterizePdf.ps1"
-$toolHashSource = @(
-    (Get-FileHash -LiteralPath $renderReference -Algorithm SHA256).Hash
-    (Get-FileHash -LiteralPath $rasterizePdf -Algorithm SHA256).Hash
-) -join "|"
-$toolHashBytes = [System.Text.Encoding]::UTF8.GetBytes($toolHashSource)
-$sha256 = [System.Security.Cryptography.SHA256]::Create()
-try {
-    $toolHash = ([System.BitConverter]::ToString($sha256.ComputeHash($toolHashBytes)) -replace "-", "").ToLowerInvariant()
-}
-finally {
-    $sha256.Dispose()
-}
 $extension = [System.IO.Path]::GetExtension($inputFull).TrimStart(".").ToLowerInvariant()
 $variantKeyPart = ""
 if (-not [string]::IsNullOrWhiteSpace($CacheVariant)) {
-    $variantBytes = [System.Text.Encoding]::UTF8.GetBytes($CacheVariant.Trim().ToLowerInvariant())
-    $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    try {
-        $variantHash = ([System.BitConverter]::ToString($sha256.ComputeHash($variantBytes)) -replace "-", "").ToLowerInvariant()
-    }
-    finally {
-        $sha256.Dispose()
-    }
+    $variantHash = Get-ShortSha256 ([System.Text.Encoding]::UTF8.GetBytes($CacheVariant.Trim().ToLowerInvariant())) 12
 
     $variantKeyPart = "-variant" + $variantHash.Substring(0, 12)
 }
 
-$key = "{0}-{1}-{2}{3}-dpi{4}" -f $extension, $inputHash.Substring(0, 24), $toolHash.Substring(0, 12), $variantKeyPart, $Dpi
+$key = "{0}-{1}-{2}{3}-dpi{4}" -f $extension, $inputHash.Substring(0, 24), $ReferenceCacheProtocol, $variantKeyPart, $Dpi
 $cacheRoot = Join-Path $repoRoot "artifacts/reference-cache"
 $cacheDir = Join-Path $cacheRoot $key
 $completeMarker = Join-Path $cacheDir "complete.txt"

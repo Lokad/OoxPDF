@@ -21,39 +21,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-function Get-ShortSha256([byte[]] $Bytes, [int] $Length = 12) {
-    $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    try {
-        $hash = ([System.BitConverter]::ToString($sha256.ComputeHash($Bytes)) -replace "-", "").ToLowerInvariant()
-        return $hash.Substring(0, [Math]::Min($Length, $hash.Length))
-    }
-    finally {
-        $sha256.Dispose()
-    }
-}
-
-function Get-ReferenceCacheKey(
-    [string] $InputPath,
-    [int] $DpiValue,
-    [string] $CacheVariant)
-{
-    $inputHash = (Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    $renderReference = Join-Path $PSScriptRoot "RenderReference.ps1"
-    $rasterizePdf = Join-Path $PSScriptRoot "RasterizePdf.ps1"
-    $toolHashSource = @(
-        (Get-FileHash -LiteralPath $renderReference -Algorithm SHA256).Hash
-        (Get-FileHash -LiteralPath $rasterizePdf -Algorithm SHA256).Hash
-    ) -join "|"
-    $toolHash = Get-ShortSha256 ([System.Text.Encoding]::UTF8.GetBytes($toolHashSource)) 12
-    $extension = [System.IO.Path]::GetExtension($InputPath).TrimStart(".").ToLowerInvariant()
-    $variantKeyPart = ""
-    if (-not [string]::IsNullOrWhiteSpace($CacheVariant)) {
-        $variantHash = Get-ShortSha256 ([System.Text.Encoding]::UTF8.GetBytes($CacheVariant.Trim().ToLowerInvariant())) 12
-        $variantKeyPart = "-variant" + $variantHash
-    }
-
-    "{0}-{1}-{2}{3}-dpi{4}" -f $extension, $inputHash.Substring(0, 24), $toolHash, $variantKeyPart, $DpiValue
-}
+. (Join-Path $PSScriptRoot "ReferenceCache.ps1")
 
 function Copy-ReferenceDirectory([string] $SourceDirectory, [string] $DestinationDirectory) {
     if (-not (Test-Path -LiteralPath (Join-Path $SourceDirectory "reference.pdf"))) {
