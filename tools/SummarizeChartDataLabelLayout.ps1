@@ -1,3 +1,5 @@
+# Summarizes chart data-label layout across runs.
+
 param(
     [string] $RunPath,
 

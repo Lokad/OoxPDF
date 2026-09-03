@@ -1,3 +1,5 @@
+# Summarizes chart graphics-structure deltas per case/kind.
+
 param(
     [string[]] $Case = @(),
 

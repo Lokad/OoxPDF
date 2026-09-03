@@ -1,3 +1,5 @@
+# Renders or copies cached Office reference PDFs (helper for cache-only gates).
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $InputPath,

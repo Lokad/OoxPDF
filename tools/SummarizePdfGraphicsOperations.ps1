@@ -1,3 +1,5 @@
+# Summarizes PDF graphics-operation rollups across runs.
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $InputJson,

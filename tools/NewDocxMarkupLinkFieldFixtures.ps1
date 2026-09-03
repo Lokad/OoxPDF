@@ -1,3 +1,5 @@
+# Generates DOCX markup link/field fixtures.
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot

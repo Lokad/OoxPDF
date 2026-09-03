@@ -1,3 +1,5 @@
+# Generates chart probe fixtures (doughnut/sparse/labels/axis-titles/legends).
+
 param(
     [switch] $DoughnutOnly,
     [switch] $SparseOnly,

@@ -1,3 +1,5 @@
+# Compares PDF text line starts (helper used by CheckVisualCase).
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $Reference,

@@ -1,3 +1,5 @@
+# Summarizes DOCX text-state deltas across run directories.
+
 param(
     [Parameter(Mandatory = $true)]
     [string[]] $RunDirectory,

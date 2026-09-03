@@ -1,3 +1,5 @@
+# Summarizes DOCX table row-boundary/page-break behavior for one run.
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $RunDirectory,

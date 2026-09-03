@@ -1,3 +1,5 @@
+# Generates DOCX markup margin fixtures.
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot

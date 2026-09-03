@@ -1,3 +1,5 @@
+# Scans PPTX font-emission heights across runs.
+
 param(
     [Parameter(Mandatory = $true)]
     [string[]] $SummaryJson,

@@ -1,3 +1,5 @@
+# Generates a public synthetic fixture grounded in a private case (anonymized).
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot

@@ -1,3 +1,5 @@
+# Summarizes PPTX text-emission branch-family reports.
+
 param(
     [Parameter(Mandatory = $true)]
     [string[]] $SummaryJson,

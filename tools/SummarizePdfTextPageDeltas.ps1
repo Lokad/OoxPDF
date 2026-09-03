@@ -1,3 +1,5 @@
+# Summarizes PDF text page deltas across runs.
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $RunDirectory,

@@ -1,3 +1,5 @@
+# Compares a DOCX layout snapshot against PDF text flow for one run directory.
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $RunDirectory,

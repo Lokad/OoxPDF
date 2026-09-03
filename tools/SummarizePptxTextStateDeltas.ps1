@@ -1,3 +1,5 @@
+# Summarizes PPTX text-state deltas across runs.
+
 param(
     [Parameter(Mandatory = $true)]
     [string[]] $CompareJson,

@@ -1,3 +1,5 @@
+# Candidate-only DOCX markup triage for private cases (no Office/COM).
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $Case,

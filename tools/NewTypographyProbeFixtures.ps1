@@ -1,3 +1,5 @@
+# Generates typography probe fixtures.
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot

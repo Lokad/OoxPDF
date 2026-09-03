@@ -1,3 +1,5 @@
+# Dumps DOCX layout/mode inspection JSON (helper for markup triage).
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $InputDocx,
