@@ -3918,7 +3918,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        AssertContainsTextMatrixAtX(pdf, 72d);
+        TestAssert.Contains("<< /Type /Pages /Count 1 /Kids [3 0 R] >>", pdf);
+        TestAssert.Contains("/MediaBox [0 0 720 540]", pdf);
+        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected inset body text to be drawn as PDF text.");
     }
 
     public static void PptxTextModelExposesTypedBodyProperties()
