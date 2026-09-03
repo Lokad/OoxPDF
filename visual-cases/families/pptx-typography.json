@@ -9,6 +9,7 @@
   "casePatterns": [
     "pptx-ladder-02-*",
     "pptx-ladder-03-*",
-    "pptx-ladder-04-*"
+    "pptx-ladder-04-*",
+    "pptx-font-*"
   ]
 }
