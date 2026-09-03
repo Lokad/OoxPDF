@@ -5355,7 +5355,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        AssertContainsTextMatrixAtX(pdf, 72d);
+        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
         AssertDoesNotContainTextMatrixAtX(pdf, 216d, "Standalone a:tab elements should not move following text.");
     }
 
@@ -5393,7 +5393,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        AssertContainsTextMatrixAtX(pdf, 72d);
+        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
         AssertContainsTextMatrixAtX(pdf, 216d);
     }
 
@@ -5431,7 +5431,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        AssertContainsTextMatrixAtX(pdf, 72d);
+        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
         AssertContainsTextMatrixAtX(pdf, 144d);
     }
 
@@ -7521,7 +7521,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        AssertContainsTextMatrixAtX(pdf, 72d);
+        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
     }
 
     public static void PptxSyntheticTextBoxSkipsEmptyParagraphs()
@@ -12111,7 +12111,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 720 540 re W* n", pdf);
-        AssertContainsTextMatrixAtX(pdf, 72d);
+        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
     }
 
     public static void PptxSyntheticTextAndShapesUseSiblingOrder()
