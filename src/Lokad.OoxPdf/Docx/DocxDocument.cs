@@ -404,6 +404,11 @@ internal sealed record DocxFloatingDrawing(
     public IReadOnlyList<DocxBodyElement> TextBoxBodyElements { get; init; } = [];
 }
 
+// One block-level w:body child in document order. Implementors wrap a single
+// source construct (paragraph, table, section break, page/manual break, or an
+// implicit paragraph synthesized by the reader); the base Revisions list carries
+// the tracked changes attached to that block, and layout consumes implementors
+// in sequence without reordering.
 internal abstract record DocxBodyElement
 {
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];

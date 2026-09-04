@@ -1303,6 +1303,10 @@ internal sealed record DocxLayoutPage(
     IReadOnlyList<DocxPlacedRelatedStoryLayout> PlacedRelatedStories,
     IReadOnlyList<DocxLayoutItem> Items);
 
+// One positioned content item on a laid-out page, emitted in the order the
+// renderer draws it. Implementors (text line, inline image, table row fragment)
+// carry page-space coordinates plus source/story provenance; layout owns
+// fragmentation (wrapped lines, row fragments), never the renderer.
 internal abstract record DocxLayoutItem;
 
 internal sealed record DocxTextLineLayout(
