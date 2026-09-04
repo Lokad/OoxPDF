@@ -1259,6 +1259,9 @@ internal sealed class OpenTypeFont
         short UnderlineThickness,
         bool IsFixedPitch);
 
+    // One cmap subtable parser. Implementors read a single subtable at their stored
+    // offset: Map returns the glyph id for a code point, or 0 when unmapped.
+    // bytes is always the whole font file, so stored offsets stay absolute.
     private abstract record CmapFormat
     {
         public abstract ushort Map(int codePoint, byte[] bytes);
