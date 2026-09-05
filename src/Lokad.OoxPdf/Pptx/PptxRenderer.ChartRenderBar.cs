@@ -672,57 +672,6 @@ internal sealed partial class PptxRenderer
             : new ChartSeriesStroke(new RgbColor(235, 235, 235), 1d, 0.25d);
     }
 
-    private static ChartSeriesFill ChartSeriesColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, double defaultAlpha)
-    {
-        return seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is { } fill
-            ? fill
-            : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, seriesIndex), defaultAlpha, null, null);
-    }
-
-    private static ChartSeriesFill ChartCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills)
-    {
-        return varyColors && seriesCount == 1 && (seriesFills.Count == 0 || seriesFills[0] is null)
-            ? new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, categoryIndex), 1d, null, null)
-            : ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
-    }
-
-    private static ChartSeriesFill ChartPointCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills)
-    {
-        if (seriesIndex < pointFills.Count && pointFills[seriesIndex].TryGetValue(categoryIndex, out ChartSeriesFill pointFill))
-        {
-            return pointFill;
-        }
-
-        return ChartCategoryOrSeriesColor(theme, colorMap, chartPalette, seriesIndex, categoryIndex, seriesCount, varyColors, seriesFills);
-    }
-
-    private static ChartSeriesFill ResolveBarPointFill(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, double value)
-    {
-        if (value < 0d && !HasExplicitChartPointFill(pointFills, seriesIndex, categoryIndex))
-        {
-            return new ChartSeriesFill(new RgbColor(255, 255, 255), 1d, null, null);
-        }
-
-        return ChartPointCategoryOrSeriesColor(theme, colorMap, chartPalette, seriesIndex, categoryIndex, seriesCount, varyColors, seriesFills, pointFills);
-    }
-
-    private static bool HasExplicitChartPointFill(IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int seriesIndex, int categoryIndex)
-    {
-        return seriesIndex < pointFills.Count && pointFills[seriesIndex].ContainsKey(categoryIndex);
-    }
-
-    private static ChartSeriesStroke? ResolveNegativeBarFallbackStroke(IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, int seriesIndex, int categoryIndex, double value)
-    {
-        return value < 0d && !HasExplicitChartPointStroke()
-            ? ChartNegativeBarDefaultStroke
-            : null;
-
-        bool HasExplicitChartPointStroke()
-        {
-            return seriesIndex < pointStrokes.Count && pointStrokes[seriesIndex].ContainsKey(categoryIndex);
-        }
-    }
-
     private static void FillChartRectangle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartSeriesFill fill)
     {
         if (fill.Alpha < 1d)
@@ -875,50 +824,6 @@ internal sealed partial class PptxRenderer
     private static bool IsDarkChartPattern(string patternPreset)
     {
         return patternPreset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static (double Min, double Max) GetClusteredPointValueExtents(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series)
-    {
-        double maxValue = Math.Max(0d, series.SelectMany(points => points).Select(point => point?.Value).OfType<double>().DefaultIfEmpty(0d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(points => points).Select(point => point?.Value).OfType<double>().DefaultIfEmpty(0d).Min());
-        return (minValue, maxValue);
-    }
-
-    private static (double Min, double Max) GetStackedPointValueExtents(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, bool percentStacked)
-    {
-        if (percentStacked)
-        {
-            return (0d, 1d);
-        }
-
-        double minValue = 0d;
-        double maxValue = 0d;
-        for (int category = 0; category < categoryCount; category++)
-        {
-            double positive = 0d;
-            double negative = 0d;
-            foreach (IReadOnlyList<ChartIndexedNumberPoint?> values in series)
-            {
-                if (category >= values.Count || values[category]?.Value is not { } value)
-                {
-                    continue;
-                }
-
-                if (value >= 0d)
-                {
-                    positive += value;
-                }
-                else
-                {
-                    negative += value;
-                }
-            }
-
-            maxValue = Math.Max(maxValue, positive);
-            minValue = Math.Min(minValue, negative);
-        }
-
-        return (minValue, maxValue);
     }
 
     private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
@@ -1099,60 +1004,4 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static double GetStackedBarWidth(double categoryBand, double gapWidthPercent)
-    {
-        return Math.Max(0.5d, categoryBand * 100d / (100d + Math.Max(0d, gapWidthPercent)));
-    }
-
-    private static double GetClusteredBarWidth(double categoryBand, int seriesCount, double gapWidthPercent)
-    {
-        int count = Math.Max(1, seriesCount);
-        return Math.Max(0.5d, categoryBand * 100d / (100d * count + Math.Max(0d, gapWidthPercent)));
-    }
-
-    private static double GetClusteredBarStep(double barWidth, double overlapPercent)
-    {
-        return Math.Max(0d, barWidth * (1d - overlapPercent / 100d));
-    }
-
-    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int category, bool percentStacked)
-    {
-        if (!percentStacked)
-        {
-            return 1d;
-        }
-
-        double total = 0d;
-        foreach (IReadOnlyList<ChartIndexedNumberPoint?> values in series)
-        {
-            if (category < values.Count && values[category]?.Value is { } value)
-            {
-                total += Math.Max(0d, value);
-            }
-        }
-
-        return Math.Max(1d, total);
-    }
-
-    private static double[] GetCategoryPositiveTotals(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, bool percentStacked)
-    {
-        var totals = new double[categoryCount];
-        if (!percentStacked)
-        {
-            Array.Fill(totals, 1d);
-            return totals;
-        }
-
-        for (int category = 0; category < categoryCount; category++)
-        {
-            totals[category] = GetCategoryPositiveTotal(series, category, percentStacked);
-        }
-
-        return totals;
-    }
-
-    private static double NormalizeStackedValue(double value, double positiveTotal, bool percentStacked)
-    {
-        return percentStacked && value > 0d ? value / positiveTotal : value;
-    }
 }
