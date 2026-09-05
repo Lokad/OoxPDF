@@ -74,7 +74,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                AddHyperlinkContainer(child, inheritedRevision);
+                AddHyperlinkContainer(child, inheritedRevision, AddInlineContainerChild, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
             }
             else if (child.Name == WordprocessingNamespace + "sdt")
             {
@@ -118,7 +118,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                AddHyperlinkContainer(child, revision);
+                AddHyperlinkContainer(child, revision, AddInlineContainerChild, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
             }
             else if (child.Name == WordprocessingNamespace + "sdt")
             {
@@ -251,31 +251,6 @@ internal sealed partial class DocxReader
             HasDeletedParagraphMark = hasDeletedParagraphMark
         };
 
-        void AddHyperlinkSpan(
-            XElement hyperlink,
-            int sourceRunStartIndex,
-            int sourceRunCount,
-            int textRunStartIndex,
-            int textRunCount,
-            int textLength)
-        {
-            string? relationshipId = (string?)hyperlink.Attribute(RelationshipsNamespace + "id");
-            relationships.TryGetValue(relationshipId ?? string.Empty, out OoxRelationship? relationship);
-            hyperlinkSpans.Add(new DocxHyperlinkSpan(
-                relationshipId,
-                (string?)hyperlink.Attribute(WordprocessingNamespace + "anchor"),
-                (string?)hyperlink.Attribute(WordprocessingNamespace + "tooltip"),
-                (string?)hyperlink.Attribute(WordprocessingNamespace + "history"),
-                relationship?.Target,
-                relationship?.TargetMode,
-                relationship?.ResolvedTarget,
-                sourceRunStartIndex,
-                sourceRunCount,
-                textRunStartIndex,
-                textRunCount,
-                textLength));
-        }
-
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)
         {
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
@@ -347,25 +322,6 @@ internal sealed partial class DocxReader
                 rendersCachedResult: hasCachedResult, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
                 fieldReferences: fieldReferences,
                 runs: runs);
-        }
-
-        void AddHyperlinkContainer(XElement hyperlink, DocxRevisionInfo? revision)
-        {
-            int sourceRunStartIndex = sourceRunIndex;
-            int textRunStartIndex = runs.Count;
-            int textLengthStart = runs.Sum(run => run.Text.Length);
-            foreach (XElement hyperlinkChild in hyperlink.Elements())
-            {
-                AddInlineContainerChild(hyperlinkChild, revision);
-            }
-
-            AddHyperlinkSpan(
-                hyperlink,
-                sourceRunStartIndex,
-                sourceRunIndex - sourceRunStartIndex,
-                textRunStartIndex,
-                runs.Count - textRunStartIndex,
-                runs.Sum(run => run.Text.Length) - textLengthStart);
         }
 
         void AddFieldPlaceholderRun(XElement run, string text, int sourceRunIndex, DocxRevisionInfo? revision)
@@ -1042,6 +998,61 @@ internal sealed partial class DocxReader
             InstructionRunCount = instructionRunCount,
             ResultRunCount = resultRunCount
         });
+    }
+
+    private static void AddHyperlinkSpan(
+        XElement hyperlink,
+        int sourceRunStartIndex,
+        int sourceRunCount,
+        int textRunStartIndex,
+        int textRunCount,
+        int textLength,
+        List<DocxHyperlinkSpan> hyperlinkSpans,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        string? relationshipId = (string?)hyperlink.Attribute(RelationshipsNamespace + "id");
+        relationships.TryGetValue(relationshipId ?? string.Empty, out OoxRelationship? relationship);
+        hyperlinkSpans.Add(new DocxHyperlinkSpan(
+            relationshipId,
+            (string?)hyperlink.Attribute(WordprocessingNamespace + "anchor"),
+            (string?)hyperlink.Attribute(WordprocessingNamespace + "tooltip"),
+            (string?)hyperlink.Attribute(WordprocessingNamespace + "history"),
+            relationship?.Target,
+            relationship?.TargetMode,
+            relationship?.ResolvedTarget,
+            sourceRunStartIndex,
+            sourceRunCount,
+            textRunStartIndex,
+            textRunCount,
+            textLength));
+    }
+
+    private static void AddHyperlinkContainer(
+        XElement hyperlink,
+        DocxRevisionInfo? revision,
+        Action<XElement, DocxRevisionInfo?> addInlineChild,
+        ref int sourceRunIndex,
+        List<DocxTextRun> runs,
+        List<DocxHyperlinkSpan> hyperlinkSpans,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        int sourceRunStartIndex = sourceRunIndex;
+        int textRunStartIndex = runs.Count;
+        int textLengthStart = runs.Sum(run => run.Text.Length);
+        foreach (XElement hyperlinkChild in hyperlink.Elements())
+        {
+            addInlineChild(hyperlinkChild, revision);
+        }
+
+        AddHyperlinkSpan(
+            hyperlink,
+            sourceRunStartIndex,
+            sourceRunIndex - sourceRunStartIndex,
+            textRunStartIndex,
+            runs.Count - textRunStartIndex,
+            runs.Sum(run => run.Text.Length) - textLengthStart,
+            hyperlinkSpans,
+            relationships);
     }
 
     private static DocxRelatedStoryKind? ResolveInlineReferenceKind(XElement element)
