@@ -64,6 +64,18 @@ internal sealed partial class DocxLayoutEngine
             : IsTextLineVisibleInCellFragment();
     }
 
+    private static bool IsCellFragmentGeometryVisible(
+        bool cellPageBreakAlignsWithFragmentBoundary,
+        double y,
+        double height,
+        double cellY,
+        double cellHeight)
+    {
+        return cellPageBreakAlignsWithFragmentBoundary
+            ? true
+            : VerticalOverlap(y, height, cellY, cellHeight) > 0.001d;
+    }
+
     private static bool IsInlineImageVisibleInCellFragmentGeometry(
         bool cellPageBreakAlignsWithFragmentBoundary,
         DocxInlineImageLayout image,
@@ -72,9 +84,12 @@ internal sealed partial class DocxLayoutEngine
         int fragmentIndex,
         int fragmentCount)
     {
-        return cellPageBreakAlignsWithFragmentBoundary
-            ? true
-            : VerticalOverlap(image.Y, image.Height, cellY, cellHeight) > 0.001d;
+        return IsCellFragmentGeometryVisible(
+            cellPageBreakAlignsWithFragmentBoundary,
+            image.Y,
+            image.Height,
+            cellY,
+            cellHeight);
     }
 
     private static bool IsNestedTableRowVisibleInCellFragmentGeometry(
@@ -85,9 +100,12 @@ internal sealed partial class DocxLayoutEngine
         int fragmentIndex,
         int fragmentCount)
     {
-        return cellPageBreakAlignsWithFragmentBoundary
-            ? true
-            : VerticalOverlap(row.Y, row.Height, cellY, cellHeight) > 0.001d;
+        return IsCellFragmentGeometryVisible(
+            cellPageBreakAlignsWithFragmentBoundary,
+            row.Y,
+            row.Height,
+            cellY,
+            cellHeight);
     }
 
     private static bool TryResolveTableCellParagraphBoundaryIndex(
@@ -231,6 +249,24 @@ internal sealed partial class DocxLayoutEngine
         return nestedTableIndex > 0;
     }
 
+    private static bool IsSourceParagraphIndexOnVisibleSideOfCellPageBreak(
+        bool useCellPageBreakBoundaryPartition,
+        int lowerParagraphBoundaryIndex,
+        int? upperParagraphBoundaryIndex,
+        int? paragraphIndex,
+        int fragmentCount)
+    {
+        if (!useCellPageBreakBoundaryPartition ||
+            fragmentCount <= 1 ||
+            paragraphIndex is not { } resolvedParagraphIndex)
+        {
+            return true;
+        }
+
+        return resolvedParagraphIndex >= lowerParagraphBoundaryIndex &&
+            (upperParagraphBoundaryIndex is not { } upper || resolvedParagraphIndex < upper);
+    }
+
     private static bool IsTextLineOnVisibleSideOfCellPageBreak(
         bool useCellPageBreakBoundaryPartition,
         int lowerParagraphBoundaryIndex,
@@ -240,15 +276,12 @@ internal sealed partial class DocxLayoutEngine
         int fragmentIndex,
         int fragmentCount)
     {
-        if (!useCellPageBreakBoundaryPartition ||
-            fragmentCount <= 1 ||
-            line.SourceParagraphIndex is not { } paragraphIndex)
-        {
-            return true;
-        }
-
-        return paragraphIndex >= lowerParagraphBoundaryIndex &&
-            (upperParagraphBoundaryIndex is not { } upper || paragraphIndex < upper);
+        return IsSourceParagraphIndexOnVisibleSideOfCellPageBreak(
+            useCellPageBreakBoundaryPartition,
+            lowerParagraphBoundaryIndex,
+            upperParagraphBoundaryIndex,
+            line.SourceParagraphIndex,
+            fragmentCount);
     }
 
     private static bool IsInlineImageOnVisibleSideOfCellPageBreak(
@@ -260,15 +293,12 @@ internal sealed partial class DocxLayoutEngine
         int fragmentIndex,
         int fragmentCount)
     {
-        if (!useCellPageBreakBoundaryPartition ||
-            fragmentCount <= 1 ||
-            image.SourceParagraphIndex is not { } paragraphIndex)
-        {
-            return true;
-        }
-
-        return paragraphIndex >= lowerParagraphBoundaryIndex &&
-            (upperParagraphBoundaryIndex is not { } upper || paragraphIndex < upper);
+        return IsSourceParagraphIndexOnVisibleSideOfCellPageBreak(
+            useCellPageBreakBoundaryPartition,
+            lowerParagraphBoundaryIndex,
+            upperParagraphBoundaryIndex,
+            image.SourceParagraphIndex,
+            fragmentCount);
     }
 
     private static bool IsNestedTableRowOnVisibleSideOfCellPageBreak(
