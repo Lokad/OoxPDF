@@ -414,19 +414,6 @@ internal sealed partial class DocxReader
                 (string?)fonts.Attribute(WordprocessingNamespace + "csTheme"));
     }
 
-    private static DocxRunFonts MergeRunFonts(DocxRunFonts current, DocxRunFonts other)
-    {
-        return new DocxRunFonts(
-            other.Ascii ?? current.Ascii,
-            other.HighAnsi ?? current.HighAnsi,
-            other.EastAsia ?? current.EastAsia,
-            other.ComplexScript ?? current.ComplexScript,
-            other.AsciiTheme ?? current.AsciiTheme,
-            other.HighAnsiTheme ?? current.HighAnsiTheme,
-            other.EastAsiaTheme ?? current.EastAsiaTheme,
-            other.ComplexScriptTheme ?? current.ComplexScriptTheme);
-    }
-
     private static bool? ReadOnOff(XElement? element)
     {
         if (element is null)

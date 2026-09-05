@@ -52,7 +52,7 @@ internal sealed partial class DocxReader
                 other.ComplexScriptItalic ?? ComplexScriptItalic,
                 other.Underline ?? Underline,
                 other.UnderlineValue ?? UnderlineValue,
-                MergeRunFonts(Fonts, other.Fonts),
+                Fonts.Merge(other.Fonts),
                 other.CharacterSpacingPoints ?? CharacterSpacingPoints,
                 other.AllCaps ?? AllCaps,
                 other.VerticalAlignmentValue ?? VerticalAlignmentValue,

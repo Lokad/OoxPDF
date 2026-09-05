@@ -937,26 +937,13 @@ internal sealed record DocxTextRunStyle(
             HiddenValue ?? source.HiddenValue,
             UnderlineColorHex ?? source.UnderlineColorHex)
         {
-            Fonts = MergeRunFonts(source.Fonts, Fonts),
+            Fonts = source.Fonts.Merge(Fonts),
             StyleResolution = source.StyleResolution,
             SourceRunIndex = source.SourceRunIndex,
             SourceTextOffsetInRun = source.SourceTextOffsetInRun,
             Revision = source.Revision,
             Revisions = source.Revisions
         };
-    }
-
-    private static DocxRunFonts MergeRunFonts(DocxRunFonts current, DocxRunFonts other)
-    {
-        return new DocxRunFonts(
-            other.Ascii ?? current.Ascii,
-            other.HighAnsi ?? current.HighAnsi,
-            other.EastAsia ?? current.EastAsia,
-            other.ComplexScript ?? current.ComplexScript,
-            other.AsciiTheme ?? current.AsciiTheme,
-            other.HighAnsiTheme ?? current.HighAnsiTheme,
-            other.EastAsiaTheme ?? current.EastAsiaTheme,
-            other.ComplexScriptTheme ?? current.ComplexScriptTheme);
     }
 }
 
@@ -971,6 +958,19 @@ internal sealed record DocxRunFonts(
     string? ComplexScriptTheme)
 {
     public static DocxRunFonts Empty { get; } = new(null, null, null, null, null, null, null, null);
+
+    public DocxRunFonts Merge(DocxRunFonts other)
+    {
+        return new DocxRunFonts(
+            other.Ascii ?? Ascii,
+            other.HighAnsi ?? HighAnsi,
+            other.EastAsia ?? EastAsia,
+            other.ComplexScript ?? ComplexScript,
+            other.AsciiTheme ?? AsciiTheme,
+            other.HighAnsiTheme ?? HighAnsiTheme,
+            other.EastAsiaTheme ?? EastAsiaTheme,
+            other.ComplexScriptTheme ?? ComplexScriptTheme);
+    }
 }
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
