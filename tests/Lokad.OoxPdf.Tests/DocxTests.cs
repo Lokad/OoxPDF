@@ -1906,7 +1906,7 @@ internal static class DocxTests
         };
         var storyTable = new DocxTable(null, [60d], [new DocxTableRow([cell], 30d)]);
         var story = new DocxRelatedStory(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(bodyParagraph), new DocxTableElement(storyTable)],
@@ -2109,7 +2109,7 @@ internal static class DocxTests
                 ["first"] = [sectionHeader]
             }
         };
-        var sectionBreak = new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "720", []);
+        var sectionBreak = new DocxSectionBreakElement(sectionSettings, DocxSectionBreakType.NextPage, "2", "1", "720", []);
         var floatingDrawing = new DocxFloatingDrawing(
             "0",
             "0",
@@ -2129,7 +2129,7 @@ internal static class DocxTests
             "paragraph",
             null,
             "12700",
-            "square",
+            DocxFloatingWrapKind.Square,
             "bothSides", ImageRelationshipId: null, Image: null, SourceParagraphIndex: null, SourceBlockIndex: null);
         var document = new DocxDocument(
             200d,
@@ -2202,7 +2202,7 @@ internal static class DocxTests
         TestAssert.Equal(1, listUsage.ParagraphIndentOverrideCount);
         TestAssert.Equal(1, listUsage.ParagraphNumberingTabStopCount);
         DocxStructureFloatingDrawingSnapshot drawingSnapshot = snapshot.FloatingDrawings.Single();
-        TestAssert.Equal("square", drawingSnapshot.WrapKind ?? string.Empty);
+        TestAssert.Equal("wrapSquare", drawingSnapshot.WrapKind ?? string.Empty);
         TestAssert.Equal("column", drawingSnapshot.HorizontalRelativeFromValue ?? string.Empty);
         TestAssert.Equal("paragraph", drawingSnapshot.VerticalRelativeFromValue ?? string.Empty);
 
@@ -2940,7 +2940,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "9",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -2974,7 +2974,7 @@ internal static class DocxTests
             ]
         };
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "9",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -3002,7 +3002,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "11",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -3036,7 +3036,7 @@ internal static class DocxTests
             ]
         };
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -3086,7 +3086,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "12",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -3103,7 +3103,7 @@ internal static class DocxTests
             ]
         };
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "12",
             [new DocxParagraphElement(targetParagraph)],
@@ -3156,7 +3156,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "13",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -3173,7 +3173,7 @@ internal static class DocxTests
             ]
         };
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "13",
             [new DocxParagraphElement(targetParagraph)],
@@ -3730,7 +3730,7 @@ internal static class DocxTests
             [],
             [defaultHeader],
             [],
-            [new DocxSectionBreakElement(sectionSettings, "nextPage", null, null, null, [])],
+            [new DocxSectionBreakElement(sectionSettings, DocxSectionBreakType.NextPage, null, null, null, [])],
             [],
             [])
         {
@@ -5638,7 +5638,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "9",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -5666,7 +5666,7 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             null);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "9",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -5728,7 +5728,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "11",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -5756,7 +5756,7 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             null);
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -5909,21 +5909,21 @@ internal static class DocxTests
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         TestAssert.Equal(4, paragraph.FieldReferences.Count);
-        TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.Kind == "Page"));
-        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Kind == "NumPages"));
-        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Kind == "Other"));
-        TestAssert.Equal(3, paragraph.FieldReferences.Count(field => field.SourceKind == "Simple"));
-        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.SourceKind == "ComplexInstruction"));
+        TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.Kind == DocxFieldKind.Page));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Kind == DocxFieldKind.NumPages));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Kind == DocxFieldKind.Other));
+        TestAssert.Equal(3, paragraph.FieldReferences.Count(field => field.SourceKind == DocxFieldSourceKind.Simple));
+        TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.SourceKind == DocxFieldSourceKind.ComplexInstruction));
         TestAssert.Equal(3, paragraph.FieldReferences.Count(field => field.UsesPlaceholder));
         TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.HasCachedResult));
         TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.HasSeparate));
         TestAssert.Equal(2, paragraph.FieldReferences.Count(field => field.Placeholder == "{PAGE}"));
         TestAssert.Equal(1, paragraph.FieldReferences.Count(field => field.Placeholder == "{NUMPAGES}"));
         TestAssert.True(paragraph.FieldReferences.Single(field => field.Instruction?.Contains("PAGEREF", StringComparison.Ordinal) == true).Placeholder is null, "PAGEREF should not be treated as a PAGE placeholder.");
-        DocxFieldReference simplePage = paragraph.FieldReferences.First(field => field.Kind == "Page" && field.SourceKind == "Simple");
-        DocxFieldReference simpleNumPages = paragraph.FieldReferences.Single(field => field.Kind == "NumPages");
-        DocxFieldReference pageRef = paragraph.FieldReferences.Single(field => field.Kind == "Other");
-        DocxFieldReference complexPage = paragraph.FieldReferences.Single(field => field.Kind == "Page" && field.SourceKind == "ComplexInstruction");
+        DocxFieldReference simplePage = paragraph.FieldReferences.First(field => field.Kind == DocxFieldKind.Page && field.SourceKind == DocxFieldSourceKind.Simple);
+        DocxFieldReference simpleNumPages = paragraph.FieldReferences.Single(field => field.Kind == DocxFieldKind.NumPages);
+        DocxFieldReference pageRef = paragraph.FieldReferences.Single(field => field.Kind == DocxFieldKind.Other);
+        DocxFieldReference complexPage = paragraph.FieldReferences.Single(field => field.Kind == DocxFieldKind.Page && field.SourceKind == DocxFieldSourceKind.ComplexInstruction);
         TestAssert.Equal(0, simplePage.TextRunIndex);
         TestAssert.Equal(1, simplePage.TextRunCount);
         TestAssert.Equal(6, simplePage.TextLength);
@@ -6047,8 +6047,8 @@ internal static class DocxTests
 
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        DocxRelatedStory footnoteStory = document.RelatedStories.Single(story => story.Kind == "Footnote" && story.Id == "5");
-        DocxRelatedStory endnoteStory = document.RelatedStories.Single(story => story.Kind == "Endnote" && story.Id == "7");
+        DocxRelatedStory footnoteStory = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Footnote && story.Id == "5");
+        DocxRelatedStory endnoteStory = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Endnote && story.Id == "7");
         DocxParagraph footnote = footnoteStory.Paragraphs.Single();
         DocxParagraph endnote = endnoteStory.Paragraphs.Single();
 
@@ -6056,14 +6056,14 @@ internal static class DocxTests
         TestAssert.Equal("End {PAGE} of {NUMPAGES}", string.Concat(endnote.Runs.Select(run => run.Text)));
         TestAssert.Equal(2, footnote.FieldReferences.Count);
         TestAssert.Equal(2, endnote.FieldReferences.Count);
-        DocxFieldReference footnotePage = footnote.FieldReferences.Single(field => field.Kind == "Page");
-        DocxFieldReference footnoteNumPages = footnote.FieldReferences.Single(field => field.Kind == "NumPages");
-        DocxFieldReference endnotePage = endnote.FieldReferences.Single(field => field.Kind == "Page");
-        DocxFieldReference endnoteNumPages = endnote.FieldReferences.Single(field => field.Kind == "NumPages");
-        TestAssert.True(footnotePage.SourceKind == "Simple" && footnotePage.UsesPlaceholder && !footnotePage.HasCachedResult, "Simple PAGE fields in footnotes should remain dynamic placeholders.");
-        TestAssert.True(footnoteNumPages.SourceKind == "ComplexInstruction" && footnoteNumPages.HasSeparate && footnoteNumPages.HasCachedResult && !footnoteNumPages.RendersCachedResult && footnoteNumPages.UsesPlaceholder, "Complex NUMPAGES fields in footnotes should keep metadata without rendering stale cached results.");
-        TestAssert.True(endnotePage.SourceKind == "ComplexInstruction" && endnotePage.HasSeparate && endnotePage.HasCachedResult && !endnotePage.RendersCachedResult && endnotePage.UsesPlaceholder, "Complex PAGE fields in endnotes should keep metadata without rendering stale cached results.");
-        TestAssert.True(endnoteNumPages.SourceKind == "Simple" && endnoteNumPages.UsesPlaceholder && !endnoteNumPages.HasCachedResult, "Simple NUMPAGES fields in endnotes should remain dynamic placeholders.");
+        DocxFieldReference footnotePage = footnote.FieldReferences.Single(field => field.Kind == DocxFieldKind.Page);
+        DocxFieldReference footnoteNumPages = footnote.FieldReferences.Single(field => field.Kind == DocxFieldKind.NumPages);
+        DocxFieldReference endnotePage = endnote.FieldReferences.Single(field => field.Kind == DocxFieldKind.Page);
+        DocxFieldReference endnoteNumPages = endnote.FieldReferences.Single(field => field.Kind == DocxFieldKind.NumPages);
+        TestAssert.True(footnotePage.SourceKind == DocxFieldSourceKind.Simple && footnotePage.UsesPlaceholder && !footnotePage.HasCachedResult, "Simple PAGE fields in footnotes should remain dynamic placeholders.");
+        TestAssert.True(footnoteNumPages.SourceKind == DocxFieldSourceKind.ComplexInstruction && footnoteNumPages.HasSeparate && footnoteNumPages.HasCachedResult && !footnoteNumPages.RendersCachedResult && footnoteNumPages.UsesPlaceholder, "Complex NUMPAGES fields in footnotes should keep metadata without rendering stale cached results.");
+        TestAssert.True(endnotePage.SourceKind == DocxFieldSourceKind.ComplexInstruction && endnotePage.HasSeparate && endnotePage.HasCachedResult && !endnotePage.RendersCachedResult && endnotePage.UsesPlaceholder, "Complex PAGE fields in endnotes should keep metadata without rendering stale cached results.");
+        TestAssert.True(endnoteNumPages.SourceKind == DocxFieldSourceKind.Simple && endnoteNumPages.UsesPlaceholder && !endnoteNumPages.HasCachedResult, "Simple NUMPAGES fields in endnotes should remain dynamic placeholders.");
 
         DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(4, snapshot.FieldReferenceCount);
@@ -6092,8 +6092,8 @@ internal static class DocxTests
             "Cases",
             "docx-markup-note-links-fields.docx"));
         DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        DocxRelatedStory footnoteStory = document.RelatedStories.Single(story => story.Kind == "Footnote" && story.Id == "5");
-        DocxRelatedStory endnoteStory = document.RelatedStories.Single(story => story.Kind == "Endnote" && story.Id == "7");
+        DocxRelatedStory footnoteStory = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Footnote && story.Id == "5");
+        DocxRelatedStory endnoteStory = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Endnote && story.Id == "7");
         DocxParagraph footnote = footnoteStory.Paragraphs.Single();
         DocxParagraph endnote = endnoteStory.Paragraphs.Single();
 
@@ -6101,10 +6101,10 @@ internal static class DocxTests
         TestAssert.Equal(2, endnote.FieldReferences.Count);
         TestAssert.Equal("https://example.invalid/markup-footnote", footnote.Hyperlinks.Single().Target ?? string.Empty);
         TestAssert.Equal("https://example.invalid/markup-endnote", endnote.Hyperlinks.Single().Target ?? string.Empty);
-        TestAssert.True(footnote.FieldReferences.Any(field => field.Kind == "Page" && field.SourceKind == "Simple" && field.UsesPlaceholder), "The fixture should keep a dynamic footnote PAGE placeholder.");
-        TestAssert.True(footnote.FieldReferences.Any(field => field.Kind == "NumPages" && field.SourceKind == "ComplexInstruction" && field.HasCachedResult && !field.RendersCachedResult), "The fixture should keep complex footnote NUMPAGES metadata.");
-        TestAssert.True(endnote.FieldReferences.Any(field => field.Kind == "Page" && field.SourceKind == "ComplexInstruction" && field.HasCachedResult && !field.RendersCachedResult), "The fixture should keep complex endnote PAGE metadata.");
-        TestAssert.True(endnote.FieldReferences.Any(field => field.Kind == "NumPages" && field.SourceKind == "Simple" && field.UsesPlaceholder), "The fixture should keep a dynamic endnote NUMPAGES placeholder.");
+        TestAssert.True(footnote.FieldReferences.Any(field => field.Kind == DocxFieldKind.Page && field.SourceKind == DocxFieldSourceKind.Simple && field.UsesPlaceholder), "The fixture should keep a dynamic footnote PAGE placeholder.");
+        TestAssert.True(footnote.FieldReferences.Any(field => field.Kind == DocxFieldKind.NumPages && field.SourceKind == DocxFieldSourceKind.ComplexInstruction && field.HasCachedResult && !field.RendersCachedResult), "The fixture should keep complex footnote NUMPAGES metadata.");
+        TestAssert.True(endnote.FieldReferences.Any(field => field.Kind == DocxFieldKind.Page && field.SourceKind == DocxFieldSourceKind.ComplexInstruction && field.HasCachedResult && !field.RendersCachedResult), "The fixture should keep complex endnote PAGE metadata.");
+        TestAssert.True(endnote.FieldReferences.Any(field => field.Kind == DocxFieldKind.NumPages && field.SourceKind == DocxFieldSourceKind.Simple && field.UsesPlaceholder), "The fixture should keep a dynamic endnote NUMPAGES placeholder.");
 
         var renderer = new DocxRenderer(
             fontResolver: null,
@@ -6239,7 +6239,7 @@ internal static class DocxTests
         TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunStartIndex);
         TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunCount);
         DocxFieldReference field = paragraph.FieldReferences.Single();
-        TestAssert.Equal("Other", field.Kind);
+        TestAssert.Equal(DocxFieldKind.Other, field.Kind);
         TestAssert.True(field.HasCachedResult, "Cross-reference fields should record cached result availability.");
         TestAssert.True(field.RendersCachedResult, "Cross-reference fields should render their cached result.");
         TestAssert.True(!field.UsesPlaceholder, "Cross-reference fields should not use PAGE placeholders.");
@@ -6384,9 +6384,9 @@ internal static class DocxTests
         TestAssert.Equal("Before deleted-field moved-field After", string.Concat(paragraph.Runs.Select(run => run.Text)));
         TestAssert.Equal(2, paragraph.FieldReferences.Count);
         TestAssert.True(paragraph.FieldReferences.All(field => field.HasCachedResult && field.RendersCachedResult), "Cached complex fields in review containers should render their stored results.");
-        TestAssert.True(paragraph.FieldReferences.All(field => field.Kind == "Other"), "Cached REF fields should not be treated as dynamic PAGE placeholders.");
-        TestAssert.True(paragraph.Runs.Any(run => run.Revision?.Kind == "Deletion"), "Deleted field result runs should keep deletion provenance.");
-        TestAssert.True(paragraph.Runs.Any(run => run.Revision?.Kind == "MoveFrom"), "Moved-from field result runs should keep move-from provenance.");
+        TestAssert.True(paragraph.FieldReferences.All(field => field.Kind == DocxFieldKind.Other), "Cached REF fields should not be treated as dynamic PAGE placeholders.");
+        TestAssert.True(paragraph.Runs.Any(run => run.Revision?.Kind == DocxRevisionKind.Deletion), "Deleted field result runs should keep deletion provenance.");
+        TestAssert.True(paragraph.Runs.Any(run => run.Revision?.Kind == DocxRevisionKind.MoveFrom), "Moved-from field result runs should keep move-from provenance.");
     }
 
     public static void DocxComplexFieldWithCachedResultInsideInlineContentControlDoesNotEmitUnsupportedDiagnostic()
@@ -6443,7 +6443,7 @@ internal static class DocxTests
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
         TestAssert.Equal("Before control cached-ref After", string.Concat(paragraph.Runs.Select(run => run.Text)));
         DocxFieldReference field = paragraph.FieldReferences.Single();
-        TestAssert.Equal("Other", field.Kind);
+        TestAssert.Equal(DocxFieldKind.Other, field.Kind);
         TestAssert.True(field.HasCachedResult && field.RendersCachedResult, "Cached complex fields inside inline content controls should render their stored result.");
         TestAssert.Equal(1, field.TextRunCount);
         TestAssert.Equal("cached-ref".Length, field.TextLength);
@@ -6605,7 +6605,7 @@ internal static class DocxTests
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
         TestAssert.Equal("Before cached-ref After", string.Concat(paragraph.Runs.Select(run => run.Text)));
         DocxFieldReference field = paragraph.FieldReferences.Single();
-        TestAssert.Equal("Other", field.Kind);
+        TestAssert.Equal(DocxFieldKind.Other, field.Kind);
         TestAssert.True(field.HasSeparate, "Malformed cached fields should record the separate marker.");
         TestAssert.True(field.HasCachedResult && field.RendersCachedResult, "Malformed cached fields should retain rendered-result metadata even without an end marker.");
         TestAssert.Equal(2, field.TextRunCount);
@@ -6829,9 +6829,9 @@ internal static class DocxTests
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         TestAssert.Equal(3, paragraph.InlineReferences.Count);
-        DocxInlineReference footnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Footnote");
-        DocxInlineReference comment = paragraph.InlineReferences.Single(reference => reference.Kind == "Comment");
-        DocxInlineReference endnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Endnote");
+        DocxInlineReference footnote = paragraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote);
+        DocxInlineReference comment = paragraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Comment);
+        DocxInlineReference endnote = paragraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote);
         TestAssert.True(footnote.Id == "5" && footnote.CustomMarkFollowsValue == "1", "Inserted footnote marker metadata should survive run-container parsing.");
         TestAssert.True(comment.Id == "6" && comment.CustomMarkFollowsValue is null, "Hyperlink comment marker metadata should survive run-container parsing.");
         TestAssert.True(endnote.Id == "7" && endnote.CustomMarkFollowsValue is null, "Simple-field endnote marker metadata should survive run-container parsing.");
@@ -6904,8 +6904,8 @@ internal static class DocxTests
         TestAssert.Equal("1", first.Runs[3].Text);
         TestAssert.Equal("superscript", first.Runs[3].VerticalAlignmentValue ?? string.Empty);
         TestAssert.Equal("After", first.Runs[4].Text);
-        TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == "Footnote").DisplayText ?? string.Empty);
-        TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
+        TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote).DisplayText ?? string.Empty);
+        TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote).DisplayText ?? string.Empty);
 
         DocxParagraph second = document.Paragraphs[1];
         TestAssert.Equal("2", second.Runs[1].Text);
@@ -6976,8 +6976,8 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph bodyParagraph = document.Paragraphs[0];
-        TestAssert.Equal("iv", bodyParagraph.InlineReferences.Single(reference => reference.Kind == "Footnote").DisplayText ?? string.Empty);
-        TestAssert.Equal("B", bodyParagraph.InlineReferences.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
+        TestAssert.Equal("iv", bodyParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote).DisplayText ?? string.Empty);
+        TestAssert.Equal("B", bodyParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote).DisplayText ?? string.Empty);
         DocxParagraph cellParagraph = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single();
         TestAssert.Equal("v", cellParagraph.InlineReferences.Single().DisplayText ?? string.Empty);
         TestAssert.Equal("v", cellParagraph.Runs.Last().Text);
@@ -8468,7 +8468,7 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxSectionBreakElement sectionBreak = document.BodyElements.OfType<DocxSectionBreakElement>().Single();
 
-        TestAssert.Equal("continuous", sectionBreak.TypeValue ?? string.Empty);
+        TestAssert.Equal("continuous", sectionBreak.TypeValue?.ToValueString() ?? string.Empty);
         TestAssert.Equal("10080", sectionBreak.PageSettings.WidthValue ?? string.Empty);
         TestAssert.Equal("12240", sectionBreak.PageSettings.HeightValue ?? string.Empty);
         TestAssert.Equal("portrait", sectionBreak.PageSettings.OrientationValue ?? string.Empty);
@@ -8532,7 +8532,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxSectionBreakElement(DocxPageSettings.Empty, "nextPage", null, null, null, []),
+                new DocxSectionBreakElement(DocxPageSettings.Empty, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -8594,7 +8594,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxSectionBreakElement(firstSectionSettings, "nextPage", "2", "1", "720", []),
+                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, "2", "1", "720", []),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -8687,7 +8687,7 @@ internal static class DocxTests
             [
                 new DocxParagraphElement(first),
                 new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
-                new DocxSectionBreakElement(firstSectionSettings, "continuous", null, null, null, []),
+                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.Continuous, null, null, null, []),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -8754,7 +8754,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxSectionBreakElement(firstSectionSettings, "oddPage", null, null, null, []),
+                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.OddPage, null, null, null, []),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -8803,7 +8803,7 @@ internal static class DocxTests
                 new DocxParagraphElement(first),
                 new DocxSectionBreakElement(
                     firstSectionSettings,
-                    "nextPage",
+                    DocxSectionBreakType.NextPage,
                     "2",
                     "0",
                     "720",
@@ -8872,7 +8872,7 @@ internal static class DocxTests
             "paragraph",
             null,
             "0",
-            "square",
+            DocxFloatingWrapKind.Square,
             "bothSides",
             SourceParagraphIndex: 0,
             SourceBlockIndex: 2, ImageRelationshipId: null, Image: null);
@@ -8891,7 +8891,7 @@ internal static class DocxTests
                 new DocxParagraphElement(first),
                 new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
                 new DocxParagraphElement(second),
-                new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "360", [])
+                new DocxSectionBreakElement(sectionSettings, DocxSectionBreakType.NextPage, "2", "1", "360", [])
             ],
             [first, second],
             []);
@@ -10587,12 +10587,12 @@ internal static class DocxTests
     public static void DocxWordCompatibleAllMarkupPositionsNumberingInNarrowedBodyFrame()
     {
         var numberingRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "41",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["numberingChange", "numPr", "ilvl"]);
         var label = new DocxListLabel(
             "12.",
@@ -10884,7 +10884,7 @@ internal static class DocxTests
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_VML", ids);
         TestAssert.Equal("Before VML note one\nVML note two After", string.Concat(paragraph.Runs.Select(run => run.Text)));
-        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.PropertyElementNames.Contains("pStyle")), "VML textbox paragraph formatting revisions should be retained as private-safe provenance.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.ParagraphPropertiesChange && revision.PropertyElementNames.Contains("pStyle")), "VML textbox paragraph formatting revisions should be retained as private-safe provenance.");
         DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(1, structure.FormattingRevisionCount);
         TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
@@ -11017,20 +11017,20 @@ internal static class DocxTests
         TestAssert.Equal("/word/media/inline-inserted.png", finalDocument.Paragraphs.Single().Images.Single().PartName ?? string.Empty);
         TestAssert.Equal(1, finalDocument.FloatingDrawings.Count);
         TestAssert.Equal("/word/media/floating-inserted.png", finalDocument.FloatingDrawings.Single().Image?.PartName ?? string.Empty);
-        TestAssert.Equal("Insertion", finalDocument.Paragraphs.Single().Images.Single().Revisions.Single().Kind);
-        TestAssert.Equal("Insertion", finalDocument.FloatingDrawings.Single().Revisions.Single().Kind);
+        TestAssert.Equal(DocxRevisionKind.Insertion, finalDocument.Paragraphs.Single().Images.Single().Revisions.Single().Kind);
+        TestAssert.Equal(DocxRevisionKind.Insertion, finalDocument.FloatingDrawings.Single().Revisions.Single().Kind);
 
         TestAssert.Equal(1, originalDocument.Paragraphs.Single().Images.Count);
         TestAssert.Equal("/word/media/inline-deleted.png", originalDocument.Paragraphs.Single().Images.Single().PartName ?? string.Empty);
         TestAssert.Equal(1, originalDocument.FloatingDrawings.Count);
         TestAssert.Equal("/word/media/floating-deleted.png", originalDocument.FloatingDrawings.Single().Image?.PartName ?? string.Empty);
-        TestAssert.Equal("Deletion", originalDocument.Paragraphs.Single().Images.Single().Revisions.Single().Kind);
-        TestAssert.Equal("Deletion", originalDocument.FloatingDrawings.Single().Revisions.Single().Kind);
+        TestAssert.Equal(DocxRevisionKind.Deletion, originalDocument.Paragraphs.Single().Images.Single().Revisions.Single().Kind);
+        TestAssert.Equal(DocxRevisionKind.Deletion, originalDocument.FloatingDrawings.Single().Revisions.Single().Kind);
 
         TestAssert.Equal(2, allDocument.Paragraphs.Single().Images.Count);
         TestAssert.Equal(2, allDocument.FloatingDrawings.Count);
-        TestAssert.True(allDocument.Paragraphs.Single().Images.Any(image => image.Revisions.Single().Kind == "Insertion") && allDocument.Paragraphs.Single().Images.Any(image => image.Revisions.Single().Kind == "Deletion"), "All-markup inline images should retain inserted and deleted image provenance.");
-        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Revisions.Single().Kind == "Insertion") && allDocument.FloatingDrawings.Any(drawing => drawing.Revisions.Single().Kind == "Deletion"), "All-markup floating drawings should retain inserted and deleted drawing provenance.");
+        TestAssert.True(allDocument.Paragraphs.Single().Images.Any(image => image.Revisions.Single().Kind == DocxRevisionKind.Insertion) && allDocument.Paragraphs.Single().Images.Any(image => image.Revisions.Single().Kind == DocxRevisionKind.Deletion), "All-markup inline images should retain inserted and deleted image provenance.");
+        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Revisions.Single().Kind == DocxRevisionKind.Insertion) && allDocument.FloatingDrawings.Any(drawing => drawing.Revisions.Single().Kind == DocxRevisionKind.Deletion), "All-markup floating drawings should retain inserted and deleted drawing provenance.");
     }
 
     public static void DocxMarkupModesFilterMovedAndCommentedImagesAndDrawings()
@@ -11044,17 +11044,17 @@ internal static class DocxTests
         AssertInlineImageParts(finalDocument, ["/word/media/body-commented.png", "/word/media/inline-move-to.png"], ["/word/media/inline-move-from.png"]);
         AssertInlineImageParts(originalDocument, ["/word/media/body-commented.png", "/word/media/inline-move-from.png"], ["/word/media/inline-move-to.png"]);
         AssertInlineImageParts(allDocument, ["/word/media/body-commented.png", "/word/media/inline-move-from.png", "/word/media/inline-move-to.png"], []);
-        TestAssert.True(allDocument.Paragraphs.Single().CommentRanges.Any(range => range.Id == "1") && allDocument.Paragraphs.Single().InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1"), "Commented inline images should keep their body comment anchor metadata.");
+        TestAssert.True(allDocument.Paragraphs.Single().CommentRanges.Any(range => range.Id == "1") && allDocument.Paragraphs.Single().InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment && reference.Id == "1"), "Commented inline images should keep their body comment anchor metadata.");
 
         TestAssert.True(finalDocument.FloatingDrawings.Single().Image?.PartName == "/word/media/floating-move-to.png", "Final view should keep moved-to floating drawings.");
         TestAssert.True(originalDocument.FloatingDrawings.Single().Image?.PartName == "/word/media/floating-move-from.png", "Original view should keep moved-from floating drawings.");
-        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-from.png" && drawing.Revisions.Single().Kind == "MoveFrom"), "All-markup should retain moved-from floating drawing provenance.");
-        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-to.png" && drawing.Revisions.Single().Kind == "MoveTo" && drawing.BehindDocumentValue == "1"), "All-markup should retain moved-to behind-document floating drawing provenance.");
+        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-from.png" && drawing.Revisions.Single().Kind == DocxRevisionKind.MoveFrom), "All-markup should retain moved-from floating drawing provenance.");
+        TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-to.png" && drawing.Revisions.Single().Kind == DocxRevisionKind.MoveTo && drawing.BehindDocumentValue == "1"), "All-markup should retain moved-to behind-document floating drawing provenance.");
 
-        DocxRelatedStory commentStory = allDocument.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "1");
+        DocxRelatedStory commentStory = allDocument.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment && story.Id == "1");
         DocxFloatingDrawing commentDrawing = commentStory.FloatingDrawings.Single();
         TestAssert.True(commentDrawing.ImageRelationshipId == "rIdCommentAnchor" && commentDrawing.Image?.PartName == "/word/media/comment-anchor.png", "Comment story anchored drawings should resolve through comment-part relationships.");
-        TestAssert.True(commentDrawing.Revisions.Single().Kind == "MoveTo" && commentDrawing.BehindDocumentValue == "1", "Revised behind-document anchored drawings inside comment stories should retain revision and geometry provenance.");
+        TestAssert.True(commentDrawing.Revisions.Single().Kind == DocxRevisionKind.MoveTo && commentDrawing.BehindDocumentValue == "1", "Revised behind-document anchored drawings inside comment stories should retain revision and geometry provenance.");
 
         static void AssertInlineImageParts(DocxDocument document, IReadOnlyList<string> expected, IReadOnlyList<string> unexpected)
         {
@@ -11154,7 +11154,7 @@ internal static class DocxTests
         TestAssert.Equal("center", drawing.HorizontalAlignValue ?? string.Empty);
         TestAssert.Equal("paragraph", drawing.VerticalRelativeFromValue ?? string.Empty);
         TestAssert.Equal("63500", drawing.VerticalOffsetValue ?? string.Empty);
-        TestAssert.Equal("wrapSquare", drawing.WrapKind ?? string.Empty);
+        TestAssert.Equal(DocxFloatingWrapKind.Square, drawing.WrapKind);
         TestAssert.Equal("bothSides", drawing.WrapTextValue ?? string.Empty);
         TestAssert.Equal("rIdImage1", drawing.ImageRelationshipId ?? string.Empty);
         TestAssert.Equal("/word/media/image1.png", drawing.Image?.PartName ?? string.Empty);
@@ -11339,7 +11339,7 @@ internal static class DocxTests
             VerticalRelativeFromValue: "page",
             VerticalAlignValue: null,
             VerticalOffsetValue: "914400",
-            WrapKind: "wrapNone",
+            WrapKind: DocxFloatingWrapKind.None,
             WrapTextValue: null,
             SourceParagraphIndex: 0,
             SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
@@ -11371,7 +11371,7 @@ internal static class DocxTests
             VerticalRelativeFromValue: "paragraph",
             VerticalAlignValue: null,
             VerticalOffsetValue: "0",
-            WrapKind: "wrapSquare",
+            WrapKind: DocxFloatingWrapKind.Square,
             WrapTextValue: "bothSides",
             ImageRelationshipId: "rIdTableAnchor",
             Image: tableAnchorImage,
@@ -11505,7 +11505,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "51",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -11517,7 +11517,7 @@ internal static class DocxTests
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote drawing anchor", 10d, 12d);
         DocxTable table = CreateTextBoxProbeTable("Footnote text box table cell", "FFC000");
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "51",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -14984,7 +14984,7 @@ internal static class DocxTests
             [],
             [
                 new DocxTableElement(table),
-                new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "360", [])
+                new DocxSectionBreakElement(sectionSettings, DocxSectionBreakType.NextPage, "2", "1", "360", [])
             ],
             [],
             [table]);
@@ -17888,7 +17888,7 @@ internal static class DocxTests
             return;
         }
 
-        var insertion = new DocxRevisionInfo("Insertion", "8", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var insertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "8", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
         var revisedRun = new DocxTextRun("Text box emission", 10d, null, false, false, false, null, null)
         {
             Revision = insertion
@@ -17910,7 +17910,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Comment",
+                    DocxRelatedStoryKind.Comment,
                     "8",
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 0,
@@ -18589,7 +18589,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "5",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -18600,7 +18600,7 @@ internal static class DocxTests
         };
         DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote continuation line", 10d, 12d);
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "5",
             Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
@@ -18892,7 +18892,7 @@ internal static class DocxTests
             VerticalRelativeFromValue: "page",
             VerticalAlignValue: null,
             VerticalOffsetValue: "457200",
-            WrapKind: "wrapNone",
+            WrapKind: DocxFloatingWrapKind.None,
             WrapTextValue: null,
             ImageRelationshipId: "rIdHeaderImage1",
             Image: headerImage, SourceParagraphIndex: null, SourceBlockIndex: null);
@@ -18931,7 +18931,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "42",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -18961,14 +18961,14 @@ internal static class DocxTests
             VerticalRelativeFromValue: "paragraph",
             VerticalAlignValue: null,
             VerticalOffsetValue: "0",
-            WrapKind: "wrapNone",
+            WrapKind: DocxFloatingWrapKind.None,
             WrapTextValue: null,
             ImageRelationshipId: "rIdFootnoteImage1",
             Image: footnoteImage,
             SourceParagraphIndex: 0,
             SourceBlockIndex: 0);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "42",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -20316,14 +20316,14 @@ internal static class DocxTests
         TestAssert.Equal("Before deleted-run After", string.Concat(allDocument.BodyElements.OfType<DocxParagraphElement>().First().Paragraph.Runs.Select(run => run.Text)));
 
         DocxParagraph allParagraph = allDocument.BodyElements.OfType<DocxParagraphElement>().First().Paragraph;
-        TestAssert.True(allParagraph.Revisions.Any(revision => revision.Kind == "Deletion" && revision.Id == "202" && revision.SourceElement == "del"), "Deleted paragraph-mark revisions on non-empty paragraphs should be preserved as paragraph provenance.");
+        TestAssert.True(allParagraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.Id == "202" && revision.SourceElement == "del"), "Deleted paragraph-mark revisions on non-empty paragraphs should be preserved as paragraph provenance.");
 
         TestAssert.True(!finalDocument.BodyElements.OfType<DocxTableElement>().Any(), "Final view should not keep a table that exists only inside a deletion container.");
         DocxTable originalDeletedTable = originalDocument.BodyElements.OfType<DocxTableElement>().Single().Table;
         DocxTable allDeletedTable = allDocument.BodyElements.OfType<DocxTableElement>().Single().Table;
         TestAssert.Equal("Deleted table text", RowTexts(originalDeletedTable));
         TestAssert.Equal("Deleted table text", RowTexts(allDeletedTable));
-        TestAssert.True(allDeletedTable.Revisions.Single().Kind == "Deletion" && allDeletedTable.Revisions.Single().Id == "203", "Deleted whole-table content should retain table-level deletion provenance.");
+        TestAssert.True(allDeletedTable.Revisions.Single().Kind == DocxRevisionKind.Deletion && allDeletedTable.Revisions.Single().Id == "203", "Deleted whole-table content should retain table-level deletion provenance.");
     }
 
     public static void DocxMarkupFinalViewMergesDeletedParagraphMarksAndKeepsSpans()
@@ -20348,10 +20348,10 @@ internal static class DocxTests
         DocxParagraph merged = finalDocument.Paragraphs[0];
         TestAssert.Equal(1, merged.Hyperlinks.Count);
         TestAssert.Equal(1, merged.FieldReferences.Count);
-        TestAssert.Equal(1, merged.InlineReferences.Count(reference => reference.Kind == "Comment"));
+        TestAssert.Equal(1, merged.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment));
         TestAssert.True(merged.Hyperlinks.Single().TextRunStartIndex > 0 && merged.Hyperlinks.Single().SourceRunStartIndex > 0, "Merged hyperlinks should be shifted after the first paragraph's runs.");
         TestAssert.True(merged.FieldReferences.Single().TextRunIndex > 0 && merged.FieldReferences.Single().SourceRunIndex > 0, "Merged field references should be shifted after the first paragraph's runs.");
-        TestAssert.True(merged.InlineReferences.Single(reference => reference.Kind == "Comment").SourceRunIndex > 0, "Merged comment anchors should keep a source run after index shifting.");
+        TestAssert.True(merged.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Comment).SourceRunIndex > 0, "Merged comment anchors should keep a source run after index shifting.");
         TestAssert.True(new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(simpleDocument).RevisionItemCount >= 1, "Simple markup should still expose a change bar candidate for the consumed deleted paragraph mark.");
     }
 
@@ -20474,11 +20474,11 @@ internal static class DocxTests
         AssertTextSpan(paragraph, internalLink.TextRunStartIndex, internalLink.TextRunCount, "Internal hyperlink text span should point to visible text runs.");
         AssertTextSpan(paragraph, externalLink.TextRunStartIndex, externalLink.TextRunCount, "External hyperlink text span should point to visible text runs.");
 
-        DocxInlineReference footnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Footnote");
-        DocxInlineReference endnote = paragraph.InlineReferences.Single(reference => reference.Kind == "Endnote");
+        DocxInlineReference footnote = paragraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote);
+        DocxInlineReference endnote = paragraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote);
         AssertSourceRunIndex(paragraph, footnote.SourceRunIndex, "Footnote reference source index should survive final-view filtering.");
         AssertSourceRunIndex(paragraph, endnote.SourceRunIndex, "Endnote reference source index should survive final-view filtering.");
-        TestAssert.True(footnote.Revision?.Kind == "Insertion", "Inserted footnote references should retain revision provenance after filtering.");
+        TestAssert.True(footnote.Revision?.Kind == DocxRevisionKind.Insertion, "Inserted footnote references should retain revision provenance after filtering.");
 
         DocxTable table = document.Tables.Single();
         TestAssert.Equal(1, table.Rows.Count);
@@ -20554,8 +20554,8 @@ internal static class DocxTests
         TestAssert.Equal("Before|Deleted paragraph|Moved from paragraph|After", ParagraphTexts(originalDocument));
         TestAssert.Equal("Before|Inserted paragraph|Moved to paragraph|After", ParagraphTexts(simpleDocument));
         TestAssert.Equal("Before|Inserted paragraph|Deleted paragraph|Moved from paragraph|Moved to paragraph|After", ParagraphTexts(allDocument));
-        TestAssert.True(allDocument.Paragraphs.Any(paragraph => paragraph.Revisions.Any(revision => revision.Kind == "Deletion")), "Block-level deletion revisions should be retained on paragraphs that survive the selected view.");
-        TestAssert.True(allDocument.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Revision?.Kind == "MoveFrom")), "Inherited block-level move revisions should reach paragraph runs.");
+        TestAssert.True(allDocument.Paragraphs.Any(paragraph => paragraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion)), "Block-level deletion revisions should be retained on paragraphs that survive the selected view.");
+        TestAssert.True(allDocument.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Revision?.Kind == DocxRevisionKind.MoveFrom)), "Inherited block-level move revisions should reach paragraph runs.");
     }
 
     public static void DocxMarkupModesFilterRevisedParagraphKeepRulesAndPageBreakBefore()
@@ -20572,14 +20572,14 @@ internal static class DocxTests
         TestAssert.Equal("Before|Inserted keep|Moved to keep|After", ParagraphTexts(simpleDocument));
         TestAssert.Equal("Before|Inserted keep|Deleted keep|Moved from keep|Moved to keep|After", ParagraphTexts(allDocument));
 
-        AssertKeepRules(finalDocument, "Inserted keep", "Insertion", "611", expectedWidowControl: false);
-        AssertKeepRules(finalDocument, "Moved to keep", "MoveTo", "614", expectedWidowControl: true);
-        AssertKeepRules(originalDocument, "Deleted keep", "Deletion", "612", expectedWidowControl: false);
-        AssertKeepRules(originalDocument, "Moved from keep", "MoveFrom", "613", expectedWidowControl: true);
-        AssertKeepRules(allDocument, "Inserted keep", "Insertion", "611", expectedWidowControl: false);
-        AssertKeepRules(allDocument, "Deleted keep", "Deletion", "612", expectedWidowControl: false);
-        AssertKeepRules(allDocument, "Moved from keep", "MoveFrom", "613", expectedWidowControl: true);
-        AssertKeepRules(allDocument, "Moved to keep", "MoveTo", "614", expectedWidowControl: true);
+        AssertKeepRules(finalDocument, "Inserted keep", DocxRevisionKind.Insertion, "611", expectedWidowControl: false);
+        AssertKeepRules(finalDocument, "Moved to keep", DocxRevisionKind.MoveTo, "614", expectedWidowControl: true);
+        AssertKeepRules(originalDocument, "Deleted keep", DocxRevisionKind.Deletion, "612", expectedWidowControl: false);
+        AssertKeepRules(originalDocument, "Moved from keep", DocxRevisionKind.MoveFrom, "613", expectedWidowControl: true);
+        AssertKeepRules(allDocument, "Inserted keep", DocxRevisionKind.Insertion, "611", expectedWidowControl: false);
+        AssertKeepRules(allDocument, "Deleted keep", DocxRevisionKind.Deletion, "612", expectedWidowControl: false);
+        AssertKeepRules(allDocument, "Moved from keep", DocxRevisionKind.MoveFrom, "613", expectedWidowControl: true);
+        AssertKeepRules(allDocument, "Moved to keep", DocxRevisionKind.MoveTo, "614", expectedWidowControl: true);
 
         AssertPageBreakRevisions(finalDocument, ["Insertion:611"]);
         AssertPageBreakRevisions(originalDocument, ["Deletion:612"]);
@@ -20594,7 +20594,7 @@ internal static class DocxTests
         static void AssertKeepRules(
             DocxDocument document,
             string text,
-            string expectedRevisionKind,
+            DocxRevisionKind expectedRevisionKind,
             string expectedRevisionId,
             bool expectedWidowControl)
         {
@@ -20631,8 +20631,8 @@ internal static class DocxTests
         TestAssert.Equal("Base|Inserted row|Moved to row", RowTexts(finalTable));
         TestAssert.Equal("Base|Deleted row|Moved from row", RowTexts(originalTable));
         TestAssert.Equal("Base|Inserted row|Deleted row|Moved from row|Moved to row", RowTexts(allTable));
-        TestAssert.True(allTable.Rows.Any(row => row.Revisions.Any(revision => revision.Kind == "Deletion")), "Block-level row deletions should be retained on rows that survive the selected view.");
-        TestAssert.True(allTable.Rows.Any(row => row.Cells.Any(cell => cell.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Revision?.Kind == "MoveTo")))), "Inherited row revisions should reach cell paragraph runs.");
+        TestAssert.True(allTable.Rows.Any(row => row.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion)), "Block-level row deletions should be retained on rows that survive the selected view.");
+        TestAssert.True(allTable.Rows.Any(row => row.Cells.Any(cell => cell.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Revision?.Kind == DocxRevisionKind.MoveTo)))), "Inherited row revisions should reach cell paragraph runs.");
     }
 
     public static void DocxMarkupModesFilterTableCellAndNestedTableRevisions()
@@ -20657,9 +20657,9 @@ internal static class DocxTests
         TestAssert.True(allTable.Rows[0].IsHeader, "Markup table fixtures should keep repeated header-row metadata.");
         TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.HasVerticalMerge && string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase)), "Markup table fixtures should keep vertical merge restart metadata.");
         TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.HasVerticalMerge && cell.VerticalMergeValue is null), "Markup table fixtures should keep vertical merge continuation metadata.");
-        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.Revisions.Any(revision => revision.Kind == "Insertion")), "Inserted table cells should retain revision provenance.");
-        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.Revisions.Any(revision => revision.Kind == "Deletion")), "Deleted table cells should retain revision provenance.");
-        TestAssert.True(DocxBlockTraversal.EnumerateTableParagraphs(allTable).Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1")), "Comment anchors inside table cells should survive table markup filtering.");
+        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Insertion)), "Inserted table cells should retain revision provenance.");
+        TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion)), "Deleted table cells should retain revision provenance.");
+        TestAssert.True(DocxBlockTraversal.EnumerateTableParagraphs(allTable).Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment && reference.Id == "1")), "Comment anchors inside table cells should survive table markup filtering.");
         TestAssert.True(allTable.Rows.SelectMany(row => row.Cells).Any(cell => cell.BodyElements.OfType<DocxTableElement>().Any()), "Nested tables inside moved cell content should remain structured body elements.");
 
         static string BodyText(DocxDocument document)
@@ -20722,7 +20722,7 @@ internal static class DocxTests
         DocxParagraph controlledParagraph = paragraphs.Single(paragraph => ParagraphText(paragraph) == "Controlled paragraph");
 
         TestAssert.Equal("Before|Controlled paragraph|After", string.Join("|", paragraphs.Select(ParagraphText)));
-        TestAssert.True(controlledParagraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.PropertyElementNames.Contains("pStyle")), "Block content controls should expose paragraph formatting revisions to markup inspection.");
+        TestAssert.True(controlledParagraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.ParagraphPropertiesChange && revision.PropertyElementNames.Contains("pStyle")), "Block content controls should expose paragraph formatting revisions to markup inspection.");
         DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(1, structure.FormattingRevisionCount);
         TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
@@ -20813,12 +20813,12 @@ internal static class DocxTests
             visible: ["Default header inserted", "Default header deleted", "Even header inserted", "Even header deleted", "First header inserted", "First header deleted", "Default footer inserted", "Default footer deleted", "Even footer inserted", "Even footer deleted", "First footer inserted", "First footer deleted"],
             hidden: []);
 
-        TestAssert.True(StaticStoryParagraphs(allDocument).Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == "Comment" && reference.Id == "1")), "Comments anchored in first/even/default static stories should survive all-markup filtering.");
-        TestAssert.True(finalDocument.BodyElements.OfType<DocxPageBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == "Insertion" && revision.Id == "801")), "Inserted run page breaks should survive final view as revision-provenance break elements.");
+        TestAssert.True(StaticStoryParagraphs(allDocument).Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment && reference.Id == "1")), "Comments anchored in first/even/default static stories should survive all-markup filtering.");
+        TestAssert.True(finalDocument.BodyElements.OfType<DocxPageBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Insertion && revision.Id == "801")), "Inserted run page breaks should survive final view as revision-provenance break elements.");
         TestAssert.True(!finalDocument.BodyElements.OfType<DocxManualBreakElement>().Any(element => element.Value == "column" && element.Revisions.Any(revision => revision.Id == "802")), "Deleted column breaks should be hidden from final view.");
-        TestAssert.True(originalDocument.BodyElements.OfType<DocxManualBreakElement>().Any(element => element.Value == "column" && element.Revisions.Any(revision => revision.Kind == "Deletion" && revision.Id == "802")), "Deleted run column breaks should survive original view as revision-provenance break elements.");
+        TestAssert.True(originalDocument.BodyElements.OfType<DocxManualBreakElement>().Any(element => element.Value == "column" && element.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.Id == "802")), "Deleted run column breaks should survive original view as revision-provenance break elements.");
         TestAssert.True(!originalDocument.BodyElements.OfType<DocxSectionBreakElement>().Any(element => element.Revisions.Any(revision => revision.Id == "803")), "Inserted section breaks should be hidden from original view.");
-        TestAssert.True(allDocument.BodyElements.OfType<DocxSectionBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == "Insertion" && revision.Id == "803")), "Inserted section breaks should retain inherited revision provenance in all-markup view.");
+        TestAssert.True(allDocument.BodyElements.OfType<DocxSectionBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Insertion && revision.Id == "803")), "Inserted section breaks should retain inherited revision provenance in all-markup view.");
 
         static string StaticStoryText(DocxDocument document)
         {
@@ -20886,8 +20886,8 @@ internal static class DocxTests
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal(2, paragraph.RevisionRanges.Count);
-        DocxRevisionRange moveFrom = paragraph.RevisionRanges.Single(range => range.Kind == "MoveFrom");
-        DocxRevisionRange moveTo = paragraph.RevisionRanges.Single(range => range.Kind == "MoveTo");
+        DocxRevisionRange moveFrom = paragraph.RevisionRanges.Single(range => range.Kind == DocxRevisionKind.MoveFrom);
+        DocxRevisionRange moveTo = paragraph.RevisionRanges.Single(range => range.Kind == DocxRevisionKind.MoveTo);
         TestAssert.True(moveFrom.Id == "7" && moveFrom.Name == "move-from" && moveFrom.Author == "A" && moveFrom.Date == "2026-06-05T00:00:00Z" && moveFrom.StartSourceRunIndex == 0 && moveFrom.EndSourceRunIndex == 1, "Move-from range markers should preserve metadata and source coordinates.");
         TestAssert.True(moveTo.Id == "8" && moveTo.Name == "move-to" && moveTo.Author == "B" && moveTo.Date == "2026-06-06T00:00:00Z" && moveTo.StartSourceRunIndex == 1 && moveTo.EndSourceRunIndex == 2, "Move-to range markers should preserve metadata and source coordinates.");
 
@@ -21130,7 +21130,7 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "tiny", "Reviewer", "2026-06-12T00:00:00Z", "ins")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "tiny", "Reviewer", "2026-06-12T00:00:00Z", "ins", null, [])
             ]
         };
         DocxDocument document = new(
@@ -21216,7 +21216,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(CreateDocxLayoutParagraph("Narrow first section", 10d, 12d)),
-                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []),
+                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(CreateDocxLayoutParagraph("Wide final section", 10d, 12d))
             ],
             [],
@@ -22134,10 +22134,10 @@ internal static class DocxTests
 
     public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfile()
     {
-        var deletionRevision = new DocxRevisionInfo("Deletion", "3", "Reviewer", "2026-06-10T00:00:00Z", "del");
-        var moveFromRevision = new DocxRevisionInfo("MoveFrom", "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
-        var insertionRevision = new DocxRevisionInfo("Insertion", "4", "Reviewer", "2026-06-10T00:00:00Z", "ins");
-        var moveToRevision = new DocxRevisionInfo("MoveTo", "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        var deletionRevision = new DocxRevisionInfo(DocxRevisionKind.Deletion, "3", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
+        var moveFromRevision = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
+        var insertionRevision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "4", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
+        var moveToRevision = new DocxRevisionInfo(DocxRevisionKind.MoveTo, "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo", null, []);
         DocxParagraph deletedParagraph = CreateRevisedParagraph("ChangedFrom", deletionRevision);
         DocxParagraph movedFromParagraph = CreateRevisedParagraph("ChangedFrom", moveFromRevision);
         DocxParagraph insertedParagraph = CreateRevisedParagraph("ChangedTo", insertionRevision);
@@ -22217,10 +22217,10 @@ internal static class DocxTests
 
     public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfileInTableCells()
     {
-        var deletionRevision = new DocxRevisionInfo("Deletion", "3", "Reviewer", "2026-06-10T00:00:00Z", "del");
-        var moveFromRevision = new DocxRevisionInfo("MoveFrom", "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
-        var insertionRevision = new DocxRevisionInfo("Insertion", "4", "Reviewer", "2026-06-10T00:00:00Z", "ins");
-        var moveToRevision = new DocxRevisionInfo("MoveTo", "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        var deletionRevision = new DocxRevisionInfo(DocxRevisionKind.Deletion, "3", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
+        var moveFromRevision = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
+        var insertionRevision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "4", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
+        var moveToRevision = new DocxRevisionInfo(DocxRevisionKind.MoveTo, "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo", null, []);
         DocxTable table = new DocxTable(
             null,
             [170d],
@@ -22344,7 +22344,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "91",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -22354,7 +22354,7 @@ internal static class DocxTests
             ]
         };
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "91",
             [new DocxParagraphElement(CreateMoveRevisionParagraph())],
@@ -22376,7 +22376,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "92",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -22386,7 +22386,7 @@ internal static class DocxTests
             ]
         };
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "92",
             [new DocxParagraphElement(CreateMoveRevisionParagraph())],
@@ -22405,8 +22405,8 @@ internal static class DocxTests
 
         static DocxParagraph CreateMoveRevisionParagraph()
         {
-            var moveFromRevision = new DocxRevisionInfo("MoveFrom", "11", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
-            var moveToRevision = new DocxRevisionInfo("MoveTo", "12", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+            var moveFromRevision = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "11", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
+            var moveToRevision = new DocxRevisionInfo(DocxRevisionKind.MoveTo, "12", "Reviewer", "2026-06-10T00:00:00Z", "moveTo", null, []);
             return new DocxParagraph(
                 [
                     new DocxTextRun("Before ", 10d, null, false, false, false, null, null),
@@ -22506,7 +22506,7 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxDocument document = new(
@@ -22544,7 +22544,7 @@ internal static class DocxTests
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForRunRevisions()
     {
-        var revision = new DocxRevisionInfo("Insertion", "11", "Reviewer", "2026-06-01T00:00:00Z", "inserted");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "11", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, []);
         DocxParagraph paragraph = CreateDocxLayoutParagraph("Revision bar run probe", 10d, 12d) with
         {
             Runs =
@@ -22589,7 +22589,7 @@ internal static class DocxTests
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForTableRevisions()
     {
-        var revision = new DocxRevisionInfo("TableRowPropertiesChange", "12", "Reviewer", "2026-06-01T00:00:00Z", "trPrChange");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.TableRowPropertiesChange, "12", "Reviewer", "2026-06-01T00:00:00Z", "trPrChange", null, []);
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph("Revision bar table probe", 10d, 12d);
         var cell = new DocxTableCell(
             "Revision bar table probe",
@@ -22647,7 +22647,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "27",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -22660,11 +22660,11 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "27", "Reviewer", "2026-06-10T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "27", "Reviewer", "2026-06-10T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "27",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -22711,7 +22711,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "28",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -22724,11 +22724,11 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "28", "Reviewer", "2026-06-10T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "28", "Reviewer", "2026-06-10T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "28",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -22770,7 +22770,7 @@ internal static class DocxTests
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForFloatingTextBoxRunRevisions()
     {
-        var revision = new DocxRevisionInfo("Insertion", "37", "Reviewer", "2026-06-10T00:00:00Z", "inserted");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "37", "Reviewer", "2026-06-10T00:00:00Z", "inserted", null, []);
         DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Text box revised run", 10d, 12d) with
         {
             Runs =
@@ -22816,7 +22816,7 @@ internal static class DocxTests
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForStaticFloatingTextBoxRunRevisions()
     {
-        var revision = new DocxRevisionInfo("Insertion", "38", "Reviewer", "2026-06-10T00:00:00Z", "inserted");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "38", "Reviewer", "2026-06-10T00:00:00Z", "inserted", null, []);
         DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Static text box revised run", 10d, 12d) with
         {
             Runs =
@@ -22876,10 +22876,10 @@ internal static class DocxTests
         DocxTextRun deleted = paragraph.Runs.Single(run => run.Text.Trim() == "Deleted");
         DocxTextRun movedFrom = paragraph.Runs.Single(run => run.Text.Trim() == "MovedFrom");
         DocxTextRun movedTo = paragraph.Runs.Single(run => run.Text.Trim() == "MovedTo");
-        TestAssert.True(inserted.Revision?.Kind == "Insertion" && inserted.Underline && inserted.ColorHex == "0000FF", "All-markup insertions should carry revision provenance and inline inserted styling.");
-        TestAssert.True(deleted.Revision?.Kind == "Deletion" && deleted.Strike && deleted.ColorHex == "C00000", "All-markup deletions should carry revision provenance and inline deleted styling.");
-        TestAssert.True(movedFrom.Revision?.Kind == "MoveFrom" && movedFrom.DoubleStrike && movedFrom.ColorHex == "C00000", "All-markup moved-from text should carry revision provenance and inline moved-from styling.");
-        TestAssert.True(movedTo.Revision?.Kind == "MoveTo" && movedTo.Underline && movedTo.ColorHex == "008000", "All-markup moved-to text should carry revision provenance and inline moved-to styling.");
+        TestAssert.True(inserted.Revision?.Kind == DocxRevisionKind.Insertion && inserted.Underline && inserted.ColorHex == "0000FF", "All-markup insertions should carry revision provenance and inline inserted styling.");
+        TestAssert.True(deleted.Revision?.Kind == DocxRevisionKind.Deletion && deleted.Strike && deleted.ColorHex == "C00000", "All-markup deletions should carry revision provenance and inline deleted styling.");
+        TestAssert.True(movedFrom.Revision?.Kind == DocxRevisionKind.MoveFrom && movedFrom.DoubleStrike && movedFrom.ColorHex == "C00000", "All-markup moved-from text should carry revision provenance and inline moved-from styling.");
+        TestAssert.True(movedTo.Revision?.Kind == DocxRevisionKind.MoveTo && movedTo.Underline && movedTo.ColorHex == "008000", "All-markup moved-to text should carry revision provenance and inline moved-to styling.");
     }
 
     public static void DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor()
@@ -22901,7 +22901,7 @@ internal static class DocxTests
 
     public static void DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory()
     {
-        var insertion = new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "ins");
+        var insertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-01T00:00:00Z", "ins", null, []);
         DocxTextRun commentRun = new("Commented", 10d, null, false, false, false, null, null)
         {
             SourceRunIndex = 0,
@@ -22929,7 +22929,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -22953,7 +22953,7 @@ internal static class DocxTests
             DocxTableCellMargins.Empty);
         var table = new DocxTable(LayoutValue: null, ColumnWidthsPoints: [120d], Rows: [new DocxTableRow([cell], HeightPoints: 24d)]);
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
@@ -23030,11 +23030,12 @@ internal static class DocxTests
             Revisions =
             [
                 new DocxRevisionInfo(
-                    "ParagraphPropertiesChange",
+                    DocxRevisionKind.ParagraphPropertiesChange,
                     "1",
                     "Reviewer",
                     "2026-06-01T00:00:00Z",
                     "pPr",
+                    null,
                     propertyElementNames:
                     [
                         "keepNext",
@@ -23047,8 +23048,8 @@ internal static class DocxTests
                         "jc",
                         "tabs"
                     ]),
-                new DocxRevisionInfo("Deletion", "2", "Reviewer", "2026-06-01T00:00:00Z", "del"),
-                new DocxRevisionInfo("MoveFrom", "3", "Reviewer", "2026-06-01T00:00:00Z", "moveFrom")
+                new DocxRevisionInfo(DocxRevisionKind.Deletion, "2", "Reviewer", "2026-06-01T00:00:00Z", "del", null, []),
+                new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "3", "Reviewer", "2026-06-01T00:00:00Z", "moveFrom", null, [])
             ]
         };
         DocxDocument document = new(
@@ -23104,7 +23105,7 @@ internal static class DocxTests
 
     public static void DocxSimpleMarkupRendererDrawsChangeBarsForRunRevisions()
     {
-        var revision = new DocxRevisionInfo("Insertion", "13", "Reviewer", "2026-06-01T00:00:00Z", "ins");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "13", "Reviewer", "2026-06-01T00:00:00Z", "ins", null, []);
         DocxParagraph paragraph = CreateDocxLayoutParagraph("Simple run revision", 10d, 12d) with
         {
             Runs =
@@ -23197,7 +23198,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "37",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -23208,7 +23209,7 @@ internal static class DocxTests
         };
         DocxTable footnoteTable = CreateTableRevisionBalloonProbeTable("Footnote table", "sn");
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "37",
             [new DocxTableElement(footnoteTable)],
@@ -23227,7 +23228,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "38",
                     CustomMarkFollowsValue: null,
                     DisplayText: "i",
@@ -23238,7 +23239,7 @@ internal static class DocxTests
         };
         DocxTable endnoteTable = CreateTableRevisionBalloonProbeTable("Endnote table", "se");
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "38",
             [new DocxTableElement(endnoteTable)],
@@ -23270,7 +23271,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "19",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -23279,13 +23280,13 @@ internal static class DocxTests
                     TextOffsetInRun: 4)
             ]
         };
-        var revision = new DocxRevisionInfo("Insertion", "19", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "19", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote inserted text", 10d, 12d) with
         {
             Revisions = [revision]
         };
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "19",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -23316,7 +23317,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "29",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -23325,13 +23326,13 @@ internal static class DocxTests
                     TextOffsetInRun: 4)
             ]
         };
-        var revision = new DocxRevisionInfo("Insertion", "29", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "29", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
         DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote inserted text", 10d, 12d) with
         {
             Revisions = [revision]
         };
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "29",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -23357,7 +23358,7 @@ internal static class DocxTests
 
     public static void DocxSimpleMarkupRendererDrawsFloatingTextBoxChangeBars()
     {
-        var revision = new DocxRevisionInfo("Insertion", "31", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "31", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
         DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Floating text box revision", 10d, 12d) with
         {
             Runs =
@@ -23386,7 +23387,7 @@ internal static class DocxTests
 
     public static void DocxSimpleMarkupRendererDrawsStaticFloatingTextBoxChangeBars()
     {
-        var revision = new DocxRevisionInfo("Insertion", "32", "Reviewer", "2026-06-10T00:00:00Z", "ins");
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "32", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
         DocxParagraph textBoxParagraph = CreateDocxLayoutParagraph("Static text box revision", 10d, 12d) with
         {
             Runs =
@@ -23490,7 +23491,7 @@ internal static class DocxTests
             VerticalRelativeFromValue: "page",
             VerticalAlignValue: null,
             VerticalOffsetValue: "3657600",
-            WrapKind: "wrapNone",
+            WrapKind: DocxFloatingWrapKind.None,
             WrapTextValue: null,
             SourceParagraphIndex: 0,
             SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
@@ -23518,7 +23519,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "21",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -23529,7 +23530,7 @@ internal static class DocxTests
         };
         DocxParagraph footnoteParagraph = CreateCommentMarkerParagraph("Footnote marker", "6");
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "21",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -23547,7 +23548,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "22",
                     CustomMarkFollowsValue: null,
                     DisplayText: "i",
@@ -23558,7 +23559,7 @@ internal static class DocxTests
         };
         DocxParagraph endnoteParagraph = CreateCommentMarkerParagraph("Endnote marker", "7");
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "22",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -23689,7 +23690,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Comment",
+                    DocxRelatedStoryKind.Comment,
                     commentId,
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 1,
@@ -23710,7 +23711,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Comment",
+                    DocxRelatedStoryKind.Comment,
                     commentId,
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 0,
@@ -23744,7 +23745,7 @@ internal static class DocxTests
             }
         };
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Header comment body", 10d, 12d))],
@@ -23784,7 +23785,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "9",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -23795,14 +23796,14 @@ internal static class DocxTests
         };
         DocxParagraph footnoteParagraph = CreateCommentMarkerParagraph("Footnote review anchor", "2");
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "9",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
             [], null);
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "2",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Footnote comment body", 10d, 12d))],
@@ -23826,7 +23827,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "11",
                     CustomMarkFollowsValue: null,
                     DisplayText: "i",
@@ -23837,14 +23838,14 @@ internal static class DocxTests
         };
         DocxParagraph endnoteParagraph = CreateCommentMarkerParagraph("Endnote review anchor", "12");
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
             [], null);
         DocxRelatedStory endnoteCommentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "12",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Endnote comment body", 10d, 12d))],
@@ -23871,7 +23872,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "10",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -23884,11 +23885,11 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "10", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "10", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
             ]
         };
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "10",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -23913,7 +23914,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "11",
                     CustomMarkFollowsValue: null,
                     DisplayText: "i",
@@ -23926,11 +23927,11 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "11", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "11", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
             ]
         };
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -23958,12 +23959,12 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "5", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "5", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
             ]
         };
         DocxFloatingDrawing floatingDrawing = CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "5",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Text box comment body", 10d, 12d))],
@@ -24003,7 +24004,7 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "6", "Reviewer", "2026-06-10T00:00:00Z", "ins")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "6", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
             ]
         };
         DocxPageSettings pageSettings = DocxPageSettings.Empty with
@@ -24014,7 +24015,7 @@ internal static class DocxTests
             }
         };
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "6",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Static text box comment body", 10d, 12d))],
@@ -24135,7 +24136,7 @@ internal static class DocxTests
             VerticalRelativeFromValue: "page",
             VerticalAlignValue: null,
             VerticalOffsetValue: "914400",
-            WrapKind: "wrapNone",
+            WrapKind: DocxFloatingWrapKind.None,
             WrapTextValue: null,
             SourceParagraphIndex: 0,
             SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
@@ -24239,7 +24240,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "9",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -24250,7 +24251,7 @@ internal static class DocxTests
         };
         DocxTable footnoteTable = CreateTableRevisionBalloonProbeTable("Footnote table revision", "n");
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "9",
             [new DocxTableElement(footnoteTable)],
@@ -24275,7 +24276,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "10",
                     CustomMarkFollowsValue: null,
                     DisplayText: "i",
@@ -24286,7 +24287,7 @@ internal static class DocxTests
         };
         DocxTable endnoteTable = CreateTableRevisionBalloonProbeTable("Endnote table revision", "e");
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "10",
             [new DocxTableElement(endnoteTable)],
@@ -24314,12 +24315,12 @@ internal static class DocxTests
             Revisions =
             [
                 new DocxRevisionInfo(
-                    "TableCellPropertiesChange",
+                    DocxRevisionKind.TableCellPropertiesChange,
                     idPrefix + "c",
                     "Reviewer",
                     "2026-06-10T00:00:00Z",
                     "tcPrChange",
-                    "Cell",
+                    DocxRevisionPropertyFamily.Cell,
                     ["tcW"])
             ]
         };
@@ -24328,12 +24329,12 @@ internal static class DocxTests
             Revisions =
             [
                 new DocxRevisionInfo(
-                    "TableRowPropertiesChange",
+                    DocxRevisionKind.TableRowPropertiesChange,
                     idPrefix + "r",
                     "Reviewer",
                     "2026-06-10T00:00:00Z",
                     "trPrChange",
-                    "Row",
+                    DocxRevisionPropertyFamily.Row,
                     ["trHeight"])
             ]
         };
@@ -24342,12 +24343,12 @@ internal static class DocxTests
             Revisions =
             [
                 new DocxRevisionInfo(
-                    "TablePropertiesChange",
+                    DocxRevisionKind.TablePropertiesChange,
                     idPrefix + "t",
                     "Reviewer",
                     "2026-06-10T00:00:00Z",
                     "tblPrChange",
-                    "Table",
+                    DocxRevisionPropertyFamily.Table,
                     ["tblBorders"])
             ]
         };
@@ -24425,7 +24426,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -24534,7 +24535,7 @@ internal static class DocxTests
             VerticalRelativeFromValue: "page",
             VerticalAlignValue: null,
             VerticalOffsetValue: "3657600",
-            WrapKind: "wrapNone",
+            WrapKind: DocxFloatingWrapKind.None,
             WrapTextValue: null,
             SourceParagraphIndex: 0,
             SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
@@ -24568,7 +24569,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "21",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -24579,7 +24580,7 @@ internal static class DocxTests
         };
         DocxParagraph footnoteRangeParagraph = CreateCommentRangeParagraph("Footnote range", "6");
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "21",
             [new DocxParagraphElement(footnoteRangeParagraph)],
@@ -24598,7 +24599,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "22",
                     CustomMarkFollowsValue: null,
                     DisplayText: "i",
@@ -24609,7 +24610,7 @@ internal static class DocxTests
         };
         DocxParagraph endnoteRangeParagraph = CreateCommentRangeParagraph("Endnote range", "7");
         DocxRelatedStory endnoteStory = new(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "22",
             [new DocxParagraphElement(endnoteRangeParagraph)],
@@ -24646,7 +24647,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "23",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -24657,7 +24658,7 @@ internal static class DocxTests
         };
         DocxTable footnoteTable = CreateCommentRangeTable("Footnote table range", "9");
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "23",
             [new DocxTableElement(footnoteTable)],
@@ -24692,7 +24693,7 @@ internal static class DocxTests
             RelatedStories =
             [
                 new DocxRelatedStory(
-                    "Comment",
+                    DocxRelatedStoryKind.Comment,
                     "/word/comments.xml",
                     "8",
                     [new DocxParagraphElement(CreateDocxLayoutParagraph("Public static table comment", 10d, 12d))],
@@ -24708,7 +24709,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "23",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -24719,7 +24720,7 @@ internal static class DocxTests
         };
         DocxTable footnoteTable = CreateCommentRangeTable("Footnote table range", "9");
         DocxRelatedStory footnoteStory = new(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "23",
             [new DocxTableElement(footnoteTable)],
@@ -24744,7 +24745,7 @@ internal static class DocxTests
             [
                 footnoteStory,
                 new DocxRelatedStory(
-                    "Comment",
+                    DocxRelatedStoryKind.Comment,
                     "/word/comments.xml",
                     "9",
                     [new DocxParagraphElement(CreateDocxLayoutParagraph("Public footnote table comment", 10d, 12d))],
@@ -24827,7 +24828,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -24886,16 +24887,16 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 8, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 8, DisplayText: null)
             ],
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxParagraph commentParagraph = CreateDocxLayoutParagraph("Public comment alpha beta gamma delta epsilon for wrapping", 10d, 12d);
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(commentParagraph)],
@@ -24962,11 +24963,11 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 9, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 9, DisplayText: null)
             ]
         };
         DocxRelatedStory parentComment = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Parent threaded comment body", 10d, 12d))],
@@ -24976,7 +24977,7 @@ internal static class DocxTests
             CommentMetadata = new DocxCommentMetadata("Reviewer One", "RO", "2024-01-02T03:04:05Z", "11111111", null, null, true)
         };
         DocxRelatedStory firstReply = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "2",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("First reply body", 10d, 12d))],
@@ -24986,7 +24987,7 @@ internal static class DocxTests
             CommentMetadata = new DocxCommentMetadata("Reviewer Two", "RT", "2024-01-03T03:04:05Z", "22222222", "11111111", "1", false)
         };
         DocxRelatedStory secondReply = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "3",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Second reply body", 10d, 12d))],
@@ -25076,7 +25077,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -25084,11 +25085,11 @@ internal static class DocxTests
             ],
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
@@ -25174,7 +25175,7 @@ internal static class DocxTests
             ColumnWidthsPoints: [96d, 180d],
             Rows: [new DocxTableRow([firstCell, secondCell], HeightPoints: null)]);
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public table comment body", 10d, 12d))],
@@ -25255,7 +25256,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -25263,7 +25264,7 @@ internal static class DocxTests
             ]
         };
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public edge comment body", 10d, 12d))],
@@ -25325,11 +25326,11 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 11, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 11, DisplayText: null)
             ]
         };
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
@@ -25395,8 +25396,8 @@ internal static class DocxTests
 
     public static void DocxAllMarkupRendererPlacesMoveRevisionBalloonsWithConnectors()
     {
-        var moveFrom = new DocxRevisionInfo("MoveFrom", "701", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
-        var moveTo = new DocxRevisionInfo("MoveTo", "702", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        var moveFrom = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "701", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
+        var moveTo = new DocxRevisionInfo(DocxRevisionKind.MoveTo, "702", "Reviewer", "2026-06-10T00:00:00Z", "moveTo", null, []);
         DocxParagraph movedFrom = CreateMovedParagraph("Moved from text", moveFrom);
         DocxParagraph filler = CreateDocxLayoutParagraph("Neutral paragraph", 10d, 12d);
         DocxParagraph movedTo = CreateMovedParagraph("Moved to text", moveTo);
@@ -25458,10 +25459,10 @@ internal static class DocxTests
 
     public static void DocxAllMarkupRevisionBalloonPreviewUsesAggregateRunProvenance()
     {
-        var insertion = new DocxRevisionInfo("Insertion", "4", "Reviewer", "2026-06-10T00:00:00Z", "ins");
-        var deletion = new DocxRevisionInfo("Deletion", "1", "Reviewer", "2026-06-10T00:00:00Z", "del");
-        var moveFrom = new DocxRevisionInfo("MoveFrom", "2", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
-        var moveTo = new DocxRevisionInfo("MoveTo", "3", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
+        var insertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "4", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
+        var deletion = new DocxRevisionInfo(DocxRevisionKind.Deletion, "1", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
+        var moveFrom = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "2", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
+        var moveTo = new DocxRevisionInfo(DocxRevisionKind.MoveTo, "3", "Reviewer", "2026-06-10T00:00:00Z", "moveTo", null, []);
         DocxParagraph paragraph = CreateDocxLayoutParagraph("Deleted MovedFrom MovedTo Inserted", 10d, 12d) with
         {
             Runs =
@@ -25498,7 +25499,7 @@ internal static class DocxTests
 
     public static void DocxAllMarkupRevisionBalloonPreviewSummarizesLongDeletedText()
     {
-        var deletion = new DocxRevisionInfo("Deletion", "1", "Reviewer", "2026-06-10T00:00:00Z", "del");
+        var deletion = new DocxRevisionInfo(DocxRevisionKind.Deletion, "1", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
         const string longDeletedText = "Deleted content that is intentionally too long for an inline balloon quote";
         DocxParagraph paragraph = CreateDocxLayoutParagraph(longDeletedText, 10d, 12d) with
         {
@@ -25523,27 +25524,27 @@ internal static class DocxTests
     {
         (byte Red, byte Green, byte Blue) first = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
         [
-            new DocxRevisionInfo("Insertion", "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins")
+            new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins", null, [])
         ]);
         (byte Red, byte Green, byte Blue) firstAgain = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
         [
-            new DocxRevisionInfo("Deletion", "2", "Reviewer A", "2026-06-11T00:00:00Z", "del")
+            new DocxRevisionInfo(DocxRevisionKind.Deletion, "2", "Reviewer A", "2026-06-11T00:00:00Z", "del", null, [])
         ]);
         (byte Red, byte Green, byte Blue) second = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
         [
-            new DocxRevisionInfo("Insertion", "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins")
+            new DocxRevisionInfo(DocxRevisionKind.Insertion, "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins", null, [])
         ]);
         (byte Red, byte Green, byte Blue) firstWithEquivalentWhitespace = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
         [
-            new DocxRevisionInfo("Deletion", "4", "  reviewer\t  a  ", "2026-06-12T00:00:00Z", "del")
+            new DocxRevisionInfo(DocxRevisionKind.Deletion, "4", "  reviewer\t  a  ", "2026-06-12T00:00:00Z", "del", null, [])
         ]);
         (byte Red, byte Green, byte Blue) composedUnicode = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
         [
-            new DocxRevisionInfo("Insertion", "5", "JOS\u00c9", "2026-06-12T00:00:00Z", "ins")
+            new DocxRevisionInfo(DocxRevisionKind.Insertion, "5", "JOS\u00c9", "2026-06-12T00:00:00Z", "ins", null, [])
         ]);
         (byte Red, byte Green, byte Blue) decomposedUnicode = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
         [
-            new DocxRevisionInfo("Deletion", "6", "Jose\u0301", "2026-06-12T00:00:00Z", "del")
+            new DocxRevisionInfo(DocxRevisionKind.Deletion, "6", "Jose\u0301", "2026-06-12T00:00:00Z", "del", null, [])
         ]);
         (byte Red, byte Green, byte Blue) fallback = DocxRenderer.ResolveRevisionAuthorColorSnapshot([]);
 
@@ -25556,9 +25557,9 @@ internal static class DocxTests
 
     public static void DocxMarkupRevisionColorsUseDominantAuthorBucketIndependentOfOrder()
     {
-        var reviewerAInsertion = new DocxRevisionInfo("Insertion", "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins");
-        var reviewerADeletion = new DocxRevisionInfo("Deletion", "2", "Reviewer A", "2026-06-11T00:00:00Z", "del");
-        var reviewerBInsertion = new DocxRevisionInfo("Insertion", "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins");
+        var reviewerAInsertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins", null, []);
+        var reviewerADeletion = new DocxRevisionInfo(DocxRevisionKind.Deletion, "2", "Reviewer A", "2026-06-11T00:00:00Z", "del", null, []);
+        var reviewerBInsertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins", null, []);
         (byte Red, byte Green, byte Blue) reviewerA = DocxRenderer.ResolveRevisionAuthorColorSnapshot([reviewerAInsertion]);
         (byte Red, byte Green, byte Blue) dominantA = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
             [reviewerBInsertion, reviewerAInsertion, reviewerADeletion]);
@@ -25596,18 +25597,18 @@ internal static class DocxTests
             {
                 InlineReferences =
                 [
-                    new DocxInlineReference("Comment", id, null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                    new DocxInlineReference(DocxRelatedStoryKind.Comment, id, null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
                 ],
                 Revisions =
                 [
-                    new DocxRevisionInfo("Insertion", id, "A", "2026-06-10T00:00:00Z", "ins")
+                    new DocxRevisionInfo(DocxRevisionKind.Insertion, id, "A", "2026-06-10T00:00:00Z", "ins", null, [])
                 ]
             };
             bodyElements.Add(new DocxParagraphElement(paragraph));
 
             DocxParagraph commentParagraph = CreateDocxLayoutParagraph("Comment body " + id, 10d, 12d);
             relatedStories.Add(new DocxRelatedStory(
-                "Comment",
+                DocxRelatedStoryKind.Comment,
                 "/word/comments.xml",
                 id,
                 [new DocxParagraphElement(commentParagraph)],
@@ -25692,7 +25693,7 @@ internal static class DocxTests
             {
                 Revisions =
                 [
-                    new DocxRevisionInfo("Insertion", id, "A", "2026-06-10T00:00:00Z", "ins")
+                    new DocxRevisionInfo(DocxRevisionKind.Insertion, id, "A", "2026-06-10T00:00:00Z", "ins", null, [])
                 ]
             };
             bodyElements.Add(new DocxParagraphElement(paragraph));
@@ -25733,18 +25734,18 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ]
         };
         DocxParagraph revisionParagraph = CreateDocxLayoutParagraph("Shared width", 10d, 8d) with
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public collision comment", 10d, 12d))],
@@ -25796,18 +25797,18 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxParagraph commentParagraph = CreateDocxLayoutParagraph("Priority comment", 10d, 8d) with
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ]
         };
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public priority comment", 10d, 12d))],
@@ -25852,7 +25853,7 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Insertion", "upper", "Reviewer", "2026-06-01T00:00:00Z", "inserted")
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "upper", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, [])
             ]
         };
         DocxParagraph spacerParagraph = CreateDocxLayoutParagraph("Spacer", 1d, 80d);
@@ -25860,7 +25861,7 @@ internal static class DocxTests
         {
             Revisions =
             [
-                new DocxRevisionInfo("Deletion", "lower", "Reviewer", "2026-06-01T00:00:00Z", "deleted")
+                new DocxRevisionInfo(DocxRevisionKind.Deletion, "lower", "Reviewer", "2026-06-01T00:00:00Z", "deleted", null, [])
             ]
         };
         DocxDocument document = new(
@@ -25909,7 +25910,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Comment",
+                    DocxRelatedStoryKind.Comment,
                     "9",
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 0,
@@ -25937,7 +25938,7 @@ internal static class DocxTests
             ColumnWidthsPoints: [72d],
             Rows: [new DocxTableRow([tableCell], HeightPoints: null)]);
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "9",
             [new DocxParagraphElement(imageParagraph), new DocxTableElement(table)],
@@ -26150,10 +26151,10 @@ internal static class DocxTests
 
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
-        TestAssert.Equal(3, document.RelatedStories.Count(story => story.Kind == "Comment"));
-        DocxRelatedStory parent = document.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "1");
-        DocxRelatedStory reply = document.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "2");
-        DocxRelatedStory secondReply = document.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "3");
+        TestAssert.Equal(3, document.RelatedStories.Count(story => story.Kind == DocxRelatedStoryKind.Comment));
+        DocxRelatedStory parent = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment && story.Id == "1");
+        DocxRelatedStory reply = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment && story.Id == "2");
+        DocxRelatedStory secondReply = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment && story.Id == "3");
         TestAssert.True(parent.CommentMetadata?.Author == "Reviewer One" && parent.CommentMetadata.Initials == "RO" && parent.CommentMetadata.Date == "2024-01-02T03:04:05Z", "Classic comment author, initials, and date metadata should survive reading.");
         TestAssert.True(parent.CommentMetadata?.ParagraphId == "11111111" && parent.CommentMetadata.ParentParagraphId is null && parent.CommentMetadata.ParentCommentId is null && parent.CommentMetadata.IsResolved == true, "Parent comment extension metadata should preserve paragraph id and resolved state.");
         TestAssert.True(reply.CommentMetadata?.Author == "Reviewer Two" && reply.CommentMetadata.Initials == "RT" && reply.CommentMetadata.Date == "2024-01-03T03:04:05Z", "Reply comment classic metadata should survive reading.");
@@ -26246,7 +26247,7 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         DocxInlineReference reference = document.Paragraphs.Single().InlineReferences.Single();
-        TestAssert.True(reference.Revision?.Kind == "Insertion" && reference.Revision.Author == "A" && reference.Revision.Date == "2026-06-04T00:00:00Z" && reference.Revision.SourceElement == "ins", "Inline references inside revision containers should retain direct revision metadata.");
+        TestAssert.True(reference.Revision?.Kind == DocxRevisionKind.Insertion && reference.Revision.Author == "A" && reference.Revision.Date == "2026-06-04T00:00:00Z" && reference.Revision.SourceElement == "ins", "Inline references inside revision containers should retain direct revision metadata.");
         TestAssert.Equal(1, reference.Revisions.Count);
 
         DocxStructureInlineReferenceSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -26307,20 +26308,20 @@ internal static class DocxTests
     public static void DocxFormattingRevisionBalloonLabelsPrioritizeVisibleProperties()
     {
         var runRevision = new DocxRevisionInfo(
-            "RunPropertiesChange",
+            DocxRevisionKind.RunPropertiesChange,
             "1",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "rPrChange",
-            "Run",
+            DocxRevisionPropertyFamily.Run,
             ["bCs", "highlight", "iCs", "rFonts", "szCs", "sz", "color"]);
         var paragraphRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "2",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["keepNext", "pStyle", "tabs", "spacing", "jc"]);
 
         TestAssert.Equal(
@@ -26334,36 +26335,36 @@ internal static class DocxTests
     public static void DocxFormattingRevisionBalloonLabelsGroupSameFamilyProperties()
     {
         var paragraphStyleRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "1",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["pStyle", "spacing"]);
         var paragraphLayoutRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "2",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["tabs", "jc", "keepNext"]);
         var runFontRevision = new DocxRevisionInfo(
-            "RunPropertiesChange",
+            DocxRevisionKind.RunPropertiesChange,
             "3",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "rPrChange",
-            "Run",
+            DocxRevisionPropertyFamily.Run,
             ["rFonts"]);
         var runColorRevision = new DocxRevisionInfo(
-            "RunPropertiesChange",
+            DocxRevisionKind.RunPropertiesChange,
             "4",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "rPrChange",
-            "Run",
+            DocxRevisionPropertyFamily.Run,
             ["highlight", "color"]);
 
         TestAssert.Equal(
@@ -26373,12 +26374,12 @@ internal static class DocxTests
 
     public static void DocxFormattingRevisionBalloonLabelsOrderFamiliesByScopeSeverity()
     {
-        var runRevision = new DocxRevisionInfo("RunPropertiesChange", "1", "Reviewer", "2026-06-10T00:00:00Z", "rPrChange", "Run", ["color"]);
-        var paragraphRevision = new DocxRevisionInfo("ParagraphPropertiesChange", "2", "Reviewer", "2026-06-10T00:00:00Z", "pPrChange", "Paragraph", ["jc"]);
-        var cellRevision = new DocxRevisionInfo("TableCellPropertiesChange", "3", "Reviewer", "2026-06-10T00:00:00Z", "tcPrChange", "Cell", ["tcW"]);
-        var rowRevision = new DocxRevisionInfo("TableRowPropertiesChange", "4", "Reviewer", "2026-06-10T00:00:00Z", "trPrChange", "Row", ["trHeight"]);
-        var tableRevision = new DocxRevisionInfo("TablePropertiesChange", "5", "Reviewer", "2026-06-10T00:00:00Z", "tblPrChange", "Table", ["tblW"]);
-        var sectionRevision = new DocxRevisionInfo("SectionPropertiesChange", "6", "Reviewer", "2026-06-10T00:00:00Z", "sectPrChange", "Section", ["pgMar"]);
+        var runRevision = new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "1", "Reviewer", "2026-06-10T00:00:00Z", "rPrChange", DocxRevisionPropertyFamily.Run, ["color"]);
+        var paragraphRevision = new DocxRevisionInfo(DocxRevisionKind.ParagraphPropertiesChange, "2", "Reviewer", "2026-06-10T00:00:00Z", "pPrChange", DocxRevisionPropertyFamily.Paragraph, ["jc"]);
+        var cellRevision = new DocxRevisionInfo(DocxRevisionKind.TableCellPropertiesChange, "3", "Reviewer", "2026-06-10T00:00:00Z", "tcPrChange", DocxRevisionPropertyFamily.Cell, ["tcW"]);
+        var rowRevision = new DocxRevisionInfo(DocxRevisionKind.TableRowPropertiesChange, "4", "Reviewer", "2026-06-10T00:00:00Z", "trPrChange", DocxRevisionPropertyFamily.Row, ["trHeight"]);
+        var tableRevision = new DocxRevisionInfo(DocxRevisionKind.TablePropertiesChange, "5", "Reviewer", "2026-06-10T00:00:00Z", "tblPrChange", DocxRevisionPropertyFamily.Table, ["tblW"]);
+        var sectionRevision = new DocxRevisionInfo(DocxRevisionKind.SectionPropertiesChange, "6", "Reviewer", "2026-06-10T00:00:00Z", "sectPrChange", DocxRevisionPropertyFamily.Section, ["pgMar"]);
 
         TestAssert.Equal(
             "Formatted section: page margins, Formatted table: table width, Formatted row: row height, Formatted cell: cell width, Formatted paragraph: alignment, Formatted run: color",
@@ -26388,52 +26389,52 @@ internal static class DocxTests
     public static void DocxFormattingRevisionBalloonLabelsNameCommonWordProperties()
     {
         var runRevision = new DocxRevisionInfo(
-            "RunPropertiesChange",
+            DocxRevisionKind.RunPropertiesChange,
             "1",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "rPrChange",
-            "Run",
+            DocxRevisionPropertyFamily.Run,
             ["iCs", "webHidden", "outline", "rtl", "vertAlign", "kern"]);
         var paragraphRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "2",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["textAlignment", "outlineLvl", "pageBreakBefore", "pBdr", "bidi", "framePr", "wordWrap"]);
         var tableRevision = new DocxRevisionInfo(
-            "TablePropertiesChange",
+            DocxRevisionKind.TablePropertiesChange,
             "3",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "tblPrChange",
-            "Table",
+            DocxRevisionPropertyFamily.Table,
             ["bidiVisual", "tblCellSpacing", "shd", "jc", "tblLook"]);
         var rowRevision = new DocxRevisionInfo(
-            "TableRowPropertiesChange",
+            DocxRevisionKind.TableRowPropertiesChange,
             "4",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "trPrChange",
-            "Row",
+            DocxRevisionPropertyFamily.Row,
             ["tblCellSpacing", "jc", "cantSplit"]);
         var cellRevision = new DocxRevisionInfo(
-            "TableCellPropertiesChange",
+            DocxRevisionKind.TableCellPropertiesChange,
             "5",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "tcPrChange",
-            "Cell",
+            DocxRevisionPropertyFamily.Cell,
             ["noWrap", "textDirection", "shd", "tcFitText"]);
         var sectionRevision = new DocxRevisionInfo(
-            "SectionPropertiesChange",
+            DocxRevisionKind.SectionPropertiesChange,
             "6",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "sectPrChange",
-            "Section",
+            DocxRevisionPropertyFamily.Section,
             ["lnNumType", "footnotePr", "pgNumType", "docGrid", "endnotePr"]);
 
         TestAssert.Equal(
@@ -26459,68 +26460,68 @@ internal static class DocxTests
     public static void DocxFormattingRevisionBalloonLabelsNameAdditionalWordProperties()
     {
         var runRevision = new DocxRevisionInfo(
-            "RunPropertiesChange",
+            DocxRevisionKind.RunPropertiesChange,
             "1",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "rPrChange",
-            "Run",
+            DocxRevisionPropertyFamily.Run,
             ["oMath", "noProof", "snapToGrid", "spacing", "eastAsianLayout"]);
         var paragraphRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "2",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["mirrorIndents", "suppressAutoHyphens", "autoSpaceDE", "suppressOverlap"]);
         var tableRevision = new DocxRevisionInfo(
-            "TablePropertiesChange",
+            DocxRevisionKind.TablePropertiesChange,
             "3",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "tblPrChange",
-            "Table",
+            DocxRevisionPropertyFamily.Table,
             ["tblpPr", "tblOverlap", "tblCaption", "tblStyleColBandSize"]);
         var rowRevision = new DocxRevisionInfo(
-            "TableRowPropertiesChange",
+            DocxRevisionKind.TableRowPropertiesChange,
             "4",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "trPrChange",
-            "Row",
+            DocxRevisionPropertyFamily.Row,
             ["gridBefore", "gridAfter", "wBefore", "tblPrEx"]);
         var cellRevision = new DocxRevisionInfo(
-            "TableCellPropertiesChange",
+            DocxRevisionKind.TableCellPropertiesChange,
             "5",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "tcPrChange",
-            "Cell",
+            DocxRevisionPropertyFamily.Cell,
             ["hideMark", "hMerge", "cellIns", "cellMerge"]);
         var sectionRevision = new DocxRevisionInfo(
-            "SectionPropertiesChange",
+            DocxRevisionKind.SectionPropertiesChange,
             "6",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "sectPrChange",
-            "Section",
+            DocxRevisionPropertyFamily.Section,
             ["pgBorders", "titlePg", "vAlign", "rtlGutter"]);
         var fallbackRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "7",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["customXmlPr"]);
         var numberingRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "8",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["numberingChange", "numId", "ilvl", "numPr"]);
 
         TestAssert.Equal(
@@ -26556,11 +26557,11 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
-        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.SourceElement == "pPrChange"), "Paragraph formatting revisions should retain private-safe provenance.");
-        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "RunPropertiesChange" && revision.SourceElement == "rPrChange"), "Run formatting revisions should be lifted into paragraph-level revision counts.");
-        TestAssert.True(paragraph.Runs.Single(run => run.Text == "Formatting revision").Revisions.Any(revision => revision.Kind == "RunPropertiesChange"), "Runs should retain their own formatting-revision provenance.");
-        TestAssert.True(paragraph.Revisions.Any(revision => revision.PropertyChangeFamily == "Paragraph" && revision.PropertyElementNames.Contains("jc")), "Paragraph formatting revisions should expose private-safe changed property names.");
-        TestAssert.True(paragraph.Revisions.Any(revision => revision.PropertyChangeFamily == "Run" && revision.PropertyElementNames.Contains("b")), "Run formatting revisions should expose private-safe changed property names.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.ParagraphPropertiesChange && revision.SourceElement == "pPrChange"), "Paragraph formatting revisions should retain private-safe provenance.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.RunPropertiesChange && revision.SourceElement == "rPrChange"), "Run formatting revisions should be lifted into paragraph-level revision counts.");
+        TestAssert.True(paragraph.Runs.Single(run => run.Text == "Formatting revision").Revisions.Any(revision => revision.Kind == DocxRevisionKind.RunPropertiesChange), "Runs should retain their own formatting-revision provenance.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.PropertyChangeFamily == DocxRevisionPropertyFamily.Paragraph && revision.PropertyElementNames.Contains("jc")), "Paragraph formatting revisions should expose private-safe changed property names.");
+        TestAssert.True(paragraph.Revisions.Any(revision => revision.PropertyChangeFamily == DocxRevisionPropertyFamily.Run && revision.PropertyElementNames.Contains("b")), "Run formatting revisions should expose private-safe changed property names.");
         string revisionPreview = DocxRenderer.BuildRevisionBalloonPreview(paragraph.Revisions);
         TestAssert.Contains("Formatted paragraph: alignment", revisionPreview);
         TestAssert.Contains("Formatted run: color, bold", revisionPreview);
@@ -26580,28 +26581,28 @@ internal static class DocxTests
     public static void DocxMarkupInspectionSnapshotsCountStoryFormattingRevisions()
     {
         var bodyRevision = new DocxRevisionInfo(
-            "ParagraphPropertiesChange",
+            DocxRevisionKind.ParagraphPropertiesChange,
             "1",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "pPrChange",
-            "Paragraph",
+            DocxRevisionPropertyFamily.Paragraph,
             ["jc"]);
         var headerRevision = new DocxRevisionInfo(
-            "RunPropertiesChange",
+            DocxRevisionKind.RunPropertiesChange,
             "2",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "rPrChange",
-            "Run",
+            DocxRevisionPropertyFamily.Run,
             ["highlight"]);
         var textBoxRevision = new DocxRevisionInfo(
-            "RunPropertiesChange",
+            DocxRevisionKind.RunPropertiesChange,
             "3",
             "Reviewer",
             "2026-06-10T00:00:00Z",
             "rPrChange",
-            "Run",
+            DocxRevisionPropertyFamily.Run,
             ["b"]);
         DocxParagraph bodyParagraph = CreateDocxLayoutParagraph("Body", 10d, 12d) with
         {
@@ -26658,9 +26659,9 @@ internal static class DocxTests
         DocxTableRow row = table.Rows.Single();
         DocxTableCell cell = row.Cells.Single();
 
-        TestAssert.True(table.Revisions.Any(revision => revision.Kind == "TablePropertiesChange" && revision.SourceElement == "tblPrChange"), "Table formatting revisions should retain private-safe provenance.");
-        TestAssert.True(row.Revisions.Any(revision => revision.Kind == "TableRowPropertiesChange" && revision.SourceElement == "trPrChange"), "Row formatting revisions should retain private-safe provenance.");
-        TestAssert.True(cell.Revisions.Any(revision => revision.Kind == "TableCellPropertiesChange" && revision.SourceElement == "tcPrChange"), "Cell formatting revisions should retain private-safe provenance.");
+        TestAssert.True(table.Revisions.Any(revision => revision.Kind == DocxRevisionKind.TablePropertiesChange && revision.SourceElement == "tblPrChange"), "Table formatting revisions should retain private-safe provenance.");
+        TestAssert.True(row.Revisions.Any(revision => revision.Kind == DocxRevisionKind.TableRowPropertiesChange && revision.SourceElement == "trPrChange"), "Row formatting revisions should retain private-safe provenance.");
+        TestAssert.True(cell.Revisions.Any(revision => revision.Kind == DocxRevisionKind.TableCellPropertiesChange && revision.SourceElement == "tcPrChange"), "Cell formatting revisions should retain private-safe provenance.");
         TestAssert.Contains("Formatted table: borders", DocxRenderer.BuildRevisionBalloonPreview(table.Revisions));
         TestAssert.Contains("Formatted row: row height", DocxRenderer.BuildRevisionBalloonPreview(row.Revisions));
         TestAssert.Contains("Formatted cell: cell width", DocxRenderer.BuildRevisionBalloonPreview(cell.Revisions));
@@ -28520,9 +28521,9 @@ internal static class DocxTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph referenceParagraph = document.Paragraphs.Single();
         TestAssert.Equal(3, referenceParagraph.InlineReferences.Count);
-        DocxInlineReference commentReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == "Comment");
-        DocxInlineReference footnoteReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == "Footnote");
-        DocxInlineReference endnoteReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == "Endnote");
+        DocxInlineReference commentReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Comment);
+        DocxInlineReference footnoteReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote);
+        DocxInlineReference endnoteReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote);
         TestAssert.True(commentReference.Id == "1" && commentReference.CustomMarkFollowsValue is null, "Comment reference markers should be preserved as inline DOCX structure.");
         TestAssert.True(footnoteReference.Id == "2" && footnoteReference.CustomMarkFollowsValue == "1", "Footnote reference markers should preserve custom mark flags.");
         TestAssert.True(endnoteReference.Id == "3" && endnoteReference.CustomMarkFollowsValue is null, "Endnote reference markers should be preserved as inline DOCX structure.");
@@ -28538,15 +28539,15 @@ internal static class DocxTests
         TestAssert.Equal(0, endnoteReference.RunChildIndex);
         TestAssert.Equal(0, endnoteReference.TextOffsetInRun);
         TestAssert.Equal(3, document.RelatedStories.Count);
-        DocxRelatedStory commentStory = document.RelatedStories.Single(story => story.Kind == "Comment");
+        DocxRelatedStory commentStory = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment);
         TestAssert.True(commentStory.PartName == "/word/comments.xml" && commentStory.Id == "1" && commentStory.BodyElements.Count == 3 && commentStory.Paragraphs.Count == 2 && commentStory.Tables.Count == 1, "Comment bodies should be preserved as related DOCX stories.");
         TestAssert.Equal(1, commentStory.Paragraphs.Sum(paragraph => paragraph.Hyperlinks.Count));
         TestAssert.Equal("https://example.invalid/comment", commentStory.Paragraphs.SelectMany(paragraph => paragraph.Hyperlinks).Single().Target ?? string.Empty);
         DocxFloatingDrawing commentDrawing = commentStory.FloatingDrawings.Single();
         TestAssert.True(commentDrawing.ImageRelationshipId == "rIdCommentImage" && commentDrawing.SourceParagraphIndex == 0 && commentDrawing.SourceBlockIndex == 0, "Related-story anchored drawings should preserve their owning paragraph, block, and part-local image relationship.");
         TestAssert.True(commentDrawing.HorizontalRelativeFromValue == "page" && commentDrawing.VerticalRelativeFromValue == "paragraph" && commentDrawing.BehindDocumentValue == "1", "Related-story anchored drawing geometry tokens should be preserved structurally before story placement is modeled.");
-        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
-        TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
+        TestAssert.True(document.RelatedStories.Any(story => story.Kind == DocxRelatedStoryKind.Footnote && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
+        TestAssert.True(document.RelatedStories.Any(story => story.Kind == DocxRelatedStoryKind.Endnote && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
 
         DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureBlockSnapshot referenceBlock = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
@@ -28634,7 +28635,7 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             ListLabel: null);
         DocxRelatedStory commentStory = new(
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "9",
             [new DocxParagraphElement(imageParagraph)],
@@ -28665,7 +28666,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "7",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -28677,7 +28678,7 @@ internal static class DocxTests
         DocxParagraph filler = CreateDocxLayoutParagraph("Filler paragraph keeps body close to the bottom", 10d, 12d);
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body line one wraps line two", 10d, 12d);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "7",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -28723,7 +28724,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "17",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -28736,7 +28737,7 @@ internal static class DocxTests
         var cell = new DocxTableCell("Footnote table cell", [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var footnoteTable = new DocxTable(null, [90d], [new DocxTableRow([cell], 24d)]);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "17",
             [new DocxTableElement(footnoteTable)],
@@ -28813,7 +28814,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "23",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -28824,7 +28825,7 @@ internal static class DocxTests
         };
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "23",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -28843,7 +28844,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
-                new DocxSectionBreakElement(wideFirstSection, "nextPage", null, null, null, []),
+                new DocxSectionBreakElement(wideFirstSection, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(anchor)
             ],
             [],
@@ -28870,7 +28871,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "31",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -28878,7 +28879,7 @@ internal static class DocxTests
                     RunChildIndex: 0,
                     TextOffsetInRun: 8),
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "32",
                     CustomMarkFollowsValue: null,
                     DisplayText: "2",
@@ -28890,14 +28891,14 @@ internal static class DocxTests
         DocxParagraph firstFootnote = CreateDocxLayoutParagraph("First footnote body", 10d, 12d);
         DocxParagraph secondFootnote = CreateDocxLayoutParagraph("Second footnote body", 10d, 12d);
         var firstStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "31",
             [new DocxParagraphElement(firstFootnote)],
             [],
             [], null);
         var secondStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "32",
             [new DocxParagraphElement(secondFootnote)],
@@ -28926,7 +28927,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "16",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -28937,7 +28938,7 @@ internal static class DocxTests
         };
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote overflow body", 10d, 12d);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "16",
             Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(footnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
@@ -29011,7 +29012,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "11",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29022,7 +29023,7 @@ internal static class DocxTests
         };
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body", 10d, 12d);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "11",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -29087,7 +29088,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "12",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29098,7 +29099,7 @@ internal static class DocxTests
         };
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body", 10d, 12d);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "12",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -29215,7 +29216,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "13",
                     CustomMarkFollowsValue: null,
                     DisplayText: markerText,
@@ -29226,7 +29227,7 @@ internal static class DocxTests
         };
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body", 10d, 12d);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "13",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -29274,7 +29275,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Footnote",
+                    DocxRelatedStoryKind.Footnote,
                     "14",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29292,7 +29293,7 @@ internal static class DocxTests
             ]);
         DocxParagraph footnoteParagraph = CreateDocxLayoutParagraph("Footnote body", 10d, 12d);
         var footnoteStory = new DocxRelatedStory(
-            "Footnote",
+            DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "14",
             [new DocxParagraphElement(footnoteParagraph)],
@@ -29340,7 +29341,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "21",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29352,7 +29353,7 @@ internal static class DocxTests
         DocxParagraph secondSectionParagraph = CreateDocxLayoutParagraph("second section body", 10d, 12d);
         DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote body", 10d, 12d);
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "21",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -29362,7 +29363,7 @@ internal static class DocxTests
         {
             EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
         };
-        var sectionBreak = new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []);
+        var sectionBreak = new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, null, null, null, []);
         var document = new DocxDocument(
             220d,
             112d,
@@ -29434,7 +29435,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "25",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29445,7 +29446,7 @@ internal static class DocxTests
         };
         DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "25",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -29464,7 +29465,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
-                new DocxSectionBreakElement(wideFirstSection, "nextPage", null, null, null, []),
+                new DocxSectionBreakElement(wideFirstSection, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(anchor)
             ],
             [],
@@ -29527,7 +29528,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "26",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29538,7 +29539,7 @@ internal static class DocxTests
         };
         DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "26",
             [new DocxParagraphElement(endnoteParagraph)],
@@ -29557,7 +29558,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
-                new DocxSectionBreakElement(wideFirstSection, "nextPage", null, null, null, []),
+                new DocxSectionBreakElement(wideFirstSection, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(anchor)
             ],
             [],
@@ -29585,7 +29586,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "22",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29593,7 +29594,7 @@ internal static class DocxTests
                     RunChildIndex: 1,
                     TextOffsetInRun: 6),
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "23",
                     CustomMarkFollowsValue: null,
                     DisplayText: "2",
@@ -29605,14 +29606,14 @@ internal static class DocxTests
         DocxParagraph secondSectionParagraph = CreateDocxLayoutParagraph("second section body", 10d, 12d);
         DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote overflow body", 10d, 18d);
         var firstEndnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "22",
             Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
             [],
             [], null);
         var secondEndnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "23",
             Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
@@ -29635,7 +29636,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(firstSectionParagraph),
-                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []),
+                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(secondSectionParagraph)
             ],
             [firstSectionParagraph, secondSectionParagraph],
@@ -29669,7 +29670,7 @@ internal static class DocxTests
             InlineReferences =
             [
                 new DocxInlineReference(
-                    "Endnote",
+                    DocxRelatedStoryKind.Endnote,
                     "24",
                     CustomMarkFollowsValue: null,
                     DisplayText: "1",
@@ -29681,7 +29682,7 @@ internal static class DocxTests
         DocxParagraph secondSectionParagraph = CreateDocxLayoutParagraph("second section body", 10d, 12d);
         DocxParagraph endnoteParagraph = CreateDocxLayoutParagraph("Endnote split body", 10d, 18d);
         var endnoteStory = new DocxRelatedStory(
-            "Endnote",
+            DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "24",
             Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
@@ -29704,7 +29705,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(firstSectionParagraph),
-                new DocxSectionBreakElement(firstSectionSettings, "nextPage", null, null, null, []),
+                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(secondSectionParagraph)
             ],
             [firstSectionParagraph, secondSectionParagraph],

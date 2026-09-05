@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
@@ -46,6 +47,16 @@ internal sealed class DocxReader
             }
         }
     }
+
+    // Scan-phase projection of complex-field open/close tracking, used only by the
+    // unsupported-field pre-scan (HasUnsupportedComplexFields family). The full parse
+    // carries richer per-field indices in DocxComplexFieldState; this stays separate
+    // because the pre-scan runs before (and independently of) paragraph parsing.
+    private sealed record DocxComplexFieldScanState(
+        StringBuilder Instruction,
+        bool HasSeparate,
+        bool InResult,
+        bool HasCachedResult);
 
     private const string MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
@@ -416,7 +427,7 @@ internal sealed class DocxReader
             (string?)positionV?.Attribute("relativeFrom"),
             (string?)positionV?.Element(WordprocessingDrawingNamespace + "align"),
             (string?)positionV?.Element(WordprocessingDrawingNamespace + "posOffset"),
-            wrap?.Name.LocalName,
+            DocxFloatingWrapKindExtensions.FromLocalName(wrap?.Name.LocalName),
             (string?)wrap?.Attribute("wrapText"),
             relationshipId,
             image,
@@ -1206,7 +1217,7 @@ internal sealed class DocxReader
 
     private static bool HasUnsupportedComplexFields(XDocument document)
     {
-        var fields = new List<(StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult)>();
+        var fields = new List<DocxComplexFieldScanState>();
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "p"))
         {
             if (HasUnsupportedComplexFieldInInlineChildren(paragraph, fields))
@@ -1273,7 +1284,7 @@ internal sealed class DocxReader
     }
 
     private static bool IsUnsupportedUnclosedComplexField(
-        (StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult) field)
+        DocxComplexFieldScanState field)
     {
         return ResolveFieldPlaceholder(field.Instruction.ToString()) is null &&
             (!field.HasSeparate || !field.HasCachedResult);
@@ -1281,7 +1292,7 @@ internal sealed class DocxReader
 
     private static bool HasUnsupportedComplexFieldInInlineChildren(
         XElement container,
-        List<(StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult)> fields)
+        List<DocxComplexFieldScanState> fields)
     {
         foreach (XElement child in container.Elements())
         {
@@ -1323,7 +1334,7 @@ internal sealed class DocxReader
 
     private static bool ProcessComplexFieldRunChild(
         XElement child,
-        List<(StringBuilder Instruction, bool HasSeparate, bool InResult, bool HasCachedResult)> fields)
+        List<DocxComplexFieldScanState> fields)
     {
         if (child.Name == WordprocessingNamespace + "fldChar")
         {
@@ -1335,7 +1346,7 @@ internal sealed class DocxReader
                     return true;
                 }
 
-                fields.Add((new StringBuilder(), HasSeparate: false, InResult: false, HasCachedResult: false));
+                fields.Add(new DocxComplexFieldScanState(new StringBuilder(), HasSeparate: false, InResult: false, HasCachedResult: false));
                 return false;
             }
 
@@ -1347,7 +1358,7 @@ internal sealed class DocxReader
                 }
 
                 (StringBuilder instruction, _, _, bool hasCachedResult) = fields[^1];
-                fields[^1] = (instruction, HasSeparate: true, InResult: true, hasCachedResult);
+                fields[^1] = new DocxComplexFieldScanState(instruction, HasSeparate: true, InResult: true, hasCachedResult);
                 return false;
             }
 
@@ -1389,7 +1400,7 @@ internal sealed class DocxReader
                 (StringBuilder instruction, bool hasSeparate, bool inResult, bool _) = fields[fieldIndex];
                 if (inResult)
                 {
-                    fields[fieldIndex] = (instruction, hasSeparate, inResult, HasCachedResult: true);
+                    fields[fieldIndex] = new DocxComplexFieldScanState(instruction, hasSeparate, inResult, HasCachedResult: true);
                 }
             }
         }
@@ -1550,7 +1561,7 @@ internal sealed class DocxReader
     {
         var paragraphs = new List<DocxParagraph>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
-        var inlineReferenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
+        var inlineReferenceCounters = new Dictionary<DocxRelatedStoryKind, int>();
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "p"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1572,7 +1583,7 @@ internal sealed class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxTableCellStyle? tableCellStyle,
-        Dictionary<string, int>? inlineReferenceCounters,
+        Dictionary<DocxRelatedStoryKind, int>? inlineReferenceCounters,
         DocxDocumentSettings? documentSettings,
         DocxRevisionInfo? inheritedRevision,
         OoxPdfDocxMarkupMode markupMode,
@@ -1606,7 +1617,7 @@ internal sealed class DocxReader
         AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(paragraphProperties));
         XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
         IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadPropertyChangeRevisions(paragraphMarkRunProperties);
-        bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == "Deletion" && revision.SourceElement == "del");
+        bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del");
         AddRevisions(paragraphRevisions, paragraphMarkRevisions);
         bool pageInstructionSeen = false;
         var complexFieldStack = new List<DocxComplexFieldState>();
@@ -1846,7 +1857,8 @@ internal sealed class DocxReader
         void AddRevisionMarker(XElement marker)
         {
             AddRevision(paragraphRevisions, CreateRevisionInfo(marker));
-            if (!TryResolveRevisionRangeMarker(marker, out string kind, out bool isStart))
+            if (!TryResolveRevisionRangeMarker(marker, out DocxRevisionKind? resolvedKind, out bool isStart) ||
+                resolvedKind is not { } kind)
             {
                 return;
             }
@@ -1866,7 +1878,7 @@ internal sealed class DocxReader
 
             string? id = (string?)marker.Attribute(WordprocessingNamespace + "id");
             int startIndex = openRevisionRanges.FindLastIndex(start =>
-                string.Equals(start.Kind, kind, StringComparison.Ordinal) &&
+                start.Kind == kind &&
                 string.Equals(start.Id, id, StringComparison.Ordinal));
             DocxRevisionRangeStart? startRange = startIndex < 0 ? null : openRevisionRanges[startIndex];
             if (startIndex >= 0)
@@ -1914,7 +1926,7 @@ internal sealed class DocxReader
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)
         {
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
-            string kind = ResolveFieldKind(instruction);
+            DocxFieldKind kind = ResolveFieldKind(instruction);
             string? placeholder = ResolveFieldPlaceholder(instruction);
             int fieldSourceRunIndex = sourceRunIndex;
             int fieldTextRunIndex = runs.Count;
@@ -1933,7 +1945,7 @@ internal sealed class DocxReader
                     });
                     AddFieldReference(
                         kind,
-                        "Simple",
+                        DocxFieldSourceKind.Simple,
                         instruction,
                         placeholder,
                         fieldSourceRunIndex,
@@ -1949,7 +1961,7 @@ internal sealed class DocxReader
                 images.AddRange(ReadInlineImages(firstRun, package, relationships, revision));
                 AddFieldReference(
                     kind,
-                    "Simple",
+                    DocxFieldSourceKind.Simple,
                     instruction,
                     placeholder,
                     fieldSourceRunIndex,
@@ -1968,7 +1980,7 @@ internal sealed class DocxReader
 
             AddFieldReference(
                 kind,
-                "Simple",
+                DocxFieldSourceKind.Simple,
                 instruction,
                 placeholder,
                 fieldSourceRunIndex,
@@ -1979,8 +1991,8 @@ internal sealed class DocxReader
         }
 
         void AddFieldReference(
-            string kind,
-            string sourceKind,
+            DocxFieldKind kind,
+            DocxFieldSourceKind sourceKind,
             string? instruction,
             string? placeholder,
             int fieldSourceRunIndex,
@@ -2147,7 +2159,7 @@ internal sealed class DocxReader
             {
                 AddFieldReference(
                     ResolveFieldKind(fieldInstruction),
-                    "ComplexInstruction",
+                    DocxFieldSourceKind.ComplexInstruction,
                     fieldInstruction,
                     placeholder,
                     currentSourceRunIndex,
@@ -2311,7 +2323,7 @@ internal sealed class DocxReader
                 : field.TextLengthStart;
             AddFieldReference(
                 ResolveFieldKind(instruction),
-                "ComplexInstruction",
+                DocxFieldSourceKind.ComplexInstruction,
                 instruction,
                 placeholder,
                 field.InstructionSourceRunIndex >= 0 ? field.InstructionSourceRunIndex : field.SourceRunIndex,
@@ -2358,7 +2370,7 @@ internal sealed class DocxReader
 
                 AddFieldReference(
                     ResolveFieldKind(instructionText),
-                    "ComplexInstruction",
+                    DocxFieldSourceKind.ComplexInstruction,
                     instructionText,
                     placeholder,
                     currentSourceRunIndex,
@@ -2550,13 +2562,12 @@ internal sealed class DocxReader
             DocxRevisionInfo? revision,
             IReadOnlyList<DocxRevisionInfo> revisions)
         {
-            string? kind = ResolveInlineReferenceKind(child);
-            if (kind is null)
+            if (ResolveInlineReferenceKind(child) is not { } kind)
             {
                 return;
             }
 
-            string? customMarkFollows = kind == "Footnote" || kind == "Endnote"
+            string? customMarkFollows = kind == DocxRelatedStoryKind.Footnote || kind == DocxRelatedStoryKind.Endnote
                 ? (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows")
                 : null;
             string? displayText = ResolveInlineReferenceDisplayText(kind, customMarkFollows);
@@ -2572,7 +2583,7 @@ internal sealed class DocxReader
                 Revision = revision,
                 Revisions = revisions
             });
-            if (kind == "Comment")
+            if (kind == DocxRelatedStoryKind.Comment)
             {
                 AddCommentReferenceRange((string?)child.Attribute(WordprocessingNamespace + "id"), currentSourceRunIndex, textOffset);
             }
@@ -2624,9 +2635,9 @@ internal sealed class DocxReader
                 textOffset));
         }
 
-        string? ResolveInlineReferenceDisplayText(string kind, string? customMarkFollows)
+        string? ResolveInlineReferenceDisplayText(DocxRelatedStoryKind kind, string? customMarkFollows)
         {
-            if (!string.IsNullOrEmpty(customMarkFollows) || (kind != "Footnote" && kind != "Endnote"))
+            if (!string.IsNullOrEmpty(customMarkFollows) || (kind != DocxRelatedStoryKind.Footnote && kind != DocxRelatedStoryKind.Endnote))
             {
                 return null;
             }
@@ -2636,7 +2647,7 @@ internal sealed class DocxReader
                 return null;
             }
 
-            DocxNoteReferenceSettings settings = kind == "Endnote"
+            DocxNoteReferenceSettings settings = kind == DocxRelatedStoryKind.Endnote
                 ? (documentSettings ?? DocxDocumentSettings.Empty).EndnoteReferenceSettings
                 : (documentSettings ?? DocxDocumentSettings.Empty).FootnoteReferenceSettings;
             inlineReferenceCounters.TryGetValue(kind, out int current);
@@ -2669,19 +2680,19 @@ internal sealed class DocxReader
             return ResolveInlineReferenceKind(element) is not null;
         }
 
-        static string? ResolveInlineReferenceKind(XElement element)
+        static DocxRelatedStoryKind? ResolveInlineReferenceKind(XElement element)
         {
             if (element.Name == WordprocessingNamespace + "commentReference")
             {
-                return "Comment";
+                return DocxRelatedStoryKind.Comment;
             }
 
             if (element.Name == WordprocessingNamespace + "footnoteReference")
             {
-                return "Footnote";
+                return DocxRelatedStoryKind.Footnote;
             }
 
-            return element.Name == WordprocessingNamespace + "endnoteReference" ? "Endnote" : null;
+            return element.Name == WordprocessingNamespace + "endnoteReference" ? DocxRelatedStoryKind.Endnote : null;
         }
     }
 
@@ -2758,20 +2769,20 @@ internal sealed class DocxReader
     {
         return ResolveFieldKind(instruction) switch
         {
-            "NumPages" => "{NUMPAGES}",
-            "Page" => "{PAGE}",
+            DocxFieldKind.NumPages => "{NUMPAGES}",
+            DocxFieldKind.Page => "{PAGE}",
             _ => null
         };
     }
 
-    private static string ResolveFieldKind(string? instruction)
+    private static DocxFieldKind ResolveFieldKind(string? instruction)
     {
         string? opcode = ReadFieldOpcode(instruction);
         return opcode switch
         {
-            "PAGE" => "Page",
-            "NUMPAGES" => "NumPages",
-            _ => "Other"
+            "PAGE" => DocxFieldKind.Page,
+            "NUMPAGES" => DocxFieldKind.NumPages,
+            _ => DocxFieldKind.Other
         };
     }
 
@@ -3065,7 +3076,7 @@ internal sealed class DocxReader
     {
         var elements = new List<DocxBodyElement>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
-        var inlineReferenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
+        var inlineReferenceCounters = new Dictionary<DocxRelatedStoryKind, int>();
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
         foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(bodyChildren, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
         {
@@ -3731,117 +3742,119 @@ internal sealed class DocxReader
             element.Name == WordprocessingNamespace + "moveToRangeEnd";
     }
 
-    private static bool TryResolveRevisionRangeMarker(XElement element, out string kind, out bool isStart)
+    private static bool TryResolveRevisionRangeMarker(XElement element, [NotNullWhen(true)] out DocxRevisionKind? kind, out bool isStart)
     {
         if (element.Name == WordprocessingNamespace + "moveFromRangeStart")
         {
-            kind = "MoveFrom";
+            kind = DocxRevisionKind.MoveFrom;
             isStart = true;
             return true;
         }
 
         if (element.Name == WordprocessingNamespace + "moveFromRangeEnd")
         {
-            kind = "MoveFrom";
+            kind = DocxRevisionKind.MoveFrom;
             isStart = false;
             return true;
         }
 
         if (element.Name == WordprocessingNamespace + "moveToRangeStart")
         {
-            kind = "MoveTo";
+            kind = DocxRevisionKind.MoveTo;
             isStart = true;
             return true;
         }
 
         if (element.Name == WordprocessingNamespace + "moveToRangeEnd")
         {
-            kind = "MoveTo";
+            kind = DocxRevisionKind.MoveTo;
             isStart = false;
             return true;
         }
 
-        kind = string.Empty;
+        kind = null;
         isStart = false;
         return false;
     }
 
-    private static string? RevisionKind(XElement element)
+    private static DocxRevisionKind? RevisionKind(XElement element)
     {
         if (element.Name == WordprocessingNamespace + "ins")
         {
-            return "Insertion";
+            return DocxRevisionKind.Insertion;
         }
 
         if (element.Name == WordprocessingNamespace + "del")
         {
-            return "Deletion";
+            return DocxRevisionKind.Deletion;
         }
 
         if (element.Name == WordprocessingNamespace + "moveFrom")
         {
-            return "MoveFrom";
+            return DocxRevisionKind.MoveFrom;
         }
 
         if (element.Name == WordprocessingNamespace + "moveTo")
         {
-            return "MoveTo";
+            return DocxRevisionKind.MoveTo;
         }
 
         if (element.Name == WordprocessingNamespace + "rPrChange")
         {
-            return "RunPropertiesChange";
+            return DocxRevisionKind.RunPropertiesChange;
         }
 
         if (element.Name == WordprocessingNamespace + "pPrChange")
         {
-            return "ParagraphPropertiesChange";
+            return DocxRevisionKind.ParagraphPropertiesChange;
         }
 
         if (element.Name == WordprocessingNamespace + "tblPrChange")
         {
-            return "TablePropertiesChange";
+            return DocxRevisionKind.TablePropertiesChange;
         }
 
         if (element.Name == WordprocessingNamespace + "trPrChange")
         {
-            return "TableRowPropertiesChange";
+            return DocxRevisionKind.TableRowPropertiesChange;
         }
 
         if (element.Name == WordprocessingNamespace + "tcPrChange")
         {
-            return "TableCellPropertiesChange";
+            return DocxRevisionKind.TableCellPropertiesChange;
         }
 
         if (element.Name == WordprocessingNamespace + "sectPrChange")
         {
-            return "SectionPropertiesChange";
+            return DocxRevisionKind.SectionPropertiesChange;
         }
 
         if (element.Name == WordprocessingNamespace + "moveFromRangeStart")
         {
-            return "MoveFromRangeStart";
+            return DocxRevisionKind.MoveFromRangeStart;
         }
 
         if (element.Name == WordprocessingNamespace + "moveFromRangeEnd")
         {
-            return "MoveFromRangeEnd";
+            return DocxRevisionKind.MoveFromRangeEnd;
         }
 
         if (element.Name == WordprocessingNamespace + "moveToRangeStart")
         {
-            return "MoveToRangeStart";
+            return DocxRevisionKind.MoveToRangeStart;
         }
 
-        return element.Name == WordprocessingNamespace + "moveToRangeEnd" ? "MoveToRangeEnd" : null;
+        return element.Name == WordprocessingNamespace + "moveToRangeEnd" ? DocxRevisionKind.MoveToRangeEnd : null;
     }
 
     private static DocxRevisionInfo? CreateRevisionInfo(XElement element)
     {
-        string? kind = RevisionKind(element);
-        return kind is null
-            ? null
-            : new DocxRevisionInfo(
+        if (RevisionKind(element) is not { } kind)
+        {
+            return null;
+        }
+
+        return new DocxRevisionInfo(
                 kind,
                 (string?)element.Attribute(WordprocessingNamespace + "id"),
                 (string?)element.Attribute(WordprocessingNamespace + "author"),
@@ -3860,34 +3873,34 @@ internal sealed class DocxReader
             .ToArray() ?? [];
     }
 
-    private static string? RevisionPropertyChangeFamily(XElement element)
+    private static DocxRevisionPropertyFamily? RevisionPropertyChangeFamily(XElement element)
     {
         if (element.Name == WordprocessingNamespace + "rPrChange")
         {
-            return "Run";
+            return DocxRevisionPropertyFamily.Run;
         }
 
         if (element.Name == WordprocessingNamespace + "pPrChange")
         {
-            return "Paragraph";
+            return DocxRevisionPropertyFamily.Paragraph;
         }
 
         if (element.Name == WordprocessingNamespace + "tblPrChange")
         {
-            return "Table";
+            return DocxRevisionPropertyFamily.Table;
         }
 
         if (element.Name == WordprocessingNamespace + "trPrChange")
         {
-            return "Row";
+            return DocxRevisionPropertyFamily.Row;
         }
 
         if (element.Name == WordprocessingNamespace + "tcPrChange")
         {
-            return "Cell";
+            return DocxRevisionPropertyFamily.Cell;
         }
 
-        return element.Name == WordprocessingNamespace + "sectPrChange" ? "Section" : null;
+        return element.Name == WordprocessingNamespace + "sectPrChange" ? DocxRevisionPropertyFamily.Section : null;
     }
 
     private static IReadOnlyList<string> ReadRevisionPropertyElementNames(XElement element)
@@ -3970,10 +3983,10 @@ internal sealed class DocxReader
 
         return revision.Kind switch
         {
-            "Insertion" => run with { ColorHex = run.ColorHex ?? "0000FF", Underline = true, UnderlineValue = run.UnderlineValue ?? "single" },
-            "Deletion" => run with { ColorHex = run.ColorHex ?? "C00000", Strike = true, StrikeValue = run.StrikeValue ?? "true" },
-            "MoveFrom" => run with { ColorHex = run.ColorHex ?? "C00000", DoubleStrike = true, DoubleStrikeValue = run.DoubleStrikeValue ?? "true" },
-            "MoveTo" => run with { ColorHex = run.ColorHex ?? "008000", Underline = true, UnderlineValue = run.UnderlineValue ?? "single" },
+            DocxRevisionKind.Insertion => run with { ColorHex = run.ColorHex ?? "0000FF", Underline = true, UnderlineValue = run.UnderlineValue ?? "single" },
+            DocxRevisionKind.Deletion => run with { ColorHex = run.ColorHex ?? "C00000", Strike = true, StrikeValue = run.StrikeValue ?? "true" },
+            DocxRevisionKind.MoveFrom => run with { ColorHex = run.ColorHex ?? "C00000", DoubleStrike = true, DoubleStrikeValue = run.DoubleStrikeValue ?? "true" },
+            DocxRevisionKind.MoveTo => run with { ColorHex = run.ColorHex ?? "008000", Underline = true, UnderlineValue = run.UnderlineValue ?? "single" },
             _ => run
         };
     }
@@ -4013,9 +4026,9 @@ internal sealed class DocxReader
                 numbering,
                 markupMode,
                 cancellationToken),
-            (string?)sectionProperties
+            DocxSectionBreakTypeExtensions.FromValue((string?)sectionProperties
                 .Element(WordprocessingNamespace + "type")
-                ?.Attribute(WordprocessingNamespace + "val"),
+                ?.Attribute(WordprocessingNamespace + "val")),
             (string?)columns?.Attribute(WordprocessingNamespace + "num"),
             (string?)columns?.Attribute(WordprocessingNamespace + "equalWidth"),
             (string?)columns?.Attribute(WordprocessingNamespace + "space"),
@@ -4146,8 +4159,8 @@ internal sealed class DocxReader
         CancellationToken cancellationToken)
     {
         return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, "Footnote", "footnote", markupMode, cancellationToken, null))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, "Endnote", "endnote", markupMode, cancellationToken, null))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null))
             .ToArray();
     }
 
@@ -4168,7 +4181,7 @@ internal sealed class DocxReader
             numbering,
             CommentsRelationshipType,
             CommentsContentType,
-            "Comment",
+            DocxRelatedStoryKind.Comment,
             "comment",
             markupMode,
             cancellationToken,
@@ -4183,7 +4196,7 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         string relationshipType,
         string contentType,
-        string kind,
+        DocxRelatedStoryKind kind,
         string storyElementName,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
@@ -4216,7 +4229,7 @@ internal sealed class DocxReader
     }
 
     private static DocxRelatedStory ReadRelatedStory(
-        string kind,
+        DocxRelatedStoryKind kind,
         string partName,
         XElement story,
         DocxStyleSet styles,
@@ -4239,7 +4252,7 @@ internal sealed class DocxReader
             markupMode,
             cancellationToken);
         IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships, styles, numbering, markupMode, cancellationToken);
-        string? paragraphId = kind == "Comment" ? ReadCommentParagraphId(story) : null;
+        string? paragraphId = kind == DocxRelatedStoryKind.Comment ? ReadCommentParagraphId(story) : null;
         DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
             ? metadata
             : null;
@@ -4253,7 +4266,7 @@ internal sealed class DocxReader
             (string?)story.Attribute(WordprocessingNamespace + "type"))
         {
             FloatingDrawings = floatingDrawings,
-            CommentMetadata = kind == "Comment"
+            CommentMetadata = kind == DocxRelatedStoryKind.Comment
                 ? new DocxCommentMetadata(
                     (string?)story.Attribute(WordprocessingNamespace + "author"),
                     (string?)story.Attribute(WordprocessingNamespace + "initials"),
@@ -4430,7 +4443,7 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        Dictionary<string, int>? inlineReferenceCounters,
+        Dictionary<DocxRelatedStoryKind, int>? inlineReferenceCounters,
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
@@ -4661,7 +4674,7 @@ internal sealed class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxTableCellStyle tableCellStyle,
-        Dictionary<string, int>? inlineReferenceCounters,
+        Dictionary<DocxRelatedStoryKind, int>? inlineReferenceCounters,
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
@@ -6617,7 +6630,7 @@ internal sealed class DocxReader
         IReadOnlyList<string> HiddenAnchorIds);
 
     private sealed record DocxRevisionRangeStart(
-        string Kind,
+        DocxRevisionKind Kind,
         string? Id,
         string? Name,
         string? Author,

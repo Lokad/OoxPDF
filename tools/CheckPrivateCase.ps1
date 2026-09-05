@@ -114,14 +114,16 @@ if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
-$referenceArgs = @("-InputPath", $inputFull, "-OutputDirectory", $referenceDir, "-Dpi", $dpi)
+$referenceArgs = @{
+    InputPath = $inputFull
+    OutputDirectory = $referenceDir
+    Dpi = $dpi
+}
 if (-not [string]::IsNullOrWhiteSpace($docxMarkup) -or -not [string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
     $referenceDocxMarkup = if ([string]::IsNullOrWhiteSpace($docxMarkup)) { "final" } else { $docxMarkup }
     $referenceDocxMarkupGeometry = if ([string]::IsNullOrWhiteSpace($docxMarkupGeometry)) { "preserve" } else { $docxMarkupGeometry }
-    $referenceArgs += @(
-        "-CacheOnly",
-        "-CacheVariant",
-        ("docxMarkup={0};docxMarkupGeometry={1}" -f $referenceDocxMarkup, $referenceDocxMarkupGeometry))
+    $referenceArgs.CacheOnly = $true
+    $referenceArgs.CacheVariant = ("docxMarkup={0};docxMarkupGeometry={1}" -f $referenceDocxMarkup, $referenceDocxMarkupGeometry)
 }
 
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rendering reference...";

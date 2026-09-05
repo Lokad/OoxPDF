@@ -225,7 +225,7 @@ internal sealed record DocxLayoutSnapshot(
                 IReadOnlyList<DocxLayoutItemSnapshot> items = ToRelatedStoryItemSnapshots(story);
                 return new DocxRelatedStoryLayoutSnapshot(
                     story.StoryIndex,
-                    story.Story.Kind,
+                    story.Story.Kind.ToValueString(),
                     story.Story.PartName,
                     story.Story.Id,
                     story.Story.Type,
@@ -400,7 +400,7 @@ internal sealed record DocxLayoutSnapshot(
                     drawing.WrapExclusionTop,
                     drawing.WrapExclusionWidth,
                     drawing.WrapExclusionHeight,
-                    drawing.Drawing.WrapKind,
+                    drawing.Drawing.WrapKind?.ToValueString(),
                     drawing.Drawing.WrapTextValue,
                     drawing.Drawing.HorizontalRelativeFromValue,
                     drawing.Drawing.HorizontalAlignValue,
@@ -569,7 +569,7 @@ internal sealed record DocxLayoutSnapshot(
             .ToArray();
         IReadOnlyList<DocxPlacedRelatedStoryLayoutSnapshot> placedRelatedStories = page.PlacedRelatedStories
             .Select(story => new DocxPlacedRelatedStoryLayoutSnapshot(
-                story.StoryLayout.Story.Kind,
+                story.StoryLayout.Story.Kind.ToValueString(),
                 story.StoryLayout.Story.PartName,
                 story.StoryLayout.Story.Id,
                 story.StoryLayout.Story.Type,
@@ -634,8 +634,8 @@ internal sealed record DocxLayoutSnapshot(
             page.StaticInlineImages.Count,
             page.StaticTableRows.Count,
             page.PlacedRelatedStories.Count,
-            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Footnote" && IsNormalRelatedStory(story.StoryLayout.Story)),
-            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == "Endnote" && IsNormalRelatedStory(story.StoryLayout.Story)),
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && IsNormalRelatedStory(story.StoryLayout.Story)),
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && IsNormalRelatedStory(story.StoryLayout.Story)),
             page.PlacedRelatedStories.Sum(story => story.TextLines.Count),
             page.PlacedRelatedStories.Sum(story => story.InlineImages.Count),
             page.PlacedRelatedStories.Sum(story => story.TableRows.Count),
@@ -812,10 +812,10 @@ internal sealed record DocxLayoutSnapshot(
                 DocumentDefaultRunPropertyTextSegmentCount: CountTextSegments(text, static resolution => resolution.HasDocumentDefaultRunProperties),
                 LineHeightSource: text.LineHeightSource?.ToString(),
                 RevisionCount: CountRevisions(text.SourceParagraph),
-                InsertionRevisionCount: CountRevisions(text.SourceParagraph, "Insertion"),
-                DeletionRevisionCount: CountRevisions(text.SourceParagraph, "Deletion"),
-                MoveFromRevisionCount: CountRevisions(text.SourceParagraph, "MoveFrom"),
-                MoveToRevisionCount: CountRevisions(text.SourceParagraph, "MoveTo"),
+                InsertionRevisionCount: CountRevisions(text.SourceParagraph, DocxRevisionKind.Insertion),
+                DeletionRevisionCount: CountRevisions(text.SourceParagraph, DocxRevisionKind.Deletion),
+                MoveFromRevisionCount: CountRevisions(text.SourceParagraph, DocxRevisionKind.MoveFrom),
+                MoveToRevisionCount: CountRevisions(text.SourceParagraph, DocxRevisionKind.MoveTo),
                 OtherRevisionCount: CountOtherRevisions(text.SourceParagraph),
                 CommentReferenceCount: CountCommentReferences(text.SourceParagraph)),
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
@@ -872,10 +872,10 @@ internal sealed record DocxLayoutSnapshot(
                 row.StoryVariantType,
                 ToTableRowTextLineSnapshots(row), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null,
                 RevisionCount: row.RevisionCount + TableRowParagraphs(row).Sum(CountRevisions),
-                InsertionRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, "Insertion")),
-                DeletionRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, "Deletion")),
-                MoveFromRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, "MoveFrom")),
-                MoveToRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, "MoveTo")),
+                InsertionRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Insertion)),
+                DeletionRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Deletion)),
+                MoveFromRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveFrom)),
+                MoveToRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveTo)),
                 OtherRevisionCount: TableRowParagraphs(row).Sum(CountOtherRevisions),
                 CommentReferenceCount: TableRowParagraphs(row).Sum(CountCommentReferences)),
             _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0)
@@ -965,23 +965,20 @@ internal sealed record DocxLayoutSnapshot(
         return paragraph?.Revisions.Count ?? 0;
     }
 
-    private static int CountRevisions(DocxParagraph? paragraph, string kind)
+    private static int CountRevisions(DocxParagraph? paragraph, DocxRevisionKind kind)
     {
-        return paragraph?.Revisions.Count(revision => string.Equals(revision.Kind, kind, StringComparison.Ordinal)) ?? 0;
+        return paragraph?.Revisions.Count(revision => revision.Kind == kind) ?? 0;
     }
 
     private static int CountOtherRevisions(DocxParagraph? paragraph)
     {
         return paragraph?.Revisions.Count(revision =>
-            !string.Equals(revision.Kind, "Insertion", StringComparison.Ordinal) &&
-            !string.Equals(revision.Kind, "Deletion", StringComparison.Ordinal) &&
-            !string.Equals(revision.Kind, "MoveFrom", StringComparison.Ordinal) &&
-            !string.Equals(revision.Kind, "MoveTo", StringComparison.Ordinal)) ?? 0;
+            revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo)) ?? 0;
     }
 
     private static int CountCommentReferences(DocxParagraph? paragraph)
     {
-        return paragraph?.InlineReferences.Count(reference => reference.Kind == "Comment") ?? 0;
+        return paragraph?.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment) ?? 0;
     }
 
     private static (double X, double Width) GetHorizontalBounds(DocxLayoutItem item)
@@ -2016,19 +2013,19 @@ internal sealed class DocxLayoutEngine
             return reserveHeightBySourceBlock;
         }
 
-        Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
-        DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, "Footnote", "separator");
+        Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
+        DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, DocxRelatedStoryKind.Footnote, "separator");
         for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             double reserveHeight = 0d;
-            var reservedKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
+            var reservedKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
             bool reservedFootnoteSeparator = false;
             foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxInlineReference reference = location.Reference;
-                if (reference.Kind != "Footnote" || reference.Id is null || !reservedKeys.Add((reference.Kind, reference.Id)))
+                if (reference.Kind != DocxRelatedStoryKind.Footnote || reference.Id is null || !reservedKeys.Add((reference.Kind, reference.Id)))
                 {
                     continue;
                 }
@@ -2073,14 +2070,14 @@ internal sealed class DocxLayoutEngine
             return pages;
         }
 
-        Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
+        Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
         if (storyByKey.Count == 0)
         {
             return pages;
         }
 
         var pagesWithStories = new DocxLayoutPage[pages.Count];
-        var placedStoryKeys = new HashSet<(string Kind, string Id)>(new RelatedStoryKeyComparer());
+        var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -2089,7 +2086,7 @@ internal sealed class DocxLayoutEngine
                 ? relatedStoryLayouts
                 : resolveRelatedStoryLayouts(ResolvePageBodyWidth(page));
             storyByKey = CreateRelatedStoryLookup(pageRelatedStoryLayouts);
-            DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(pageRelatedStoryLayouts, "Footnote", "separator");
+            DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(pageRelatedStoryLayouts, DocxRelatedStoryKind.Footnote, "separator");
             List<DocxReferencedRelatedStoryLayout> pageFootnoteStories = [];
             foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
             {
@@ -2098,7 +2095,7 @@ internal sealed class DocxLayoutEngine
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxInlineReference reference = location.Reference;
-                    if (reference.Kind != "Footnote" || reference.Id is null)
+                    if (reference.Kind != DocxRelatedStoryKind.Footnote || reference.Id is null)
                     {
                         continue;
                     }
@@ -2137,10 +2134,10 @@ internal sealed class DocxLayoutEngine
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
-        HashSet<(string Kind, string Id)> placedStoryKeys,
+        HashSet<(DocxRelatedStoryKind Kind, string Id)> placedStoryKeys,
         CancellationToken cancellationToken)
     {
-        List<DocxInlineReferenceLocation> endnoteLocations = ResolveReferencedRelatedStoryLocations(document, "Endnote", placedStoryKeys).ToList();
+        List<DocxInlineReferenceLocation> endnoteLocations = ResolveReferencedRelatedStoryLocations(document, DocxRelatedStoryKind.Endnote, placedStoryKeys).ToList();
         if (endnoteLocations.Count == 0)
         {
             return pages;
@@ -2173,7 +2170,7 @@ internal sealed class DocxLayoutEngine
                 continue;
             }
 
-            Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[sectionEndPageIndex])));
+            Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[sectionEndPageIndex])));
             var sectionEndStories = new List<DocxReferencedRelatedStoryLayout>();
             foreach (DocxInlineReferenceLocation location in sectionGroup)
             {
@@ -2193,7 +2190,7 @@ internal sealed class DocxLayoutEngine
         List<DocxRelatedStoryLayout> documentEndStories = [];
         if (documentEndLocations.Count > 0)
         {
-            Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[^1])));
+            Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[^1])));
             foreach (DocxInlineReferenceLocation location in documentEndLocations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -2348,15 +2345,15 @@ internal sealed class DocxLayoutEngine
 
     private static IEnumerable<DocxInlineReferenceLocation> ResolveReferencedRelatedStoryLocations(
         DocxDocument document,
-        string kind,
-        HashSet<(string Kind, string Id)> placedStoryKeys)
+        DocxRelatedStoryKind kind,
+        HashSet<(DocxRelatedStoryKind Kind, string Id)> placedStoryKeys)
     {
         for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
         {
             foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
             {
                 DocxInlineReference reference = location.Reference;
-                if (!string.Equals(reference.Kind, kind, StringComparison.OrdinalIgnoreCase) ||
+                if (reference.Kind != kind ||
                     reference.Id is null ||
                     !placedStoryKeys.Add((reference.Kind, reference.Id)))
                 {
@@ -2369,7 +2366,7 @@ internal sealed class DocxLayoutEngine
     }
 
     private static bool TryResolveReferencedRelatedStoryLayout(
-        IReadOnlyDictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey,
+        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey,
         DocxInlineReferenceLocation location,
         [NotNullWhen(true)] out DocxRelatedStoryLayout? storyLayout)
     {
@@ -2871,9 +2868,9 @@ internal sealed class DocxLayoutEngine
             ShiftTableRows(storyLayout.TableRows, deltaY, page.MarginLeft));
     }
 
-    private static Dictionary<(string Kind, string Id), DocxRelatedStoryLayout> CreateRelatedStoryLookup(IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts)
+    private static Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> CreateRelatedStoryLookup(IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts)
     {
-        var storyByKey = new Dictionary<(string Kind, string Id), DocxRelatedStoryLayout>(new RelatedStoryKeyComparer());
+        var storyByKey = new Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>();
         foreach (DocxRelatedStoryLayout story in relatedStoryLayouts)
         {
             if (story.Story.Id is not null && IsNormalRelatedStory(story.Story))
@@ -2893,28 +2890,14 @@ internal sealed class DocxLayoutEngine
 
     private static DocxRelatedStoryLayout? FindSpecialRelatedStoryLayout(
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
-        string kind,
+        DocxRelatedStoryKind kind,
         string type)
     {
         return relatedStoryLayouts.FirstOrDefault(story =>
             story.Story.Id is not null &&
             story.ContentHeight > 0d &&
-            string.Equals(story.Story.Kind, kind, StringComparison.OrdinalIgnoreCase) &&
+            story.Story.Kind == kind &&
             string.Equals(story.Story.Type, type, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private sealed class RelatedStoryKeyComparer : IEqualityComparer<(string Kind, string Id)>
-    {
-        public bool Equals((string Kind, string Id) x, (string Kind, string Id) y)
-        {
-            return string.Equals(x.Kind, y.Kind, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(x.Id, y.Id, StringComparison.Ordinal);
-        }
-
-        public int GetHashCode((string Kind, string Id) obj)
-        {
-            return HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Kind), StringComparer.Ordinal.GetHashCode(obj.Id));
-        }
     }
 
     private static IReadOnlyList<DocxRelatedStoryLayout> CreateRelatedStoryLayouts(
@@ -3044,7 +3027,7 @@ internal sealed class DocxLayoutEngine
                 paragraph,
                 elementIndex,
                 paragraphIndex,
-                story.Kind,
+                story.Kind.ToValueString(),
                 bodyWidth,
                 cursorY,
                 spacingProfile,
@@ -3137,7 +3120,7 @@ internal sealed class DocxLayoutEngine
                     anchorPageIndex: null,
                     anchorColumnIndex: sourceBlock?.FirstColumnIndex,
                     sourceBlock,
-                    storyKind: story.Kind,
+                    storyKind: story.Kind.ToValueString(),
                     storyVariantType: null,
                     pageCount: pageCount,
                     textMeasurer: textMeasurer,
@@ -3463,7 +3446,7 @@ internal sealed class DocxLayoutEngine
         }
 
         var story = new DocxRelatedStory(
-            "TextBox",
+            DocxRelatedStoryKind.TextBox,
             "floating-drawing",
             drawing.ImageRelationshipId,
             drawing.TextBoxBodyElements,
@@ -3512,13 +3495,9 @@ internal sealed class DocxLayoutEngine
             height + topDistance + bottomDistance);
     }
 
-    private static bool IsWrapExclusionKind(string? wrapKind)
+    private static bool IsWrapExclusionKind(DocxFloatingWrapKind? wrapKind)
     {
-        return wrapKind is not null &&
-            (wrapKind.Equals("wrapSquare", StringComparison.OrdinalIgnoreCase) ||
-            wrapKind.Equals("wrapTight", StringComparison.OrdinalIgnoreCase) ||
-            wrapKind.Equals("wrapThrough", StringComparison.OrdinalIgnoreCase) ||
-            wrapKind.Equals("wrapTopAndBottom", StringComparison.OrdinalIgnoreCase));
+        return wrapKind is DocxFloatingWrapKind.Square or DocxFloatingWrapKind.Tight or DocxFloatingWrapKind.Through or DocxFloatingWrapKind.TopAndBottom;
     }
 
     private static DocxAnchorPlacement ResolveHorizontalPlacement(
@@ -4210,7 +4189,7 @@ internal sealed class DocxLayoutEngine
     private static DocxSectionLayoutProperties CreateSectionLayoutProperties(DocxSectionBreakElement sectionBreak)
     {
         return new DocxSectionLayoutProperties(
-            sectionBreak.TypeValue,
+            sectionBreak.TypeValue?.ToValueString(),
             sectionBreak.ColumnCountValue,
             sectionBreak.ColumnEqualWidthValue,
             sectionBreak.ColumnSpaceValue,
@@ -4556,24 +4535,22 @@ internal sealed class DocxLayoutEngine
     private static bool ShouldStartNewPageForSectionBreak(DocxSectionBreakElement sectionBreak)
     {
         return sectionBreak.TypeValue is null ||
-            sectionBreak.TypeValue.Equals("nextPage", StringComparison.OrdinalIgnoreCase) ||
-            sectionBreak.TypeValue.Equals("oddPage", StringComparison.OrdinalIgnoreCase) ||
-            sectionBreak.TypeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
+            sectionBreak.TypeValue is DocxSectionBreakType.NextPage or DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage;
     }
 
     private static bool IsContinuousSectionBreak(DocxSectionBreakElement sectionBreak)
     {
-        return sectionBreak.TypeValue?.Equals("continuous", StringComparison.OrdinalIgnoreCase) == true;
+        return sectionBreak.TypeValue == DocxSectionBreakType.Continuous;
     }
 
     private static bool ShouldInsertParityBlankPage(DocxSectionBreakElement sectionBreak, int nextPageNumber)
     {
-        if (sectionBreak.TypeValue?.Equals("oddPage", StringComparison.OrdinalIgnoreCase) == true)
+        if (sectionBreak.TypeValue == DocxSectionBreakType.OddPage)
         {
             return nextPageNumber % 2 == 0;
         }
 
-        if (sectionBreak.TypeValue?.Equals("evenPage", StringComparison.OrdinalIgnoreCase) == true)
+        if (sectionBreak.TypeValue == DocxSectionBreakType.EvenPage)
         {
             return nextPageNumber % 2 != 0;
         }

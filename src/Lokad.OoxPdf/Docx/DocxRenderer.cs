@@ -1134,7 +1134,7 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        if (markupContext.DrawsCommentMarkers && paragraph.InlineReferences.Any(reference => reference.Kind == "Comment"))
+        if (markupContext.DrawsCommentMarkers && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment))
         {
             if (UsesWordCompatibleAllMarkupTextProfile(markupContext))
             {
@@ -1178,7 +1178,7 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxMarkupContext markupContext)
     {
-        foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == "Comment"))
+        foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
         {
             DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
                 string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
@@ -1355,7 +1355,7 @@ internal sealed partial class DocxRenderer
     {
         string? id = paragraph
             .InlineReferences
-            .Where(reference => reference.Kind == "Comment")
+            .Where(reference => reference.Kind == DocxRelatedStoryKind.Comment)
             .Select(reference => reference.Id)
             .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
         return id is null ? "?" : id;
@@ -1700,22 +1700,11 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<DocxMarkupBalloonCandidate> band)
     {
         return band
-            .OrderBy(candidate => MarkupBalloonKindPriority(candidate.Kind))
+            .OrderBy(candidate => candidate.Kind)
             .ThenByDescending(candidate => candidate.AnchorY)
             .ThenBy(candidate => candidate.Sequence);
     }
 
-    private static int MarkupBalloonKindPriority(string kind)
-    {
-        return kind switch
-        {
-            "Comment" => 0,
-            "Markup" => 1,
-            "Revision" => 2,
-            "Overflow" => 3,
-            _ => 4
-        };
-    }
 
     private static double ClampMarkupBalloonConnectorAnchorX(double connectorAnchorX, DocxLayoutPage page)
     {
@@ -1810,9 +1799,9 @@ internal sealed partial class DocxRenderer
         }
 
         return group.Count < MarkupBalloonMaxNearbyRevisionGroupSize &&
-            group.All(item => item.Kind == "Revision") &&
-            previous.Kind == "Revision" &&
-            candidate.Kind == "Revision" &&
+            group.All(item => item.Kind == DocxMarkupBalloonKind.Revision) &&
+            previous.Kind == DocxMarkupBalloonKind.Revision &&
+            candidate.Kind == DocxMarkupBalloonKind.Revision &&
             Math.Abs(previous.AnchorY - candidate.AnchorY) <= 9d;
     }
 
@@ -1825,7 +1814,7 @@ internal sealed partial class DocxRenderer
             return group[0];
         }
 
-        bool allRevisions = group.All(candidate => candidate.Kind == "Revision");
+        bool allRevisions = group.All(candidate => candidate.Kind == DocxMarkupBalloonKind.Revision);
         string title = allRevisions
             ? group.Count.ToString(CultureInfo.InvariantCulture) + " tracked changes"
             : group.Count.ToString(CultureInfo.InvariantCulture) + " markup items";
@@ -1844,9 +1833,9 @@ internal sealed partial class DocxRenderer
             : wordCompatibleBodyParts.Length == 0 ? null : TrimBalloonText(string.Join("; ", wordCompatibleBodyParts), textWidth);
         return group[0] with
         {
-            Kind = group.Select(candidate => candidate.Kind).Distinct(StringComparer.Ordinal).Count() == 1
+            Kind = group.Select(candidate => candidate.Kind).Distinct().Count() == 1
                 ? group[0].Kind
-                : "Markup",
+                : DocxMarkupBalloonKind.Markup,
             Title = TrimBalloonText(title, textWidth),
             Body = body,
             WordCompatibleTitle = wordCompatibleTitle,
@@ -1909,7 +1898,7 @@ internal sealed partial class DocxRenderer
             return body;
         }
 
-        return string.Equals(candidate.Kind, "Comment", StringComparison.Ordinal)
+        return candidate.Kind == DocxMarkupBalloonKind.Comment
             ? null
             : FirstNonEmpty(candidate.WordCompatibleTitle, candidate.Title);
     }
@@ -1967,7 +1956,7 @@ internal sealed partial class DocxRenderer
                 : "More markup " + (continuationIndex + 1).ToString(CultureInfo.InvariantCulture) + "/" + continuationCount.ToString(CultureInfo.InvariantCulture);
             string body = TrimBalloonText(BuildOverflowContinuationBody(chunk), area.Width);
             placements.Add(new DocxMarkupBalloonPlacement(
-                "Overflow",
+                DocxMarkupBalloonKind.Overflow,
                 area.Side,
                 title,
                 body,
@@ -2063,11 +2052,11 @@ internal sealed partial class DocxRenderer
     {
         var candidates = new List<DocxMarkupBalloonCandidate>();
         Dictionary<string, DocxRelatedStoryLayout> commentStories = relatedStories
-            .Where(story => story.Story.Kind == "Comment" && story.Story.Id is not null)
+            .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.Id is not null)
             .GroupBy(story => story.Story.Id ?? string.Empty, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         Dictionary<string, DocxRelatedStoryLayout[]> commentRepliesByParentId = relatedStories
-            .Where(story => story.Story.Kind == "Comment" && story.Story.CommentMetadata?.ParentCommentId is not null)
+            .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.CommentMetadata?.ParentCommentId is not null)
             .GroupBy(story => story.Story.CommentMetadata?.ParentCommentId ?? string.Empty, StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,
@@ -2092,7 +2081,7 @@ internal sealed partial class DocxRenderer
 
             if (markupContext.RendersCommentBalloons)
             {
-                foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == "Comment"))
+                foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
                 {
                     string key = RuntimeHelpers.GetHashCode(paragraph).ToString(CultureInfo.InvariantCulture) + ":" + (reference.Id ?? string.Empty);
                     if (!renderedComments.Add(key))
@@ -2107,7 +2096,7 @@ internal sealed partial class DocxRenderer
                     DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
                     DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference);
                     candidates.Add(new DocxMarkupBalloonCandidate(
-                        "Comment",
+                        DocxMarkupBalloonKind.Comment,
                         TrimBalloonText(BuildCommentBalloonTitle(storyLayout?.Story, reference.Id), textWidth),
                         commentBody,
                         BuildWordCompatibleCommentBalloonTitle(storyLayout?.Story, reference.Id),
@@ -2143,7 +2132,7 @@ internal sealed partial class DocxRenderer
                 string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(paragraph.Revisions), textWidth);
                 string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(paragraph), textWidth);
                 candidates.Add(new DocxMarkupBalloonCandidate(
-                    "Revision",
+                    DocxMarkupBalloonKind.Revision,
                     revisionTitle,
                     revisionBody,
                     revisionTitle,
@@ -2177,7 +2166,7 @@ internal sealed partial class DocxRenderer
                         string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(tableRevisions), textWidth);
                         string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(tableRevisions), textWidth);
                         candidates.Add(new DocxMarkupBalloonCandidate(
-                            "Revision",
+                            DocxMarkupBalloonKind.Revision,
                             revisionTitle,
                             revisionBody,
                             revisionTitle,
@@ -2207,7 +2196,7 @@ internal sealed partial class DocxRenderer
                         string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(rowRevisions), textWidth);
                         string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(rowRevisions), textWidth);
                         candidates.Add(new DocxMarkupBalloonCandidate(
-                            "Revision",
+                            DocxMarkupBalloonKind.Revision,
                             revisionTitle,
                             revisionBody,
                             revisionTitle,
@@ -2246,7 +2235,7 @@ internal sealed partial class DocxRenderer
                     string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(cellRevisions), textWidth);
                     string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(cellRevisions), textWidth);
                     candidates.Add(new DocxMarkupBalloonCandidate(
-                        "Revision",
+                        DocxMarkupBalloonKind.Revision,
                         revisionTitle,
                         revisionBody,
                         revisionTitle,
@@ -2856,7 +2845,7 @@ internal sealed partial class DocxRenderer
         double ConnectorX);
 
     private sealed record DocxMarkupBalloonCandidate(
-        string Kind,
+        DocxMarkupBalloonKind Kind,
         string Title,
         string Body,
         string? WordCompatibleTitle,
@@ -2888,7 +2877,7 @@ internal sealed partial class DocxRenderer
         int CandidateCount);
 
     private sealed record DocxMarkupBalloonPlacement(
-        string Kind,
+        DocxMarkupBalloonKind Kind,
         string Side,
         string Title,
         string Body,
@@ -2925,7 +2914,7 @@ internal sealed partial class DocxRenderer
         {
             return new DocxMarkupBalloonPlacementSnapshot(
                 pageIndex,
-                Kind,
+                Kind.ToValueString(),
                 Side,
                 X,
                 Y,
@@ -3024,7 +3013,7 @@ internal sealed partial class DocxRenderer
             .Select(RevisionBalloonLabel));
         labels.AddRange(revisions
             .Where(IsFormattingRevision)
-            .GroupBy(ResolveFormattingRevisionFamily, StringComparer.Ordinal)
+            .GroupBy(ResolveFormattingRevisionFamily)
             .Select(group => BuildFormattingRevisionBalloonLabel(
                 group.Key,
                 group.SelectMany(revision => revision.PropertyElementNames))));
@@ -3034,19 +3023,19 @@ internal sealed partial class DocxRenderer
     private static IReadOnlyList<string> BuildRevisionTextPreviewLabels(DocxParagraph paragraph)
     {
         var labels = new List<string>(3);
-        string? deletedText = BuildRevisionTextPreview(paragraph.Runs, "Deletion");
+        string? deletedText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.Deletion);
         if (deletedText is not null)
         {
             labels.Add("Deleted: \"" + deletedText + "\"");
         }
 
-        string? movedFromText = BuildRevisionTextPreview(paragraph.Runs, "MoveFrom");
+        string? movedFromText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.MoveFrom);
         if (movedFromText is not null)
         {
             labels.Add("Moved from: \"" + movedFromText + "\"");
         }
 
-        string? movedToText = BuildRevisionTextPreview(paragraph.Runs, "MoveTo");
+        string? movedToText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.MoveTo);
         if (movedToText is not null)
         {
             labels.Add("Moved to: \"" + movedToText + "\"");
@@ -3055,7 +3044,7 @@ internal sealed partial class DocxRenderer
         return labels;
     }
 
-    private static string? BuildRevisionTextPreview(IEnumerable<DocxTextRun> runs, string kind)
+    private static string? BuildRevisionTextPreview(IEnumerable<DocxTextRun> runs, DocxRevisionKind kind)
     {
         string text = string.Concat(runs
             .Where(run => HasRevisionKind(run, kind))
@@ -3078,17 +3067,17 @@ internal sealed partial class DocxRenderer
     {
         return revision.Kind switch
         {
-            "Insertion" => "Inserted text",
-            "Deletion" => "Deleted text",
-            "MoveFrom" => "Moved from",
-            "MoveTo" => "Moved to",
-            "RunPropertiesChange" => BuildFormattingRevisionBalloonLabel(revision),
-            "ParagraphPropertiesChange" => BuildFormattingRevisionBalloonLabel(revision),
-            "TablePropertiesChange" => BuildFormattingRevisionBalloonLabel(revision),
-            "TableRowPropertiesChange" => BuildFormattingRevisionBalloonLabel(revision),
-            "TableCellPropertiesChange" => BuildFormattingRevisionBalloonLabel(revision),
-            "SectionPropertiesChange" => BuildFormattingRevisionBalloonLabel(revision),
-            _ => string.IsNullOrWhiteSpace(revision.Kind) ? string.Empty : revision.Kind
+            DocxRevisionKind.Insertion => "Inserted text",
+            DocxRevisionKind.Deletion => "Deleted text",
+            DocxRevisionKind.MoveFrom => "Moved from",
+            DocxRevisionKind.MoveTo => "Moved to",
+            DocxRevisionKind.RunPropertiesChange => BuildFormattingRevisionBalloonLabel(revision),
+            DocxRevisionKind.ParagraphPropertiesChange => BuildFormattingRevisionBalloonLabel(revision),
+            DocxRevisionKind.TablePropertiesChange => BuildFormattingRevisionBalloonLabel(revision),
+            DocxRevisionKind.TableRowPropertiesChange => BuildFormattingRevisionBalloonLabel(revision),
+            DocxRevisionKind.TableCellPropertiesChange => BuildFormattingRevisionBalloonLabel(revision),
+            DocxRevisionKind.SectionPropertiesChange => BuildFormattingRevisionBalloonLabel(revision),
+            _ => revision.Kind.ToValueString()
         };
     }
 
@@ -3182,25 +3171,25 @@ internal sealed partial class DocxRenderer
     private static bool IsFormattingRevision(DocxRevisionInfo revision)
     {
         return revision.Kind is
-            "RunPropertiesChange" or
-            "ParagraphPropertiesChange" or
-            "TablePropertiesChange" or
-            "TableRowPropertiesChange" or
-            "TableCellPropertiesChange" or
-            "SectionPropertiesChange";
+            DocxRevisionKind.RunPropertiesChange or
+            DocxRevisionKind.ParagraphPropertiesChange or
+            DocxRevisionKind.TablePropertiesChange or
+            DocxRevisionKind.TableRowPropertiesChange or
+            DocxRevisionKind.TableCellPropertiesChange or
+            DocxRevisionKind.SectionPropertiesChange;
     }
 
-    private static string ResolveFormattingRevisionFamily(DocxRevisionInfo revision)
+    private static DocxRevisionPropertyFamily ResolveFormattingRevisionFamily(DocxRevisionInfo revision)
     {
         return revision.PropertyChangeFamily ?? revision.Kind switch
         {
-            "RunPropertiesChange" => "Run",
-            "ParagraphPropertiesChange" => "Paragraph",
-            "TablePropertiesChange" => "Table",
-            "TableRowPropertiesChange" => "Row",
-            "TableCellPropertiesChange" => "Cell",
-            "SectionPropertiesChange" => "Section",
-            _ => "formatting"
+            DocxRevisionKind.RunPropertiesChange => DocxRevisionPropertyFamily.Run,
+            DocxRevisionKind.ParagraphPropertiesChange => DocxRevisionPropertyFamily.Paragraph,
+            DocxRevisionKind.TablePropertiesChange => DocxRevisionPropertyFamily.Table,
+            DocxRevisionKind.TableRowPropertiesChange => DocxRevisionPropertyFamily.Row,
+            DocxRevisionKind.TableCellPropertiesChange => DocxRevisionPropertyFamily.Cell,
+            DocxRevisionKind.SectionPropertiesChange => DocxRevisionPropertyFamily.Section,
+            _ => DocxRevisionPropertyFamily.Formatting
         };
     }
 
@@ -3209,16 +3198,16 @@ internal sealed partial class DocxRenderer
         return BuildFormattingRevisionBalloonLabel(ResolveFormattingRevisionFamily(revision), revision.PropertyElementNames);
     }
 
-    private static string BuildFormattingRevisionBalloonLabel(string family, IEnumerable<string> propertyElementNames)
+    private static string BuildFormattingRevisionBalloonLabel(DocxRevisionPropertyFamily family, IEnumerable<string> propertyElementNames)
     {
         string prefix = family switch
         {
-            "Run" => "Formatted run",
-            "Paragraph" => "Formatted paragraph",
-            "Table" => "Formatted table",
-            "Row" => "Formatted row",
-            "Cell" => "Formatted cell",
-            "Section" => "Formatted section",
+            DocxRevisionPropertyFamily.Run => "Formatted run",
+            DocxRevisionPropertyFamily.Paragraph => "Formatted paragraph",
+            DocxRevisionPropertyFamily.Table => "Formatted table",
+            DocxRevisionPropertyFamily.Row => "Formatted row",
+            DocxRevisionPropertyFamily.Cell => "Formatted cell",
+            DocxRevisionPropertyFamily.Section => "Formatted section",
             _ => "Formatting change"
         };
         string[] names = propertyElementNames
@@ -3244,11 +3233,11 @@ internal sealed partial class DocxRenderer
         return properties.Length == 0 ? prefix : prefix + ": " + string.Join(", ", properties) + suffix;
     }
 
-    private static int FormattingRevisionPropertyPriority(string family, string value)
+    private static int FormattingRevisionPropertyPriority(DocxRevisionPropertyFamily family, string value)
     {
         return family switch
         {
-            "Run" => value switch
+            DocxRevisionPropertyFamily.Run => value switch
             {
                 "rStyle" => 0,
                 "rFonts" => 10,
@@ -3291,7 +3280,7 @@ internal sealed partial class DocxRenderer
                 "oMath" => 380,
                 _ => 500
             },
-            "Paragraph" => value switch
+            DocxRevisionPropertyFamily.Paragraph => value switch
             {
                 "pStyle" => 0,
                 "numPr" => 10,
@@ -3329,7 +3318,7 @@ internal sealed partial class DocxRenderer
                 "divId" => 330,
                 _ => 500
             },
-            "Table" => value switch
+            DocxRevisionPropertyFamily.Table => value switch
             {
                 "tblStyle" => 0,
                 "tblBorders" => 10,
@@ -3351,7 +3340,7 @@ internal sealed partial class DocxRenderer
                 "cnfStyle" => 170,
                 _ => 500
             },
-            "Row" => value switch
+            DocxRevisionPropertyFamily.Row => value switch
             {
                 "tblHeader" => 0,
                 "trHeight" => 10,
@@ -3368,7 +3357,7 @@ internal sealed partial class DocxRenderer
                 "divId" => 120,
                 _ => 500
             },
-            "Cell" => value switch
+            DocxRevisionPropertyFamily.Cell => value switch
             {
                 "tcW" => 0,
                 "gridSpan" => 10,
@@ -3388,7 +3377,7 @@ internal sealed partial class DocxRenderer
                 "cnfStyle" => 150,
                 _ => 500
             },
-            "Section" => value switch
+            DocxRevisionPropertyFamily.Section => value switch
             {
                 "type" => 0,
                 "pgSz" => 10,
@@ -3416,9 +3405,9 @@ internal sealed partial class DocxRenderer
         };
     }
 
-    private static string FormatFormattingRevisionPropertyName(string family, string value)
+    private static string FormatFormattingRevisionPropertyName(DocxRevisionPropertyFamily family, string value)
     {
-        if (family == "Run")
+        if (family == DocxRevisionPropertyFamily.Run)
         {
             string? runName = value switch
             {
@@ -4751,7 +4740,7 @@ internal sealed partial class DocxRenderer
         return WordCompatibleAllMarkupBodyPositioningCharacterSpacingPoints;
     }
 
-    private static bool HasRevisionKind(DocxTextRun styleRun, string kind)
+    private static bool HasRevisionKind(DocxTextRun styleRun, DocxRevisionKind kind)
     {
         return IsRevisionKind(styleRun.Revision, kind) ||
             styleRun.Revisions.Any(revision => IsRevisionKind(revision, kind));
@@ -4759,20 +4748,20 @@ internal sealed partial class DocxRenderer
 
     private static bool HasInsertionLikeRevisionKind(DocxTextRun styleRun)
     {
-        return HasRevisionKind(styleRun, "Insertion") ||
-            HasRevisionKind(styleRun, "MoveTo");
+        return HasRevisionKind(styleRun, DocxRevisionKind.Insertion) ||
+            HasRevisionKind(styleRun, DocxRevisionKind.MoveTo);
     }
 
     private static bool HasDeletionLikeRevisionKind(DocxTextRun styleRun)
     {
-        return HasRevisionKind(styleRun, "Deletion") ||
-            HasRevisionKind(styleRun, "MoveFrom");
+        return HasRevisionKind(styleRun, DocxRevisionKind.Deletion) ||
+            HasRevisionKind(styleRun, DocxRevisionKind.MoveFrom);
     }
 
-    private static bool IsRevisionKind(DocxRevisionInfo? revision, string kind)
+    private static bool IsRevisionKind(DocxRevisionInfo? revision, DocxRevisionKind kind)
     {
         return revision is not null &&
-            string.Equals(revision.Kind, kind, StringComparison.OrdinalIgnoreCase);
+            revision.Kind == kind;
     }
 
     private static bool ShouldApplyWordCompatibleAllMarkupBodyPositioningSpacing(
@@ -4946,7 +4935,7 @@ internal sealed partial class DocxRenderer
             part.Width > 0d &&
             !string.IsNullOrEmpty(part.Text) &&
             string.IsNullOrWhiteSpace(part.Text) &&
-            line.SourceParagraph?.InlineReferences.Any(reference => reference.Kind == "Comment") == true;
+            line.SourceParagraph?.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) == true;
     }
 
     private static void AddTerminalLineSpace(
@@ -5075,7 +5064,7 @@ internal sealed partial class DocxRenderer
                     IsStaticStory: false,
                     "TextBox",
                     line.StoryVariantType,
-                    story.StoryLayout.Story.Kind,
+                    story.StoryLayout.Story.Kind.ToValueString(),
                     story.StoryLayout.Story.Id);
             }
         }
@@ -5286,7 +5275,7 @@ internal sealed partial class DocxRenderer
                 segment.RevisionKind != "Deletion" &&
                 segment.RevisionKind != "MoveFrom" &&
                 segment.RevisionKind != "MoveTo"),
-            line.SourceParagraph?.InlineReferences.Count(reference => reference.Kind == "Comment") ?? 0,
+            line.SourceParagraph?.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment) ?? 0,
             segments.Count(segment => segment.IsTerminalLineSpace),
             segments.Count(segment => Math.Abs(segment.PdfCharacterSpacing) > 0.0001d),
             segments);
@@ -5334,7 +5323,7 @@ internal sealed partial class DocxRenderer
             segment.StyleRun.EffectiveProperties.StyleResolution.HasCharacterStyleRunProperties,
             segment.StyleRun.EffectiveProperties.StyleResolution.HasDirectRunProperties,
             segment.StyleRun.EffectiveProperties.StyleResolution.HasTableStyleRunProperties,
-            segment.StyleRun.Revision?.Kind,
+            segment.StyleRun.Revision?.Kind.ToValueString(),
             segment.StyleRun.Revision?.SourceElement);
     }
 

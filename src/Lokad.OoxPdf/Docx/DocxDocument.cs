@@ -49,7 +49,7 @@ internal sealed record DocxDocument(
 }
 
 internal sealed record DocxRelatedStory(
-    string Kind,
+    DocxRelatedStoryKind Kind,
     string PartName,
     string? Id,
     IReadOnlyList<DocxBodyElement> BodyElements,
@@ -394,7 +394,7 @@ internal sealed record DocxFloatingDrawing(
     string? VerticalRelativeFromValue,
     string? VerticalAlignValue,
     string? VerticalOffsetValue,
-    string? WrapKind,
+    DocxFloatingWrapKind? WrapKind,
     string? WrapTextValue,
     string? ImageRelationshipId,
     DocxInlineImage? Image,
@@ -437,7 +437,7 @@ internal sealed record DocxSectionColumn(
 
 internal sealed record DocxSectionBreakElement(
     DocxPageSettings PageSettings,
-    string? TypeValue,
+    DocxSectionBreakType? TypeValue,
     string? ColumnCountValue,
     string? ColumnEqualWidthValue,
     string? ColumnSpaceValue,
@@ -568,7 +568,7 @@ internal sealed record DocxBookmarkAnchor(
     int TextOffset);
 
 internal sealed record DocxInlineReference(
-    string Kind,
+    DocxRelatedStoryKind Kind,
     string? Id,
     string? CustomMarkFollowsValue,
     string? DisplayText,
@@ -590,7 +590,7 @@ internal sealed record DocxCommentRange(
     int? ReferenceTextOffset);
 
 internal sealed record DocxRevisionRange(
-    string Kind,
+    DocxRevisionKind Kind,
     string? Id,
     string? Name,
     string? Author,
@@ -601,8 +601,8 @@ internal sealed record DocxRevisionRange(
     int? EndTextOffset);
 
 internal sealed record DocxFieldReference(
-    string Kind,
-    string SourceKind,
+    DocxFieldKind Kind,
+    DocxFieldSourceKind SourceKind,
     string? Instruction,
     string? Placeholder,
     int SourceRunIndex,
@@ -834,13 +834,13 @@ internal sealed record DocxRunStyleResolution(
 internal sealed record DocxRevisionInfo
 {
     public DocxRevisionInfo(
-        string kind,
+        DocxRevisionKind kind,
         string? id,
         string? author,
         string? date,
         string sourceElement,
-        string? propertyChangeFamily = null,
-        IReadOnlyList<string>? propertyElementNames = null)
+        DocxRevisionPropertyFamily? propertyChangeFamily,
+        IReadOnlyList<string> propertyElementNames)
     {
         Kind = kind;
         Id = id;
@@ -848,10 +848,10 @@ internal sealed record DocxRevisionInfo
         Date = date;
         SourceElement = sourceElement;
         PropertyChangeFamily = propertyChangeFamily;
-        PropertyElementNames = propertyElementNames?.ToArray() ?? [];
+        PropertyElementNames = propertyElementNames.ToArray();
     }
 
-    public string Kind { get; init; }
+    public DocxRevisionKind Kind { get; init; }
 
     public string? Id { get; init; }
 
@@ -861,7 +861,7 @@ internal sealed record DocxRevisionInfo
 
     public string SourceElement { get; init; }
 
-    public string? PropertyChangeFamily { get; init; }
+    public DocxRevisionPropertyFamily? PropertyChangeFamily { get; init; }
 
     public IReadOnlyList<string> PropertyElementNames { get; init; }
 }

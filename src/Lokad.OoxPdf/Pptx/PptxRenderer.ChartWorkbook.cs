@@ -114,6 +114,14 @@ internal sealed partial class PptxRenderer
         string TotalsRowFormula,
         string CalculatedColumnFormula);
 
+    private readonly record struct ChartWorkbookStructuredReferenceBody(
+        string FirstColumnName,
+        string LastColumnName,
+        bool IncludeHeader,
+        bool OnlyHeader,
+        bool OnlyTotals,
+        bool WholeTable);
+
     private readonly record struct ChartWorkbookCalculationProperties(
         string CalculationMode,
         string CalculationId,
@@ -647,17 +655,17 @@ internal sealed partial class PptxRenderer
             }
 
             string body = trimmed[(open + 1)..^1];
-            if (!TryParseStructuredReferenceBody(
-                body,
-                out string? firstColumnName,
-                out string? lastColumnName,
-                out bool includeHeader,
-                out bool onlyHeader,
-                out bool onlyTotals,
-                out bool wholeTable))
+            if (ParseStructuredReferenceBody(body) is not { } reference)
             {
                 return trimmed;
             }
+
+            string firstColumnName = reference.FirstColumnName;
+            string lastColumnName = reference.LastColumnName;
+            bool wholeTable = reference.WholeTable;
+            bool onlyHeader = reference.OnlyHeader;
+            bool onlyTotals = reference.OnlyTotals;
+            bool includeHeader = reference.IncludeHeader;
 
             int firstColumn = table.FirstColumn;
             int lastColumn = table.LastColumn;
@@ -736,43 +744,75 @@ internal sealed partial class PptxRenderer
             return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(firstColumn, firstRow)}:{ToCellReference(lastColumn, lastRow)}");
         }
 
-        private static bool TryParseStructuredReferenceBody(
-            string body,
-            out string firstColumnName,
-            out string lastColumnName,
-            out bool includeHeader,
-            out bool onlyHeader,
-            out bool onlyTotals,
-            out bool wholeTable)
+        private static ChartWorkbookStructuredReferenceBody? ParseStructuredReferenceBody(string body)
         {
-            firstColumnName = string.Empty;
-            lastColumnName = string.Empty;
-            includeHeader = false;
-            onlyHeader = false;
-            onlyTotals = false;
-            wholeTable = false;
+            string firstColumnName = string.Empty;
+            string lastColumnName = string.Empty;
+            bool includeHeader = false;
+            bool onlyHeader = false;
+            bool onlyTotals = false;
+            bool wholeTable = false;
+
+            bool ApplyStructuredReferenceItem(string segment)
+            {
+                if (string.Equals(segment, "#All", StringComparison.OrdinalIgnoreCase))
+                {
+                    includeHeader = true;
+                    wholeTable = true;
+                    return true;
+                }
+
+                if (string.Equals(segment, "#Headers", StringComparison.OrdinalIgnoreCase))
+                {
+                    includeHeader = true;
+                    onlyHeader = true;
+                    wholeTable = true;
+                    return true;
+                }
+
+                if (string.Equals(segment, "#Data", StringComparison.OrdinalIgnoreCase))
+                {
+                    wholeTable = true;
+                    return true;
+                }
+
+                if (string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))
+                {
+                    onlyTotals = true;
+                    wholeTable = true;
+                    return true;
+                }
+
+                return false;
+            }
+
             string trimmed = body.Trim();
             if (trimmed.Length == 0)
             {
-                return false;
+                return null;
             }
 
             if (trimmed[0] != '[')
             {
                 string segment = UnescapeStructuredReferenceText(trimmed);
-                if (ApplyStructuredReferenceItem(segment, ref includeHeader, ref onlyHeader, ref onlyTotals, ref wholeTable))
+                if (!ApplyStructuredReferenceItem(segment))
                 {
-                    return true;
+                    firstColumnName = segment;
+                    lastColumnName = segment;
                 }
 
-                firstColumnName = segment;
-                lastColumnName = segment;
-                return true;
+                return new ChartWorkbookStructuredReferenceBody(
+                    firstColumnName,
+                    lastColumnName,
+                    includeHeader,
+                    onlyHeader,
+                    onlyTotals,
+                    wholeTable);
             }
 
             foreach (string segment in ParseStructuredReferenceSegments(trimmed))
             {
-                if (ApplyStructuredReferenceItem(segment, ref includeHeader, ref onlyHeader, ref onlyTotals, ref wholeTable))
+                if (ApplyStructuredReferenceItem(segment))
                 {
                     continue;
                 }
@@ -786,40 +826,18 @@ internal sealed partial class PptxRenderer
                 wholeTable = false;
             }
 
-            return wholeTable || !string.IsNullOrWhiteSpace(firstColumnName);
-        }
-
-        private static bool ApplyStructuredReferenceItem(string segment, ref bool includeHeader, ref bool onlyHeader, ref bool onlyTotals, ref bool wholeTable)
-        {
-            if (string.Equals(segment, "#All", StringComparison.OrdinalIgnoreCase))
+            if (!wholeTable && string.IsNullOrWhiteSpace(firstColumnName))
             {
-                includeHeader = true;
-                wholeTable = true;
-                return true;
+                return null;
             }
 
-            if (string.Equals(segment, "#Headers", StringComparison.OrdinalIgnoreCase))
-            {
-                includeHeader = true;
-                onlyHeader = true;
-                wholeTable = true;
-                return true;
-            }
-
-            if (string.Equals(segment, "#Data", StringComparison.OrdinalIgnoreCase))
-            {
-                wholeTable = true;
-                return true;
-            }
-
-            if (string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))
-            {
-                onlyTotals = true;
-                wholeTable = true;
-                return true;
-            }
-
-            return false;
+            return new ChartWorkbookStructuredReferenceBody(
+                firstColumnName,
+                lastColumnName,
+                includeHeader,
+                onlyHeader,
+                onlyTotals,
+                wholeTable);
         }
 
         private static string[] ParseStructuredReferenceSegments(string body)
