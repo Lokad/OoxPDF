@@ -27,7 +27,7 @@ internal static class FontTests
         FontFaceResolution resolved = resolver.Resolve(new FontRequest("Arial"));
         TestAssert.NotNull(resolved.Source);
 
-        FontFaceResolution bold = resolver.Resolve(new FontRequest("Arial", Bold: true));
+        FontFaceResolution bold = resolver.Resolve(new FontRequest("Arial", true, false));
         TestAssert.NotNull(bold.Source);
         TestAssert.True(bold.WeightClass >= resolved.WeightClass, "Expected bold font resolution to prefer a heavier face when one is available.");
     }
@@ -74,7 +74,7 @@ internal static class FontTests
             new FontStyleKey(
                 Bold: font.Os2.WeightClass >= 600,
                 Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
-                WeightClass: font.Os2.WeightClass,
+                WeightClass: font.Os2.WeightClass, FaceIndex: 0,
                 HasMathTable: font.TableTags.Contains("MATH")),
             new MemoryFontProgramSource("memory:test-arial", bytes),
             IsFallback: false);
@@ -196,7 +196,7 @@ internal static class FontTests
         }
 
         var graphics = new PdfGraphicsBuilder();
-        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 10d, 20d, 12d), "Expected PDF glyph path conversion for Arial 'A'.");
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 10d, 20d, 12d, 0d), "Expected PDF glyph path conversion for Arial 'A'.");
         string pdf = graphics.ToString();
 
         TestAssert.Contains(" m", pdf);
@@ -222,7 +222,7 @@ internal static class FontTests
         }
 
         var graphics = new PdfGraphicsBuilder();
-        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 18d), "Expected PDF glyph path conversion for Arial 'O'.");
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 18d, 0d), "Expected PDF glyph path conversion for Arial 'O'.");
         string pdf = graphics.ToString();
 
         TestAssert.Contains(" c", pdf);
@@ -246,7 +246,7 @@ internal static class FontTests
         }
 
         var graphics = new PdfGraphicsBuilder();
-        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 14d), "Expected PDF glyph path conversion for compound Arial 'é'.");
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 14d, 0d), "Expected PDF glyph path conversion for compound Arial 'é'.");
         string pdf = graphics.ToString();
 
         TestAssert.True(pdf.Split(" m", StringSplitOptions.None).Length > 2, "Expected multiple contour starts for compound glyph path.");
@@ -584,7 +584,7 @@ internal static class FontTests
     public static void FontPackResolverDownloadsManifestOnlyOnCreate()
     {
         byte[] fontBytes = [1, 2, 3, 4];
-        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes);
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes, "Aptos", "Aptos", "Aptos");
 
         OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes: null, out StubHttpMessageHandler handler);
 
@@ -597,7 +597,7 @@ internal static class FontTests
     public static void FontPackResolverDownloadsSelectedFontAndValidatesHash()
     {
         byte[] fontBytes = [1, 2, 3, 4];
-        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes);
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes, "Aptos", "Aptos", "Aptos");
         OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out StubHttpMessageHandler handler);
 
         FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
@@ -617,7 +617,7 @@ internal static class FontTests
     {
         byte[] expectedFontBytes = [1, 2, 3, 4];
         byte[] servedFontBytes = [1, 2, 3, 5];
-        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", expectedFontBytes);
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", expectedFontBytes, "Aptos", "Aptos", "Aptos");
         OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, servedFontBytes, out _);
         FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
 
@@ -669,7 +669,7 @@ internal static class FontTests
     public static void PresentationFontResolverUsesFontPackCatalog()
     {
         byte[] fontBytes = [1, 2, 3, 4];
-        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes);
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes, "Aptos", "Aptos", "Aptos");
         OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out _);
         var presentationResolver = new PresentationFontResolver(resolver);
 
@@ -707,9 +707,9 @@ internal static class FontTests
         string packId,
         string relativeFontPath,
         byte[] fontBytes,
-        string requestedFamily = "Aptos",
-        string resolvedFamily = "Aptos",
-        string fallbackFamily = "Aptos")
+        string requestedFamily,
+        string resolvedFamily,
+        string fallbackFamily)
     {
         string sha256 = Convert.ToHexString(SHA256.HashData(fontBytes));
         return Encoding.UTF8.GetBytes($$"""

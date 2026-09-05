@@ -17,7 +17,7 @@ internal static class PptxLineStyleReader
         out RgbColor color,
         out double lineWidth,
         out double alpha,
-        double? fallbackLineWidth = null)
+        double? fallbackLineWidth)
     {
         XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
         lineWidth = line?.Attribute("w") is { } widthAttribute

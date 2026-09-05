@@ -388,7 +388,7 @@ internal sealed partial class DocxReader
                         fieldTextLengthStart,
                         hasCachedResult,
                         rendersCachedResult: false,
-                        usesPlaceholder: true);
+                        usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
                     return;
                 }
 
@@ -404,7 +404,7 @@ internal sealed partial class DocxReader
                     fieldTextLengthStart,
                     hasCachedResult,
                     rendersCachedResult: false,
-                    usesPlaceholder: true);
+                    usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
                 return;
             }
 
@@ -422,7 +422,7 @@ internal sealed partial class DocxReader
                 fieldTextRunIndex,
                 fieldTextLengthStart,
                 hasCachedResult,
-                rendersCachedResult: hasCachedResult);
+                rendersCachedResult: hasCachedResult, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
         }
 
         void AddFieldReference(
@@ -433,13 +433,13 @@ internal sealed partial class DocxReader
             int fieldSourceRunIndex,
             int fieldTextRunIndex,
             int fieldTextLengthStart,
-            bool hasCachedResult = false,
-            bool rendersCachedResult = false,
-            bool usesPlaceholder = false,
-            bool hasSeparate = false,
-            int nestingDepth = 0,
-            int instructionRunCount = 0,
-            int resultRunCount = 0)
+            bool hasCachedResult,
+            bool rendersCachedResult,
+            bool usesPlaceholder,
+            bool hasSeparate,
+            int nestingDepth,
+            int instructionRunCount,
+            int resultRunCount)
         {
             fieldReferences.Add(new DocxFieldReference(
                 kind,
@@ -599,7 +599,7 @@ internal sealed partial class DocxReader
                     placeholder,
                     currentSourceRunIndex,
                     fieldTextRunIndex,
-                    fieldTextLengthStart);
+                    fieldTextLengthStart, hasCachedResult: false, rendersCachedResult: false, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
             }
 
             images.AddRange(ReadInlineImages(run, package, relationships, revision));
@@ -812,7 +812,7 @@ internal sealed partial class DocxReader
                     fieldTextRunIndex,
                     fieldTextLengthStart,
                     usesPlaceholder: placeholder is not null,
-                    instructionRunCount: 1);
+                    instructionRunCount: 1, hasCachedResult: false, rendersCachedResult: false, hasSeparate: false, nestingDepth: 0, resultRunCount: 0);
                 return;
             }
 

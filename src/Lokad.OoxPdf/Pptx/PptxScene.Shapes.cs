@@ -71,7 +71,7 @@ internal sealed partial class PptxSceneBuilder
                 },
                 ReadLineCap(shapeProperties),
                 ReadLineJoin(shapeProperties),
-                ReadLineJoinValue(shapeProperties))
+                ReadLineJoinValue(shapeProperties), true)
             : default;
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
@@ -753,7 +753,7 @@ internal sealed partial class PptxSceneBuilder
             },
             lineCap,
             ReadLineJoin(shapeProperties),
-            ReadLineJoinValue(shapeProperties));
+            ReadLineJoinValue(shapeProperties), true);
         return true;
     }
 
@@ -763,7 +763,7 @@ internal sealed partial class PptxSceneBuilder
         out RgbColor color,
         out double lineWidth,
         out double alpha,
-        double? fallbackLineWidth = null)
+        double? fallbackLineWidth)
     {
         return TryReadLineWithAlpha(shapeProperties, theme, PptxColorMap.Default, out color, out lineWidth, out alpha, fallbackLineWidth);
     }
@@ -775,7 +775,7 @@ internal sealed partial class PptxSceneBuilder
         out RgbColor color,
         out double lineWidth,
         out double alpha,
-        double? fallbackLineWidth = null)
+        double? fallbackLineWidth)
     {
         return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, fallbackLineWidth);
     }

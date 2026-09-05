@@ -47,15 +47,15 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonRgb StrokeRgb,
         DocxMarkupBalloonRgb TitleRgb,
         DocxMarkupBalloonRgb BodyRgb,
-        int CandidateCount = 1,
-        int CommentCandidateCount = 0,
-        int RevisionCandidateCount = 0,
-        int CommentWithDateCount = 0,
-        int CommentResolvedCount = 0,
-        int CommentOpenCount = 0,
-        int CommentReplyCount = 0,
-        int BodySummaryPartCount = 0,
-        int WordCompatibleBodySummaryPartCount = 0);
+        int CandidateCount,
+        int CommentCandidateCount,
+        int RevisionCandidateCount,
+        int CommentWithDateCount,
+        int CommentResolvedCount,
+        int CommentOpenCount,
+        int CommentReplyCount,
+        int BodySummaryPartCount,
+        int WordCompatibleBodySummaryPartCount);
 
     private sealed record DocxMarkupBalloonLaneBand(
         int Index,
@@ -84,19 +84,19 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonRgb TitleRgb,
         DocxMarkupBalloonRgb BodyRgb,
         bool IsOverflowSummary,
-        int CandidateCount = 1,
-        int CommentCandidateCount = 0,
-        int RevisionCandidateCount = 0,
-        int CommentWithDateCount = 0,
-        int CommentResolvedCount = 0,
-        int CommentOpenCount = 0,
-        int CommentReplyCount = 0,
-        int BodySummaryPartCount = 0,
-        int WordCompatibleBodySummaryPartCount = 0,
-        int? OverflowStartIndex = null,
-        int? OverflowEndIndex = null,
-        int LaneBandIndex = 0,
-        int LaneBandCandidateCount = 0)
+        int CandidateCount,
+        int CommentCandidateCount,
+        int RevisionCandidateCount,
+        int CommentWithDateCount,
+        int CommentResolvedCount,
+        int CommentOpenCount,
+        int CommentReplyCount,
+        int BodySummaryPartCount,
+        int WordCompatibleBodySummaryPartCount,
+        int? OverflowStartIndex,
+        int? OverflowEndIndex,
+        int LaneBandIndex,
+        int LaneBandCandidateCount)
     {
         public DocxMarkupBalloonPlacementSnapshot ToSnapshot(int pageIndex)
         {

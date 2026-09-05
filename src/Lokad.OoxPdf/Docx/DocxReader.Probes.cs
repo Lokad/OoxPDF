@@ -47,6 +47,8 @@ internal sealed partial class DocxReader
                     ? $"DOCX feature '{feature}' was detected and approximated."
                     : $"Unsupported DOCX feature '{feature}' was detected and ignored or approximated.",
                 diagnosticPartName.Length == 0 ? partName : diagnosticPartName,
+                SlideIndex: null,
+                PageIndex: null,
                 Feature: feature,
                 Fallback: fallback));
         }

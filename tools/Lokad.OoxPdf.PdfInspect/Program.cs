@@ -573,7 +573,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
         @"(?s)(?<number>\d+)\s+(?<generation>\d+)\s+obj(?<body>.*?)endobj",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    public static IReadOnlyList<PdfObject> ParseAll(string pdf, byte[] bytes, bool skipImageDecode = false)
+    public static IReadOnlyList<PdfObject> ParseAll(string pdf, byte[] bytes, bool skipImageDecode)
     {
         var objects = new List<PdfObject>();
         foreach (Match match in ObjectRegex.Matches(pdf))

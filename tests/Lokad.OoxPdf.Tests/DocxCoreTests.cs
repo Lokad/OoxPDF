@@ -169,7 +169,7 @@ internal static class DocxCoreTests
     {
         var run = new DocxTextRun("Tracked", 11d, null, false, false, false, null, null, 0.25d);
 
-        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 11d, pdfCharacterSpacing: 0.05d, compensatePdfCharacterSpacing: true);
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 11d, pdfCharacterSpacing: 0.05d, compensatePdfCharacterSpacing: true, source: DocxTextStateCharacterSpacingSource.None);
 
         TestAssert.Equal(11.04d, plan.PdfFontSize);
         TestAssert.Equal(0.05d, plan.PdfCharacterSpacing);
@@ -183,7 +183,7 @@ internal static class DocxCoreTests
         var run = new DocxTextRun("1", 12d, null, false, false, false, null, null);
         double numberedTc = OfficePdfTextEmissionProfile.ObservedWordNumberedListTextStateCharacterSpacing(12d);
 
-        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 12d, numberedTc, compensatePdfCharacterSpacing: false);
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 12d, numberedTc, compensatePdfCharacterSpacing: false, source: DocxTextStateCharacterSpacingSource.None);
 
         TestAssert.Equal(12d, plan.PdfFontSize);
         TestAssert.Equal(numberedTc, plan.PdfCharacterSpacing);

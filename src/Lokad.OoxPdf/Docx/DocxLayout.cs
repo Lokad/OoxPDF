@@ -71,7 +71,7 @@ internal sealed record DocxFloatingDrawingLayout(
     double? WrapExclusionHeight,
     string? StoryKind,
     string? StoryVariantType,
-    DocxRelatedStoryLayout? TextBoxLayout = null);
+    DocxRelatedStoryLayout? TextBoxLayout);
 
 internal sealed record DocxWrapExclusionFrame(
     double X,
@@ -606,7 +606,7 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
-                        StoryKind: "Body", StoryVariantType: null));
+                        StoryKind: "Body", StoryVariantType: null, EmitsTerminalParagraphMark: false));
                     activeColumnHasContent = true;
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;

@@ -286,7 +286,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (!yielded && segmentLength == 0)
             {
-                yield return new DocxWrappedTextLine(string.Empty, []);
+                yield return new DocxWrappedTextLine(string.Empty, [], false);
             }
 
             if (breakIndex < 0)

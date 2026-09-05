@@ -41,9 +41,9 @@ internal readonly record struct PptxSceneImageRecolor(
     public static PptxSceneImageRecolor Luminance(
         double brightness,
         double contrast,
-        string? kindValue = "lum",
-        string? brightnessValue = null,
-        string? contrastValue = null)
+        string? kindValue,
+        string? brightnessValue,
+        string? contrastValue)
     {
         return new PptxSceneImageRecolor(
             PptxSceneImageRecolorKind.Luminance,

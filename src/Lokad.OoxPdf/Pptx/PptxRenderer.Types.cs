@@ -152,9 +152,9 @@ internal sealed partial class PptxRenderer
         double RotationCenterY,
         bool FlipHorizontal,
         bool FlipVertical,
-        bool PreventCoalesce = false,
-        TextOutline? Outline = null,
-        bool StrictClip = false);
+        bool PreventCoalesce,
+        TextOutline? Outline,
+        bool StrictClip);
 
     private sealed record TextGlyphRun(
         TextRun Source,
@@ -290,7 +290,7 @@ internal sealed partial class PptxRenderer
         PptxTextFlowSegmentKind Kind,
         bool Draw,
         bool PreventCoalesce,
-        double FontScale = 1d);
+        double FontScale);
 
     private readonly record struct ResolvedParagraphTextStyle(
         TextAlignment Alignment,

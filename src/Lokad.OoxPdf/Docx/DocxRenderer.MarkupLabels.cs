@@ -940,8 +940,22 @@ internal sealed partial class DocxRenderer
         double fontSize,
         byte red,
         byte green,
+        byte blue)
+    {
+        DrawBalloonText(graphics, resource, text, x, baselineY, fontSize, red, green, blue, positioningCharacterSpacing: 0d);
+    }
+
+    private static void DrawBalloonText(
+        PdfGraphicsBuilder graphics,
+        DocxRunFontResource resource,
+        string text,
+        double x,
+        double baselineY,
+        double fontSize,
+        byte red,
+        byte green,
         byte blue,
-        double positioningCharacterSpacing = 0d)
+        double positioningCharacterSpacing)
     {
         if (Math.Abs(positioningCharacterSpacing) > 0.001d)
         {
@@ -953,7 +967,7 @@ internal sealed partial class DocxRenderer
                 kerningEnabled: false);
             if (positioningArray is not null)
             {
-                graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, red, green, blue, positioningArray);
+                graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, red, green, blue, positioningArray, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
             }
 
             return;
@@ -962,7 +976,7 @@ internal sealed partial class DocxRenderer
         string glyphHex = resource.Embedded.EncodeGlyphHex(text);
         if (glyphHex.Length != 0)
         {
-            graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, red, green, blue, glyphHex);
+            graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, red, green, blue, glyphHex, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
         }
     }
 

@@ -252,7 +252,7 @@ internal sealed partial class PptxSceneBuilder
 
         bool widthSpecified = line?.Attribute("w") is not null;
         return shapeProperties is not null &&
-            TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha)
+            TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: null)
                 ? new PptxSceneLineStyle(
                     true,
                     color,

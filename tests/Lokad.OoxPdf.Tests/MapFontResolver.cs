@@ -25,7 +25,7 @@ internal sealed class MapFontResolver : IFontResolver
         return new FontFaceResolution(
             requestedFamily,
             resolvedFamily,
-            new FontStyleKey(request.Bold, request.Italic),
+            new FontStyleKey(request.Bold, request.Italic, 400, 0, false),
             new MemoryFontProgramSource("test:" + resolvedFamily, ReadOnlyMemory<byte>.Empty),
             isFallback);
     }

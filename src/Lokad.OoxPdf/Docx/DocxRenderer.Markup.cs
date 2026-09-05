@@ -141,7 +141,7 @@ internal sealed partial class DocxRenderer
                     candidate.CommentReplyCount,
                     candidate.BodySummaryPartCount,
                     candidate.WordCompatibleBodySummaryPartCount,
-                    LaneBandIndex: laneBand.Index,
+                    OverflowStartIndex: null, OverflowEndIndex: null, LaneBandIndex: laneBand.Index,
                     LaneBandCandidateCount: laneBand.CandidateCount));
                 nextTop = y - MarkupBalloonMinimumSpacingPoints;
             }
@@ -546,7 +546,7 @@ internal sealed partial class DocxRenderer
                 CommentResolvedCount: chunk.Sum(candidate => candidate.CommentResolvedCount),
                 CommentOpenCount: chunk.Sum(candidate => candidate.CommentOpenCount),
                 CommentReplyCount: chunk.Sum(candidate => candidate.CommentReplyCount),
-                OverflowStartIndex: nextOverflowStartIndex + overflowIndex,
+                BodySummaryPartCount: 0, WordCompatibleBodySummaryPartCount: 0, OverflowStartIndex: nextOverflowStartIndex + overflowIndex,
                 OverflowEndIndex: nextOverflowStartIndex + overflowIndex + chunk.Length - 1,
                 LaneBandIndex: laneBandIndex,
                 LaneBandCandidateCount: laneBandCandidateCount));
@@ -674,7 +674,7 @@ internal sealed partial class DocxRenderer
                         new DocxMarkupBalloonRgb(217, 151, 0),
                         new DocxMarkupBalloonRgb(70, 70, 70),
                         new DocxMarkupBalloonRgb(0, 0, 0),
-                        CommentCandidateCount: 1,
+                        CandidateCount: 1, RevisionCandidateCount: 0, CommentCandidateCount: 1,
                         CommentWithDateCount: commentMetrics.WithDateCount,
                         CommentResolvedCount: commentMetrics.ResolvedCount,
                         CommentOpenCount: commentMetrics.OpenCount,
@@ -710,7 +710,7 @@ internal sealed partial class DocxRenderer
                     paragraphRevisionPalette.StrokeRgb,
                     paragraphRevisionPalette.TitleRgb,
                     new DocxMarkupBalloonRgb(0, 0, 0),
-                    RevisionCandidateCount: 1,
+                    CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
                     BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
                     WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
             }
@@ -744,7 +744,7 @@ internal sealed partial class DocxRenderer
                             tableRevisionPalette.StrokeRgb,
                             tableRevisionPalette.TitleRgb,
                             new DocxMarkupBalloonRgb(0, 0, 0),
-                            RevisionCandidateCount: 1,
+                            CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
                             BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
                             WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
                     }
@@ -774,7 +774,7 @@ internal sealed partial class DocxRenderer
                             rowRevisionPalette.StrokeRgb,
                             rowRevisionPalette.TitleRgb,
                             new DocxMarkupBalloonRgb(0, 0, 0),
-                            RevisionCandidateCount: 1,
+                            CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
                             BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
                             WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
                     }
@@ -813,7 +813,7 @@ internal sealed partial class DocxRenderer
                         cellRevisionPalette.StrokeRgb,
                         cellRevisionPalette.TitleRgb,
                         new DocxMarkupBalloonRgb(0, 0, 0),
-                        RevisionCandidateCount: 1,
+                        CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
                         BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
                         WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
                 }

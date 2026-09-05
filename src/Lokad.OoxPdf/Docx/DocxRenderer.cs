@@ -21,23 +21,23 @@ internal sealed record DocxMarkupBalloonPlacementSnapshot(
     double Height,
     double AnchorY,
     bool IsOverflowSummary,
-    double AnchorConnectorX = 0d,
-    double BalloonConnectorX = 0d,
-    bool AnchorConnectorClamped = false,
-    int CandidateCount = 1,
-    int CommentCandidateCount = 0,
-    int RevisionCandidateCount = 0,
-    int CommentWithDateCount = 0,
-    int CommentResolvedCount = 0,
-    int CommentOpenCount = 0,
-    int CommentReplyCount = 0,
-    int BodySummaryPartCount = 0,
-    int WordCompatibleBodySummaryPartCount = 0,
-    int CommentSeparatorLineCount = 0,
-    int? OverflowStartIndex = null,
-    int? OverflowEndIndex = null,
-    int LaneBandIndex = 0,
-    int LaneBandCandidateCount = 0);
+    double AnchorConnectorX,
+    double BalloonConnectorX,
+    bool AnchorConnectorClamped,
+    int CandidateCount,
+    int CommentCandidateCount,
+    int RevisionCandidateCount,
+    int CommentWithDateCount,
+    int CommentResolvedCount,
+    int CommentOpenCount,
+    int CommentReplyCount,
+    int BodySummaryPartCount,
+    int WordCompatibleBodySummaryPartCount,
+    int CommentSeparatorLineCount,
+    int? OverflowStartIndex,
+    int? OverflowEndIndex,
+    int LaneBandIndex,
+    int LaneBandCandidateCount);
 
 internal sealed partial class DocxRenderer
 {
@@ -873,7 +873,7 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        return DocxFontFallbackRules.ResolveDefaultDocumentTypeface(fontResolver);
+        return DocxFontFallbackRules.ResolveDefaultDocumentTypeface(fontResolver, false, false);
     }
 
     private static OpenTypeFont? LoadFont(
@@ -1167,7 +1167,7 @@ internal sealed partial class DocxRenderer
             string glyphHex = labelResource?.Embedded.EncodeGlyphHex(label) ?? string.Empty;
             if (labelResource is not null && glyphHex.Length != 0)
             {
-                graphics.DrawGlyphText(labelResource.Name, labelFontSize, markerX + 1.5d, markerY + 1.4d, 0, 0, 0, glyphHex);
+                graphics.DrawGlyphText(labelResource.Name, labelFontSize, markerX + 1.5d, markerY + 1.4d, 0, 0, 0, glyphHex, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
             }
         }
     }

@@ -13,8 +13,8 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PdfFontResource> RenderTextRuns(
         IReadOnlyList<TextRun> textRuns,
         PdfGraphicsBuilder graphics,
-        string resourcePrefix = "F",
-        PresentationFontResolver? fontResolver = null)
+        string resourcePrefix,
+        PresentationFontResolver? fontResolver)
     {
         if (textRuns.Count == 0)
         {

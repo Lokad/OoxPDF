@@ -93,7 +93,7 @@ internal static class DocxTextEmissionPlanner
         double layoutFontSize,
         double pdfCharacterSpacing,
         bool compensatePdfCharacterSpacing,
-        DocxTextStateCharacterSpacingSource source = DocxTextStateCharacterSpacingSource.None)
+        DocxTextStateCharacterSpacingSource source)
     {
         DocxEffectiveRunProperties effective = style.EffectiveProperties;
         double positioningCharacterSpacing = compensatePdfCharacterSpacing

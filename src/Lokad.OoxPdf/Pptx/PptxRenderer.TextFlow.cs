@@ -614,7 +614,7 @@ internal sealed partial class PptxRenderer
     {
         if (run.Kind == PptxTextRunKind.Break)
         {
-            return new PptxTextFlowRun(run, run.Style, [new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true)]);
+            return new PptxTextFlowRun(run, run.Style, [new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true, FontScale: 1d)]);
         }
 
         var segments = new List<PptxTextFlowSegment>();
@@ -623,7 +623,7 @@ internal sealed partial class PptxRenderer
         {
             if (tabPartIndex > 0)
             {
-                segments.Add(new PptxTextFlowSegment(" ", " ", PptxTextFlowSegmentKind.Tab, Draw: true, PreventCoalesce: true));
+                segments.Add(new PptxTextFlowSegment(" ", " ", PptxTextFlowSegmentKind.Tab, Draw: true, PreventCoalesce: true, FontScale: 1d));
             }
 
             foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], run.Properties, defaultRunProperties))

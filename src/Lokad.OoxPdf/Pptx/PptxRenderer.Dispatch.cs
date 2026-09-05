@@ -218,6 +218,7 @@ internal sealed partial class PptxRenderer
             OoxPdfSeverity.Warning,
             "Unsupported PPTX graphic frame was detected and ignored.",
             effectivePartName,
+            PageIndex: null,
             SlideIndex: context.SlideNumber,
             Feature: "graphic frame",
             Fallback: "Ignored"));
@@ -235,6 +236,7 @@ internal sealed partial class PptxRenderer
             OoxPdfSeverity.Warning,
             "PPTX node rendering failed and the node was ignored while rendering continued.",
             sourcePartName ?? context.SlidePartName,
+            PageIndex: null,
             SlideIndex: context.SlideNumber,
             Feature: node.Kind.ToString(),
             Fallback: "Ignored"));

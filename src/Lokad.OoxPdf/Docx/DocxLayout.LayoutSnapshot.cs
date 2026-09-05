@@ -28,10 +28,15 @@ internal sealed record DocxLayoutSnapshot(
     IReadOnlyList<DocxFloatingDrawingLayoutSnapshot> StaticFloatingDrawings,
     IReadOnlyList<DocxRelatedStoryLayoutSnapshot> RelatedStories)
 {
+    public static DocxLayoutSnapshot FromLayout(DocxLayout layout)
+    {
+        return FromLayout(layout, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+    }
+
     public static DocxLayoutSnapshot FromLayout(
         DocxLayout layout,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        OoxPdfDocxMarkupGeometryMode markupGeometryMode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+        OoxPdfDocxMarkupMode markupMode,
+        OoxPdfDocxMarkupGeometryMode markupGeometryMode)
     {
         DocxLayoutPageSnapshot[] pages = layout.Pages.Select(ToSnapshot).ToArray();
         IReadOnlyList<DocxLayoutSourceBlockSnapshot> sourceBlocks = ToSourceBlockSnapshots(pages);

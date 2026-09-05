@@ -60,7 +60,7 @@ internal sealed record DocxTextLineLayout(
     DocxParagraph? SourceParagraph,
     string? StoryVariantType,
     DocxLineHeightSource? LineHeightSource,
-    bool EmitsTerminalParagraphMark = false) : DocxLayoutItem;
+    bool EmitsTerminalParagraphMark) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
@@ -74,7 +74,7 @@ internal sealed record DocxTextSegmentLayout(
     bool CompensatePdfCharacterSpacing,
     int SourceTextRunIndex,
     int SourceTextOffsetInRun,
-    DocxTextSegmentRole Role = DocxTextSegmentRole.Text);
+    DocxTextSegmentRole Role);
 
 internal enum DocxTextSegmentRole
 {
@@ -87,12 +87,12 @@ internal sealed record DocxTextSpan(
     string Text,
     DocxTextRun StyleRun,
     int SourceTextRunIndex,
-    int SourceTextOffsetInRun = 0);
+    int SourceTextOffsetInRun);
 
 internal sealed record DocxWrappedTextLine(
     string Text,
     IReadOnlyList<DocxTextSpan> Spans,
-    bool EndsWithIntraTokenBreak = false);
+    bool EndsWithIntraTokenBreak);
 
 internal sealed record DocxInlineImageLayout(
     DocxInlineImage Image,
@@ -146,7 +146,7 @@ internal sealed record DocxTableLayoutContext(
     double? IndentPoints,
     double? CellSpacingPoints,
     string? LayoutValue,
-    IReadOnlyList<DocxRevisionInfo>? Revisions = null);
+    IReadOnlyList<DocxRevisionInfo>? Revisions);
 
 internal sealed record DocxTableCellLayout(
     DocxTableCell Cell,
@@ -209,7 +209,7 @@ internal sealed record DocxTextEmissionSegment(
     bool IsTerminalLineSpace,
     int SourceTextRunIndex,
     int SourceTextOffsetInRun,
-    DocxTextSegmentRole Role = DocxTextSegmentRole.Text);
+    DocxTextSegmentRole Role);
 
 internal readonly record struct DocxKeepBlockEstimate(
     double Height,

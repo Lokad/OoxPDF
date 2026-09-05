@@ -42,6 +42,7 @@ internal sealed partial class PptxRenderer
                 OoxPdfSeverity.Error,
                 "Referenced image part was missing and the image was ignored.",
                 resolvedPictureFill.TargetPartName,
+                PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: "image",
                 Fallback: "Ignored"));

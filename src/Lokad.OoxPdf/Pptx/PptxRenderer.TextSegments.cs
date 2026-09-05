@@ -478,7 +478,7 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce, FontScale: 1d);
                     builder.Clear();
                 }
 
@@ -487,7 +487,7 @@ internal sealed partial class PptxRenderer
                     i++;
                 }
 
-                yield return new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true);
+                yield return new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true, FontScale: 1d);
                 nextPreventsCoalesce = false;
                 hideLeadingSpaces = false;
                 continue;
@@ -497,11 +497,11 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce, FontScale: 1d);
                     builder.Clear();
                 }
 
-                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true);
+                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true, FontScale: 1d);
                 nextPreventsCoalesce = true;
                 continue;
             }
@@ -511,11 +511,11 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce, FontScale: 1d);
                     builder.Clear();
                 }
 
-                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.NoBreakHiddenAdvance, Draw: false, PreventCoalesce: true);
+                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.NoBreakHiddenAdvance, Draw: false, PreventCoalesce: true, FontScale: 1d);
                 nextPreventsCoalesce = true;
                 continue;
             }
@@ -524,7 +524,7 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce, FontScale: 1d);
                     builder.Clear();
                 }
 
@@ -536,11 +536,11 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce, FontScale: 1d);
                     builder.Clear();
                 }
 
-                yield return new PptxTextFlowSegment(c.ToString(), c.ToString(), PptxTextFlowSegmentKind.BoundaryPunctuation, Draw: true, PreventCoalesce: true);
+                yield return new PptxTextFlowSegment(c.ToString(), c.ToString(), PptxTextFlowSegmentKind.BoundaryPunctuation, Draw: true, PreventCoalesce: true, FontScale: 1d);
                 nextPreventsCoalesce = true;
                 hideLeadingSpaces = true;
                 continue;
@@ -551,7 +551,7 @@ internal sealed partial class PptxRenderer
 
         if (builder.Length > 0)
         {
-            yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+            yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce, FontScale: 1d);
         }
     }
 }

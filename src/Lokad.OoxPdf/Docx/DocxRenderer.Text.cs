@@ -112,11 +112,11 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         int pageNumber,
         int pageCount,
-        double fontScale = 1d,
-        double baselineOffsetY = 0d,
-        double xOffset = 0d,
-        bool suppressCommentReferenceSpacer = false,
-        bool useWordCompatibleTextProfile = false)
+        double fontScale,
+        double baselineOffsetY,
+        double xOffset,
+        bool suppressCommentReferenceSpacer,
+        bool useWordCompatibleTextProfile)
     {
         IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
             ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text)]
@@ -512,10 +512,10 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<DocxTextSegmentLayout> segments,
         DocxTextLineLayout line,
         DocxFontResources fontResources,
-        double fontScale = 1d,
-        double baselineOffsetY = 0d,
-        double xOffset = 0d,
-        bool useWordCompatibleTextProfile = false)
+        double fontScale,
+        double baselineOffsetY,
+        double xOffset,
+        bool useWordCompatibleTextProfile)
     {
         if (segments.Count == 0)
         {

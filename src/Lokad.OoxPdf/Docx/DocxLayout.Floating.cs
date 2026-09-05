@@ -168,7 +168,7 @@ internal sealed partial class DocxLayoutEngine
                 ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                 ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                 ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
-                SourceParagraph: paragraph, StoryVariantType: null));
+                SourceParagraph: paragraph, StoryVariantType: null, EmitsTerminalParagraphMark: false));
             firstLine = false;
             paragraphX = continuationTextStartOffset;
             paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));

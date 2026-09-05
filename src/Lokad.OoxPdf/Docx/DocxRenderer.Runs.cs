@@ -26,7 +26,7 @@ internal sealed partial class DocxRenderer
         string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: true);
         if (positioningArray is not null)
         {
-            graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing);
+            graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
             return;
         }
 
@@ -36,7 +36,7 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic, plan.PdfCharacterSpacing);
+        graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
     }
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
@@ -621,7 +621,7 @@ internal sealed partial class DocxRenderer
         short metricValue,
         OpenTypeFont font,
         double fontSize,
-        bool useWordCompatibleRevisionDecorationProfile = false)
+        bool useWordCompatibleRevisionDecorationProfile)
     {
         double thickness = Math.Max(0.25d, Math.Abs(metricValue) * fontSize / font.UnitsPerEm);
         return useWordCompatibleRevisionDecorationProfile
@@ -712,6 +712,7 @@ internal sealed partial class DocxRenderer
             OoxPdfSeverity.Error,
             $"Image '{image.ContentType}' could not be rendered and was ignored: {reason}",
             image.PartName,
+            SlideIndex: null,
             PageIndex: pageIndex,
             Feature: image.ContentType,
             Fallback: "Ignored"));

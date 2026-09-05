@@ -348,13 +348,13 @@ internal sealed class PdfGraphicsBuilder
         byte green,
         byte blue,
         string glyphHex,
-        bool italic = false,
-        double characterSpacing = 0d,
-        int textRenderingMode = 0,
-        byte strokeRed = 0,
-        byte strokeGreen = 0,
-        byte strokeBlue = 0,
-        double strokeWidth = 0d)
+        bool italic,
+        double characterSpacing,
+        int textRenderingMode,
+        byte strokeRed,
+        byte strokeGreen,
+        byte strokeBlue,
+        double strokeWidth)
     {
         DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, '<' + glyphHex + "> Tj", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth);
     }
@@ -368,13 +368,13 @@ internal sealed class PdfGraphicsBuilder
         byte green,
         byte blue,
         string glyphPositioningArray,
-        bool italic = false,
-        double characterSpacing = 0d,
-        int textRenderingMode = 0,
-        byte strokeRed = 0,
-        byte strokeGreen = 0,
-        byte strokeBlue = 0,
-        double strokeWidth = 0d)
+        bool italic,
+        double characterSpacing,
+        int textRenderingMode,
+        byte strokeRed,
+        byte strokeGreen,
+        byte strokeBlue,
+        double strokeWidth)
     {
         DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, glyphPositioningArray + " TJ", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth);
     }

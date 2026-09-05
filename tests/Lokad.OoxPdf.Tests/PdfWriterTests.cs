@@ -57,7 +57,7 @@ internal static class PdfWriterTests
         graphics.FillRectangle(10, 20, 30, 40);
         graphics.SetStrokeRgb(0, 0, 0);
         graphics.StrokeRectangle(10, 20, 30, 40);
-        graphics.DrawGlyphText("F1", 12, 20, 30, 255, 255, 255, "0041", textRenderingMode: 1, strokeRed: 128, strokeGreen: 128, strokeBlue: 128, strokeWidth: 0.5d);
+        graphics.DrawGlyphText("F1", 12, 20, 30, 255, 255, 255, "0041", textRenderingMode: 1, strokeRed: 128, strokeGreen: 128, strokeBlue: 128, strokeWidth: 0.5d, italic: false, characterSpacing: 0d);
 
         string pdf = WritePdfText(new[] { new PdfPage(200, 200, graphics.ToString()) });
 
@@ -196,7 +196,7 @@ internal static class PdfWriterTests
             [],
             [],
             [],
-            [new PdfLinkAnnotation(10, 20, 30, 40, "https://example.invalid/a?b=(c)\\d")]);
+            [new PdfLinkAnnotation(10, 20, 30, 40, "https://example.invalid/a?b=(c)\\d", Destination: null)]);
 
         string pdf = WritePdfText([page]);
 

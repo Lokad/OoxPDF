@@ -158,7 +158,7 @@ internal sealed partial class DocxLayoutEngine
         DocxParagraph? previousParagraph,
         DocxParagraph paragraph,
         double pendingAfterSpacing,
-        double spacingScale = 1d)
+        double spacingScale)
     {
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
         bool suppress = ShouldSuppressContextualSpacing(previousParagraph, paragraph);

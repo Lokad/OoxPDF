@@ -617,7 +617,7 @@ internal static class DocxTextSpacingTests
     public static void DocxSyntheticParagraphKeepNextEstimateHonorsContextualSpacing()
     {
         var contextualSpacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, null, true);
-        DocxParagraph CreateBodyParagraph(string text, double before, double after, bool keepNext = false)
+        DocxParagraph CreateBodyParagraph(string text, double before, double after, bool keepNext)
         {
             return new DocxParagraph(
                 [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
@@ -642,7 +642,7 @@ internal static class DocxTextSpacingTests
             DocxTests.CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
         ];
         DocxParagraph keepNext = CreateBodyParagraph("Keep", before: 0d, after: 12d, keepNext: true);
-        DocxParagraph next = CreateBodyParagraph("Next", before: 12d, after: 0d);
+        DocxParagraph next = CreateBodyParagraph("Next", before: 12d, after: 0d, keepNext: false);
         DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
             .Concat([new DocxParagraphElement(keepNext), new DocxParagraphElement(next)])
             .ToArray();

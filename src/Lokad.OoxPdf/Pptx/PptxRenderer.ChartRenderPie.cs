@@ -144,6 +144,7 @@ internal sealed partial class PptxRenderer
             severity,
             message,
             partName,
+            PageIndex: null,
             SlideIndex: slideIndex,
             Feature: "chart",
             Fallback: fallback));

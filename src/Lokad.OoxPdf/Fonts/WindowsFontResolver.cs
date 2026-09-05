@@ -46,7 +46,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
             : new FontFaceResolution(
                 request.FamilyName,
                 request.FamilyName,
-                new FontStyleKey(request.Bold, request.Italic),
+                new FontStyleKey(request.Bold, request.Italic, 400, 0, false),
                 new MemoryFontProgramSource("missing:" + request.FamilyName, ReadOnlyMemory<byte>.Empty),
                 IsFallback: true);
     }

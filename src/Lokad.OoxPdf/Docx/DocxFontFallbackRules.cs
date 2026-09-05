@@ -15,8 +15,8 @@ internal static class DocxFontFallbackRules
 
     public static FontFaceResolution ResolveDefaultDocumentTypeface(
         IFontResolver fontResolver,
-        bool bold = false,
-        bool italic = false)
+        bool bold,
+        bool italic)
     {
         FontFaceResolution defaultResolution = fontResolver.Resolve(new FontRequest(DefaultDocumentTypefaceRequest, bold, italic));
         if (!defaultResolution.IsFallback ||

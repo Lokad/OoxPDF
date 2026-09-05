@@ -67,9 +67,14 @@ internal sealed record DocxMarkupContext(
         return context;
     }
 
+    public static DocxMarkupContext FromMode(OoxPdfDocxMarkupMode mode)
+    {
+        return FromMode(mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+    }
+
     public static DocxMarkupContext FromMode(
         OoxPdfDocxMarkupMode mode,
-        OoxPdfDocxMarkupGeometryMode geometryMode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+        OoxPdfDocxMarkupGeometryMode geometryMode)
     {
         bool expandsMarkupMargin = mode == OoxPdfDocxMarkupMode.AllMarkup &&
             geometryMode is OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin or OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;

@@ -173,10 +173,16 @@ internal sealed partial class PptxRenderer
         RgbColor Color,
         double Alpha,
         double Width,
-        IReadOnlyList<double>? DashPattern = null,
-        int? Cap = null,
-        int? Join = null,
-        PptxSceneLineCompound? Compound = null);
+        IReadOnlyList<double>? DashPattern,
+        int? Cap,
+        int? Join,
+        PptxSceneLineCompound? Compound)
+    {
+        public ChartSeriesStroke(RgbColor color, double alpha, double width)
+            : this(color, alpha, width, null, null, null, null)
+        {
+        }
+    }
 
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
@@ -184,7 +190,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke ChartDataLabelLeaderLineDefaultStroke { get; } = new(new RgbColor(89, 89, 89), 1d, 0.75d);
 
-    private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1);
+    private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1, null);
 
     private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark)
     {

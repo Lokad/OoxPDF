@@ -87,7 +87,7 @@ internal sealed partial class PptxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         string? chartPartName,
         int slideIndex,
-        bool emitDefaultLayoutDiagnostics = true)
+        bool emitDefaultLayoutDiagnostics)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         var fonts = new List<PdfFontResource>();

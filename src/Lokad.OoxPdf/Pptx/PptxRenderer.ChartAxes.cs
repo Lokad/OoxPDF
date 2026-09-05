@@ -372,7 +372,7 @@ internal sealed partial class PptxRenderer
                 RotationCenterX: 0d,
                 RotationCenterY: 0d,
                 FlipHorizontal: false,
-                FlipVertical: false));
+                FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
         }
 
         return RenderTextRuns(runs, graphics, "CCA", fontResolver);
@@ -453,7 +453,7 @@ internal sealed partial class PptxRenderer
                 RotationCenterX: 0d,
                 RotationCenterY: 0d,
                 FlipHorizontal: false,
-                FlipVertical: false));
+                FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
         }
 
         return RenderTextRuns(runs, graphics, "CVA", fontResolver);

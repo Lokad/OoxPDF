@@ -11,7 +11,7 @@ internal static class PdfGlyphOutlinePath
         double x,
         double y,
         double fontSize,
-        double shear = 0d)
+        double shear)
     {
         if (!font.TryReadGlyphOutline(glyphId, out var outline) || outline.Contours.Count == 0)
         {
@@ -29,7 +29,7 @@ internal static class PdfGlyphOutlinePath
         double x,
         double y,
         double fontSize,
-        double shear = 0d)
+        double shear)
     {
         double scale = font.UnitsPerEm == 0 ? 0d : fontSize / font.UnitsPerEm;
         foreach (OpenTypeFont.OpenTypeGlyphContour contour in outline.Contours)

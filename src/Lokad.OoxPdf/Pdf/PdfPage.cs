@@ -77,7 +77,7 @@ internal readonly record struct PdfLinkAnnotation(
     double Width,
     double Height,
     string? Uri,
-    PdfLinkDestination? Destination = null)
+    PdfLinkDestination? Destination)
 {
     internal static PdfLinkAnnotation ToUri(double x, double y, double width, double height, string uri)
     {

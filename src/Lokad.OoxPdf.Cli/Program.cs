@@ -105,7 +105,7 @@ static int Run(string[] args)
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
     {
-        collector.Add(new OoxPdfDiagnostic("OOXML_CONVERSION_FAILED", OoxPdfSeverity.Error, ex.Message));
+        collector.Add(new OoxPdfDiagnostic("OOXML_CONVERSION_FAILED", OoxPdfSeverity.Error, ex.Message, PartName: null, SlideIndex: null, PageIndex: null, Feature: null, Fallback: null));
         WriteDiagnostics(diagnosticsPath, collector.Diagnostics);
         Console.Error.WriteLine(ex.Message);
         return 1;

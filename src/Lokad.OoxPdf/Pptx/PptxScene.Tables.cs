@@ -400,7 +400,7 @@ internal sealed partial class PptxSceneBuilder
                 },
                 lineCap,
                 ReadLineJoin(shapeProperties),
-                ReadLineJoinValue(shapeProperties)));
+                ReadLineJoinValue(shapeProperties), true));
     }
 
     private static XElement WrapTableCellBorderLine(XElement line)

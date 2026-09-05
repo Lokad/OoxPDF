@@ -275,7 +275,7 @@ internal static class PublicApiTests
             return new FontFaceResolution(
                 request.FamilyName,
                 request.FamilyName,
-                new FontStyleKey(request.Bold, request.Italic),
+                new FontStyleKey(request.Bold, request.Italic, 400, 0, false),
                 source,
                 IsFallback: false);
         }

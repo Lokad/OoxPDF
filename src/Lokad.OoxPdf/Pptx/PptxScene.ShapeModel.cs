@@ -185,7 +185,7 @@ internal readonly record struct PptxSceneLineStyle(
     string? CapValue,
     int? Join,
     string? JoinValue,
-    bool WidthSpecified = true)
+    bool WidthSpecified)
 {
     public bool HasDash => DashPattern is { Count: > 0 };
 }

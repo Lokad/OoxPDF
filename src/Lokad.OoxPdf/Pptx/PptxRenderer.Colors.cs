@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
 
     private static bool TryReadLine(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth)
     {
-        return TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out _);
+        return TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out _, fallbackLineWidth: null);
     }
 
     private static bool TryReadLineWithAlpha(
@@ -56,7 +56,7 @@ internal sealed partial class PptxRenderer
         out RgbColor color,
         out double lineWidth,
         out double alpha,
-        double? fallbackLineWidth = null)
+        double? fallbackLineWidth)
     {
         return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, PptxColorMap.Default, out color, out lineWidth, out alpha, fallbackLineWidth);
     }
@@ -68,7 +68,7 @@ internal sealed partial class PptxRenderer
         out RgbColor color,
         out double lineWidth,
         out double alpha,
-        double? fallbackLineWidth = null)
+        double? fallbackLineWidth)
     {
         return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, fallbackLineWidth);
     }

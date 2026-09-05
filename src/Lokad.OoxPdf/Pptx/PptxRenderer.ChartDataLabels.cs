@@ -999,7 +999,7 @@ internal sealed partial class PptxRenderer
             RotationCenterX: 0d,
             RotationCenterY: 0d,
             FlipHorizontal: false,
-            FlipVertical: false);
+            FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false);
     }
 
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)

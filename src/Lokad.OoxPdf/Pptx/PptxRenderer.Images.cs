@@ -77,6 +77,7 @@ internal sealed partial class PptxRenderer
                 OoxPdfSeverity.Error,
                 "Referenced image part was missing and the image was ignored.",
                 targetPartName,
+                PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: "image",
                 Fallback: "Ignored"));
@@ -912,6 +913,7 @@ internal sealed partial class PptxRenderer
                         OoxPdfSeverity.Warning,
                         $"PPTX {ImageRecolorKindName(recolor)} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.",
                         partName,
+                        PageIndex: null,
                         SlideIndex: slideIndex,
                         Feature: "image recolor",
                         Fallback: "Original image"));
@@ -940,6 +942,7 @@ internal sealed partial class PptxRenderer
                 OoxPdfSeverity.Error,
                 $"Image '{contentType}' could not be rendered and was ignored: Unsupported image content type.",
                 partName,
+                PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: contentType,
                 Fallback: "Ignored"));
@@ -951,6 +954,7 @@ internal sealed partial class PptxRenderer
                 OoxPdfSeverity.Error,
                 $"Image '{contentType}' could not be rendered and was ignored: {ex.Message}",
                 partName,
+                PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: contentType,
                 Fallback: "Ignored"));
@@ -997,6 +1001,7 @@ internal sealed partial class PptxRenderer
                 OoxPdfSeverity.Warning,
                 $"Image '{partName}' could not be decoded for Office-style cropped image embedding on slide {slideIndex}; falling back to PDF clipping.",
                 partName,
+                PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: "image crop",
                 Fallback: "PDF clipping"));

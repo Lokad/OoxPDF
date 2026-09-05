@@ -28,6 +28,7 @@ internal sealed partial class PptxRenderer
                 OoxPdfSeverity.Warning,
                 $"Unsupported PPTX feature '{feature}' was detected and ignored.",
                 partName,
+                PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: feature,
                 Fallback: "Ignored"));
@@ -46,6 +47,7 @@ internal sealed partial class PptxRenderer
                 OoxPdfSeverity.Warning,
                 "PPTX text vertical overflow uses ellipsis; local clipping was applied, but the ellipsis marker is not rendered.",
                 partName,
+                PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: "text vertical overflow ellipsis marker",
                 Fallback: "Local clip"));
