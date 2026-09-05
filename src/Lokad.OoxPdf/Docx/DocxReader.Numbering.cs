@@ -1,0 +1,319 @@
+using System.Globalization;
+using System.Text;
+using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Ooxml;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
+
+namespace Lokad.OoxPdf.Docx;
+
+internal sealed partial class DocxReader
+{
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    private static string FormatNoteReferenceNumber(int value, string? format)
+    {
+        return format switch
+        {
+            "lowerRoman" => ToRomanNumeral(value).ToLowerInvariant(),
+            "upperRoman" => ToRomanNumeral(value),
+            "lowerLetter" => ToAlphabeticNumber(value, upper: false),
+            "upperLetter" => ToAlphabeticNumber(value, upper: true),
+            _ => value.ToString(CultureInfo.InvariantCulture)
+        };
+    }
+
+    // Single caller; kept static: numeral-builder pair kept together.
+    private static string ToAlphabeticNumber(int value, bool upper)
+    {
+        if (value <= 0)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        var builder = new StringBuilder();
+        int current = value;
+        while (current > 0)
+        {
+            current--;
+            char letter = (char)((upper ? 'A' : 'a') + current % 26);
+            builder.Insert(0, letter);
+            current /= 26;
+        }
+
+        return builder.ToString();
+    }
+
+    // Single caller; kept static: numeral-builder pair kept together.
+    private static string ToRomanNumeral(int value)
+    {
+        if (value <= 0 || value > 3999)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        ReadOnlySpan<(int Value, string Text)> numerals =
+        [
+            (1000, "M"),
+            (900, "CM"),
+            (500, "D"),
+            (400, "CD"),
+            (100, "C"),
+            (90, "XC"),
+            (50, "L"),
+            (40, "XL"),
+            (10, "X"),
+            (9, "IX"),
+            (5, "V"),
+            (4, "IV"),
+            (1, "I")
+        ];
+        var builder = new StringBuilder();
+        int current = value;
+        foreach ((int numeralValue, string numeralText) in numerals)
+        {
+            while (current >= numeralValue)
+            {
+                builder.Append(numeralText);
+                current -= numeralValue;
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)
+    {
+        XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
+        string? numId = (string?)numberingProperties?
+            .Element(WordprocessingNamespace + "numId")
+            ?.Attribute(WordprocessingNamespace + "val");
+        int level = numberingProperties?
+            .Element(WordprocessingNamespace + "ilvl")
+            ?.Attribute(WordprocessingNamespace + "val") is { } levelAttribute
+            ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
+            : 0;
+        if (numId is null || !numbering.NumToAbstract.TryGetValue(numId, out string? abstractId))
+        {
+            return null;
+        }
+
+        DocxNumberingLevel? numberingLevel = numbering.LevelOverrides.TryGetValue((numId, level), out DocxNumberingLevel? concreteLevel)
+            ? concreteLevel
+            : numbering.Levels.TryGetValue((abstractId, level), out DocxNumberingLevel? abstractLevel)
+                ? abstractLevel
+                : null;
+        if (numberingLevel is null)
+        {
+            return null;
+        }
+
+        if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
+        {
+            string bulletText = string.IsNullOrEmpty(numberingLevel.Text) ? "\u2022" : numberingLevel.Text;
+            return new DocxListLabel(bulletText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, numberingLevel.Style);
+        }
+
+        var key = (numId, level);
+        int start = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
+            ? overriddenStart
+            : numberingLevel.Start;
+        counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : start;
+        foreach (var resetKey in counters.Keys.Where(k => k.NumId == numId && k.Level > level).ToArray())
+        {
+            counters.Remove(resetKey);
+        }
+
+        string labelText = ResolveNumberingLevelText(numberingLevel.Text, numId, counters);
+        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, numberingLevel.Style);
+    }
+
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    private static string ResolveNumberingLevelText(string text, string numId, IReadOnlyDictionary<(string NumId, int Level), int> counters)
+    {
+        string resolved = text;
+        for (int level = 0; level < 9; level++)
+        {
+            string token = "%" + (level + 1).ToString(CultureInfo.InvariantCulture);
+            if (resolved.Contains(token, StringComparison.Ordinal))
+            {
+                string value = counters.TryGetValue((numId, level), out int counter)
+                    ? counter.ToString(CultureInfo.InvariantCulture)
+                    : "0";
+                resolved = resolved.Replace(token, value, StringComparison.Ordinal);
+            }
+        }
+
+        return resolved;
+    }
+
+    // Single caller; kept static: entry-point stage, not a local candidate.
+    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxRelationship? numberingRelationship = package.GetRelationships(documentPartName, cancellationToken)
+            .FirstOrDefault(r => !r.IsExternal && r.Type == NumberingRelationshipType && r.ResolvedTarget is not null);
+        OoxPart? numberingPart = numberingRelationship?.ResolvedTarget is null
+            ? package.Parts.FirstOrDefault(p => p.ContentType == NumberingContentType)
+            : package.GetPart(numberingRelationship.ResolvedTarget);
+        if (numberingPart is null)
+        {
+            return DocxNumberingSet.Empty;
+        }
+
+        using Stream stream = numberingPart.OpenRead();
+        XDocument numberingXml = SafeXml.Load(stream, cancellationToken);
+        var levels = new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>();
+        foreach (XElement abstractNum in numberingXml.Root?.Elements(WordprocessingNamespace + "abstractNum") ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string? abstractId = (string?)abstractNum.Attribute(WordprocessingNamespace + "abstractNumId");
+            if (abstractId is null)
+            {
+                continue;
+            }
+
+            foreach (XElement level in abstractNum.Elements(WordprocessingNamespace + "lvl"))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int levelIndex = level.Attribute(WordprocessingNamespace + "ilvl") is { } ilvl
+                    ? int.Parse(ilvl.Value, CultureInfo.InvariantCulture)
+                    : 0;
+                levels[(abstractId, levelIndex)] = ReadNumberingLevel(level, levelIndex, fontCatalog);
+            }
+        }
+
+        var numToAbstract = new Dictionary<string, string>(StringComparer.Ordinal);
+        var startOverrides = new Dictionary<(string NumId, int Level), int>();
+        var levelOverrides = new Dictionary<(string NumId, int Level), DocxNumberingLevel>();
+        foreach (XElement num in numberingXml.Root?.Elements(WordprocessingNamespace + "num") ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string? numId = (string?)num.Attribute(WordprocessingNamespace + "numId");
+            string? abstractId = (string?)num.Element(WordprocessingNamespace + "abstractNumId")?.Attribute(WordprocessingNamespace + "val");
+            if (numId is not null && abstractId is not null)
+            {
+                numToAbstract[numId] = abstractId;
+            }
+
+            if (numId is null)
+            {
+                continue;
+            }
+
+            foreach (XElement overrideLevel in num.Elements(WordprocessingNamespace + "lvlOverride"))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int levelIndex = overrideLevel.Attribute(WordprocessingNamespace + "ilvl") is { } ilvl
+                    ? int.Parse(ilvl.Value, CultureInfo.InvariantCulture)
+                    : 0;
+                if (overrideLevel.Element(WordprocessingNamespace + "startOverride")?.Attribute(WordprocessingNamespace + "val") is { } startValue)
+                {
+                    startOverrides[(numId, levelIndex)] = int.Parse(startValue.Value, CultureInfo.InvariantCulture);
+                }
+
+                XElement? concreteLevel = overrideLevel.Element(WordprocessingNamespace + "lvl");
+                if (concreteLevel is not null)
+                {
+                    levelOverrides[(numId, levelIndex)] = ReadNumberingLevel(concreteLevel, levelIndex, fontCatalog);
+                }
+            }
+        }
+
+        return new DocxNumberingSet(numToAbstract, levels, startOverrides, levelOverrides);
+    }
+
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    private static DocxNumberingLevel ReadNumberingLevel(XElement level, int levelIndex, DocxFontCatalog fontCatalog)
+    {
+        int start = level.Element(WordprocessingNamespace + "start")?.Attribute(WordprocessingNamespace + "val") is { } startValue
+            ? int.Parse(startValue.Value, CultureInfo.InvariantCulture)
+            : 1;
+        string format = (string?)level.Element(WordprocessingNamespace + "numFmt")?.Attribute(WordprocessingNamespace + "val") ?? "decimal";
+        string text = (string?)level.Element(WordprocessingNamespace + "lvlText")?.Attribute(WordprocessingNamespace + "val") ??
+            (format.Equals("bullet", StringComparison.OrdinalIgnoreCase) ? "\u2022" : "%" + (levelIndex + 1) + ".");
+        string suffix = (string?)level.Element(WordprocessingNamespace + "suff")?.Attribute(WordprocessingNamespace + "val") ?? "tab";
+        DocxTextRunStyle style = ReadTextRunStyle(level.Element(WordprocessingNamespace + "rPr"));
+        return new DocxNumberingLevel(format, ResolveNumberingSymbolText(text, style, fontCatalog), suffix, start, ReadNumberingIndent(level), style);
+    }
+
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    private static string ResolveNumberingSymbolText(string text, DocxTextRunStyle style, DocxFontCatalog fontCatalog)
+    {
+        return UsesSymbolCharset(style, fontCatalog) ? MapSymbolCharsetText(text) : text;
+    }
+
+    // Single caller; kept static: charset-probe pair kept together.
+    private static bool UsesSymbolCharset(DocxTextRunStyle style, DocxFontCatalog fontCatalog)
+    {
+        string? family = FirstNonEmpty(style.Fonts.Ascii, style.Fonts.HighAnsi, style.FontFamily, style.Fonts.ComplexScript);
+        if (family is null)
+        {
+            return false;
+        }
+
+        DocxFontTableEntry? entry = fontCatalog.Entries
+            .FirstOrDefault(item => item.Name.Equals(family, StringComparison.OrdinalIgnoreCase));
+        return entry?.CharsetValue is { } charset &&
+            (charset.Equals("02", StringComparison.OrdinalIgnoreCase) || charset.Equals("2", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Single caller; kept static: charset-probe pair kept together.
+    private static string MapSymbolCharsetText(string text)
+    {
+        Span<char> mapped = text.Length <= 256
+            ? stackalloc char[text.Length]
+            : new char[text.Length];
+        for (int i = 0; i < text.Length; i++)
+        {
+            char ch = text[i];
+            mapped[i] = ch <= 0x00FF ? (char)(0xF000 + ch) : ch;
+        }
+
+        return new string(mapped);
+    }
+
+    private sealed record DocxNumberingSet(
+        IReadOnlyDictionary<string, string> NumToAbstract,
+        IReadOnlyDictionary<(string AbstractId, int Level), DocxNumberingLevel> Levels,
+        IReadOnlyDictionary<(string NumId, int Level), int> StartOverrides,
+        IReadOnlyDictionary<(string NumId, int Level), DocxNumberingLevel> LevelOverrides)
+    {
+        public static DocxNumberingSet Empty { get; } = new(
+            new Dictionary<string, string>(),
+            new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>(),
+            new Dictionary<(string NumId, int Level), int>(),
+            new Dictionary<(string NumId, int Level), DocxNumberingLevel>());
+    }
+
+    private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent, DocxTextRunStyle Style);
+
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    private static DocxNumberingIndent ReadNumberingIndent(XElement level)
+    {
+        XElement? indent = level
+            .Element(WordprocessingNamespace + "pPr")
+            ?.Element(WordprocessingNamespace + "ind");
+        XElement? numberingTab = level
+            .Element(WordprocessingNamespace + "pPr")
+            ?.Element(WordprocessingNamespace + "tabs")
+            ?.Elements(WordprocessingNamespace + "tab")
+            .FirstOrDefault(tab => string.Equals(
+                (string?)tab.Attribute(WordprocessingNamespace + "val"),
+                "num",
+                StringComparison.OrdinalIgnoreCase));
+        return new DocxNumberingIndent(
+            ReadLogicalStartTwips(indent),
+            ReadLogicalEndTwips(indent),
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "firstLine"),
+            ReadTwipsAttribute(indent, WordprocessingNamespace + "hanging"),
+            ReadTwipsAttribute(numberingTab, WordprocessingNamespace + "pos"),
+            ReadLogicalStartValue(indent),
+            ReadLogicalEndValue(indent),
+            (string?)indent?.Attribute(WordprocessingNamespace + "firstLine"),
+            (string?)indent?.Attribute(WordprocessingNamespace + "hanging"),
+            (string?)numberingTab?.Attribute(WordprocessingNamespace + "val"),
+            (string?)numberingTab?.Attribute(WordprocessingNamespace + "pos"));
+    }
+}
