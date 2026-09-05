@@ -969,8 +969,8 @@ internal sealed partial class DocxReader
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
-            bool hasOtherBeforeSide = HasBeforeSpacingSide(other.Spacing);
-            bool hasOtherAfterSide = HasAfterSpacingSide(other.Spacing);
+            bool hasOtherBeforeSide = DocxParagraphSpacing.HasBeforeSpacingSide(other.Spacing);
+            bool hasOtherAfterSide = DocxParagraphSpacing.HasAfterSpacingSide(other.Spacing);
             return new DocxResolvedParagraphProperties(
                 other.Alignment ?? Alignment,
                 other.AlignmentValue ?? AlignmentValue,
@@ -978,9 +978,9 @@ internal sealed partial class DocxReader
                 hasOtherAfterSide ? other.SpacingAfterPoints : other.SpacingAfterPoints ?? SpacingAfterPoints,
                 other.LineSpacingFactor ?? LineSpacingFactor,
                 other.LineSpacingPoints ?? LineSpacingPoints,
-                MergeSpacing(Spacing, other.Spacing),
-                MergeKeepRules(KeepRules, other.KeepRules),
-                MergeIndent(Indent, other.Indent),
+                Spacing.Merge(other.Spacing),
+                KeepRules.Merge(other.KeepRules),
+                Indent.Merge(other.Indent),
                 other.TabStops.Count != 0 ? other.TabStops : TabStops,
                 other.SnapToGrid ?? SnapToGrid,
                 other.SnapToGridValue ?? SnapToGridValue,
@@ -989,60 +989,5 @@ internal sealed partial class DocxReader
                 other.WordWrap ?? WordWrap,
                 other.WordWrapValue ?? WordWrapValue);
         }
-    }
-
-    private static DocxParagraphSpacing MergeSpacing(DocxParagraphSpacing current, DocxParagraphSpacing other)
-    {
-        bool hasOtherBeforeSide = HasBeforeSpacingSide(other);
-        bool hasOtherAfterSide = HasAfterSpacingSide(other);
-        return new DocxParagraphSpacing(
-            hasOtherBeforeSide ? other.BeforeValue : current.BeforeValue,
-            hasOtherAfterSide ? other.AfterValue : current.AfterValue,
-            hasOtherBeforeSide ? other.BeforeLinesValue : current.BeforeLinesValue,
-            hasOtherAfterSide ? other.AfterLinesValue : current.AfterLinesValue,
-            hasOtherBeforeSide ? other.BeforeAutoSpacingValue : current.BeforeAutoSpacingValue,
-            hasOtherAfterSide ? other.AfterAutoSpacingValue : current.AfterAutoSpacingValue,
-            other.LineValue ?? current.LineValue,
-            other.LineRuleValue ?? current.LineRuleValue,
-            other.ContextualSpacing ?? current.ContextualSpacing);
-    }
-
-    private static bool HasBeforeSpacingSide(DocxParagraphSpacing spacing)
-    {
-        return spacing.BeforeValue is not null ||
-            spacing.BeforeLinesValue is not null ||
-            spacing.BeforeAutoSpacingValue is not null;
-    }
-
-    private static bool HasAfterSpacingSide(DocxParagraphSpacing spacing)
-    {
-        return spacing.AfterValue is not null ||
-            spacing.AfterLinesValue is not null ||
-            spacing.AfterAutoSpacingValue is not null;
-    }
-
-    private static DocxParagraphKeepRules MergeKeepRules(DocxParagraphKeepRules current, DocxParagraphKeepRules other)
-    {
-        return new DocxParagraphKeepRules(
-            other.KeepNext ?? current.KeepNext,
-            other.KeepNextValue ?? current.KeepNextValue,
-            other.KeepLines ?? current.KeepLines,
-            other.KeepLinesValue ?? current.KeepLinesValue,
-            other.WidowControl ?? current.WidowControl,
-            other.WidowControlValue ?? current.WidowControlValue);
-    }
-
-    private static DocxParagraphIndent MergeIndent(DocxParagraphIndent current, DocxParagraphIndent other)
-    {
-        bool hasOtherFirstLineSide = other.FirstLineValue is not null || other.HangingValue is not null;
-        return new DocxParagraphIndent(
-            other.LeftPoints ?? current.LeftPoints,
-            other.RightPoints ?? current.RightPoints,
-            hasOtherFirstLineSide ? other.FirstLinePoints : current.FirstLinePoints,
-            hasOtherFirstLineSide ? other.HangingPoints : current.HangingPoints,
-            other.LeftValue ?? current.LeftValue,
-            other.RightValue ?? current.RightValue,
-            hasOtherFirstLineSide ? other.FirstLineValue : current.FirstLineValue,
-            hasOtherFirstLineSide ? other.HangingValue : current.HangingValue);
     }
 }

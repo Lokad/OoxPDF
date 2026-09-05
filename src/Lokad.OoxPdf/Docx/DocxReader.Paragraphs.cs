@@ -1302,7 +1302,7 @@ internal sealed partial class DocxReader
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static double ResolveDefaultAutoLineSpacingFactor(DocxResolvedParagraphProperties paragraph)
     {
-        return HasBeforeSpacingSide(paragraph.Spacing) || HasAfterSpacingSide(paragraph.Spacing)
+        return DocxParagraphSpacing.HasBeforeSpacingSide(paragraph.Spacing) || DocxParagraphSpacing.HasAfterSpacingSide(paragraph.Spacing)
             ? WordSpacingTokenAutoLineSpacingFactor
             : WordUntokenedAutoLineSpacingFactor;
     }

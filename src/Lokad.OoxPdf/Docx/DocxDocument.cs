@@ -652,6 +652,36 @@ internal sealed record DocxParagraphSpacing(
     bool? ContextualSpacing)
 {
     public static DocxParagraphSpacing Empty { get; } = new(null, null, null, null, null, null, null, null, null);
+
+    public DocxParagraphSpacing Merge(DocxParagraphSpacing other)
+    {
+        bool hasOtherBeforeSide = HasBeforeSpacingSide(other);
+        bool hasOtherAfterSide = HasAfterSpacingSide(other);
+        return new DocxParagraphSpacing(
+            hasOtherBeforeSide ? other.BeforeValue : BeforeValue,
+            hasOtherAfterSide ? other.AfterValue : AfterValue,
+            hasOtherBeforeSide ? other.BeforeLinesValue : BeforeLinesValue,
+            hasOtherAfterSide ? other.AfterLinesValue : AfterLinesValue,
+            hasOtherBeforeSide ? other.BeforeAutoSpacingValue : BeforeAutoSpacingValue,
+            hasOtherAfterSide ? other.AfterAutoSpacingValue : AfterAutoSpacingValue,
+            other.LineValue ?? LineValue,
+            other.LineRuleValue ?? LineRuleValue,
+            other.ContextualSpacing ?? ContextualSpacing);
+    }
+
+    internal static bool HasBeforeSpacingSide(DocxParagraphSpacing spacing)
+    {
+        return spacing.BeforeValue is not null ||
+            spacing.BeforeLinesValue is not null ||
+            spacing.BeforeAutoSpacingValue is not null;
+    }
+
+    internal static bool HasAfterSpacingSide(DocxParagraphSpacing spacing)
+    {
+        return spacing.AfterValue is not null ||
+            spacing.AfterLinesValue is not null ||
+            spacing.AfterAutoSpacingValue is not null;
+    }
 }
 
 internal sealed record DocxParagraphKeepRules(
@@ -663,6 +693,17 @@ internal sealed record DocxParagraphKeepRules(
     string? WidowControlValue)
 {
     public static DocxParagraphKeepRules Empty { get; } = new(null, null, null, null, null, null);
+
+    public DocxParagraphKeepRules Merge(DocxParagraphKeepRules other)
+    {
+        return new DocxParagraphKeepRules(
+            other.KeepNext ?? KeepNext,
+            other.KeepNextValue ?? KeepNextValue,
+            other.KeepLines ?? KeepLines,
+            other.KeepLinesValue ?? KeepLinesValue,
+            other.WidowControl ?? WidowControl,
+            other.WidowControlValue ?? WidowControlValue);
+    }
 }
 
 internal sealed record DocxParagraphIndent(
@@ -676,6 +717,20 @@ internal sealed record DocxParagraphIndent(
     string? HangingValue)
 {
     public static DocxParagraphIndent Empty { get; } = new(null, null, null, null, null, null, null, null);
+
+    public DocxParagraphIndent Merge(DocxParagraphIndent other)
+    {
+        bool hasOtherFirstLineSide = other.FirstLineValue is not null || other.HangingValue is not null;
+        return new DocxParagraphIndent(
+            other.LeftPoints ?? LeftPoints,
+            other.RightPoints ?? RightPoints,
+            hasOtherFirstLineSide ? other.FirstLinePoints : FirstLinePoints,
+            hasOtherFirstLineSide ? other.HangingPoints : HangingPoints,
+            other.LeftValue ?? LeftValue,
+            other.RightValue ?? RightValue,
+            hasOtherFirstLineSide ? other.FirstLineValue : FirstLineValue,
+            hasOtherFirstLineSide ? other.HangingValue : HangingValue);
+    }
 }
 
 internal sealed record DocxListLabel(
