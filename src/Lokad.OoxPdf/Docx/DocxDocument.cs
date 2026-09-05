@@ -55,7 +55,7 @@ internal sealed record DocxRelatedStory(
     IReadOnlyList<DocxBodyElement> BodyElements,
     IReadOnlyList<DocxParagraph> FallbackParagraphs,
     IReadOnlyList<DocxTable> FallbackTables,
-    string? Type = null)
+    string? Type)
 {
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
     public DocxCommentMetadata? CommentMetadata { get; init; }
@@ -295,12 +295,12 @@ internal sealed record DocxFontTableEntry(
 internal sealed record DocxThemeFonts(
     string? MajorLatinTypeface,
     string? MinorLatinTypeface,
-    string? MajorComplexScriptTypeface = null,
-    string? MinorComplexScriptTypeface = null,
-    string? MajorEastAsiaTypeface = null,
-    string? MinorEastAsiaTypeface = null)
+    string? MajorComplexScriptTypeface,
+    string? MinorComplexScriptTypeface,
+    string? MajorEastAsiaTypeface,
+    string? MinorEastAsiaTypeface)
 {
-    public static DocxThemeFonts Empty { get; } = new(null, null);
+    public static DocxThemeFonts Empty { get; } = new(null, null, null, null, null, null);
 }
 
 internal sealed record DocxStyleCatalog(
@@ -396,10 +396,10 @@ internal sealed record DocxFloatingDrawing(
     string? VerticalOffsetValue,
     string? WrapKind,
     string? WrapTextValue,
-    string? ImageRelationshipId = null,
-    DocxInlineImage? Image = null,
-    int? SourceParagraphIndex = null,
-    int? SourceBlockIndex = null)
+    string? ImageRelationshipId,
+    DocxInlineImage? Image,
+    int? SourceParagraphIndex,
+    int? SourceBlockIndex)
 {
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public IReadOnlyList<DocxBodyElement> TextBoxBodyElements { get; init; } = [];
@@ -419,7 +419,7 @@ internal sealed record DocxParagraphElement(DocxParagraph Paragraph) : DocxBodyE
 
 internal sealed record DocxTableElement(DocxTable Table) : DocxBodyElement;
 
-internal sealed record DocxImplicitParagraphElement(string SourceKind) : DocxBodyElement
+internal sealed record DocxImplicitParagraphElement(DocxBreakSourceKind SourceKind) : DocxBodyElement
 {
     public static DocxTextRun CreateParagraphMarkRun()
     {
@@ -427,9 +427,9 @@ internal sealed record DocxImplicitParagraphElement(string SourceKind) : DocxBod
     }
 }
 
-internal sealed record DocxPageBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
+internal sealed record DocxPageBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
 
-internal sealed record DocxManualBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
+internal sealed record DocxManualBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
 
 internal sealed record DocxSectionColumn(
     string? WidthValue,
@@ -462,10 +462,10 @@ internal static class DocxBodyElementFactory
     }
 
     public static DocxPageBreakElement CreatePageBreak(
-        string sourceKind,
+        DocxBreakSourceKind sourceKind,
         string? value,
-        DocxParagraph? breakParagraph = null,
-        IReadOnlyList<DocxRevisionInfo>? revisions = null)
+        DocxParagraph? breakParagraph,
+        IReadOnlyList<DocxRevisionInfo>? revisions)
     {
         return new DocxPageBreakElement(sourceKind, value, breakParagraph)
         {
@@ -473,7 +473,7 @@ internal static class DocxBodyElementFactory
         };
     }
 
-    public static DocxManualBreakElement CreateManualBreak(string sourceKind, string? value, DocxParagraph? breakParagraph)
+    public static DocxManualBreakElement CreateManualBreak(DocxBreakSourceKind sourceKind, string? value, DocxParagraph? breakParagraph)
     {
         return new DocxManualBreakElement(sourceKind, value, breakParagraph)
         {
@@ -571,10 +571,10 @@ internal sealed record DocxInlineReference(
     string Kind,
     string? Id,
     string? CustomMarkFollowsValue,
-    string? DisplayText = null,
-    int SourceRunIndex = -1,
-    int RunChildIndex = -1,
-    int TextOffsetInRun = 0)
+    string? DisplayText,
+    int SourceRunIndex,
+    int RunChildIndex,
+    int TextOffsetInRun)
 {
     public DocxRevisionInfo? Revision { get; init; }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
@@ -712,23 +712,50 @@ internal sealed record DocxTextRun(
     bool Underline,
     string? UnderlineValue,
     string? FontFamily,
-    double CharacterSpacingPoints = 0d,
-    bool AllCaps = false,
-    string? VerticalAlignmentValue = null,
-    bool Strike = false,
-    string? StrikeValue = null,
-    bool DoubleStrike = false,
-    string? DoubleStrikeValue = null,
-    string? HighlightValue = null,
-    string? ShadingFillHex = null,
-    string? ShadingValue = null,
-    string? ShadingColor = null,
-    bool SmallCaps = false,
-    string? SmallCapsValue = null,
-    bool Hidden = false,
-    string? HiddenValue = null,
-    string? UnderlineColorHex = null)
+    double CharacterSpacingPoints,
+    bool AllCaps,
+    string? VerticalAlignmentValue,
+    bool Strike,
+    string? StrikeValue,
+    bool DoubleStrike,
+    string? DoubleStrikeValue,
+    string? HighlightValue,
+    string? ShadingFillHex,
+    string? ShadingValue,
+    string? ShadingColor,
+    bool SmallCaps,
+    string? SmallCapsValue,
+    bool Hidden,
+    string? HiddenValue,
+    string? UnderlineColorHex)
 {
+
+    public DocxTextRun(
+        string Text,
+        double FontSize,
+        string? ColorHex,
+        bool Bold,
+        bool Italic,
+        bool Underline,
+        string? UnderlineValue,
+        string? FontFamily)
+        : this(Text, FontSize, ColorHex, Bold, Italic, Underline, UnderlineValue, FontFamily, 0d, false, null, false, null, false, null, null, null, null, null, false, null, false, null, null)
+    {
+    }
+
+    public DocxTextRun(
+        string Text,
+        double FontSize,
+        string? ColorHex,
+        bool Bold,
+        bool Italic,
+        bool Underline,
+        string? UnderlineValue,
+        string? FontFamily,
+        double CharacterSpacingPoints)
+        : this(Text, FontSize, ColorHex, Bold, Italic, Underline, UnderlineValue, FontFamily, CharacterSpacingPoints, false, null, false, null, false, null, null, null, null, null, false, null, false, null, null)
+    {
+    }
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
     public DocxRunStyleResolution StyleResolution { get; init; } = DocxRunStyleResolution.Empty;
     public int SourceRunIndex { get; init; } = -1;
@@ -848,23 +875,36 @@ internal sealed record DocxTextRunStyle(
     string? UnderlineValue,
     string? FontFamily,
     DocxRunFonts Fonts,
-    double? CharacterSpacingPoints = null,
-    bool? AllCaps = null,
-    string? VerticalAlignmentValue = null,
-    bool? Strike = null,
-    string? StrikeValue = null,
-    bool? DoubleStrike = null,
-    string? DoubleStrikeValue = null,
-    string? HighlightValue = null,
-    string? ShadingFillHex = null,
-    string? ShadingValue = null,
-    string? ShadingColor = null,
-    bool? SmallCaps = null,
-    string? SmallCapsValue = null,
-    bool? Hidden = null,
-    string? HiddenValue = null,
-    string? UnderlineColorHex = null)
+    double? CharacterSpacingPoints,
+    bool? AllCaps,
+    string? VerticalAlignmentValue,
+    bool? Strike,
+    string? StrikeValue,
+    bool? DoubleStrike,
+    string? DoubleStrikeValue,
+    string? HighlightValue,
+    string? ShadingFillHex,
+    string? ShadingValue,
+    string? ShadingColor,
+    bool? SmallCaps,
+    string? SmallCapsValue,
+    bool? Hidden,
+    string? HiddenValue,
+    string? UnderlineColorHex)
 {
+
+    public DocxTextRunStyle(
+        double? FontSize,
+        string? ColorHex,
+        bool? Bold,
+        bool? Italic,
+        bool? Underline,
+        string? UnderlineValue,
+        string? FontFamily,
+        DocxRunFonts Fonts)
+        : this(FontSize, ColorHex, Bold, Italic, Underline, UnderlineValue, FontFamily, Fonts, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+    {
+    }
     public static DocxTextRunStyle Empty { get; } = new(null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
     public DocxTextRun ApplyTo(DocxTextRun? baseRun, string text, double fallbackFontSize)
@@ -941,19 +981,27 @@ internal sealed record DocxTable(
     string? LayoutValue,
     IReadOnlyList<double> ColumnWidthsPoints,
     IReadOnlyList<DocxTableRow> Rows,
-    string? StyleId = null,
-    double? PreferredWidthPoints = null,
-    string? PreferredWidthValue = null,
-    string? PreferredWidthType = null,
-    double? IndentPoints = null,
-    string? IndentValue = null,
-    string? IndentType = null,
-    double? CellSpacingPoints = null,
-    string? CellSpacingValue = null,
-    string? CellSpacingType = null,
-    DocxTableLook? Look = null,
-    bool HasExplicitGrid = true)
+    string? StyleId,
+    double? PreferredWidthPoints,
+    string? PreferredWidthValue,
+    string? PreferredWidthType,
+    double? IndentPoints,
+    string? IndentValue,
+    string? IndentType,
+    double? CellSpacingPoints,
+    string? CellSpacingValue,
+    string? CellSpacingType,
+    DocxTableLook? Look,
+    bool HasExplicitGrid)
 {
+
+    public DocxTable(
+        string? LayoutValue,
+        IReadOnlyList<double> ColumnWidthsPoints,
+        IReadOnlyList<DocxTableRow> Rows)
+        : this(LayoutValue, ColumnWidthsPoints, Rows, null, null, null, null, null, null, null, null, null, null, null, true)
+    {
+    }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 }
 
@@ -978,14 +1026,21 @@ internal sealed record DocxTableLook(
 internal sealed record DocxTableRow(
     IReadOnlyList<DocxTableCell> Cells,
     double? HeightPoints,
-    bool IsHeader = false,
-    string? HeaderValue = null,
-    string? HeightValue = null,
-    string? HeightRuleValue = null,
-    DocxTableCellMargins? TablePropertyExceptionCellMargins = null,
-    bool CantSplit = false,
-    string? CantSplitValue = null)
+    bool IsHeader,
+    string? HeaderValue,
+    string? HeightValue,
+    string? HeightRuleValue,
+    DocxTableCellMargins? TablePropertyExceptionCellMargins,
+    bool CantSplit,
+    string? CantSplitValue)
 {
+
+    public DocxTableRow(
+        IReadOnlyList<DocxTableCell> Cells,
+        double? HeightPoints)
+        : this(Cells, HeightPoints, false, null, null, null, null, false, null)
+    {
+    }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 }
 
@@ -998,20 +1053,33 @@ internal sealed record DocxTableCell(
     string? VerticalAlignmentValue,
     IReadOnlyList<DocxTableCellBorder> Borders,
     DocxTableCellMargins Margins,
-    double? PreferredWidthPoints = null,
-    string? PreferredWidthValue = null,
-    string? PreferredWidthType = null,
-    int GridSpan = 1,
-    string? GridSpanValue = null,
-    DocxTableCellConditionalFormat? ConditionalFormat = null,
-    bool HasVerticalMerge = false,
-    string? VerticalMergeValue = null,
-    bool NoWrap = false,
-    string? NoWrapValue = null,
-    bool FitText = false,
-    string? FitTextValue = null,
-    string? TextDirectionValue = null)
+    double? PreferredWidthPoints,
+    string? PreferredWidthValue,
+    string? PreferredWidthType,
+    int GridSpan,
+    string? GridSpanValue,
+    DocxTableCellConditionalFormat? ConditionalFormat,
+    bool HasVerticalMerge,
+    string? VerticalMergeValue,
+    bool NoWrap,
+    string? NoWrapValue,
+    bool FitText,
+    string? FitTextValue,
+    string? TextDirectionValue)
 {
+
+    public DocxTableCell(
+        string Text,
+        IReadOnlyList<DocxParagraph> Paragraphs,
+        string? FillHex,
+        string? ShadingValue,
+        string? ShadingColor,
+        string? VerticalAlignmentValue,
+        IReadOnlyList<DocxTableCellBorder> Borders,
+        DocxTableCellMargins Margins)
+        : this(Text, Paragraphs, FillHex, ShadingValue, ShadingColor, VerticalAlignmentValue, Borders, Margins, null, null, null, 1, null, null, false, null, false, null, false, null, null)
+    {
+    }
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 }

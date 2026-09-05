@@ -477,7 +477,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionPlannerOwnsPdfTextStateAndPositioningSpacing()
     {
-        var run = new DocxTextRun("Tracked", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.25d);
+        var run = new DocxTextRun("Tracked", 11d, null, false, false, false, null, null, 0.25d);
 
         DocxTextEmissionPlan plan = DocxTextEmissionPlanner.Create(run, 11d, pdfCharacterSpacing: 0.05d, compensatePdfCharacterSpacing: true);
 
@@ -504,7 +504,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionPlannerForcesTerminalLineSpacesToNeutralTc()
     {
-        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.25d);
+        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, 0.25d);
 
         DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateTerminalLineSpace(run, 11d);
 
@@ -517,7 +517,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionPlannerOwnsTerminalSegmentPlanOverride()
     {
-        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.25d);
+        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, 0.25d);
 
         DocxTextEmissionPlan textPlan = DocxTextEmissionPlanner.CreateForEmissionSegment(
             run,
@@ -545,7 +545,7 @@ internal static class DocxTests
 
     public static void DocxTextEmissionPlannerDerivesTcFromAdvanceTarget()
     {
-        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, CharacterSpacingPoints: 0.12d);
+        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, 0.12d);
 
         DocxTextStateAdvanceTarget target = DocxTextEmissionPlanner.CreateAdvanceTarget(
             glyphGapCount: 3,
@@ -588,7 +588,7 @@ internal static class DocxTests
     public static void DocxTextEmissionPlannerSplitsDashPunctuationIntoOperationParts()
     {
         var run = new DocxTextRun("Alpha-Beta", 10d, null, false, false, false, null, null);
-        var segment = new DocxTextSegmentLayout("Alpha-Beta", run, 20d, 100d);
+        var segment = new DocxTextSegmentLayout("Alpha-Beta", run, 20d, 100d, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text);
 
         IReadOnlyList<DocxTextEmissionPart> parts = DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, 10d, new FontSizeWidthTextMeasurer());
 
@@ -605,7 +605,7 @@ internal static class DocxTests
     public static void DocxTextEmissionPlannerKeepsWholeOperationWithoutMeasurer()
     {
         var run = new DocxTextRun("Alpha-Beta", 10d, null, false, false, false, null, null);
-        var segment = new DocxTextSegmentLayout("Alpha-Beta", run, 20d, 50d);
+        var segment = new DocxTextSegmentLayout("Alpha-Beta", run, 20d, 50d, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text);
 
         IReadOnlyList<DocxTextEmissionPart> parts = DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, 10d, null);
 
@@ -618,7 +618,7 @@ internal static class DocxTests
     public static void DocxTextEmissionPlannerSkipsEmptyOperationParts()
     {
         var run = new DocxTextRun(string.Empty, 10d, null, false, false, false, null, null);
-        var segment = new DocxTextSegmentLayout(string.Empty, run, 20d, 0d);
+        var segment = new DocxTextSegmentLayout(string.Empty, run, 20d, 0d, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text);
 
         IReadOnlyList<DocxTextEmissionPart> parts = DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, 10d, new FontSizeWidthTextMeasurer());
 
@@ -1008,7 +1008,7 @@ internal static class DocxTests
         TestAssert.True(document.BodyElements[0] is DocxTableElement, "The authored terminal table should remain a table body element.");
         TestAssert.True(document.BodyElements[1] is DocxImplicitParagraphElement, "A terminal body table should synthesize Word's implicit final paragraph mark.");
         var implicitParagraph = (DocxImplicitParagraphElement)document.BodyElements[1];
-        TestAssert.Equal("terminalTable", implicitParagraph.SourceKind);
+        TestAssert.Equal(DocxBreakSourceKind.TerminalTable, implicitParagraph.SourceKind);
 
         DocxTable bodyTable = ((DocxTableElement)document.BodyElements[0]).Table;
         DocxTableCell outerCell = bodyTable.Rows.Single().Cells.Single();
@@ -1576,7 +1576,7 @@ internal static class DocxTests
     {
         var catalog = new DocxFontCatalog(
             [new DocxFontTableEntry("Corporate Sans", "Aptos", "swiss", "variable", null, null)],
-            new DocxThemeFonts("Aptos Display", "Aptos"));
+            new DocxThemeFonts("Aptos Display", "Aptos", null, null, null, null));
         var run = new DocxTextRun("Text", 11d, null, false, false, false, null, "Corporate Sans")
         {
             Fonts = new DocxRunFonts(
@@ -1604,7 +1604,7 @@ internal static class DocxTests
             new DocxThemeFonts(
                 "Theme Display",
                 "Theme Sans",
-                MajorEastAsiaTypeface: "Theme East Display",
+                MajorComplexScriptTypeface: null, MinorComplexScriptTypeface: null, MajorEastAsiaTypeface: "Theme East Display",
                 MinorEastAsiaTypeface: "Theme East"));
         var run = new DocxTextRun("\u6f22\u5b57", 11d, null, false, false, false, null, "Latin Sans")
         {
@@ -1644,7 +1644,7 @@ internal static class DocxTests
             run,
             new DocxFontCatalog(
                 [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
-                new DocxThemeFonts("Theme Display", "Theme Sans")));
+                new DocxThemeFonts("Theme Display", "Theme Sans", null, null, null, null)));
         var resolver = new MapFontResolver(["Installed Sans", "Theme Sans"], "Resolver Fallback");
 
         DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
@@ -1691,7 +1691,7 @@ internal static class DocxTests
                 new DocxThemeFonts(
                     "Theme Display",
                     "Theme Sans",
-                    MinorComplexScriptTypeface: "Theme Bidi",
+                    MajorComplexScriptTypeface: null, MajorEastAsiaTypeface: null, MinorComplexScriptTypeface: "Theme Bidi",
                     MinorEastAsiaTypeface: "Theme East")));
         var resolver = new MapFontResolver(["Theme East", "Theme Bidi"], "Resolver Fallback");
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
@@ -1725,7 +1725,7 @@ internal static class DocxTests
             run,
             new DocxFontCatalog(
                 [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
-                new DocxThemeFonts("Theme Display", "Theme Sans")));
+                new DocxThemeFonts("Theme Display", "Theme Sans", null, null, null, null)));
         var resolver = new MapFontResolver(["Corporate Sans", "Installed Sans", "Theme Display"], "Resolver Fallback");
 
         DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
@@ -1911,7 +1911,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(bodyParagraph), new DocxTableElement(storyTable)],
             [fallbackParagraph],
-            []);
+            [], null);
 
         TestAssert.Equal("Story", story.Paragraphs.Single().Runs.Single().Text);
         TestAssert.Equal("Story|Nested", string.Join("|", DocxBlockTraversal.EnumerateBodyParagraphs(story).Select(paragraph => paragraph.Runs.Single().Text)));
@@ -2078,12 +2078,9 @@ internal static class DocxTests
             null,
             "center",
             [new DocxTableCellBorder("bottom", "single", "auto", "4")],
-            DocxTableCellMargins.Empty,
-            GridSpan: 2,
-            GridSpanValue: "2",
-            HasVerticalMerge: true,
-            VerticalMergeValue: "restart")
+            DocxTableCellMargins.Empty)
         {
+            GridSpan = 2, GridSpanValue = "2", HasVerticalMerge = true, VerticalMergeValue = "restart",
             BodyElements = [new DocxParagraphElement(cellParagraph)]
         };
         var continuationCell = new DocxTableCell(
@@ -2094,27 +2091,14 @@ internal static class DocxTests
             null,
             null,
             [],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true,
-            VerticalMergeValue: "continue");
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true,VerticalMergeValue = "continue" };
         var table = new DocxTable(
             "fixed",
             [20d, 20d],
             [
-                new DocxTableRow([restartCell], 18d, IsHeader: true, HeaderValue: "1", HeightValue: "360", HeightRuleValue: "atLeast", CantSplit: true, CantSplitValue: "1"),
+                new DocxTableRow([restartCell], 18d) with {IsHeader = true,HeaderValue = "1",HeightValue = "360",HeightRuleValue = "atLeast",CantSplit = true,CantSplitValue = "1" },
                 new DocxTableRow([continuationCell], null)
-            ],
-            StyleId: "TableGrid",
-            PreferredWidthPoints: 40d,
-            PreferredWidthValue: "800",
-            PreferredWidthType: "dxa",
-            IndentPoints: 6d,
-            IndentValue: "120",
-            IndentType: "dxa",
-            CellSpacingPoints: 1d,
-            CellSpacingValue: "20",
-            CellSpacingType: "dxa",
-            Look: new DocxTableLook(null, true, "1", null, null, true, "1", null, null, null, null, null, null));
+            ]) with {StyleId = "TableGrid",PreferredWidthPoints = 40d,PreferredWidthValue = "800",PreferredWidthType = "dxa",IndentPoints = 6d,IndentValue = "120",IndentType = "dxa",CellSpacingPoints = 1d,CellSpacingValue = "20",CellSpacingType = "dxa",Look = new DocxTableLook(null, true, "1", null, null, true, "1", null, null, null, null, null, null) };
         DocxParagraph documentHeader = CreateDocxLayoutParagraph("Header", fontSize: 9d, lineSpacingPoints: 10d);
         DocxParagraph documentFooter = CreateDocxLayoutParagraph("Footer", fontSize: 9d, lineSpacingPoints: 10d);
         DocxParagraph sectionHeader = CreateDocxLayoutParagraph("Section", fontSize: 9d, lineSpacingPoints: 10d);
@@ -2146,7 +2130,7 @@ internal static class DocxTests
             null,
             "12700",
             "square",
-            "bothSides");
+            "bothSides", ImageRelationshipId: null, Image: null, SourceParagraphIndex: null, SourceBlockIndex: null);
         var document = new DocxDocument(
             200d,
             200d,
@@ -2160,7 +2144,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(paragraph),
-                new DocxPageBreakElement("runBreak", "page", breakParagraph),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", breakParagraph),
                 new DocxTableElement(table),
                 sectionBreak
             ],
@@ -2929,7 +2913,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(after)
             ]
         };
@@ -2995,7 +2979,7 @@ internal static class DocxTests
             "9",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -3057,7 +3041,7 @@ internal static class DocxTests
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -3124,7 +3108,7 @@ internal static class DocxTests
             "12",
             [new DocxParagraphElement(targetParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument(
                 [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(markerParagraph)],
                 [])
@@ -3194,7 +3178,7 @@ internal static class DocxTests
             "13",
             [new DocxParagraphElement(targetParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument(
                 [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(markerParagraph)],
                 [])
@@ -3679,8 +3663,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [40d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)],
-            StyleId: "TableStyle");
+            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]) with {StyleId = "TableStyle" };
         var document = new DocxDocument(
             200d,
             200d,
@@ -3861,8 +3844,8 @@ internal static class DocxTests
     public static void DocxParagraphLayoutStageAppliesVerticalAlignFontSizeAndBaseline()
     {
         var normalRun = new DocxTextRun("A", 16d, null, false, false, false, null, "Body");
-        var superscriptRun = new DocxTextRun("2", 16d, null, false, false, false, null, "Body", VerticalAlignmentValue: "superscript");
-        var subscriptRun = new DocxTextRun("n", 16d, null, false, false, false, null, "Body", VerticalAlignmentValue: "subscript");
+        var superscriptRun = new DocxTextRun("2", 16d, null, false, false, false, null, "Body", 0d, false, "superscript", false, null, false, null, null, null, null, null, false, null, false, null, null);
+        var subscriptRun = new DocxTextRun("n", 16d, null, false, false, false, null, "Body", 0d, false, "subscript", false, null, false, null, null, null, null, null, false, null, false, null, null);
         var paragraph = new DocxParagraph(
             [normalRun, superscriptRun, subscriptRun],
             [],
@@ -5466,7 +5449,7 @@ internal static class DocxTests
             [floatingDrawing],
             [],
             [],
-            [new DocxParagraphElement(firstPage), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondPage)],
+            [new DocxParagraphElement(firstPage), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondPage)],
             [firstPage, secondPage],
             []);
         var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -5621,7 +5604,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(paragraph),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(secondPage)
             ],
             [paragraph, secondPage],
@@ -5688,7 +5671,7 @@ internal static class DocxTests
             "9",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxParagraph secondPage = CreateDocxLayoutParagraph("Second page", 10d, 12d);
         var document = new DocxDocument(
             200d,
@@ -5703,7 +5686,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(bodyParagraph),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(secondPage)
             ],
             [bodyParagraph, secondPage],
@@ -5778,7 +5761,7 @@ internal static class DocxTests
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxParagraph secondPage = CreateDocxLayoutParagraph("Second page", 10d, 12d);
         var document = new DocxDocument(
             200d,
@@ -5793,7 +5776,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(bodyParagraph),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(secondPage)
             ],
             [bodyParagraph, secondPage],
@@ -8083,9 +8066,9 @@ internal static class DocxTests
         DocxPageBreakElement[] breaks = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
 
         TestAssert.Equal(2, breaks.Length);
-        TestAssert.Equal("pageBreakBefore", breaks[0].SourceKind);
+        TestAssert.Equal(DocxBreakSourceKind.PageBreakBefore, breaks[0].SourceKind);
         TestAssert.Equal("on", breaks[0].Value ?? string.Empty);
-        TestAssert.Equal("pageBreakBefore", breaks[1].SourceKind);
+        TestAssert.Equal(DocxBreakSourceKind.PageBreakBefore, breaks[1].SourceKind);
         TestAssert.True(breaks[1].Value is null, "Expected implicit pageBreakBefore to keep a null source token.");
     }
 
@@ -8144,7 +8127,7 @@ internal static class DocxTests
         DocxPageBreakElement[] breaks = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
 
         TestAssert.Equal(1, breaks.Length);
-        TestAssert.Equal("pageBreakBefore", breaks[0].SourceKind);
+        TestAssert.Equal(DocxBreakSourceKind.PageBreakBefore, breaks[0].SourceKind);
         TestAssert.Equal("on", breaks[0].Value ?? string.Empty);
         TestAssert.Equal(3, document.BodyElements.OfType<DocxParagraphElement>().Count());
     }
@@ -8188,7 +8171,7 @@ internal static class DocxTests
         TestAssert.Equal(3, elements.Length);
         TestAssert.True(elements[1] is DocxPageBreakElement, "A run-level page-break-only paragraph should become a body page break.");
         var pageBreak = (DocxPageBreakElement)elements[1];
-        TestAssert.Equal("runBreak", pageBreak.SourceKind);
+        TestAssert.Equal(DocxBreakSourceKind.RunBreak, pageBreak.SourceKind);
         TestAssert.Equal("page", pageBreak.Value ?? string.Empty);
     }
 
@@ -8232,7 +8215,7 @@ internal static class DocxTests
         TestAssert.Equal("First", ((DocxParagraphElement)elements[0]).Paragraph.Runs.Single().Text);
         TestAssert.True(elements[1] is DocxManualBreakElement, "A run-level column-break-only paragraph should become a body manual break.");
         var manualBreak = (DocxManualBreakElement)elements[1];
-        TestAssert.Equal("runBreak", manualBreak.SourceKind);
+        TestAssert.Equal(DocxBreakSourceKind.RunBreak, manualBreak.SourceKind);
         TestAssert.Equal("column", manualBreak.Value ?? string.Empty);
         TestAssert.True(manualBreak.BreakParagraph is not null, "The authored break paragraph should remain available for future column-flow layout.");
         TestAssert.Equal("Second", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
@@ -8703,7 +8686,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxSectionBreakElement(firstSectionSettings, "continuous", null, null, null, []),
                 new DocxParagraphElement(second)
             ],
@@ -8892,7 +8875,7 @@ internal static class DocxTests
             "square",
             "bothSides",
             SourceParagraphIndex: 0,
-            SourceBlockIndex: 2);
+            SourceBlockIndex: 2, ImageRelationshipId: null, Image: null);
         var document = new DocxDocument(
             300d,
             300d,
@@ -8906,7 +8889,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxManualBreakElement("runBreak", "column", null),
+                new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
                 new DocxParagraphElement(second),
                 new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "360", [])
             ],
@@ -9468,9 +9451,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [100d],
-            [new DocxTableRow([new DocxTableCell("One Two Three Four Five", [tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d)],
-            PreferredWidthPoints: 100d,
-            IndentPoints: 70d);
+            [new DocxTableRow([new DocxTableCell("One Two Three Four Five", [tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d)]) with {PreferredWidthPoints = 100d,IndentPoints = 70d };
         DocxParagraph[] fillers =
         [
             CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
@@ -11361,7 +11342,7 @@ internal static class DocxTests
             WrapKind: "wrapNone",
             WrapTextValue: null,
             SourceParagraphIndex: 0,
-            SourceBlockIndex: 0)
+            SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
         {
             TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
         };
@@ -11541,7 +11522,7 @@ internal static class DocxTests
             "51",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            [])
+            [], null)
         {
             FloatingDrawings = [CreateFloatingTextBoxDrawing([new DocxTableElement(table)])]
         };
@@ -14948,7 +14929,7 @@ internal static class DocxTests
         DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
         DocxDocument document = CreateLayoutTestDocument([
             new DocxTableElement(first),
-            new DocxPageBreakElement("pageBreakBefore", null, null),
+            new DocxPageBreakElement(DocxBreakSourceKind.PageBreakBefore, null, null),
             new DocxTableElement(second)
         ], [first, second]);
 
@@ -14965,7 +14946,7 @@ internal static class DocxTests
         DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
         DocxDocument document = CreateLayoutTestDocument([
             new DocxTableElement(first),
-            new DocxManualBreakElement("runBreak", "column", null),
+            new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
             new DocxTableElement(second)
         ], [first, second]);
 
@@ -15029,7 +15010,7 @@ internal static class DocxTests
         DocxDocument document = CreateLayoutTestDocument([
             new DocxTableElement(first),
             new DocxParagraphElement(marker),
-            new DocxPageBreakElement("runBreak", "page", breakParagraph),
+            new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", breakParagraph),
             new DocxTableElement(second)
         ], [first, second]);
 
@@ -15043,7 +15024,7 @@ internal static class DocxTests
 
     public static void DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak()
     {
-        var header = new DocxTableRow([new DocxTableCell("Header", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d, IsHeader: true);
+        var header = new DocxTableRow([new DocxTableCell("Header", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d) with {IsHeader = true };
         var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
         var second = new DocxTableRow([new DocxTableCell("Second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
         var table = new DocxTable(null, [60d], [header, first, second]);
@@ -15302,7 +15283,7 @@ internal static class DocxTests
         DocxParagraph[] splitParagraphs = Enumerable.Range(1, 8)
             .Select(index => CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
-        var header = new DocxTableRow([new DocxTableCell("Header", [headerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d, IsHeader: true);
+        var header = new DocxTableRow([new DocxTableCell("Header", [headerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d) with {IsHeader = true };
         var filler = new DocxTableRow([new DocxTableCell("Filler", [fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
         var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
         var table = new DocxTable(null, [60d], [header, filler, split]);
@@ -15406,9 +15387,7 @@ internal static class DocxTests
                 null,
                 null,
                 [],
-                DocxTableCellMargins.Empty,
-                HasVerticalMerge: true,
-                VerticalMergeValue: "restart")
+                DocxTableCellMargins.Empty) with {HasVerticalMerge = true,VerticalMergeValue = "restart" }
         ], 100d);
         var continuation = new DocxTableRow([
             new DocxTableCell(
@@ -15419,8 +15398,7 @@ internal static class DocxTests
                 null,
                 null,
                 [],
-                DocxTableCellMargins.Empty,
-                HasVerticalMerge: true)
+                DocxTableCellMargins.Empty) with {HasVerticalMerge = true }
         ], 20d);
         var table = new DocxTable(null, [60d], [filler, restart, continuation]);
         var document = new DocxDocument(
@@ -15477,7 +15455,7 @@ internal static class DocxTests
     public static void DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary()
     {
         var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 80d, CantSplit: true, CantSplitValue: "1");
+        var second = new DocxTableRow([new DocxTableCell("Second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 80d) with {CantSplit = true,CantSplitValue = "1" };
         var table = new DocxTable(null, [60d], [first, second]);
         var document = new DocxDocument(
             100d,
@@ -15581,8 +15559,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [100d],
-            [new DocxTableRow([new DocxTableCell("aaaa aaaa aaaa aaaa", [], null, null, null, null, [], DocxTableCellMargins.Empty)], null)],
-            PreferredWidthPoints: 25d);
+            [new DocxTableRow([new DocxTableCell("aaaa aaaa aaaa aaaa", [], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]) with {PreferredWidthPoints = 25d };
         var document = new DocxDocument(
             100d,
             100d,
@@ -15618,9 +15595,7 @@ internal static class DocxTests
             null,
             null,
             [new DocxTableCellBorder("bottom", "single", "000000", "8")],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true,
-            VerticalMergeValue: "restart");
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true,VerticalMergeValue = "restart" };
         var continuation = new DocxTableCell(
             "Continuation",
             [],
@@ -15629,8 +15604,7 @@ internal static class DocxTests
             null,
             null,
             [new DocxTableCellBorder("top", "single", "000000", "8")],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true);
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true };
         var table = new DocxTable(
             null,
             [60d],
@@ -15685,9 +15659,7 @@ internal static class DocxTests
             "auto",
             null,
             [new DocxTableCellBorder("left", "single", "000000", "8")],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true,
-            VerticalMergeValue: "restart");
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true,VerticalMergeValue = "restart" };
         var continuation = new DocxTableCell(
             "Continuation",
             [],
@@ -15696,8 +15668,7 @@ internal static class DocxTests
             null,
             null,
             [],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true);
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true };
         var table = new DocxTable(
             null,
             [60d],
@@ -15762,8 +15733,7 @@ internal static class DocxTests
     {
         var header = new DocxTableRow(
             [new DocxTableCell("Header", [CreateDocxLayoutParagraph("Header", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty)],
-            10d,
-            IsHeader: true);
+            10d) with {IsHeader = true };
         var filler = new DocxTableRow(
             [new DocxTableCell("Filler", [CreateDocxLayoutParagraph("Filler", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty)],
             50d);
@@ -15775,9 +15745,7 @@ internal static class DocxTests
             "auto",
             null,
             [new DocxTableCellBorder("left", "single", "000000", "8")],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true,
-            VerticalMergeValue: "restart");
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true,VerticalMergeValue = "restart" };
         var continuation = new DocxTableCell(
             "Continuation",
             [],
@@ -15786,8 +15754,7 @@ internal static class DocxTests
             null,
             null,
             [],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true);
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true };
         var table = new DocxTable(
             null,
             [60d],
@@ -15873,8 +15840,7 @@ internal static class DocxTests
             [new DocxTableRow([
                 new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty),
                 new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            PreferredWidthPoints: 60d);
+            ], 20d)]) with {PreferredWidthPoints = 60d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -15897,10 +15863,7 @@ internal static class DocxTests
             [new DocxTableRow([
                 new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty),
                 new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            PreferredWidthPoints: 220d,
-            PreferredWidthValue: "4400",
-            PreferredWidthType: "dxa");
+            ], 20d)]) with {PreferredWidthPoints = 220d,PreferredWidthValue = "4400",PreferredWidthType = "dxa" };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -15924,9 +15887,7 @@ internal static class DocxTests
             [new DocxTableRow([
                 new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty),
                 new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            PreferredWidthValue: "2500",
-            PreferredWidthType: "pct");
+            ], 20d)]) with {PreferredWidthValue = "2500",PreferredWidthType = "pct" };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -15949,8 +15910,7 @@ internal static class DocxTests
             [new DocxTableRow([
                 new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty),
                 new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            HasExplicitGrid: false);
+            ], 20d)]) with {HasExplicitGrid = false };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -15972,10 +15932,9 @@ internal static class DocxTests
             null,
             [72d, 72d, 72d],
             [new DocxTableRow([
-                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2"),
+                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {GridSpan = 2,GridSpanValue = "2" },
                 new DocxTableCell("tail", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            HasExplicitGrid: false);
+            ], 20d)]) with {HasExplicitGrid = false };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -15996,10 +15955,9 @@ internal static class DocxTests
             null,
             [],
             [new DocxTableRow([
-                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2"),
+                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {GridSpan = 2,GridSpanValue = "2" },
                 new DocxTableCell("tail", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            HasExplicitGrid: false);
+            ], 20d)]) with {HasExplicitGrid = false };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -16020,8 +15978,8 @@ internal static class DocxTests
             null,
             [60d, 60d],
             [new DocxTableRow([
-                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 40d),
-                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 80d)
+                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthPoints = 40d },
+                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthPoints = 80d }
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
@@ -16044,11 +16002,11 @@ internal static class DocxTests
             [60d, 60d],
             [
                 new DocxTableRow([
-                    new DocxTableCell("span", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2")
+                    new DocxTableCell("span", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {GridSpan = 2,GridSpanValue = "2" }
                 ], 20d),
                 new DocxTableRow([
-                    new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 40d),
-                    new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 80d)
+                    new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthPoints = 40d },
+                    new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthPoints = 80d }
                 ], 20d)
             ]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
@@ -16073,8 +16031,8 @@ internal static class DocxTests
             null,
             [100d, 100d],
             [new DocxTableRow([
-                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthValue: "1250", PreferredWidthType: "pct"),
-                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthValue: "3750", PreferredWidthType: "pct")
+                new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthValue = "1250",PreferredWidthType = "pct" },
+                new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthValue = "3750",PreferredWidthType = "pct" }
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
@@ -16096,7 +16054,7 @@ internal static class DocxTests
             null,
             [40d, 60d, 80d],
             [new DocxTableRow([
-                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty, GridSpan: 2, GridSpanValue: "2"),
+                new DocxTableCell("wide", [], null, null, null, null, [], DocxTableCellMargins.Empty) with {GridSpan = 2,GridSpanValue = "2" },
                 new DocxTableCell("tail", [], null, null, null, null, [], DocxTableCellMargins.Empty)
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
@@ -16121,10 +16079,7 @@ internal static class DocxTests
             [40d],
             [new DocxTableRow([
                 new DocxTableCell("indented", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            IndentPoints: 18d,
-            IndentValue: "360",
-            IndentType: "dxa");
+            ], 20d)]) with {IndentPoints = 18d,IndentValue = "360",IndentType = "dxa" };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -16146,10 +16101,7 @@ internal static class DocxTests
             [new DocxTableRow([
                 new DocxTableCell("left", [], null, null, null, null, [], DocxTableCellMargins.Empty),
                 new DocxTableCell("right", [], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)],
-            CellSpacingPoints: 6d,
-            CellSpacingValue: "120",
-            CellSpacingType: "dxa");
+            ], 20d)]) with {CellSpacingPoints = 6d,CellSpacingValue = "120",CellSpacingType = "dxa" };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -16352,7 +16304,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(after)
             ]
         };
@@ -16390,7 +16342,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(after)
             ]
         };
@@ -16441,7 +16393,7 @@ internal static class DocxTests
         {
             BodyElements = beforeParagraphs
                 .Select<DocxParagraph, DocxBodyElement>(paragraph => new DocxParagraphElement(paragraph))
-                .Append(new DocxPageBreakElement("runBreak", "page", null))
+                .Append(new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null))
                 .Append(new DocxParagraphElement(after))
                 .ToArray()
         };
@@ -16505,7 +16457,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(earlyBefore),
-                new DocxPageBreakElement("earlyBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(earlyAfter)
             ]
         };
@@ -16515,7 +16467,7 @@ internal static class DocxTests
             [
                 new DocxParagraphElement(laterFirst),
                 new DocxParagraphElement(laterMiddle),
-                new DocxPageBreakElement("laterBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(laterAfter)
             ]
         };
@@ -16548,7 +16500,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(after)
             ]
         };
@@ -16579,7 +16531,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxTableElement(beforeNestedTable),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxTableElement(afterNestedTable)
             ]
         };
@@ -16610,7 +16562,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxManualBreakElement("runBreak", "column", null),
+                new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
                 new DocxParagraphElement(after)
             ]
         };
@@ -16641,7 +16593,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(earlyBefore),
-                new DocxPageBreakElement("earlyBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(earlyAfter)
             ]
         };
@@ -16651,7 +16603,7 @@ internal static class DocxTests
             [
                 new DocxTableElement(beforeNestedTable),
                 new DocxTableElement(middleNestedTable),
-                new DocxPageBreakElement("laterBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxTableElement(afterNestedTable)
             ]
         };
@@ -16688,7 +16640,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(earlyBefore),
-                new DocxPageBreakElement("earlyBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(earlyAfter)
             ]
         };
@@ -16958,7 +16910,7 @@ internal static class DocxTests
             null);
         var cell = new DocxTableCell("A", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var rowExceptionMargins = new DocxTableCellMargins(0d, null, 0d, null, "0", null, "0", null);
-        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null, TablePropertyExceptionCellMargins: rowExceptionMargins)]);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null) with {TablePropertyExceptionCellMargins = rowExceptionMargins }]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17153,12 +17105,11 @@ internal static class DocxTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty, NoWrap: true);
+        var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty) with {NoWrap = true };
         var table = new DocxTable(
             null,
             [34d],
-            [new DocxTableRow([cell], 10d)],
-            PreferredWidthPoints: 34d);
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 34d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17191,12 +17142,11 @@ internal static class DocxTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty, FitText: true);
+        var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty) with {FitText = true };
         var table = new DocxTable(
             null,
             [34d],
-            [new DocxTableRow([cell], 10d)],
-            PreferredWidthPoints: 34d);
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 34d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17236,8 +17186,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [16d],
-            [new DocxTableRow([cell], 10d)],
-            PreferredWidthPoints: 16d);
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 16d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17279,8 +17228,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [25d],
-            [new DocxTableRow([cell], 10d)],
-            PreferredWidthPoints: 25d);
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 25d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17317,8 +17265,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [25d],
-            [new DocxTableRow([cell], 10d)],
-            PreferredWidthPoints: 25d);
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 25d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17354,8 +17301,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [20d],
-            [new DocxTableRow([cell], 10d)],
-            PreferredWidthPoints: 20d);
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 20d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17403,8 +17349,7 @@ internal static class DocxTests
         var table = new DocxTable(
             null,
             [16d],
-            [new DocxTableRow([cell], 10d)],
-            PreferredWidthPoints: 16d);
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 16d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
@@ -17555,7 +17500,7 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             null);
         var cell = new DocxTableCell("First Second", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d, HeightValue: "200", HeightRuleValue: "exact")]);
+        var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d) with {HeightValue = "200",HeightRuleValue = "exact" }]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "First Second".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
@@ -17592,7 +17537,7 @@ internal static class DocxTests
             new DocxTableCellBorder("bottom", "single", "auto", "4")
         };
         var cell = new DocxTableCell("A", [paragraph], null, null, null, null, borders, DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 10d, HeightValue: "200", HeightRuleValue: "exact")]);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 10d) with {HeightValue = "200",HeightRuleValue = "exact" }]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -17629,29 +17574,11 @@ internal static class DocxTests
             null,
             "center",
             [new DocxTableCellBorder("top", "single", "000000", "8")],
-            margins,
-            PreferredWidthPoints: 42d,
-            PreferredWidthValue: "840",
-            PreferredWidthType: "dxa",
-            GridSpan: 2,
-            GridSpanValue: "2",
-            ConditionalFormat: new DocxTableCellConditionalFormat("100000000000", true, "1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-            HasVerticalMerge: true,
-            VerticalMergeValue: "restart",
-            NoWrap: true,
-            NoWrapValue: "1",
-            FitText: true,
-            FitTextValue: "1",
-            TextDirectionValue: "tbRl");
-        DocxTable table = new(
+            margins) with {PreferredWidthPoints = 42d,PreferredWidthValue = "840",PreferredWidthType = "dxa",GridSpan = 2,GridSpanValue = "2",ConditionalFormat = new DocxTableCellConditionalFormat("100000000000", true, "1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),HasVerticalMerge = true,VerticalMergeValue = "restart",NoWrap = true,NoWrapValue = "1",FitText = true,FitTextValue = "1",TextDirectionValue = "tbRl" };
+        DocxTable table = new DocxTable(
             null,
             [40d, 40d],
-            [new DocxTableRow([cell], 20d, IsHeader: true, HeaderValue: "1", HeightValue: "400", HeightRuleValue: "atLeast")],
-            PreferredWidthPoints: 84d,
-            PreferredWidthValue: "1680",
-            PreferredWidthType: "dxa",
-            IndentPoints: 6d,
-            CellSpacingPoints: 1d);
+            [new DocxTableRow([cell], 20d) with {IsHeader = true,HeaderValue = "1",HeightValue = "400",HeightRuleValue = "atLeast" }]) with { PreferredWidthPoints = 84d, PreferredWidthValue = "1680", PreferredWidthType = "dxa", IndentPoints = 6d, CellSpacingPoints = 1d };
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
@@ -17808,8 +17735,8 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(paragraph),
-                new DocxManualBreakElement("runBreak", "column", null),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxTableElement(nestedTable)
             ]
         };
@@ -17836,10 +17763,9 @@ internal static class DocxTests
             null,
             null,
             [],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true,
-            VerticalMergeValue: "restart")
+            DocxTableCellMargins.Empty)
         {
+            HasVerticalMerge = true, VerticalMergeValue = "restart",
             BodyElements = [new DocxParagraphElement(ownerParagraph)]
         };
         var continuationCell = new DocxTableCell(
@@ -17850,9 +17776,7 @@ internal static class DocxTests
             null,
             null,
             [],
-            DocxTableCellMargins.Empty,
-            HasVerticalMerge: true,
-            VerticalMergeValue: "continue");
+            DocxTableCellMargins.Empty) with {HasVerticalMerge = true,VerticalMergeValue = "continue" };
         DocxTable table = new(null, [90d], [new DocxTableRow([ownerCell], 24d), new DocxTableRow([continuationCell], 24d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
@@ -17991,7 +17915,7 @@ internal static class DocxTests
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 0,
                     RunChildIndex: 0,
-                    TextOffsetInRun: 0)
+                    TextOffsetInRun: 0, DisplayText: null)
             ],
             Revisions = [insertion]
         };
@@ -18227,7 +18151,7 @@ internal static class DocxTests
         }
 
         string familyName = font.Value.Resolution.FamilyName;
-        var spacedRun = new DocxTextRun("Body", 10d, null, false, false, false, null, familyName, CharacterSpacingPoints: 1.25d)
+        var spacedRun = new DocxTextRun("Body", 10d, null, false, false, false, null, familyName, 1.25d)
         {
             Fonts = new DocxRunFonts(familyName, null, null, null, null, null, null, null),
             StyleResolution = new DocxRunStyleResolution(
@@ -18681,7 +18605,7 @@ internal static class DocxTests
             "5",
             Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
             [],
-            []);
+            [], null);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
@@ -18830,7 +18754,7 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             [headerTable]);
 
@@ -18866,7 +18790,7 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             [headerTable]);
 
@@ -18901,7 +18825,7 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             []);
 
@@ -18971,7 +18895,7 @@ internal static class DocxTests
             WrapKind: "wrapNone",
             WrapTextValue: null,
             ImageRelationshipId: "rIdHeaderImage1",
-            Image: headerImage);
+            Image: headerImage, SourceParagraphIndex: null, SourceBlockIndex: null);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
             HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
@@ -19049,7 +18973,7 @@ internal static class DocxTests
             "42",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            [])
+            [], null)
         {
             FloatingDrawings = [footnoteDrawing]
         };
@@ -19116,7 +19040,7 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             []);
 
@@ -21383,7 +21307,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxPageBreakElement("runBreak", "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -21961,13 +21885,7 @@ internal static class DocxTests
                     GridSpan = 2,
                     GridSpanValue = "2"
                 }
-            ], null)],
-            PreferredWidthPoints: 110d,
-            PreferredWidthValue: "2200",
-            PreferredWidthType: "dxa",
-            IndentPoints: 5d,
-            IndentValue: "100",
-            IndentType: "dxa");
+            ], null)]) with {PreferredWidthPoints = 110d,PreferredWidthValue = "2200",PreferredWidthType = "dxa",IndentPoints = 5d,IndentValue = "100",IndentType = "dxa" };
         var firstCell = new DocxTableCell(
             "Alpha beta gamma delta epsilon zeta eta theta",
             [firstCellParagraph],
@@ -21976,10 +21894,7 @@ internal static class DocxTests
             null,
             null,
             [],
-            new DocxTableCellMargins(4d, 10d, 4d, 8d, "80", "200", "80", "160"),
-            PreferredWidthPoints: 96d,
-            PreferredWidthValue: "1920",
-            PreferredWidthType: "dxa");
+            new DocxTableCellMargins(4d, 10d, 4d, 8d, "80", "200", "80", "160")) with {PreferredWidthPoints = 96d,PreferredWidthValue = "1920",PreferredWidthType = "dxa" };
         var secondCell = new DocxTableCell(
             string.Empty,
             [secondCellParagraph],
@@ -21988,26 +21903,15 @@ internal static class DocxTests
             null,
             null,
             [],
-            new DocxTableCellMargins(4d, 12d, 4d, 12d, "80", "240", "80", "240"),
-            PreferredWidthPoints: 144d,
-            PreferredWidthValue: "2880",
-            PreferredWidthType: "dxa")
+            new DocxTableCellMargins(4d, 12d, 4d, 12d, "80", "240", "80", "240"))
         {
+            PreferredWidthPoints = 144d, PreferredWidthValue = "2880", PreferredWidthType = "dxa",
             BodyElements = [new DocxParagraphElement(secondCellParagraph), new DocxTableElement(nestedTable)]
         };
         var outerTable = new DocxTable(
             "fixed",
             [100d, 140d],
-            [new DocxTableRow([firstCell, secondCell], null)],
-            PreferredWidthPoints: 240d,
-            PreferredWidthValue: "4800",
-            PreferredWidthType: "dxa",
-            IndentPoints: 18d,
-            IndentValue: "360",
-            IndentType: "dxa",
-            CellSpacingPoints: 6d,
-            CellSpacingValue: "120",
-            CellSpacingType: "dxa");
+            [new DocxTableRow([firstCell, secondCell], null)]) with {PreferredWidthPoints = 240d,PreferredWidthValue = "4800",PreferredWidthType = "dxa",IndentPoints = 18d,IndentValue = "360",IndentType = "dxa",CellSpacingPoints = 6d,CellSpacingValue = "120",CellSpacingType = "dxa" };
         DocxDocument document = new(
             612d,
             792d,
@@ -22317,7 +22221,7 @@ internal static class DocxTests
         var moveFromRevision = new DocxRevisionInfo("MoveFrom", "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom");
         var insertionRevision = new DocxRevisionInfo("Insertion", "4", "Reviewer", "2026-06-10T00:00:00Z", "ins");
         var moveToRevision = new DocxRevisionInfo("MoveTo", "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo");
-        DocxTable table = new(
+        DocxTable table = new DocxTable(
             null,
             [170d],
             [
@@ -22455,7 +22359,7 @@ internal static class DocxTests
             "91",
             [new DocxParagraphElement(CreateMoveRevisionParagraph())],
             [],
-            []);
+            [], null);
         DocxDocument footnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(footnoteAnchor)], [])
             with
             {
@@ -22487,7 +22391,7 @@ internal static class DocxTests
             "92",
             [new DocxParagraphElement(CreateMoveRevisionParagraph())],
             [],
-            []);
+            [], null);
         DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -22765,7 +22669,7 @@ internal static class DocxTests
             "27",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -22829,7 +22733,7 @@ internal static class DocxTests
             "28",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -23008,8 +22912,8 @@ internal static class DocxTests
                 commentRun,
                 new DocxTextRun(" inserted", 10d, null, false, false, true, "single", null) { Revision = insertion },
                 new DocxTextRun(" double", 10d, null, false, false, true, "double", null),
-                new DocxTextRun(" strike", 10d, null, false, false, false, null, null, Strike: true),
-                new DocxTextRun(" double-strike", 10d, null, false, false, false, null, null, DoubleStrike: true)
+                new DocxTextRun(" strike", 10d, null, false, false, false, null, null, 0d, false, null, true, null, false, null, null, null, null, null, false, null, false, null, null),
+                new DocxTextRun(" double-strike", 10d, null, false, false, false, null, null, 0d, false, null, false, null, true, null, null, null, null, null, false, null, false, null, null)
             ],
             [],
             null,
@@ -23025,7 +22929,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -23054,7 +22958,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
             [],
-            [])
+            [], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", "2026-06-01T00:00:00Z", null, null, null, null)
         };
@@ -23309,7 +23213,7 @@ internal static class DocxTests
             "37",
             [new DocxTableElement(footnoteTable)],
             [],
-            []);
+            [], null);
         DocxDocument footnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -23339,7 +23243,7 @@ internal static class DocxTests
             "38",
             [new DocxTableElement(endnoteTable)],
             [],
-            []);
+            [], null);
         DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -23386,7 +23290,7 @@ internal static class DocxTests
             "19",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -23432,7 +23336,7 @@ internal static class DocxTests
             "29",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -23589,7 +23493,7 @@ internal static class DocxTests
             WrapKind: "wrapNone",
             WrapTextValue: null,
             SourceParagraphIndex: 0,
-            SourceBlockIndex: 0)
+            SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
         {
             TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
         };
@@ -23630,7 +23534,7 @@ internal static class DocxTests
             "21",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         AssertSimpleMarkupCommentMarkerRendered(
             CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -23659,7 +23563,7 @@ internal static class DocxTests
             "22",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         AssertSimpleMarkupCommentMarkerRendered(
             CreateCommentMarkerFlowDocument([new DocxParagraphElement(endnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -23790,7 +23694,7 @@ internal static class DocxTests
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 1,
                     RunChildIndex: 0,
-                    TextOffsetInRun: 0)
+                    TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -23811,7 +23715,7 @@ internal static class DocxTests
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 0,
                     RunChildIndex: 0,
-                    TextOffsetInRun: 0)
+                    TextOffsetInRun: 0, DisplayText: null)
             ]
         };
     }
@@ -23845,7 +23749,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Header comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             240d,
             200d,
@@ -23896,14 +23800,14 @@ internal static class DocxTests
             "9",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxRelatedStory commentStory = new(
             "Comment",
             "/word/comments.xml",
             "2",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Footnote comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -23938,14 +23842,14 @@ internal static class DocxTests
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxRelatedStory endnoteCommentStory = new(
             "Comment",
             "/word/comments.xml",
             "12",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Endnote comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -23989,7 +23893,7 @@ internal static class DocxTests
             "10",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -24031,7 +23935,7 @@ internal static class DocxTests
             "11",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -24064,7 +23968,7 @@ internal static class DocxTests
             "5",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Text box comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             300d,
             300d,
@@ -24115,7 +24019,7 @@ internal static class DocxTests
             "6",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Static text box comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             300d,
             300d,
@@ -24234,7 +24138,7 @@ internal static class DocxTests
             WrapKind: "wrapNone",
             WrapTextValue: null,
             SourceParagraphIndex: 0,
-            SourceBlockIndex: 0)
+            SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
         {
             TextBoxBodyElements = textBoxBodyElements
         };
@@ -24351,7 +24255,7 @@ internal static class DocxTests
             "9",
             [new DocxTableElement(footnoteTable)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -24387,7 +24291,7 @@ internal static class DocxTests
             "10",
             [new DocxTableElement(endnoteTable)],
             [],
-            []);
+            [], null);
         DocxDocument endnoteDocument = CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -24521,7 +24425,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -24633,7 +24537,7 @@ internal static class DocxTests
             WrapKind: "wrapNone",
             WrapTextValue: null,
             SourceParagraphIndex: 0,
-            SourceBlockIndex: 0)
+            SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
         {
             TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
         };
@@ -24680,7 +24584,7 @@ internal static class DocxTests
             "21",
             [new DocxParagraphElement(footnoteRangeParagraph)],
             [],
-            []);
+            [], null);
         AssertWordCompatibleCommentRangeMarkerRendered(
             CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -24710,7 +24614,7 @@ internal static class DocxTests
             "22",
             [new DocxParagraphElement(endnoteRangeParagraph)],
             [],
-            []);
+            [], null);
         AssertWordCompatibleCommentRangeMarkerRendered(
             CreateCommentMarkerFlowDocument([new DocxParagraphElement(endnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -24758,7 +24662,7 @@ internal static class DocxTests
             "23",
             [new DocxTableElement(footnoteTable)],
             [],
-            []);
+            [], null);
         AssertWordCompatibleCommentRangeMarkerRendered(
             CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -24793,7 +24697,7 @@ internal static class DocxTests
                     "8",
                     [new DocxParagraphElement(CreateDocxLayoutParagraph("Public static table comment", 10d, 12d))],
                     [],
-                    [])
+                    [], null)
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -24820,7 +24724,7 @@ internal static class DocxTests
             "23",
             [new DocxTableElement(footnoteTable)],
             [],
-            []);
+            [], null);
         DocxDocument footnoteDocument = new(
             612d,
             792d,
@@ -24845,7 +24749,7 @@ internal static class DocxTests
                     "9",
                     [new DocxParagraphElement(CreateDocxLayoutParagraph("Public footnote table comment", 10d, 12d))],
                     [],
-                    [])
+                    [], null)
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -24923,7 +24827,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -24982,7 +24886,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 8)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 8, DisplayText: null)
             ],
             Revisions =
             [
@@ -24996,7 +24900,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(commentParagraph)],
             [],
-            [])
+            [], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", "2026-06-01T00:00:00Z", null, null, null, null)
         };
@@ -25058,7 +24962,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 9)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 9, DisplayText: null)
             ]
         };
         DocxRelatedStory parentComment = new(
@@ -25067,7 +24971,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Parent threaded comment body", 10d, 12d))],
             [],
-            [])
+            [], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer One", "RO", "2024-01-02T03:04:05Z", "11111111", null, null, true)
         };
@@ -25077,7 +24981,7 @@ internal static class DocxTests
             "2",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("First reply body", 10d, 12d))],
             [],
-            [])
+            [], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer Two", "RT", "2024-01-03T03:04:05Z", "22222222", "11111111", "1", false)
         };
@@ -25087,7 +24991,7 @@ internal static class DocxTests
             "3",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Second reply body", 10d, 12d))],
             [],
-            [])
+            [], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer Three", "R3", "2024-01-04T03:04:05Z", "33333333", "11111111", "1", false)
         };
@@ -25172,7 +25076,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 2, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -25189,7 +25093,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -25275,7 +25179,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public table comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -25351,7 +25255,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ],
             CommentRanges =
             [
@@ -25364,7 +25268,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public edge comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             200d,
             240d,
@@ -25421,7 +25325,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 11)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 11, DisplayText: null)
             ]
         };
         DocxRelatedStory commentStory = new(
@@ -25430,7 +25334,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -25692,7 +25596,7 @@ internal static class DocxTests
             {
                 InlineReferences =
                 [
-                    new DocxInlineReference("Comment", id, null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0)
+                    new DocxInlineReference("Comment", id, null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
                 ],
                 Revisions =
                 [
@@ -25708,7 +25612,7 @@ internal static class DocxTests
                 id,
                 [new DocxParagraphElement(commentParagraph)],
                 [],
-                []));
+                [], null));
         }
 
         var document = new DocxDocument(
@@ -25829,7 +25733,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ]
         };
         DocxParagraph revisionParagraph = CreateDocxLayoutParagraph("Shared width", 10d, 8d) with
@@ -25845,7 +25749,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public collision comment", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             260d,
             240d,
@@ -25899,7 +25803,7 @@ internal static class DocxTests
         {
             InlineReferences =
             [
-                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0)
+                new DocxInlineReference("Comment", "1", null, SourceRunIndex: -1, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
             ]
         };
         DocxRelatedStory commentStory = new(
@@ -25908,7 +25812,7 @@ internal static class DocxTests
             "1",
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Public priority comment", 10d, 12d))],
             [],
-            []);
+            [], null);
         DocxDocument document = new(
             260d,
             240d,
@@ -26010,7 +25914,7 @@ internal static class DocxTests
                     CustomMarkFollowsValue: null,
                     SourceRunIndex: 0,
                     RunChildIndex: 1,
-                    TextOffsetInRun: 14)
+                    TextOffsetInRun: 14, DisplayText: null)
             ]
         };
         DocxInlineImage storyImage = new(48d, 24d, "image/png", [1, 2, 3], "/word/media/comment.png");
@@ -26038,7 +25942,7 @@ internal static class DocxTests
             "9",
             [new DocxParagraphElement(imageParagraph), new DocxTableElement(table)],
             [],
-            []);
+            [], null);
         DocxDocument document = new(612d, 792d)
         {
             BodyElements = [new DocxParagraphElement(bodyParagraph)],
@@ -28701,7 +28605,7 @@ internal static class DocxTests
 
     public static void DocxRelatedStoryLayoutOwnsInlineImages()
     {
-        DocxTextRun bodyRun = new("Body", 12d, "000000", Bold: false, Italic: false, Underline: false, UnderlineValue: null, FontFamily: null);
+        DocxTextRun bodyRun = new("Body", 12d, "000000", false, false, false, null, null);
         DocxParagraph bodyParagraph = new(
             [bodyRun],
             [],
@@ -28735,7 +28639,7 @@ internal static class DocxTests
             "9",
             [new DocxParagraphElement(imageParagraph)],
             [],
-            []);
+            [], null);
         DocxDocument document = new DocxDocument(612d, 792d)
         {
             BodyElements = [new DocxParagraphElement(bodyParagraph)],
@@ -28778,7 +28682,7 @@ internal static class DocxTests
             "7",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             220d,
             112d,
@@ -28837,7 +28741,7 @@ internal static class DocxTests
             "17",
             [new DocxTableElement(footnoteTable)],
             [],
-            [footnoteTable]);
+            [footnoteTable], null);
         var document = new DocxDocument(
             220d,
             140d,
@@ -28925,7 +28829,7 @@ internal static class DocxTests
             "23",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             612d,
             792d,
@@ -28991,14 +28895,14 @@ internal static class DocxTests
             "31",
             [new DocxParagraphElement(firstFootnote)],
             [],
-            []);
+            [], null);
         var secondStory = new DocxRelatedStory(
             "Footnote",
             "/word/footnotes.xml",
             "32",
             [new DocxParagraphElement(secondFootnote)],
             [],
-            []);
+            [], null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(anchor)], []) with
         {
             RelatedStories = [firstStory, secondStory]
@@ -29038,7 +28942,7 @@ internal static class DocxTests
             "16",
             Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(footnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -29123,7 +29027,7 @@ internal static class DocxTests
             "11",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -29199,7 +29103,7 @@ internal static class DocxTests
             "12",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -29261,7 +29165,22 @@ internal static class DocxTests
             false,
             null,
             null,
-            VerticalAlignmentValue: "superscript")
+            0d,
+            false,
+            "superscript",
+            false,
+            null,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            false,
+            null,
+            null)
         {
             SourceRunIndex = 0,
             SourceTextOffsetInRun = markerOffset
@@ -29312,7 +29231,7 @@ internal static class DocxTests
             "13",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -29378,7 +29297,7 @@ internal static class DocxTests
             "14",
             [new DocxParagraphElement(footnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -29438,7 +29357,7 @@ internal static class DocxTests
             "21",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
         {
             EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
@@ -29531,7 +29450,7 @@ internal static class DocxTests
             "25",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             612d,
             792d,
@@ -29624,7 +29543,7 @@ internal static class DocxTests
             "26",
             [new DocxParagraphElement(endnoteParagraph)],
             [],
-            []);
+            [], null);
         var document = new DocxDocument(
             612d,
             792d,
@@ -29691,14 +29610,14 @@ internal static class DocxTests
             "22",
             Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
             [],
-            []);
+            [], null);
         var secondEndnoteStory = new DocxRelatedStory(
             "Endnote",
             "/word/endnotes.xml",
             "23",
             Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
             [],
-            []);
+            [], null);
         DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
         {
             EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
@@ -29767,7 +29686,7 @@ internal static class DocxTests
             "24",
             Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
             [],
-            []);
+            [], null);
         DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
         {
             EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }

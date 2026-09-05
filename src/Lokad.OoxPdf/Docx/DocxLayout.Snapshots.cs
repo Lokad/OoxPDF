@@ -140,12 +140,12 @@ internal sealed record DocxFloatingDrawingLayoutSnapshot(
     string? ImageContentType,
     double? ImageWidthPoints,
     double? ImageHeightPoints,
-    int TextBoxTextLineCount = 0,
-    int TextBoxInlineImageCount = 0,
-    int TextBoxTableRowCount = 0,
-    double TextBoxContentHeight = 0d,
-    string? StoryKind = null,
-    string? StoryVariantType = null);
+    int TextBoxTextLineCount,
+    int TextBoxInlineImageCount,
+    int TextBoxTableRowCount,
+    double TextBoxContentHeight,
+    string? StoryKind,
+    string? StoryVariantType);
 
 internal sealed record DocxStaticStoryLayoutSnapshot(
     string Kind,
@@ -240,27 +240,27 @@ internal sealed record DocxLayoutItemSnapshot(
     double? ParagraphBeforeSpacingPoints,
     double? ParagraphAfterSpacingPoints,
     bool? ContextualSpacingSuppressed,
-    string? StoryVariantType = null,
-    IReadOnlyList<DocxLayoutItemSnapshot>? TextLines = null,
-    string? ParagraphStyleId = null,
-    bool? ParagraphStyleFound = null,
-    int? ParagraphStyleDepth = null,
-    bool? HasDocumentDefaultParagraphProperties = null,
-    bool? HasDirectParagraphProperties = null,
-    bool? HasTableStyleParagraphProperties = null,
-    int? CharacterStyleTextSegmentCount = null,
-    int? DirectRunPropertyTextSegmentCount = null,
-    int? ParagraphStyleRunPropertyTextSegmentCount = null,
-    int? TableStyleRunPropertyTextSegmentCount = null,
-    int? DocumentDefaultRunPropertyTextSegmentCount = null,
-    string? LineHeightSource = null,
-    int RevisionCount = 0,
-    int InsertionRevisionCount = 0,
-    int DeletionRevisionCount = 0,
-    int MoveFromRevisionCount = 0,
-    int MoveToRevisionCount = 0,
-    int OtherRevisionCount = 0,
-    int CommentReferenceCount = 0);
+    string? StoryVariantType,
+    IReadOnlyList<DocxLayoutItemSnapshot>? TextLines,
+    string? ParagraphStyleId,
+    bool? ParagraphStyleFound,
+    int? ParagraphStyleDepth,
+    bool? HasDocumentDefaultParagraphProperties,
+    bool? HasDirectParagraphProperties,
+    bool? HasTableStyleParagraphProperties,
+    int? CharacterStyleTextSegmentCount,
+    int? DirectRunPropertyTextSegmentCount,
+    int? ParagraphStyleRunPropertyTextSegmentCount,
+    int? TableStyleRunPropertyTextSegmentCount,
+    int? DocumentDefaultRunPropertyTextSegmentCount,
+    string? LineHeightSource,
+    int RevisionCount,
+    int InsertionRevisionCount,
+    int DeletionRevisionCount,
+    int MoveFromRevisionCount,
+    int MoveToRevisionCount,
+    int OtherRevisionCount,
+    int CommentReferenceCount);
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,
@@ -342,8 +342,8 @@ internal sealed record DocxTableSnapshot(
     int AuthoredVerticalMergeContinuationCellCount,
     int LaidOutVerticalMergeContinuationCellCount,
     int MissingVerticalMergeOwnerCellCount,
-    string? StoryKind = null,
-    string? StoryVariantType = null);
+    string? StoryKind,
+    string? StoryVariantType);
 
 internal sealed record DocxTableCellSnapshot(
     int CellIndex,
@@ -411,10 +411,10 @@ internal sealed record DocxTableCellSnapshot(
     int UppercaseCharacterCount,
     int LowercaseCharacterCount,
     int LongestBreakableTokenLength,
-    int BodyElementCount = 0,
-    int ManualBreakElementCount = 0,
-    int PageBreakElementCount = 0,
-    int NestedTableElementCount = 0);
+    int BodyElementCount,
+    int ManualBreakElementCount,
+    int PageBreakElementCount,
+    int NestedTableElementCount);
 
 internal sealed record DocxTextEmissionSnapshot(
     string MarkupMode,
@@ -480,16 +480,16 @@ internal sealed record DocxTextEmissionSegmentSnapshot(
     string? FontResourceName,
     bool SyntheticBold,
     bool SyntheticItalic,
-    string? CharacterStyleId = null,
-    bool CharacterStyleFound = false,
-    int CharacterStyleDepth = 0,
-    bool HasDocumentDefaultRunProperties = false,
-    bool HasParagraphStyleRunProperties = false,
-    bool HasCharacterStyleRunProperties = false,
-    bool HasDirectRunProperties = false,
-    bool HasTableStyleRunProperties = false,
-    string? RevisionKind = null,
-    string? RevisionSourceElement = null);
+    string? CharacterStyleId,
+    bool CharacterStyleFound,
+    int CharacterStyleDepth,
+    bool HasDocumentDefaultRunProperties,
+    bool HasParagraphStyleRunProperties,
+    bool HasCharacterStyleRunProperties,
+    bool HasDirectRunProperties,
+    bool HasTableStyleRunProperties,
+    string? RevisionKind,
+    string? RevisionSourceElement);
 
 internal sealed record TextProfile(
     int SpaceCharacterCount,

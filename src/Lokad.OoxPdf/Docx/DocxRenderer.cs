@@ -4561,7 +4561,7 @@ internal sealed partial class DocxRenderer
         bool useWordCompatibleTextProfile = false)
     {
         IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
-            ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width)]
+            ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text)]
             : line.Segments;
         var emissionSegments = new List<DocxTextEmissionSegment>(segments.Count + 1);
         double substitutedFieldXAdjustment = 0d;

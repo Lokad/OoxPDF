@@ -103,7 +103,7 @@ internal sealed class DocxReader
         cancellationToken.ThrowIfCancellationRequested();
         DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
             ? null
-            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken);
+            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, null);
         IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken);
@@ -3078,19 +3078,21 @@ internal sealed class DocxReader
                 DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
                     paragraphProperties,
                     ReadParagraphStyleId(paragraphProperties),
-                    styles);
+                    styles,
+                    null);
                 if (resolvedParagraph.PageBreakBefore == true)
                 {
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(
-                        "pageBreakBefore",
+                        DocxBreakSourceKind.PageBreakBefore,
                         resolvedParagraph.PageBreakBeforeValue,
+                        null,
                         revisions: inheritedRevision is null ? [] : [inheritedRevision]));
                 }
 
                 if (IsRunPageBreakOnlyParagraph(element, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
-                    elements.Add(DocxBodyElementFactory.CreatePageBreak("runBreak", "page", breakParagraph));
+                    elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -3103,7 +3105,7 @@ internal sealed class DocxReader
                 if (IsRunColumnBreakOnlyParagraph(element, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
-                    elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column", breakParagraph));
+                    elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -3122,11 +3124,11 @@ internal sealed class DocxReader
                         {
                             if (string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase))
                             {
-                                elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column", null));
+                                elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", null));
                             }
                             else
                             {
-                                elements.Add(DocxBodyElementFactory.CreatePageBreak("runBreak", part.BreakValue));
+                                elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, part.BreakValue, null, null));
                             }
 
                             continue;
@@ -3995,7 +3997,7 @@ internal sealed class DocxReader
         XDocument? settings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        DocxRevisionInfo? inheritedRevision = null)
+        DocxRevisionInfo? inheritedRevision)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? columns = sectionProperties.Element(WordprocessingNamespace + "cols");
@@ -4432,7 +4434,7 @@ internal sealed class DocxReader
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        DocxRevisionInfo? inheritedRevision = null)
+        DocxRevisionInfo? inheritedRevision)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? tableProperties = table.Element(WordprocessingNamespace + "tblPr");
@@ -4663,7 +4665,7 @@ internal sealed class DocxReader
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        DocxRevisionInfo? inheritedRevision = null)
+        DocxRevisionInfo? inheritedRevision)
     {
         var elements = new List<DocxBodyElement>();
         foreach (DocxRevisionScopedElement scopedChild in EnumerateRevisionScopedChildren(cell.Elements(), markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
@@ -4693,7 +4695,7 @@ internal sealed class DocxReader
                         inheritedRevision: childRevision,
                         markupMode: markupMode,
                         cancellationToken: cancellationToken);
-                    elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column", breakParagraph));
+                    elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph));
                     continue;
                 }
 
@@ -4705,8 +4707,8 @@ internal sealed class DocxReader
                         if (part.BreakValue is not null)
                         {
                             elements.Add(string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase)
-                                ? DocxBodyElementFactory.CreateManualBreak("runBreak", "column", null)
-                                : DocxBodyElementFactory.CreatePageBreak("runBreak", part.BreakValue));
+                                ? DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", null)
+                                : DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, part.BreakValue, null, null));
                             continue;
                         }
 
@@ -4776,7 +4778,7 @@ internal sealed class DocxReader
             return;
         }
 
-        elements.Add(new DocxImplicitParagraphElement("terminalTable"));
+        elements.Add(new DocxImplicitParagraphElement(DocxBreakSourceKind.TerminalTable));
     }
 
     private static DocxTableCellMargins ReadTableCellMargins(XElement? cellProperties)
@@ -5033,7 +5035,7 @@ internal sealed class DocxReader
         XElement run,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision = null)
+        DocxRevisionInfo? revision)
     {
         var images = new List<DocxInlineImage>();
         foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
@@ -5065,7 +5067,7 @@ internal sealed class DocxReader
         XElement drawing,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision = null)
+        DocxRevisionInfo? revision)
     {
         XElement? extent = drawing.Element(WordprocessingDrawingNamespace + "extent");
         string? relationshipId = ReadDrawingImageRelationshipId(drawing);
@@ -5103,7 +5105,7 @@ internal sealed class DocxReader
         XElement shape,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision = null)
+        DocxRevisionInfo? revision)
     {
         if (!TryReadVmlImageShape(
                 shape,
@@ -5550,7 +5552,7 @@ internal sealed class DocxReader
         XElement? directProperties,
         string? paragraphStyleId,
         DocxStyleSet styles,
-        DocxResolvedParagraphProperties? tableStyleProperties = null)
+        DocxResolvedParagraphProperties? tableStyleProperties)
     {
         DocxResolvedParagraphProperties result = styles.ParagraphDefaults;
         foreach (DocxStyle style in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
@@ -5594,7 +5596,7 @@ internal sealed class DocxReader
         string? paragraphStyleId,
         string? characterStyleId,
         DocxStyleSet styles,
-        DocxResolvedRunProperties? tableStyleProperties = null)
+        DocxResolvedRunProperties? tableStyleProperties)
     {
         DocxResolvedRunProperties result = styles.RunDefaults;
         if (tableStyleProperties is { } tableProperties)
@@ -5620,7 +5622,7 @@ internal sealed class DocxReader
         string? paragraphStyleId,
         string? characterStyleId,
         DocxStyleSet styles,
-        DocxResolvedRunProperties? tableStyleProperties = null)
+        DocxResolvedRunProperties? tableStyleProperties)
     {
         DocxStyle[] paragraphStyleChain = EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles).ToArray();
         DocxStyle[] characterStyleChain = EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles).ToArray();
@@ -5974,7 +5976,7 @@ internal sealed class DocxReader
         DocxTableStyle? DefaultTableStyle)
     {
         public static DocxStyleSet Empty { get; } = new(
-            new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null),
+            new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
@@ -6062,13 +6064,13 @@ internal sealed class DocxReader
         string? VerticalAlignmentValue,
         IReadOnlyList<DocxTableCellBorder> Borders,
         DocxTableCellMargins Margins,
-        bool? NoWrap = null,
-        string? NoWrapValue = null,
-        bool? FitText = null,
-        string? FitTextValue = null,
-        string? TextDirectionValue = null)
+        bool? NoWrap,
+        string? NoWrapValue,
+        bool? FitText,
+        string? FitTextValue,
+        string? TextDirectionValue)
     {
-        public static DocxTableCellStyle Empty { get; } = new(DocxResolvedParagraphProperties.Empty, DocxResolvedRunProperties.Empty, null, null, null, null, [], DocxTableCellMargins.Empty);
+        public static DocxTableCellStyle Empty { get; } = new(DocxResolvedParagraphProperties.Empty, DocxResolvedRunProperties.Empty, null, null, null, null, [], DocxTableCellMargins.Empty, null, null, null, null, null);
 
         public DocxTableCellStyle Merge(DocxTableCellStyle other)
         {
@@ -6179,8 +6181,8 @@ internal sealed class DocxReader
 
     private static DocxTableCellStyle ReadTableCellStyle(
         XElement? cellProperties,
-        XElement? paragraphProperties = null,
-        XElement? runProperties = null)
+        XElement? paragraphProperties,
+        XElement? runProperties)
     {
         XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
         XElement? noWrap = cellProperties?.Element(WordprocessingNamespace + "noWrap");
@@ -6557,20 +6559,20 @@ internal sealed class DocxReader
         DocxRunFonts Fonts,
         double? CharacterSpacingPoints,
         bool? AllCaps,
-        string? VerticalAlignmentValue = null,
-        bool? Strike = null,
-        string? StrikeValue = null,
-        bool? DoubleStrike = null,
-        string? DoubleStrikeValue = null,
-        string? HighlightValue = null,
-        string? ShadingFillHex = null,
-        string? ShadingValue = null,
-        string? ShadingColor = null,
-        bool? SmallCaps = null,
-        string? SmallCapsValue = null,
-        bool? Hidden = null,
-        string? HiddenValue = null,
-        string? UnderlineColorHex = null)
+        string? VerticalAlignmentValue,
+        bool? Strike,
+        string? StrikeValue,
+        bool? DoubleStrike,
+        string? DoubleStrikeValue,
+        string? HighlightValue,
+        string? ShadingFillHex,
+        string? ShadingValue,
+        string? ShadingColor,
+        bool? SmallCaps,
+        string? SmallCapsValue,
+        bool? Hidden,
+        string? HiddenValue,
+        string? UnderlineColorHex)
     {
         public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
