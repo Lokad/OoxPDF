@@ -128,7 +128,7 @@ internal sealed partial class PptxSceneBuilder
             gradientFill?.Name == DrawingNamespace + "gradFill" &&
             gradientOwner?.Name is { } ownerName &&
             (ownerName == PresentationNamespace + "spPr" || ownerName == PresentationNamespace + "bgPr") &&
-            IsSupportedAlphaGradientFill(gradientFill);
+            IsSupportedAlphaGradientFill();
         bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == PresentationNamespace + "spPr";
         bool supportedBackgroundFill = fill?.Name == DrawingNamespace + "solidFill" &&
@@ -150,22 +150,22 @@ internal sealed partial class PptxSceneBuilder
         bool supportedGlow = fill?.Name == DrawingNamespace + "glow" &&
             owner?.Name == DrawingNamespace + "effectLst";
         return !supportedUniformGradientFill && !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
-    }
 
-    private static bool IsSupportedAlphaGradientFill(XElement gradientFill)
-    {
-        if (gradientFill.Element(DrawingNamespace + "gsLst") is not { } gradientStopList ||
-            gradientFill.Element(DrawingNamespace + "lin") is not { })
+        bool IsSupportedAlphaGradientFill()
         {
-            return false;
-        }
+            if (gradientFill.Element(DrawingNamespace + "gsLst") is not { } alphaStopList ||
+                gradientFill.Element(DrawingNamespace + "lin") is not { })
+            {
+                return false;
+            }
 
-        XElement[] stops = gradientStopList
-            .Elements(DrawingNamespace + "gs")
-            .ToArray();
-        return stops.Length >= 2 &&
-            stops.All(stop => stop.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement) is not null) &&
-            PptxColorResolver.HasSupportedGradientStopAlpha(stops);
+            XElement[] stops = alphaStopList
+                .Elements(DrawingNamespace + "gs")
+                .ToArray();
+            return stops.Length >= 2 &&
+                stops.All(stop => stop.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement) is not null) &&
+                PptxColorResolver.HasSupportedGradientStopAlpha(stops);
+        }
     }
 
     private static PptxSceneShapeEffectFamily ReadShapeEffects(XElement? shapeProperties)
