@@ -8,7 +8,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Docx;
 
-internal sealed record DocxLayoutSnapshot(
+internal sealed partial record DocxLayoutSnapshot(
     string MarkupMode,
     string MarkupGeometryMode,
     double MarkupMarginReservePoints,
