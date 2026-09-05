@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Lokad.OoxPdf.Fonts;
 
-internal sealed class OpenTypeFont
+internal sealed partial class OpenTypeFont
 {
     private static readonly ConcurrentDictionary<string, OpenTypeFont> FileCache = new(StringComparer.OrdinalIgnoreCase);
 
