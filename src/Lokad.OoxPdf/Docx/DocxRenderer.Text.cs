@@ -536,4 +536,98 @@ internal sealed partial class DocxRenderer
     {
         return useWordCompatibleTextProfile && fontSize > WordCompatibleAllMarkupMaxBodyTextFontSizePoints;
     }
+
+    private static void RenderTextLine(
+        DocxTextLineLayout line,
+        PdfGraphicsBuilder graphics,
+        DocxFontResources fontResources,
+        DocxMarkupContext markupContext,
+        int pageNumber,
+        int pageCount)
+    {
+        RenderMarkupIndicators(line, graphics, fontResources, markupContext);
+        foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(
+            line,
+            fontResources,
+            pageNumber,
+            pageCount,
+            ResolveTextEmissionFontScale(markupContext),
+            ResolveTextEmissionBaselineOffset(markupContext),
+            ResolveTextEmissionXOffset(markupContext),
+            ShouldSuppressWordCompatibleCommentReferenceSpacer(markupContext),
+            UsesWordCompatibleAllMarkupTextProfile(markupContext)))
+        {
+            RenderTextEmissionSegment(segment, graphics, markupContext);
+        }
+    }
+
+    private static void RenderMarkupIndicators(
+        DocxTextLineLayout line,
+        PdfGraphicsBuilder graphics,
+        DocxFontResources fontResources,
+        DocxMarkupContext markupContext)
+    {
+        if (!markupContext.DrawsChangeBars && !markupContext.DrawsCommentMarkers)
+        {
+            return;
+        }
+
+        IReadOnlyList<DocxRevisionInfo> lineRevisions = markupContext.DrawsChangeBars && !UsesWordCompatibleAllMarkupTextProfile(markupContext)
+            ? CollectTextLineRevisions(line)
+            : [];
+        if (markupContext.DrawsChangeBars &&
+            lineRevisions.Count != 0 &&
+            !UsesWordCompatibleAllMarkupTextProfile(markupContext))
+        {
+            double scaledFontSize = line.FontSize * ResolveTextEmissionFontScale(markupContext);
+            double height = Math.Max(6d, line.LineHeight ?? scaledFontSize * 1.2d);
+            double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
+            double y = baselineY - height * 0.25d;
+            DocxMarkupBalloonRgb color = ResolveRevisionAuthorColor(lineRevisions);
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            graphics.FillRectangle(Math.Max(0d, line.X - 7d), y, 1.5d, height);
+        }
+
+        if (line.SourceParagraph is not { } paragraph)
+        {
+            return;
+        }
+
+        if (markupContext.DrawsCommentMarkers && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment))
+        {
+            if (UsesWordCompatibleAllMarkupTextProfile(markupContext))
+            {
+                RenderWordCompatibleCommentRangeMarkers(line, paragraph, graphics, markupContext);
+                return;
+            }
+
+            double scaledFontSize = line.FontSize * ResolveTextEmissionFontScale(markupContext);
+            string label = ResolveCommentMarkerLabel(paragraph);
+            double labelFontSize = Math.Max(4.5d, Math.Min(7d, scaledFontSize * 0.55d));
+            double markerHeight = Math.Max(6d, labelFontSize + 2d);
+            double markerWidth = Math.Max(markerHeight, label.Length * labelFontSize * 0.55d + 3d);
+            double markerX = line.X + Math.Max(0d, line.Width) + 2d;
+            double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
+            double markerY = baselineY + markerHeight * 0.15d;
+            graphics.SetFillRgb(255, 192, 0);
+            graphics.FillRectangle(markerX, markerY, markerWidth, markerHeight);
+            graphics.SetStrokeRgb(217, 151, 0);
+            graphics.SetLineWidth(0.5d);
+            graphics.StrokeRectangle(markerX, markerY, markerWidth, markerHeight);
+            if (!ShouldDrawCommentMarkerLabel(markupContext))
+            {
+                return;
+            }
+
+            DocxRunFontResource? labelResource = fontResources.Fallback ??
+                line.Segments
+                    .Select(segment => ResolveFontResource(segment.StyleRun, fontResources))
+                    .FirstOrDefault(resource => resource is not null);
+            string glyphHex = labelResource?.Embedded.EncodeGlyphHex(label) ?? string.Empty;
+            if (labelResource is not null && glyphHex.Length != 0)
+            {
+                graphics.DrawGlyphText(labelResource.Name, labelFontSize, markerX + 1.5d, markerY + 1.4d, 0, 0, 0, glyphHex, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+            }
+        }
+    }
 }
