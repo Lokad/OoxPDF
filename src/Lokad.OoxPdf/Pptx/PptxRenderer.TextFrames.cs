@@ -222,7 +222,7 @@ internal sealed partial class PptxRenderer
                         lineLayouts.Count == 0 &&
                         IsShortWordSegment(currentAdvanceText);
                     double segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                    double segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                    double segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, new TextAdvanceOptions(runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled));
                     double segmentWidth = Math.Max(0d, segmentIntrinsicWidth + segmentBoundaryAdjustment);
                     bool splitOverwideFirstSegment = allowWrapping &&
                         flowSegment.Kind == PptxTextFlowSegmentKind.Text &&
@@ -249,7 +249,7 @@ internal sealed partial class PptxRenderer
                             string chunk = chunks[chunkIndex];
                             double chunkWidth = advanceEstimator.Measure(chunk, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                             double chunkBoundaryAdjustment = chunkIndex == 0
-                                ? MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, chunk, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled)
+                                ? MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, chunk, previousAdvanceCodePoint, fragmentFontSize, new TextAdvanceOptions(runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled))
                                 : 0d;
                             double chunkTotalWidth = Math.Max(0d, chunkWidth + chunkBoundaryAdjustment);
                             maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
@@ -388,7 +388,7 @@ internal sealed partial class PptxRenderer
                             previousAdvanceCodePoint = LastCodePoint(movedRun.Text);
 
                             double hiddenIntrinsicWidth = advanceEstimator.Measure(movedNoBreakAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                            double hiddenBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, movedNoBreakAdvanceText, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                            double hiddenBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, movedNoBreakAdvanceText, previousAdvanceCodePoint, fragmentFontSize, new TextAdvanceOptions(runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled));
                             double hiddenWidth = Math.Max(0d, hiddenIntrinsicWidth + hiddenBoundaryAdjustment);
                             pendingVisibleLeadingAdjustment = hiddenBoundaryAdjustment;
                             cursorX += hiddenWidth;
@@ -399,7 +399,7 @@ internal sealed partial class PptxRenderer
                         currentSegment = currentSegment.TrimStart();
                         currentAdvanceText = currentAdvanceText.TrimStart();
                         segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                        segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                        segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, new TextAdvanceOptions(runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled));
                         segmentWidth = Math.Max(0d, segmentIntrinsicWidth + segmentBoundaryAdjustment);
                     }
 

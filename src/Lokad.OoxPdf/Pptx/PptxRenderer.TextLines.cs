@@ -16,11 +16,11 @@ internal sealed partial class PptxRenderer
         return CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
     }
 
-    private static double MeasureFlowSegmentBoundaryAdjustment(TextAdvanceEstimator advanceEstimator, string advanceText, int? previousCodePoint, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
+    private static double MeasureFlowSegmentBoundaryAdjustment(TextAdvanceEstimator advanceEstimator, string advanceText, int? previousCodePoint, double fontSize, TextAdvanceOptions options)
     {
         if (previousCodePoint is int previous && FirstCodePoint() is int first)
         {
-            return advanceEstimator.MeasureBoundaryAdvance(previous, first, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
+            return advanceEstimator.MeasureBoundaryAdvance(previous, first, fontSize, options);
         }
 
         return 0d;
@@ -470,11 +470,7 @@ internal sealed partial class PptxRenderer
             ".",
             LastCodePoint(wordText),
             run.FontSize,
-            run.FontFamily,
-            run.Bold,
-            run.Italic,
-            run.CharacterSpacing,
-            run.KerningEnabled);
+            new TextAdvanceOptions(run.FontFamily, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled));
         double periodX = atom.X + wordWidth + periodBoundaryAdjustment;
         yield return atom with { Text = wordText, Width = Math.Max(0d, periodX - atom.X) };
         yield return atom with { Text = ".", X = periodX, Width = Math.Max(0d, atom.X + atom.Width - periodX) };

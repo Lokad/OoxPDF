@@ -821,6 +821,8 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private readonly record struct TextAdvanceOptions(string? FontFamily, bool Bold, bool Italic, double CharacterSpacing, bool KerningEnabled);
+
     private sealed class TextAdvanceEstimator
     {
         private readonly PresentationFontResolver resolver;
@@ -902,6 +904,11 @@ internal sealed partial class PptxRenderer
                 ? font.GetKerning(previousGlyph, nextGlyph)
                 : 0d;
             return units * fontSize / font.UnitsPerEm + characterSpacing;
+        }
+
+        public double MeasureBoundaryAdvance(int previousCodePoint, int nextCodePoint, double fontSize, TextAdvanceOptions options)
+        {
+            return MeasureBoundaryAdvance(previousCodePoint, nextCodePoint, fontSize, options.FontFamily, options.Bold, options.Italic, options.CharacterSpacing, options.KerningEnabled);
         }
 
         public ResolvedGlyphFont? ResolveGlyphFont(string? familyName, bool bold, bool italic, int codePoint)
