@@ -82,15 +82,15 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                AddBookmarkAnchor(child);
+                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs);
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
-                AddCommentRangeStart(child);
+                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs);
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
             {
-                AddCommentRangeEnd(child);
+                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs);
             }
             else if (IsRevisionMarkerElement(child))
             {
@@ -106,7 +106,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                AddBookmarkAnchor(child);
+                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs);
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
@@ -130,11 +130,11 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
-                AddCommentRangeStart(child);
+                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs);
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
             {
-                AddCommentRangeEnd(child);
+                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs);
             }
             else if (IsRevisionMarkerElement(child))
             {
@@ -250,44 +250,6 @@ internal sealed partial class DocxReader
             Revisions = paragraphRevisions,
             HasDeletedParagraphMark = hasDeletedParagraphMark
         };
-
-        void AddBookmarkAnchor(XElement bookmarkStart)
-        {
-            bookmarkAnchors.Add(new DocxBookmarkAnchor(
-                (string?)bookmarkStart.Attribute(WordprocessingNamespace + "id"),
-                (string?)bookmarkStart.Attribute(WordprocessingNamespace + "name"),
-                sourceRunIndex,
-                runs.Count,
-                runs.Sum(run => run.Text.Length)));
-        }
-
-        void AddCommentRangeStart(XElement rangeStart)
-        {
-            openCommentRanges.Add(new DocxCommentRangeStart(
-                (string?)rangeStart.Attribute(WordprocessingNamespace + "id"),
-                sourceRunIndex,
-                runs.Sum(run => run.Text.Length)));
-        }
-
-        void AddCommentRangeEnd(XElement rangeEnd)
-        {
-            string? id = (string?)rangeEnd.Attribute(WordprocessingNamespace + "id");
-            int startIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
-            DocxCommentRangeStart? start = startIndex < 0 ? null : openCommentRanges[startIndex];
-            if (startIndex >= 0)
-            {
-                openCommentRanges.RemoveAt(startIndex);
-            }
-
-            commentRanges.Add(new DocxCommentRange(
-                id,
-                start?.SourceRunIndex,
-                start?.TextOffset,
-                sourceRunIndex,
-                runs.Sum(run => run.Text.Length),
-                ReferenceSourceRunIndex: null,
-                ReferenceTextOffset: null));
-        }
 
         void AddRevisionMarker(XElement marker)
         {
@@ -1129,6 +1091,57 @@ internal sealed partial class DocxReader
 
             return element.Name == WordprocessingNamespace + "endnoteReference" ? DocxRelatedStoryKind.Endnote : null;
         }
+    }
+
+    private static void AddBookmarkAnchor(
+        XElement bookmarkStart,
+        List<DocxBookmarkAnchor> bookmarkAnchors,
+        int sourceRunIndex,
+        List<DocxTextRun> runs)
+    {
+        bookmarkAnchors.Add(new DocxBookmarkAnchor(
+            (string?)bookmarkStart.Attribute(WordprocessingNamespace + "id"),
+            (string?)bookmarkStart.Attribute(WordprocessingNamespace + "name"),
+            sourceRunIndex,
+            runs.Count,
+            runs.Sum(run => run.Text.Length)));
+    }
+
+    private static void AddCommentRangeStart(
+        XElement rangeStart,
+        List<DocxCommentRangeStart> openCommentRanges,
+        int sourceRunIndex,
+        List<DocxTextRun> runs)
+    {
+        openCommentRanges.Add(new DocxCommentRangeStart(
+            (string?)rangeStart.Attribute(WordprocessingNamespace + "id"),
+            sourceRunIndex,
+            runs.Sum(run => run.Text.Length)));
+    }
+
+    private static void AddCommentRangeEnd(
+        XElement rangeEnd,
+        List<DocxCommentRangeStart> openCommentRanges,
+        List<DocxCommentRange> commentRanges,
+        int sourceRunIndex,
+        List<DocxTextRun> runs)
+    {
+        string? id = (string?)rangeEnd.Attribute(WordprocessingNamespace + "id");
+        int startIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
+        DocxCommentRangeStart? start = startIndex < 0 ? null : openCommentRanges[startIndex];
+        if (startIndex >= 0)
+        {
+            openCommentRanges.RemoveAt(startIndex);
+        }
+
+        commentRanges.Add(new DocxCommentRange(
+            id,
+            start?.SourceRunIndex,
+            start?.TextOffset,
+            sourceRunIndex,
+            runs.Sum(run => run.Text.Length),
+            ReferenceSourceRunIndex: null,
+            ReferenceTextOffset: null));
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
