@@ -250,7 +250,7 @@ internal sealed partial class PptxRenderer
                     cellFills.Add(new TableCellFill(cellX, cellBottom, columnWidth, cellHeight, fill, fillAlpha));
                 }
 
-                AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
+                AddTableCellBorders(sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
                 double declaredRowHeight = rawRowHeights[rowIndex] * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
                 double declaredRowSpanHeight = rawRowHeights
                     .Skip(rowIndex)
@@ -282,6 +282,14 @@ internal sealed partial class PptxRenderer
         }
 
         return new TableFrameLayout(textSpans, textFrames, cellFills, frameX, frameTop, frameWidth, frameHeight, DefaultGrid: null, explicitBorders);
+
+        void AddTableCellBorders(PptxSceneTableCellBorders cellBorders, double x, double y, double width, double height)
+        {
+            AddTableBorder(explicitBorders, cellBorders.Left, x, y, x, y + height);
+            AddTableBorder(explicitBorders, cellBorders.Right, x + width, y, x + width, y + height);
+            AddTableBorder(explicitBorders, cellBorders.Top, x, y + height, x + width, y + height);
+            AddTableBorder(explicitBorders, cellBorders.Bottom, x, y, x + width, y);
+        }
     }
 
     private static double[] ResolveTableRowHeights(
@@ -341,7 +349,7 @@ internal sealed partial class PptxRenderer
                     .Skip(columnIndex)
                     .Take(columnSpan)
                     .Sum() * columnScale;
-                double minimumHeight = EstimateTableCellMinimumHeight(context, sceneCell, columnWidth, colorMap, sceneCell.StyleText);
+                double minimumHeight = EstimateTableCellMinimumHeight(sceneCell, columnWidth, sceneCell.StyleText);
                 if (minimumHeight > PptxTextMetricRules.TextStateTolerance)
                 {
                     if (rowSpan <= 1)
@@ -394,6 +402,24 @@ internal sealed partial class PptxRenderer
         }
 
         return rowHeights;
+
+        double EstimateTableCellMinimumHeight(PptxSceneTableCell sceneCell, double width, PptxSceneTableCellTextStyle tableStyleTextStyle)
+        {
+            PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, -1, -1, 1, 1, 1d, 1d, 1d, 1d, 0d, 0d, width, 1d, colorMap, tableStyleTextStyle);
+            if (tableTextFrame is null)
+            {
+                return 0d;
+            }
+
+            PptxTextFrameModel frame = BuildTextFrameModel(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
+            double textHeight = EstimateTextHeight(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties);
+            if (textHeight <= PptxTextMetricRules.TextStateTolerance)
+            {
+                return 0d;
+            }
+
+            return frame.Insets.Top + textHeight + frame.Insets.Bottom;
+        }
     }
 
     private static bool ShouldKeepDeclaredRowsForSparsePositiveFillSlack(PptxSceneTable sceneTable)
@@ -461,29 +487,6 @@ internal sealed partial class PptxRenderer
 
         rowHeights = declaredRows;
         return true;
-    }
-
-    private static double EstimateTableCellMinimumHeight(
-        PptxRenderContext context,
-        PptxSceneTableCell sceneCell,
-        double width,
-        PptxColorMap colorMap,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
-    {
-        PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, -1, -1, 1, 1, 1d, 1d, 1d, 1d, 0d, 0d, width, 1d, colorMap, tableStyleTextStyle);
-        if (tableTextFrame is null)
-        {
-            return 0d;
-        }
-
-        PptxTextFrameModel frame = BuildTextFrameModel(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
-        double textHeight = EstimateTextHeight(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties);
-        if (textHeight <= PptxTextMetricRules.TextStateTolerance)
-        {
-            return 0d;
-        }
-
-        return frame.Insets.Top + textHeight + frame.Insets.Bottom;
     }
 
     private static void RenderTableFrameLayout(PdfGraphicsBuilder graphics, TableFrameLayout layout)
@@ -648,14 +651,6 @@ internal sealed partial class PptxRenderer
                 : columnLefts[columnIndex] + 0.5d;
             graphics.StrokeLine(x1, y, x2, y);
         }
-    }
-
-    private static void AddTableCellBorders(List<TableBorderLine> borders, PptxSceneTableCellBorders cellBorders, double x, double y, double width, double height)
-    {
-        AddTableBorder(borders, cellBorders.Left, x, y, x, y + height);
-        AddTableBorder(borders, cellBorders.Right, x + width, y, x + width, y + height);
-        AddTableBorder(borders, cellBorders.Top, x, y + height, x + width, y + height);
-        AddTableBorder(borders, cellBorders.Bottom, x, y, x + width, y);
     }
 
     private static void AddTableBorder(List<TableBorderLine> borders, PptxSceneTableCellBorder border, double x1, double y1, double x2, double y2)

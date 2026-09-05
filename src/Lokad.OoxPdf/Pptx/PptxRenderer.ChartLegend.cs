@@ -122,7 +122,12 @@ internal sealed partial class PptxRenderer
             {
                 string cacheName = ReadChartSeriesName(series)?.Trim() ?? string.Empty;
                 string activeName = string.IsNullOrWhiteSpace(cacheName) ? $"Series {index + 1}" : cacheName;
-                PptxSceneChartDataSource source = ReadChartSeriesNameDataSource(series);
+                PptxSceneChartDataSource ReadChartSeriesNameDataSource()
+                {
+                    return PptxSceneBuilder.ReadChartDataSource(series.Element(ChartNamespace + "tx"), "strRef", "numRef");
+                }
+
+                PptxSceneChartDataSource source = ReadChartSeriesNameDataSource();
                 IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
                 ChartSeriesNameSource activeNameSource = !string.IsNullOrWhiteSpace(cacheName)
                     ? ChartSeriesNameSource.Cache
@@ -135,11 +140,6 @@ internal sealed partial class PptxRenderer
     private static string? ReadChartSeriesName(XElement series)
     {
         return PptxSceneBuilder.ReadChartText(series.Element(ChartNamespace + "tx"), trimLiteral: true);
-    }
-
-    private static PptxSceneChartDataSource ReadChartSeriesNameDataSource(XElement series)
-    {
-        return PptxSceneBuilder.ReadChartDataSource(series.Element(ChartNamespace + "tx"), "strRef", "numRef");
     }
 
     private static ChartLegendLayout ReadChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml)
@@ -213,7 +213,18 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < entries.Count; i++)
         {
             ChartLegendEntry entry = entries[i];
-            double entryX = legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(entries, style, textMeasurer, legendBox.MarkerSize, legendBox.X, i) : legendBox.X;
+            double GetPackedHorizontalLegendEntryX(double markerSize, double legendX, int entryIndex)
+            {
+            double x = legendX;
+            for (int i = 0; i < entryIndex; i++)
+            {
+                x += GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, markerSize);
+            }
+    
+            return x;
+            }
+
+            double entryX = legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(legendBox.MarkerSize, legendBox.X, i) : legendBox.X;
             double entryWidth = legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, legendBox.MarkerSize) : legendBox.Width;
             double y = legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight;
             double markerBaselineFactor = legendBox.Horizontal || legendBox.SideStrokeLegend
@@ -233,7 +244,14 @@ internal sealed partial class PptxRenderer
                         graphics.SetAlpha(1d, fillStroke.Alpha);
                     }
 
-                    SetChartStroke(graphics, ResolveFilledLegendKeyStroke(fillStroke));
+                    ChartSeriesStroke ResolveFilledLegendKeyStroke()
+                    {
+                        return fillStroke.Width > ChartFilledSeriesInheritedStrokeWidth
+                            ? fillStroke with { Width = ChartFilledSeriesInheritedStrokeWidth }
+                            : fillStroke;
+                    }
+
+                    SetChartStroke(graphics, ResolveFilledLegendKeyStroke());
                     graphics.StrokeRectangle(entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize);
                     if (fillStroke.Alpha < 1d)
                     {
@@ -291,7 +309,16 @@ internal sealed partial class PptxRenderer
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
         bool horizontal = IsHorizontalLegendPosition(layout.PositionKind);
         bool sideStrokeLegend = !horizontal && entries.All(entry => entry.Stroke is not null && entry.Fill is null);
-        bool fillLegendInFullFrame = !sideStrokeLegend && IsSameChartBox(plotBox, frame);
+        bool IsSameChartBox()
+        {
+            const double tolerance = 0.01d;
+            return Math.Abs(plotBox.X - frame.X) <= tolerance &&
+                Math.Abs(plotBox.Y - frame.Y) <= tolerance &&
+                Math.Abs(plotBox.Width - frame.Width) <= tolerance &&
+                Math.Abs(plotBox.Height - frame.Height) <= tolerance;
+        }
+
+        bool fillLegendInFullFrame = !sideStrokeLegend && IsSameChartBox();
         bool sideFillLegend = !horizontal && !fillLegendInFullFrame && !sideStrokeLegend && entries.Any(entry => entry.Fill is not null);
         bool sideFillLegendInFullFrame = !horizontal && fillLegendInFullFrame;
         double lineHeight = fontSize * (sideStrokeLegend
@@ -308,13 +335,32 @@ internal sealed partial class PptxRenderer
         double textGap = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
             : PptxChartMetricRules.LegendTextGap;
+        double GetSideLegendContentWidth()
+        {
+            double contentWidth = entries.Count == 0
+                ? 0d
+                : entries.Max(entry => markerWidth + textGap + textMeasurer.Measure(entry.Name, style));
+            return Math.Max(style.FontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
+        }
+
+        double GetPackedHorizontalLegendWidth()
+        {
+            double packedWidth = 0d;
+            foreach (ChartLegendEntry entry in entries)
+            {
+                packedWidth += GetPackedHorizontalLegendEntryWidth(entry.Name, style, textMeasurer, markerSize);
+            }
+
+            return Math.Max(1d, packedWidth);
+        }
+
         double width = horizontal
-            ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth(entries, style, textMeasurer, markerSize))
+            ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth())
             : Math.Max(
                 sideStrokeLegend || sideFillLegendInFullFrame
                     ? 0d
                     : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio),
-                GetSideLegendContentWidth(entries, style, textMeasurer, markerWidth, textGap));
+                GetSideLegendContentWidth());
         double x = layout.PositionKind switch
         {
             PptxSceneChartLegendPosition.Left when sideFillLegendInFullFrame => frame.X + frame.Width * PptxChartMetricRules.LegendFullFrameSideInsetRatio,
@@ -326,6 +372,14 @@ internal sealed partial class PptxRenderer
             _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
             _ => plotBox.X + plotBox.Width + sideGap
         };
+        double GetLegendSideStrokeBaselineCenterOffsetFactor()
+        {
+            return entries.Any(entry => entry.Marker is { } marker &&
+                marker.Size >= PptxChartMarkerMetricRules.StyledLineChartMarkerSize - PptxChartMetricRules.AxisValueEpsilon)
+                ? PptxChartMetricRules.LegendSideStrokeStyledMarkerBaselineCenterOffsetFactor
+                : PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor;
+        }
+
         double firstY = layout.PositionKind switch
         {
             PptxSceneChartLegendPosition.Bottom when fillLegendInFullFrame => frame.Y + lineHeight * PptxChartMetricRules.LegendFullFrameBottomBaselineFactor,
@@ -333,7 +387,7 @@ internal sealed partial class PptxRenderer
             PptxSceneChartLegendPosition.Bottom => Math.Max(0d, plotBox.Y - lineHeight * PptxChartMetricRules.LegendBottomOffsetFactor),
             PptxSceneChartLegendPosition.Top => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
-                fontSize * GetLegendSideStrokeBaselineCenterOffsetFactor(entries) +
+                fontSize * GetLegendSideStrokeBaselineCenterOffsetFactor() +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when sideFillLegend && placement == ChartLegendPlacement.BubbleTitleRightLegend => frame.Y + frame.Height * PptxChartMetricRules.BubbleTitleRightLegendSwatchYRatio,
             _ when sideFillLegend => frame.Y + frame.Height / 2d -
@@ -360,60 +414,6 @@ internal sealed partial class PptxRenderer
         }
 
         return new ChartLegendBox(x, clipY, width, clipHeight, firstY, lineHeight, markerSize, markerWidth, textGap, horizontal, sideStrokeLegend);
-    }
-
-    private static double GetLegendSideStrokeBaselineCenterOffsetFactor(IReadOnlyList<ChartLegendEntry> entries)
-    {
-        return entries.Any(entry => entry.Marker is { } marker &&
-            marker.Size >= PptxChartMarkerMetricRules.StyledLineChartMarkerSize - PptxChartMetricRules.AxisValueEpsilon)
-            ? PptxChartMetricRules.LegendSideStrokeStyledMarkerBaselineCenterOffsetFactor
-            : PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor;
-    }
-
-    private static ChartSeriesStroke ResolveFilledLegendKeyStroke(ChartSeriesStroke stroke)
-    {
-        return stroke.Width > ChartFilledSeriesInheritedStrokeWidth
-            ? stroke with { Width = ChartFilledSeriesInheritedStrokeWidth }
-            : stroke;
-    }
-
-    private static double GetPackedHorizontalLegendWidth(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerSize)
-    {
-        double width = 0d;
-        foreach (ChartLegendEntry entry in entries)
-        {
-            width += GetPackedHorizontalLegendEntryWidth(entry.Name, style, textMeasurer, markerSize);
-        }
-
-        return Math.Max(1d, width);
-    }
-
-    private static double GetSideLegendContentWidth(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerWidth, double textGap)
-    {
-        double contentWidth = entries.Count == 0
-            ? 0d
-            : entries.Max(entry => markerWidth + textGap + textMeasurer.Measure(entry.Name, style));
-        return Math.Max(style.FontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
-    }
-
-    private static bool IsSameChartBox(ChartPlotBox plotBox, ChartFrameBox frame)
-    {
-        const double tolerance = 0.01d;
-        return Math.Abs(plotBox.X - frame.X) <= tolerance &&
-            Math.Abs(plotBox.Y - frame.Y) <= tolerance &&
-            Math.Abs(plotBox.Width - frame.Width) <= tolerance &&
-            Math.Abs(plotBox.Height - frame.Height) <= tolerance;
-    }
-
-    private static double GetPackedHorizontalLegendEntryX(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerSize, double legendX, int entryIndex)
-    {
-        double x = legendX;
-        for (int i = 0; i < entryIndex; i++)
-        {
-            x += GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, markerSize);
-        }
-
-        return x;
     }
 
     private static double GetPackedHorizontalLegendEntryWidth(string name, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerSize)

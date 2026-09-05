@@ -96,12 +96,12 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_GRAPHIC_FRAME", "graphic frame");
         }
 
-        if (HasUnsupportedGradientFill(sceneSlide, slideXml))
+        if (HasUnsupportedGradientFill())
         {
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
         }
 
-        if (HasUnsupportedPatternFill(sceneSlide, slideXml))
+        if (HasUnsupportedPatternFill())
         {
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
@@ -144,6 +144,18 @@ internal sealed partial class PptxRenderer
         if (HasUnsupportedCallout(sceneSlide))
         {
             Emit("PPTX_UNSUPPORTED_CALLOUT", "callout shape");
+        }
+
+        bool HasUnsupportedGradientFill()
+        {
+            return HasUnsupportedSceneGradientFill(sceneSlide.SlideNodes) ||
+                slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill);
+        }
+
+        bool HasUnsupportedPatternFill()
+        {
+            return HasUnsupportedShapePatternFill(sceneSlide.SlideNodes) ||
+                slideXml.Descendants(DrawingNamespace + "pattFill").Any(IsUnsupportedNonShapePatternFill);
         }
     }
 
@@ -298,12 +310,6 @@ internal sealed partial class PptxRenderer
         return stops.Length < 2 ||
             stops.Any(stop => stop.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement) is null) ||
             !PptxColorResolver.HasSupportedGradientStopAlpha(stops);
-    }
-
-    private static bool HasUnsupportedGradientFill(PptxSceneSlide sceneSlide, XDocument slideXml)
-    {
-        return HasUnsupportedSceneGradientFill(sceneSlide.SlideNodes) ||
-            slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill);
     }
 
     private static bool HasUnsupportedSceneGradientFill(IReadOnlyList<PptxSceneNode> nodes)
@@ -485,25 +491,25 @@ internal sealed partial class PptxRenderer
         }
 
         return false;
-    }
 
-    private static bool HasUnsupportedTableTextOrientation(PptxSceneTable? table)
-    {
-        return table?.Rows.Any(row => row.Cells.Any(cell => cell.HasUnsupportedTextOrientation)) == true;
-    }
+        bool HasUnsupportedChartTextOrientation(PptxSceneChart? chart)
+        {
+            return chart is not null &&
+                (HasUnsupportedTextOrientation(chart.Title.TextBodyProperties.OrientationValue) ||
+                    HasUnsupportedTextOrientation(chart.Legend.TextBodyProperties.OrientationValue) ||
+                    chart.Axes.Any(axis => HasUnsupportedTextOrientation(axis.Title.TextBodyProperties.OrientationValue)) ||
+                    chart.Plots.Any(plot =>
+                        HasUnsupportedTextOrientation(plot.DataLabels.TextBodyProperties.OrientationValue) ||
+                        plot.DataLabels.Overrides.Any(label => HasUnsupportedTextOrientation(label.TextBodyProperties.OrientationValue)) ||
+                        plot.Series.Any(series =>
+                            HasUnsupportedTextOrientation(series.DataLabels.TextBodyProperties.OrientationValue) ||
+                            series.DataLabels.Overrides.Any(label => HasUnsupportedTextOrientation(label.TextBodyProperties.OrientationValue)))));
+        }
 
-    private static bool HasUnsupportedChartTextOrientation(PptxSceneChart? chart)
-    {
-        return chart is not null &&
-            (HasUnsupportedTextOrientation(chart.Title.TextBodyProperties.OrientationValue) ||
-                HasUnsupportedTextOrientation(chart.Legend.TextBodyProperties.OrientationValue) ||
-                chart.Axes.Any(axis => HasUnsupportedTextOrientation(axis.Title.TextBodyProperties.OrientationValue)) ||
-                chart.Plots.Any(plot =>
-                    HasUnsupportedTextOrientation(plot.DataLabels.TextBodyProperties.OrientationValue) ||
-                    plot.DataLabels.Overrides.Any(label => HasUnsupportedTextOrientation(label.TextBodyProperties.OrientationValue)) ||
-                    plot.Series.Any(series =>
-                        HasUnsupportedTextOrientation(series.DataLabels.TextBodyProperties.OrientationValue) ||
-                        series.DataLabels.Overrides.Any(label => HasUnsupportedTextOrientation(label.TextBodyProperties.OrientationValue)))));
+        bool HasUnsupportedTableTextOrientation(PptxSceneTable? table)
+        {
+            return table?.Rows.Any(row => row.Cells.Any(cell => cell.HasUnsupportedTextOrientation)) == true;
+        }
     }
 
     private static bool IsUnsupportedNonShapeTextOrientation(XElement bodyProperties)
@@ -543,6 +549,20 @@ internal sealed partial class PptxRenderer
         }
 
         return false;
+
+        bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)
+        {
+            return chart is not null &&
+                (HasUnsupportedTextVerticalOverflow(chart.Title.TextBodyProperties.VerticalOverflowValue) ||
+                    chart.Axes.Any(axis => HasUnsupportedTextVerticalOverflow(axis.Title.TextBodyProperties.VerticalOverflowValue)));
+        }
+
+        bool HasUnsupportedTableTextVerticalOverflow(PptxSceneTable? table)
+        {
+            return table?.Rows.Any(row => row.Cells.Any(cell =>
+                cell.HasUnsupportedVerticalOverflow &&
+                TextBodyOrientationNeedsOverflowDiagnostic(cell.TextBody?.Element(DrawingNamespace + "bodyPr")))) == true;
+        }
     }
 
     private static bool SceneTextBodyNeedsVerticalOverflowDiagnostic(PptxSceneTextBody? textBody)
@@ -551,25 +571,11 @@ internal sealed partial class PptxRenderer
             TextBodyOrientationNeedsOverflowDiagnostic(textBody.BodyProperties);
     }
 
-    private static bool HasUnsupportedTableTextVerticalOverflow(PptxSceneTable? table)
-    {
-        return table?.Rows.Any(row => row.Cells.Any(cell =>
-            cell.HasUnsupportedVerticalOverflow &&
-            TextBodyOrientationNeedsOverflowDiagnostic(cell.TextBody?.Element(DrawingNamespace + "bodyPr")))) == true;
-    }
-
     private static bool TextBodyOrientationNeedsOverflowDiagnostic(XElement? bodyProperties)
     {
         string? orientation = (string?)bodyProperties?.Attribute("vert");
         return !string.IsNullOrEmpty(orientation) &&
             !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)
-    {
-        return chart is not null &&
-            (HasUnsupportedTextVerticalOverflow(chart.Title.TextBodyProperties.VerticalOverflowValue) ||
-                chart.Axes.Any(axis => HasUnsupportedTextVerticalOverflow(axis.Title.TextBodyProperties.VerticalOverflowValue)));
     }
 
     private static bool IsUnsupportedNonShapeTextVerticalOverflow(XElement bodyProperties)
@@ -588,12 +594,6 @@ internal sealed partial class PptxRenderer
     private static bool IsUnsupportedPatternFill(XElement patternFill)
     {
         return !IsSupportedDiagonalPatternFill((string?)patternFill.Attribute("prst"));
-    }
-
-    private static bool HasUnsupportedPatternFill(PptxSceneSlide sceneSlide, XDocument slideXml)
-    {
-        return HasUnsupportedShapePatternFill(sceneSlide.SlideNodes) ||
-            slideXml.Descendants(DrawingNamespace + "pattFill").Any(IsUnsupportedNonShapePatternFill);
     }
 
     private static bool HasUnsupportedShapePatternFill(IReadOnlyList<PptxSceneNode> nodes)
@@ -660,15 +660,15 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedTransparency(PptxSceneSlide sceneSlide, XDocument slideXml)
     {
-        return HasUnsupportedSceneShapeTransparency(sceneSlide) ||
+        return HasUnsupportedSceneShapeTransparency() ||
             slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedNonShapeAlpha);
-    }
 
-    private static bool HasUnsupportedSceneShapeTransparency(PptxSceneSlide sceneSlide)
-    {
-        return HasUnsupportedShapeTransparency(sceneSlide.MasterNodes) ||
-            HasUnsupportedShapeTransparency(sceneSlide.LayoutNodes) ||
-            HasUnsupportedShapeTransparency(sceneSlide.SlideNodes);
+        bool HasUnsupportedSceneShapeTransparency()
+        {
+            return HasUnsupportedShapeTransparency(sceneSlide.MasterNodes) ||
+                HasUnsupportedShapeTransparency(sceneSlide.LayoutNodes) ||
+                HasUnsupportedShapeTransparency(sceneSlide.SlideNodes);
+        }
     }
 
     private static bool HasUnsupportedShapeTransparency(IReadOnlyList<PptxSceneNode> nodes)
@@ -687,13 +687,13 @@ internal sealed partial class PptxRenderer
 
     private static bool IsUnsupportedNonShapeAlpha(XElement alpha)
     {
-        return !IsShapeAlpha(alpha) && PptxSceneBuilder.IsUnsupportedAlpha(alpha);
-    }
+        return !IsShapeAlpha() && PptxSceneBuilder.IsUnsupportedAlpha(alpha);
 
-    private static bool IsShapeAlpha(XElement alpha)
-    {
-        return alpha.Ancestors().Any(ancestor =>
-            ancestor.Name == PresentationNamespace + "sp" ||
-            ancestor.Name == PresentationNamespace + "cxnSp");
+        bool IsShapeAlpha()
+        {
+            return alpha.Ancestors().Any(ancestor =>
+                ancestor.Name == PresentationNamespace + "sp" ||
+                ancestor.Name == PresentationNamespace + "cxnSp");
+        }
     }
 }

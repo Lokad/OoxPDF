@@ -28,7 +28,7 @@ internal sealed partial class DocxLayoutEngine
             return [];
         }
 
-        DocxLayoutPage storyCanvas = CreateRelatedStoryLayoutCanvas(bodyWidth, textLines, inlineImages, tableRows);
+        DocxLayoutPage storyCanvas = CreateRelatedStoryLayoutCanvas();
         return story.FloatingDrawings
             .Select(drawing =>
             {
@@ -52,35 +52,31 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken: cancellationToken);
             })
             .ToArray();
-    }
 
-    private static DocxLayoutPage CreateRelatedStoryLayoutCanvas(
-        double bodyWidth,
-        IReadOnlyList<DocxTextLineLayout> textLines,
-        IReadOnlyList<DocxInlineImageLayout> inlineImages,
-        IReadOnlyList<DocxTableRowLayout> tableRows)
-    {
-        IReadOnlyList<DocxLayoutItem> items = textLines
-            .Cast<DocxLayoutItem>()
-            .Concat(inlineImages)
-            .Concat(tableRows)
-            .ToArray();
-        return new DocxLayoutPage(
-            bodyWidth,
-            UnpagedRelatedStoryCanvasHeightPoints,
-            0d,
-            0d,
-            0d,
-            0d,
-            0d,
-            DocxPageSettings.Empty,
-            new DocxSectionLayoutProperties(null, null, null, null, null, null, []),
-            [new DocxLayoutColumnFrame(0, 0d, bodyWidth, null)],
-            [],
-            [],
-            [],
-            [],
-            items);
+        DocxLayoutPage CreateRelatedStoryLayoutCanvas()
+        {
+            IReadOnlyList<DocxLayoutItem> items = textLines
+                .Cast<DocxLayoutItem>()
+                .Concat(inlineImages)
+                .Concat(tableRows)
+                .ToArray();
+            return new DocxLayoutPage(
+                bodyWidth,
+                UnpagedRelatedStoryCanvasHeightPoints,
+                0d,
+                0d,
+                0d,
+                0d,
+                0d,
+                DocxPageSettings.Empty,
+                new DocxSectionLayoutProperties(null, null, null, null, null, null, []),
+                [new DocxLayoutColumnFrame(0, 0d, bodyWidth, null)],
+                [],
+                [],
+                [],
+                [],
+                items);
+        }
     }
 
     private static IReadOnlyList<DocxTextLineLayout> LayoutRelatedStoryParagraphTextLines(
@@ -307,16 +303,9 @@ internal sealed partial class DocxLayoutEngine
         DocxAnchorPlacement verticalPlacement = ResolveVerticalPlacement(verticalReference, extentHeight, drawing.VerticalAlignValue, verticalOffset);
         double? placedX = horizontalPlacement.Position;
         double? placedTop = verticalPlacement.Position;
-        DocxWrapExclusionFrame? wrapExclusion = CreateWrapExclusionFrame(drawing, placedX, placedTop, extentWidth, extentHeight, distanceTop, distanceBottom, distanceLeft, distanceRight);
+        DocxWrapExclusionFrame? wrapExclusion = CreateWrapExclusionFrame();
         DocxRelatedStoryLayout? textBoxLayout = CreateFloatingTextBoxLayout(
-            drawing,
-            extentWidth,
-            textMeasurer,
-            defaultTabStopPoints,
-            anchorPageIndex is null ? null : anchorPageIndex.Value + 1,
-            pageCount,
-            paragraphSpacingScale,
-            cancellationToken);
+            anchorPageIndex is null ? null : anchorPageIndex.Value + 1);
         return new DocxFloatingDrawingLayout(
             drawing,
             pageStartIndex,
@@ -348,79 +337,62 @@ internal sealed partial class DocxLayoutEngine
             storyKind,
             storyVariantType,
             textBoxLayout);
-    }
 
-    private static DocxRelatedStoryLayout? CreateFloatingTextBoxLayout(
-        DocxFloatingDrawing drawing,
-        double? extentWidth,
-        IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints,
-        int? pageNumber,
-        int? pageCount,
-        double paragraphSpacingScale,
-        CancellationToken cancellationToken)
-    {
-        if (textMeasurer is null ||
-            drawing.TextBoxBodyElements.Count == 0 ||
-            extentWidth is not { } width ||
-            width <= 0d)
+        DocxRelatedStoryLayout? CreateFloatingTextBoxLayout(int? pageNumber)
         {
-            return null;
+            if (textMeasurer is null ||
+                drawing.TextBoxBodyElements.Count == 0 ||
+                extentWidth is not { } width ||
+                width <= 0d)
+            {
+                return null;
+            }
+
+            var story = new DocxRelatedStory(
+                DocxRelatedStoryKind.TextBox,
+                "floating-drawing",
+                drawing.ImageRelationshipId,
+                drawing.TextBoxBodyElements,
+                [],
+                [], null);
+            return CreateRelatedStoryLayout(
+                story,
+                storyIndex: -1,
+                Math.Max(1d, width),
+                textMeasurer,
+                defaultTabStopPoints,
+                paragraphSpacingScale,
+                pageNumber: pageNumber,
+                pageCount: pageCount,
+                cancellationToken: cancellationToken);
         }
 
-        var story = new DocxRelatedStory(
-            DocxRelatedStoryKind.TextBox,
-            "floating-drawing",
-            drawing.ImageRelationshipId,
-            drawing.TextBoxBodyElements,
-            [],
-            [], null);
-        return CreateRelatedStoryLayout(
-            story,
-            storyIndex: -1,
-            Math.Max(1d, width),
-            textMeasurer,
-            defaultTabStopPoints,
-            paragraphSpacingScale,
-            pageNumber: pageNumber,
-            pageCount: pageCount,
-            cancellationToken: cancellationToken);
-    }
-
-    private static DocxWrapExclusionFrame? CreateWrapExclusionFrame(
-        DocxFloatingDrawing drawing,
-        double? placedX,
-        double? placedTop,
-        double? extentWidth,
-        double? extentHeight,
-        double? distanceTop,
-        double? distanceBottom,
-        double? distanceLeft,
-        double? distanceRight)
-    {
-        if (!IsWrapExclusionKind(drawing.WrapKind) ||
-            placedX is not { } x ||
-            placedTop is not { } top ||
-            extentWidth is not { } width ||
-            extentHeight is not { } height)
+        DocxWrapExclusionFrame? CreateWrapExclusionFrame()
         {
-            return null;
+            bool IsWrapExclusionKind()
+            {
+                return drawing.WrapKind is DocxFloatingWrapKind.Square or DocxFloatingWrapKind.Tight or DocxFloatingWrapKind.Through or DocxFloatingWrapKind.TopAndBottom;
+            }
+
+            if (!IsWrapExclusionKind() ||
+                placedX is not { } x ||
+                placedTop is not { } top ||
+                extentWidth is not { } width ||
+                extentHeight is not { } height)
+            {
+                return null;
+            }
+
+            double leftDistance = distanceLeft ?? 0d;
+            double rightDistance = distanceRight ?? 0d;
+            double topDistance = distanceTop ?? 0d;
+            double bottomDistance = distanceBottom ?? 0d;
+            return new DocxWrapExclusionFrame(
+                x - leftDistance,
+                top + topDistance,
+                width + leftDistance + rightDistance,
+                height + topDistance + bottomDistance);
         }
-
-        double leftDistance = distanceLeft ?? 0d;
-        double rightDistance = distanceRight ?? 0d;
-        double topDistance = distanceTop ?? 0d;
-        double bottomDistance = distanceBottom ?? 0d;
-        return new DocxWrapExclusionFrame(
-            x - leftDistance,
-            top + topDistance,
-            width + leftDistance + rightDistance,
-            height + topDistance + bottomDistance);
-    }
-
-    private static bool IsWrapExclusionKind(DocxFloatingWrapKind? wrapKind)
-    {
-        return wrapKind is DocxFloatingWrapKind.Square or DocxFloatingWrapKind.Tight or DocxFloatingWrapKind.Through or DocxFloatingWrapKind.TopAndBottom;
     }
 
     private static DocxAnchorPlacement ResolveHorizontalPlacement(

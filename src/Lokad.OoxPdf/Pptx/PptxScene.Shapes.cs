@@ -73,8 +73,15 @@ internal sealed partial class PptxSceneBuilder
                 ReadLineJoin(shapeProperties),
                 ReadLineJoinValue(shapeProperties), true)
             : default;
+        string ReadShapePreset()
+        {
+            return (string?)shapeProperties
+                ?.Element(DrawingNamespace + "prstGeom")
+                ?.Attribute("prst") ?? "rect";
+        }
+
         return new PptxSceneShape(
-            ReadShapePreset(shapeProperties),
+            ReadShapePreset(),
             ReadPresetAdjustments(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
             ReadCustomGeometry(shapeProperties),
@@ -239,15 +246,15 @@ internal sealed partial class PptxSceneBuilder
             return false;
         }
 
+        double ParseGradientPercentage(XElement element, string attribute)
+        {
+            return element.Attribute(attribute) is { } value
+                ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
+                : 0d;
+        }
+
         stop = new PptxSceneGradientStop(ParseGradientPercentage(gradientStop, "pos"), color, alpha);
         return true;
-    }
-
-    private static double ParseGradientPercentage(XElement element, string attribute)
-    {
-        return element.Attribute(attribute) is { } value
-            ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
-            : 0d;
     }
 
     private static IReadOnlyDictionary<string, double> ReadPresetAdjustments(XElement? shapeProperties)
@@ -873,13 +880,6 @@ internal sealed partial class PptxSceneBuilder
         }
 
         return null;
-    }
-
-    private static string ReadShapePreset(XElement? shapeProperties)
-    {
-        return (string?)shapeProperties
-            ?.Element(DrawingNamespace + "prstGeom")
-            ?.Attribute("prst") ?? "rect";
     }
 
     private static PptxSceneLineEnd ReadLineEnd(XElement? shapeProperties, string elementName)

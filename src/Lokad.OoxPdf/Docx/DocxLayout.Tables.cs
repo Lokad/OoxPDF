@@ -62,7 +62,7 @@ internal sealed partial class DocxLayoutEngine
             if (!row.CantSplit &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, textMeasurer, defaultTabStopPoints, paragraphSpacingScale))
+                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight))
             {
                 AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, remainingPageHeight, "PageBoundary", finishPage, paragraphSpacingScale);
                 markBoundaryContent();
@@ -85,6 +85,92 @@ internal sealed partial class DocxLayoutEngine
             rowHeights = frame.RowHeights;
             AddTableRowLayout(table, frame.Context, row, rowIndex, rowHeights, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale);
             markBoundaryContent();
+        }
+
+        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight)
+        {
+            if (textMeasurer is null)
+            {
+                return false;
+            }
+
+            double fragmentBottomY = rowHeight - firstFragmentHeight;
+            double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+            double rowTopPadding = ResolveTableRowTopPadding(row);
+            for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+            {
+                DocxTableCell cell = row.Cells[cellIndex];
+                if (IsVerticalMergeContinuation(cell))
+                {
+                    continue;
+                }
+
+                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale);
+                bool HasTableCellKeepRuleBoundaryViolation()
+                {
+                    if (textLines.Count == 0)
+                    {
+                        return false;
+                    }
+            
+                    IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell));
+                    foreach (IGrouping<int?, DocxTextLineLayout> group in textLines.GroupBy(line => line.SourceParagraphIndex))
+                    {
+                        if (group.Key is not { } paragraphIndex ||
+                            paragraphIndex < 0 ||
+                            paragraphIndex >= paragraphs.Count)
+                        {
+                            continue;
+                        }
+            
+                        DocxParagraphKeepRules keepRules = paragraphs[paragraphIndex].EffectiveProperties.KeepRules;
+                        int firstFragmentLineCount = group.Count(line => line.BaselineY >= fragmentBottomY);
+                        int continuationLineCount = group.Count(line => line.BaselineY < fragmentBottomY);
+                        bool splitsParagraph = firstFragmentLineCount != 0 && continuationLineCount != 0;
+                        if (splitsParagraph &&
+                            (keepRules.KeepNext == true ||
+                                keepRules.KeepLines == true ||
+                                (keepRules.WidowControl != false &&
+                                    (firstFragmentLineCount == 1 || continuationLineCount == 1))))
+                        {
+                            return true;
+                        }
+            
+                        bool IsNextTableCellParagraphInContinuation()
+                        {
+                            int nextParagraphIndex = paragraphIndex + 1;
+                            return textLines.Any(line => line.SourceParagraphIndex == nextParagraphIndex) &&
+                                textLines
+                                    .Where(line => line.SourceParagraphIndex == nextParagraphIndex)
+                                    .All(line => line.BaselineY < fragmentBottomY);
+                        }
+
+                        if (keepRules.KeepNext == true &&
+                            firstFragmentLineCount != 0 &&
+                            continuationLineCount == 0 &&
+                            IsNextTableCellParagraphInContinuation())
+                        {
+                            return true;
+                        }
+                    }
+            
+                    return false;
+                }
+
+                if (HasTableCellKeepRuleBoundaryViolation())
+                {
+                    return false;
+                }
+
+                bool hasLineInFirstFragment = textLines.Any(line => firstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY);
+                bool hasLineInContinuation = textLines.Any(line => line.BaselineY < fragmentBottomY);
+                if (hasLineInFirstFragment && hasLineInContinuation)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 
@@ -121,10 +207,23 @@ internal sealed partial class DocxLayoutEngine
             table.LayoutValue,
             table.Revisions);
         var rowHeights = new double[table.Rows.Count];
+        double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale)
+        {
+            double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+            double rowTopPadding = ResolveTableRowTopPadding(row);
+            double contentHeight = textMeasurer is null
+                ? 0d
+                : row.Cells
+                    .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale))
+                    .DefaultIfEmpty(0d)
+                    .Max();
+            return ResolveTableRowHeight(row, contentHeight);
+        }
+
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            rowHeights[rowIndex] = MeasureTableRowHeight(table, table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
+            rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale);
         }
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
@@ -136,8 +235,54 @@ internal sealed partial class DocxLayoutEngine
         double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
         double gridTableWidth = table.ColumnWidthsPoints.Sum();
         double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;
-        double targetTableWidth = ResolveTargetTableWidth(table, tableAvailableWidth, fallbackTableWidth);
-        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(table, targetTableWidth);
+        double ResolveTargetTableWidth()
+        {
+            double? ResolvePreferredTableWidth()
+            {
+                if (table.PreferredWidthPoints is { } points)
+                {
+                    return points;
+                }
+        
+                double ResolveOuterTableCellContentInset()
+                {
+                    DocxTableRow? firstRow = table.Rows.FirstOrDefault();
+                    if (firstRow is null || firstRow.Cells.Count == 0)
+                    {
+                        return 0d;
+                    }
+            
+                    DocxTableCell firstCell = firstRow.Cells[0];
+                    DocxTableCell lastCell = firstRow.Cells[^1];
+                    return ResolveTableCellHorizontalPadding(firstCell.Margins.LeftPoints) +
+                        ResolveTableCellBorderContentInset(firstCell, "left") +
+                        ResolveTableCellHorizontalPadding(lastCell.Margins.RightPoints) +
+                        ResolveTableCellBorderContentInset(lastCell, "right");
+                }
+        
+                if (table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+                    int.TryParse(table.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
+                {
+                    double normalPercentageWidth = tableAvailableWidth * fiftiethsPercent / 5000d;
+                    double explicitGridWidth = table.HasExplicitGrid ? table.ColumnWidthsPoints.Sum() : 0d;
+                    double percentageBasis = explicitGridWidth > 0d && explicitGridWidth < normalPercentageWidth - 0.001d
+                        ? tableAvailableWidth + ResolveOuterTableCellContentInset()
+                        : tableAvailableWidth;
+                    return Math.Max(0d, percentageBasis * fiftiethsPercent / 5000d);
+                }
+        
+                return null;
+            }
+
+            double preferredWidth = ResolvePreferredTableWidth() ?? fallbackTableWidth;
+            return table.PreferredWidthType?.Equals("dxa", StringComparison.OrdinalIgnoreCase) == true ||
+                table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true
+                ? Math.Max(1d, preferredWidth)
+                : Math.Min(tableAvailableWidth, preferredWidth);
+        }
+
+        double targetTableWidth = ResolveTargetTableWidth();
+        IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         return new DocxResolvedTableGrid(
@@ -147,53 +292,69 @@ internal sealed partial class DocxLayoutEngine
             effectiveColumns,
             scale,
             effectiveColumns.Select(width => width * scale).ToArray());
-    }
 
-    private static IReadOnlyList<double> GetEffectiveTableColumnWidths(DocxTable table, double preferredTableWidth)
-    {
-        int columnCount = table.ColumnWidthsPoints.Count;
-        if (columnCount == 0)
+        IReadOnlyList<double> GetEffectiveTableColumnWidths(double preferredTableWidth)
         {
-            int inferredColumnCount = GetMaxGridColumnCount(table);
-            return inferredColumnCount > 0
-                ? Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray()
-                : table.ColumnWidthsPoints;
-        }
-
-        double?[] preferredWidths = new double?[columnCount];
-        foreach (DocxTableRow row in table.Rows)
-        {
-            int gridColumnIndex = 0;
-            foreach (DocxTableCell cell in row.Cells)
+            int columnCount = table.ColumnWidthsPoints.Count;
+            if (columnCount == 0)
             {
-                int span = Math.Max(1, cell.GridSpan);
-                double? preferredWidth = ResolvePreferredCellWidth(cell, preferredTableWidth);
-                if (span == 1 &&
-                    gridColumnIndex < columnCount &&
-                    preferredWidth is > 0d)
+                int inferredColumnCount = GetMaxGridColumnCount(table);
+                return inferredColumnCount > 0
+                    ? Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray()
+                    : table.ColumnWidthsPoints;
+            }
+
+            double?[] preferredWidths = new double?[columnCount];
+            foreach (DocxTableRow row in table.Rows)
+            {
+                int gridColumnIndex = 0;
+                foreach (DocxTableCell cell in row.Cells)
                 {
-                    preferredWidths[gridColumnIndex] = preferredWidth.Value;
+                    int span = Math.Max(1, cell.GridSpan);
+                    double? ResolvePreferredCellWidth()
+                    {
+                        if (cell.PreferredWidthPoints is { } points)
+                        {
+                            return points;
+                        }
+                
+                        if (cell.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+                            int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
+                        {
+                            return Math.Max(0d, preferredTableWidth * fiftiethsPercent / 5000d);
+                        }
+                
+                        return null;
+                    }
+
+                    double? cellPreferredWidth = ResolvePreferredCellWidth();
+                    if (span == 1 &&
+                        gridColumnIndex < columnCount &&
+                        cellPreferredWidth is > 0d)
+                    {
+                        preferredWidths[gridColumnIndex] = cellPreferredWidth.Value;
+                    }
+
+                    gridColumnIndex += span;
                 }
 
-                gridColumnIndex += span;
+                if (preferredWidths.All(width => width is > 0d))
+                {
+                    return preferredWidths.Select(width => width ?? 0d).ToArray();
+                }
             }
 
-            if (preferredWidths.All(width => width is > 0d))
+            if (!table.HasExplicitGrid)
             {
-                return preferredWidths.Select(width => width ?? 0d).ToArray();
+                int inferredColumnCount = columnCount == 0 ? GetMaxGridColumnCount(table) : columnCount;
+                if (inferredColumnCount > 0)
+                {
+                    return Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray();
+                }
             }
-        }
 
-        if (!table.HasExplicitGrid)
-        {
-            int inferredColumnCount = columnCount == 0 ? GetMaxGridColumnCount(table) : columnCount;
-            if (inferredColumnCount > 0)
-            {
-                return Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray();
-            }
+            return table.ColumnWidthsPoints;
         }
-
-        return table.ColumnWidthsPoints;
     }
 
     private static int GetMaxGridColumnCount(DocxTable table)
@@ -202,90 +363,6 @@ internal sealed partial class DocxLayoutEngine
             .Select(row => row.Cells.Sum(cell => Math.Max(1, cell.GridSpan)))
             .DefaultIfEmpty(0)
             .Max();
-    }
-
-    private static double? ResolvePreferredCellWidth(DocxTableCell cell, double preferredTableWidth)
-    {
-        if (cell.PreferredWidthPoints is { } points)
-        {
-            return points;
-        }
-
-        if (cell.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
-            int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
-        {
-            return Math.Max(0d, preferredTableWidth * fiftiethsPercent / 5000d);
-        }
-
-        return null;
-    }
-
-    private static double? ResolvePreferredTableWidth(DocxTable table, double availableWidth)
-    {
-        if (table.PreferredWidthPoints is { } points)
-        {
-            return points;
-        }
-
-        if (table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
-            int.TryParse(table.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
-        {
-            double normalPercentageWidth = availableWidth * fiftiethsPercent / 5000d;
-            double explicitGridWidth = table.HasExplicitGrid ? table.ColumnWidthsPoints.Sum() : 0d;
-            double percentageBasis = explicitGridWidth > 0d && explicitGridWidth < normalPercentageWidth - 0.001d
-                ? availableWidth + ResolveOuterTableCellContentInset(table)
-                : availableWidth;
-            return Math.Max(0d, percentageBasis * fiftiethsPercent / 5000d);
-        }
-
-        return null;
-    }
-
-    private static double ResolveOuterTableCellContentInset(DocxTable table)
-    {
-        DocxTableRow? firstRow = table.Rows.FirstOrDefault();
-        if (firstRow is null || firstRow.Cells.Count == 0)
-        {
-            return 0d;
-        }
-
-        DocxTableCell firstCell = firstRow.Cells[0];
-        DocxTableCell lastCell = firstRow.Cells[^1];
-        return ResolveTableCellHorizontalPadding(firstCell.Margins.LeftPoints) +
-            ResolveTableCellBorderContentInset(firstCell, "left") +
-            ResolveTableCellHorizontalPadding(lastCell.Margins.RightPoints) +
-            ResolveTableCellBorderContentInset(lastCell, "right");
-    }
-
-    private static double ResolveTargetTableWidth(DocxTable table, double availableWidth, double fallbackWidth)
-    {
-        double preferredWidth = ResolvePreferredTableWidth(table, availableWidth) ?? fallbackWidth;
-        return table.PreferredWidthType?.Equals("dxa", StringComparison.OrdinalIgnoreCase) == true ||
-            table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true
-            ? Math.Max(1d, preferredWidth)
-            : Math.Min(availableWidth, preferredWidth);
-    }
-
-    private static double MeasureTableRowHeight(
-        DocxTable table,
-        DocxTableRow row,
-        IReadOnlyList<double> effectiveColumns,
-        double scale,
-        IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints,
-        int? pageNumber,
-        int? pageCount,
-        double paragraphSpacingScale)
-    {
-        double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-        double rowTopPadding = ResolveTableRowTopPadding(row);
-        double contentHeight = textMeasurer is null
-            ? 0d
-            : row.Cells
-                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale))
-                .DefaultIfEmpty(0d)
-                .Max();
-        return ResolveTableRowHeight(row, contentHeight);
     }
 
     private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight)
@@ -306,25 +383,25 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double height = Math.Max(declaredHeight, contentHeight);
-        height += ResolveTableRowCollapsedHorizontalBorderAdvance(row);
-        return Math.Max(1d, height);
-    }
-
-    private static double ResolveTableRowCollapsedHorizontalBorderAdvance(DocxTableRow row)
-    {
-        double maxBottom = row.Cells
-            .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")))
-            .DefaultIfEmpty(0d)
-            .Max();
-        if (maxBottom > 0d)
+        double ResolveTableRowCollapsedHorizontalBorderAdvance()
         {
-            return maxBottom;
+            double maxBottom = row.Cells
+                .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")))
+                .DefaultIfEmpty(0d)
+                .Max();
+            if (maxBottom > 0d)
+            {
+                return maxBottom;
+            }
+    
+            return row.Cells
+                .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "top")))
+                .DefaultIfEmpty(0d)
+                .Max();
         }
 
-        return row.Cells
-            .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "top")))
-            .DefaultIfEmpty(0d)
-            .Max();
+        height += ResolveTableRowCollapsedHorizontalBorderAdvance();
+        return Math.Max(1d, height);
     }
 
     private static void AddTableRowLayout(
@@ -420,9 +497,14 @@ internal sealed partial class DocxLayoutEngine
         DocxTableLayoutFrame initialFrame = resolveFrame();
         IReadOnlyList<double> initialRowHeights = initialFrame.RowHeights;
         double rowHeight = initialRowHeights[rowIndex];
+        double SumRepeatedTableHeaderRowsHeight()
+        {
+            return headerRows.Sum(entry => entry.RowIndex >= 0 && entry.RowIndex < initialRowHeights.Count ? initialRowHeights[entry.RowIndex] : 0d);
+        }
+
         double continuationContentHeight = row.IsHeader
             ? initialFrame.PageContentHeight
-            : Math.Max(1d, initialFrame.PageContentHeight - SumRepeatedTableHeaderRowsHeight(initialRowHeights, headerRows));
+            : Math.Max(1d, initialFrame.PageContentHeight - SumRepeatedTableHeaderRowsHeight());
         IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, fragmentBoundariesFromRowTop, continuationContentHeight);
         double consumedHeight = 0d;
         for (int fragmentIndex = 0; fragmentIndex < fragmentHeights.Count; fragmentIndex++)
@@ -484,113 +566,6 @@ internal sealed partial class DocxLayoutEngine
         {
             AddTableRowLayout(table, tableContext, headerRow, headerRowIndex, rowHeights, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, x, paragraphSpacingScale);
         }
-    }
-
-    private static double SumRepeatedTableHeaderRowsHeight(
-        IReadOnlyList<double> rowHeights,
-        IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows)
-    {
-        return headerRows.Sum(entry => entry.RowIndex >= 0 && entry.RowIndex < rowHeights.Count ? rowHeights[entry.RowIndex] : 0d);
-    }
-
-    private static bool CanSplitTableRowAtPageBoundary(
-        DocxTableRow row,
-        IReadOnlyList<double> effectiveColumns,
-        double scale,
-        double rowHeight,
-        double firstFragmentHeight,
-        IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints,
-        double paragraphSpacingScale)
-    {
-        if (textMeasurer is null)
-        {
-            return false;
-        }
-
-        double fragmentBottomY = rowHeight - firstFragmentHeight;
-        double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-        double rowTopPadding = ResolveTableRowTopPadding(row);
-        for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
-        {
-            DocxTableCell cell = row.Cells[cellIndex];
-            if (IsVerticalMergeContinuation(cell))
-            {
-                continue;
-            }
-
-            IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale);
-            if (HasTableCellKeepRuleBoundaryViolation(cell, textLines, fragmentBottomY))
-            {
-                return false;
-            }
-
-            bool hasLineInFirstFragment = textLines.Any(line => firstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY);
-            bool hasLineInContinuation = textLines.Any(line => line.BaselineY < fragmentBottomY);
-            if (hasLineInFirstFragment && hasLineInContinuation)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool HasTableCellKeepRuleBoundaryViolation(
-        DocxTableCell cell,
-        IReadOnlyList<DocxTextLineLayout> textLines,
-        double fragmentBottomY)
-    {
-        if (textLines.Count == 0)
-        {
-            return false;
-        }
-
-        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell));
-        foreach (IGrouping<int?, DocxTextLineLayout> group in textLines.GroupBy(line => line.SourceParagraphIndex))
-        {
-            if (group.Key is not { } paragraphIndex ||
-                paragraphIndex < 0 ||
-                paragraphIndex >= paragraphs.Count)
-            {
-                continue;
-            }
-
-            DocxParagraphKeepRules keepRules = paragraphs[paragraphIndex].EffectiveProperties.KeepRules;
-            int firstFragmentLineCount = group.Count(line => line.BaselineY >= fragmentBottomY);
-            int continuationLineCount = group.Count(line => line.BaselineY < fragmentBottomY);
-            bool splitsParagraph = firstFragmentLineCount != 0 && continuationLineCount != 0;
-            if (splitsParagraph &&
-                (keepRules.KeepNext == true ||
-                    keepRules.KeepLines == true ||
-                    (keepRules.WidowControl != false &&
-                        (firstFragmentLineCount == 1 || continuationLineCount == 1))))
-            {
-                return true;
-            }
-
-            if (keepRules.KeepNext == true &&
-                firstFragmentLineCount != 0 &&
-                continuationLineCount == 0 &&
-                IsNextTableCellParagraphInContinuation(paragraphIndex, textLines, fragmentBottomY))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsNextTableCellParagraphInContinuation(
-        int paragraphIndex,
-        IReadOnlyList<DocxTextLineLayout> textLines,
-        double fragmentBottomY)
-    {
-        int nextParagraphIndex = paragraphIndex + 1;
-        return textLines.Any(line => line.SourceParagraphIndex == nextParagraphIndex) &&
-            textLines
-                .Where(line => line.SourceParagraphIndex == nextParagraphIndex)
-                .All(line => line.BaselineY < fragmentBottomY);
     }
 
     private static bool TryResolveExplicitTableCellPageBreakBoundaries(

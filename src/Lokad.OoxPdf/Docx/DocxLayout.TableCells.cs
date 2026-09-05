@@ -39,21 +39,6 @@ internal sealed partial class DocxLayoutEngine
             string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsTextLineVisibleInCellFragment(
-        DocxTextLineLayout line,
-        double cellY,
-        double cellHeight,
-        int fragmentIndex,
-        int fragmentCount)
-    {
-        if (fragmentCount <= 1)
-        {
-            return true;
-        }
-
-        double bottom = fragmentIndex == 0 ? cellY - 0.001d : cellY + 0.001d;
-        return line.BaselineY >= bottom && line.BaselineY <= cellY + cellHeight + 0.001d;
-    }
 
     private static bool IsTextLineVisibleInCellFragmentGeometry(
         bool cellPageBreakAlignsWithFragmentBoundary,
@@ -63,9 +48,20 @@ internal sealed partial class DocxLayoutEngine
         int fragmentIndex,
         int fragmentCount)
     {
+        bool IsTextLineVisibleInCellFragment()
+        {
+            if (fragmentCount <= 1)
+            {
+                return true;
+            }
+    
+            double bottom = fragmentIndex == 0 ? cellY - 0.001d : cellY + 0.001d;
+            return line.BaselineY >= bottom && line.BaselineY <= cellY + cellHeight + 0.001d;
+        }
+
         return cellPageBreakAlignsWithFragmentBoundary
             ? true
-            : IsTextLineVisibleInCellFragment(line, cellY, cellHeight, fragmentIndex, fragmentCount);
+            : IsTextLineVisibleInCellFragment();
     }
 
     private static bool IsInlineImageVisibleInCellFragmentGeometry(
@@ -412,6 +408,17 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            DocxParagraph MergeTableCellColumnBreakParagraphs(DocxParagraph first, DocxParagraph second)
+            {
+                return first with
+                {
+                    Runs = first.Runs.Concat(second.Runs).ToArray(),
+                    Images = first.Images.Concat(second.Images).ToArray(),
+                    SpacingAfterPoints = second.EffectiveProperties.SpacingAfterPoints,
+                    Spacing = second.EffectiveProperties.Spacing
+                };
+            }
+
             while (index + 2 < authoredElements.Count &&
                 IsTableCellColumnBreakElement(authoredElements[index + 1]) &&
                 authoredElements[index + 2] is DocxParagraphElement continuationElement)
@@ -435,17 +442,6 @@ internal sealed partial class DocxLayoutEngine
     {
         return element is DocxManualBreakElement manualBreak &&
             manualBreak.Value?.Equals("column", StringComparison.OrdinalIgnoreCase) == true;
-    }
-
-    private static DocxParagraph MergeTableCellColumnBreakParagraphs(DocxParagraph first, DocxParagraph second)
-    {
-        return first with
-        {
-            Runs = first.Runs.Concat(second.Runs).ToArray(),
-            Images = first.Images.Concat(second.Images).ToArray(),
-            SpacingAfterPoints = second.EffectiveProperties.SpacingAfterPoints,
-            Spacing = second.EffectiveProperties.Spacing
-        };
     }
 
     private static double MeasureTableCellContentHeight(
@@ -663,7 +659,7 @@ internal sealed partial class DocxLayoutEngine
                         paragraph.EffectiveProperties.TabStops,
                         defaultTabStopPoints,
                         pageNumber);
-                    lineShape = FitTableCellLineText(cell, lineShape, paragraphWidth);
+                    lineShape = FitTableCellLineText(lineShape, paragraphWidth);
                     lines.Add(new DocxTextLineLayout(
                         lineShape.Text,
                         firstRun,
@@ -719,6 +715,54 @@ internal sealed partial class DocxLayoutEngine
                 ? extra / 2d
                 : 0d;
         return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset, 0d);
+
+        DocxParagraphLineShape FitTableCellLineText(DocxParagraphLineShape lineShape, double targetWidth)
+        {
+            if (!cell.FitText ||
+                lineShape.Segments.Count == 0 ||
+                lineShape.Text.IndexOf('\t') >= 0 ||
+                targetWidth <= 0d)
+            {
+                return lineShape;
+            }
+
+            int gapCount = lineShape.Segments.Sum(CountFitTextCharacterSpacingGaps);
+            if (gapCount == 0)
+            {
+                return lineShape with { Width = Math.Max(0d, targetWidth) };
+            }
+
+            double fitSpacing = (targetWidth - lineShape.Width) / gapCount;
+            var segments = new List<DocxTextSegmentLayout>(lineShape.Segments.Count);
+            double segmentX = lineShape.Segments[0].X;
+            for (int index = 0; index < lineShape.Segments.Count; index++)
+            {
+                DocxTextSegmentLayout segment = lineShape.Segments[index];
+                int segmentGapCount = CountFitTextCharacterSpacingGaps(segment);
+                double fittedWidth = segment.Width + (fitSpacing * segmentGapCount);
+                segments.Add(segmentGapCount == 0
+                    ? segment with { X = segmentX }
+                    : segment with
+                    {
+                        X = segmentX,
+                        Width = fittedWidth,
+                        PdfCharacterSpacing = segment.PdfCharacterSpacing + fitSpacing,
+                        PdfCharacterSpacingSource = DocxTextStateCharacterSpacingSource.AdvanceTarget,
+                        CompensatePdfCharacterSpacing = false
+                    });
+
+                double boundaryAdvance = index + 1 < lineShape.Segments.Count
+                    ? lineShape.Segments[index + 1].X - (segment.X + segment.Width)
+                    : 0d;
+                segmentX += fittedWidth + boundaryAdvance;
+            }
+
+            return lineShape with
+            {
+                Width = targetWidth,
+                Segments = segments
+            };
+        }
     }
 
     private static IReadOnlyList<DocxInlineImageLayout> LayoutTableCellInlineImages(
@@ -936,57 +980,6 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveTableCellTextWrapWidth(DocxTableCell cell, double width)
     {
         return cell.NoWrap || cell.FitText ? TableCellNoWrapLineWidthPoints : Math.Max(1d, width);
-    }
-
-    private static DocxParagraphLineShape FitTableCellLineText(
-        DocxTableCell cell,
-        DocxParagraphLineShape lineShape,
-        double targetWidth)
-    {
-        if (!cell.FitText ||
-            lineShape.Segments.Count == 0 ||
-            lineShape.Text.IndexOf('\t') >= 0 ||
-            targetWidth <= 0d)
-        {
-            return lineShape;
-        }
-
-        int gapCount = lineShape.Segments.Sum(CountFitTextCharacterSpacingGaps);
-        if (gapCount == 0)
-        {
-            return lineShape with { Width = Math.Max(0d, targetWidth) };
-        }
-
-        double fitSpacing = (targetWidth - lineShape.Width) / gapCount;
-        var segments = new List<DocxTextSegmentLayout>(lineShape.Segments.Count);
-        double segmentX = lineShape.Segments[0].X;
-        for (int index = 0; index < lineShape.Segments.Count; index++)
-        {
-            DocxTextSegmentLayout segment = lineShape.Segments[index];
-            int segmentGapCount = CountFitTextCharacterSpacingGaps(segment);
-            double fittedWidth = segment.Width + (fitSpacing * segmentGapCount);
-            segments.Add(segmentGapCount == 0
-                ? segment with { X = segmentX }
-                : segment with
-                {
-                    X = segmentX,
-                    Width = fittedWidth,
-                    PdfCharacterSpacing = segment.PdfCharacterSpacing + fitSpacing,
-                    PdfCharacterSpacingSource = DocxTextStateCharacterSpacingSource.AdvanceTarget,
-                    CompensatePdfCharacterSpacing = false
-                });
-
-            double boundaryAdvance = index + 1 < lineShape.Segments.Count
-                ? lineShape.Segments[index + 1].X - (segment.X + segment.Width)
-                : 0d;
-            segmentX += fittedWidth + boundaryAdvance;
-        }
-
-        return lineShape with
-        {
-            Width = targetWidth,
-            Segments = segments
-        };
     }
 
     private static int CountFitTextCharacterSpacingGaps(DocxTextSegmentLayout segment)

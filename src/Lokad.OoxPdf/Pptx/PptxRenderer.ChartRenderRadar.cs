@@ -26,7 +26,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            AppendRadarPolygonEdgeSegments(graphics, geometry, pointCount, geometry.Radius * tickRatio);
+            AppendRadarPolygonEdgeSegments(geometry.Radius * tickRatio);
             hasGridPath = true;
         }
         if (hasGridPath)
@@ -34,7 +34,7 @@ internal sealed partial class PptxRenderer
             graphics.StrokeCurrentPath();
         }
 
-        AppendRadarRadialSegments(graphics, geometry, pointCount, repeatFirstSpoke: true);
+        AppendRadarRadialSegments(repeatFirstSpoke: true);
         graphics.StrokeCurrentPath();
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
@@ -66,12 +66,59 @@ internal sealed partial class PptxRenderer
             }
 
             SetChartStroke(graphics, stroke);
-            AppendClosedPolylinePath(graphics, points);
+            AppendClosedPolylinePath(points);
             graphics.StrokeCurrentPath();
 
             if (stroke.Alpha < 1d)
             {
                 graphics.RestoreState();
+            }
+        }
+
+        void AppendClosedPolylinePath(IReadOnlyList<(double X, double Y)> points)
+        {
+            if (points.Count == 0)
+            {
+                return;
+            }
+
+            graphics.MoveTo(points[0].X, points[0].Y);
+            for (int i = 1; i < points.Count; i++)
+            {
+                graphics.LineTo(points[i].X, points[i].Y);
+            }
+
+            graphics.LineTo(points[0].X, points[0].Y);
+        }
+
+        void AppendRadarPolygonEdgeSegments(double radius)
+        {
+            var points = new (double X, double Y)[pointCount];
+            for (int i = 0; i < pointCount; i++)
+            {
+                double angle = GetRadarPointAngle(i, pointCount);
+                points[i] = (geometry.CenterX + Math.Cos(angle) * radius, geometry.CenterY + Math.Sin(angle) * radius);
+            }
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                (double X, double Y) start = points[i];
+                (double X, double Y) end = points[(i + 1) % points.Length];
+                graphics.MoveTo(start.X, start.Y);
+                graphics.LineTo(end.X, end.Y);
+            }
+        }
+
+        void AppendRadarRadialSegments(bool repeatFirstSpoke)
+        {
+            int segmentCount = repeatFirstSpoke ? pointCount + 1 : pointCount;
+            for (int i = 0; i < segmentCount; i++)
+            {
+                double angle = GetRadarPointAngle(i % pointCount, pointCount);
+                graphics.MoveTo(geometry.CenterX, geometry.CenterY);
+                graphics.LineTo(
+                    geometry.CenterX + Math.Cos(angle) * geometry.Radius,
+                    geometry.CenterY + Math.Sin(angle) * geometry.Radius);
             }
         }
     }
@@ -89,53 +136,6 @@ internal sealed partial class PptxRenderer
             ? GetStackedPointValueExtents(denseSeries, pointCount, percentStacked)
             : GetClusteredPointValueExtents(denseSeries);
         return new ChartValueExtents(minValue, maxValue);
-    }
-
-    private static void AppendRadarPolygonEdgeSegments(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, int pointCount, double radius)
-    {
-        var points = new (double X, double Y)[pointCount];
-        for (int i = 0; i < pointCount; i++)
-        {
-            double angle = GetRadarPointAngle(i, pointCount);
-            points[i] = (geometry.CenterX + Math.Cos(angle) * radius, geometry.CenterY + Math.Sin(angle) * radius);
-        }
-
-        for (int i = 0; i < points.Length; i++)
-        {
-            (double X, double Y) start = points[i];
-            (double X, double Y) end = points[(i + 1) % points.Length];
-            graphics.MoveTo(start.X, start.Y);
-            graphics.LineTo(end.X, end.Y);
-        }
-    }
-
-    private static void AppendRadarRadialSegments(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, int pointCount, bool repeatFirstSpoke)
-    {
-        int segmentCount = repeatFirstSpoke ? pointCount + 1 : pointCount;
-        for (int i = 0; i < segmentCount; i++)
-        {
-            double angle = GetRadarPointAngle(i % pointCount, pointCount);
-            graphics.MoveTo(geometry.CenterX, geometry.CenterY);
-            graphics.LineTo(
-                geometry.CenterX + Math.Cos(angle) * geometry.Radius,
-                geometry.CenterY + Math.Sin(angle) * geometry.Radius);
-        }
-    }
-
-    private static void AppendClosedPolylinePath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
-    {
-        if (points.Count == 0)
-        {
-            return;
-        }
-
-        graphics.MoveTo(points[0].X, points[0].Y);
-        for (int i = 1; i < points.Count; i++)
-        {
-            graphics.LineTo(points[i].X, points[i].Y);
-        }
-
-        graphics.LineTo(points[0].X, points[0].Y);
     }
 
     private static double GetRadarPointAngle(int index, int pointCount)

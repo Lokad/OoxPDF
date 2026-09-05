@@ -233,7 +233,7 @@ internal sealed partial class PptxRenderer
         XElement? textBody = shape.Element(PresentationNamespace + "txBody");
         IReadOnlyList<XElement> inheritedPlaceholders = FindInheritedPlaceholderShapes(shape, placeholderSources);
         XElement? inheritedPlaceholder = inheritedPlaceholders.LastOrDefault();
-        XElement? inheritedTextBody = BuildEffectiveInheritedTextBody(inheritedPlaceholders);
+        XElement? inheritedTextBody = BuildEffectiveInheritedTextBody();
         ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
         bool usesInheritedShapeBounds = bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is not null;
         if (bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties)
@@ -379,41 +379,41 @@ internal sealed partial class PptxRenderer
             orientation,
             shapeFontColor,
             paragraphs);
-    }
 
-    private static XElement? BuildEffectiveInheritedTextBody(IReadOnlyList<XElement> inheritedPlaceholders)
-    {
-        XElement[] inheritedTextBodies = inheritedPlaceholders
-            .Select(placeholder => placeholder.Element(PresentationNamespace + "txBody"))
-            .Where(textBody => textBody is not null)
-            .Cast<XElement>()
-            .ToArray();
-        if (inheritedTextBodies.Length == 0)
+        XElement? BuildEffectiveInheritedTextBody()
         {
-            return null;
-        }
-
-        XElement effectiveTextBody = new(PresentationNamespace + "txBody");
-        XElement effectiveBodyProperties = new(DrawingNamespace + "bodyPr");
-        foreach (XElement bodyProperties in inheritedTextBodies
-            .Select(textBody => textBody.Element(DrawingNamespace + "bodyPr"))
-            .Where(bodyProperties => bodyProperties is not null)
-            .Cast<XElement>())
-        {
-            foreach (XAttribute attribute in bodyProperties.Attributes())
+            XElement[] inheritedTextBodies = inheritedPlaceholders
+                .Select(placeholder => placeholder.Element(PresentationNamespace + "txBody"))
+                .Where(candidateTextBody => candidateTextBody is not null)
+                .Cast<XElement>()
+                .ToArray();
+            if (inheritedTextBodies.Length == 0)
             {
-                effectiveBodyProperties.SetAttributeValue(attribute.Name, attribute.Value);
+                return null;
             }
 
-            foreach (XElement child in bodyProperties.Elements())
+            XElement effectiveTextBody = new(PresentationNamespace + "txBody");
+            XElement effectiveBodyProperties = new(DrawingNamespace + "bodyPr");
+            foreach (XElement mergedBodyProperties in inheritedTextBodies
+                .Select(candidateTextBody => candidateTextBody.Element(DrawingNamespace + "bodyPr"))
+                .Where(mergedBodyProperties => mergedBodyProperties is not null)
+                .Cast<XElement>())
             {
-                effectiveBodyProperties.Elements(child.Name).Remove();
-                effectiveBodyProperties.Add(new XElement(child));
-            }
-        }
+                foreach (XAttribute attribute in mergedBodyProperties.Attributes())
+                {
+                    effectiveBodyProperties.SetAttributeValue(attribute.Name, attribute.Value);
+                }
 
-        effectiveTextBody.Add(effectiveBodyProperties);
-        return effectiveTextBody;
+                foreach (XElement child in mergedBodyProperties.Elements())
+                {
+                    effectiveBodyProperties.Elements(child.Name).Remove();
+                    effectiveBodyProperties.Add(new XElement(child));
+                }
+            }
+
+            effectiveTextBody.Add(effectiveBodyProperties);
+            return effectiveTextBody;
+        }
     }
 
     private static PptxTextFrameModel BuildTextFrameModel(
@@ -750,12 +750,12 @@ internal sealed partial class PptxRenderer
                 ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
                 : 0;
             string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
-            PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
+            PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(levelName);
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing, compatibleDefaultLineSpacingFactor);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
-            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, colorMap, slideNumber, fontScale, tableStyleTextStyle);
+            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties());
+            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade);
             XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
             ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale);
             paragraphs.Add(new PptxTextParagraphModel(
@@ -779,6 +779,214 @@ internal sealed partial class PptxRenderer
         }
 
         return paragraphs;
+
+        PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties)
+        {
+            if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
+            {
+                return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, null, null, null, PptxThemeTypefaceSource.DefaultMinorLatin, null, PptxParagraphBulletSizeKind.Text, null);
+            }
+
+            XElement? bulletFont = FindBulletProperty("buFont");
+            XElement? bulletColor = FindBulletProperty("buClr");
+            XElement? bulletSizePercent = FindBulletProperty("buSzPct");
+            XElement? bulletSizePoints = FindBulletProperty("buSzPts");
+            string? fontTypeface = (string?)bulletFont?.Attribute("typeface");
+            string? fontCharset = (string?)bulletFont?.Attribute("charset");
+            PptxThemeTypefaceResolution FontFaceResolution = theme.ResolveTypefaceWithSource(fontTypeface);
+            RgbColor? color = bulletColor is not null && PptxColorResolver.TryReadSolidColor(bulletColor, theme, colorMap, out RgbColor resolvedColor)
+                ? resolvedColor
+                : null;
+            PptxParagraphBulletSizeKind sizeKind = PptxParagraphBulletSizeKind.Text;
+            string? sizeValue = null;
+            if ((string?)bulletSizePercent?.Attribute("val") is { } percentValue)
+            {
+                sizeKind = PptxParagraphBulletSizeKind.Percent;
+                sizeValue = percentValue;
+            }
+            else if ((string?)bulletSizePoints?.Attribute("val") is { } pointValue)
+            {
+                sizeKind = PptxParagraphBulletSizeKind.Points;
+                sizeValue = pointValue;
+            }
+
+            if ((string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char") is { } character)
+            {
+                string resolvedCharacter = IsSymbolBulletFont(bulletFont)
+                    ? MapSymbolBulletText(character)
+                    : character;
+                return new PptxParagraphBulletModel(PptxParagraphBulletKind.Character, character, resolvedCharacter, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
+            }
+
+            if (paragraphProperties.Element(DrawingNamespace + "buAutoNum") is { } autoNumber)
+            {
+                string? startAtValue = (string?)autoNumber.Attribute("startAt");
+                int? startAt = int.TryParse(startAtValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedStartAt) && parsedStartAt > 0
+                    ? parsedStartAt
+                    : null;
+                return new PptxParagraphBulletModel(
+                    PptxParagraphBulletKind.AutoNumber,
+                    null,
+                    null,
+                    (string?)autoNumber.Attribute("type"),
+                    startAtValue,
+                    startAt,
+                    fontTypeface,
+                    fontCharset,
+                    FontFaceResolution.Typeface,
+                    FontFaceResolution.Source,
+                    color,
+                    sizeKind,
+                    sizeValue);
+            }
+
+            if (paragraphProperties.Element(DrawingNamespace + "buBlip") is not null)
+            {
+                return new PptxParagraphBulletModel(PptxParagraphBulletKind.Blip, null, null, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
+            }
+
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
+
+            XElement? FindBulletProperty(string localName)
+            {
+                if (paragraphProperties is null)
+                {
+                    return null;
+                }
+
+                XName propertyName = DrawingNamespace + localName;
+                XElement? marker = paragraphProperties
+                    .Elements()
+                    .FirstOrDefault(element => element.Name == DrawingNamespace + "buChar" ||
+                        element.Name == DrawingNamespace + "buAutoNum" ||
+                        element.Name == DrawingNamespace + "buBlip");
+                IEnumerable<XElement> candidates = marker is null
+                    ? paragraphProperties.Elements()
+                    : paragraphProperties.Elements().TakeWhile(element => element != marker);
+                return candidates.FirstOrDefault(element => element.Name == propertyName);
+            }
+        }
+
+        PptxParagraphStyleCascade BuildParagraphStyleCascade(string levelName)
+        {
+            var layers = new List<PptxParagraphStyleLayer>
+            {
+                new(
+                    "shape.lstStyle",
+                    PptxParagraphStyleLayerKind.ShapeListStyle,
+                    textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName))
+            };
+            layers.AddRange(inheritedPlaceholders
+                .Select((placeholder, index) => new PptxParagraphStyleLayer(
+                    InheritedPlaceholderLayerName(placeholder, index, placeholderSources.Count),
+                    InheritedPlaceholderLayerKind(placeholder, index, placeholderSources.Count),
+                    placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)))
+                .Reverse());
+            layers.Add(new PptxParagraphStyleLayer(
+                "inherited.txStyle",
+                PptxParagraphStyleLayerKind.InheritedTextStyle,
+                FindInheritedTextStyle(shape, placeholderSources, levelName)));
+            layers.Add(new PptxParagraphStyleLayer(
+                "defaultTextStyle",
+                PptxParagraphStyleLayerKind.DefaultTextStyle,
+                FindDefaultTextStyle(placeholderSources, levelName)));
+            return new PptxParagraphStyleCascade(levelName, layers);
+
+            PptxParagraphStyleLayerKind InheritedPlaceholderLayerKind(XElement placeholder, int sourceIndex, int sourceCount)
+            {
+                string? sourceRootName = placeholder.Document?.Root?.Name.LocalName;
+                if (sourceRootName == "sldMaster")
+                {
+                    return PptxParagraphStyleLayerKind.MasterPlaceholderListStyle;
+                }
+
+                if (sourceRootName == "sldLayout")
+                {
+                    return PptxParagraphStyleLayerKind.LayoutPlaceholderListStyle;
+                }
+
+                return (sourceCount, sourceIndex) switch
+                {
+                    (2, 0) => PptxParagraphStyleLayerKind.MasterPlaceholderListStyle,
+                    (2, _) => PptxParagraphStyleLayerKind.LayoutPlaceholderListStyle,
+                    _ => PptxParagraphStyleLayerKind.InheritedPlaceholderListStyle
+                };
+            }
+
+            string InheritedPlaceholderLayerName(XElement placeholder, int sourceIndex, int sourceCount)
+            {
+                string? sourceRootName = placeholder.Document?.Root?.Name.LocalName;
+                if (sourceRootName == "sldMaster")
+                {
+                    return "master.placeholder.lstStyle";
+                }
+
+                if (sourceRootName == "sldLayout")
+                {
+                    return "layout.placeholder.lstStyle";
+                }
+
+                return (sourceCount, sourceIndex) switch
+                {
+                    (2, 0) => "master.placeholder.lstStyle",
+                    (2, _) => "layout.placeholder.lstStyle",
+                    _ => $"inherited.placeholder[{sourceIndex}].lstStyle"
+                };
+            }
+        }
+
+        PptxParagraphStyleCascade BuildResolvedParagraphStyleCascade(PptxParagraphStyleCascade defaultCascade, XElement? paragraphProperties)
+        {
+            var layers = new List<PptxParagraphStyleLayer>
+            {
+                new(
+                    "paragraph.pPr",
+                    PptxParagraphStyleLayerKind.ParagraphProperties,
+                    paragraphProperties)
+            };
+            layers.AddRange(defaultCascade.Layers);
+            return new PptxParagraphStyleCascade(defaultCascade.LevelName, layers);
+        }
+
+        IReadOnlyList<PptxTextRunModel> BuildRunModels(XElement paragraph, ResolvedParagraphTextStyle paragraphStyle, PptxParagraphStyleCascade resolvedParagraphStyleCascade)
+        {
+            var runs = new List<PptxTextRunModel>();
+            foreach (XElement child in paragraph.Elements())
+            {
+                if (child.Name == DrawingNamespace + "br")
+                {
+                    XElement? breakProperties = child.Element(DrawingNamespace + "rPr");
+                    PptxRunStyleCascade breakCascade = BuildRunStyleCascade("break.rPr", breakProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
+                    runs.Add(new PptxTextRunModel(
+                        runs.Count,
+                        PptxTextRunKind.Break,
+                        child,
+                        breakProperties,
+                        breakCascade,
+                        "\n",
+                        ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
+                    continue;
+                }
+
+                if (!IsTextRunElement(child))
+                {
+                    continue;
+                }
+
+                XElement? runProperties = child.Element(DrawingNamespace + "rPr");
+                PptxRunStyleCascade textRunCascade = BuildRunStyleCascade("run.rPr", runProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
+                runs.Add(new PptxTextRunModel(
+                    runs.Count,
+                    child.Name == DrawingNamespace + "fld" ? PptxTextRunKind.Field : PptxTextRunKind.Text,
+                    child,
+                    runProperties,
+                    textRunCascade,
+                    ReadTextElementText(child, slideNumber),
+                    ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
+            }
+
+            return runs;
+        }
     }
 
     private static bool TextContainsManualLineBreak(string text)
@@ -791,74 +999,6 @@ internal sealed partial class PptxRenderer
         return HasShapeAutoFit(bodyProperties)
             ? PptxTextMetricRules.OfficeCompatibleDefaultLineSpacingFactor
             : PptxTextMetricRules.OfficeCompatibleNoAutoFitDefaultLineSpacingFactor;
-    }
-
-    private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)
-    {
-        if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
-        {
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, null, null, null, PptxThemeTypefaceSource.DefaultMinorLatin, null, PptxParagraphBulletSizeKind.Text, null);
-        }
-
-        XElement? bulletFont = FindBulletProperty(paragraphProperties, "buFont");
-        XElement? bulletColor = FindBulletProperty(paragraphProperties, "buClr");
-        XElement? bulletSizePercent = FindBulletProperty(paragraphProperties, "buSzPct");
-        XElement? bulletSizePoints = FindBulletProperty(paragraphProperties, "buSzPts");
-        string? fontTypeface = (string?)bulletFont?.Attribute("typeface");
-        string? fontCharset = (string?)bulletFont?.Attribute("charset");
-        PptxThemeTypefaceResolution FontFaceResolution = theme.ResolveTypefaceWithSource(fontTypeface);
-        RgbColor? color = bulletColor is not null && PptxColorResolver.TryReadSolidColor(bulletColor, theme, colorMap, out RgbColor resolvedColor)
-            ? resolvedColor
-            : null;
-        PptxParagraphBulletSizeKind sizeKind = PptxParagraphBulletSizeKind.Text;
-        string? sizeValue = null;
-        if ((string?)bulletSizePercent?.Attribute("val") is { } percentValue)
-        {
-            sizeKind = PptxParagraphBulletSizeKind.Percent;
-            sizeValue = percentValue;
-        }
-        else if ((string?)bulletSizePoints?.Attribute("val") is { } pointValue)
-        {
-            sizeKind = PptxParagraphBulletSizeKind.Points;
-            sizeValue = pointValue;
-        }
-
-        if ((string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char") is { } character)
-        {
-            string resolvedCharacter = IsSymbolBulletFont(bulletFont)
-                ? MapSymbolBulletText(character)
-                : character;
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Character, character, resolvedCharacter, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
-        }
-
-        if (paragraphProperties.Element(DrawingNamespace + "buAutoNum") is { } autoNumber)
-        {
-            string? startAtValue = (string?)autoNumber.Attribute("startAt");
-            int? startAt = int.TryParse(startAtValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedStartAt) && parsedStartAt > 0
-                ? parsedStartAt
-                : null;
-            return new PptxParagraphBulletModel(
-                PptxParagraphBulletKind.AutoNumber,
-                null,
-                null,
-                (string?)autoNumber.Attribute("type"),
-                startAtValue,
-                startAt,
-                fontTypeface,
-                fontCharset,
-                FontFaceResolution.Typeface,
-                FontFaceResolution.Source,
-                color,
-                sizeKind,
-                sizeValue);
-        }
-
-        if (paragraphProperties.Element(DrawingNamespace + "buBlip") is not null)
-        {
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Blip, null, null, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
-        }
-
-        return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, fontTypeface, fontCharset, FontFaceResolution.Typeface, FontFaceResolution.Source, color, sizeKind, sizeValue);
     }
 
     private static string? FormatColor(RgbColor? color)
@@ -877,143 +1017,6 @@ internal sealed partial class PptxRenderer
         bool italic = OoxXml.ParseOptionalBool(endRunProperties, "i") ||
             (endRunProperties?.Attribute("i") is null && OoxXml.ParseOptionalBool(defaultRunProperties, "i"));
         return new ResolvedEndParagraphTextStyle(fontSize, typeface, bold, italic);
-    }
-
-    private static PptxParagraphStyleCascade BuildParagraphStyleCascade(
-        XElement shape,
-        XElement textBody,
-        IReadOnlyList<XElement> inheritedPlaceholders,
-        IReadOnlyList<XDocument> placeholderSources,
-        string levelName)
-    {
-        var layers = new List<PptxParagraphStyleLayer>
-        {
-            new(
-                "shape.lstStyle",
-                PptxParagraphStyleLayerKind.ShapeListStyle,
-                textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName))
-        };
-        layers.AddRange(inheritedPlaceholders
-            .Select((placeholder, index) => new PptxParagraphStyleLayer(
-                InheritedPlaceholderLayerName(placeholder, index, placeholderSources.Count),
-                InheritedPlaceholderLayerKind(placeholder, index, placeholderSources.Count),
-                placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)))
-            .Reverse());
-        layers.Add(new PptxParagraphStyleLayer(
-            "inherited.txStyle",
-            PptxParagraphStyleLayerKind.InheritedTextStyle,
-            FindInheritedTextStyle(shape, placeholderSources, levelName)));
-        layers.Add(new PptxParagraphStyleLayer(
-            "defaultTextStyle",
-            PptxParagraphStyleLayerKind.DefaultTextStyle,
-            FindDefaultTextStyle(placeholderSources, levelName)));
-        return new PptxParagraphStyleCascade(levelName, layers);
-    }
-
-    private static string InheritedPlaceholderLayerName(XElement placeholder, int sourceIndex, int sourceCount)
-    {
-        string? sourceRootName = placeholder.Document?.Root?.Name.LocalName;
-        if (sourceRootName == "sldMaster")
-        {
-            return "master.placeholder.lstStyle";
-        }
-
-        if (sourceRootName == "sldLayout")
-        {
-            return "layout.placeholder.lstStyle";
-        }
-
-        return (sourceCount, sourceIndex) switch
-        {
-            (2, 0) => "master.placeholder.lstStyle",
-            (2, _) => "layout.placeholder.lstStyle",
-            _ => $"inherited.placeholder[{sourceIndex}].lstStyle"
-        };
-    }
-
-    private static PptxParagraphStyleLayerKind InheritedPlaceholderLayerKind(XElement placeholder, int sourceIndex, int sourceCount)
-    {
-        string? sourceRootName = placeholder.Document?.Root?.Name.LocalName;
-        if (sourceRootName == "sldMaster")
-        {
-            return PptxParagraphStyleLayerKind.MasterPlaceholderListStyle;
-        }
-
-        if (sourceRootName == "sldLayout")
-        {
-            return PptxParagraphStyleLayerKind.LayoutPlaceholderListStyle;
-        }
-
-        return (sourceCount, sourceIndex) switch
-        {
-            (2, 0) => PptxParagraphStyleLayerKind.MasterPlaceholderListStyle,
-            (2, _) => PptxParagraphStyleLayerKind.LayoutPlaceholderListStyle,
-            _ => PptxParagraphStyleLayerKind.InheritedPlaceholderListStyle
-        };
-    }
-
-    private static PptxParagraphStyleCascade BuildResolvedParagraphStyleCascade(
-        PptxParagraphStyleCascade defaultCascade,
-        XElement? paragraphProperties)
-    {
-        var layers = new List<PptxParagraphStyleLayer>
-        {
-            new(
-                "paragraph.pPr",
-                PptxParagraphStyleLayerKind.ParagraphProperties,
-                paragraphProperties)
-        };
-        layers.AddRange(defaultCascade.Layers);
-        return new PptxParagraphStyleCascade(defaultCascade.LevelName, layers);
-    }
-
-    private static IReadOnlyList<PptxTextRunModel> BuildRunModels(
-        XElement paragraph,
-        ResolvedParagraphTextStyle paragraphStyle,
-        PptxParagraphStyleCascade resolvedParagraphStyleCascade,
-        RgbColor? shapeFontColor,
-        PptxTheme theme,
-        PptxColorMap colorMap,
-        int slideNumber,
-        double fontScale,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
-    {
-        var runs = new List<PptxTextRunModel>();
-        foreach (XElement child in paragraph.Elements())
-        {
-            if (child.Name == DrawingNamespace + "br")
-            {
-                XElement? breakProperties = child.Element(DrawingNamespace + "rPr");
-                PptxRunStyleCascade breakCascade = BuildRunStyleCascade("break.rPr", breakProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
-                runs.Add(new PptxTextRunModel(
-                    runs.Count,
-                    PptxTextRunKind.Break,
-                    child,
-                    breakProperties,
-                    breakCascade,
-                    "\n",
-                    ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
-                continue;
-            }
-
-            if (!IsTextRunElement(child))
-            {
-                continue;
-            }
-
-            XElement? runProperties = child.Element(DrawingNamespace + "rPr");
-            PptxRunStyleCascade textRunCascade = BuildRunStyleCascade("run.rPr", runProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
-            runs.Add(new PptxTextRunModel(
-                runs.Count,
-                child.Name == DrawingNamespace + "fld" ? PptxTextRunKind.Field : PptxTextRunKind.Text,
-                child,
-                runProperties,
-                textRunCascade,
-                ReadTextElementText(child, slideNumber),
-                ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
-        }
-
-        return runs;
     }
 
     private static PptxRunStyleCascade BuildRunStyleCascade(

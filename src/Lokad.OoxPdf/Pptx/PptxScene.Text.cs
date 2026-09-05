@@ -188,7 +188,7 @@ internal sealed partial class PptxSceneBuilder
         double fontSize = ReadFontSize(runProperties, defaultRunProperties);
         double alpha = paragraphStyle.Alpha;
         RgbColor color = paragraphStyle.Color;
-        bool hasHyperlinkClick = HasRunHyperlinkClick(runProperties);
+        bool hasHyperlinkClick = HasRunHyperlinkClick();
         if (hasHyperlinkClick && theme.TryResolveColor("hlink", colorMap, out RgbColor hyperlinkColor))
         {
             color = hyperlinkColor;
@@ -237,6 +237,11 @@ internal sealed partial class PptxSceneBuilder
             ReadCharacterSpacing(runProperties, defaultRunProperties),
             ReadBaselineOffset(runProperties, defaultRunProperties, fontSize),
             TryReadHighlightColor(runProperties, out RgbColor highlight) ? highlight : null);
+
+        bool HasRunHyperlinkClick()
+        {
+            return runProperties?.Element(DrawingNamespace + "hlinkClick") is not null;
+        }
     }
 
     private static double ReadFontSize(XElement? runProperties, XElement? defaultRunProperties)
@@ -281,11 +286,6 @@ internal sealed partial class PptxSceneBuilder
     private static string? ReadUnderlineValue(XElement? runProperties, XElement? defaultRunProperties)
     {
         return (string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"));
-    }
-
-    private static bool HasRunHyperlinkClick(XElement? runProperties)
-    {
-        return runProperties?.Element(DrawingNamespace + "hlinkClick") is not null;
     }
 
     private static string? ReadStrikeValue(XElement? runProperties, XElement? defaultRunProperties)

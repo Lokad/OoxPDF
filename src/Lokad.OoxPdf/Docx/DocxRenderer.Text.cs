@@ -19,6 +19,12 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext)
     {
         DocxTextRun style = segment.StyleRun;
+        bool ShouldUseWordCompatibleRevisionDecorationProfile()
+        {
+            return UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
+                (segment.StyleRun.Revision is not null || segment.StyleRun.Revisions.Count != 0);
+        }
+
         RgbColor color = segment.Color;
         if (!segment.IsTerminalLineSpace)
         {
@@ -40,11 +46,23 @@ internal sealed partial class DocxRenderer
 
         if (!segment.IsTerminalLineSpace)
         {
-            bool useWordCompatibleRevisionDecorationProfile = ShouldUseWordCompatibleRevisionDecorationProfile(segment, markupContext);
+            bool useWordCompatibleRevisionDecorationProfile = ShouldUseWordCompatibleRevisionDecorationProfile();
             RgbColor decorationColor = useWordCompatibleRevisionDecorationProfile
                 ? new RgbColor(WordCompatibleAllMarkupReviewStrokeRgb.Red, WordCompatibleAllMarkupReviewStrokeRgb.Green, WordCompatibleAllMarkupReviewStrokeRgb.Blue)
                 : color;
-            double decorationWidth = ResolveRevisionDecorationWidth(segment, useWordCompatibleRevisionDecorationProfile);
+            double ResolveRevisionDecorationWidth()
+            {
+                if (!useWordCompatibleRevisionDecorationProfile ||
+                    !HasInsertionLikeRevisionKind(segment.StyleRun) ||
+                    segment.Text.EnumerateRunes().Count() > 8)
+                {
+                    return segment.Width;
+                }
+        
+                return Math.Max(0d, segment.Width - WordCompatibleAllMarkupShortInsertionDecorationWidthInsetPoints);
+            }
+
+            double decorationWidth = ResolveRevisionDecorationWidth();
             RenderTextDecorations(
                 style,
                 segment.Resource.Embedded,
@@ -58,28 +76,6 @@ internal sealed partial class DocxRenderer
                 useWordCompatibleRevisionDecorationProfile,
                 graphics);
         }
-    }
-
-    private static bool ShouldUseWordCompatibleRevisionDecorationProfile(
-        DocxTextEmissionSegment segment,
-        DocxMarkupContext markupContext)
-    {
-        return UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-            (segment.StyleRun.Revision is not null || segment.StyleRun.Revisions.Count != 0);
-    }
-
-    private static double ResolveRevisionDecorationWidth(
-        DocxTextEmissionSegment segment,
-        bool useWordCompatibleRevisionDecorationProfile)
-    {
-        if (!useWordCompatibleRevisionDecorationProfile ||
-            !HasInsertionLikeRevisionKind(segment.StyleRun) ||
-            segment.Text.EnumerateRunes().Count() > 8)
-        {
-            return segment.Width;
-        }
-
-        return Math.Max(0d, segment.Width - WordCompatibleAllMarkupShortInsertionDecorationWidthInsetPoints);
     }
 
     private static DocxRunFontResource? ResolveFontResource(DocxTextRun run, DocxFontResources fontResources)
@@ -134,11 +130,20 @@ internal sealed partial class DocxRenderer
             double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale, useWordCompatibleTextProfile);
             double baselineY = GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY;
             int partSourceTextOffset = segment.SourceTextOffsetInRun;
+            bool ShouldSuppressCommentReferenceSpacerPart(DocxTextEmissionPart part)
+            {
+            return suppressCommentReferenceSpacer &&
+                part.Width > 0d &&
+                !string.IsNullOrEmpty(part.Text) &&
+                string.IsNullOrWhiteSpace(part.Text) &&
+                line.SourceParagraph?.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) == true;
+            }
+
             foreach (DocxTextEmissionPart part in DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
             {
                 int currentPartSourceTextOffset = partSourceTextOffset;
                 partSourceTextOffset += part.Text.Length;
-                if (ShouldSuppressCommentReferenceSpacerPart(line, part, suppressCommentReferenceSpacer))
+                if (ShouldSuppressCommentReferenceSpacerPart(part))
                 {
                     continue;
                 }
@@ -185,7 +190,44 @@ internal sealed partial class DocxRenderer
 
         if (line.EmitsTerminalParagraphMark)
         {
-            AddTerminalLineSpace(emissionSegments, segments, line, fontResources, fontScale, baselineOffsetY, xOffset, useWordCompatibleTextProfile);
+        void AddTerminalLineSpace()
+        {
+            if (segments.Count == 0)
+            {
+                return;
+            }
+    
+            DocxTextSegmentLayout segment = segments[^1];
+            DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
+            if (resource is null)
+            {
+                return;
+            }
+    
+            double fontSize = ResolveTerminalLineSpaceFontSize(segment, line, fontScale, useWordCompatibleTextProfile);
+            double baselineY = GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY;
+            DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
+            emissionSegments.Add(new DocxTextEmissionSegment(
+                " ",
+                segment.StyleRun,
+                resource,
+                ReadColor(effective.ColorHex),
+                ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile),
+                baselineY,
+                0d,
+                fontSize,
+                PdfCharacterSpacing: 0d,
+                PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
+                CompensatePdfCharacterSpacing: true,
+                SyntheticBold: false,
+                SyntheticItalic: effective.Italic && !resource.Resolution.Italic,
+                IsTerminalLineSpace: true,
+                segment.SourceTextRunIndex,
+                segment.SourceTextOffsetInRun + segment.Text.Length,
+                segment.Role));
+        }
+
+            AddTerminalLineSpace();
             return emissionSegments;
         }
 
@@ -495,63 +537,6 @@ internal sealed partial class DocxRenderer
         return useWordCompatibleTextProfile && fontSize > WordCompatibleAllMarkupMaxBodyTextFontSizePoints;
     }
 
-    private static bool ShouldSuppressCommentReferenceSpacerPart(
-        DocxTextLineLayout line,
-        DocxTextEmissionPart part,
-        bool suppressCommentReferenceSpacer)
-    {
-        return suppressCommentReferenceSpacer &&
-            part.Width > 0d &&
-            !string.IsNullOrEmpty(part.Text) &&
-            string.IsNullOrWhiteSpace(part.Text) &&
-            line.SourceParagraph?.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) == true;
-    }
-
-    private static void AddTerminalLineSpace(
-        List<DocxTextEmissionSegment> emissionSegments,
-        IReadOnlyList<DocxTextSegmentLayout> segments,
-        DocxTextLineLayout line,
-        DocxFontResources fontResources,
-        double fontScale,
-        double baselineOffsetY,
-        double xOffset,
-        bool useWordCompatibleTextProfile)
-    {
-        if (segments.Count == 0)
-        {
-            return;
-        }
-
-        DocxTextSegmentLayout segment = segments[^1];
-        DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
-        if (resource is null)
-        {
-            return;
-        }
-
-        double fontSize = ResolveTerminalLineSpaceFontSize(segment, line, fontScale, useWordCompatibleTextProfile);
-        double baselineY = GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY;
-        DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
-        emissionSegments.Add(new DocxTextEmissionSegment(
-            " ",
-            segment.StyleRun,
-            resource,
-            ReadColor(effective.ColorHex),
-            ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile),
-            baselineY,
-            0d,
-            fontSize,
-            PdfCharacterSpacing: 0d,
-            PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
-            CompensatePdfCharacterSpacing: true,
-            SyntheticBold: false,
-            SyntheticItalic: effective.Italic && !resource.Resolution.Italic,
-            IsTerminalLineSpace: true,
-            segment.SourceTextRunIndex,
-            segment.SourceTextOffsetInRun + segment.Text.Length,
-            segment.Role));
-    }
-
     private static IEnumerable<DocxTextLineLayout> EnumerateBodyTextLines(DocxLayoutPage page)
     {
         foreach (DocxLayoutItem item in page.Items)
@@ -637,11 +622,6 @@ internal sealed partial class DocxRenderer
                     story.StoryLayout.Story.Id);
             }
         }
-    }
-
-    private static string ResolveTextEmissionStoryKind(DocxTextLineLayout line, string fallback)
-    {
-        return string.IsNullOrWhiteSpace(line.StoryKind) ? fallback : line.StoryKind;
     }
 
     private static IEnumerable<DocxLayoutItem> EnumerateStaticLayoutItems(DocxLayoutPage page)

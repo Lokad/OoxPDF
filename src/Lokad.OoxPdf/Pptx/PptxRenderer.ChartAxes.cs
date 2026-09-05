@@ -270,22 +270,22 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void ClipChartPlotArea(PdfGraphicsBuilder graphics, double x, double y, double width, double height)
-    {
-        graphics.ClipRectangleEvenOdd(x, y, width, height);
-    }
-
     private static void RenderInChartPlotAreaClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, Action render)
     {
         graphics.SaveState();
         try
         {
-            ClipChartPlotArea(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
+            ClipChartPlotArea();
             render();
         }
         finally
         {
             graphics.RestoreState();
+        }
+
+        void ClipChartPlotArea()
+        {
+            graphics.ClipRectangleEvenOdd(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
         }
     }
 
@@ -889,24 +889,24 @@ internal sealed partial class PptxRenderer
         return explosions;
     }
 
-    private static bool HasMajorGridlines(XElement? axis)
-    {
-        return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "majorGridlines"));
-    }
-
-    private static bool HasMinorGridlines(XElement? axis)
-    {
-        return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "minorGridlines"));
-    }
-
     private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        return sceneAxis?.HasMajorGridlines ?? HasMajorGridlines(axis);
+        return sceneAxis?.HasMajorGridlines ?? HasMajorGridlines();
+
+        bool HasMajorGridlines()
+        {
+            return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "majorGridlines"));
+        }
     }
 
     private static bool ReadSceneOrXmlMinorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        return sceneAxis?.HasMinorGridlines ?? HasMinorGridlines(axis);
+        return sceneAxis?.HasMinorGridlines ?? HasMinorGridlines();
+
+        bool HasMinorGridlines()
+        {
+            return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "minorGridlines"));
+        }
     }
 
     private static ChartGridlineStyle ReadSceneOrXmlChartGridlineStyle(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
@@ -1105,26 +1105,26 @@ internal sealed partial class PptxRenderer
         return PptxSceneBuilder.IsOoxmlBooleanElementEnabled(delete);
     }
 
-    private static bool IsChartAxisLabelVisible(XElement? axis)
-    {
-        if (IsChartAxisDeleted(axis))
-        {
-            return false;
-        }
-
-        string tickLabelPosition = PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos");
-        return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) != PptxSceneChartTickLabelPosition.None;
-    }
-
     private static bool IsSceneOrXmlChartAxisLabelVisible(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
         if (sceneAxis is null)
         {
-            return IsChartAxisLabelVisible(axis);
+            return IsChartAxisLabelVisible();
         }
 
         return sceneAxis.IsDeleted != true &&
             ResolveChartTickLabelPosition(sceneAxis.TickLabelPositionKind) != PptxSceneChartTickLabelPosition.None;
+
+        bool IsChartAxisLabelVisible()
+        {
+            if (IsChartAxisDeleted(axis))
+            {
+                return false;
+            }
+
+            string tickLabelPosition = PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos");
+            return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) != PptxSceneChartTickLabelPosition.None;
+        }
     }
 
     private static bool ResolveValueAxisLabelsRightSide(XElement? axis, bool defaultRightSide)

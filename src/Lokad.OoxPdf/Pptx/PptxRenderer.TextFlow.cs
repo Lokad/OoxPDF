@@ -439,7 +439,26 @@ internal sealed partial class PptxRenderer
         bool hideLeadingSpacesAfterBoundary = false;
         foreach (PptxTextRunModel run in paragraph.Runs)
         {
-            PptxTextFlowRun flowRun = BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties, attachSpacesToFollowingWord);
+            bool StartsWithDrawableRegularSpace(IReadOnlyList<PptxTextFlowSegment> segments)
+            {
+            foreach (PptxTextFlowSegment segment in segments)
+            {
+                if (!segment.Draw)
+                {
+                    continue;
+                }
+    
+                return segment.Kind == PptxTextFlowSegmentKind.Text &&
+                    segment.Text.Length != 0 &&
+                    segment.AdvanceText.Length != 0 &&
+                    segment.Text[0] == ' ' &&
+                    segment.AdvanceText[0] == ' ';
+            }
+    
+            return false;
+            }
+
+            PptxTextFlowRun flowRun = BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties);
             bool hideLeadingSpacesAfterStyleBoundary =
                 previousDrawableRun is not null &&
                 StartsWithDrawableRegularSpace(flowRun.Segments) &&
@@ -476,6 +495,122 @@ internal sealed partial class PptxRenderer
         }
 
         return new PptxTextFlowParagraph(paragraph, paragraph.Style, runs.ToArray());
+
+        IReadOnlyList<PptxTextFlowSegment> HideSpacesAfterBoundaryPunctuation(IReadOnlyList<PptxTextFlowSegment> segments, ref bool hideLeadingSpaces)
+        {
+            var rewritten = new List<PptxTextFlowSegment>(segments.Count);
+            foreach (PptxTextFlowSegment segment in segments)
+            {
+                foreach (PptxTextFlowSegment current in HideLeadingSpacesIfNeeded(segment, hideLeadingSpaces))
+                {
+                    rewritten.Add(current);
+                    if (current.Kind == PptxTextFlowSegmentKind.BoundaryPunctuation)
+                    {
+                        hideLeadingSpaces = true;
+                    }
+                    else if (current.AdvanceText.Any(static c => c != ' '))
+                    {
+                        hideLeadingSpaces = false;
+                    }
+                }
+            }
+
+            return rewritten.ToArray();
+
+            IReadOnlyList<PptxTextFlowSegment> HideLeadingSpacesIfNeeded(PptxTextFlowSegment segment, bool hideLeadingSpaces)
+            {
+                if (!hideLeadingSpaces ||
+                    !segment.Draw ||
+                    segment.Kind != PptxTextFlowSegmentKind.Text ||
+                    segment.Text.Length == 0 ||
+                    segment.AdvanceText.Length == 0 ||
+                    segment.Text[0] != ' ' ||
+                    segment.AdvanceText[0] != ' ')
+                {
+                    return [segment];
+                }
+
+                int hiddenLength = 0;
+                while (hiddenLength < segment.AdvanceText.Length &&
+                    hiddenLength < segment.Text.Length &&
+                    segment.AdvanceText[hiddenLength] == ' ' &&
+                    segment.Text[hiddenLength] == ' ')
+                {
+                    hiddenLength++;
+                }
+
+                string hiddenAdvance = segment.AdvanceText[..hiddenLength];
+                PptxTextFlowSegment hidden = new(string.Empty, hiddenAdvance, PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true, segment.FontScale);
+                if (hiddenLength < segment.Text.Length)
+                {
+                    return
+                    [
+                        hidden,
+                        segment with
+                        {
+                            Text = segment.Text[hiddenLength..],
+                            AdvanceText = segment.AdvanceText[hiddenLength..]
+                        }
+                    ];
+                }
+
+                return [hidden];
+            }
+        }
+
+        PptxTextFlowRun BuildTextFlowRun(PptxTextRunModel run, XElement? defaultRunProperties)
+        {
+            if (run.Kind == PptxTextRunKind.Break)
+            {
+                return new PptxTextFlowRun(run, run.Style, [new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true, FontScale: 1d)]);
+            }
+
+            var segments = new List<PptxTextFlowSegment>();
+            string[] tabParts = run.Text.Split('\t');
+            for (int tabPartIndex = 0; tabPartIndex < tabParts.Length; tabPartIndex++)
+            {
+                if (tabPartIndex > 0)
+                {
+                    segments.Add(new PptxTextFlowSegment(" ", " ", PptxTextFlowSegmentKind.Tab, Draw: true, PreventCoalesce: true, FontScale: 1d));
+                }
+
+                foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], run.Properties, defaultRunProperties))
+                {
+                    if (fragment.Text.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    foreach (PptxTextFlowSegment segment in SplitFlowSegments(fragment.Text, attachSpacesToFollowingWord))
+                    {
+                        segments.Add(segment with
+                        {
+                            FontScale = fragment.FontScale
+                        });
+                    }
+                }
+            }
+
+            return new PptxTextFlowRun(run, run.Style, segments);
+        }
+
+        bool CanCoalesceFlowRunStyles(ResolvedRunTextStyle left, ResolvedRunTextStyle right)
+        {
+            return Math.Abs(left.FontSize - right.FontSize) < PptxTextMetricRules.CoordinateTolerance &&
+                Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < PptxTextMetricRules.CoordinateTolerance &&
+                Math.Abs(left.BaselineOffset - right.BaselineOffset) < PptxTextMetricRules.CoordinateTolerance &&
+                left.Color.Equals(right.Color) &&
+                Math.Abs(left.Alpha - right.Alpha) < PptxTextMetricRules.TextStateTolerance &&
+                TextOutlinesEqual(left.Outline, right.Outline) &&
+                left.Bold == right.Bold &&
+                left.Italic == right.Italic &&
+                left.Underline == right.Underline &&
+                string.Equals(left.UnderlineValue, right.UnderlineValue, StringComparison.OrdinalIgnoreCase) &&
+                left.Strike == right.Strike &&
+                string.Equals(left.StrikeValue, right.StrikeValue, StringComparison.OrdinalIgnoreCase) &&
+                left.KerningEnabled == right.KerningEnabled &&
+                string.Equals(left.Typeface, right.Typeface, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private static bool UsesHighlightedSyntheticBoldItalicParagraphSpacing(IReadOnlyList<PptxTextFlowRun> runs, TextAdvanceEstimator advanceEstimator)
@@ -506,144 +641,9 @@ internal sealed partial class PptxRenderer
              advanceEstimator.RequestedStyleRequiresSyntheticItalic(style.Typeface, style.Bold, style.Italic));
     }
 
-    private static bool StartsWithDrawableRegularSpace(IReadOnlyList<PptxTextFlowSegment> segments)
-    {
-        foreach (PptxTextFlowSegment segment in segments)
-        {
-            if (!segment.Draw)
-            {
-                continue;
-            }
-
-            return segment.Kind == PptxTextFlowSegmentKind.Text &&
-                segment.Text.Length != 0 &&
-                segment.AdvanceText.Length != 0 &&
-                segment.Text[0] == ' ' &&
-                segment.AdvanceText[0] == ' ';
-        }
-
-        return false;
-    }
-
     private static bool HasDrawableText(IReadOnlyList<PptxTextFlowSegment> segments)
     {
         return segments.Any(static segment => segment.Draw && segment.Kind == PptxTextFlowSegmentKind.Text && segment.Text.Length != 0);
-    }
-
-    private static bool CanCoalesceFlowRunStyles(ResolvedRunTextStyle left, ResolvedRunTextStyle right)
-    {
-        return Math.Abs(left.FontSize - right.FontSize) < PptxTextMetricRules.CoordinateTolerance &&
-            Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < PptxTextMetricRules.CoordinateTolerance &&
-            Math.Abs(left.BaselineOffset - right.BaselineOffset) < PptxTextMetricRules.CoordinateTolerance &&
-            left.Color.Equals(right.Color) &&
-            Math.Abs(left.Alpha - right.Alpha) < PptxTextMetricRules.TextStateTolerance &&
-            TextOutlinesEqual(left.Outline, right.Outline) &&
-            left.Bold == right.Bold &&
-            left.Italic == right.Italic &&
-            left.Underline == right.Underline &&
-            string.Equals(left.UnderlineValue, right.UnderlineValue, StringComparison.OrdinalIgnoreCase) &&
-            left.Strike == right.Strike &&
-            string.Equals(left.StrikeValue, right.StrikeValue, StringComparison.OrdinalIgnoreCase) &&
-            left.KerningEnabled == right.KerningEnabled &&
-            string.Equals(left.Typeface, right.Typeface, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyList<PptxTextFlowSegment> HideSpacesAfterBoundaryPunctuation(IReadOnlyList<PptxTextFlowSegment> segments, ref bool hideLeadingSpaces)
-    {
-        var rewritten = new List<PptxTextFlowSegment>(segments.Count);
-        foreach (PptxTextFlowSegment segment in segments)
-        {
-            foreach (PptxTextFlowSegment current in HideLeadingSpacesIfNeeded(segment, hideLeadingSpaces))
-            {
-                rewritten.Add(current);
-                if (current.Kind == PptxTextFlowSegmentKind.BoundaryPunctuation)
-                {
-                    hideLeadingSpaces = true;
-                }
-                else if (current.AdvanceText.Any(static c => c != ' '))
-                {
-                    hideLeadingSpaces = false;
-                }
-            }
-        }
-
-        return rewritten.ToArray();
-    }
-
-    private static IReadOnlyList<PptxTextFlowSegment> HideLeadingSpacesIfNeeded(PptxTextFlowSegment segment, bool hideLeadingSpaces)
-    {
-        if (!hideLeadingSpaces ||
-            !segment.Draw ||
-            segment.Kind != PptxTextFlowSegmentKind.Text ||
-            segment.Text.Length == 0 ||
-            segment.AdvanceText.Length == 0 ||
-            segment.Text[0] != ' ' ||
-            segment.AdvanceText[0] != ' ')
-        {
-            return [segment];
-        }
-
-        int hiddenLength = 0;
-        while (hiddenLength < segment.AdvanceText.Length &&
-            hiddenLength < segment.Text.Length &&
-            segment.AdvanceText[hiddenLength] == ' ' &&
-            segment.Text[hiddenLength] == ' ')
-        {
-            hiddenLength++;
-        }
-
-        string hiddenAdvance = segment.AdvanceText[..hiddenLength];
-        PptxTextFlowSegment hidden = new(string.Empty, hiddenAdvance, PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true, segment.FontScale);
-        if (hiddenLength < segment.Text.Length)
-        {
-            return
-            [
-                hidden,
-                segment with
-                {
-                    Text = segment.Text[hiddenLength..],
-                    AdvanceText = segment.AdvanceText[hiddenLength..]
-                }
-            ];
-        }
-
-        return [hidden];
-    }
-
-    private static PptxTextFlowRun BuildTextFlowRun(PptxTextRunModel run, XElement? defaultRunProperties, bool attachSpacesToFollowingWord)
-    {
-        if (run.Kind == PptxTextRunKind.Break)
-        {
-            return new PptxTextFlowRun(run, run.Style, [new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true, FontScale: 1d)]);
-        }
-
-        var segments = new List<PptxTextFlowSegment>();
-        string[] tabParts = run.Text.Split('\t');
-        for (int tabPartIndex = 0; tabPartIndex < tabParts.Length; tabPartIndex++)
-        {
-            if (tabPartIndex > 0)
-            {
-                segments.Add(new PptxTextFlowSegment(" ", " ", PptxTextFlowSegmentKind.Tab, Draw: true, PreventCoalesce: true, FontScale: 1d));
-            }
-
-            foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], run.Properties, defaultRunProperties))
-            {
-                if (fragment.Text.Length == 0)
-                {
-                    continue;
-                }
-
-                foreach (PptxTextFlowSegment segment in SplitFlowSegments(fragment.Text, attachSpacesToFollowingWord))
-                {
-                    segments.Add(segment with
-                    {
-                        FontScale = fragment.FontScale
-                    });
-                }
-            }
-        }
-
-        return new PptxTextFlowRun(run, run.Style, segments);
     }
 
     private static IReadOnlyList<TextRun> FlattenTextLayout(PptxTextLayoutModel layout)
@@ -718,78 +718,77 @@ internal sealed partial class PptxRenderer
                 span.GlyphSpan,
                 PdfCharacterSpacingOverride: null)))
             .ToArray();
-        return AddEllipsisOverflowMarkers(spans, fontResolver);
-    }
+        return AddEllipsisOverflowMarkers();
 
-    private static IReadOnlyList<PptxPositionedTextSpan> AddEllipsisOverflowMarkers(
-        IReadOnlyList<PptxPositionedTextSpan> spans,
-        PresentationFontResolver? fontResolver)
-    {
-        if (spans.Count == 0)
+        IReadOnlyList<PptxPositionedTextSpan> AddEllipsisOverflowMarkers()
         {
-            return spans;
-        }
-
-        var result = new List<PptxPositionedTextSpan>(spans.Count);
-        var advanceEstimator = new TextAdvanceEstimator(fontResolver, CancellationToken.None);
-        foreach (IGrouping<int, PptxPositionedTextSpan> frameSpans in spans.GroupBy(span => span.FrameIndex))
-        {
-            PptxPositionedTextSpan[] frame = frameSpans.ToArray();
-            result.AddRange(frame);
-            if (!frame.Any(span => string.Equals(span.FrameVerticalOverflowMode, nameof(PptxTextVerticalOverflow.Ellipsis), StringComparison.Ordinal)))
+            if (spans.Length == 0)
             {
-                continue;
+                return spans;
             }
 
-            PptxPositionedTextSpan[] visible = frame
-                .Where(span => BaselineIntersectsClip(span.Run, span.Run.Y + span.Run.BaselineOffset))
-                .ToArray();
-            if (visible.Length == 0 || visible.Length == frame.Length)
+            var result = new List<PptxPositionedTextSpan>(spans.Length);
+            var advanceEstimator = new TextAdvanceEstimator(fontResolver, CancellationToken.None);
+            foreach (IGrouping<int, PptxPositionedTextSpan> frameSpans in spans.GroupBy(span => span.FrameIndex))
             {
-                continue;
+                PptxPositionedTextSpan[] frame = frameSpans.ToArray();
+                result.AddRange(frame);
+                if (!frame.Any(span => string.Equals(span.FrameVerticalOverflowMode, nameof(PptxTextVerticalOverflow.Ellipsis), StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+
+                PptxPositionedTextSpan[] visible = frame
+                    .Where(span => BaselineIntersectsClip(span.Run, span.Run.Y + span.Run.BaselineOffset))
+                    .ToArray();
+                if (visible.Length == 0 || visible.Length == frame.Length)
+                {
+                    continue;
+                }
+
+                PptxPositionedTextSpan last = visible
+                    .OrderBy(span => span.ParagraphIndex)
+                    .ThenBy(span => span.LineIndex)
+                    .ThenBy(span => span.SpanIndex)
+                    .Last();
+                result.Add(CreateEllipsisOverflowMarker(last));
             }
 
-            PptxPositionedTextSpan last = visible
-                .OrderBy(span => span.ParagraphIndex)
+            return result
+                .OrderBy(span => span.FrameIndex)
+                .ThenBy(span => span.ParagraphIndex)
                 .ThenBy(span => span.LineIndex)
                 .ThenBy(span => span.SpanIndex)
-                .Last();
-            result.Add(CreateEllipsisOverflowMarker(last, advanceEstimator));
+                .ToArray();
+
+            PptxPositionedTextSpan CreateEllipsisOverflowMarker(PptxPositionedTextSpan anchor)
+            {
+                const string ellipsis = "…";
+                double width = PptxTextMetricRules.MinimumWidth(
+                    advanceEstimator.Measure(ellipsis, anchor.Run.FontSize, anchor.Run.FontFamily, anchor.Run.Bold, anchor.Run.Italic, anchor.Run.CharacterSpacing, anchor.Run.KerningEnabled));
+                TextRun run = anchor.Run with
+                {
+                    Text = ellipsis,
+                    X = anchor.EndX,
+                    Width = width,
+                    PreventCoalesce = true,
+                    HighlightColor = null,
+                    Underline = false,
+                    Strike = false,
+                    Outline = null
+                };
+
+                return anchor with
+                {
+                    SpanIndex = anchor.LineSpanCount,
+                    LineSpanCount = anchor.LineSpanCount + 1,
+                    Run = run,
+                    EndX = run.X + width,
+                    Atoms = BuildTextAtoms(run, advanceEstimator, PptxTextAtomKind.Word),
+                    GlyphSpan = BuildGlyphSpan(run, advanceEstimator, 0d)
+                };
+            }
         }
-
-        return result
-            .OrderBy(span => span.FrameIndex)
-            .ThenBy(span => span.ParagraphIndex)
-            .ThenBy(span => span.LineIndex)
-            .ThenBy(span => span.SpanIndex)
-            .ToArray();
     }
 
-    private static PptxPositionedTextSpan CreateEllipsisOverflowMarker(PptxPositionedTextSpan anchor, TextAdvanceEstimator advanceEstimator)
-    {
-        const string ellipsis = "…";
-        double width = PptxTextMetricRules.MinimumWidth(
-            advanceEstimator.Measure(ellipsis, anchor.Run.FontSize, anchor.Run.FontFamily, anchor.Run.Bold, anchor.Run.Italic, anchor.Run.CharacterSpacing, anchor.Run.KerningEnabled));
-        TextRun run = anchor.Run with
-        {
-            Text = ellipsis,
-            X = anchor.EndX,
-            Width = width,
-            PreventCoalesce = true,
-            HighlightColor = null,
-            Underline = false,
-            Strike = false,
-            Outline = null
-        };
-
-        return anchor with
-        {
-            SpanIndex = anchor.LineSpanCount,
-            LineSpanCount = anchor.LineSpanCount + 1,
-            Run = run,
-            EndX = run.X + width,
-            Atoms = BuildTextAtoms(run, advanceEstimator, PptxTextAtomKind.Word),
-            GlyphSpan = BuildGlyphSpan(run, advanceEstimator, 0d)
-        };
-    }
 }

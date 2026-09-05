@@ -146,6 +146,26 @@ internal static class PptxTableStyleResolver
         (double hue, double saturation, double luminance) = ToHsl(color);
         double tintedLuminance = luminance + (1d - luminance) * tint;
         return FromHsl(hue, saturation * saturationFactor, tintedLuminance);
+
+        RgbColor FromHsl(double hue, double saturation, double luminance)
+        {
+            saturation = Math.Clamp(saturation, 0d, 1d);
+            luminance = Math.Clamp(luminance, 0d, 1d);
+            double chroma = (1d - Math.Abs(2d * luminance - 1d)) * saturation;
+            double segment = hue / 60d;
+            double second = chroma * (1d - Math.Abs(segment % 2d - 1d));
+            (double red, double green, double blue) = segment switch
+            {
+                >= 0d and < 1d => (chroma, second, 0d),
+                >= 1d and < 2d => (second, chroma, 0d),
+                >= 2d and < 3d => (0d, chroma, second),
+                >= 3d and < 4d => (0d, second, chroma),
+                >= 4d and < 5d => (second, 0d, chroma),
+                _ => (chroma, 0d, second)
+            };
+            double match = luminance - chroma / 2d;
+            return new RgbColor(ToByte((red + match) * 255d), ToByte((green + match) * 255d), ToByte((blue + match) * 255d));
+        }
     }
 
     private static RgbColor ShadeColor(RgbColor color, double shade)
@@ -196,23 +216,4 @@ internal static class PptxTableStyleResolver
         return (hue, saturation, luminance);
     }
 
-    private static RgbColor FromHsl(double hue, double saturation, double luminance)
-    {
-        saturation = Math.Clamp(saturation, 0d, 1d);
-        luminance = Math.Clamp(luminance, 0d, 1d);
-        double chroma = (1d - Math.Abs(2d * luminance - 1d)) * saturation;
-        double segment = hue / 60d;
-        double second = chroma * (1d - Math.Abs(segment % 2d - 1d));
-        (double red, double green, double blue) = segment switch
-        {
-            >= 0d and < 1d => (chroma, second, 0d),
-            >= 1d and < 2d => (second, chroma, 0d),
-            >= 2d and < 3d => (0d, chroma, second),
-            >= 3d and < 4d => (0d, second, chroma),
-            >= 4d and < 5d => (second, 0d, chroma),
-            _ => (chroma, 0d, second)
-        };
-        double match = luminance - chroma / 2d;
-        return new RgbColor(ToByte((red + match) * 255d), ToByte((green + match) * 255d), ToByte((blue + match) * 255d));
-    }
 }

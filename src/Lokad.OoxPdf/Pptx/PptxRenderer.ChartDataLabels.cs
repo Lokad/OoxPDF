@@ -46,8 +46,13 @@ internal sealed partial class PptxRenderer
             double explosion = pointExplosions.TryGetValue(slice.Index, out double offset) ? Math.Clamp(offset, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
             double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
-            IReadOnlyList<string> labelParts = FormatPieDataLabelParts(slice.Value, total, slice.Index, slice.WorkbookPoint, valueFormatCode, effectiveOptions, categoryLabels, seriesNames);
-            string label = JoinChartDataLabelParts(labelParts, effectiveOptions);
+            IReadOnlyList<string> labelParts = FormatPieDataLabelParts(slice.Value, slice.Index, slice.WorkbookPoint, effectiveOptions);
+            string JoinChartDataLabelParts()
+            {
+                return string.Join(GetChartDataLabelSeparator(effectiveOptions), labelParts);
+            }
+
+            string label = JoinChartDataLabelParts();
             if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
             {
                 ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
@@ -72,13 +77,95 @@ internal sealed partial class PptxRenderer
 
                 if (!string.IsNullOrEmpty(label))
                 {
-                    AddPolarChartLabelRuns(runs, labelParts, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment, fontResolver);
+                    AddPolarChartLabelRuns(labelParts, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, style, alignment);
                 }
             }
             angle += sweep;
         }
 
         return RenderTextRuns(runs, graphics, "CP", fontResolver);
+
+        IReadOnlyList<string> FormatPieDataLabelParts(double value, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, ChartDataLabelOptions options)
+        {
+            if (!string.IsNullOrWhiteSpace(options.CustomText))
+            {
+                return [options.CustomText];
+            }
+
+            var parts = new List<string>(4);
+            string seriesName = GetActiveSeriesName(seriesNames, 0);
+            if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
+            {
+                parts.Add(seriesName);
+            }
+
+            string categoryLabel = GetIndexedCategoryLabel(categoryLabels, categoryIndex);
+            if (options.ShowCategoryName && !string.IsNullOrWhiteSpace(categoryLabel))
+            {
+                parts.Add(categoryLabel);
+            }
+
+            if (options.ShowValue)
+            {
+                parts.Add(FormatChartDataLabelValue(value, options, workbookPoint, valueFormatCode));
+            }
+
+            string FormatChartPercentageLabel(double fraction)
+            {
+                return (fraction * 100d).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+            }
+
+            if (options.ShowPercent)
+            {
+                parts.Add(FormatChartPercentageLabel(value / total));
+            }
+
+            return parts;
+        }
+
+        void AddPolarChartLabelRuns(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment)
+        {
+            var textMeasurer = new ChartTextMeasurer(fontResolver);
+            ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
+            bool ShouldSplitPolarDataLabelParts()
+            {
+                string separator = GetChartDataLabelSeparator(options);
+                return separator.Length > 0 && separator.All(char.IsWhiteSpace);
+            }
+
+            if (parts.Count <= 1 || options.CustomTextRuns.Count > 0 || !ShouldSplitPolarDataLabelParts())
+            {
+                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
+                return;
+            }
+
+            ChartTextRunLayout[] labelRuns = parts
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .Select(part => new ChartTextRunLayout(part, style, Math.Max(0d, textMeasurer.Measure(part, style))))
+                .Where(run => run.Width > 0d)
+                .ToArray();
+            if (labelRuns.Length <= 1)
+            {
+                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
+                return;
+            }
+
+            double separatorWidth = textMeasurer.Measure(GetChartDataLabelSeparator(options), style);
+            double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
+            double cursor = alignment switch
+            {
+                TextAlignment.Right => x + Math.Max(1d, width) - totalWidth,
+                TextAlignment.Center => x + (Math.Max(1d, width) - totalWidth) / 2d,
+                _ => x
+            };
+
+            foreach (ChartTextRunLayout run in labelRuns)
+            {
+                double runWidth = Math.Max(0.1d, run.Width);
+                runs.Add(CreateChartTextRun(run.Text, cursor, y, runWidth, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, run.Style, TextAlignment.Left) with { PreventCoalesce = true });
+                cursor += runWidth + separatorWidth;
+            }
+        }
     }
 
     private static void RenderPieDataLabelLeaderLine(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, double angleRadians, double explosion, ChartLayoutBox labelBox, ChartDataLabelOptions options)
@@ -406,11 +493,11 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CLD", fontResolver);
-    }
 
-    private static double GetFillDataLabelLegendKeyWidth(double fontSize)
-    {
-        return fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor);
+        double GetStrokeMarkerDataLabelLegendKeyWidth(double fontSize, ChartMarkerStyle marker)
+        {
+            return Math.Max(marker.Size * 2d, fontSize * 1.05d) + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
+        }
     }
 
     private static double RenderFillDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, double fontSize, ChartSeriesFill fill)
@@ -434,11 +521,6 @@ internal sealed partial class PptxRenderer
         }
 
         return swatchSize + swatchGap;
-    }
-
-    private static double GetStrokeMarkerDataLabelLegendKeyWidth(double fontSize, ChartMarkerStyle marker)
-    {
-        return Math.Max(marker.Size * 2d, fontSize * 1.05d) + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
     }
 
     private static double RenderStrokeMarkerDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, double fontSize, ChartMarkerStyle marker, ChartSeriesStroke stroke)
@@ -626,6 +708,11 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CSD", fontResolver);
+
+        double GetFillDataLabelLegendKeyWidth(double fontSize)
+        {
+            return fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor);
+        }
     }
 
     private static string FormatScatterDataLabel(
@@ -651,32 +738,32 @@ internal sealed partial class PptxRenderer
             parts.Add(FormatChartDataLabelValue(point.Y, options, point.YWorkbookPoint ?? point.YPoint, point.YFormatCode));
         }
 
-        if (options.ShowBubbleSize && ResolveBubbleSizeValue(point) is { } bubbleSize)
+        string FormatBubbleSizeDataLabelValue(double value, ScatterPoint point, ChartDataLabelOptions options)
+        {
+            if (options.NumberFormatInfo.IsDefined || !string.IsNullOrWhiteSpace(options.NumberFormat))
+            {
+                return FormatChartDataLabelValue(value, options, point.BubbleSizeWorkbookPoint ?? point.BubbleSizePoint, point.BubbleSizeFormatCode);
+            }
+    
+            string formatCode = point.BubbleSizeFormatCode ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(formatCode) &&
+                !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase)
+                ? FormatChartNumber(value, formatCode)
+                : FormatChartAxisLabel(value, null);
+        }
+
+        double? ResolveBubbleSizeValue()
+        {
+            return point.BubbleSizeWorkbookPoint?.Value ??
+                point.BubbleSizePoint?.Value;
+        }
+
+        if (options.ShowBubbleSize && ResolveBubbleSizeValue() is { } bubbleSize)
         {
             parts.Add(FormatBubbleSizeDataLabelValue(bubbleSize, point, options));
         }
 
         return string.Join(GetChartDataLabelSeparator(options), parts);
-    }
-
-    private static double? ResolveBubbleSizeValue(ScatterPoint point)
-    {
-        return point.BubbleSizeWorkbookPoint?.Value ??
-            point.BubbleSizePoint?.Value;
-    }
-
-    private static string FormatBubbleSizeDataLabelValue(double value, ScatterPoint point, ChartDataLabelOptions options)
-    {
-        if (options.NumberFormatInfo.IsDefined || !string.IsNullOrWhiteSpace(options.NumberFormat))
-        {
-            return FormatChartDataLabelValue(value, options, point.BubbleSizeWorkbookPoint ?? point.BubbleSizePoint, point.BubbleSizeFormatCode);
-        }
-
-        string formatCode = point.BubbleSizeFormatCode ?? string.Empty;
-        return !string.IsNullOrWhiteSpace(formatCode) &&
-            !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase)
-            ? FormatChartNumber(value, formatCode)
-            : FormatChartAxisLabel(value, null);
     }
 
     private static (double X, double Y, double Radius) ResolveScatterPointGeometry(
@@ -870,50 +957,6 @@ internal sealed partial class PptxRenderer
         }
 
         AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver);
-    }
-
-    private static void AddPolarChartLabelRuns(List<TextRun> runs, IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver)
-    {
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
-        ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
-        if (parts.Count <= 1 || options.CustomTextRuns.Count > 0 || !ShouldSplitPolarDataLabelParts(options))
-        {
-            AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
-            return;
-        }
-
-        ChartTextRunLayout[] labelRuns = parts
-            .Where(part => !string.IsNullOrWhiteSpace(part))
-            .Select(part => new ChartTextRunLayout(part, style, Math.Max(0d, textMeasurer.Measure(part, style))))
-            .Where(run => run.Width > 0d)
-            .ToArray();
-        if (labelRuns.Length <= 1)
-        {
-            AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
-            return;
-        }
-
-        double separatorWidth = textMeasurer.Measure(GetChartDataLabelSeparator(options), style);
-        double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
-        double cursor = alignment switch
-        {
-            TextAlignment.Right => x + Math.Max(1d, width) - totalWidth,
-            TextAlignment.Center => x + (Math.Max(1d, width) - totalWidth) / 2d,
-            _ => x
-        };
-
-        foreach (ChartTextRunLayout run in labelRuns)
-        {
-            double runWidth = Math.Max(0.1d, run.Width);
-            runs.Add(CreateChartTextRun(run.Text, cursor, y, runWidth, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, run.Style, TextAlignment.Left) with { PreventCoalesce = true });
-            cursor += runWidth + separatorWidth;
-        }
-    }
-
-    private static bool ShouldSplitPolarDataLabelParts(ChartDataLabelOptions options)
-    {
-        string separator = GetChartDataLabelSeparator(options);
-        return separator.Length > 0 && separator.All(char.IsWhiteSpace);
     }
 
     private static ChartLayoutBox ResolveDataLabelTextClipBox(ChartPlotBox plotBox, ChartDataLabelOptions options, double x, double y, double width, double height)
@@ -1299,49 +1342,6 @@ internal sealed partial class PptxRenderer
         }
 
         return resolved;
-    }
-
-    private static string FormatChartPercentageLabel(double fraction)
-    {
-        return (fraction * 100d).ToString("0.#", CultureInfo.InvariantCulture) + "%";
-    }
-
-    private static IReadOnlyList<string> FormatPieDataLabelParts(double value, double total, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, string? valueFormatCode, ChartDataLabelOptions options, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames)
-    {
-        if (!string.IsNullOrWhiteSpace(options.CustomText))
-        {
-            return [options.CustomText];
-        }
-
-        var parts = new List<string>(4);
-        string seriesName = GetActiveSeriesName(seriesNames, 0);
-        if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
-        {
-            parts.Add(seriesName);
-        }
-
-        string categoryLabel = GetIndexedCategoryLabel(categoryLabels, categoryIndex);
-        if (options.ShowCategoryName && !string.IsNullOrWhiteSpace(categoryLabel))
-        {
-            parts.Add(categoryLabel);
-        }
-
-        if (options.ShowValue)
-        {
-            parts.Add(FormatChartDataLabelValue(value, options, workbookPoint, valueFormatCode));
-        }
-
-        if (options.ShowPercent)
-        {
-            parts.Add(FormatChartPercentageLabel(value / total));
-        }
-
-        return parts;
-    }
-
-    private static string JoinChartDataLabelParts(IReadOnlyList<string> parts, ChartDataLabelOptions options)
-    {
-        return string.Join(GetChartDataLabelSeparator(options), parts);
     }
 
     private static string FormatCartesianDataLabel(

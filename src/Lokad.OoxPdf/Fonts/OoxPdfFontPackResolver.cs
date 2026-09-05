@@ -49,7 +49,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             manifestUri,
             "font pack manifest",
             cancellationToken).ConfigureAwait(false);
-        FontPackManifest manifest = DeserializeManifest(manifestBytes);
+        FontPackManifest manifest = DeserializeManifest();
         ValidatedManifest validated = ValidateManifest(packId, manifest);
 
         var resolver = new OoxPdfFontPackResolver(
@@ -60,6 +60,24 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             validated.FallbackFamilies);
 
         return resolver;
+
+        FontPackManifest DeserializeManifest()
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<FontPackManifest>(manifestBytes, JsonOptions)
+                    ?? throw new OoxPdfFontPackException(
+                        OoxPdfFontPackDiagnosticIds.FontPackInvalid,
+                        "The font pack manifest is empty.");
+            }
+            catch (JsonException ex)
+            {
+                throw new OoxPdfFontPackException(
+                    OoxPdfFontPackDiagnosticIds.FontPackInvalid,
+                    "The font pack manifest is not valid JSON.",
+                    ex);
+            }
+        }
     }
 
     public FontFaceResolution Resolve(FontRequest request)
@@ -176,24 +194,6 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             throw new OoxPdfFontPackException(
                 OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
                 $"Unable to download {description} from '{uri}'.",
-                ex);
-        }
-    }
-
-    private static FontPackManifest DeserializeManifest(byte[] manifestBytes)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<FontPackManifest>(manifestBytes, JsonOptions)
-                ?? throw new OoxPdfFontPackException(
-                    OoxPdfFontPackDiagnosticIds.FontPackInvalid,
-                    "The font pack manifest is empty.");
-        }
-        catch (JsonException ex)
-        {
-            throw new OoxPdfFontPackException(
-                OoxPdfFontPackDiagnosticIds.FontPackInvalid,
-                "The font pack manifest is not valid JSON.",
                 ex);
         }
     }

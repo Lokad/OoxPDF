@@ -429,28 +429,28 @@ internal sealed class JpegImage
                         continue;
                     }
 
-                    component.Samples[targetY * component.SampleWidth + targetX] = ToByte(InverseDct(coefficients, x, y) + 128d);
+                    component.Samples[targetY * component.SampleWidth + targetX] = ToByte(InverseDct(x, y) + 128d);
                 }
             }
-        }
 
-        private static double InverseDct(int[] coefficients, int x, int y)
-        {
-            double sum = 0d;
-            for (int v = 0; v < 8; v++)
+            double InverseDct(int x, int y)
             {
-                double cv = v == 0 ? Math.Sqrt(0.5d) : 1d;
-                double yCos = Math.Cos((2 * y + 1) * v * Math.PI / 16d);
-                for (int u = 0; u < 8; u++)
+                double sum = 0d;
+                for (int v = 0; v < 8; v++)
                 {
-                    double cu = u == 0 ? Math.Sqrt(0.5d) : 1d;
-                    sum += cu * cv * coefficients[v * 8 + u] *
-                        Math.Cos((2 * x + 1) * u * Math.PI / 16d) *
-                        yCos;
+                    double cv = v == 0 ? Math.Sqrt(0.5d) : 1d;
+                    double yCos = Math.Cos((2 * y + 1) * v * Math.PI / 16d);
+                    for (int u = 0; u < 8; u++)
+                    {
+                        double cu = u == 0 ? Math.Sqrt(0.5d) : 1d;
+                        sum += cu * cv * coefficients[v * 8 + u] *
+                            Math.Cos((2 * x + 1) * u * Math.PI / 16d) *
+                            yCos;
+                    }
                 }
-            }
 
-            return sum / 4d;
+                return sum / 4d;
+            }
         }
 
         private byte[] BuildRgb()

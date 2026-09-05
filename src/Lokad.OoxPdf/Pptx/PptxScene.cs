@@ -294,27 +294,27 @@ internal sealed partial class PptxSceneBuilder
         }
 
         return new PptxScene(document, theme, slides);
+
+        bool HasSlideOleObject(XDocument slideXml)
+        {
+            return slideXml.Descendants(PresentationNamespace + "oleObj").Any();
+        }
+
+        bool HasSlideTiming(XDocument slideXml)
+        {
+            return slideXml.Descendants(PresentationNamespace + "timing").Any();
+        }
+
+        bool HasSlideTransition(XDocument slideXml)
+        {
+            return slideXml.Descendants(PresentationNamespace + "transition").Any();
+        }
     }
 
     private static XDocument LoadXml(OoxPart part, CancellationToken cancellationToken)
     {
         using Stream stream = part.OpenRead();
         return SafeXml.Load(stream, cancellationToken);
-    }
-
-    private static bool HasSlideTransition(XDocument slideXml)
-    {
-        return slideXml.Descendants(PresentationNamespace + "transition").Any();
-    }
-
-    private static bool HasSlideTiming(XDocument slideXml)
-    {
-        return slideXml.Descendants(PresentationNamespace + "timing").Any();
-    }
-
-    private static bool HasSlideOleObject(XDocument slideXml)
-    {
-        return slideXml.Descendants(PresentationNamespace + "oleObj").Any();
     }
 
     private static PptxColorMap ReadMasterColorMap(XDocument? xml)
@@ -580,7 +580,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadLineCap(shapeProperties),
                 ReadLineJoin(shapeProperties),
                 ReadLineJoinValue(shapeProperties),
-                IsLineWidthSpecified(shapeProperties))
+                IsLineWidthSpecified())
             : default;
         return new PptxScenePicture(
             relationshipId,
@@ -591,31 +591,29 @@ internal sealed partial class PptxSceneBuilder
             ReadPictureAlpha(picture),
             ReadPictureAlphaValue(picture),
             ReadImageRecolor(picture, theme, colorMap),
-            HasPictureVideo(picture),
-            HasPictureAudio(picture),
+            HasPictureVideo(),
+            HasPictureAudio(),
             ReadPictureTile(picture),
             line,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
+
+        bool HasPictureAudio()
+        {
+            return picture.Descendants(PresentationNamespace + "audio").Any() ||
+                picture.Descendants(DrawingNamespace + "audioFile").Any();
+        }
+
+        bool HasPictureVideo()
+        {
+            return picture.Descendants(PresentationNamespace + "video").Any() ||
+                picture.Descendants(DrawingNamespace + "videoFile").Any();
+        }
+
+        bool IsLineWidthSpecified()
+        {
+            return shapeProperties
+                ?.Element(DrawingNamespace + "ln")
+                ?.Attribute("w") is not null;
+        }
     }
-
-    private static bool IsLineWidthSpecified(XElement? shapeProperties)
-    {
-        return shapeProperties
-            ?.Element(DrawingNamespace + "ln")
-            ?.Attribute("w") is not null;
-    }
-
-    private static bool HasPictureVideo(XElement picture)
-    {
-        return picture.Descendants(PresentationNamespace + "video").Any() ||
-            picture.Descendants(DrawingNamespace + "videoFile").Any();
-    }
-
-    private static bool HasPictureAudio(XElement picture)
-    {
-        return picture.Descendants(PresentationNamespace + "audio").Any() ||
-            picture.Descendants(DrawingNamespace + "audioFile").Any();
-    }
-
-
 }

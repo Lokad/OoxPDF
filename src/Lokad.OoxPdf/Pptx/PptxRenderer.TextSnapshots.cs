@@ -32,6 +32,52 @@ internal sealed partial class PptxRenderer
                     .ToArray())
             .Select(span => span.Run)
             .ToArray();
+
+        IReadOnlyList<PptxPositionedTextSpan> CoalesceSourceTextRunsForInspection(IReadOnlyList<PptxPositionedTextSpan> textSpans)
+        {
+            var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
+            foreach (PptxPositionedTextSpan span in textSpans)
+            {
+                if (coalesced.Count != 0 && CanCoalesceSourceTextRunForInspection(coalesced[^1], span))
+                {
+                    PptxPositionedTextSpan previous = coalesced[^1];
+                    TextRun mergedRun = previous.Run with
+                    {
+                        Text = previous.Run.Text + span.Run.Text,
+                        Width = Math.Max(previous.Run.Width, span.Run.X + span.Run.Width - previous.Run.X)
+                    };
+                    coalesced[^1] = previous with
+                    {
+                        Run = mergedRun,
+                        EndX = Math.Max(previous.EndX, span.EndX),
+                        Atoms = previous.Atoms.Concat(span.Atoms).ToArray()
+                    };
+                    continue;
+                }
+
+                coalesced.Add(span);
+            }
+
+            return coalesced;
+
+            bool CanCoalesceSourceTextRunForInspection(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
+            {
+                return left.SourceRun is not null &&
+                    ReferenceEquals(left.SourceRun, right.SourceRun) &&
+                    left.FrameIndex == right.FrameIndex &&
+                    left.ParagraphIndex == right.ParagraphIndex &&
+                    left.SourceRunIndex == right.SourceRunIndex &&
+                    left.Run.Color.Equals(right.Run.Color) &&
+                    Math.Abs(left.Run.Alpha - right.Run.Alpha) < PptxTextMetricRules.TextStateTolerance &&
+                    left.Run.HighlightColor.Equals(right.Run.HighlightColor) &&
+                    left.Run.Bold == right.Run.Bold &&
+                    left.Run.Italic == right.Run.Italic &&
+                    left.Run.Underline == right.Run.Underline &&
+                    left.Run.Strike == right.Run.Strike &&
+                    left.Run.KerningEnabled == right.Run.KerningEnabled &&
+                    string.Equals(left.Run.FontFamily, right.Run.FontFamily, StringComparison.OrdinalIgnoreCase);
+            }
+        }
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex)
@@ -49,52 +95,6 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> CoalesceSourceTextRunsForInspection(IReadOnlyList<PptxPositionedTextSpan> textSpans)
-    {
-        var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
-        foreach (PptxPositionedTextSpan span in textSpans)
-        {
-            if (coalesced.Count != 0 && CanCoalesceSourceTextRunForInspection(coalesced[^1], span))
-            {
-                PptxPositionedTextSpan previous = coalesced[^1];
-                TextRun mergedRun = previous.Run with
-                {
-                    Text = previous.Run.Text + span.Run.Text,
-                    Width = Math.Max(previous.Run.Width, span.Run.X + span.Run.Width - previous.Run.X)
-                };
-                coalesced[^1] = previous with
-                {
-                    Run = mergedRun,
-                    EndX = Math.Max(previous.EndX, span.EndX),
-                    Atoms = previous.Atoms.Concat(span.Atoms).ToArray()
-                };
-                continue;
-            }
-
-            coalesced.Add(span);
-        }
-
-        return coalesced;
-    }
-
-    private static bool CanCoalesceSourceTextRunForInspection(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
-    {
-        return left.SourceRun is not null &&
-            ReferenceEquals(left.SourceRun, right.SourceRun) &&
-            left.FrameIndex == right.FrameIndex &&
-            left.ParagraphIndex == right.ParagraphIndex &&
-            left.SourceRunIndex == right.SourceRunIndex &&
-            left.Run.Color.Equals(right.Run.Color) &&
-            Math.Abs(left.Run.Alpha - right.Run.Alpha) < PptxTextMetricRules.TextStateTolerance &&
-            left.Run.HighlightColor.Equals(right.Run.HighlightColor) &&
-            left.Run.Bold == right.Run.Bold &&
-            left.Run.Italic == right.Run.Italic &&
-            left.Run.Underline == right.Run.Underline &&
-            left.Run.Strike == right.Run.Strike &&
-            left.Run.KerningEnabled == right.Run.KerningEnabled &&
-            string.Equals(left.Run.FontFamily, right.Run.FontFamily, StringComparison.OrdinalIgnoreCase);
-    }
-
     internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex)
     {
         PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
@@ -106,6 +106,17 @@ internal sealed partial class PptxRenderer
         PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(context.InheritedSources, context);
         PptxTextLayoutModel slideLayout = BuildTextLayoutModel(context, context.SlideSource, includePlaceholders: true, context.InheritedXml);
         return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
+
+        PptxTextLayoutModel BuildTextLayoutModelForSources(IReadOnlyList<PptxRenderSource> sources, PptxRenderContext context)
+        {
+            var frames = new List<PptxTextFrameLayout>();
+            foreach (PptxRenderSource source in sources)
+            {
+                frames.AddRange(BuildTextLayoutModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+            }
+
+            return new PptxTextLayoutModel(frames);
+        }
     }
 
     internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex)
@@ -119,32 +130,17 @@ internal sealed partial class PptxRenderer
         PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(context.InheritedSources, context);
         PptxTextFlowModel slideFlow = BuildTextFlowModel(context, context.SlideSource, includePlaceholders: true, context.InheritedXml);
         return ToSnapshot(new PptxTextFlowModel(inheritedFlow.Frames.Concat(slideFlow.Frames).ToArray()));
-    }
 
-    private static PptxTextLayoutModel BuildTextLayoutModelForSources(
-        IReadOnlyList<PptxRenderSource> sources,
-        PptxRenderContext context)
-    {
-        var frames = new List<PptxTextFrameLayout>();
-        foreach (PptxRenderSource source in sources)
+        PptxTextFlowModel BuildTextFlowModelForSources(IReadOnlyList<PptxRenderSource> sources, PptxRenderContext context)
         {
-            frames.AddRange(BuildTextLayoutModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+            var frames = new List<PptxTextFlowFrame>();
+            foreach (PptxRenderSource source in sources)
+            {
+                frames.AddRange(BuildTextFlowModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+            }
+
+            return new PptxTextFlowModel(frames);
         }
-
-        return new PptxTextLayoutModel(frames);
-    }
-
-    private static PptxTextFlowModel BuildTextFlowModelForSources(
-        IReadOnlyList<PptxRenderSource> sources,
-        PptxRenderContext context)
-    {
-        var frames = new List<PptxTextFlowFrame>();
-        foreach (PptxRenderSource source in sources)
-        {
-            frames.AddRange(BuildTextFlowModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
-        }
-
-        return new PptxTextFlowModel(frames);
     }
 
     private static PptxTextRunSnapshot ToSnapshot(TextRun run)

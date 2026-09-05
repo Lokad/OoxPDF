@@ -112,7 +112,7 @@ internal sealed class PdfDocumentWriter
 
         int objectCount = nextAnnotationObject - 1;
         writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
-        writer.WriteObject(2, BuildPagesObject(pages));
+        writer.WriteObject(2, BuildPagesObject());
 
         for (int i = 0; i < pages.Count; i++)
         {
@@ -122,7 +122,7 @@ internal sealed class PdfDocumentWriter
             PdfPage page = pages[i];
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
-                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects)}{BuildPageAnnotations(annotationObjectsByPage[i])} >>\n"));
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page)}{BuildPageAnnotations(annotationObjectsByPage[i])} >>\n"));
             byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
             writer.WriteObject(contentObjectNumber, FormattableString.Invariant(
                 $"<< /Length {contentBytes.Length} >>\nstream\n{page.Content}endstream\n"));
@@ -181,134 +181,128 @@ internal sealed class PdfDocumentWriter
 
         writer.WriteAscii(FormattableString.Invariant(
             $"trailer\n<< /Size {objectCount + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF\n"));
-    }
 
-    private static string BuildPagesObject(IReadOnlyList<PdfPage> pages)
-    {
-        var builder = new StringBuilder();
-        builder.Append("<< /Type /Pages /Count ");
-        builder.Append(CultureInfo.InvariantCulture, $"{pages.Count}");
-        builder.Append(" /Kids [");
-        for (int i = 0; i < pages.Count; i++)
+        string BuildPagesObject()
         {
-            if (i > 0)
+            var builder = new StringBuilder();
+            builder.Append("<< /Type /Pages /Count ");
+            builder.Append(CultureInfo.InvariantCulture, $"{pages.Count}");
+            builder.Append(" /Kids [");
+            for (int i = 0; i < pages.Count; i++)
             {
-                builder.Append(' ');
-            }
-
-            builder.Append(CultureInfo.InvariantCulture, $"{3 + i * 2} 0 R");
-        }
-
-        builder.Append("] >>\n");
-        return builder.ToString();
-    }
-
-    private static string BuildPageAnnotations(IReadOnlyList<int> annotationObjects)
-    {
-        if (annotationObjects.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var builder = new StringBuilder(" /Annots [");
-        for (int i = 0; i < annotationObjects.Count; i++)
-        {
-            if (i > 0)
-            {
-                builder.Append(' ');
-            }
-
-            builder.Append(CultureInfo.InvariantCulture, $"{annotationObjects[i]} 0 R");
-        }
-
-        builder.Append(']');
-        return builder.ToString();
-    }
-
-    private static string BuildResources(
-        PdfPage page,
-        IReadOnlyDictionary<string, FontObjectNumbers> fontObjects,
-        IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects,
-        IReadOnlyDictionary<string, int> shadingObjects,
-        IReadOnlyDictionary<string, int> softMaskObjects,
-        IReadOnlyDictionary<string, int> patternObjects)
-    {
-        if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0 && page.Patterns.Count == 0)
-        {
-            return "<< >>";
-        }
-
-        var builder = new StringBuilder("<<");
-        if (page.Fonts.Count != 0)
-        {
-            builder.Append(" /Font <<");
-            foreach (PdfFontResource font in page.Fonts)
-            {
-                FontObjectNumbers objects = fontObjects[font.Font.ResourceKey];
-                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
-                builder.Append(CultureInfo.InvariantCulture, $"{objects.Type0} 0 R");
-            }
-
-            builder.Append(" >>");
-        }
-
-        if (page.Images.Count != 0)
-        {
-            builder.Append(" /XObject <<");
-            foreach (PdfImageResource image in page.Images)
-            {
-                ImageObjectNumbers objects = imageObjects[image.Image.ResourceKey];
-                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
-                builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
-            }
-
-            builder.Append(" >>");
-        }
-
-        if (page.ExtGStates.Count != 0)
-        {
-            builder.Append(" /ExtGState <<");
-            foreach (PdfExtGStateResource state in page.ExtGStates)
-            {
-                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(state.ResourceName));
-                builder.Append(CultureInfo.InvariantCulture, $" << /ca {FormatNumber(state.FillAlpha)} /CA {FormatNumber(state.StrokeAlpha)}");
-                if (state.SoftMask is not null)
+                if (i > 0)
                 {
-                    builder.Append(CultureInfo.InvariantCulture, $" /SMask << /S /Luminosity /G {softMaskObjects[state.SoftMask.ResourceKey]} 0 R >>");
+                    builder.Append(' ');
+                }
+
+                builder.Append(CultureInfo.InvariantCulture, $"{3 + i * 2} 0 R");
+            }
+
+            builder.Append("] >>\n");
+            return builder.ToString();
+        }
+
+        string BuildPageAnnotations(IReadOnlyList<int> annotationObjects)
+        {
+            if (annotationObjects.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(" /Annots [");
+            for (int i = 0; i < annotationObjects.Count; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(' ');
+                }
+
+                builder.Append(CultureInfo.InvariantCulture, $"{annotationObjects[i]} 0 R");
+            }
+
+            builder.Append(']');
+            return builder.ToString();
+        }
+
+        string BuildResources(PdfPage page)
+        {
+            if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0 && page.Patterns.Count == 0)
+            {
+                return "<< >>";
+            }
+
+            var builder = new StringBuilder("<<");
+            if (page.Fonts.Count != 0)
+            {
+                builder.Append(" /Font <<");
+                foreach (PdfFontResource font in page.Fonts)
+                {
+                    FontObjectNumbers objects = fontObjects[font.Font.ResourceKey];
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
+                    builder.Append(CultureInfo.InvariantCulture, $"{objects.Type0} 0 R");
+                }
+
+                builder.Append(" >>");
+            }
+
+            if (page.Images.Count != 0)
+            {
+                builder.Append(" /XObject <<");
+                foreach (PdfImageResource image in page.Images)
+                {
+                    ImageObjectNumbers objects = imageObjects[image.Image.ResourceKey];
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
+                    builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
+                }
+
+                builder.Append(" >>");
+            }
+
+            if (page.ExtGStates.Count != 0)
+            {
+                builder.Append(" /ExtGState <<");
+                foreach (PdfExtGStateResource state in page.ExtGStates)
+                {
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(state.ResourceName));
+                    builder.Append(CultureInfo.InvariantCulture, $" << /ca {FormatNumber(state.FillAlpha)} /CA {FormatNumber(state.StrokeAlpha)}");
+                    if (state.SoftMask is not null)
+                    {
+                        builder.Append(CultureInfo.InvariantCulture, $" /SMask << /S /Luminosity /G {softMaskObjects[state.SoftMask.ResourceKey]} 0 R >>");
+                    }
+
+                    builder.Append(" >>");
+                }
+
+                builder.Append(" >>");
+            }
+
+            if (page.Shadings.Count != 0)
+            {
+                builder.Append(" /Shading <<");
+                foreach (PdfShadingResource shading in page.Shadings)
+                {
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(shading.ResourceName));
+                    builder.Append(CultureInfo.InvariantCulture, $" {shadingObjects[shading.Shading.ResourceKey]} 0 R");
+                }
+
+                builder.Append(" >>");
+            }
+
+            if (page.Patterns.Count != 0)
+            {
+                builder.Append(" /Pattern <<");
+                foreach (PdfTilingPatternResource pattern in page.Patterns)
+                {
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(pattern.ResourceName));
+                    builder.Append(CultureInfo.InvariantCulture, $" {patternObjects[pattern.Pattern.ResourceKey]} 0 R");
                 }
 
                 builder.Append(" >>");
             }
 
             builder.Append(" >>");
+            return builder.ToString();
         }
-
-        if (page.Shadings.Count != 0)
-        {
-            builder.Append(" /Shading <<");
-            foreach (PdfShadingResource shading in page.Shadings)
-            {
-                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(shading.ResourceName));
-                builder.Append(CultureInfo.InvariantCulture, $" {shadingObjects[shading.Shading.ResourceKey]} 0 R");
-            }
-
-            builder.Append(" >>");
-        }
-
-        if (page.Patterns.Count != 0)
-        {
-            builder.Append(" /Pattern <<");
-            foreach (PdfTilingPatternResource pattern in page.Patterns)
-            {
-                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(pattern.ResourceName));
-                builder.Append(CultureInfo.InvariantCulture, $" {patternObjects[pattern.Pattern.ResourceKey]} 0 R");
-            }
-
-            builder.Append(" >>");
-        }
-
-        builder.Append(" >>");
-        return builder.ToString();
     }
 
     private static void WriteFontObjects(PdfObjectWriter writer, PdfEmbeddedFont font, FontObjectNumbers objects, CancellationToken cancellationToken)
@@ -344,6 +338,46 @@ internal sealed class PdfDocumentWriter
     {
         writer.WriteObject(objectNumber, FormattableString.Invariant(
             $"<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [{FormatNumber(shading.X0)} {FormatNumber(shading.Y0)} {FormatNumber(shading.X1)} {FormatNumber(shading.Y1)}] /Function {BuildAxialShadingFunction(shading.Stops)} /Extend [true true] >>\n"));
+
+        string BuildAxialShadingFunction(IReadOnlyList<PdfShadingStop> stops)
+        {
+            if (stops.Count == 2)
+            {
+                return BuildExponentialInterpolationFunction(stops[0], stops[1]);
+            }
+
+            var builder = new StringBuilder();
+            builder.Append("<< /FunctionType 3 /Domain [0 1] /Functions [");
+            for (int i = 0; i < stops.Count - 1; i++)
+            {
+                builder.Append(' ').Append(BuildExponentialInterpolationFunction(stops[i], stops[i + 1]));
+            }
+
+            builder.Append(" ] /Bounds [");
+            for (int i = 1; i < stops.Count - 1; i++)
+            {
+                if (i > 1)
+                {
+                    builder.Append(' ');
+                }
+
+                builder.Append(FormatNumber(stops[i].Offset));
+            }
+
+            builder.Append("] /Encode [");
+            for (int i = 0; i < stops.Count - 1; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(' ');
+                }
+
+                builder.Append("0 1");
+            }
+
+            builder.Append("] >>");
+            return builder.ToString();
+        }
     }
 
     private static void WriteLuminositySoftMaskObject(
@@ -353,10 +387,29 @@ internal sealed class PdfDocumentWriter
         IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
     {
         ImageObjectNumbers image = imageObjects[softMask.Image.ResourceKey];
-        string content = BuildLuminositySoftMaskContent(softMask);
+        string content = BuildLuminositySoftMaskContent();
         byte[] contentBytes = Encoding.ASCII.GetBytes(content);
         writer.WriteObject(objectNumber, FormattableString.Invariant(
             $"<< /Type /XObject /Subtype /Form /BBox [{FormatNumber(softMask.X)} {FormatNumber(softMask.Y)} {FormatNumber(softMask.X + softMask.Width)} {FormatNumber(softMask.Y + softMask.Height)}] /Group << /S /Transparency /CS /DeviceRGB >> /Resources << /XObject << /ImMask {image.Image} 0 R >> >> /Length {contentBytes.Length} >>\nstream\n{content}endstream\n"));
+
+        string BuildLuminositySoftMaskContent()
+        {
+            double visibleWidth = Math.Max(0.001d, 1d - softMask.CropLeft - softMask.CropRight);
+            double visibleHeight = Math.Max(0.001d, 1d - softMask.CropTop - softMask.CropBottom);
+            double scaledWidth = softMask.Width / visibleWidth;
+            double scaledHeight = softMask.Height / visibleHeight;
+            double imageX = softMask.X - softMask.CropLeft * scaledWidth;
+            double imageY = softMask.Y - softMask.CropBottom * scaledHeight;
+            var builder = new StringBuilder();
+            builder.AppendLine("q");
+            builder.Append(FormatNumber(softMask.X)).Append(' ').Append(FormatNumber(softMask.Y)).Append(' ');
+            builder.Append(FormatNumber(softMask.Width)).Append(' ').Append(FormatNumber(softMask.Height)).AppendLine(" re W n");
+            builder.Append(FormatNumber(scaledWidth)).Append(" 0 0 ").Append(FormatNumber(scaledHeight)).Append(' ');
+            builder.Append(FormatNumber(imageX)).Append(' ').Append(FormatNumber(imageY)).AppendLine(" cm");
+            builder.AppendLine("/ImMask Do");
+            builder.AppendLine("Q");
+            return builder.ToString();
+        }
     }
 
     private static void WriteTilingPatternObject(
@@ -371,9 +424,23 @@ internal sealed class PdfDocumentWriter
             : string.Empty;
         string resources = pattern.Images.Count == 0
             ? "<< >>"
-            : BuildPatternResources(pattern, imageObjects);
+            : BuildPatternResources();
         writer.WriteObject(objectNumber, FormattableString.Invariant(
             $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources {resources} /Length {contentBytes.Length} >>\nstream\n{pattern.Content}endstream\n"));
+
+        string BuildPatternResources()
+        {
+            var builder = new StringBuilder("<< /XObject <<");
+            foreach (PdfImageResource image in pattern.Images)
+            {
+                ImageObjectNumbers objects = imageObjects[image.Image.ResourceKey];
+                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
+                builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
+            }
+
+            builder.Append(" >> >>");
+            return builder.ToString();
+        }
     }
 
     private static void WriteLinkAnnotationObject(
@@ -387,105 +454,62 @@ internal sealed class PdfDocumentWriter
         double x2 = annotation.X + annotation.Width;
         double y2 = annotation.Y + annotation.Height;
         writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /Type /Annot /Subtype /Link /Rect [{FormatNumber(x1)} {FormatNumber(y1)} {FormatNumber(x2)} {FormatNumber(y2)}] /Border [0 0 0]{BuildLinkTarget(annotation, pageCount)} >>\n"));
-    }
+            $"<< /Type /Annot /Subtype /Link /Rect [{FormatNumber(x1)} {FormatNumber(y1)} {FormatNumber(x2)} {FormatNumber(y2)}] /Border [0 0 0]{BuildLinkTarget()} >>\n"));
 
-    private static string BuildLinkTarget(PdfLinkAnnotation annotation, int pageCount)
-    {
-        if (!string.IsNullOrEmpty(annotation.Uri))
+        string BuildLinkTarget()
         {
-            return $" /A << /S /URI /URI ({EscapePdfString(annotation.Uri)}) >>";
-        }
-
-        if (annotation.Destination is { } destination)
-        {
-            if (destination.PageIndex < 0 || destination.PageIndex >= pageCount)
+            if (!string.IsNullOrEmpty(annotation.Uri))
             {
-                throw new InvalidOperationException(
-                    FormattableString.Invariant($"PDF link destination page index {destination.PageIndex} is outside the document page range 0..{pageCount - 1}."));
+                return $" /A << /S /URI /URI ({EscapePdfString(annotation.Uri)}) >>";
             }
 
-            int pageObjectNumber = 3 + destination.PageIndex * 2;
-            string left = destination.Left is { } x ? FormatNumber(x) : "null";
-            string top = destination.Top is { } y ? FormatNumber(y) : "null";
-            string zoom = destination.Zoom is { } z ? FormatNumber(z) : "null";
-            return FormattableString.Invariant($" /Dest [{pageObjectNumber} 0 R /XYZ {left} {top} {zoom}]");
-        }
-
-        throw new InvalidOperationException("PDF link annotations must have either a URI target or an internal destination target.");
-    }
-
-    private static string BuildPatternResources(PdfTilingPattern pattern, IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
-    {
-        var builder = new StringBuilder("<< /XObject <<");
-        foreach (PdfImageResource image in pattern.Images)
-        {
-            ImageObjectNumbers objects = imageObjects[image.Image.ResourceKey];
-            builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
-            builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
-        }
-
-        builder.Append(" >> >>");
-        return builder.ToString();
-    }
-
-    private static string BuildLuminositySoftMaskContent(PdfLuminositySoftMask softMask)
-    {
-        double visibleWidth = Math.Max(0.001d, 1d - softMask.CropLeft - softMask.CropRight);
-        double visibleHeight = Math.Max(0.001d, 1d - softMask.CropTop - softMask.CropBottom);
-        double scaledWidth = softMask.Width / visibleWidth;
-        double scaledHeight = softMask.Height / visibleHeight;
-        double imageX = softMask.X - softMask.CropLeft * scaledWidth;
-        double imageY = softMask.Y - softMask.CropBottom * scaledHeight;
-        var builder = new StringBuilder();
-        builder.AppendLine("q");
-        builder.Append(FormatNumber(softMask.X)).Append(' ').Append(FormatNumber(softMask.Y)).Append(' ');
-        builder.Append(FormatNumber(softMask.Width)).Append(' ').Append(FormatNumber(softMask.Height)).AppendLine(" re W n");
-        builder.Append(FormatNumber(scaledWidth)).Append(" 0 0 ").Append(FormatNumber(scaledHeight)).Append(' ');
-        builder.Append(FormatNumber(imageX)).Append(' ').Append(FormatNumber(imageY)).AppendLine(" cm");
-        builder.AppendLine("/ImMask Do");
-        builder.AppendLine("Q");
-        return builder.ToString();
-    }
-
-    private static string BuildAxialShadingFunction(IReadOnlyList<PdfShadingStop> stops)
-    {
-        if (stops.Count == 2)
-        {
-            return BuildExponentialInterpolationFunction(stops[0], stops[1]);
-        }
-
-        var builder = new StringBuilder();
-        builder.Append("<< /FunctionType 3 /Domain [0 1] /Functions [");
-        for (int i = 0; i < stops.Count - 1; i++)
-        {
-            builder.Append(' ').Append(BuildExponentialInterpolationFunction(stops[i], stops[i + 1]));
-        }
-
-        builder.Append(" ] /Bounds [");
-        for (int i = 1; i < stops.Count - 1; i++)
-        {
-            if (i > 1)
+            if (annotation.Destination is { } destination)
             {
-                builder.Append(' ');
+                if (destination.PageIndex < 0 || destination.PageIndex >= pageCount)
+                {
+                    throw new InvalidOperationException(
+                        FormattableString.Invariant($"PDF link destination page index {destination.PageIndex} is outside the document page range 0..{pageCount - 1}."));
+                }
+
+                int pageObjectNumber = 3 + destination.PageIndex * 2;
+                string left = destination.Left is { } x ? FormatNumber(x) : "null";
+                string top = destination.Top is { } y ? FormatNumber(y) : "null";
+                string zoom = destination.Zoom is { } z ? FormatNumber(z) : "null";
+                return FormattableString.Invariant($" /Dest [{pageObjectNumber} 0 R /XYZ {left} {top} {zoom}]");
             }
 
-            builder.Append(FormatNumber(stops[i].Offset));
-        }
+            throw new InvalidOperationException("PDF link annotations must have either a URI target or an internal destination target.");
 
-        builder.Append("] /Encode [");
-        for (int i = 0; i < stops.Count - 1; i++)
-        {
-            if (i > 0)
+            string EscapePdfString(string value)
             {
-                builder.Append(' ');
+                var builder = new StringBuilder(value.Length);
+                foreach (char c in value)
+                {
+                    switch (c)
+                    {
+                        case '\\':
+                        case '(':
+                        case ')':
+                            builder.Append('\\').Append(c);
+                            break;
+                        case '\r':
+                            builder.Append(@"\r");
+                            break;
+                        case '\n':
+                            builder.Append(@"\n");
+                            break;
+                        case '\t':
+                            builder.Append(@"\t");
+                            break;
+                        default:
+                            builder.Append(c);
+                            break;
+                    }
+                }
+
+                return builder.ToString();
             }
-
-            builder.Append("0 1");
         }
-
-        builder.Append("] >>");
-        return builder.ToString();
     }
 
     private static string BuildExponentialInterpolationFunction(PdfShadingStop start, PdfShadingStop end)
@@ -518,35 +542,6 @@ internal sealed class PdfDocumentWriter
         return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
     }
 
-    private static string EscapePdfString(string value)
-    {
-        var builder = new StringBuilder(value.Length);
-        foreach (char c in value)
-        {
-            switch (c)
-            {
-                case '\\':
-                case '(':
-                case ')':
-                    builder.Append('\\').Append(c);
-                    break;
-                case '\r':
-                    builder.Append(@"\r");
-                    break;
-                case '\n':
-                    builder.Append(@"\n");
-                    break;
-                case '\t':
-                    builder.Append(@"\t");
-                    break;
-                default:
-                    builder.Append(c);
-                    break;
-            }
-        }
-
-        return builder.ToString();
-    }
 
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);
 

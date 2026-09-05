@@ -22,22 +22,23 @@ internal static class DocxTableCellContent
         return cell.Paragraphs.Count == 0 && cell.Text.Length != 0
             ? [CreatePlainTextParagraph(cell.Text)]
             : cell.Paragraphs;
+
+        DocxParagraph CreatePlainTextParagraph(string text)
+        {
+            return new DocxParagraph(
+                [new DocxTextRun(text, DocxDefaults.FontSizePoints, null, false, false, false, null, null)],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                0d,
+                1d,
+                null,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty,
+                null);
+        }
     }
 
-    private static DocxParagraph CreatePlainTextParagraph(string text)
-    {
-        return new DocxParagraph(
-            [new DocxTextRun(text, DocxDefaults.FontSizePoints, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            1d,
-            null,
-            DocxParagraphSpacing.Empty,
-            DocxParagraphKeepRules.Empty,
-            null);
-    }
 }

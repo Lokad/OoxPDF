@@ -135,81 +135,104 @@ internal sealed partial class DocxLayoutEngine
                 : page with { PlacedRelatedStories = placedStories };
         }
 
-        return AddPlacedEndnoteStories(document, pagesWithStories, resolveRelatedStoryLayouts, placedStoryKeys, cancellationToken);
-    }
+        return AddPlacedEndnoteStories(pagesWithStories);
 
-    private static IReadOnlyList<DocxLayoutPage> AddPlacedEndnoteStories(
-        DocxDocument document,
-        IReadOnlyList<DocxLayoutPage> pages,
-        Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
-        HashSet<(DocxRelatedStoryKind Kind, string Id)> placedStoryKeys,
-        CancellationToken cancellationToken)
-    {
-        List<DocxInlineReferenceLocation> endnoteLocations = ResolveReferencedRelatedStoryLocations(document, DocxRelatedStoryKind.Endnote, placedStoryKeys).ToList();
-        if (endnoteLocations.Count == 0)
+        IReadOnlyList<DocxLayoutPage> AddPlacedEndnoteStories(IReadOnlyList<DocxLayoutPage> pages)
         {
-            return pages;
-        }
-
-        var outputPages = pages.ToList();
-        var documentEndLocations = new List<DocxInlineReferenceLocation>();
-        var sectionEndLocations = new List<DocxInlineReferenceLocation>();
-        foreach (DocxInlineReferenceLocation endnoteLocation in endnoteLocations)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, endnoteLocation) < 0)
+            List<DocxInlineReferenceLocation> endnoteLocations = ResolveReferencedRelatedStoryLocations(document, DocxRelatedStoryKind.Endnote, placedStoryKeys).ToList();
+            if (endnoteLocations.Count == 0)
             {
-                documentEndLocations.Add(endnoteLocation);
-                continue;
+                return pages;
             }
 
-            sectionEndLocations.Add(endnoteLocation);
-        }
-
-        foreach (IGrouping<(int StartBlockIndex, int EndBlockIndex), DocxInlineReferenceLocation> sectionGroup in sectionEndLocations
-                     .GroupBy(location => ResolveSectionBlockRange(document.BodyElements, location.SourceBlockIndex))
-                     .OrderBy(group => group.Key.StartBlockIndex))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            int sectionEndPageIndex = ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, sectionGroup.First());
-            if (sectionEndPageIndex < 0)
-            {
-                documentEndLocations.AddRange(sectionGroup);
-                continue;
-            }
-
-            Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[sectionEndPageIndex])));
-            var sectionEndStories = new List<DocxReferencedRelatedStoryLayout>();
-            foreach (DocxInlineReferenceLocation location in sectionGroup)
+            var outputPages = pages.ToList();
+            var documentEndLocations = new List<DocxInlineReferenceLocation>();
+            var sectionEndLocations = new List<DocxInlineReferenceLocation>();
+            foreach (DocxInlineReferenceLocation endnoteLocation in endnoteLocations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (TryResolveReferencedRelatedStoryLayout(storyByKey, location, out DocxRelatedStoryLayout? storyLayout))
+                if (ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, endnoteLocation) < 0)
                 {
-                    sectionEndStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
+                    documentEndLocations.Add(endnoteLocation);
+                    continue;
+                }
+
+                sectionEndLocations.Add(endnoteLocation);
+            }
+
+            foreach (IGrouping<(int StartBlockIndex, int EndBlockIndex), DocxInlineReferenceLocation> sectionGroup in sectionEndLocations
+                         .GroupBy(location => ResolveSectionBlockRange(document.BodyElements, location.SourceBlockIndex))
+                         .OrderBy(group => group.Key.StartBlockIndex))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int sectionEndPageIndex = ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, sectionGroup.First());
+                if (sectionEndPageIndex < 0)
+                {
+                    documentEndLocations.AddRange(sectionGroup);
+                    continue;
+                }
+
+                Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[sectionEndPageIndex])));
+                var sectionEndStories = new List<DocxReferencedRelatedStoryLayout>();
+                foreach (DocxInlineReferenceLocation location in sectionGroup)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (TryResolveReferencedRelatedStoryLayout(endnoteStoryByKey, location, out DocxRelatedStoryLayout? storyLayout))
+                    {
+                        sectionEndStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
+                    }
+                }
+
+                if (sectionEndStories.Count > 0)
+                {
+                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, cancellationToken);
                 }
             }
 
-            if (sectionEndStories.Count > 0)
+            List<DocxRelatedStoryLayout> documentEndStories = [];
+            if (documentEndLocations.Count > 0)
             {
-                PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, cancellationToken);
-            }
-        }
-
-        List<DocxRelatedStoryLayout> documentEndStories = [];
-        if (documentEndLocations.Count > 0)
-        {
-            Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[^1])));
-            foreach (DocxInlineReferenceLocation location in documentEndLocations)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (TryResolveReferencedRelatedStoryLayout(storyByKey, location, out DocxRelatedStoryLayout? storyLayout))
+                Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[^1])));
+                foreach (DocxInlineReferenceLocation location in documentEndLocations)
                 {
-                    documentEndStories.Add(storyLayout);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (TryResolveReferencedRelatedStoryLayout(endnoteStoryByKey, location, out DocxRelatedStoryLayout? storyLayout))
+                    {
+                        documentEndStories.Add(storyLayout);
+                    }
                 }
             }
-        }
 
-        return ReindexPageOwnedLayouts(AddDocumentEndnoteStories(outputPages, documentEndStories));
+            return ReindexPageOwnedLayouts(AddDocumentEndnoteStories());
+
+            IReadOnlyList<DocxLayoutPage> AddDocumentEndnoteStories()
+            {
+                if (documentEndStories.Count == 0)
+                {
+                    return outputPages;
+                }
+
+                var documentEndPages = outputPages.ToList();
+                DocxLayoutPage activePage = documentEndPages[^1];
+                List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
+                double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
+                int activePageIndex = documentEndPages.Count - 1;
+                foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
+                {
+                    PlaceRelatedStorySlices(
+                        documentEndPages,
+                        ref activePageIndex,
+                        ref activePage,
+                        ref activePlacedStories,
+                        ref cursorTop,
+                        endnoteStoryLayout,
+                        sourceBlockIndex: -1,
+                        insertContinuationAfterActivePage: false);
+                }
+
+                return documentEndPages;
+            }
+        }
     }
 
     private static void PlaceSectionEndEndnoteStories(
@@ -235,36 +258,6 @@ internal sealed partial class DocxLayoutEngine
                 story.Location.SourceBlockIndex,
                 insertContinuationAfterActivePage: true);
         }
-    }
-
-    private static IReadOnlyList<DocxLayoutPage> AddDocumentEndnoteStories(
-        IReadOnlyList<DocxLayoutPage> pages,
-        IReadOnlyList<DocxRelatedStoryLayout> endnoteStories)
-    {
-        if (endnoteStories.Count == 0)
-        {
-            return pages;
-        }
-
-        var outputPages = pages.ToList();
-        DocxLayoutPage activePage = outputPages[^1];
-        List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
-        int activePageIndex = outputPages.Count - 1;
-        foreach (DocxRelatedStoryLayout storyLayout in endnoteStories)
-        {
-            PlaceRelatedStorySlices(
-                outputPages,
-                ref activePageIndex,
-                ref activePage,
-                ref activePlacedStories,
-                ref cursorTop,
-                storyLayout,
-                sourceBlockIndex: -1,
-                insertContinuationAfterActivePage: false);
-        }
-
-        return outputPages;
     }
 
     private static void PlaceRelatedStorySlices(
@@ -349,6 +342,18 @@ internal sealed partial class DocxLayoutEngine
 
         activePlacedStories = [];
         cursorTop = activePage.Height - activePage.MarginTop;
+
+        DocxLayoutPage CreateEmptyContinuationPage(DocxLayoutPage template)
+        {
+            return template with
+            {
+                StaticTextLines = [],
+                StaticInlineImages = [],
+                StaticTableRows = [],
+                PlacedRelatedStories = [],
+                Items = []
+            };
+        }
     }
 
     private static IEnumerable<DocxInlineReferenceLocation> ResolveReferencedRelatedStoryLocations(
@@ -395,7 +400,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxLayoutPage> pages,
         DocxInlineReferenceLocation location)
     {
-        int referencePageIndex = FindInlineReferenceRenderedPageIndex(pages, location);
+        int referencePageIndex = FindInlineReferenceRenderedPageIndex();
         if (referencePageIndex < 0 ||
             !string.Equals(pages[referencePageIndex].PageSettings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase))
         {
@@ -413,6 +418,19 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return sectionEndPageIndex >= 0 ? sectionEndPageIndex : referencePageIndex;
+
+        int FindInlineReferenceRenderedPageIndex()
+        {
+            for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+            {
+                if (IsInlineReferenceRenderedOnPage(pages, pageIndex, location))
+                {
+                    return pageIndex;
+                }
+            }
+
+            return -1;
+        }
     }
 
     private static (int StartBlockIndex, int EndBlockIndex) ResolveSectionBlockRange(IReadOnlyList<DocxBodyElement> elements, int sourceBlockIndex)
@@ -440,19 +458,6 @@ internal sealed partial class DocxLayoutEngine
         return (startBlockIndex, endBlockIndex);
     }
 
-    private static int FindInlineReferenceRenderedPageIndex(IReadOnlyList<DocxLayoutPage> pages, DocxInlineReferenceLocation location)
-    {
-        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
-        {
-            if (IsInlineReferenceRenderedOnPage(pages, pageIndex, location))
-            {
-                return pageIndex;
-            }
-        }
-
-        return -1;
-    }
-
     private static double ResolvePageBodyWidth(DocxLayoutPage page)
     {
         return Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
@@ -473,18 +478,6 @@ internal sealed partial class DocxLayoutEngine
             .DefaultIfEmpty(page.Height - page.MarginTop)
             .Min();
         return Math.Min(bodyBottom, placedStoryBottom) - FootnoteSeparatorGapPoints;
-    }
-
-    private static DocxLayoutPage CreateEmptyContinuationPage(DocxLayoutPage template)
-    {
-        return template with
-        {
-            StaticTextLines = [],
-            StaticInlineImages = [],
-            StaticTableRows = [],
-            PlacedRelatedStories = [],
-            Items = []
-        };
     }
 
     private static IReadOnlyList<DocxLayoutPage> ReindexPageOwnedLayouts(IReadOnlyList<DocxLayoutPage> pages)
@@ -622,12 +615,12 @@ internal sealed partial class DocxLayoutEngine
         int sourceBlockIndex = location.SourceBlockIndex;
         DocxInlineReference reference = location.Reference;
         if (reference.SourceRunIndex < 0 ||
-            !IsInlineReferenceRunRenderedAnywhere(pages, location, reference.SourceRunIndex))
+            !IsInlineReferenceRunRenderedAnywhere(reference.SourceRunIndex))
         {
             return true;
         }
 
-        if (IsInlineReferenceOffsetRenderedAnywhere(pages, location, reference.SourceRunIndex, reference.TextOffsetInRun))
+        if (IsInlineReferenceOffsetRenderedAnywhere(reference.SourceRunIndex, reference.TextOffsetInRun))
         {
             return EnumeratePageTextLineOwners(pages[pageIndex])
                 .Any(owner => TextLineMatchesInlineReferenceOwner(owner, sourceBlockIndex, location.SourceParagraph) &&
@@ -637,27 +630,40 @@ internal sealed partial class DocxLayoutEngine
         return EnumeratePageTextLineOwners(pages[pageIndex])
             .Any(owner => TextLineMatchesInlineReferenceOwner(owner, sourceBlockIndex, location.SourceParagraph) &&
                 owner.Line.Segments.Any(segment => segment.SourceTextRunIndex == reference.SourceRunIndex));
-    }
 
-    private static bool IsInlineReferenceOffsetRenderedAnywhere(
-        IReadOnlyList<DocxLayoutPage> pages,
-        DocxInlineReferenceLocation location,
-        int sourceRunIndex,
-        int textOffsetInRun)
-    {
-        foreach (DocxLayoutPage page in pages)
+        bool IsInlineReferenceRunRenderedAnywhere(int sourceRunIndex)
         {
-            foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
+            foreach (DocxLayoutPage page in pages)
             {
-                if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
-                    owner.Line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, sourceRunIndex, textOffsetInRun)))
+                foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
                 {
-                    return true;
+                    if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
+                        owner.Line.Segments.Any(segment => segment.SourceTextRunIndex == sourceRunIndex))
+                    {
+                        return true;
+                    }
                 }
             }
+
+            return false;
         }
 
-        return false;
+        bool IsInlineReferenceOffsetRenderedAnywhere(int sourceRunIndex, int textOffsetInRun)
+        {
+            foreach (DocxLayoutPage page in pages)
+            {
+                foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
+                {
+                    if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
+                        owner.Line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, sourceRunIndex, textOffsetInRun)))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
     }
 
     private static bool SegmentContainsSourceTextOffset(DocxTextSegmentLayout segment, int sourceRunIndex, int textOffsetInRun)
@@ -670,26 +676,6 @@ internal sealed partial class DocxLayoutEngine
         int start = Math.Max(0, segment.SourceTextOffsetInRun);
         int end = start + segment.Text.Length;
         return textOffsetInRun >= start && textOffsetInRun < end;
-    }
-
-    private static bool IsInlineReferenceRunRenderedAnywhere(
-        IReadOnlyList<DocxLayoutPage> pages,
-        DocxInlineReferenceLocation location,
-        int sourceRunIndex)
-    {
-        foreach (DocxLayoutPage page in pages)
-        {
-            foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
-            {
-                if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
-                    owner.Line.Segments.Any(segment => segment.SourceTextRunIndex == sourceRunIndex))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     private static bool TextLineMatchesInlineReferenceOwner(DocxPageTextLineOwner owner, int sourceBlockIndex, DocxParagraph sourceParagraph)

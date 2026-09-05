@@ -102,10 +102,70 @@ internal sealed partial class PptxRenderer
         PdfImageXObject? image = null;
         if (!crop.IsEmpty)
         {
-            image = GetOrCreateCroppedImage(imageResource, recolor, crop, imageCache, diagnosticSink, slideIndex);
+            image = GetOrCreateCroppedImage(crop);
             if (image is not null)
             {
                 crop = default;
+            }
+        }
+
+        PdfImageXObject? GetOrCreateCroppedImage(CropRect crop)
+        {
+            string cacheKey = imageResource.PartName + "\u001f" + ImageRecolorCacheKey(recolor) + "\u001fcrop:" +
+                crop.Left.ToString("R", CultureInfo.InvariantCulture) + "," +
+                crop.Top.ToString("R", CultureInfo.InvariantCulture) + "," +
+                crop.Right.ToString("R", CultureInfo.InvariantCulture) + "," +
+                crop.Bottom.ToString("R", CultureInfo.InvariantCulture);
+            if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
+            {
+                return cached;
+            }
+
+            PdfImageXObject? croppedImage = CreateCroppedImage(
+                imageResource.PartName,
+                imageResource.ContentType,
+                imageResource.Bytes);
+            imageCache?.TryAdd(cacheKey, croppedImage);
+            return croppedImage;
+
+            PdfImageXObject? CreateCroppedImage(string partName, string contentType, byte[] bytes)
+            {
+                try
+                {
+                    if (contentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+                    {
+                        PngImage png = PngImage.Read(bytes);
+                        return CreateCroppedRgbImage(png.Width, png.Height, png.Rgb, png.Alpha, recolor, crop);
+                    }
+
+                    if (contentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
+                        contentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        BmpImage bmp = BmpImage.Read(bytes);
+                        return CreateCroppedRgbImage(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha, recolor, crop);
+                    }
+
+                    if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+                        contentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+                    {
+                        JpegImage jpeg = JpegImage.Read(bytes);
+                        return CreateCroppedRgbImage(jpeg.Width, jpeg.Height, jpeg.Rgb, alpha: null, recolor, crop);
+                    }
+                }
+                catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
+                {
+                    diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                        "IMAGE_CROP_UNSUPPORTED_FORMAT",
+                        OoxPdfSeverity.Warning,
+                        $"Image '{partName}' could not be decoded for Office-style cropped image embedding on slide {slideIndex}; falling back to PDF clipping.",
+                        partName,
+                        PageIndex: null,
+                        SlideIndex: slideIndex,
+                        Feature: "image crop",
+                        Fallback: "PDF clipping"));
+                }
+
+                return null;
             }
         }
 
@@ -849,35 +909,6 @@ internal sealed partial class PptxRenderer
         return image;
     }
 
-    private static PdfImageXObject? GetOrCreateCroppedImage(
-        PptxSceneImageResource imageResource,
-        PptxSceneImageRecolor recolor,
-        CropRect crop,
-        Dictionary<string, PdfImageXObject?>? imageCache,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex)
-    {
-        string cacheKey = imageResource.PartName + "\u001f" + ImageRecolorCacheKey(recolor) + "\u001fcrop:" +
-            crop.Left.ToString("R", CultureInfo.InvariantCulture) + "," +
-            crop.Top.ToString("R", CultureInfo.InvariantCulture) + "," +
-            crop.Right.ToString("R", CultureInfo.InvariantCulture) + "," +
-            crop.Bottom.ToString("R", CultureInfo.InvariantCulture);
-        if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
-        {
-            return cached;
-        }
-
-        PdfImageXObject? image = CreateCroppedImage(
-            imageResource.PartName,
-            imageResource.ContentType,
-            imageResource.Bytes,
-            recolor,
-            crop,
-            diagnosticSink,
-            slideIndex);
-        imageCache?.TryAdd(cacheKey, image);
-        return image;
-    }
 
     private static PdfImageXObject? CreateImage(
         string partName,
@@ -911,7 +942,7 @@ internal sealed partial class PptxRenderer
                     diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                         "PPTX_UNSUPPORTED_IMAGE_RECOLOR",
                         OoxPdfSeverity.Warning,
-                        $"PPTX {ImageRecolorKindName(recolor)} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.",
+                        $"PPTX {ImageRecolorKindName()} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.",
                         partName,
                         PageIndex: null,
                         SlideIndex: slideIndex,
@@ -961,53 +992,18 @@ internal sealed partial class PptxRenderer
         }
 
         return null;
-    }
 
-    private static PdfImageXObject? CreateCroppedImage(
-        string partName,
-        string contentType,
-        byte[] bytes,
-        PptxSceneImageRecolor recolor,
-        CropRect crop,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex)
-    {
-        try
+        string ImageRecolorKindName()
         {
-            if (contentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+            return recolor.Kind switch
             {
-                PngImage png = PngImage.Read(bytes);
-                return CreateCroppedRgbImage(png.Width, png.Height, png.Rgb, png.Alpha, recolor, crop);
-            }
-
-            if (contentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
-                contentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
-            {
-                BmpImage bmp = BmpImage.Read(bytes);
-                return CreateCroppedRgbImage(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha, recolor, crop);
-            }
-
-            if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
-                contentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
-            {
-                JpegImage jpeg = JpegImage.Read(bytes);
-                return CreateCroppedRgbImage(jpeg.Width, jpeg.Height, jpeg.Rgb, alpha: null, recolor, crop);
-            }
+                PptxSceneImageRecolorKind.Luminance => "luminance",
+                PptxSceneImageRecolorKind.Duotone => "duotone",
+                PptxSceneImageRecolorKind.Grayscale => "grayscale",
+                PptxSceneImageRecolorKind.BiLevel => "bi-level",
+                _ => "none"
+            };
         }
-        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
-        {
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                "IMAGE_CROP_UNSUPPORTED_FORMAT",
-                OoxPdfSeverity.Warning,
-                $"Image '{partName}' could not be decoded for Office-style cropped image embedding on slide {slideIndex}; falling back to PDF clipping.",
-                partName,
-                PageIndex: null,
-                SlideIndex: slideIndex,
-                Feature: "image crop",
-                Fallback: "PDF clipping"));
-        }
-
-        return null;
     }
 
     private static PdfImageXObject? CreateCroppedRgbImage(
@@ -1066,9 +1062,9 @@ internal sealed partial class PptxRenderer
             double blue = rgb[i + 2];
             if (recolor.Kind == PptxSceneImageRecolorKind.Luminance)
             {
-                transformed[i] = ApplyBrightnessContrast(red, recolor.Brightness, recolor.Contrast);
-                transformed[i + 1] = ApplyBrightnessContrast(green, recolor.Brightness, recolor.Contrast);
-                transformed[i + 2] = ApplyBrightnessContrast(blue, recolor.Brightness, recolor.Contrast);
+                transformed[i] = ApplyBrightnessContrast(red);
+                transformed[i + 1] = ApplyBrightnessContrast(green);
+                transformed[i + 2] = ApplyBrightnessContrast(blue);
                 continue;
             }
 
@@ -1097,23 +1093,46 @@ internal sealed partial class PptxRenderer
         }
 
         return transformed;
+
+        byte ApplyBrightnessContrast(double channel)
+        {
+            double value = channel / 255d;
+            value = ApplyContrast(value, recolor.Contrast);
+            value = ApplyBrightness(value, recolor.Brightness);
+            return ToByte(value * 255d);
+
+            double ApplyContrast(double value, double contrast)
+            {
+                value = Math.Clamp(value, 0d, 1d);
+                if (contrast < 0d)
+                {
+                    return value * (1d + contrast);
+                }
+
+                if (contrast > 0d)
+                {
+                    double scale = 1d - contrast;
+                    return value < 0.5d
+                        ? value * scale
+                        : 1d - (1d - value) * scale;
+                }
+
+                return value;
+            }
+
+            double ApplyBrightness(double value, double brightness)
+            {
+                value = Math.Clamp(value, 0d, 1d);
+                return brightness < 0d
+                    ? value * (1d + brightness)
+                    : value + brightness;
+            }
+        }
     }
 
     private static bool IsNoImageRecolor(PptxSceneImageRecolor recolor)
     {
         return recolor.Kind == PptxSceneImageRecolorKind.None;
-    }
-
-    private static string ImageRecolorKindName(PptxSceneImageRecolor recolor)
-    {
-        return recolor.Kind switch
-        {
-            PptxSceneImageRecolorKind.Luminance => "luminance",
-            PptxSceneImageRecolorKind.Duotone => "duotone",
-            PptxSceneImageRecolorKind.Grayscale => "grayscale",
-            PptxSceneImageRecolorKind.BiLevel => "bi-level",
-            _ => "none"
-        };
     }
 
     private static string ImageRecolorCacheKey(PptxSceneImageRecolor recolor)
@@ -1126,41 +1145,6 @@ internal sealed partial class PptxRenderer
             PptxSceneImageRecolorKind.BiLevel => FormattableString.Invariant($"bi:{recolor.Threshold:0.#####}"),
             _ => "none"
         };
-    }
-
-    private static byte ApplyBrightnessContrast(double channel, double brightness, double contrast)
-    {
-        double value = channel / 255d;
-        value = ApplyContrast(value, contrast);
-        value = ApplyBrightness(value, brightness);
-        return ToByte(value * 255d);
-    }
-
-    private static double ApplyContrast(double value, double contrast)
-    {
-        value = Math.Clamp(value, 0d, 1d);
-        if (contrast < 0d)
-        {
-            return value * (1d + contrast);
-        }
-
-        if (contrast > 0d)
-        {
-            double scale = 1d - contrast;
-            return value < 0.5d
-                ? value * scale
-                : 1d - (1d - value) * scale;
-        }
-
-        return value;
-    }
-
-    private static double ApplyBrightness(double value, double brightness)
-    {
-        value = Math.Clamp(value, 0d, 1d);
-        return brightness < 0d
-            ? value * (1d + brightness)
-            : value + brightness;
     }
 
     private static byte Interpolate(byte from, byte to, double ratio)

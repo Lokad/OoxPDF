@@ -121,21 +121,123 @@ internal sealed partial class PptxRenderer
 
     private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
     {
-        DrawHighlightRunsWithFonts(textRuns, graphics, fonts);
+        DrawHighlightRunsWithFonts();
         textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
         textRuns = CoalesceUnderlineRuns(textRuns);
         foreach (TextRun run in textRuns)
         {
             if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
             {
-                DrawWrappedRun(graphics, rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
+                DrawWrappedRun(rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
+            }
+        }
+
+        void DrawWrappedRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
+        {
+            graphics.SaveState();
+            if (HasTextTransform(run))
+            {
+                ApplyTextTransform(graphics, run);
+            }
+
+            graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
+            if (glyphRun is not null)
+            {
+                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
+                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
+                if (needsTextAlpha)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
+                }
+
+                DrawGlyphText(graphics, glyphRun);
+
+                if (run.Underline)
+                {
+                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
+                    {
+                        FillTextDecorationRectangleEvenOdd(graphics, underline);
+                    }
+                }
+
+                if (run.Strike)
+                {
+                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
+                    {
+                        FillTextDecorationRectangleEvenOdd(graphics, strike);
+                    }
+                }
+
+                if (needsTextAlpha)
+                {
+                    graphics.RestoreState();
+                }
+            }
+
+            graphics.RestoreState();
+        }
+
+        void DrawHighlightRunsWithFonts()
+        {
+            foreach (TextRun run in CoalesceHighlightRuns())
+            {
+                if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                {
+                    continue;
+                }
+
+                DrawHighlightRun(rendered.Font, run);
+            }
+
+            IReadOnlyList<TextRun> CoalesceHighlightRuns()
+            {
+                var coalesced = new List<TextRun>(textRuns.Count);
+                foreach (TextRun run in textRuns)
+                {
+                    if (run.Text.Length == 0 || run.HighlightColor is null)
+                    {
+                        continue;
+                    }
+
+                    if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, true, true))
+                    {
+                        TextRun previous = coalesced[^1];
+                        coalesced[^1] = previous with
+                        {
+                            Text = previous.Text + run.Text,
+                            Width = run.X + run.Width - previous.X
+                        };
+                    }
+                    else
+                    {
+                        coalesced.Add(run);
+                    }
+                }
+
+                return coalesced;
+            }
+
+            void DrawHighlightRun(PdfEmbeddedFont embedded, TextRun run)
+            {
+                if (run.HighlightColor is not { } highlight)
+                {
+                    return;
+                }
+
+                double baselineY = run.Y + run.BaselineOffset;
+                double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
+                DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, lineWidth);
             }
         }
     }
 
     private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
     {
-        DrawHighlightSpansWithFonts(textSpans, graphics, fonts);
+        DrawHighlightSpansWithFonts();
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
@@ -147,8 +249,120 @@ internal sealed partial class PptxRenderer
                 TextRun run = emissionSpan.Run;
                 if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
                 {
-                    DrawWrappedSpan(graphics, rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
+                    DrawWrappedSpan(rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
                 }
+            }
+        }
+
+        void DrawWrappedSpan(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
+        {
+            TextRun run = span.Run;
+            graphics.SaveState();
+            if (HasTextTransform(run))
+            {
+                ApplyTextTransform(graphics, run);
+            }
+
+            graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
+            if (glyphRun is not null)
+            {
+                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
+                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
+                if (needsTextAlpha)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
+                }
+
+                DrawGlyphText(graphics, glyphRun);
+
+                if (run.Underline)
+                {
+                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
+                    {
+                        FillTextDecorationRectangleEvenOdd(graphics, underline);
+                    }
+                }
+
+                if (run.Strike)
+                {
+                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
+                    {
+                        FillTextDecorationRectangleEvenOdd(graphics, strike);
+                    }
+                }
+
+                if (needsTextAlpha)
+                {
+                    graphics.RestoreState();
+                }
+            }
+
+            graphics.RestoreState();
+        }
+
+        void DrawHighlightSpansWithFonts()
+        {
+            foreach (PptxPositionedTextSpan span in CoalesceHighlightSpans())
+            {
+                TextRun run = span.Run;
+                if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                {
+                    continue;
+                }
+
+                DrawHighlightSpan(rendered.Font, span);
+            }
+
+            IReadOnlyList<PptxPositionedTextSpan> CoalesceHighlightSpans()
+            {
+                var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
+                foreach (PptxPositionedTextSpan span in textSpans)
+                {
+                    TextRun run = span.Run;
+                    if (run.Text.Length == 0 || run.HighlightColor is null)
+                    {
+                        continue;
+                    }
+
+                    if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run, true, true))
+                    {
+                        PptxPositionedTextSpan previous = coalesced[^1];
+                        TextRun mergedRun = previous.Run with
+                        {
+                            Text = previous.Run.Text + run.Text,
+                            Width = run.X + run.Width - previous.Run.X
+                        };
+                        coalesced[^1] = previous with
+                        {
+                            Run = mergedRun,
+                            EndX = span.EndX,
+                            Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
+                            GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, run, span.GlyphSpan)
+                        };
+                    }
+                    else
+                    {
+                        coalesced.Add(span);
+                    }
+                }
+
+                return coalesced;
+            }
+
+            void DrawHighlightSpan(PdfEmbeddedFont embedded, PptxPositionedTextSpan span)
+            {
+                TextRun run = span.Run;
+                if (run.HighlightColor is not { } highlight)
+                {
+                    return;
+                }
+
+                double baselineY = span.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
+                DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, span.GlyphSpan.NaturalWidth);
             }
         }
     }
@@ -239,20 +453,6 @@ internal sealed partial class PptxRenderer
     private static bool UsesNumberedTextStateProfile(PptxPositionedTextSpan span) =>
         string.Equals(span.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) ||
         string.Equals(span.FrameAutofitMode, "noAutofit", StringComparison.Ordinal);
-
-    private static void DrawHighlightSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
-    {
-        foreach (PptxPositionedTextSpan span in CoalesceHighlightSpans(textSpans))
-        {
-            TextRun run = span.Run;
-            if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
-            {
-                continue;
-            }
-
-            DrawHighlightSpan(graphics, rendered.Font, span);
-        }
-    }
 
     private static IReadOnlyList<PptxPositionedTextSpan> SplitLeadingSpacesAtHighlightBoundaries(IReadOnlyList<PptxPositionedTextSpan> textSpans)
     {
@@ -383,7 +583,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (coalesced.Count != 0 && CanCoalesceTextSpan(coalesced[^1], span, compareHighlight))
+            if (coalesced.Count != 0 && CanCoalesceTextSpan(coalesced[^1], span))
             {
                 PptxPositionedTextSpan previous = coalesced[^1];
                 TextRun mergedRun = previous.Run with
@@ -406,19 +606,19 @@ internal sealed partial class PptxRenderer
         }
 
         return coalesced;
-    }
 
-    private static bool CanCoalesceTextSpan(PptxPositionedTextSpan left, PptxPositionedTextSpan right, bool compareHighlight)
-    {
-        if (left.SourceRun is not null &&
-            right.SourceRun is not null &&
-            !ReferenceEquals(left.SourceRun, right.SourceRun) &&
-            PreservesSourceRunTextOperationBoundary(left, right))
+        bool CanCoalesceTextSpan(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
         {
-            return false;
-        }
+            if (left.SourceRun is not null &&
+                right.SourceRun is not null &&
+                !ReferenceEquals(left.SourceRun, right.SourceRun) &&
+                PreservesSourceRunTextOperationBoundary(left, right))
+            {
+                return false;
+            }
 
-        return CanCoalesceTextRun(left.Run, right.Run, compareHighlight, PreservesHighlightTextOperationBoundaries(left, right));
+            return CanCoalesceTextRun(left.Run, right.Run, compareHighlight, PreservesHighlightTextOperationBoundaries(left, right));
+        }
     }
 
     private static bool CanCoalesceTextRun(TextRun left, TextRun right, bool compareHighlight, bool preserveHighlightBoundary)
@@ -474,93 +674,16 @@ internal sealed partial class PptxRenderer
         }
 
         return !HasTrailingWhitespaceBoundary(left.Run.Text);
+
+        bool HasTrailingWhitespaceBoundary(string text)
+        {
+            return text.Length > 0 && char.IsWhiteSpace(text[^1]);
+        }
     }
 
     private static bool UsesMathTypeface(string? typeface)
     {
         return typeface?.IndexOf("Math", StringComparison.OrdinalIgnoreCase) >= 0;
-    }
-
-    private static bool HasTrailingWhitespaceBoundary(string text)
-    {
-        return text.Length > 0 && char.IsWhiteSpace(text[^1]);
-    }
-
-    private static void DrawHighlightRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
-    {
-        foreach (TextRun run in CoalesceHighlightRuns(textRuns))
-        {
-            if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
-            {
-                continue;
-            }
-
-            DrawHighlightRun(graphics, rendered.Font, run);
-        }
-    }
-
-    private static IReadOnlyList<TextRun> CoalesceHighlightRuns(IReadOnlyList<TextRun> textRuns)
-    {
-        var coalesced = new List<TextRun>(textRuns.Count);
-        foreach (TextRun run in textRuns)
-        {
-            if (run.Text.Length == 0 || run.HighlightColor is null)
-            {
-                continue;
-            }
-
-            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, true, true))
-            {
-                TextRun previous = coalesced[^1];
-                coalesced[^1] = previous with
-                {
-                    Text = previous.Text + run.Text,
-                    Width = run.X + run.Width - previous.X
-                };
-            }
-            else
-            {
-                coalesced.Add(run);
-            }
-        }
-
-        return coalesced;
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> CoalesceHighlightSpans(IReadOnlyList<PptxPositionedTextSpan> textSpans)
-    {
-        var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
-        foreach (PptxPositionedTextSpan span in textSpans)
-        {
-            TextRun run = span.Run;
-            if (run.Text.Length == 0 || run.HighlightColor is null)
-            {
-                continue;
-            }
-
-            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run, true, true))
-            {
-                PptxPositionedTextSpan previous = coalesced[^1];
-                TextRun mergedRun = previous.Run with
-                {
-                    Text = previous.Run.Text + run.Text,
-                    Width = run.X + run.Width - previous.Run.X
-                };
-                coalesced[^1] = previous with
-                {
-                    Run = mergedRun,
-                    EndX = span.EndX,
-                    Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
-                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, run, span.GlyphSpan)
-                };
-            }
-            else
-            {
-                coalesced.Add(span);
-            }
-        }
-
-        return coalesced;
     }
 
     private static IReadOnlyList<TextRun> CoalesceUnderlineRuns(IReadOnlyList<TextRun> textRuns)
@@ -783,105 +906,6 @@ internal sealed partial class PptxRenderer
         return familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
     }
 
-    private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
-    {
-        graphics.SaveState();
-        if (HasTextTransform(run))
-        {
-            ApplyTextTransform(graphics, run);
-        }
-
-        graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-        TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
-        if (glyphRun is not null)
-        {
-            bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
-                (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
-            if (needsTextAlpha)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
-            }
-
-            DrawGlyphText(graphics, glyphRun);
-
-            if (run.Underline)
-            {
-                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
-                {
-                    FillTextDecorationRectangleEvenOdd(graphics, underline);
-                }
-            }
-
-            if (run.Strike)
-            {
-                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
-                {
-                    FillTextDecorationRectangleEvenOdd(graphics, strike);
-                }
-            }
-
-            if (needsTextAlpha)
-            {
-                graphics.RestoreState();
-            }
-        }
-
-        graphics.RestoreState();
-    }
-
-    private static void DrawWrappedSpan(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
-    {
-        TextRun run = span.Run;
-        graphics.SaveState();
-        if (HasTextTransform(run))
-        {
-            ApplyTextTransform(graphics, run);
-        }
-
-        graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-        TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
-        if (glyphRun is not null)
-        {
-            bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
-                (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
-            if (needsTextAlpha)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
-            }
-
-            DrawGlyphText(graphics, glyphRun);
-
-            if (run.Underline)
-            {
-                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
-                {
-                    FillTextDecorationRectangleEvenOdd(graphics, underline);
-                }
-            }
-
-            if (run.Strike)
-            {
-                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
-                {
-                    FillTextDecorationRectangleEvenOdd(graphics, strike);
-                }
-            }
-
-            if (needsTextAlpha)
-            {
-                graphics.RestoreState();
-            }
-        }
-
-        graphics.RestoreState();
-    }
-
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
     {
         string glyphHex = embedded.EncodeGlyphHex(run.Text);
@@ -898,11 +922,41 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms(embedded, run);
+        IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms();
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
         double pdfCharacterSpacing = run.CharacterSpacing;
         string? positioningArray = EncodeGlyphPositioningArray(embedded, glyphs, run.FontSize, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
+
+        IReadOnlyList<TextGlyphAtom> BuildTextGlyphAtoms()
+        {
+            var atoms = new List<TextGlyphAtom>();
+            ushort previousGlyph = 0;
+            foreach (Rune rune in run.Text.EnumerateRunes())
+            {
+                ushort glyph = embedded.Font.MapCodePoint(rune.Value);
+                if (glyph == 0)
+                {
+                    continue;
+                }
+
+                double adjustmentBefore = 0d;
+                if (atoms.Count > 0)
+                {
+                    adjustmentBefore += run.CharacterSpacing;
+                    if (run.KerningEnabled && previousGlyph != 0)
+                    {
+                        adjustmentBefore += embedded.Font.GetKerning(previousGlyph, glyph) * run.FontSize / embedded.Font.UnitsPerEm;
+                    }
+                }
+
+                double advance = embedded.Font.GetAdvanceWidth(glyph) * run.FontSize / embedded.Font.UnitsPerEm;
+                atoms.Add(new TextGlyphAtom(rune.Value, run.FontFamily, PptxGlyphTypefaceResolutionSource.Primary, glyph, advance, adjustmentBefore));
+                previousGlyph = glyph;
+            }
+
+            return atoms;
+        }
     }
 
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
@@ -922,7 +976,7 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        PptxPdfTextEmissionContext emissionContext = CreatePdfTextEmissionContext(span);
+        PptxPdfTextEmissionContext emissionContext = CreatePdfTextEmissionContext();
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(emissionContext);
         double pdfCharacterSpacing = span.PdfCharacterSpacingOverride
             ?? PptxPdfTextEmissionProfile.CharacterSpacing(emissionContext, span.GlyphSpan.CharacterSpacing);
@@ -931,51 +985,51 @@ internal sealed partial class PptxRenderer
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.TypefaceResolutionSource, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
-    }
 
-    private static PptxPdfTextEmissionContext CreatePdfTextEmissionContext(PptxPositionedTextSpan span)
-    {
-        TextRun run = span.Run;
-        return new PptxPdfTextEmissionContext(
-            run.FontSize,
-            run.Y + run.BaselineOffset,
-            span.FrameIndex,
-            span.ParagraphIndex,
-            span.LineIndex,
-            span.SpanIndex,
-            span.LineSpanCount,
-            span.FrameFontScale,
-            span.FrameShapeX,
-            span.FrameShapeTopY,
-            span.FrameShapeWidth,
-            span.FrameShapeHeight,
-            span.TableRowIndex,
-            span.TableColumnIndex,
-            span.TableRowSpan,
-            span.TableColumnSpan,
-            span.FrameInsetLeft,
-            span.FrameInsetRight,
-            span.FrameInsetTop,
-            span.FrameInsetBottom,
-            span.FrameWrapMode,
-            span.FrameWrapValue,
-            span.FrameVerticalOverflowMode,
-            span.FrameVerticalOverflowValue,
-            span.FrameVerticalOverflowSource,
-            span.FrameAutofitMode,
-            span.FrameTextX,
-            span.FrameTextWidth,
-            span.FrameTextWrapWidth,
-            span.FrameTextHeight,
-            span.FrameClipX,
-            span.FrameClipWidth,
-            span.FrameClipY,
-            span.FrameClipHeight,
-            span.FrameColumnCount,
-            span.FrameColumnSpacing,
-            span.LineBox?.TopY ?? run.Y,
-            span.LineBox?.Advance ?? 0d,
-            span.LineBox?.MaxFontSize ?? run.FontSize);
+        PptxPdfTextEmissionContext CreatePdfTextEmissionContext()
+        {
+            TextRun emissionRun = span.Run;
+            return new PptxPdfTextEmissionContext(
+                emissionRun.FontSize,
+                emissionRun.Y + emissionRun.BaselineOffset,
+                span.FrameIndex,
+                span.ParagraphIndex,
+                span.LineIndex,
+                span.SpanIndex,
+                span.LineSpanCount,
+                span.FrameFontScale,
+                span.FrameShapeX,
+                span.FrameShapeTopY,
+                span.FrameShapeWidth,
+                span.FrameShapeHeight,
+                span.TableRowIndex,
+                span.TableColumnIndex,
+                span.TableRowSpan,
+                span.TableColumnSpan,
+                span.FrameInsetLeft,
+                span.FrameInsetRight,
+                span.FrameInsetTop,
+                span.FrameInsetBottom,
+                span.FrameWrapMode,
+                span.FrameWrapValue,
+                span.FrameVerticalOverflowMode,
+                span.FrameVerticalOverflowValue,
+                span.FrameVerticalOverflowSource,
+                span.FrameAutofitMode,
+                span.FrameTextX,
+                span.FrameTextWidth,
+                span.FrameTextWrapWidth,
+                span.FrameTextHeight,
+                span.FrameClipX,
+                span.FrameClipWidth,
+                span.FrameClipY,
+                span.FrameClipHeight,
+                span.FrameColumnCount,
+                span.FrameColumnSpacing,
+                span.LineBox?.TopY ?? emissionRun.Y,
+                span.LineBox?.Advance ?? 0d,
+                span.LineBox?.MaxFontSize ?? emissionRun.FontSize);
+        }
     }
 
     private static string EncodeGlyphHex(PdfEmbeddedFont embedded, PptxTextGlyphSpanLayout span)
@@ -1077,60 +1131,6 @@ internal sealed partial class PptxRenderer
 
         double previousPdfAdvance = previousLayoutAdvance * pdfFontSize / layoutFontSize;
         return layoutAdjustmentBefore + previousLayoutAdvance - previousPdfAdvance;
-    }
-
-    private static IReadOnlyList<TextGlyphAtom> BuildTextGlyphAtoms(PdfEmbeddedFont embedded, TextRun run)
-    {
-        var atoms = new List<TextGlyphAtom>();
-        ushort previousGlyph = 0;
-        foreach (Rune rune in run.Text.EnumerateRunes())
-        {
-            ushort glyph = embedded.Font.MapCodePoint(rune.Value);
-            if (glyph == 0)
-            {
-                continue;
-            }
-
-            double adjustmentBefore = 0d;
-            if (atoms.Count > 0)
-            {
-                adjustmentBefore += run.CharacterSpacing;
-                if (run.KerningEnabled && previousGlyph != 0)
-                {
-                    adjustmentBefore += embedded.Font.GetKerning(previousGlyph, glyph) * run.FontSize / embedded.Font.UnitsPerEm;
-                }
-            }
-
-            double advance = embedded.Font.GetAdvanceWidth(glyph) * run.FontSize / embedded.Font.UnitsPerEm;
-            atoms.Add(new TextGlyphAtom(rune.Value, run.FontFamily, PptxGlyphTypefaceResolutionSource.Primary, glyph, advance, adjustmentBefore));
-            previousGlyph = glyph;
-        }
-
-        return atoms;
-    }
-
-    private static void DrawHighlightRun(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run)
-    {
-        if (run.HighlightColor is not { } highlight)
-        {
-            return;
-        }
-
-        double baselineY = run.Y + run.BaselineOffset;
-        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
-        DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, lineWidth);
-    }
-
-    private static void DrawHighlightSpan(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, PptxPositionedTextSpan span)
-    {
-        TextRun run = span.Run;
-        if (run.HighlightColor is not { } highlight)
-        {
-            return;
-        }
-
-        double baselineY = span.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
-        DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, span.GlyphSpan.NaturalWidth);
     }
 
     private static void DrawHighlightRectangle(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run, RgbColor highlight, double baselineY, double lineWidth)
@@ -1251,7 +1251,7 @@ internal sealed partial class PptxRenderer
     {
         if (ShouldDrawGlyphOutlinePath(glyphRun))
         {
-            DrawGlyphOutlinePath(graphics, glyphRun);
+            DrawGlyphOutlinePath();
             return;
         }
 
@@ -1295,6 +1295,43 @@ internal sealed partial class PptxRenderer
                 strokeBlue: TextStrokeColor(glyphRun).Blue,
                 strokeWidth: TextStrokeWidth(glyphRun));
         }
+
+        void DrawGlyphOutlinePath()
+        {
+            TextRun outlineRun = glyphRun.Source;
+            graphics.SetFillRgb(outlineRun.Color.Red, outlineRun.Color.Green, outlineRun.Color.Blue);
+            double shear = glyphRun.SyntheticItalic ? PdfGraphicsBuilder.SyntheticItalicShear : 0d;
+
+            double cursorX = glyphRun.X;
+            bool hasPath = false;
+            for (int i = 0; i < glyphRun.Glyphs.Count; i++)
+            {
+                TextGlyphAtom glyph = glyphRun.Glyphs[i];
+                if (i > 0)
+                {
+                    cursorX += glyph.AdjustmentBefore;
+                }
+
+                if (PdfGlyphOutlinePath.TryAppendGlyphPath(
+                    graphics,
+                    glyphRun.Font.Font,
+                    glyph.GlyphId,
+                    cursorX,
+                    glyphRun.BaselineY,
+                    glyphRun.PdfFontSize,
+                    shear))
+                {
+                    hasPath = true;
+                }
+
+                cursorX += glyph.Advance;
+            }
+
+            if (hasPath)
+            {
+                graphics.FillCurrentPath();
+            }
+        }
     }
 
     private static bool ShouldDrawGlyphOutlinePath(TextGlyphRun glyphRun)
@@ -1325,48 +1362,11 @@ internal sealed partial class PptxRenderer
         }
 
         return hasDrawableGlyph;
-    }
 
-    private static void DrawGlyphOutlinePath(PdfGraphicsBuilder graphics, TextGlyphRun glyphRun)
-    {
-        TextRun run = glyphRun.Source;
-        graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-        double shear = glyphRun.SyntheticItalic ? PdfGraphicsBuilder.SyntheticItalicShear : 0d;
-
-        double cursorX = glyphRun.X;
-        bool hasPath = false;
-        for (int i = 0; i < glyphRun.Glyphs.Count; i++)
+        bool IsAdvanceOnlyGlyph(TextGlyphAtom glyph)
         {
-            TextGlyphAtom glyph = glyphRun.Glyphs[i];
-            if (i > 0)
-            {
-                cursorX += glyph.AdjustmentBefore;
-            }
-
-            if (PdfGlyphOutlinePath.TryAppendGlyphPath(
-                graphics,
-                glyphRun.Font.Font,
-                glyph.GlyphId,
-                cursorX,
-                glyphRun.BaselineY,
-                glyphRun.PdfFontSize,
-                shear))
-            {
-                hasPath = true;
-            }
-
-            cursorX += glyph.Advance;
+            return Rune.IsWhiteSpace(new Rune(glyph.CodePoint));
         }
-
-        if (hasPath)
-        {
-            graphics.FillCurrentPath();
-        }
-    }
-
-    private static bool IsAdvanceOnlyGlyph(TextGlyphAtom glyph)
-    {
-        return Rune.IsWhiteSpace(new Rune(glyph.CodePoint));
     }
 
     private static int TextRenderingMode(TextGlyphRun glyphRun)

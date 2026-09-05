@@ -287,13 +287,22 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        if (IsSegmentedTableBorderStyle(value))
+        if (IsSegmentedTableBorderStyle())
         {
             RenderSegmentedTableBorderStrip(graphics, value, x, y, width, height, orientation);
             return;
         }
 
         graphics.FillRectangle(x, y, width, height);
+
+        bool IsSegmentedTableBorderStyle()
+        {
+            return value.Equals("dotted", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("dashSmallGap", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private static void RenderDoubleTableBorderStrip(
@@ -541,15 +550,6 @@ internal sealed partial class DocxRenderer
             previousMinor = nextMinor;
             high = !high;
         }
-    }
-
-    private static bool IsSegmentedTableBorderStyle(string value)
-    {
-        return value.Equals("dotted", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dashSmallGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void RenderDashDotStrokedTableBorderStrip(

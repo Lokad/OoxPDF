@@ -106,14 +106,14 @@ internal sealed partial class DocxLayoutEngine
         return effective.LineSpacingFactor;
     }
 
-    private static double RoundToTwips(double points)
-    {
-        return Math.Round(points * 20d, MidpointRounding.AwayFromZero) / 20d;
-    }
-
     private static double QuantizeTableCellWrappedLineHeight(double lineHeight, int wrappedLineCount)
     {
-        return wrappedLineCount > 1 ? RoundToTwips(lineHeight) : lineHeight;
+        double RoundToTwips()
+        {
+            return Math.Round(lineHeight * 20d, MidpointRounding.AwayFromZero) / 20d;
+        }
+
+        return wrappedLineCount > 1 ? RoundToTwips() : lineHeight;
     }
 
     private static bool ShouldMoveParagraphForWidowControl(
@@ -137,18 +137,6 @@ internal sealed partial class DocxLayoutEngine
             (fittingLineCount == 1 || lineCount - fittingLineCount == 1);
     }
 
-    private static bool ShouldSuppressContextualSpacing(DocxParagraph? previousParagraph, DocxParagraph paragraph)
-    {
-        DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
-        DocxEffectiveParagraphProperties? previousEffective = previousParagraph?.EffectiveProperties;
-        return effective.Spacing.ContextualSpacing == true &&
-            previousEffective is not null &&
-            string.Equals(
-                NormalizeContextualSpacingStyleId(previousEffective.StyleId),
-                NormalizeContextualSpacingStyleId(effective.StyleId),
-                StringComparison.Ordinal);
-    }
-
     private static string NormalizeContextualSpacingStyleId(string? styleId)
     {
         return string.IsNullOrWhiteSpace(styleId) ? string.Empty : styleId;
@@ -161,7 +149,19 @@ internal sealed partial class DocxLayoutEngine
         double spacingScale)
     {
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
-        bool suppress = ShouldSuppressContextualSpacing(previousParagraph, paragraph);
+        bool ShouldSuppressContextualSpacing()
+        {
+            DocxEffectiveParagraphProperties currentEffective = paragraph.EffectiveProperties;
+            DocxEffectiveParagraphProperties? previousEffective = previousParagraph?.EffectiveProperties;
+            return currentEffective.Spacing.ContextualSpacing == true &&
+                previousEffective is not null &&
+                string.Equals(
+                    NormalizeContextualSpacingStyleId(previousEffective.StyleId),
+                    NormalizeContextualSpacingStyleId(currentEffective.StyleId),
+                    StringComparison.Ordinal);
+        }
+
+        bool suppress = ShouldSuppressContextualSpacing();
         double spacingBefore = effective.SpacingBeforePoints * spacingScale;
         double spacingAfter = effective.SpacingAfterPoints * spacingScale;
         double appliedBefore = suppress
@@ -215,7 +215,7 @@ internal sealed partial class DocxLayoutEngine
             if (next is DocxTableElement nextTable)
             {
                 height += paragraph.EffectiveProperties.SpacingAfterPoints * paragraphSpacingScale;
-                height += EstimateFirstTableRowHeight(nextTable.Table, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale);
+                height += EstimateFirstTableRowHeight(nextTable.Table);
                 firstTableRowCount++;
             }
 
@@ -223,6 +223,24 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return new DocxKeepBlockEstimate(height, paragraphCount, firstTableRowCount);
+
+        double EstimateFirstTableRowHeight(DocxTable table)
+        {
+            DocxTableRow? row = table.Rows.FirstOrDefault();
+            if (row is null)
+            {
+                return 0d;
+            }
+
+            DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth);
+            double[] cellWidths = GetTableRowCellWidths(row, grid.EffectiveColumns, grid.Scale);
+            double rowTopPadding = ResolveTableRowTopPadding(row);
+            double contentHeight = row.Cells
+                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, null, paragraphSpacingScale: paragraphSpacingScale))
+                .DefaultIfEmpty(0d)
+                .Max();
+            return ResolveTableRowHeight(row, contentHeight);
+        }
     }
 
     private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out DocxBodyElement? target)
@@ -282,24 +300,6 @@ internal sealed partial class DocxLayoutEngine
         return height;
     }
 
-    private static double EstimateFirstTableRowHeight(DocxTable table, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double paragraphSpacingScale)
-    {
-        DocxTableRow? row = table.Rows.FirstOrDefault();
-        if (row is null)
-        {
-            return 0d;
-        }
-
-        DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth);
-        double[] cellWidths = GetTableRowCellWidths(row, grid.EffectiveColumns, grid.Scale);
-        double rowTopPadding = ResolveTableRowTopPadding(row);
-        double contentHeight = row.Cells
-            .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, null, paragraphSpacingScale: paragraphSpacingScale))
-            .DefaultIfEmpty(0d)
-            .Max();
-        return ResolveTableRowHeight(row, contentHeight);
-    }
-
     private static double GetParagraphTextStartOffset(DocxParagraph paragraph)
     {
         if (paragraph.ListLabel is null)
@@ -320,10 +320,21 @@ internal sealed partial class DocxLayoutEngine
             return GetParagraphFirstLineIndentOffset(paragraph);
         }
 
+        bool IsNumberingTabSuffix(DocxListLabel label)
+        {
+            return string.IsNullOrEmpty(label.SuffixValue) ||
+                label.SuffixValue.Equals("tab", StringComparison.OrdinalIgnoreCase);
+        }
+
+        bool IsNumberingSpaceSuffix(DocxListLabel label)
+        {
+            return label.SuffixValue.Equals("space", StringComparison.OrdinalIgnoreCase);
+        }
+
         if (IsNumberingTabSuffix(paragraph.ListLabel))
         {
             double textStart = GetParagraphTextStartOffset(paragraph);
-            return Math.Max(textStart, GetNumberingTabPosition(paragraph) ?? 0d);
+            return Math.Max(textStart, GetNumberingTabPosition() ?? 0d);
         }
 
         double gap = IsNumberingSpaceSuffix(paragraph.ListLabel)
@@ -335,6 +346,15 @@ internal sealed partial class DocxLayoutEngine
             GetParagraphLabelStartOffset(paragraph) +
                 textMeasurer.MeasureText(labelRun, paragraph.ListLabel.Text, labelRun.EffectiveProperties.FontSize) +
                 gap);
+
+        double? GetNumberingTabPosition()
+        {
+            double? paragraphNumberingTab = paragraph.EffectiveProperties.TabStops
+                .Where(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase))
+                .Select(tab => tab.PositionPoints)
+                .FirstOrDefault(position => position is not null);
+            return paragraphNumberingTab ?? paragraph.ListLabel?.Indent.NumberingTabPositionPoints;
+        }
     }
 
     private static double GetParagraphLabelStartOffset(DocxParagraph paragraph)
@@ -391,15 +411,6 @@ internal sealed partial class DocxLayoutEngine
             indent.HangingValue is not null;
     }
 
-    private static double? GetNumberingTabPosition(DocxParagraph paragraph)
-    {
-        double? paragraphNumberingTab = paragraph.EffectiveProperties.TabStops
-            .Where(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase))
-            .Select(tab => tab.PositionPoints)
-            .FirstOrDefault(position => position is not null);
-        return paragraphNumberingTab ?? paragraph.ListLabel?.Indent.NumberingTabPositionPoints;
-    }
-
     private static double GetParagraphStartOffset(DocxParagraph paragraph)
     {
         return paragraph.ListLabel is null
@@ -441,7 +452,7 @@ internal sealed partial class DocxLayoutEngine
         bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
             ShouldJustifyTextLine(paragraph.EffectiveProperties.Alignment, finalWrappedLine, drawableLineWidth, paragraphWidth, line.Spans);
         IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
-            ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun, labelX, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
+            ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun)
             : justifyLine
                 ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
                 : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
@@ -451,56 +462,62 @@ internal sealed partial class DocxLayoutEngine
             : justifyLine
                 ? paragraphWidth
                 : lineWidth;
+        string GetListLabelTextSeparator(DocxListLabel label)
+        {
+            return label.SuffixValue switch
+            {
+                "nothing" => string.Empty,
+                "space" => " ",
+                _ => "\t"
+            };
+        }
+
         string text = firstLine && paragraph.ListLabel is not null
             ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text
             : line.Text;
         return new DocxParagraphLineShape(text, effectiveX, effectiveWidth, segments);
-    }
 
-    private static IReadOnlyList<DocxTextSegmentLayout> CreateNumberedLineSegments(
-        DocxListLabel label,
-        IReadOnlyList<DocxTextSpan> lineSpans,
-        DocxTextRun styleRun,
-        double labelX,
-        double lineX,
-        double fontSize,
-        IDocxTextMeasurer textMeasurer,
-        IReadOnlyList<DocxTabStop> tabStops,
-        double defaultTabStopPoints)
-    {
-        DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
-        double labelFontSize = labelRun.EffectiveProperties.FontSize;
-        double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelFontSize);
-        DocxTextEmissionPlan labelPlan = DocxTextEmissionPlanner.CreateForListLabel(labelRun, label);
-        var segments = new List<DocxTextSegmentLayout>
+        IReadOnlyList<DocxTextSegmentLayout> CreateNumberedLineSegments(DocxListLabel label, IReadOnlyList<DocxTextSpan> lineSpans, DocxTextRun styleRun)
         {
-            new(
-                label.Text,
-                labelRun,
-                labelX,
-                labelWidth,
-                labelFontSize,
-                PdfCharacterSpacing: labelPlan.PdfCharacterSpacing,
-                PdfCharacterSpacingSource: labelPlan.PdfCharacterSpacingSource,
-                CompensatePdfCharacterSpacing: labelPlan.CompensatePdfCharacterSpacing,
-                SourceTextRunIndex: -1,
-                BaselineOffsetY: 0d,
-                SourceTextOffsetInRun: 0,
-                Role: DocxTextSegmentRole.ListLabel)
-        };
+            DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
+            double labelFontSize = labelRun.EffectiveProperties.FontSize;
+            double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelFontSize);
+            DocxTextEmissionPlan labelPlan = DocxTextEmissionPlanner.CreateForListLabel(labelRun, label);
+            var numberedSegments = new List<DocxTextSegmentLayout>
+            {
+                new(
+                    label.Text,
+                    labelRun,
+                    labelX,
+                    labelWidth,
+                    labelFontSize,
+                    PdfCharacterSpacing: labelPlan.PdfCharacterSpacing,
+                    PdfCharacterSpacingSource: labelPlan.PdfCharacterSpacingSource,
+                    CompensatePdfCharacterSpacing: labelPlan.CompensatePdfCharacterSpacing,
+                    SourceTextRunIndex: -1,
+                    BaselineOffsetY: 0d,
+                    SourceTextOffsetInRun: 0,
+                    Role: DocxTextSegmentRole.ListLabel)
+            };
 
-        string separator = GetListLabelPdfSeparator(label);
-        if (separator.Length != 0)
-        {
-            DocxTextRun separatorRun = styleRun;
-            double separatorFontSize = separatorRun.EffectiveProperties.FontSize;
-            double separatorX = labelX + labelWidth;
-            double separatorWidth = textMeasurer.MeasureText(separatorRun, separator, separatorFontSize);
-            segments.Add(new DocxTextSegmentLayout(separator, separatorRun, separatorX, separatorWidth, separatorFontSize, SourceTextRunIndex: -1, BaselineOffsetY: 0d, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, SourceTextOffsetInRun: 0, Role: DocxTextSegmentRole.ListSeparator));
+            string GetListLabelPdfSeparator(DocxListLabel label)
+            {
+                return label.SuffixValue.Equals("nothing", StringComparison.OrdinalIgnoreCase) ? string.Empty : " ";
+            }
+
+            string separator = GetListLabelPdfSeparator(label);
+            if (separator.Length != 0)
+            {
+                DocxTextRun separatorRun = styleRun;
+                double separatorFontSize = separatorRun.EffectiveProperties.FontSize;
+                double separatorX = labelX + labelWidth;
+                double separatorWidth = textMeasurer.MeasureText(separatorRun, separator, separatorFontSize);
+                numberedSegments.Add(new DocxTextSegmentLayout(separator, separatorRun, separatorX, separatorWidth, separatorFontSize, SourceTextRunIndex: -1, BaselineOffsetY: 0d, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, SourceTextOffsetInRun: 0, Role: DocxTextSegmentRole.ListSeparator));
+            }
+
+            numberedSegments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));
+            return numberedSegments;
         }
-
-        segments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));
-        return segments;
     }
 
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
@@ -514,29 +531,4 @@ internal sealed partial class DocxLayoutEngine
         return label.Style.ApplyTo(baseRun, label.Text, fontSize);
     }
 
-    private static string GetListLabelTextSeparator(DocxListLabel label)
-    {
-        return label.SuffixValue switch
-        {
-            "nothing" => string.Empty,
-            "space" => " ",
-            _ => "\t"
-        };
-    }
-
-    private static string GetListLabelPdfSeparator(DocxListLabel label)
-    {
-        return label.SuffixValue.Equals("nothing", StringComparison.OrdinalIgnoreCase) ? string.Empty : " ";
-    }
-
-    private static bool IsNumberingTabSuffix(DocxListLabel label)
-    {
-        return string.IsNullOrEmpty(label.SuffixValue) ||
-            label.SuffixValue.Equals("tab", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsNumberingSpaceSuffix(DocxListLabel label)
-    {
-        return label.SuffixValue.Equals("space", StringComparison.OrdinalIgnoreCase);
-    }
 }

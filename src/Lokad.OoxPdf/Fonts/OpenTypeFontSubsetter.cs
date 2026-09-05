@@ -69,7 +69,7 @@ internal static class OpenTypeFontSubsetter
             return null;
         }
 
-        ushort[] originalGlyphs = BuildGlyphClosure(source, originalGlyphCount, indexToLocFormat, glyf, loca, unicodeByOriginalGlyph.Keys, cancellationToken);
+        ushort[] originalGlyphs = BuildGlyphClosure(unicodeByOriginalGlyph.Keys);
         if (originalGlyphs.Length <= 1)
         {
             return null;
@@ -82,16 +82,16 @@ internal static class OpenTypeFontSubsetter
             cidByOriginalGlyph[originalGlyphs[i]] = (ushort)i;
         }
 
-        byte[] subsetGlyf = BuildGlyf(source, originalGlyphs, cidByOriginalGlyph, originalGlyphCount, indexToLocFormat, glyf, loca, out byte[] subsetLoca, cancellationToken);
+        byte[] subsetGlyf = BuildGlyf(out byte[] subsetLoca);
         byte[] subsetHhea = CopyTable(source, hhea);
-        byte[] subsetHmtx = BuildHmtx(source, originalGlyphs, originalGlyphCount, hhea, hmtx, subsetHhea);
+        byte[] subsetHmtx = BuildHmtx();
         byte[] subsetMaxp = CopyTable(source, maxp);
         W16(subsetMaxp, 4, (ushort)originalGlyphs.Length);
         byte[] subsetHead = CopyTable(source, head);
         W32(subsetHead, 8, 0);
         W16(subsetHead, 50, 1);
-        byte[] subsetPost = BuildPost(source, post);
-        byte[] subsetCmap = BuildCmap(unicodeByOriginalGlyph, cidByOriginalGlyph);
+        byte[] subsetPost = BuildPost();
+        byte[] subsetCmap = BuildCmap();
 
         var outputTables = new List<TableData>
         {
@@ -116,8 +116,261 @@ internal static class OpenTypeFontSubsetter
             }
         }
 
-        byte[] subsetBytes = BuildSfnt(source.AsSpan(0, 4), outputTables, cancellationToken);
+        byte[] subsetBytes = BuildSfnt(source.AsSpan(0, 4), outputTables);
         return new OpenTypeFontSubset(subsetBytes, cidByOriginalGlyph);
+
+        byte[] BuildSfnt(ReadOnlySpan<byte> scalerType, List<TableData> tables)
+        {
+            tables.Sort((left, right) => string.CompareOrdinal(left.Tag, right.Tag));
+            int tableCount = tables.Count;
+            int directoryLength = 12 + tableCount * 16;
+            int outputLength = directoryLength;
+            foreach (TableData table in tables)
+            {
+                outputLength = Align4(outputLength);
+                outputLength += table.Data.Length;
+            }
+
+            var output = new byte[Align4(outputLength)];
+            scalerType.CopyTo(output);
+            W16(output, 4, (ushort)tableCount);
+            WriteSearchFields(output, 6, tableCount, 16);
+
+            int dataOffset = directoryLength;
+            int directoryOffset = 12;
+            int headOffset = -1;
+            foreach (TableData table in tables)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                dataOffset = Align4(dataOffset);
+                Encoding.ASCII.GetBytes(table.Tag, output.AsSpan(directoryOffset, 4));
+                W32(output, directoryOffset + 4, Checksum(table.Data));
+                W32(output, directoryOffset + 8, (uint)dataOffset);
+                W32(output, directoryOffset + 12, (uint)table.Data.Length);
+                Array.Copy(table.Data, 0, output, dataOffset, table.Data.Length);
+                if (table.Tag.Equals("head", StringComparison.Ordinal))
+                {
+                    headOffset = dataOffset;
+                }
+
+                dataOffset += table.Data.Length;
+                directoryOffset += 16;
+            }
+
+            if (headOffset < 0)
+            {
+                throw new InvalidDataException("Subset font is missing head table.");
+            }
+
+            W32(output, headOffset + 8, 0);
+            uint adjustment = unchecked(0xB1B0AFBAu - Checksum(output));
+            W32(output, headOffset + 8, adjustment);
+            return output;
+        }
+
+        byte[] BuildPost()
+        {
+            var output = new byte[32];
+            Array.Copy(source, post.Offset, output, 0, Math.Min(post.Length, output.Length));
+            W32(output, 0, 0x00030000);
+            return output;
+        }
+
+        byte[] BuildHmtx()
+        {
+            ushort numberOfHMetrics = U16(source, hhea.Offset + 34);
+            if (numberOfHMetrics == 0)
+            {
+                throw new InvalidDataException("Horizontal metrics table is empty.");
+            }
+
+            W16(subsetHhea, 34, (ushort)originalGlyphs.Length);
+            var output = new byte[originalGlyphs.Length * 4];
+            for (int i = 0; i < originalGlyphs.Length; i++)
+            {
+                ushort glyph = originalGlyphs[i];
+                if (!TryReadHorizontalMetric(source, glyph, originalGlyphCount, numberOfHMetrics, hmtx, out ushort advance, out short leftSideBearing))
+                {
+                    throw new InvalidDataException("Horizontal metric is invalid.");
+                }
+
+                W16(output, i * 4, advance);
+                W16(output, i * 4 + 2, unchecked((ushort)leftSideBearing));
+            }
+
+            return output;
+        }
+
+        byte[] BuildGlyf(out byte[] subsetLoca)
+        {
+            using var glyfStream = new MemoryStream();
+            subsetLoca = new byte[(originalGlyphs.Length + 1) * 4];
+            for (int i = 0; i < originalGlyphs.Length; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int alignedOffset = Align4((int)glyfStream.Position);
+                while (glyfStream.Position < alignedOffset)
+                {
+                    glyfStream.WriteByte(0);
+                }
+
+                W32(subsetLoca, i * 4, (uint)glyfStream.Position);
+                if (!TryGetGlyphData(source, originalGlyphs[i], originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
+                {
+                    throw new InvalidDataException("Glyph range is invalid.");
+                }
+
+                byte[] glyphData = new byte[glyphLength];
+                Array.Copy(source, glyphOffset, glyphData, 0, glyphLength);
+                if (!RemapCompoundGlyph(glyphData, cidByOriginalGlyph))
+                {
+                    throw new InvalidDataException("Compound glyph remapping failed.");
+                }
+
+                glyfStream.Write(glyphData);
+            }
+
+            int finalOffset = Align4((int)glyfStream.Position);
+            while (glyfStream.Position < finalOffset)
+            {
+                glyfStream.WriteByte(0);
+            }
+
+            W32(subsetLoca, originalGlyphs.Length * 4, (uint)glyfStream.Position);
+            return glyfStream.ToArray();
+        }
+
+        ushort[] BuildGlyphClosure(IEnumerable<ushort> seedGlyphs)
+        {
+            var included = new SortedSet<ushort> { 0 };
+            var pending = new Queue<ushort>();
+            pending.Enqueue(0);
+            foreach (ushort glyph in seedGlyphs)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (glyph < originalGlyphCount && included.Add(glyph))
+                {
+                    pending.Enqueue(glyph);
+                }
+            }
+
+            while (pending.Count != 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                ushort glyph = pending.Dequeue();
+                if (!TryReadCompoundComponents(source, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out ushort[] components))
+                {
+                    throw new InvalidDataException("Compound glyph is malformed.");
+                }
+
+                foreach (ushort component in components)
+                {
+                    if (component < originalGlyphCount && included.Add(component))
+                    {
+                        pending.Enqueue(component);
+                    }
+                }
+            }
+
+            return included.ToArray();
+        }
+
+        byte[] BuildCmap()
+        {
+            var glyphByCodePoint = new SortedDictionary<int, ushort>();
+            foreach ((ushort originalGlyph, int codePoint) in unicodeByOriginalGlyph)
+            {
+                if (codePoint < 0 || codePoint > 0x10FFFF || codePoint is >= 0xD800 and <= 0xDFFF)
+                {
+                    continue;
+                }
+
+                if (cidByOriginalGlyph.TryGetValue(originalGlyph, out ushort cid))
+                {
+                    glyphByCodePoint.TryAdd(codePoint, cid);
+                }
+            }
+
+            byte[] format4 = BuildCmapFormat4();
+            byte[] format12 = BuildCmapFormat12();
+            int format4Offset = 4 + 8 * 2;
+            int format12Offset = format4Offset + format4.Length;
+            var output = new byte[format12Offset + format12.Length];
+            W16(output, 0, 0);
+            W16(output, 2, 2);
+            W16(output, 4, 3);
+            W16(output, 6, 1);
+            W32(output, 8, (uint)format4Offset);
+            W16(output, 12, 3);
+            W16(output, 14, 10);
+            W32(output, 16, (uint)format12Offset);
+            Array.Copy(format4, 0, output, format4Offset, format4.Length);
+            Array.Copy(format12, 0, output, format12Offset, format12.Length);
+            return output;
+
+            byte[] BuildCmapFormat4()
+            {
+                KeyValuePair<int, ushort>[] bmp = glyphByCodePoint
+                    .Where(pair => pair.Key <= 0xFFFF && pair.Key != 0xFFFF)
+                    .ToArray();
+                int segmentCount = bmp.Length + 1;
+                int length = 16 + segmentCount * 8;
+                var format4Output = new byte[length];
+                W16(format4Output, 0, 4);
+                W16(format4Output, 2, (ushort)length);
+                W16(format4Output, 4, 0);
+                W16(format4Output, 6, (ushort)(segmentCount * 2));
+                WriteSearchFields(format4Output, 8, segmentCount, 2);
+
+                int endCodes = 14;
+                int startCodes = endCodes + segmentCount * 2 + 2;
+                int idDeltas = startCodes + segmentCount * 2;
+                int idRangeOffsets = idDeltas + segmentCount * 2;
+                for (int i = 0; i < bmp.Length; i++)
+                {
+                    int bmpCodePoint = bmp[i].Key;
+                    ushort glyph = bmp[i].Value;
+                    W16(format4Output, endCodes + i * 2, (ushort)bmpCodePoint);
+                    W16(format4Output, startCodes + i * 2, (ushort)bmpCodePoint);
+                    W16(format4Output, idDeltas + i * 2, unchecked((ushort)(glyph - bmpCodePoint)));
+                    W16(format4Output, idRangeOffsets + i * 2, 0);
+                }
+
+                int sentinel = segmentCount - 1;
+                W16(format4Output, endCodes + sentinel * 2, 0xFFFF);
+                W16(format4Output, startCodes + sentinel * 2, 0xFFFF);
+                W16(format4Output, idDeltas + sentinel * 2, 1);
+                W16(format4Output, idRangeOffsets + sentinel * 2, 0);
+                return format4Output;
+            }
+
+            byte[] BuildCmapFormat12()
+            {
+                var groups = new List<CmapGroup>();
+                foreach ((int groupCodePoint, ushort glyph) in glyphByCodePoint)
+                {
+                    groups.Add(new CmapGroup((uint)groupCodePoint, (uint)groupCodePoint, glyph));
+                }
+
+                int length = 16 + groups.Count * 12;
+                var format12Output = new byte[length];
+                W16(format12Output, 0, 12);
+                W16(format12Output, 2, 0);
+                W32(format12Output, 4, (uint)length);
+                W32(format12Output, 8, 0);
+                W32(format12Output, 12, (uint)groups.Count);
+                int offset = 16;
+                foreach (CmapGroup group in groups)
+                {
+                    W32(format12Output, offset, group.StartCode);
+                    W32(format12Output, offset + 4, group.EndCode);
+                    W32(format12Output, offset + 8, group.StartGlyph);
+                    offset += 12;
+                }
+
+                return format12Output;
+            }
+        }
     }
 
     private static Dictionary<string, TableRecord> ReadTableDirectory(byte[] bytes)
@@ -150,121 +403,6 @@ internal static class OpenTypeFontSubsetter
         }
 
         return tables;
-    }
-
-    private static ushort[] BuildGlyphClosure(
-        byte[] source,
-        ushort originalGlyphCount,
-        short indexToLocFormat,
-        TableRecord glyf,
-        TableRecord loca,
-        IEnumerable<ushort> seedGlyphs,
-        CancellationToken cancellationToken)
-    {
-        var included = new SortedSet<ushort> { 0 };
-        var pending = new Queue<ushort>();
-        pending.Enqueue(0);
-        foreach (ushort glyph in seedGlyphs)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (glyph < originalGlyphCount && included.Add(glyph))
-            {
-                pending.Enqueue(glyph);
-            }
-        }
-
-        while (pending.Count != 0)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            ushort glyph = pending.Dequeue();
-            if (!TryReadCompoundComponents(source, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out ushort[] components))
-            {
-                throw new InvalidDataException("Compound glyph is malformed.");
-            }
-
-            foreach (ushort component in components)
-            {
-                if (component < originalGlyphCount && included.Add(component))
-                {
-                    pending.Enqueue(component);
-                }
-            }
-        }
-
-        return included.ToArray();
-    }
-
-    private static byte[] BuildGlyf(
-        byte[] source,
-        ushort[] originalGlyphs,
-        IReadOnlyDictionary<ushort, ushort> cidByOriginalGlyph,
-        ushort originalGlyphCount,
-        short indexToLocFormat,
-        TableRecord glyf,
-        TableRecord loca,
-        out byte[] subsetLoca,
-        CancellationToken cancellationToken)
-    {
-        using var glyfStream = new MemoryStream();
-        subsetLoca = new byte[(originalGlyphs.Length + 1) * 4];
-        for (int i = 0; i < originalGlyphs.Length; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            int alignedOffset = Align4((int)glyfStream.Position);
-            while (glyfStream.Position < alignedOffset)
-            {
-                glyfStream.WriteByte(0);
-            }
-
-            W32(subsetLoca, i * 4, (uint)glyfStream.Position);
-            if (!TryGetGlyphData(source, originalGlyphs[i], originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
-            {
-                throw new InvalidDataException("Glyph range is invalid.");
-            }
-
-            byte[] glyphData = new byte[glyphLength];
-            Array.Copy(source, glyphOffset, glyphData, 0, glyphLength);
-            if (!RemapCompoundGlyph(glyphData, cidByOriginalGlyph))
-            {
-                throw new InvalidDataException("Compound glyph remapping failed.");
-            }
-
-            glyfStream.Write(glyphData);
-        }
-
-        int finalOffset = Align4((int)glyfStream.Position);
-        while (glyfStream.Position < finalOffset)
-        {
-            glyfStream.WriteByte(0);
-        }
-
-        W32(subsetLoca, originalGlyphs.Length * 4, (uint)glyfStream.Position);
-        return glyfStream.ToArray();
-    }
-
-    private static byte[] BuildHmtx(byte[] source, ushort[] originalGlyphs, ushort originalGlyphCount, TableRecord hhea, TableRecord hmtx, byte[] subsetHhea)
-    {
-        ushort numberOfHMetrics = U16(source, hhea.Offset + 34);
-        if (numberOfHMetrics == 0)
-        {
-            throw new InvalidDataException("Horizontal metrics table is empty.");
-        }
-
-        W16(subsetHhea, 34, (ushort)originalGlyphs.Length);
-        var output = new byte[originalGlyphs.Length * 4];
-        for (int i = 0; i < originalGlyphs.Length; i++)
-        {
-            ushort glyph = originalGlyphs[i];
-            if (!TryReadHorizontalMetric(source, glyph, originalGlyphCount, numberOfHMetrics, hmtx, out ushort advance, out short leftSideBearing))
-            {
-                throw new InvalidDataException("Horizontal metric is invalid.");
-            }
-
-            W16(output, i * 4, advance);
-            W16(output, i * 4 + 2, unchecked((ushort)leftSideBearing));
-        }
-
-        return output;
     }
 
     private static bool TryReadHorizontalMetric(
@@ -306,160 +444,6 @@ internal static class OpenTypeFontSubsetter
         advance = U16(source, advanceOffset);
         leftSideBearing = I16(source, lsbOffset);
         return true;
-    }
-
-    private static byte[] BuildPost(byte[] source, TableRecord post)
-    {
-        var output = new byte[32];
-        Array.Copy(source, post.Offset, output, 0, Math.Min(post.Length, output.Length));
-        W32(output, 0, 0x00030000);
-        return output;
-    }
-
-    private static byte[] BuildCmap(IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, IReadOnlyDictionary<ushort, ushort> cidByOriginalGlyph)
-    {
-        var glyphByCodePoint = new SortedDictionary<int, ushort>();
-        foreach ((ushort originalGlyph, int codePoint) in unicodeByOriginalGlyph)
-        {
-            if (codePoint < 0 || codePoint > 0x10FFFF || codePoint is >= 0xD800 and <= 0xDFFF)
-            {
-                continue;
-            }
-
-            if (cidByOriginalGlyph.TryGetValue(originalGlyph, out ushort cid))
-            {
-                glyphByCodePoint.TryAdd(codePoint, cid);
-            }
-        }
-
-        byte[] format4 = BuildCmapFormat4(glyphByCodePoint);
-        byte[] format12 = BuildCmapFormat12(glyphByCodePoint);
-        int format4Offset = 4 + 8 * 2;
-        int format12Offset = format4Offset + format4.Length;
-        var output = new byte[format12Offset + format12.Length];
-        W16(output, 0, 0);
-        W16(output, 2, 2);
-        W16(output, 4, 3);
-        W16(output, 6, 1);
-        W32(output, 8, (uint)format4Offset);
-        W16(output, 12, 3);
-        W16(output, 14, 10);
-        W32(output, 16, (uint)format12Offset);
-        Array.Copy(format4, 0, output, format4Offset, format4.Length);
-        Array.Copy(format12, 0, output, format12Offset, format12.Length);
-        return output;
-    }
-
-    private static byte[] BuildCmapFormat4(SortedDictionary<int, ushort> glyphByCodePoint)
-    {
-        KeyValuePair<int, ushort>[] bmp = glyphByCodePoint
-            .Where(pair => pair.Key <= 0xFFFF && pair.Key != 0xFFFF)
-            .ToArray();
-        int segmentCount = bmp.Length + 1;
-        int length = 16 + segmentCount * 8;
-        var output = new byte[length];
-        W16(output, 0, 4);
-        W16(output, 2, (ushort)length);
-        W16(output, 4, 0);
-        W16(output, 6, (ushort)(segmentCount * 2));
-        WriteSearchFields(output, 8, segmentCount, 2);
-
-        int endCodes = 14;
-        int startCodes = endCodes + segmentCount * 2 + 2;
-        int idDeltas = startCodes + segmentCount * 2;
-        int idRangeOffsets = idDeltas + segmentCount * 2;
-        for (int i = 0; i < bmp.Length; i++)
-        {
-            int codePoint = bmp[i].Key;
-            ushort glyph = bmp[i].Value;
-            W16(output, endCodes + i * 2, (ushort)codePoint);
-            W16(output, startCodes + i * 2, (ushort)codePoint);
-            W16(output, idDeltas + i * 2, unchecked((ushort)(glyph - codePoint)));
-            W16(output, idRangeOffsets + i * 2, 0);
-        }
-
-        int sentinel = segmentCount - 1;
-        W16(output, endCodes + sentinel * 2, 0xFFFF);
-        W16(output, startCodes + sentinel * 2, 0xFFFF);
-        W16(output, idDeltas + sentinel * 2, 1);
-        W16(output, idRangeOffsets + sentinel * 2, 0);
-        return output;
-    }
-
-    private static byte[] BuildCmapFormat12(SortedDictionary<int, ushort> glyphByCodePoint)
-    {
-        var groups = new List<CmapGroup>();
-        foreach ((int codePoint, ushort glyph) in glyphByCodePoint)
-        {
-            groups.Add(new CmapGroup((uint)codePoint, (uint)codePoint, glyph));
-        }
-
-        int length = 16 + groups.Count * 12;
-        var output = new byte[length];
-        W16(output, 0, 12);
-        W16(output, 2, 0);
-        W32(output, 4, (uint)length);
-        W32(output, 8, 0);
-        W32(output, 12, (uint)groups.Count);
-        int offset = 16;
-        foreach (CmapGroup group in groups)
-        {
-            W32(output, offset, group.StartCode);
-            W32(output, offset + 4, group.EndCode);
-            W32(output, offset + 8, group.StartGlyph);
-            offset += 12;
-        }
-
-        return output;
-    }
-
-    private static byte[] BuildSfnt(ReadOnlySpan<byte> scalerType, List<TableData> tables, CancellationToken cancellationToken)
-    {
-        tables.Sort((left, right) => string.CompareOrdinal(left.Tag, right.Tag));
-        int tableCount = tables.Count;
-        int directoryLength = 12 + tableCount * 16;
-        int outputLength = directoryLength;
-        foreach (TableData table in tables)
-        {
-            outputLength = Align4(outputLength);
-            outputLength += table.Data.Length;
-        }
-
-        var output = new byte[Align4(outputLength)];
-        scalerType.CopyTo(output);
-        W16(output, 4, (ushort)tableCount);
-        WriteSearchFields(output, 6, tableCount, 16);
-
-        int dataOffset = directoryLength;
-        int directoryOffset = 12;
-        int headOffset = -1;
-        foreach (TableData table in tables)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            dataOffset = Align4(dataOffset);
-            Encoding.ASCII.GetBytes(table.Tag, output.AsSpan(directoryOffset, 4));
-            W32(output, directoryOffset + 4, Checksum(table.Data));
-            W32(output, directoryOffset + 8, (uint)dataOffset);
-            W32(output, directoryOffset + 12, (uint)table.Data.Length);
-            Array.Copy(table.Data, 0, output, dataOffset, table.Data.Length);
-            if (table.Tag.Equals("head", StringComparison.Ordinal))
-            {
-                headOffset = dataOffset;
-            }
-
-            dataOffset += table.Data.Length;
-            directoryOffset += 16;
-        }
-
-        if (headOffset < 0)
-        {
-            throw new InvalidDataException("Subset font is missing head table.");
-        }
-
-        W32(output, headOffset + 8, 0);
-        uint adjustment = unchecked(0xB1B0AFBAu - Checksum(output));
-        W32(output, headOffset + 8, adjustment);
-        return output;
     }
 
     private static bool TryReadCompoundComponents(

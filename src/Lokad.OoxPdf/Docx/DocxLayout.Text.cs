@@ -86,6 +86,23 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return segments;
+
+        double GetAlignedTabFieldStart(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
+        {
+            if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase))
+            {
+                return tabStop.PositionPoints - fieldWidth;
+            }
+
+            if (decimalAlignmentWidth is not null)
+            {
+                return tabStop.PositionPoints - decimalAlignmentWidth.Value;
+            }
+
+            return string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase)
+                ? tabStop.PositionPoints - (fieldWidth / 2d)
+                : tabStop.PositionPoints;
+        }
     }
 
     private static double MeasureTextSpans(
@@ -198,7 +215,7 @@ internal sealed partial class DocxLayoutEngine
         for (int i = 0; i < drawableSpans.Count; i++)
         {
             DocxTextSpan span = drawableSpans[i];
-            segmentX = AddJustifiedSpanSegments(segments, span, segmentX, fontSize, textMeasurer, extraPerSpace);
+            segmentX = AddJustifiedSpanSegments(span, segmentX);
             if (i + 1 < drawableSpans.Count)
             {
                 segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, drawableSpans[i + 1].Text);
@@ -206,52 +223,46 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return segments;
-    }
 
-    private static double AddJustifiedSpanSegments(
-        List<DocxTextSegmentLayout> segments,
-        DocxTextSpan span,
-        double segmentX,
-        double fontSize,
-        IDocxTextMeasurer textMeasurer,
-        double extraPerSpace)
-    {
-        double spanFontSize = GetTextSpanFontSize(span, fontSize);
-        double baselineOffset = GetTextSpanBaselineOffset(span, fontSize);
-        int start = 0;
-        while (start < span.Text.Length)
+        double AddJustifiedSpanSegments(DocxTextSpan span, double segmentX)
         {
-            bool isSpace = IsJustificationSpace(span.Text[start]);
-            int end = start + 1;
-            while (end < span.Text.Length && IsJustificationSpace(span.Text[end]) == isSpace)
+            double spanFontSize = GetTextSpanFontSize(span, fontSize);
+            double baselineOffset = GetTextSpanBaselineOffset(span, fontSize);
+            int start = 0;
+            while (start < span.Text.Length)
             {
-                end++;
+                bool isSpace = IsJustificationSpace(span.Text[start]);
+                int end = start + 1;
+                while (end < span.Text.Length && IsJustificationSpace(span.Text[end]) == isSpace)
+                {
+                    end++;
+                }
+
+                string text = span.Text[start..end];
+                double width = textMeasurer.MeasureText(span.StyleRun, text, spanFontSize);
+                if (isSpace)
+                {
+                    segmentX += width + text.Length * extraPerSpace;
+                }
+                else
+                {
+                    segments.Add(new DocxTextSegmentLayout(
+                        text,
+                        span.StyleRun,
+                        segmentX,
+                        width,
+                        spanFontSize,
+                        baselineOffset,
+                        SourceTextRunIndex: span.SourceTextRunIndex,
+                        SourceTextOffsetInRun: span.SourceTextOffsetInRun + start, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
+                    segmentX += width;
+                }
+
+                start = end;
             }
 
-            string text = span.Text[start..end];
-            double width = textMeasurer.MeasureText(span.StyleRun, text, spanFontSize);
-            if (isSpace)
-            {
-                segmentX += width + text.Length * extraPerSpace;
-            }
-            else
-            {
-                segments.Add(new DocxTextSegmentLayout(
-                    text,
-                    span.StyleRun,
-                    segmentX,
-                    width,
-                    spanFontSize,
-                    baselineOffset,
-                    SourceTextRunIndex: span.SourceTextRunIndex,
-                    SourceTextOffsetInRun: span.SourceTextOffsetInRun + start, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
-                segmentX += width;
-            }
-
-            start = end;
+            return segmentX;
         }
-
-        return segmentX;
     }
 
     private static int CountStretchableJustificationSpaces(IReadOnlyList<DocxTextSpan> spans)
@@ -368,15 +379,13 @@ internal sealed partial class DocxLayoutEngine
             double spanFontSize = GetTextSpanFontSize(span, fontSize);
             double baselineOffset = GetTextSpanBaselineOffset(span, fontSize);
             segmentX = AddTextSegment(
-                segments,
                 span.StyleRun,
                 span.SourceTextRunIndex,
                 span.SourceTextOffsetInRun,
                 span.Text,
                 segmentX,
                 spanFontSize,
-                baselineOffset,
-                textMeasurer);
+                baselineOffset);
             if (i + 1 < spans.Count)
             {
                 segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
@@ -384,6 +393,62 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return segmentX;
+
+        double AddTextSegment(DocxTextRun styleRun, int sourceTextRunIndex, int sourceTextOffsetInRun, string text, double segmentX, double fontSize, double baselineOffset)
+        {
+            int leadingSpaces = CountLeadingOfficeSeparatedSpaces();
+            if (leadingSpaces == 0 || leadingSpaces == text.Length)
+            {
+                double width = textMeasurer.MeasureText(styleRun, text, fontSize);
+                segments.Add(new DocxTextSegmentLayout(
+                    text,
+                    styleRun,
+                    segmentX,
+                    width,
+                    fontSize,
+                    baselineOffset,
+                    SourceTextRunIndex: sourceTextRunIndex,
+                    SourceTextOffsetInRun: sourceTextOffsetInRun, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
+                return segmentX + width;
+            }
+
+            string spaceText = text[..leadingSpaces];
+            double spaceWidth = textMeasurer.MeasureText(styleRun, spaceText, fontSize);
+            segments.Add(new DocxTextSegmentLayout(
+                spaceText,
+                styleRun,
+                segmentX,
+                spaceWidth,
+                fontSize,
+                baselineOffset,
+                SourceTextRunIndex: sourceTextRunIndex,
+                SourceTextOffsetInRun: sourceTextOffsetInRun, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
+            segmentX += spaceWidth + DocxTextSpacing.BoundarySpacing(styleRun, spaceText, text[leadingSpaces..]);
+
+            string bodyText = text[leadingSpaces..];
+            double bodyWidth = textMeasurer.MeasureText(styleRun, bodyText, fontSize);
+            segments.Add(new DocxTextSegmentLayout(
+                bodyText,
+                styleRun,
+                segmentX,
+                bodyWidth,
+                fontSize,
+                baselineOffset,
+                SourceTextRunIndex: sourceTextRunIndex,
+                SourceTextOffsetInRun: sourceTextOffsetInRun + leadingSpaces, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
+            return segmentX + bodyWidth;
+
+            int CountLeadingOfficeSeparatedSpaces()
+            {
+                int count = 0;
+                while (count < text.Length && text[count] == ' ')
+                {
+                    count++;
+                }
+
+                return count;
+            }
+        }
     }
 
     private static double MeasureTextFieldSpans(
@@ -437,36 +502,19 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return width;
-    }
 
-    private static int IndexOfDecimalSeparator(string text)
-    {
-        for (int i = 0; i < text.Length; i++)
+        int IndexOfDecimalSeparator(string text)
         {
-            if (text[i] is '.' or ',')
+            for (int i = 0; i < text.Length; i++)
             {
-                return i;
+                if (text[i] is '.' or ',')
+                {
+                    return i;
+                }
             }
+
+            return -1;
         }
-
-        return -1;
-    }
-
-    private static double GetAlignedTabFieldStart(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
-    {
-        if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase))
-        {
-            return tabStop.PositionPoints - fieldWidth;
-        }
-
-        if (decimalAlignmentWidth is not null)
-        {
-            return tabStop.PositionPoints - decimalAlignmentWidth.Value;
-        }
-
-        return string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase)
-            ? tabStop.PositionPoints - (fieldWidth / 2d)
-            : tabStop.PositionPoints;
     }
 
     private static double GetAlignedTabFieldEnd(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
@@ -486,71 +534,6 @@ internal sealed partial class DocxLayoutEngine
             : tabStop.PositionPoints + fieldWidth;
     }
 
-    private static double AddTextSegment(
-        List<DocxTextSegmentLayout> segments,
-        DocxTextRun styleRun,
-        int sourceTextRunIndex,
-        int sourceTextOffsetInRun,
-        string text,
-        double segmentX,
-        double fontSize,
-        double baselineOffset,
-        IDocxTextMeasurer textMeasurer)
-    {
-        int leadingSpaces = CountLeadingOfficeSeparatedSpaces(text);
-        if (leadingSpaces == 0 || leadingSpaces == text.Length)
-        {
-            double width = textMeasurer.MeasureText(styleRun, text, fontSize);
-            segments.Add(new DocxTextSegmentLayout(
-                text,
-                styleRun,
-                segmentX,
-                width,
-                fontSize,
-                baselineOffset,
-                SourceTextRunIndex: sourceTextRunIndex,
-                SourceTextOffsetInRun: sourceTextOffsetInRun, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
-            return segmentX + width;
-        }
-
-        string spaceText = text[..leadingSpaces];
-        double spaceWidth = textMeasurer.MeasureText(styleRun, spaceText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(
-            spaceText,
-            styleRun,
-            segmentX,
-            spaceWidth,
-            fontSize,
-            baselineOffset,
-            SourceTextRunIndex: sourceTextRunIndex,
-            SourceTextOffsetInRun: sourceTextOffsetInRun, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
-        segmentX += spaceWidth + DocxTextSpacing.BoundarySpacing(styleRun, spaceText, text[leadingSpaces..]);
-
-        string bodyText = text[leadingSpaces..];
-        double bodyWidth = textMeasurer.MeasureText(styleRun, bodyText, fontSize);
-        segments.Add(new DocxTextSegmentLayout(
-            bodyText,
-            styleRun,
-            segmentX,
-            bodyWidth,
-            fontSize,
-            baselineOffset,
-            SourceTextRunIndex: sourceTextRunIndex,
-            SourceTextOffsetInRun: sourceTextOffsetInRun + leadingSpaces, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
-        return segmentX + bodyWidth;
-    }
-
-    private static int CountLeadingOfficeSeparatedSpaces(string text)
-    {
-        int count = 0;
-        while (count < text.Length && text[count] == ' ')
-        {
-            count++;
-        }
-
-        return count;
-    }
-
     private static double GetTextSpanFontSize(DocxTextSpan span, double fallbackFontSize)
     {
         double fontSize = span.StyleRun.EffectiveProperties.FontSize;
@@ -566,12 +549,6 @@ internal sealed partial class DocxLayoutEngine
         return DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
     }
 
-    private static double AdvanceToNextDefaultTabStop(double width, double defaultTabStopPoints)
-    {
-        double tabStop = defaultTabStopPoints > 0d ? defaultTabStopPoints : WordDefaultTabStopPoints;
-        return (Math.Floor(width / tabStop) + 1d) * tabStop;
-    }
-
     private static DocxResolvedTabStop ResolveNextTabStop(double width, IReadOnlyList<DocxTabStop> tabStops, double defaultTabStopPoints)
     {
         foreach (DocxTabStop tabStop in tabStops
@@ -584,13 +561,19 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        return new DocxResolvedTabStop(AdvanceToNextDefaultTabStop(width, defaultTabStopPoints), null);
-    }
+        return new DocxResolvedTabStop(AdvanceToNextDefaultTabStop(), null);
 
-    private static bool IsPositioningTabStop(DocxTabStop tabStop)
-    {
-        return !string.Equals(tabStop.Value, "bar", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(tabStop.Value, "clear", StringComparison.OrdinalIgnoreCase);
+        double AdvanceToNextDefaultTabStop()
+        {
+            double tabStop = defaultTabStopPoints > 0d ? defaultTabStopPoints : WordDefaultTabStopPoints;
+            return (Math.Floor(width / tabStop) + 1d) * tabStop;
+        }
+
+        bool IsPositioningTabStop(DocxTabStop tabStop)
+        {
+            return !string.Equals(tabStop.Value, "bar", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(tabStop.Value, "clear", StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private static IEnumerable<DocxWrappedTextLine> WrapTextLines(
@@ -740,7 +723,7 @@ internal sealed partial class DocxLayoutEngine
 
         for (int length = token.Length - 1; length > 0; length--)
         {
-            if (!IsSafeEmergencyTokenBreak(text, token, length))
+            if (!IsSafeEmergencyTokenBreak(length))
             {
                 continue;
             }
@@ -755,6 +738,35 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return false;
+
+        bool IsSafeEmergencyTokenBreak(int length)
+        {
+            if (length <= 0 || length >= token.Length)
+            {
+                return false;
+            }
+
+            int breakIndex = token.Start + length;
+            char before = text[breakIndex - 1];
+            char after = text[breakIndex];
+            if (char.IsHighSurrogate(before) && char.IsLowSurrogate(after))
+            {
+                return false;
+            }
+
+            if (before == '\u2011' ||
+                after == '\u2011' ||
+                IsNoBreakWhitespaceChar(before) ||
+                IsNoBreakWhitespaceChar(after))
+            {
+                return false;
+            }
+
+            UnicodeCategory afterCategory = char.GetUnicodeCategory(after);
+            return afterCategory is not UnicodeCategory.NonSpacingMark and
+                not UnicodeCategory.SpacingCombiningMark and
+                not UnicodeCategory.EnclosingMark;
+        }
     }
 
     private static bool TryFindPreferredTokenBreak(
@@ -794,35 +806,6 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return false;
-    }
-
-    private static bool IsSafeEmergencyTokenBreak(string text, TextToken token, int length)
-    {
-        if (length <= 0 || length >= token.Length)
-        {
-            return false;
-        }
-
-        int breakIndex = token.Start + length;
-        char before = text[breakIndex - 1];
-        char after = text[breakIndex];
-        if (char.IsHighSurrogate(before) && char.IsLowSurrogate(after))
-        {
-            return false;
-        }
-
-        if (before == '\u2011' ||
-            after == '\u2011' ||
-            IsNoBreakWhitespaceChar(before) ||
-            IsNoBreakWhitespaceChar(after))
-        {
-            return false;
-        }
-
-        UnicodeCategory afterCategory = char.GetUnicodeCategory(after);
-        return afterCategory is not UnicodeCategory.NonSpacingMark and
-            not UnicodeCategory.SpacingCombiningMark and
-            not UnicodeCategory.EnclosingMark;
     }
 
     private static IReadOnlyList<TextToken> ReplaceToken(IReadOnlyList<TextToken> tokens, int index, TextToken replacement)
@@ -938,33 +921,27 @@ internal sealed partial class DocxLayoutEngine
         for (int index = 0; index < spans.Count; index++)
         {
             DocxTextSpan span = spans[index];
-            AddHiddenBreakNormalizedSpans(
-                normalized,
-                span,
-                preserveTerminalSoftHyphen && index == spans.Count - 1 && span.Text.EndsWith('\u00AD'));
+            AddHiddenBreakNormalizedSpans(span, preserveTerminalSoftHyphen && index == spans.Count - 1 && span.Text.EndsWith('\u00AD'));
         }
 
         return normalized;
-    }
 
-    private static void AddHiddenBreakNormalizedSpans(
-        List<DocxTextSpan> normalized,
-        DocxTextSpan span,
-        bool preserveTerminalSoftHyphen)
-    {
-        int chunkStart = 0;
-        for (int index = 0; index < span.Text.Length; index++)
+        void AddHiddenBreakNormalizedSpans(DocxTextSpan span, bool preserveTerminalSoftHyphen)
         {
-            if (!IsHiddenBreakCharacter(span.Text[index], preserveTerminalSoftHyphen && index == span.Text.Length - 1))
+            int chunkStart = 0;
+            for (int index = 0; index < span.Text.Length; index++)
             {
-                continue;
+                if (!IsHiddenBreakCharacter(span.Text[index], preserveTerminalSoftHyphen && index == span.Text.Length - 1))
+                {
+                    continue;
+                }
+
+                AddHiddenBreakNormalizedSpan(normalized, span, chunkStart, index);
+                chunkStart = index + 1;
             }
 
-            AddHiddenBreakNormalizedSpan(normalized, span, chunkStart, index);
-            chunkStart = index + 1;
+            AddHiddenBreakNormalizedSpan(normalized, span, chunkStart, span.Text.Length);
         }
-
-        AddHiddenBreakNormalizedSpan(normalized, span, chunkStart, span.Text.Length);
     }
 
     private static void AddHiddenBreakNormalizedSpan(

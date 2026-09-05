@@ -20,7 +20,31 @@ internal sealed partial class DocxRenderer
 
     internal static string BuildRevisionBalloonPreview(DocxParagraph paragraph)
     {
-        return BuildRevisionBalloonPreview(paragraph.Revisions, BuildRevisionTextPreviewLabels(paragraph));
+        return BuildRevisionBalloonPreview(paragraph.Revisions, BuildRevisionTextPreviewLabels());
+
+        IReadOnlyList<string> BuildRevisionTextPreviewLabels()
+        {
+            var labels = new List<string>(3);
+            string? deletedText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.Deletion);
+            if (deletedText is not null)
+            {
+                labels.Add("Deleted: \"" + deletedText + "\"");
+            }
+
+            string? movedFromText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.MoveFrom);
+            if (movedFromText is not null)
+            {
+                labels.Add("Moved from: \"" + movedFromText + "\"");
+            }
+
+            string? movedToText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.MoveTo);
+            if (movedToText is not null)
+            {
+                labels.Add("Moved to: \"" + movedToText + "\"");
+            }
+
+            return labels;
+        }
     }
 
     internal static string BuildRevisionBalloonTitle(IReadOnlyList<DocxRevisionInfo> revisions)
@@ -66,7 +90,7 @@ internal sealed partial class DocxRenderer
             return string.Empty;
         }
 
-        string[] labels = BuildRevisionBalloonLabels(revisions)
+        string[] labels = BuildRevisionBalloonLabels()
             .Concat(previewLabels)
             .Where(label => label.Length != 0)
             .Distinct(StringComparer.Ordinal)
@@ -74,45 +98,21 @@ internal sealed partial class DocxRenderer
             .ThenBy(label => label, StringComparer.Ordinal)
             .ToArray();
         return labels.Length == 0 ? "Revision" : string.Join(", ", labels);
-    }
 
-    private static IReadOnlyList<string> BuildRevisionBalloonLabels(IReadOnlyList<DocxRevisionInfo> revisions)
-    {
-        var labels = new List<string>(revisions.Count);
-        labels.AddRange(revisions
-            .Where(revision => !IsFormattingRevision(revision))
-            .Select(RevisionBalloonLabel));
-        labels.AddRange(revisions
-            .Where(IsFormattingRevision)
-            .GroupBy(ResolveFormattingRevisionFamily)
-            .Select(group => BuildFormattingRevisionBalloonLabel(
-                group.Key,
-                group.SelectMany(revision => revision.PropertyElementNames))));
-        return labels;
-    }
-
-    private static IReadOnlyList<string> BuildRevisionTextPreviewLabels(DocxParagraph paragraph)
-    {
-        var labels = new List<string>(3);
-        string? deletedText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.Deletion);
-        if (deletedText is not null)
+        IReadOnlyList<string> BuildRevisionBalloonLabels()
         {
-            labels.Add("Deleted: \"" + deletedText + "\"");
+            var revisionLabels = new List<string>(revisions.Count);
+            revisionLabels.AddRange(revisions
+                .Where(revision => !IsFormattingRevision(revision))
+                .Select(RevisionBalloonLabel));
+            revisionLabels.AddRange(revisions
+                .Where(IsFormattingRevision)
+                .GroupBy(ResolveFormattingRevisionFamily)
+                .Select(group => BuildFormattingRevisionBalloonLabel(
+                    group.Key,
+                    group.SelectMany(revision => revision.PropertyElementNames))));
+            return revisionLabels;
         }
-
-        string? movedFromText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.MoveFrom);
-        if (movedFromText is not null)
-        {
-            labels.Add("Moved from: \"" + movedFromText + "\"");
-        }
-
-        string? movedToText = BuildRevisionTextPreview(paragraph.Runs, DocxRevisionKind.MoveTo);
-        if (movedToText is not null)
-        {
-            labels.Add("Moved to: \"" + movedToText + "\"");
-        }
-
-        return labels;
     }
 
     private static string? BuildRevisionTextPreview(IEnumerable<DocxTextRun> runs, DocxRevisionKind kind)
@@ -174,7 +174,7 @@ internal sealed partial class DocxRenderer
             return 40;
         }
 
-        int? formattingPriority = FormattingRevisionLabelPriority(label);
+        int? formattingPriority = FormattingRevisionLabelPriority();
         if (formattingPriority is not null)
         {
             return formattingPriority.Value;
@@ -196,47 +196,47 @@ internal sealed partial class DocxRenderer
         }
 
         return 100;
-    }
 
-    private static int? FormattingRevisionLabelPriority(string label)
-    {
-        if (label.StartsWith("Formatted section", StringComparison.Ordinal))
+        int? FormattingRevisionLabelPriority()
         {
-            return 50;
-        }
+            if (label.StartsWith("Formatted section", StringComparison.Ordinal))
+            {
+                return 50;
+            }
 
-        if (label.StartsWith("Formatted table", StringComparison.Ordinal))
-        {
-            return 51;
-        }
+            if (label.StartsWith("Formatted table", StringComparison.Ordinal))
+            {
+                return 51;
+            }
 
-        if (label.StartsWith("Formatted row", StringComparison.Ordinal))
-        {
-            return 52;
-        }
+            if (label.StartsWith("Formatted row", StringComparison.Ordinal))
+            {
+                return 52;
+            }
 
-        if (label.StartsWith("Formatted cell", StringComparison.Ordinal))
-        {
-            return 53;
-        }
+            if (label.StartsWith("Formatted cell", StringComparison.Ordinal))
+            {
+                return 53;
+            }
 
-        if (label.StartsWith("Formatted paragraph", StringComparison.Ordinal))
-        {
-            return 54;
-        }
+            if (label.StartsWith("Formatted paragraph", StringComparison.Ordinal))
+            {
+                return 54;
+            }
 
-        if (label.StartsWith("Formatted run", StringComparison.Ordinal))
-        {
-            return 55;
-        }
+            if (label.StartsWith("Formatted run", StringComparison.Ordinal))
+            {
+                return 55;
+            }
 
-        if (string.Equals(label, "Formatting change", StringComparison.Ordinal) ||
-            label.StartsWith("Formatted ", StringComparison.Ordinal))
-        {
-            return 56;
-        }
+            if (string.Equals(label, "Formatting change", StringComparison.Ordinal) ||
+                label.StartsWith("Formatted ", StringComparison.Ordinal))
+            {
+                return 56;
+            }
 
-        return null;
+            return null;
+        }
     }
 
     private static bool IsFormattingRevision(DocxRevisionInfo revision)
@@ -286,7 +286,7 @@ internal sealed partial class DocxRenderer
             .Distinct(StringComparer.Ordinal)
             .ToArray();
         string[] properties = names
-            .OrderBy(name => FormattingRevisionPropertyPriority(family, name))
+            .OrderBy(name => FormattingRevisionPropertyPriority(name))
             .ThenBy(name => FormatFormattingRevisionPropertyName(family, name), StringComparer.Ordinal)
             .Select(name => FormatFormattingRevisionPropertyName(family, name))
             .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -302,178 +302,178 @@ internal sealed partial class DocxRenderer
             ? string.Empty
             : ", +" + hiddenPropertyCount.ToString(CultureInfo.InvariantCulture) + " more";
         return properties.Length == 0 ? prefix : prefix + ": " + string.Join(", ", properties) + suffix;
-    }
 
-    private static int FormattingRevisionPropertyPriority(DocxRevisionPropertyFamily family, string value)
-    {
-        return family switch
+        int FormattingRevisionPropertyPriority(string value)
         {
-            DocxRevisionPropertyFamily.Run => value switch
+            return family switch
             {
-                "rStyle" => 0,
-                "rFonts" => 10,
-                "sz" => 20,
-                "color" => 30,
-                "highlight" => 40,
-                "b" => 50,
-                "i" => 60,
-                "u" => 70,
-                "vertAlign" => 80,
-                "shd" => 90,
-                "strike" => 100,
-                "dstrike" => 110,
-                "caps" => 120,
-                "smallCaps" => 130,
-                "vanish" => 140,
-                "rtl" => 150,
-                "lang" => 160,
-                "eastAsianLayout" => 170,
-                "position" => 180,
-                "kern" => 190,
-                "outline" => 200,
-                "shadow" => 210,
-                "emboss" => 220,
-                "imprint" => 230,
-                "webHidden" => 240,
-                "szCs" => 250,
-                "bCs" => 260,
-                "iCs" => 270,
-                "spacing" => 280,
-                "w" => 290,
-                "bdr" => 300,
-                "effect" => 310,
-                "em" => 320,
-                "fitText" => 330,
-                "snapToGrid" => 340,
-                "noProof" => 350,
-                "specVanish" => 360,
-                "cs" => 370,
-                "oMath" => 380,
+                DocxRevisionPropertyFamily.Run => value switch
+                {
+                    "rStyle" => 0,
+                    "rFonts" => 10,
+                    "sz" => 20,
+                    "color" => 30,
+                    "highlight" => 40,
+                    "b" => 50,
+                    "i" => 60,
+                    "u" => 70,
+                    "vertAlign" => 80,
+                    "shd" => 90,
+                    "strike" => 100,
+                    "dstrike" => 110,
+                    "caps" => 120,
+                    "smallCaps" => 130,
+                    "vanish" => 140,
+                    "rtl" => 150,
+                    "lang" => 160,
+                    "eastAsianLayout" => 170,
+                    "position" => 180,
+                    "kern" => 190,
+                    "outline" => 200,
+                    "shadow" => 210,
+                    "emboss" => 220,
+                    "imprint" => 230,
+                    "webHidden" => 240,
+                    "szCs" => 250,
+                    "bCs" => 260,
+                    "iCs" => 270,
+                    "spacing" => 280,
+                    "w" => 290,
+                    "bdr" => 300,
+                    "effect" => 310,
+                    "em" => 320,
+                    "fitText" => 330,
+                    "snapToGrid" => 340,
+                    "noProof" => 350,
+                    "specVanish" => 360,
+                    "cs" => 370,
+                    "oMath" => 380,
+                    _ => 500
+                },
+                DocxRevisionPropertyFamily.Paragraph => value switch
+                {
+                    "pStyle" => 0,
+                    "numPr" => 10,
+                    "ilvl" => 20,
+                    "numId" => 30,
+                    "numberingChange" => 40,
+                    "jc" => 50,
+                    "ind" => 60,
+                    "spacing" => 70,
+                    "tabs" => 80,
+                    "keepNext" => 90,
+                    "keepLines" => 100,
+                    "widowControl" => 110,
+                    "pageBreakBefore" => 120,
+                    "outlineLvl" => 130,
+                    "pBdr" => 140,
+                    "shd" => 150,
+                    "contextualSpacing" => 160,
+                    "wordWrap" => 170,
+                    "bidi" => 180,
+                    "textAlignment" => 190,
+                    "framePr" => 200,
+                    "suppressLineNumbers" => 210,
+                    "adjustRightInd" => 220,
+                    "autoSpaceDE" => 230,
+                    "autoSpaceDN" => 240,
+                    "snapToGrid" => 250,
+                    "kinsoku" => 260,
+                    "overflowPunct" => 270,
+                    "topLinePunct" => 280,
+                    "suppressAutoHyphens" => 290,
+                    "mirrorIndents" => 300,
+                    "suppressOverlap" => 310,
+                    "cnfStyle" => 320,
+                    "divId" => 330,
+                    _ => 500
+                },
+                DocxRevisionPropertyFamily.Table => value switch
+                {
+                    "tblStyle" => 0,
+                    "tblBorders" => 10,
+                    "tblW" => 20,
+                    "tblLayout" => 30,
+                    "tblInd" => 40,
+                    "tblCellMar" => 50,
+                    "tblLook" => 60,
+                    "jc" => 70,
+                    "tblCellSpacing" => 80,
+                    "shd" => 90,
+                    "bidiVisual" => 100,
+                    "tblpPr" => 110,
+                    "tblOverlap" => 120,
+                    "tblCaption" => 130,
+                    "tblDescription" => 140,
+                    "tblStyleRowBandSize" => 150,
+                    "tblStyleColBandSize" => 160,
+                    "cnfStyle" => 170,
+                    _ => 500
+                },
+                DocxRevisionPropertyFamily.Row => value switch
+                {
+                    "tblHeader" => 0,
+                    "trHeight" => 10,
+                    "cantSplit" => 20,
+                    "jc" => 30,
+                    "tblCellSpacing" => 40,
+                    "gridBefore" => 50,
+                    "gridAfter" => 60,
+                    "wBefore" => 70,
+                    "wAfter" => 80,
+                    "hidden" => 90,
+                    "tblPrEx" => 100,
+                    "cnfStyle" => 110,
+                    "divId" => 120,
+                    _ => 500
+                },
+                DocxRevisionPropertyFamily.Cell => value switch
+                {
+                    "tcW" => 0,
+                    "gridSpan" => 10,
+                    "vMerge" => 20,
+                    "vAlign" => 30,
+                    "tcMar" => 40,
+                    "tcBorders" => 50,
+                    "shd" => 60,
+                    "textDirection" => 70,
+                    "tcFitText" => 80,
+                    "noWrap" => 90,
+                    "hideMark" => 100,
+                    "hMerge" => 110,
+                    "cellIns" => 120,
+                    "cellDel" => 130,
+                    "cellMerge" => 140,
+                    "cnfStyle" => 150,
+                    _ => 500
+                },
+                DocxRevisionPropertyFamily.Section => value switch
+                {
+                    "type" => 0,
+                    "pgSz" => 10,
+                    "pgMar" => 20,
+                    "cols" => 30,
+                    "headerReference" => 40,
+                    "footerReference" => 50,
+                    "pgNumType" => 60,
+                    "docGrid" => 70,
+                    "lnNumType" => 80,
+                    "footnotePr" => 90,
+                    "endnotePr" => 100,
+                    "pgBorders" => 110,
+                    "titlePg" => 120,
+                    "vAlign" => 130,
+                    "paperSrc" => 140,
+                    "textDirection" => 150,
+                    "bidi" => 160,
+                    "rtlGutter" => 170,
+                    "printerSettings" => 180,
+                    "formProt" => 190,
+                    _ => 500
+                },
                 _ => 500
-            },
-            DocxRevisionPropertyFamily.Paragraph => value switch
-            {
-                "pStyle" => 0,
-                "numPr" => 10,
-                "ilvl" => 20,
-                "numId" => 30,
-                "numberingChange" => 40,
-                "jc" => 50,
-                "ind" => 60,
-                "spacing" => 70,
-                "tabs" => 80,
-                "keepNext" => 90,
-                "keepLines" => 100,
-                "widowControl" => 110,
-                "pageBreakBefore" => 120,
-                "outlineLvl" => 130,
-                "pBdr" => 140,
-                "shd" => 150,
-                "contextualSpacing" => 160,
-                "wordWrap" => 170,
-                "bidi" => 180,
-                "textAlignment" => 190,
-                "framePr" => 200,
-                "suppressLineNumbers" => 210,
-                "adjustRightInd" => 220,
-                "autoSpaceDE" => 230,
-                "autoSpaceDN" => 240,
-                "snapToGrid" => 250,
-                "kinsoku" => 260,
-                "overflowPunct" => 270,
-                "topLinePunct" => 280,
-                "suppressAutoHyphens" => 290,
-                "mirrorIndents" => 300,
-                "suppressOverlap" => 310,
-                "cnfStyle" => 320,
-                "divId" => 330,
-                _ => 500
-            },
-            DocxRevisionPropertyFamily.Table => value switch
-            {
-                "tblStyle" => 0,
-                "tblBorders" => 10,
-                "tblW" => 20,
-                "tblLayout" => 30,
-                "tblInd" => 40,
-                "tblCellMar" => 50,
-                "tblLook" => 60,
-                "jc" => 70,
-                "tblCellSpacing" => 80,
-                "shd" => 90,
-                "bidiVisual" => 100,
-                "tblpPr" => 110,
-                "tblOverlap" => 120,
-                "tblCaption" => 130,
-                "tblDescription" => 140,
-                "tblStyleRowBandSize" => 150,
-                "tblStyleColBandSize" => 160,
-                "cnfStyle" => 170,
-                _ => 500
-            },
-            DocxRevisionPropertyFamily.Row => value switch
-            {
-                "tblHeader" => 0,
-                "trHeight" => 10,
-                "cantSplit" => 20,
-                "jc" => 30,
-                "tblCellSpacing" => 40,
-                "gridBefore" => 50,
-                "gridAfter" => 60,
-                "wBefore" => 70,
-                "wAfter" => 80,
-                "hidden" => 90,
-                "tblPrEx" => 100,
-                "cnfStyle" => 110,
-                "divId" => 120,
-                _ => 500
-            },
-            DocxRevisionPropertyFamily.Cell => value switch
-            {
-                "tcW" => 0,
-                "gridSpan" => 10,
-                "vMerge" => 20,
-                "vAlign" => 30,
-                "tcMar" => 40,
-                "tcBorders" => 50,
-                "shd" => 60,
-                "textDirection" => 70,
-                "tcFitText" => 80,
-                "noWrap" => 90,
-                "hideMark" => 100,
-                "hMerge" => 110,
-                "cellIns" => 120,
-                "cellDel" => 130,
-                "cellMerge" => 140,
-                "cnfStyle" => 150,
-                _ => 500
-            },
-            DocxRevisionPropertyFamily.Section => value switch
-            {
-                "type" => 0,
-                "pgSz" => 10,
-                "pgMar" => 20,
-                "cols" => 30,
-                "headerReference" => 40,
-                "footerReference" => 50,
-                "pgNumType" => 60,
-                "docGrid" => 70,
-                "lnNumType" => 80,
-                "footnotePr" => 90,
-                "endnotePr" => 100,
-                "pgBorders" => 110,
-                "titlePg" => 120,
-                "vAlign" => 130,
-                "paperSrc" => 140,
-                "textDirection" => 150,
-                "bidi" => 160,
-                "rtlGutter" => 170,
-                "printerSettings" => 180,
-                "formProt" => 190,
-                _ => 500
-            },
-            _ => 500
-        };
+            };
+        }
     }
 
     private static string FormatFormattingRevisionPropertyName(DocxRevisionPropertyFamily family, string value)
@@ -618,19 +618,19 @@ internal sealed partial class DocxRenderer
             "rtlGutter" => "right-to-left gutter",
             "printerSettings" => "printer settings",
             "formProt" => "form protection",
-            _ => HumanizeFormattingRevisionPropertyName(value)
+            _ => HumanizeFormattingRevisionPropertyName()
         };
-    }
 
-    private static string HumanizeFormattingRevisionPropertyName(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
+        string HumanizeFormattingRevisionPropertyName()
         {
-            return string.Empty;
-        }
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
 
-        string spaced = Regex.Replace(value.Trim(), "([a-z0-9])([A-Z])", "$1 $2");
-        return spaced.Replace(" Pr", " properties", StringComparison.Ordinal).ToLowerInvariant();
+            string spaced = Regex.Replace(value.Trim(), "([a-z0-9])([A-Z])", "$1 $2");
+            return spaced.Replace(" Pr", " properties", StringComparison.Ordinal).ToLowerInvariant();
+        }
     }
 
     internal static string BuildCommentBalloonTitle(DocxRelatedStory? story, string? fallbackId)
@@ -860,7 +860,7 @@ internal sealed partial class DocxRenderer
         }
 
         string[] words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        string firstLine = ConsumeBalloonWords(words, 0, firstLineWidth, embedded, fontSize, out int nextWordIndex);
+        string firstLine = ConsumeBalloonWords(0, firstLineWidth, out int nextWordIndex);
         if (nextWordIndex >= words.Length)
         {
             return [firstLine];
@@ -869,40 +869,34 @@ internal sealed partial class DocxRenderer
         string secondLine = string.Join(" ", words.Skip(nextWordIndex));
         secondLine = FitWordCompatibleBalloonLine(secondLine, continuationWidth, embedded, fontSize);
         return [firstLine + " ", secondLine];
-    }
 
-    private static string ConsumeBalloonWords(
-        string[] words,
-        int startIndex,
-        double maxWidth,
-        PdfEmbeddedFont embedded,
-        double fontSize,
-        out int nextWordIndex)
-    {
-        string line = string.Empty;
-        int index = startIndex;
-        for (; index < words.Length; index++)
+        string ConsumeBalloonWords(int startIndex, double maxWidth, out int nextWordIndex)
         {
-            string candidate = line.Length == 0
-                ? words[index]
-                : line + " " + words[index];
-            if (line.Length != 0 &&
-                embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+            string line = string.Empty;
+            int index = startIndex;
+            for (; index < words.Length; index++)
             {
-                break;
+                string candidate = line.Length == 0
+                    ? words[index]
+                    : line + " " + words[index];
+                if (line.Length != 0 &&
+                    embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+                {
+                    break;
+                }
+
+                line = candidate;
             }
 
-            line = candidate;
-        }
+            if (line.Length == 0 && startIndex < words.Length)
+            {
+                line = FitWordCompatibleBalloonLine(words[startIndex], maxWidth, embedded, fontSize);
+                index = startIndex + 1;
+            }
 
-        if (line.Length == 0 && startIndex < words.Length)
-        {
-            line = FitWordCompatibleBalloonLine(words[startIndex], maxWidth, embedded, fontSize);
-            index = startIndex + 1;
+            nextWordIndex = index;
+            return line;
         }
-
-        nextWordIndex = index;
-        return line;
     }
 
     private static string FitWordCompatibleBalloonLine(

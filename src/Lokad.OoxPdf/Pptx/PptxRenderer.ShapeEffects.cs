@@ -472,48 +472,48 @@ internal sealed partial class PptxRenderer
 
     private static void AppendEllipseArcSegment(PdfGraphicsBuilder graphics, double centerX, double centerY, double radiusX, double radiusY, double startDegrees, double sweepDegrees, bool moveToStart)
     {
-        BezierSegment segment = CreateEllipseArcSegment(centerX, centerY, radiusX, radiusY, startDegrees, sweepDegrees);
+        BezierSegment segment = CreateEllipseArcSegment();
         if (moveToStart)
         {
             graphics.MoveTo(segment.StartX, segment.StartY);
         }
 
         graphics.CurveTo(segment.Control1X, segment.Control1Y, segment.Control2X, segment.Control2Y, segment.EndX, segment.EndY);
-    }
 
-    private static BezierSegment CreateEllipseArcSegment(double centerX, double centerY, double radiusX, double radiusY, double startDegrees, double sweepDegrees)
-    {
-        double start = ConvertVisualAngleToEllipseParameter(startDegrees, radiusX, radiusY);
-        double end = ConvertVisualAngleToEllipseParameter(startDegrees + sweepDegrees, radiusX, radiusY);
-        double sweep = end - start;
-        if (sweepDegrees >= 0d)
+        BezierSegment CreateEllipseArcSegment()
         {
-            while (sweep <= 0d)
+            double start = ConvertVisualAngleToEllipseParameter(startDegrees, radiusX, radiusY);
+            double end = ConvertVisualAngleToEllipseParameter(startDegrees + sweepDegrees, radiusX, radiusY);
+            double sweep = end - start;
+            if (sweepDegrees >= 0d)
             {
-                sweep += Math.Tau;
+                while (sweep <= 0d)
+                {
+                    sweep += Math.Tau;
+                }
             }
-        }
-        else
-        {
-            while (sweep >= 0d)
+            else
             {
-                sweep -= Math.Tau;
+                while (sweep >= 0d)
+                {
+                    sweep -= Math.Tau;
+                }
             }
+
+            double endParameter = start + sweep;
+            double k = 4d / 3d * Math.Tan(sweep / 4d);
+
+            double x0 = centerX + radiusX * Math.Cos(start);
+            double y0 = centerY - radiusY * Math.Sin(start);
+            double x3 = centerX + radiusX * Math.Cos(endParameter);
+            double y3 = centerY - radiusY * Math.Sin(endParameter);
+            double x1 = x0 - radiusX * k * Math.Sin(start);
+            double y1 = y0 - radiusY * k * Math.Cos(start);
+            double x2 = x3 + radiusX * k * Math.Sin(endParameter);
+            double y2 = y3 + radiusY * k * Math.Cos(endParameter);
+
+            return new BezierSegment(x0, y0, x1, y1, x2, y2, x3, y3);
         }
-
-        double endParameter = start + sweep;
-        double k = 4d / 3d * Math.Tan(sweep / 4d);
-
-        double x0 = centerX + radiusX * Math.Cos(start);
-        double y0 = centerY - radiusY * Math.Sin(start);
-        double x3 = centerX + radiusX * Math.Cos(endParameter);
-        double y3 = centerY - radiusY * Math.Sin(endParameter);
-        double x1 = x0 - radiusX * k * Math.Sin(start);
-        double y1 = y0 - radiusY * k * Math.Cos(start);
-        double x2 = x3 + radiusX * k * Math.Sin(endParameter);
-        double y2 = y3 + radiusY * k * Math.Cos(endParameter);
-
-        return new BezierSegment(x0, y0, x1, y1, x2, y2, x3, y3);
     }
 
     private static double ConvertVisualAngleToEllipseParameter(double degrees, double radiusX, double radiusY)

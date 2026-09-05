@@ -211,6 +211,15 @@ internal sealed partial class DocxRenderer
     private static bool IsBehindDocument(DocxFloatingDrawing drawing)
     {
         return IsOnOffTrue(drawing.BehindDocumentValue);
+
+        bool IsOnOffTrue(string? value)
+        {
+            return value is not null &&
+                (value.Length == 0 ||
+                value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("on", StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     private static long ReadZOrder(string? value)
@@ -218,14 +227,5 @@ internal sealed partial class DocxRenderer
         return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long zOrder)
             ? zOrder
             : 0L;
-    }
-
-    private static bool IsOnOffTrue(string? value)
-    {
-        return value is not null &&
-            (value.Length == 0 ||
-            value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("on", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -728,11 +728,16 @@ internal sealed record DocxLayoutSnapshot(
                 CommentReferenceCount: TableRowParagraphs(row).Sum(CountCommentReferences)),
             _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0)
         };
-    }
 
-    private static int CountTextSegments(DocxTextLineLayout text, Func<DocxRunStyleResolution, bool> predicate)
-    {
-        return text.Segments.Count(segment => predicate(segment.StyleRun.StyleResolution));
+        int CountCommentReferences(DocxParagraph? paragraph)
+        {
+            return paragraph?.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment) ?? 0;
+        }
+
+        int CountTextSegments(DocxTextLineLayout text, Func<DocxRunStyleResolution, bool> predicate)
+        {
+            return text.Segments.Count(segment => predicate(segment.StyleRun.StyleResolution));
+        }
     }
 
     private static IReadOnlyList<DocxLayoutItemSnapshot> ToTableRowTextLineSnapshots(DocxTableRowLayout row)
@@ -822,11 +827,6 @@ internal sealed record DocxLayoutSnapshot(
     {
         return paragraph?.Revisions.Count(revision =>
             revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo)) ?? 0;
-    }
-
-    private static int CountCommentReferences(DocxParagraph? paragraph)
-    {
-        return paragraph?.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment) ?? 0;
     }
 
     private static (double X, double Width) GetHorizontalBounds(DocxLayoutItem item)
@@ -936,7 +936,7 @@ internal sealed record DocxLayoutSnapshot(
         IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.EffectiveProperties.SpacingAfterPoints).ToArray();
         string cellText = string.Concat(paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
         string visualCellText = string.Concat(visualParagraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
-        TextProfile textProfile = BuildTextProfile(cellText);
+        TextProfile textProfile = BuildTextProfile();
         return new DocxTableCellSnapshot(
             cellIndex,
             cellLayout.X,
@@ -1007,63 +1007,63 @@ internal sealed record DocxLayoutSnapshot(
             bodyElements.OfType<DocxManualBreakElement>().Count(),
             bodyElements.OfType<DocxPageBreakElement>().Count(),
             bodyElements.OfType<DocxTableElement>().Count());
+
+        TextProfile BuildTextProfile()
+        {
+            int spaceCharacterCount = 0;
+            int nonAsciiCharacterCount = 0;
+            int punctuationCharacterCount = 0;
+            int digitCharacterCount = 0;
+            int uppercaseCharacterCount = 0;
+            int lowercaseCharacterCount = 0;
+            foreach (char value in cellText)
+            {
+                if (char.IsWhiteSpace(value))
+                {
+                    spaceCharacterCount++;
+                }
+
+                if (value > 0x7f)
+                {
+                    nonAsciiCharacterCount++;
+                }
+
+                if (char.IsPunctuation(value))
+                {
+                    punctuationCharacterCount++;
+                }
+
+                if (char.IsDigit(value))
+                {
+                    digitCharacterCount++;
+                }
+
+                if (char.IsUpper(value))
+                {
+                    uppercaseCharacterCount++;
+                }
+
+                if (char.IsLower(value))
+                {
+                    lowercaseCharacterCount++;
+                }
+            }
+
+            int longestBreakableTokenLength = ResolveLongestBreakableTokenLength(cellText);
+            return new TextProfile(
+                spaceCharacterCount,
+                nonAsciiCharacterCount,
+                punctuationCharacterCount,
+                digitCharacterCount,
+                uppercaseCharacterCount,
+                lowercaseCharacterCount,
+                longestBreakableTokenLength);
+        }
     }
 
     private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
     {
         return DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
-    }
-
-    private static TextProfile BuildTextProfile(string text)
-    {
-        int spaceCharacterCount = 0;
-        int nonAsciiCharacterCount = 0;
-        int punctuationCharacterCount = 0;
-        int digitCharacterCount = 0;
-        int uppercaseCharacterCount = 0;
-        int lowercaseCharacterCount = 0;
-        foreach (char value in text)
-        {
-            if (char.IsWhiteSpace(value))
-            {
-                spaceCharacterCount++;
-            }
-
-            if (value > 0x7f)
-            {
-                nonAsciiCharacterCount++;
-            }
-
-            if (char.IsPunctuation(value))
-            {
-                punctuationCharacterCount++;
-            }
-
-            if (char.IsDigit(value))
-            {
-                digitCharacterCount++;
-            }
-
-            if (char.IsUpper(value))
-            {
-                uppercaseCharacterCount++;
-            }
-
-            if (char.IsLower(value))
-            {
-                lowercaseCharacterCount++;
-            }
-        }
-
-        int longestBreakableTokenLength = ResolveLongestBreakableTokenLength(text);
-        return new TextProfile(
-            spaceCharacterCount,
-            nonAsciiCharacterCount,
-            punctuationCharacterCount,
-            digitCharacterCount,
-            uppercaseCharacterCount,
-            lowercaseCharacterCount,
-            longestBreakableTokenLength);
     }
 
     private static int ResolveLongestBreakableTokenLength(string text)

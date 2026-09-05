@@ -120,18 +120,18 @@ internal sealed partial class PptxRenderer
             slideXml,
             sceneSlide.SlideRelationships,
             sceneSlide.SlideColorMap);
-        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(sceneSlide), fontResolver, imageCache, diagnosticSink, cancellationToken);
-    }
+        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken);
 
-    private static IReadOnlyList<PptxRenderSource> BuildInheritedSources(PptxSceneSlide sceneSlide)
-    {
-        return (sceneSlide.MasterXml, sceneSlide.LayoutXml) switch
+        IReadOnlyList<PptxRenderSource> BuildInheritedSources()
         {
-            ({ } master, { } layout) => [BuildMasterSource(sceneSlide, master), BuildLayoutSource(sceneSlide, layout)],
-            ({ } master, null) => [BuildMasterSource(sceneSlide, master)],
-            (null, { } layout) => [BuildLayoutSource(sceneSlide, layout)],
-            _ => []
-        };
+            return (sceneSlide.MasterXml, sceneSlide.LayoutXml) switch
+            {
+                ({ } master, { } layout) => [BuildMasterSource(sceneSlide, master), BuildLayoutSource(sceneSlide, layout)],
+                ({ } master, null) => [BuildMasterSource(sceneSlide, master)],
+                (null, { } layout) => [BuildLayoutSource(sceneSlide, layout)],
+                _ => []
+            };
+        }
     }
 
     private static PptxRenderSource BuildMasterSource(PptxSceneSlide sceneSlide, XDocument xml)

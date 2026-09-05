@@ -134,7 +134,7 @@ internal sealed partial class PptxSceneBuilder
         (PptxSceneTableCellVerticalAnchor verticalAnchor, string? verticalAnchorValue, PptxSceneTableCellVerticalAnchorSource verticalAnchorSource) = ReadTableCellVerticalAnchorInfo(cell);
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
-        int leadingEmptyParagraphCount = CountLeadingEmptyTableCellTextParagraphs(textBody);
+        int leadingEmptyParagraphCount = CountLeadingEmptyTableCellTextParagraphs();
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
@@ -150,53 +150,53 @@ internal sealed partial class PptxSceneBuilder
             PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
             textBody,
-            BuildTableCellLayoutTextBody(textBody, leadingEmptyParagraphCount),
+            BuildTableCellLayoutTextBody(),
             HasUnsupportedTextOrientation(bodyProperties),
             HasUnsupportedTextVerticalOverflow(bodyProperties),
             leadingEmptyParagraphCount);
-    }
 
-    private static XElement? BuildTableCellLayoutTextBody(XElement? textBody, int leadingEmptyParagraphCount)
-    {
-        if (textBody is null)
+        XElement? BuildTableCellLayoutTextBody()
         {
-            return null;
-        }
-
-        var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
-        foreach (XElement paragraph in textBodyCopy.Elements(DrawingNamespace + "p").Take(leadingEmptyParagraphCount).ToArray())
-        {
-            paragraph.Remove();
-        }
-
-        return textBodyCopy;
-    }
-
-    private static int CountLeadingEmptyTableCellTextParagraphs(XElement? textBody)
-    {
-        if (textBody is null)
-        {
-            return 0;
-        }
-
-        XElement[] paragraphs = textBody.Elements(DrawingNamespace + "p").ToArray();
-        if (!paragraphs.Any(ParagraphHasVisibleTextContent))
-        {
-            return 0;
-        }
-
-        int count = 0;
-        foreach (XElement paragraph in paragraphs)
-        {
-            if (ParagraphHasVisibleTextContent(paragraph))
+            if (textBody is null)
             {
-                return count;
+                return null;
             }
 
-            count++;
+            var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
+            foreach (XElement paragraph in textBodyCopy.Elements(DrawingNamespace + "p").Take(leadingEmptyParagraphCount).ToArray())
+            {
+                paragraph.Remove();
+            }
+
+            return textBodyCopy;
         }
 
-        return 0;
+        int CountLeadingEmptyTableCellTextParagraphs()
+        {
+            if (textBody is null)
+            {
+                return 0;
+            }
+
+            XElement[] paragraphs = textBody.Elements(DrawingNamespace + "p").ToArray();
+            if (!paragraphs.Any(ParagraphHasVisibleTextContent))
+            {
+                return 0;
+            }
+
+            int count = 0;
+            foreach (XElement paragraph in paragraphs)
+            {
+                if (ParagraphHasVisibleTextContent(paragraph))
+                {
+                    return count;
+                }
+
+                count++;
+            }
+
+            return 0;
+        }
     }
 
     private static bool ParagraphHasVisibleTextContent(XElement paragraph)

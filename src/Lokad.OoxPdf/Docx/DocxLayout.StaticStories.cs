@@ -161,7 +161,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs, pageNumber, pageCount);
+            DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs);
             int sourceLineIndex = 0;
             if (spans.Length != 0)
             {
@@ -183,7 +183,7 @@ internal sealed partial class DocxLayoutEngine
                     double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
                     double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
                     double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
-                    IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX, textMeasurer);
+                    IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
                     lines.Add(new DocxTextLineLayout(
                         line.Text,
                         line.Spans[0].StyleRun,
@@ -241,29 +241,59 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray());
-    }
 
-    private static DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs, int pageNumber, int pageCount)
-    {
-        if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
+        DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs)
         {
-            for (int i = 0; i < runs.Count; i++)
+            if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
             {
-                if (!runs[i].EffectiveProperties.Hidden)
+                for (int i = 0; i < runs.Count; i++)
                 {
-                    return [CreateTextSpan(" ", runs[i], i)];
+                    if (!runs[i].EffectiveProperties.Hidden)
+                    {
+                        return [CreateTextSpan(" ", runs[i], i)];
+                    }
+                }
+
+                return [];
+            }
+
+            return runs
+                .Select((run, index) => (run, index))
+                .Where(item => !item.run.EffectiveProperties.Hidden)
+                .Select(item => CreateTextSpan(ResolveStaticFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
+                .Where(span => span.Text.Length != 0)
+                .ToArray();
+        }
+
+        IReadOnlyList<DocxTextSegmentLayout> CreateStaticTextSegments(IReadOnlyList<DocxTextSpan> spans, double lineX)
+        {
+            var segments = new List<DocxTextSegmentLayout>(spans.Count);
+            double segmentX = lineX;
+            for (int i = 0; i < spans.Count; i++)
+            {
+                DocxTextSpan span = spans[i];
+                double nominalFontSize = span.StyleRun.EffectiveProperties.FontSize;
+                double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
+                double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
+                double segmentWidth = textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
+                segments.Add(new DocxTextSegmentLayout(
+                    span.Text,
+                    span.StyleRun,
+                    segmentX,
+                    segmentWidth,
+                    layoutFontSize,
+                    baselineOffset,
+                    SourceTextRunIndex: span.SourceTextRunIndex,
+                    SourceTextOffsetInRun: span.SourceTextOffsetInRun, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
+                segmentX += segmentWidth;
+                if (i + 1 < spans.Count)
+                {
+                    segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
                 }
             }
 
-            return [];
+            return segments;
         }
-
-        return runs
-            .Select((run, index) => (run, index))
-            .Where(item => !item.run.EffectiveProperties.Hidden)
-            .Select(item => CreateTextSpan(ResolveStaticFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
-            .Where(span => span.Text.Length != 0)
-            .ToArray();
     }
 
     private static IEnumerable<DocxWrappedTextLine> WrapStaticTextLines(
@@ -337,39 +367,6 @@ internal sealed partial class DocxLayoutEngine
         {
             yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false);
         }
-    }
-
-    private static IReadOnlyList<DocxTextSegmentLayout> CreateStaticTextSegments(
-        IReadOnlyList<DocxTextSpan> spans,
-        double lineX,
-        IDocxTextMeasurer textMeasurer)
-    {
-        var segments = new List<DocxTextSegmentLayout>(spans.Count);
-        double segmentX = lineX;
-        for (int i = 0; i < spans.Count; i++)
-        {
-            DocxTextSpan span = spans[i];
-            double nominalFontSize = span.StyleRun.EffectiveProperties.FontSize;
-            double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
-            double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
-            double width = textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
-            segments.Add(new DocxTextSegmentLayout(
-                span.Text,
-                span.StyleRun,
-                segmentX,
-                width,
-                layoutFontSize,
-                baselineOffset,
-                SourceTextRunIndex: span.SourceTextRunIndex,
-                SourceTextOffsetInRun: span.SourceTextOffsetInRun, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
-            segmentX += width;
-            if (i + 1 < spans.Count)
-            {
-                segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
-            }
-        }
-
-        return segments;
     }
 
     private static double MeasureStaticTextSpans(IReadOnlyList<DocxTextSpan> spans, IDocxTextMeasurer textMeasurer)
@@ -500,7 +497,7 @@ internal sealed partial class DocxLayoutEngine
 
         finalSectionSettings = new DocxEffectiveSectionSettings(
             ResolveEffectiveSectionSettings(
-                BuildFinalSectionSettings(document),
+                BuildFinalSectionSettings(),
                 inheritedHeadersByType,
                 inheritedFootersByType,
                 inheritedHeaderBodyElementsByType,
@@ -509,6 +506,49 @@ internal sealed partial class DocxLayoutEngine
                 ? new DocxSectionLayoutProperties(null, null, null, null, null, null, [])
                 : CreateSectionLayoutProperties(document.FinalSectionBreak));
         return sectionSettingsByElementIndex;
+
+        DocxPageSettings BuildFinalSectionSettings()
+        {
+            DocxPageSettings settings = document.PageSettings;
+            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = settings.HeaderParagraphsByType.Count == 0 && document.HeaderParagraphsByType.Count > 0
+                ? document.HeaderParagraphsByType
+                : settings.HeaderParagraphsByType;
+            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = settings.FooterParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count > 0
+                ? document.FooterParagraphsByType
+                : settings.FooterParagraphsByType;
+            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = settings.HeaderBodyElementsByType.Count == 0 && document.HeaderBodyElementsByType.Count > 0
+                ? document.HeaderBodyElementsByType
+                : settings.HeaderBodyElementsByType;
+            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = settings.FooterBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count > 0
+                ? document.FooterBodyElementsByType
+                : settings.FooterBodyElementsByType;
+
+            if (headersByType.Count == 0 && document.HeaderParagraphs.Count > 0)
+            {
+                headersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["default"] = document.HeaderParagraphs
+                };
+                headerBodyElementsByType = ToStaticBodyElementsByType(headersByType);
+            }
+
+            if (footersByType.Count == 0 && document.FooterParagraphs.Count > 0)
+            {
+                footersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["default"] = document.FooterParagraphs
+                };
+                footerBodyElementsByType = ToStaticBodyElementsByType(footersByType);
+            }
+
+            return settings with
+            {
+                HeaderParagraphsByType = headersByType,
+                FooterParagraphsByType = footersByType,
+                HeaderBodyElementsByType = headerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(headersByType) : headerBodyElementsByType,
+                FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType
+            };
+        }
     }
 
     private static DocxSectionLayoutProperties CreateSectionLayoutProperties(DocxSectionBreakElement sectionBreak)
@@ -527,49 +567,6 @@ internal sealed partial class DocxLayoutEngine
                     ReadOptionalTwipsValue(column.WidthValue),
                     ReadOptionalTwipsValue(column.SpaceValue)))
                 .ToArray());
-    }
-
-    private static DocxPageSettings BuildFinalSectionSettings(DocxDocument document)
-    {
-        DocxPageSettings settings = document.PageSettings;
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = settings.HeaderParagraphsByType.Count == 0 && document.HeaderParagraphsByType.Count > 0
-            ? document.HeaderParagraphsByType
-            : settings.HeaderParagraphsByType;
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = settings.FooterParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count > 0
-            ? document.FooterParagraphsByType
-            : settings.FooterParagraphsByType;
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = settings.HeaderBodyElementsByType.Count == 0 && document.HeaderBodyElementsByType.Count > 0
-            ? document.HeaderBodyElementsByType
-            : settings.HeaderBodyElementsByType;
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = settings.FooterBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count > 0
-            ? document.FooterBodyElementsByType
-            : settings.FooterBodyElementsByType;
-
-        if (headersByType.Count == 0 && document.HeaderParagraphs.Count > 0)
-        {
-            headersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["default"] = document.HeaderParagraphs
-            };
-            headerBodyElementsByType = ToStaticBodyElementsByType(headersByType);
-        }
-
-        if (footersByType.Count == 0 && document.FooterParagraphs.Count > 0)
-        {
-            footersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["default"] = document.FooterParagraphs
-            };
-            footerBodyElementsByType = ToStaticBodyElementsByType(footersByType);
-        }
-
-        return settings with
-        {
-            HeaderParagraphsByType = headersByType,
-            FooterParagraphsByType = footersByType,
-            HeaderBodyElementsByType = headerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(headersByType) : headerBodyElementsByType,
-            FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType
-        };
     }
 
     private static DocxPageSettings ResolveEffectiveSectionSettings(
@@ -724,9 +721,50 @@ internal sealed partial class DocxLayoutEngine
             section.SectionProperties,
             CreateColumnFrames(
                 width,
-                marginLeft,
-                marginRight,
                 section.SectionProperties));
+
+        IReadOnlyList<DocxLayoutColumnFrame> CreateColumnFrames(double pageWidth, DocxSectionLayoutProperties section)
+        {
+            double bodyWidth = Math.Max(1d, pageWidth - marginLeft - marginRight);
+            int columnCount = Math.Max(1, section.ColumnCount ?? 1);
+            if (columnCount == 1)
+            {
+                return [new DocxLayoutColumnFrame(0, marginLeft, bodyWidth, null)];
+            }
+
+            if (string.Equals(section.ColumnEqualWidthValue, "0", StringComparison.OrdinalIgnoreCase))
+            {
+                if (section.ColumnDefinitions.Count == 0)
+                {
+                    return [];
+                }
+
+                double x = marginLeft;
+                var frames = new List<DocxLayoutColumnFrame>();
+                for (int index = 0; index < section.ColumnDefinitions.Count; index++)
+                {
+                    DocxSectionColumnLayoutProperties column = section.ColumnDefinitions[index];
+                    double customColumnWidth = Math.Max(1d, column.WidthPoints ?? 0d);
+                    double? customGutter = index + 1 < section.ColumnDefinitions.Count
+                        ? Math.Max(0d, column.SpacePoints ?? 0d)
+                        : null;
+                    frames.Add(new DocxLayoutColumnFrame(index, x, customColumnWidth, customGutter));
+                    x += customColumnWidth + (customGutter ?? 0d);
+                }
+
+                return frames;
+            }
+
+            double columnGutter = Math.Max(0d, section.ColumnSpacePoints ?? 0d);
+            double columnWidth = Math.Max(1d, (bodyWidth - columnGutter * (columnCount - 1)) / columnCount);
+            return Enumerable.Range(0, columnCount)
+                .Select(index => new DocxLayoutColumnFrame(
+                    index,
+                    marginLeft + index * (columnWidth + columnGutter),
+                    columnWidth,
+                    index + 1 < columnCount ? columnGutter : null))
+                .ToArray();
+        }
     }
 
     private static double ResolveReservedMarkupRightMargin(double pageWidth, double marginLeft, double marginRight)
@@ -766,53 +804,6 @@ internal sealed partial class DocxLayoutEngine
     private static bool IsEvenMirroredPage(DocxDocument document, int pageNumber)
     {
         return document.Settings.MirrorMargins == true && pageNumber % 2 == 0;
-    }
-
-    private static IReadOnlyList<DocxLayoutColumnFrame> CreateColumnFrames(
-        double pageWidth,
-        double marginLeft,
-        double marginRight,
-        DocxSectionLayoutProperties section)
-    {
-        double bodyWidth = Math.Max(1d, pageWidth - marginLeft - marginRight);
-        int columnCount = Math.Max(1, section.ColumnCount ?? 1);
-        if (columnCount == 1)
-        {
-            return [new DocxLayoutColumnFrame(0, marginLeft, bodyWidth, null)];
-        }
-
-        if (string.Equals(section.ColumnEqualWidthValue, "0", StringComparison.OrdinalIgnoreCase))
-        {
-            if (section.ColumnDefinitions.Count == 0)
-            {
-                return [];
-            }
-
-            double x = marginLeft;
-            var frames = new List<DocxLayoutColumnFrame>();
-            for (int index = 0; index < section.ColumnDefinitions.Count; index++)
-            {
-                DocxSectionColumnLayoutProperties column = section.ColumnDefinitions[index];
-                double customColumnWidth = Math.Max(1d, column.WidthPoints ?? 0d);
-                double? customGutter = index + 1 < section.ColumnDefinitions.Count
-                    ? Math.Max(0d, column.SpacePoints ?? 0d)
-                    : null;
-                frames.Add(new DocxLayoutColumnFrame(index, x, customColumnWidth, customGutter));
-                x += customColumnWidth + (customGutter ?? 0d);
-            }
-
-            return frames;
-        }
-
-        double gutter = Math.Max(0d, section.ColumnSpacePoints ?? 0d);
-        double columnWidth = Math.Max(1d, (bodyWidth - gutter * (columnCount - 1)) / columnCount);
-        return Enumerable.Range(0, columnCount)
-            .Select(index => new DocxLayoutColumnFrame(
-                index,
-                marginLeft + index * (columnWidth + gutter),
-                columnWidth,
-                index + 1 < columnCount ? gutter : null))
-            .ToArray();
     }
 
     private static DocxLayoutColumnFrame ResolveActiveColumnFrame(DocxPageGeometry page, int activeColumnIndex)

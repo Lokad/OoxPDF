@@ -349,13 +349,13 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        if (IsSegmentedUnderlineValue(underlineValue))
+        if (IsSegmentedUnderlineValue())
         {
             RenderSegmentedUnderlineDecoration(graphics, x, y, width, thickness, fontSize, underlineValue);
             return;
         }
 
-        if (IsDoubleUnderlineValue(underlineValue))
+        if (IsDoubleUnderlineValue())
         {
             double offset = Math.Max(thickness, fontSize / 18d);
             graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
@@ -367,6 +367,32 @@ internal sealed partial class DocxRenderer
             ? Math.Max(thickness * 1.35d, 0.3d)
             : thickness;
         graphics.FillRectangle(x, y - solidThickness / 2d, width, solidThickness);
+
+        bool IsDoubleUnderlineValue()
+        {
+            return underlineValue is not null &&
+                (underlineValue.Equals("double", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dbl", StringComparison.OrdinalIgnoreCase));
+        }
+
+        bool IsSegmentedUnderlineValue()
+        {
+            return underlineValue is not null &&
+                (underlineValue.Equals("dash", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dashHeavy", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dashedHeavy", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dashLong", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dashLongHeavy", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dotted", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dottedHeavy", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dashDotHeavy", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dotDashHeavy", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dashDotDotHeavy", StringComparison.OrdinalIgnoreCase) ||
+                underlineValue.Equals("dotDotDashHeavy", StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     private static bool IsWordsUnderlineValue(string? underlineValue)
@@ -443,38 +469,12 @@ internal sealed partial class DocxRenderer
         return count;
     }
 
-    private static bool IsDoubleUnderlineValue(string? underlineValue)
-    {
-        return underlineValue is not null &&
-            (underlineValue.Equals("double", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dbl", StringComparison.OrdinalIgnoreCase));
-    }
-
     private static bool IsWaveUnderlineValue(string? underlineValue)
     {
         return underlineValue is not null &&
             (underlineValue.Equals("wave", StringComparison.OrdinalIgnoreCase) ||
             underlineValue.Equals("wavyHeavy", StringComparison.OrdinalIgnoreCase) ||
             underlineValue.Equals("wavyDouble", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static bool IsSegmentedUnderlineValue(string? underlineValue)
-    {
-        return underlineValue is not null &&
-            (underlineValue.Equals("dash", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dashHeavy", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dashedHeavy", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dashLong", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dashLongHeavy", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dotted", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dottedHeavy", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dashDotHeavy", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dotDashHeavy", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dashDotDotHeavy", StringComparison.OrdinalIgnoreCase) ||
-            underlineValue.Equals("dotDotDashHeavy", StringComparison.OrdinalIgnoreCase));
     }
 
     private static void RenderSegmentedUnderlineDecoration(
@@ -490,7 +490,7 @@ internal sealed partial class DocxRenderer
             ? Math.Max(thickness * 1.35d, 0.3d)
             : thickness;
         double dotLength = Math.Max(segmentThickness, 0.35d);
-        double dashLength = IsLongDashUnderlineValue(underlineValue)
+        double dashLength = IsLongDashUnderlineValue()
             ? Math.Max(fontSize / 2d, segmentThickness * 5d)
             : Math.Max(fontSize / 4d, segmentThickness * 3d);
         double gapLength = Math.Max(segmentThickness * 1.5d, 0.5d);
@@ -516,18 +516,18 @@ internal sealed partial class DocxRenderer
                 ? dotLength
                 : dashLength;
         RenderPatternedUnderlineDecoration(graphics, [segmentLength], gapLength, x, y, width, segmentThickness);
+
+        bool IsLongDashUnderlineValue()
+        {
+            return underlineValue?.Equals("dashLong", StringComparison.OrdinalIgnoreCase) == true ||
+                underlineValue?.Equals("dashLongHeavy", StringComparison.OrdinalIgnoreCase) == true;
+        }
     }
 
     private static bool IsHeavyUnderlineValue(string? underlineValue)
     {
         return underlineValue?.Contains("Heavy", StringComparison.OrdinalIgnoreCase) == true ||
             underlineValue?.Equals("thick", StringComparison.OrdinalIgnoreCase) == true;
-    }
-
-    private static bool IsLongDashUnderlineValue(string? underlineValue)
-    {
-        return underlineValue?.Equals("dashLong", StringComparison.OrdinalIgnoreCase) == true ||
-            underlineValue?.Equals("dashLongHeavy", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static void RenderPatternedUnderlineDecoration(

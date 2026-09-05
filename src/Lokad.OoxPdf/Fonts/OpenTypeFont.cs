@@ -85,7 +85,7 @@ internal sealed class OpenTypeFont
 
         if (Encoding.ASCII.GetString(bytes, 0, 4) == "ttcf")
         {
-            bytes = ExtractCollectionFont(bytes, fontIndex);
+            bytes = ExtractCollectionFont(bytes);
         }
         else if (fontIndex != 0)
         {
@@ -119,6 +119,70 @@ internal sealed class OpenTypeFont
         ushort[] advances = ReadAdvances(bytes, tables);
         IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables);
         return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances, kerningPairs);
+
+        byte[] ExtractCollectionFont(byte[] bytes)
+        {
+            if (bytes.Length < 16)
+            {
+                throw new InvalidDataException("TrueType collection header is too small.");
+            }
+
+            uint fontCount = U32(bytes, 8);
+            if (fontIndex < 0 || fontIndex >= fontCount)
+            {
+                throw new InvalidDataException("TrueType collection font index is out of range.");
+            }
+
+            uint fontOffset = U32(bytes, 12 + fontIndex * 4);
+            if (fontOffset > bytes.Length - 12)
+            {
+                throw new InvalidDataException("TrueType collection font offset is invalid.");
+            }
+
+            ushort collectionTableCount = U16(bytes, (int)fontOffset + 4);
+            int directoryLength = 12 + collectionTableCount * 16;
+            if (fontOffset + directoryLength > bytes.Length)
+            {
+                throw new InvalidDataException("TrueType collection table directory is invalid.");
+            }
+
+            var records = new CollectionTableRecord[collectionTableCount];
+            int directoryOffset = (int)fontOffset + 12;
+            for (int i = 0; i < collectionTableCount; i++)
+            {
+                int recordOffset = directoryOffset + i * 16;
+                uint tableOffset = U32(bytes, recordOffset + 8);
+                uint tableLength = U32(bytes, recordOffset + 12);
+                if (tableOffset + tableLength > bytes.Length)
+                {
+                    throw new InvalidDataException("TrueType collection table exceeds file length.");
+                }
+
+                records[i] = new CollectionTableRecord(tableOffset, tableLength);
+            }
+
+            int outputLength = directoryLength;
+            foreach (CollectionTableRecord record in records)
+            {
+                outputLength = Align4(outputLength);
+                outputLength += (int)record.Length;
+            }
+
+            var output = new byte[Align4(outputLength)];
+            Array.Copy(bytes, (int)fontOffset, output, 0, directoryLength);
+
+            int writeOffset = directoryLength;
+            for (int i = 0; i < records.Length; i++)
+            {
+                CollectionTableRecord record = records[i];
+                writeOffset = Align4(writeOffset);
+                Array.Copy(bytes, (int)record.Offset, output, writeOffset, (int)record.Length);
+                W32(output, 12 + i * 16 + 8, (uint)writeOffset);
+                writeOffset += (int)record.Length;
+            }
+
+            return output;
+        }
     }
 
     public static int GetCollectionFontCount(byte[] bytes)
@@ -566,6 +630,11 @@ internal sealed class OpenTypeFont
             UnderlinePosition: I16(bytes, post.Offset + 8),
             UnderlineThickness: I16(bytes, post.Offset + 10),
             IsFixedPitch: U32(bytes, post.Offset + 12) != 0);
+
+        double FixedToDouble(int value)
+        {
+            return value / 65536d;
+        }
     }
 
     private static string ReadFamilyName(byte[] bytes, Dictionary<string, TableRecord> tables)
@@ -1150,78 +1219,9 @@ internal sealed class OpenTypeFont
         BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(offset, 4), value);
     }
 
-    private static double FixedToDouble(int value)
-    {
-        return value / 65536d;
-    }
-
     private static double F2Dot14(byte[] bytes, int offset)
     {
         return I16(bytes, offset) / 16384d;
-    }
-
-    private static byte[] ExtractCollectionFont(byte[] bytes, int fontIndex)
-    {
-        if (bytes.Length < 16)
-        {
-            throw new InvalidDataException("TrueType collection header is too small.");
-        }
-
-        uint fontCount = U32(bytes, 8);
-        if (fontIndex < 0 || fontIndex >= fontCount)
-        {
-            throw new InvalidDataException("TrueType collection font index is out of range.");
-        }
-
-        uint fontOffset = U32(bytes, 12 + fontIndex * 4);
-        if (fontOffset > bytes.Length - 12)
-        {
-            throw new InvalidDataException("TrueType collection font offset is invalid.");
-        }
-
-        ushort numTables = U16(bytes, (int)fontOffset + 4);
-        int directoryLength = 12 + numTables * 16;
-        if (fontOffset + directoryLength > bytes.Length)
-        {
-            throw new InvalidDataException("TrueType collection table directory is invalid.");
-        }
-
-        var records = new CollectionTableRecord[numTables];
-        int directoryOffset = (int)fontOffset + 12;
-        for (int i = 0; i < numTables; i++)
-        {
-            int recordOffset = directoryOffset + i * 16;
-            uint tableOffset = U32(bytes, recordOffset + 8);
-            uint tableLength = U32(bytes, recordOffset + 12);
-            if (tableOffset + tableLength > bytes.Length)
-            {
-                throw new InvalidDataException("TrueType collection table exceeds file length.");
-            }
-
-            records[i] = new CollectionTableRecord(tableOffset, tableLength);
-        }
-
-        int outputLength = directoryLength;
-        foreach (CollectionTableRecord record in records)
-        {
-            outputLength = Align4(outputLength);
-            outputLength += (int)record.Length;
-        }
-
-        var output = new byte[Align4(outputLength)];
-        Array.Copy(bytes, (int)fontOffset, output, 0, directoryLength);
-
-        int writeOffset = directoryLength;
-        for (int i = 0; i < records.Length; i++)
-        {
-            CollectionTableRecord record = records[i];
-            writeOffset = Align4(writeOffset);
-            Array.Copy(bytes, (int)record.Offset, output, writeOffset, (int)record.Length);
-            W32(output, 12 + i * 16 + 8, (uint)writeOffset);
-            writeOffset += (int)record.Length;
-        }
-
-        return output;
     }
 
     private static int Align4(int value)

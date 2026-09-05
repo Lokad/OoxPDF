@@ -111,7 +111,7 @@ internal sealed partial class PptxRenderer
             colorSource = PptxRunTextColorSource.RunSolidFill;
             alpha = runAlpha;
         }
-        else if (tableStyleTextStyle.Color is { } tableTextColor && !HasTextFill(runProperties))
+        else if (tableStyleTextStyle.Color is { } tableTextColor && !HasTextFill())
         {
             color = tableTextColor;
             colorSource = PptxRunTextColorSource.TableTextStyle;
@@ -172,21 +172,33 @@ internal sealed partial class PptxRenderer
             IsStrikeEnabled(strikeValue),
             strikeValue,
             capsValue,
-            IsKerningEnabled(runProperties, defaultRunProperties, fontSize),
+            IsKerningEnabled(),
             typeface.Source,
             typeface.Typeface);
+
+        bool HasTextFill()
+        {
+            return runProperties?.Element(DrawingNamespace + "solidFill") is not null ||
+                runProperties?.Element(DrawingNamespace + "noFill") is not null ||
+                runProperties?.Element(DrawingNamespace + "gradFill") is not null;
+        }
+
+        bool IsKerningEnabled()
+        {
+            XAttribute? threshold = runProperties?.Attribute("kern") ?? defaultRunProperties?.Attribute("kern");
+            if (threshold is null)
+            {
+                return false;
+            }
+
+            double minimumFontSize = int.Parse(threshold.Value, CultureInfo.InvariantCulture) / 100d;
+            return minimumFontSize <= 0d || fontSize >= minimumFontSize;
+        }
     }
 
     private static bool HasTextNoFill(XElement? runProperties)
     {
         return runProperties?.Element(DrawingNamespace + "noFill") is not null;
-    }
-
-    private static bool HasTextFill(XElement? runProperties)
-    {
-        return runProperties?.Element(DrawingNamespace + "solidFill") is not null ||
-            runProperties?.Element(DrawingNamespace + "noFill") is not null ||
-            runProperties?.Element(DrawingNamespace + "gradFill") is not null;
     }
 
     private static bool TryReadTextOutline(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme, PptxColorMap colorMap, out TextOutline outline)
@@ -239,18 +251,6 @@ internal sealed partial class PptxRenderer
             runProperties?.Element(DrawingNamespace + "ea") ??
             runProperties?.Element(DrawingNamespace + "cs"))
             ?.Attribute("typeface");
-    }
-
-    private static bool IsKerningEnabled(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
-    {
-        XAttribute? threshold = runProperties?.Attribute("kern") ?? defaultRunProperties?.Attribute("kern");
-        if (threshold is null)
-        {
-            return false;
-        }
-
-        double minimumFontSize = int.Parse(threshold.Value, CultureInfo.InvariantCulture) / 100d;
-        return minimumFontSize <= 0d || fontSize >= minimumFontSize;
     }
 
     private static bool IsTextRunElement(XElement element)

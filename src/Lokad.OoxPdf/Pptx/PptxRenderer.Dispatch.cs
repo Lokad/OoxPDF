@@ -43,8 +43,26 @@ internal sealed partial class PptxRenderer
             catch (Exception ex) when (IsRecoverableNodeRenderException(ex))
             {
                 graphics.RestoreToStateDepth(stateDepth);
-                EmitNodeRenderFailureDiagnostic(node, context, sourcePartName);
+                EmitNodeRenderFailureDiagnostic(node);
             }
+        }
+
+        void EmitNodeRenderFailureDiagnostic(PptxSceneNode node)
+        {
+            context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "PPTX_NODE_RENDER_FAILED",
+                OoxPdfSeverity.Warning,
+                "PPTX node rendering failed and the node was ignored while rendering continued.",
+                sourcePartName ?? context.SlidePartName,
+                PageIndex: null,
+                SlideIndex: context.SlideNumber,
+                Feature: node.Kind.ToString(),
+                Fallback: "Ignored"));
+        }
+
+        bool IsRecoverableNodeRenderException(Exception exception)
+        {
+            return exception is FormatException or InvalidDataException or NotSupportedException or ArgumentException;
         }
     }
 
@@ -68,7 +86,7 @@ internal sealed partial class PptxRenderer
             case PptxSceneNodeKind.Shape:
                 if (renderPlaceholders || !node.IsPlaceholder)
                 {
-                    if (HasDrawableShape(node))
+                    if (HasDrawableShape())
                     {
                         BeginSlideNodeClip(context, graphics);
                         RenderShape(
@@ -150,32 +168,32 @@ internal sealed partial class PptxRenderer
                     cancellationToken);
                 break;
         }
-    }
 
-    private static bool HasDrawableShape(PptxSceneNode node)
-    {
-        return node.Shape is
+        bool HasDrawableShape()
         {
-            Fill.HasFill: true
-        } or
-        {
-            GradientFill.HasGradient: true
-        } or
-        {
-            PatternFill.HasPattern: true
-        } or
-        {
-            PictureFill.HasPicture: true
-        } or
-        {
-            Glow.HasGlow: true
-        } or
-        {
-            OuterShadow.HasShadow: true
-        } or
-        {
-            Line.HasLine: true
-        };
+            return node.Shape is
+            {
+                Fill.HasFill: true
+            } or
+            {
+                GradientFill.HasGradient: true
+            } or
+            {
+                PatternFill.HasPattern: true
+            } or
+            {
+                PictureFill.HasPicture: true
+            } or
+            {
+                Glow.HasGlow: true
+            } or
+            {
+                OuterShadow.HasShadow: true
+            } or
+            {
+                Line.HasLine: true
+            };
+        }
     }
 
     private static void BeginSlideNodeClip(PptxRenderContext context, PdfGraphicsBuilder graphics)
@@ -224,21 +242,4 @@ internal sealed partial class PptxRenderer
             Fallback: "Ignored"));
     }
 
-    private static bool IsRecoverableNodeRenderException(Exception exception)
-    {
-        return exception is FormatException or InvalidDataException or NotSupportedException or ArgumentException;
-    }
-
-    private static void EmitNodeRenderFailureDiagnostic(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)
-    {
-        context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
-            "PPTX_NODE_RENDER_FAILED",
-            OoxPdfSeverity.Warning,
-            "PPTX node rendering failed and the node was ignored while rendering continued.",
-            sourcePartName ?? context.SlidePartName,
-            PageIndex: null,
-            SlideIndex: context.SlideNumber,
-            Feature: node.Kind.ToString(),
-            Fallback: "Ignored"));
-    }
 }

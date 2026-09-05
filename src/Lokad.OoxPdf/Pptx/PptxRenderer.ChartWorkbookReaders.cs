@@ -264,72 +264,72 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        return ContainsWorkbookDateTimeFormatToken(formatCode);
-    }
+        return ContainsWorkbookDateTimeFormatToken();
 
-    private static bool IsBuiltInWorkbookDateLikeNumberFormatId(int numberFormatId)
-    {
-        return (numberFormatId >= 14 && numberFormatId <= 22) ||
-            (numberFormatId >= 27 && numberFormatId <= 36) ||
-            (numberFormatId >= 45 && numberFormatId <= 47) ||
-            (numberFormatId >= 50 && numberFormatId <= 58);
-    }
-
-    private static bool ContainsWorkbookDateTimeFormatToken(string formatCode)
-    {
-        if (string.IsNullOrWhiteSpace(formatCode) ||
-            string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
+        bool ContainsWorkbookDateTimeFormatToken()
         {
-            return false;
-        }
-
-        for (int i = 0; i < formatCode.Length; i++)
-        {
-            char c = formatCode[i];
-            if (c == '"')
+            if (string.IsNullOrWhiteSpace(formatCode) ||
+                string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
             {
-                i++;
-                while (i < formatCode.Length && formatCode[i] != '"')
+                return false;
+            }
+
+            for (int i = 0; i < formatCode.Length; i++)
+            {
+                char c = formatCode[i];
+                if (c == '"')
                 {
                     i++;
+                    while (i < formatCode.Length && formatCode[i] != '"')
+                    {
+                        i++;
+                    }
+
+                    continue;
                 }
 
-                continue;
-            }
-
-            if (c == '\\' || c == '_' || c == '*')
-            {
-                i++;
-                continue;
-            }
-
-            if (c == '[')
-            {
-                int closingBracket = formatCode.IndexOf(']', i + 1);
-                if (closingBracket < 0)
+                if (c == '\\' || c == '_' || c == '*')
                 {
-                    closingBracket = formatCode.Length - 1;
+                    i++;
+                    continue;
                 }
 
-                string bracketToken = formatCode.Substring(i + 1, Math.Max(0, closingBracket - i - 1)).Trim();
-                if (bracketToken.Length > 0 &&
-                    bracketToken.All(c => c == 'h' || c == 'H' || c == 'm' || c == 'M' || c == 's' || c == 'S'))
+                if (c == '[')
+                {
+                    int closingBracket = formatCode.IndexOf(']', i + 1);
+                    if (closingBracket < 0)
+                    {
+                        closingBracket = formatCode.Length - 1;
+                    }
+
+                    string bracketToken = formatCode.Substring(i + 1, Math.Max(0, closingBracket - i - 1)).Trim();
+                    if (bracketToken.Length > 0 &&
+                        bracketToken.All(c => c == 'h' || c == 'H' || c == 'm' || c == 'M' || c == 's' || c == 'S'))
+                    {
+                        return true;
+                    }
+
+                    i = closingBracket;
+                    continue;
+                }
+
+                char lower = char.ToLowerInvariant(c);
+                if (lower == 'y' || lower == 'd' || lower == 'h' || lower == 's')
                 {
                     return true;
                 }
-
-                i = closingBracket;
-                continue;
             }
 
-            char lower = char.ToLowerInvariant(c);
-            if (lower == 'y' || lower == 'd' || lower == 'h' || lower == 's')
-            {
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        bool IsBuiltInWorkbookDateLikeNumberFormatId(int numberFormatId)
+        {
+            return (numberFormatId >= 14 && numberFormatId <= 22) ||
+                (numberFormatId >= 27 && numberFormatId <= 36) ||
+                (numberFormatId >= 45 && numberFormatId <= 47) ||
+                (numberFormatId >= 50 && numberFormatId <= 58);
+        }
     }
 
     private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken)

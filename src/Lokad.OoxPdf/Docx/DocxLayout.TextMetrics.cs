@@ -32,7 +32,18 @@ internal static class DocxTextSpacing
 {
     public static double AddCharacterSpacing(double measuredWidth, DocxTextRun? run, string text)
     {
-        return measuredWidth + CountCharacterSpacingGaps(text) * (run?.EffectiveProperties.CharacterSpacingPoints ?? 0d);
+        return measuredWidth + CountCharacterSpacingGaps() * (run?.EffectiveProperties.CharacterSpacingPoints ?? 0d);
+
+        int CountCharacterSpacingGaps()
+        {
+            int count = 0;
+            foreach (Rune _ in text.EnumerateRunes())
+            {
+                count++;
+            }
+
+            return Math.Max(0, count - 1);
+        }
     }
 
     public static double BoundarySpacing(DocxTextRun? left, string leftText, string rightText)
@@ -45,16 +56,6 @@ internal static class DocxTextSpacing
             : left?.EffectiveProperties.CharacterSpacingPoints ?? 0d;
     }
 
-    private static int CountCharacterSpacingGaps(string text)
-    {
-        int count = 0;
-        foreach (Rune _ in text.EnumerateRunes())
-        {
-            count++;
-        }
-
-        return Math.Max(0, count - 1);
-    }
 }
 
 internal static class DocxLineMetrics

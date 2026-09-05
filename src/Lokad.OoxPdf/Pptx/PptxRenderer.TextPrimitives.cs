@@ -591,6 +591,24 @@ internal sealed partial class PptxRenderer
         string result = FormatAutoNumber(autoNumberValue, bullet.AutoNumberType);
         autoNumberValue++;
         return result;
+
+        string FormatAutoNumber(int value, string? type)
+        {
+            return type switch
+            {
+                "arabicParenBoth" => $"({value})",
+                "arabicParenR" => $"{value})",
+                "alphaLcPeriod" => $"{FormatAlphaNumber(value, upper: false)}.",
+                "alphaUcPeriod" => $"{FormatAlphaNumber(value, upper: true)}.",
+                "alphaLcParenR" => $"{FormatAlphaNumber(value, upper: false)})",
+                "alphaUcParenR" => $"{FormatAlphaNumber(value, upper: true)})",
+                "romanLcPeriod" => $"{FormatRomanNumber(value, upper: false)}.",
+                "romanUcPeriod" => $"{FormatRomanNumber(value, upper: true)}.",
+                "romanLcParenR" => $"{FormatRomanNumber(value, upper: false)})",
+                "romanUcParenR" => $"{FormatRomanNumber(value, upper: true)})",
+                _ => $"{value}."
+            };
+        }
     }
 
     private static bool IsSymbolBulletFont(XElement? bulletFont)
@@ -613,24 +631,6 @@ internal sealed partial class PptxRenderer
         }
 
         return new string(mapped);
-    }
-
-    private static string FormatAutoNumber(int value, string? type)
-    {
-        return type switch
-        {
-            "arabicParenBoth" => $"({value})",
-            "arabicParenR" => $"{value})",
-            "alphaLcPeriod" => $"{FormatAlphaNumber(value, upper: false)}.",
-            "alphaUcPeriod" => $"{FormatAlphaNumber(value, upper: true)}.",
-            "alphaLcParenR" => $"{FormatAlphaNumber(value, upper: false)})",
-            "alphaUcParenR" => $"{FormatAlphaNumber(value, upper: true)})",
-            "romanLcPeriod" => $"{FormatRomanNumber(value, upper: false)}.",
-            "romanUcPeriod" => $"{FormatRomanNumber(value, upper: true)}.",
-            "romanLcParenR" => $"{FormatRomanNumber(value, upper: false)})",
-            "romanUcParenR" => $"{FormatRomanNumber(value, upper: true)})",
-            _ => $"{value}."
-        };
     }
 
     private static string FormatAlphaNumber(int value, bool upper)
@@ -708,25 +708,6 @@ internal sealed partial class PptxRenderer
         }
 
         return new BulletStyle(fontSize, color, bullet.ResolvedFontTypeface ?? textTypeface);
-    }
-
-    private static XElement? FindBulletProperty(XElement? paragraphProperties, string localName)
-    {
-        if (paragraphProperties is null)
-        {
-            return null;
-        }
-
-        XName propertyName = DrawingNamespace + localName;
-        XElement? marker = paragraphProperties
-            .Elements()
-            .FirstOrDefault(element => element.Name == DrawingNamespace + "buChar" ||
-                element.Name == DrawingNamespace + "buAutoNum" ||
-                element.Name == DrawingNamespace + "buBlip");
-        IEnumerable<XElement> candidates = marker is null
-            ? paragraphProperties.Elements()
-            : paragraphProperties.Elements().TakeWhile(element => element != marker);
-        return candidates.FirstOrDefault(element => element.Name == propertyName);
     }
 
     private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)

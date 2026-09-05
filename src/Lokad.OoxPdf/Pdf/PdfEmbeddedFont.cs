@@ -30,7 +30,22 @@ internal sealed class PdfEmbeddedFont
         }
 
         UnicodeByCid = BuildUnicodeByCid();
-        CodepointSetHash = ComputeCodepointSetHash(unicodeByOriginalGlyph);
+        CodepointSetHash = ComputeCodepointSetHash();
+
+        string ComputeCodepointSetHash()
+        {
+            int[] codePoints = unicodeByOriginalGlyph.Values.Distinct().OrderBy(codePoint => codePoint).ToArray();
+            byte[] bytes = new byte[codePoints.Length * 4];
+            for (int i = 0; i < codePoints.Length; i++)
+            {
+                bytes[i * 4] = (byte)codePoints[i];
+                bytes[i * 4 + 1] = (byte)(codePoints[i] >> 8);
+                bytes[i * 4 + 2] = (byte)(codePoints[i] >> 16);
+                bytes[i * 4 + 3] = (byte)(codePoints[i] >> 24);
+            }
+
+            return Convert.ToHexString(SHA256.HashData(bytes)).Substring(0, 12);
+        }
     }
 
     public OpenTypeFont Font { get; }
@@ -282,21 +297,6 @@ internal sealed class PdfEmbeddedFont
 
         builder.Append('<').Append(glyphChunk).Append('>');
         glyphChunk.Clear();
-    }
-
-    private static string ComputeCodepointSetHash(IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph)
-    {
-        int[] codePoints = unicodeByOriginalGlyph.Values.Distinct().OrderBy(codePoint => codePoint).ToArray();
-        byte[] bytes = new byte[codePoints.Length * 4];
-        for (int i = 0; i < codePoints.Length; i++)
-        {
-            bytes[i * 4] = (byte)codePoints[i];
-            bytes[i * 4 + 1] = (byte)(codePoints[i] >> 8);
-            bytes[i * 4 + 2] = (byte)(codePoints[i] >> 16);
-            bytes[i * 4 + 3] = (byte)(codePoints[i] >> 24);
-        }
-
-        return Convert.ToHexString(SHA256.HashData(bytes)).Substring(0, 12);
     }
 
     private IReadOnlyDictionary<ushort, int> BuildUnicodeByCid()

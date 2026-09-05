@@ -963,20 +963,20 @@ internal sealed partial class PptxSceneBuilder
             ReadChartShapeStyle(title?.Element(ChartNamespace + "spPr"), theme, colorMap),
             ReadChartTextBodyProperties(title),
             ReadChartTextStyleOverride(title, theme, colorMap));
-    }
 
-    private static string? InferAutoChartTitleText(IReadOnlyList<PptxSceneChartPlot> plots)
-    {
-        IReadOnlyList<PptxSceneChartSeries> series = plots
-            .SelectMany(plot => plot.Series)
-            .ToArray();
-        if (series.Count != 1)
+        string? InferAutoChartTitleText(IReadOnlyList<PptxSceneChartPlot> plots)
         {
-            return null;
-        }
+            IReadOnlyList<PptxSceneChartSeries> series = plots
+                .SelectMany(plot => plot.Series)
+                .ToArray();
+            if (series.Count != 1)
+            {
+                return null;
+            }
 
-        string? name = series[0].Name?.Trim();
-        return string.IsNullOrWhiteSpace(name) ? null : name;
+            string? name = series[0].Name?.Trim();
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
     }
 
     private static PptxSceneChartTitle EmptyChartTitle(bool? IsAutoDeleted, string IsAutoDeletedValue)
@@ -1310,6 +1310,21 @@ internal sealed partial class PptxSceneBuilder
         }
 
         return entries;
+
+        bool HasChartTextStyleOverride(PptxSceneChartTextStyleOverride textStyle)
+        {
+            return textStyle.FontFamily is not null ||
+                textStyle.RequestedTypeface is not null ||
+                textStyle.TypefaceSource is not null ||
+                textStyle.FontSize is not null ||
+                textStyle.CharacterSpacing is not null ||
+                textStyle.Color is not null ||
+                textStyle.Alpha is not null ||
+                textStyle.Bold is not null ||
+                textStyle.Italic is not null ||
+                textStyle.Underline is not null ||
+                textStyle.Strike is not null;
+        }
     }
 
     private static PptxSceneFillStyle ReadChartStyleFillReference(XElement? fillReference, PptxTheme theme, PptxColorMap colorMap)
@@ -1354,21 +1369,6 @@ internal sealed partial class PptxSceneBuilder
             style.OuterShadow.HasShadow ||
             style.Effects.HasEffectDag ||
             style.Effects.UnsupportedEffectNames?.Count > 0;
-    }
-
-    private static bool HasChartTextStyleOverride(PptxSceneChartTextStyleOverride textStyle)
-    {
-        return textStyle.FontFamily is not null ||
-            textStyle.RequestedTypeface is not null ||
-            textStyle.TypefaceSource is not null ||
-            textStyle.FontSize is not null ||
-            textStyle.CharacterSpacing is not null ||
-            textStyle.Color is not null ||
-            textStyle.Alpha is not null ||
-            textStyle.Bold is not null ||
-            textStyle.Italic is not null ||
-            textStyle.Underline is not null ||
-            textStyle.Strike is not null;
     }
 
     private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme, PptxColorMap colorMap)

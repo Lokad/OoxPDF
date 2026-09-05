@@ -66,15 +66,58 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonArea area = ResolveMarkupBalloonArea(page);
         DocxMarkupBalloonCandidate[] candidates = OrderMarkupBalloonCandidatesForPlacement(
                 GroupNearbyMarkupBalloonCandidates(
-                    OrderMarkupBalloonCandidatesForPlacement(CollectMarkupBalloonCandidates(page, relatedStories, floatingDrawings, markupContext, area.Width)),
+                    OrderMarkupBalloonCandidatesForPlacement(CollectMarkupBalloonCandidates(area.Width)),
                     area.Width))
             .ToArray();
+
+        IReadOnlyList<DocxMarkupBalloonCandidate> GroupNearbyMarkupBalloonCandidates(
+            IEnumerable<DocxMarkupBalloonCandidate> orderedCandidates,
+            double textWidth)
+        {
+            var grouped = new List<DocxMarkupBalloonCandidate>();
+            var group = new List<DocxMarkupBalloonCandidate>();
+            foreach (DocxMarkupBalloonCandidate candidate in orderedCandidates)
+            {
+                if (group.Count == 0 ||
+                    CanGroupMarkupBalloonCandidates(group, candidate))
+                {
+                    group.Add(candidate);
+                    continue;
+                }
+
+                grouped.Add(MergeMarkupBalloonGroup(group, textWidth));
+                group.Clear();
+                group.Add(candidate);
+            }
+
+            if (group.Count != 0)
+            {
+                grouped.Add(MergeMarkupBalloonGroup(group, textWidth));
+            }
+
+            return grouped;
+
+            bool CanGroupMarkupBalloonCandidates(IReadOnlyList<DocxMarkupBalloonCandidate> group, DocxMarkupBalloonCandidate candidate)
+            {
+                DocxMarkupBalloonCandidate previous = group[^1];
+                if (Math.Abs(previous.AnchorY - candidate.AnchorY) <= 0.5d)
+                {
+                    return true;
+                }
+
+                return group.Count < MarkupBalloonMaxNearbyRevisionGroupSize &&
+                    group.All(item => item.Kind == DocxMarkupBalloonKind.Revision) &&
+                    previous.Kind == DocxMarkupBalloonKind.Revision &&
+                    candidate.Kind == DocxMarkupBalloonKind.Revision &&
+                    Math.Abs(previous.AnchorY - candidate.AnchorY) <= 9d;
+            }
+        }
         if (candidates.Length == 0)
         {
             return [];
         }
 
-        IReadOnlyList<DocxMarkupBalloonLaneBand> laneBands = BuildMarkupBalloonLaneBands(candidates, page, markupContext);
+        IReadOnlyList<DocxMarkupBalloonLaneBand> laneBands = BuildMarkupBalloonLaneBands();
         var placements = new List<DocxMarkupBalloonPlacement>();
         double nextTop = page.Height - page.MarginTop;
         int nextOverflowStartIndex = 1;
@@ -110,7 +153,7 @@ internal sealed partial class DocxRenderer
                     ? -nearbyAnchorConnectorCount * 1.5d
                     : nearbyAnchorConnectorCount * 1.5d;
                 double unclampedConnectorAnchorX = connectorAnchorX;
-                connectorAnchorX = ClampMarkupBalloonConnectorAnchorX(connectorAnchorX, page);
+                connectorAnchorX = ClampMarkupBalloonConnectorAnchorX(connectorAnchorX);
                 bool anchorConnectorClamped = Math.Abs(connectorAnchorX - unclampedConnectorAnchorX) > 0.001d;
                 placements.Add(new DocxMarkupBalloonPlacement(
                     candidate.Kind,
@@ -158,65 +201,315 @@ internal sealed partial class DocxRenderer
         }
 
         return placements;
-    }
 
-    private static IReadOnlyList<DocxMarkupBalloonLaneBand> BuildMarkupBalloonLaneBands(
-        IReadOnlyList<DocxMarkupBalloonCandidate> candidates,
-        DocxLayoutPage page,
-        DocxMarkupContext markupContext)
-    {
-        var bands = new List<DocxMarkupBalloonLaneBand>();
-        var current = new List<DocxMarkupBalloonCandidate>();
-        double currentTopLimit = 0d;
-        double currentBottom = 0d;
-        double currentMaxBalloonHeight = 0d;
-
-        foreach (DocxMarkupBalloonCandidate candidate in candidates)
+        IReadOnlyList<DocxMarkupBalloonLaneBand> BuildMarkupBalloonLaneBands()
         {
-            double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
-            double height = ResolveMarkupBalloonHeight(candidate, markupContext);
-            double preferredTop = Math.Min(page.Height - page.MarginTop, anchorY + ResolveMarkupBalloonTopInset(markupContext));
-            double preferredBottom = preferredTop - height;
-            if (current.Count != 0 &&
-                currentBottom - preferredTop > MarkupBalloonLaneBandSeparationPoints)
+            var bands = new List<DocxMarkupBalloonLaneBand>();
+            var current = new List<DocxMarkupBalloonCandidate>();
+            double currentTopLimit = 0d;
+            double currentBottom = 0d;
+            double currentMaxBalloonHeight = 0d;
+
+            foreach (DocxMarkupBalloonCandidate candidate in candidates)
             {
-                AddCurrentBand();
-                current.Clear();
+                double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
+                double height = ResolveMarkupBalloonHeight(candidate, markupContext);
+                double preferredTop = Math.Min(page.Height - page.MarginTop, anchorY + ResolveMarkupBalloonTopInset(markupContext));
+                double preferredBottom = preferredTop - height;
+                if (current.Count != 0 &&
+                    currentBottom - preferredTop > MarkupBalloonLaneBandSeparationPoints)
+                {
+                    AddCurrentBand();
+                    current.Clear();
+                }
+
+                if (current.Count == 0)
+                {
+                    currentTopLimit = preferredTop;
+                    currentBottom = preferredBottom;
+                    currentMaxBalloonHeight = height;
+                }
+                else
+                {
+                    currentTopLimit = Math.Max(currentTopLimit, preferredTop);
+                    currentBottom = Math.Min(currentBottom, preferredBottom);
+                    currentMaxBalloonHeight = Math.Max(currentMaxBalloonHeight, height);
+                }
+
+                current.Add(candidate);
             }
 
-            if (current.Count == 0)
-            {
-                currentTopLimit = preferredTop;
-                currentBottom = preferredBottom;
-                currentMaxBalloonHeight = height;
-            }
-            else
-            {
-                currentTopLimit = Math.Max(currentTopLimit, preferredTop);
-                currentBottom = Math.Min(currentBottom, preferredBottom);
-                currentMaxBalloonHeight = Math.Max(currentMaxBalloonHeight, height);
-            }
+            AddCurrentBand();
+            return bands;
 
-            current.Add(candidate);
+            void AddCurrentBand()
+            {
+                if (current.Count == 0)
+                {
+                    return;
+                }
+
+                int index = bands.Count;
+                bands.Add(new DocxMarkupBalloonLaneBand(
+                    index,
+                    current.ToArray(),
+                    currentTopLimit,
+                    currentMaxBalloonHeight,
+                    current.Sum(candidate => candidate.CandidateCount)));
+            }
         }
 
-        AddCurrentBand();
-        return bands;
-
-        void AddCurrentBand()
+        double ClampMarkupBalloonConnectorAnchorX(double connectorAnchorX)
         {
-            if (current.Count == 0)
+            return Math.Min(page.Width - 0.5d, Math.Max(0.5d, connectorAnchorX));
+        }
+
+        IReadOnlyList<DocxMarkupBalloonCandidate> CollectMarkupBalloonCandidates(double textWidth)
+        {
+            var balloonCandidates = new List<DocxMarkupBalloonCandidate>();
+            Dictionary<string, DocxRelatedStoryLayout> commentStories = relatedStories
+                .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.Id is not null)
+                .GroupBy(story => story.Story.Id ?? string.Empty, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            Dictionary<string, DocxRelatedStoryLayout[]> commentRepliesByParentId = relatedStories
+                .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.CommentMetadata?.ParentCommentId is not null)
+                .GroupBy(story => story.Story.CommentMetadata?.ParentCommentId ?? string.Empty, StringComparer.Ordinal)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderBy(story => FormatCommentDate(story.Story.CommentMetadata?.Date), StringComparer.Ordinal)
+                        .ThenBy(story => story.Story.Id, StringComparer.Ordinal)
+                        .ToArray(),
+                    StringComparer.Ordinal);
+            var renderedComments = new HashSet<string>(StringComparer.Ordinal);
+            var renderedRevisions = new HashSet<int>();
+            var renderedTableRevisions = new HashSet<string>(StringComparer.Ordinal);
+            var renderedTableRowRevisions = new HashSet<string>(StringComparer.Ordinal);
+            var renderedTableCellRevisions = new HashSet<string>(StringComparer.Ordinal);
+            DocxTextLineLayout[] anchorTextLines = EnumerateMarkupBalloonAnchorTextLines(page, floatingDrawings).ToArray();
+            int sequence = 0;
+            foreach (DocxTextLineLayout line in anchorTextLines)
             {
-                return;
+                if (line.SourceParagraph is not { } paragraph)
+                {
+                    continue;
+                }
+
+                if (markupContext.RendersCommentBalloons)
+                {
+                    foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
+                    {
+                        string key = RuntimeHelpers.GetHashCode(paragraph).ToString(CultureInfo.InvariantCulture) + ":" + (reference.Id ?? string.Empty);
+                        if (!renderedComments.Add(key))
+                        {
+                            continue;
+                        }
+
+                        commentStories.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout? storyLayout);
+                        commentRepliesByParentId.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout[]? replies);
+                        string commentBody = TrimBalloonText(BuildCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
+                        string wordCompatibleCommentBody = TrimBalloonText(BuildWordCompatibleCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
+                        DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
+                        DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference);
+                        balloonCandidates.Add(new DocxMarkupBalloonCandidate(
+                            DocxMarkupBalloonKind.Comment,
+                            TrimBalloonText(BuildCommentBalloonTitle(storyLayout?.Story, reference.Id), textWidth),
+                            commentBody,
+                            BuildWordCompatibleCommentBalloonTitle(storyLayout?.Story, reference.Id),
+                            wordCompatibleCommentBody,
+                            anchorLine.BaselineY,
+                            ResolveCommentAnchorX(anchorLine, anchorTextLines, paragraph, reference, markupContext),
+                            anchorLine.X - 2d,
+                            anchorLine.X + Math.Max(0d, anchorLine.Width) + 2d,
+                            sequence++,
+                            new DocxMarkupBalloonRgb(255, 250, 220),
+                            new DocxMarkupBalloonRgb(217, 151, 0),
+                            new DocxMarkupBalloonRgb(70, 70, 70),
+                            new DocxMarkupBalloonRgb(0, 0, 0),
+                            CandidateCount: 1, RevisionCandidateCount: 0, CommentCandidateCount: 1,
+                            CommentWithDateCount: commentMetrics.WithDateCount,
+                            CommentResolvedCount: commentMetrics.ResolvedCount,
+                            CommentOpenCount: commentMetrics.OpenCount,
+                            CommentReplyCount: commentMetrics.ReplyCount,
+                            BodySummaryPartCount: CountBalloonSummaryPart(commentBody),
+                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(commentBody)));
+                    }
+                }
+
+                if (markupContext.RendersRevisionBalloons && paragraph.Revisions.Count != 0)
+                {
+                    int key = RuntimeHelpers.GetHashCode(paragraph);
+                    if (!renderedRevisions.Add(key))
+                    {
+                        continue;
+                    }
+
+                    DocxRevisionMarkupPalette paragraphRevisionPalette = ResolveRevisionMarkupPalette(paragraph.Revisions);
+                    string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(paragraph.Revisions), textWidth);
+                    string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(paragraph), textWidth);
+                    balloonCandidates.Add(new DocxMarkupBalloonCandidate(
+                        DocxMarkupBalloonKind.Revision,
+                        revisionTitle,
+                        revisionBody,
+                        revisionTitle,
+                        revisionBody,
+                        line.BaselineY,
+                        line.X + Math.Max(0d, line.Width) * 0.5d,
+                        line.X - 2d,
+                        line.X + Math.Max(0d, line.Width) + 2d,
+                        sequence++,
+                        paragraphRevisionPalette.FillRgb,
+                        paragraphRevisionPalette.StrokeRgb,
+                        paragraphRevisionPalette.TitleRgb,
+                        new DocxMarkupBalloonRgb(0, 0, 0),
+                        CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
+                        BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
+                        WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
+                }
             }
 
-            int index = bands.Count;
-            bands.Add(new DocxMarkupBalloonLaneBand(
-                index,
-                current.ToArray(),
-                currentTopLimit,
-                currentMaxBalloonHeight,
-                current.Sum(candidate => candidate.CandidateCount)));
+            if (markupContext.RendersRevisionBalloons)
+            {
+                foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, floatingDrawings))
+                {
+                    IReadOnlyList<DocxRevisionInfo> tableRevisions = row.Table.Revisions ?? [];
+                    if (tableRevisions.Count != 0)
+                    {
+                        string tableKey = TableBalloonKey(row);
+                        if (renderedTableRevisions.Add(tableKey))
+                        {
+                            DocxRevisionMarkupPalette tableRevisionPalette = ResolveRevisionMarkupPalette(tableRevisions);
+                            string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(tableRevisions), textWidth);
+                            string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(tableRevisions), textWidth);
+                            balloonCandidates.Add(new DocxMarkupBalloonCandidate(
+                                DocxMarkupBalloonKind.Revision,
+                                revisionTitle,
+                                revisionBody,
+                                revisionTitle,
+                                revisionBody,
+                                row.Y + Math.Max(0d, row.Height) * 0.5d,
+                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
+                                row.Table.TableX - 2d,
+                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
+                                sequence++,
+                                tableRevisionPalette.FillRgb,
+                                tableRevisionPalette.StrokeRgb,
+                                tableRevisionPalette.TitleRgb,
+                                new DocxMarkupBalloonRgb(0, 0, 0),
+                                CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
+                                BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
+                                WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
+                        }
+                    }
+
+                    IReadOnlyList<DocxRevisionInfo> rowRevisions = row.Revisions ?? [];
+                    if (rowRevisions.Count != 0)
+                    {
+                        string rowKey = TableRowBalloonKey(row);
+                        if (renderedTableRowRevisions.Add(rowKey))
+                        {
+                            DocxRevisionMarkupPalette rowRevisionPalette = ResolveRevisionMarkupPalette(rowRevisions);
+                            string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(rowRevisions), textWidth);
+                            string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(rowRevisions), textWidth);
+                            balloonCandidates.Add(new DocxMarkupBalloonCandidate(
+                                DocxMarkupBalloonKind.Revision,
+                                revisionTitle,
+                                revisionBody,
+                                revisionTitle,
+                                revisionBody,
+                                row.Y + Math.Max(0d, row.Height) * 0.5d,
+                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
+                                row.Table.TableX - 2d,
+                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
+                                sequence++,
+                                rowRevisionPalette.FillRgb,
+                                rowRevisionPalette.StrokeRgb,
+                                rowRevisionPalette.TitleRgb,
+                                new DocxMarkupBalloonRgb(0, 0, 0),
+                                CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
+                                BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
+                                WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
+                        }
+                    }
+
+                    for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+                    {
+                        DocxTableCellLayout cell = row.Cells[cellIndex];
+                        IReadOnlyList<DocxRevisionInfo> cellRevisions = cell.Cell.Revisions;
+                        if (cellRevisions.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        string cellKey = TableCellBalloonKey(row, cellIndex);
+                        if (!renderedTableCellRevisions.Add(cellKey))
+                        {
+                            continue;
+                        }
+
+                        DocxRevisionMarkupPalette cellRevisionPalette = ResolveRevisionMarkupPalette(cellRevisions);
+                        string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(cellRevisions), textWidth);
+                        string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(cellRevisions), textWidth);
+                        balloonCandidates.Add(new DocxMarkupBalloonCandidate(
+                            DocxMarkupBalloonKind.Revision,
+                            revisionTitle,
+                            revisionBody,
+                            revisionTitle,
+                            revisionBody,
+                            cell.Y + Math.Max(0d, cell.Height) * 0.5d,
+                            cell.X + Math.Max(0d, cell.Width) * 0.5d,
+                            cell.X - 2d,
+                            cell.X + Math.Max(0d, cell.Width) + 2d,
+                            sequence++,
+                            cellRevisionPalette.FillRgb,
+                            cellRevisionPalette.StrokeRgb,
+                            cellRevisionPalette.TitleRgb,
+                            new DocxMarkupBalloonRgb(0, 0, 0),
+                            CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
+                            BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
+                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
+                    }
+                }
+            }
+
+            return balloonCandidates;
+
+            DocxCommentThreadBalloonMetrics CountCommentThreadBalloonMetrics(DocxRelatedStoryLayout? storyLayout, IReadOnlyList<DocxRelatedStoryLayout> replies)
+            {
+                int withDateCount = 0;
+                int resolvedCount = 0;
+                int openCount = 0;
+
+                Count(storyLayout?.Story.CommentMetadata);
+                foreach (DocxRelatedStoryLayout reply in replies)
+                {
+                    Count(reply.Story.CommentMetadata);
+                }
+
+                return new DocxCommentThreadBalloonMetrics(withDateCount, resolvedCount, openCount, replies.Count);
+
+                void Count(DocxCommentMetadata? metadata)
+                {
+                    if (metadata is null)
+                    {
+                        return;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(metadata.Date))
+                    {
+                        withDateCount++;
+                    }
+
+                    if (metadata.IsResolved == true)
+                    {
+                        resolvedCount++;
+                    }
+                    else if (metadata.IsResolved == false)
+                    {
+                        openCount++;
+                    }
+                }
+            }
         }
     }
 
@@ -270,11 +563,6 @@ internal sealed partial class DocxRenderer
     }
 
 
-    private static double ClampMarkupBalloonConnectorAnchorX(double connectorAnchorX, DocxLayoutPage page)
-    {
-        return Math.Min(page.Width - 0.5d, Math.Max(0.5d, connectorAnchorX));
-    }
-
     private static double ResolveMarkupBalloonAnchorY(
         double anchorY,
         DocxLayoutPage page,
@@ -326,49 +614,6 @@ internal sealed partial class DocxRenderer
             : 10d;
     }
 
-    private static IReadOnlyList<DocxMarkupBalloonCandidate> GroupNearbyMarkupBalloonCandidates(
-        IEnumerable<DocxMarkupBalloonCandidate> orderedCandidates,
-        double textWidth)
-    {
-        var grouped = new List<DocxMarkupBalloonCandidate>();
-        var group = new List<DocxMarkupBalloonCandidate>();
-        foreach (DocxMarkupBalloonCandidate candidate in orderedCandidates)
-        {
-            if (group.Count == 0 ||
-                CanGroupMarkupBalloonCandidates(group, candidate))
-            {
-                group.Add(candidate);
-                continue;
-            }
-
-            grouped.Add(MergeMarkupBalloonGroup(group, textWidth));
-            group.Clear();
-            group.Add(candidate);
-        }
-
-        if (group.Count != 0)
-        {
-            grouped.Add(MergeMarkupBalloonGroup(group, textWidth));
-        }
-
-        return grouped;
-    }
-
-    private static bool CanGroupMarkupBalloonCandidates(IReadOnlyList<DocxMarkupBalloonCandidate> group, DocxMarkupBalloonCandidate candidate)
-    {
-        DocxMarkupBalloonCandidate previous = group[^1];
-        if (Math.Abs(previous.AnchorY - candidate.AnchorY) <= 0.5d)
-        {
-            return true;
-        }
-
-        return group.Count < MarkupBalloonMaxNearbyRevisionGroupSize &&
-            group.All(item => item.Kind == DocxMarkupBalloonKind.Revision) &&
-            previous.Kind == DocxMarkupBalloonKind.Revision &&
-            candidate.Kind == DocxMarkupBalloonKind.Revision &&
-            Math.Abs(previous.AnchorY - candidate.AnchorY) <= 9d;
-    }
-
     private static DocxMarkupBalloonCandidate MergeMarkupBalloonGroup(
         IReadOnlyList<DocxMarkupBalloonCandidate> group,
         double textWidth)
@@ -382,11 +627,11 @@ internal sealed partial class DocxRenderer
         string title = allRevisions
             ? group.Count.ToString(CultureInfo.InvariantCulture) + " tracked changes"
             : group.Count.ToString(CultureInfo.InvariantCulture) + " markup items";
-        string[] bodyParts = BuildMarkupBalloonGroupBodyParts(group);
+        string[] bodyParts = BuildMarkupBalloonGroupBodyParts();
         string body = TrimBalloonText(string.Join("; ", bodyParts), textWidth);
         string[] wordCompatibleBodyParts = allRevisions
             ? bodyParts
-            : BuildWordCompatibleMarkupBalloonGroupBodyParts(group);
+            : BuildWordCompatibleMarkupBalloonGroupBodyParts();
         string? wordCompatibleTitle = allRevisions
             ? TrimBalloonText(title, textWidth)
             : group
@@ -420,51 +665,51 @@ internal sealed partial class DocxRenderer
             BodySummaryPartCount = bodyParts.Length,
             WordCompatibleBodySummaryPartCount = allRevisions ? bodyParts.Length : wordCompatibleBodyParts.Length
         };
-    }
 
-    private static string[] BuildMarkupBalloonGroupBodyParts(IReadOnlyList<DocxMarkupBalloonCandidate> group)
-    {
-        return group
-            .Select(BuildMarkupBalloonGroupBodyPart)
-            .Where(part => !string.IsNullOrWhiteSpace(part))
-            .OfType<string>()
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    private static string? BuildMarkupBalloonGroupBodyPart(DocxMarkupBalloonCandidate candidate)
-    {
-        string? body = FirstNonEmpty(candidate.Body);
-        string? title = FirstNonEmpty(candidate.Title);
-        if (body is null)
+        string[] BuildMarkupBalloonGroupBodyParts()
         {
-            return title;
+            return group
+                .Select(BuildMarkupBalloonGroupBodyPart)
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .OfType<string>()
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            string? BuildMarkupBalloonGroupBodyPart(DocxMarkupBalloonCandidate candidate)
+            {
+                string? partBody = FirstNonEmpty(candidate.Body);
+                string? partTitle = FirstNonEmpty(candidate.Title);
+                if (partBody is null)
+                {
+                    return partTitle;
+                }
+
+                return partTitle is null ? partBody : partTitle + ": " + partBody;
+            }
         }
 
-        return title is null ? body : title + ": " + body;
-    }
-
-    private static string[] BuildWordCompatibleMarkupBalloonGroupBodyParts(IReadOnlyList<DocxMarkupBalloonCandidate> group)
-    {
-        return group
-            .Select(BuildWordCompatibleMarkupBalloonGroupBodyPart)
-            .Where(part => !string.IsNullOrWhiteSpace(part))
-            .OfType<string>()
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    private static string? BuildWordCompatibleMarkupBalloonGroupBodyPart(DocxMarkupBalloonCandidate candidate)
-    {
-        string? body = FirstNonEmpty(candidate.WordCompatibleBody, candidate.Body);
-        if (body is not null)
+        string[] BuildWordCompatibleMarkupBalloonGroupBodyParts()
         {
-            return body;
-        }
+            return group
+                .Select(BuildWordCompatibleMarkupBalloonGroupBodyPart)
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .OfType<string>()
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
 
-        return candidate.Kind == DocxMarkupBalloonKind.Comment
-            ? null
-            : FirstNonEmpty(candidate.WordCompatibleTitle, candidate.Title);
+            string? BuildWordCompatibleMarkupBalloonGroupBodyPart(DocxMarkupBalloonCandidate candidate)
+            {
+                string? partBody = FirstNonEmpty(candidate.WordCompatibleBody, candidate.Body);
+                if (partBody is not null)
+                {
+                    return partBody;
+                }
+
+                return candidate.Kind == DocxMarkupBalloonKind.Comment
+                    ? null
+                    : FirstNonEmpty(candidate.WordCompatibleTitle, candidate.Title);
+            }
+        }
     }
 
     private static int CountBalloonSummaryPart(string? body)
@@ -555,272 +800,17 @@ internal sealed partial class DocxRenderer
         }
 
         return (nextTop, nextOverflowStartIndex + overflowIndex);
-    }
 
-    private static string BuildOverflowContinuationBody(IReadOnlyList<DocxMarkupBalloonCandidate> candidates)
-    {
-        int count = candidates.Sum(candidate => candidate.CandidateCount);
-        string sample = candidates
-            .Select(candidate => candidate.Body)
-            .FirstOrDefault(body => !string.IsNullOrWhiteSpace(body)) ?? string.Empty;
-        return string.IsNullOrWhiteSpace(sample)
-            ? count.ToString(CultureInfo.InvariantCulture)
-            : count.ToString(CultureInfo.InvariantCulture) + ": " + sample;
-    }
-
-    private static DocxCommentThreadBalloonMetrics CountCommentThreadBalloonMetrics(
-        DocxRelatedStoryLayout? storyLayout,
-        IReadOnlyList<DocxRelatedStoryLayout> replies)
-    {
-        int withDateCount = 0;
-        int resolvedCount = 0;
-        int openCount = 0;
-
-        Count(storyLayout?.Story.CommentMetadata);
-        foreach (DocxRelatedStoryLayout reply in replies)
+        string BuildOverflowContinuationBody(IReadOnlyList<DocxMarkupBalloonCandidate> candidates)
         {
-            Count(reply.Story.CommentMetadata);
+            int count = candidates.Sum(candidate => candidate.CandidateCount);
+            string sample = candidates
+                .Select(candidate => candidate.Body)
+                .FirstOrDefault(text => !string.IsNullOrWhiteSpace(text)) ?? string.Empty;
+            return string.IsNullOrWhiteSpace(sample)
+                ? count.ToString(CultureInfo.InvariantCulture)
+                : count.ToString(CultureInfo.InvariantCulture) + ": " + sample;
         }
-
-        return new DocxCommentThreadBalloonMetrics(withDateCount, resolvedCount, openCount, replies.Count);
-
-        void Count(DocxCommentMetadata? metadata)
-        {
-            if (metadata is null)
-            {
-                return;
-            }
-
-            if (!string.IsNullOrWhiteSpace(metadata.Date))
-            {
-                withDateCount++;
-            }
-
-            if (metadata.IsResolved == true)
-            {
-                resolvedCount++;
-            }
-            else if (metadata.IsResolved == false)
-            {
-                openCount++;
-            }
-        }
-    }
-
-    private static IReadOnlyList<DocxMarkupBalloonCandidate> CollectMarkupBalloonCandidates(
-        DocxLayoutPage page,
-        IReadOnlyList<DocxRelatedStoryLayout> relatedStories,
-        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
-        DocxMarkupContext markupContext,
-        double textWidth)
-    {
-        var candidates = new List<DocxMarkupBalloonCandidate>();
-        Dictionary<string, DocxRelatedStoryLayout> commentStories = relatedStories
-            .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.Id is not null)
-            .GroupBy(story => story.Story.Id ?? string.Empty, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-        Dictionary<string, DocxRelatedStoryLayout[]> commentRepliesByParentId = relatedStories
-            .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.CommentMetadata?.ParentCommentId is not null)
-            .GroupBy(story => story.Story.CommentMetadata?.ParentCommentId ?? string.Empty, StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group
-                    .OrderBy(story => FormatCommentDate(story.Story.CommentMetadata?.Date), StringComparer.Ordinal)
-                    .ThenBy(story => story.Story.Id, StringComparer.Ordinal)
-                    .ToArray(),
-                StringComparer.Ordinal);
-        var renderedComments = new HashSet<string>(StringComparer.Ordinal);
-        var renderedRevisions = new HashSet<int>();
-        var renderedTableRevisions = new HashSet<string>(StringComparer.Ordinal);
-        var renderedTableRowRevisions = new HashSet<string>(StringComparer.Ordinal);
-        var renderedTableCellRevisions = new HashSet<string>(StringComparer.Ordinal);
-        DocxTextLineLayout[] anchorTextLines = EnumerateMarkupBalloonAnchorTextLines(page, floatingDrawings).ToArray();
-        int sequence = 0;
-        foreach (DocxTextLineLayout line in anchorTextLines)
-        {
-            if (line.SourceParagraph is not { } paragraph)
-            {
-                continue;
-            }
-
-            if (markupContext.RendersCommentBalloons)
-            {
-                foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
-                {
-                    string key = RuntimeHelpers.GetHashCode(paragraph).ToString(CultureInfo.InvariantCulture) + ":" + (reference.Id ?? string.Empty);
-                    if (!renderedComments.Add(key))
-                    {
-                        continue;
-                    }
-
-                    commentStories.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout? storyLayout);
-                    commentRepliesByParentId.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout[]? replies);
-                    string commentBody = TrimBalloonText(BuildCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
-                    string wordCompatibleCommentBody = TrimBalloonText(BuildWordCompatibleCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
-                    DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
-                    DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference);
-                    candidates.Add(new DocxMarkupBalloonCandidate(
-                        DocxMarkupBalloonKind.Comment,
-                        TrimBalloonText(BuildCommentBalloonTitle(storyLayout?.Story, reference.Id), textWidth),
-                        commentBody,
-                        BuildWordCompatibleCommentBalloonTitle(storyLayout?.Story, reference.Id),
-                        wordCompatibleCommentBody,
-                        anchorLine.BaselineY,
-                        ResolveCommentAnchorX(anchorLine, anchorTextLines, paragraph, reference, markupContext),
-                        anchorLine.X - 2d,
-                        anchorLine.X + Math.Max(0d, anchorLine.Width) + 2d,
-                        sequence++,
-                        new DocxMarkupBalloonRgb(255, 250, 220),
-                        new DocxMarkupBalloonRgb(217, 151, 0),
-                        new DocxMarkupBalloonRgb(70, 70, 70),
-                        new DocxMarkupBalloonRgb(0, 0, 0),
-                        CandidateCount: 1, RevisionCandidateCount: 0, CommentCandidateCount: 1,
-                        CommentWithDateCount: commentMetrics.WithDateCount,
-                        CommentResolvedCount: commentMetrics.ResolvedCount,
-                        CommentOpenCount: commentMetrics.OpenCount,
-                        CommentReplyCount: commentMetrics.ReplyCount,
-                        BodySummaryPartCount: CountBalloonSummaryPart(commentBody),
-                        WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(commentBody)));
-                }
-            }
-
-            if (markupContext.RendersRevisionBalloons && paragraph.Revisions.Count != 0)
-            {
-                int key = RuntimeHelpers.GetHashCode(paragraph);
-                if (!renderedRevisions.Add(key))
-                {
-                    continue;
-                }
-
-                DocxRevisionMarkupPalette paragraphRevisionPalette = ResolveRevisionMarkupPalette(paragraph.Revisions);
-                string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(paragraph.Revisions), textWidth);
-                string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(paragraph), textWidth);
-                candidates.Add(new DocxMarkupBalloonCandidate(
-                    DocxMarkupBalloonKind.Revision,
-                    revisionTitle,
-                    revisionBody,
-                    revisionTitle,
-                    revisionBody,
-                    line.BaselineY,
-                    line.X + Math.Max(0d, line.Width) * 0.5d,
-                    line.X - 2d,
-                    line.X + Math.Max(0d, line.Width) + 2d,
-                    sequence++,
-                    paragraphRevisionPalette.FillRgb,
-                    paragraphRevisionPalette.StrokeRgb,
-                    paragraphRevisionPalette.TitleRgb,
-                    new DocxMarkupBalloonRgb(0, 0, 0),
-                    CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                    BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                    WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
-            }
-        }
-
-        if (markupContext.RendersRevisionBalloons)
-        {
-            foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, floatingDrawings))
-            {
-                IReadOnlyList<DocxRevisionInfo> tableRevisions = row.Table.Revisions ?? [];
-                if (tableRevisions.Count != 0)
-                {
-                    string tableKey = TableBalloonKey(row);
-                    if (renderedTableRevisions.Add(tableKey))
-                    {
-                        DocxRevisionMarkupPalette tableRevisionPalette = ResolveRevisionMarkupPalette(tableRevisions);
-                        string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(tableRevisions), textWidth);
-                        string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(tableRevisions), textWidth);
-                        candidates.Add(new DocxMarkupBalloonCandidate(
-                            DocxMarkupBalloonKind.Revision,
-                            revisionTitle,
-                            revisionBody,
-                            revisionTitle,
-                            revisionBody,
-                            row.Y + Math.Max(0d, row.Height) * 0.5d,
-                            row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
-                            row.Table.TableX - 2d,
-                            row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
-                            sequence++,
-                            tableRevisionPalette.FillRgb,
-                            tableRevisionPalette.StrokeRgb,
-                            tableRevisionPalette.TitleRgb,
-                            new DocxMarkupBalloonRgb(0, 0, 0),
-                            CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                            BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
-                    }
-                }
-
-                IReadOnlyList<DocxRevisionInfo> rowRevisions = row.Revisions ?? [];
-                if (rowRevisions.Count != 0)
-                {
-                    string rowKey = TableRowBalloonKey(row);
-                    if (renderedTableRowRevisions.Add(rowKey))
-                    {
-                        DocxRevisionMarkupPalette rowRevisionPalette = ResolveRevisionMarkupPalette(rowRevisions);
-                        string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(rowRevisions), textWidth);
-                        string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(rowRevisions), textWidth);
-                        candidates.Add(new DocxMarkupBalloonCandidate(
-                            DocxMarkupBalloonKind.Revision,
-                            revisionTitle,
-                            revisionBody,
-                            revisionTitle,
-                            revisionBody,
-                            row.Y + Math.Max(0d, row.Height) * 0.5d,
-                            row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
-                            row.Table.TableX - 2d,
-                            row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
-                            sequence++,
-                            rowRevisionPalette.FillRgb,
-                            rowRevisionPalette.StrokeRgb,
-                            rowRevisionPalette.TitleRgb,
-                            new DocxMarkupBalloonRgb(0, 0, 0),
-                            CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                            BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
-                    }
-                }
-
-                for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
-                {
-                    DocxTableCellLayout cell = row.Cells[cellIndex];
-                    IReadOnlyList<DocxRevisionInfo> cellRevisions = cell.Cell.Revisions;
-                    if (cellRevisions.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    string cellKey = TableCellBalloonKey(row, cellIndex);
-                    if (!renderedTableCellRevisions.Add(cellKey))
-                    {
-                        continue;
-                    }
-
-                    DocxRevisionMarkupPalette cellRevisionPalette = ResolveRevisionMarkupPalette(cellRevisions);
-                    string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(cellRevisions), textWidth);
-                    string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(cellRevisions), textWidth);
-                    candidates.Add(new DocxMarkupBalloonCandidate(
-                        DocxMarkupBalloonKind.Revision,
-                        revisionTitle,
-                        revisionBody,
-                        revisionTitle,
-                        revisionBody,
-                        cell.Y + Math.Max(0d, cell.Height) * 0.5d,
-                        cell.X + Math.Max(0d, cell.Width) * 0.5d,
-                        cell.X - 2d,
-                        cell.X + Math.Max(0d, cell.Width) + 2d,
-                        sequence++,
-                        cellRevisionPalette.FillRgb,
-                        cellRevisionPalette.StrokeRgb,
-                        cellRevisionPalette.TitleRgb,
-                        new DocxMarkupBalloonRgb(0, 0, 0),
-                        CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                        BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                        WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
-                }
-            }
-        }
-
-        return candidates;
     }
 
     private static DocxTextLineLayout ResolveCommentAnchorLine(

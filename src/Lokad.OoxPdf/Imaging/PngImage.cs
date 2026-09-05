@@ -118,10 +118,16 @@ internal sealed class PngImage
         };
         int filterBytesPerPixel = Math.Max(1, (bitsPerPixel + 7) / 8);
         var rgb = new byte[width * height * 3];
-        byte[]? alpha = colorType is 3 or 4 or 6 || HasGrayscaleTransparency(colorType, transparency) ? new byte[width * height] : null;
+        byte[]? alpha = colorType is 3 or 4 or 6 || HasGrayscaleTransparency() ? new byte[width * height] : null;
+
+        bool HasGrayscaleTransparency()
+        {
+            return colorType == 0 && transparency is { Length: >= 2 };
+        }
+
         if (interlace == 1)
         {
-            DecodeAdam7(decompressed, width, height, bitDepth, colorType, bitsPerPixel, filterBytesPerPixel, palette, transparency, rgb, alpha);
+            DecodeAdam7();
             return new PngImage(width, height, rgb, alpha);
         }
 
@@ -145,39 +151,39 @@ internal sealed class PngImage
         }
 
         return new PngImage(width, height, rgb, alpha);
-    }
 
-    private static void DecodeAdam7(byte[] decompressed, int width, int height, int bitDepth, int colorType, int bitsPerPixel, int filterBytesPerPixel, byte[]? palette, byte[]? transparency, byte[] rgb, byte[]? alpha)
-    {
-        int source = 0;
-        for (int pass = 0; pass < 7; pass++)
+        void DecodeAdam7()
         {
-            int passWidth = Adam7Size(width, Adam7StartX[pass], Adam7StepX[pass]);
-            int passHeight = Adam7Size(height, Adam7StartY[pass], Adam7StepY[pass]);
-            if (passWidth == 0 || passHeight == 0)
+            int adam7Source = 0;
+            for (int pass = 0; pass < 7; pass++)
             {
-                continue;
-            }
-
-            int stride = (passWidth * bitsPerPixel + 7) / 8;
-            var previous = new byte[stride];
-            var current = new byte[stride];
-            for (int row = 0; row < passHeight; row++)
-            {
-                byte filter = decompressed[source++];
-                decompressed.AsSpan(source, stride).CopyTo(current);
-                source += stride;
-                Unfilter(filter, current, previous, filterBytesPerPixel);
-
-                int y = Adam7StartY[pass] + row * Adam7StepY[pass];
-                for (int x = 0; x < passWidth; x++)
+                int passWidth = Adam7Size(width, Adam7StartX[pass], Adam7StepX[pass]);
+                int passHeight = Adam7Size(height, Adam7StartY[pass], Adam7StepY[pass]);
+                if (passWidth == 0 || passHeight == 0)
                 {
-                    int finalX = Adam7StartX[pass] + x * Adam7StepX[pass];
-                    WritePixel(bitDepth, colorType, current, x, y * width + finalX, palette, transparency, rgb, alpha);
+                    continue;
                 }
 
-                (previous, current) = (current, previous);
-                Array.Clear(current);
+                int adam7Stride = (passWidth * bitsPerPixel + 7) / 8;
+                var adam7Previous = new byte[adam7Stride];
+                var adam7Current = new byte[adam7Stride];
+                for (int row = 0; row < passHeight; row++)
+                {
+                    byte filter = decompressed[adam7Source++];
+                    decompressed.AsSpan(adam7Source, adam7Stride).CopyTo(adam7Current);
+                    adam7Source += adam7Stride;
+                    Unfilter(filter, adam7Current, adam7Previous, filterBytesPerPixel);
+
+                    int y = Adam7StartY[pass] + row * Adam7StepY[pass];
+                    for (int x = 0; x < passWidth; x++)
+                    {
+                        int finalX = Adam7StartX[pass] + x * Adam7StepX[pass];
+                        WritePixel(bitDepth, colorType, adam7Current, x, y * width + finalX, palette, transparency, rgb, alpha);
+                    }
+
+                    (adam7Previous, adam7Current) = (adam7Current, adam7Previous);
+                    Array.Clear(adam7Current);
+                }
             }
         }
     }
@@ -270,11 +276,6 @@ internal sealed class PngImage
         int shift = (samplesPerByte - 1 - (x % samplesPerByte)) * bitDepth;
         int mask = (1 << bitDepth) - 1;
         return (current[byteIndex] >> shift) & mask;
-    }
-
-    private static bool HasGrayscaleTransparency(int colorType, byte[]? transparency)
-    {
-        return colorType == 0 && transparency is { Length: >= 2 };
     }
 
     private static bool MatchesTransparentGray(byte gray, byte[]? transparency)

@@ -35,28 +35,14 @@ internal sealed partial class PptxRenderer
         return GetScatterYValueExtents(series);
     }
 
-    private static ChartValueExtents GetScatterDataXExtents(IReadOnlyList<ScatterSeries> series)
-    {
-        double maxX = series.SelectMany(item => item.Points).Max(point => point.X);
-        double minX = series.SelectMany(item => item.Points).Min(point => point.X);
-        return new ChartValueExtents(minX, maxX);
-    }
-
-    private static ChartValueExtents GetScatterDataYExtents(IReadOnlyList<ScatterSeries> series)
-    {
-        double maxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
-        double minY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
-        return new ChartValueExtents(minY, maxY);
-    }
-
     private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, ChartValueExtents? xValueExtents, ChartValueExtents? yValueExtents)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        ChartValueExtents xExtents = xValueExtents ?? GetScatterDataXExtents(series);
-        ChartValueExtents yExtents = yValueExtents ?? GetScatterDataYExtents(series);
+        ChartValueExtents xExtents = xValueExtents ?? GetScatterDataXExtents();
+        ChartValueExtents yExtents = yValueExtents ?? GetScatterDataYExtents();
         double minX = xExtents.Min;
         double maxX = xExtents.Max;
         double minY = yExtents.Min;
@@ -100,7 +86,7 @@ internal sealed partial class PptxRenderer
                     (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
                     if (bubble)
                     {
-                        FillBubbleInPlotClip(graphics, plotBox, pointX, pointY, radius);
+                        FillBubbleInPlotClip(pointX, pointY, radius);
                     }
                     else
                     {
@@ -114,6 +100,25 @@ internal sealed partial class PptxRenderer
                     graphics.RestoreState();
                 }
             }
+        }
+
+        void FillBubbleInPlotClip(double pointX, double pointY, double radius)
+        {
+            RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.FillEllipseEvenOdd(pointX - radius, pointY - radius, radius * 2d, radius * 2d));
+        }
+
+        ChartValueExtents GetScatterDataXExtents()
+        {
+            double dataMaxX = series.SelectMany(item => item.Points).Max(point => point.X);
+            double dataMinX = series.SelectMany(item => item.Points).Min(point => point.X);
+            return new ChartValueExtents(dataMinX, dataMaxX);
+        }
+
+        ChartValueExtents GetScatterDataYExtents()
+        {
+            double dataMaxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
+            double dataMinY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
+            return new ChartValueExtents(dataMinY, dataMaxY);
         }
     }
 
@@ -132,8 +137,4 @@ internal sealed partial class PptxRenderer
         });
     }
 
-    private static void FillBubbleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double pointX, double pointY, double radius)
-    {
-        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.FillEllipseEvenOdd(pointX - radius, pointY - radius, radius * 2d, radius * 2d));
-    }
 }

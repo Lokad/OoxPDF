@@ -133,12 +133,28 @@ internal sealed partial class DocxRenderer
     public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!HasRenderableContent(document))
+        if (!HasRenderableContent())
         {
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
 
         return RenderParagraphs(document, fontResolver, ResolveEffectiveMarkupContext(document), diagnosticSink, cancellationToken);
+
+        bool HasRenderableContent()
+        {
+            return document.BodyElements.Count != 0
+                || HasRenderableDrawings(document.FloatingDrawings)
+                || document.HeaderParagraphs.Count != 0
+                || document.FooterParagraphs.Count != 0
+                || HasBodyElements(document.HeaderBodyElementsByType)
+                || HasBodyElements(document.FooterBodyElementsByType)
+                || HasBodyElements(document.PageSettings.HeaderBodyElementsByType)
+                || HasBodyElements(document.PageSettings.FooterBodyElementsByType)
+                || HasRenderableDrawings(document.HeaderFloatingDrawingsByType)
+                || HasRenderableDrawings(document.FooterFloatingDrawingsByType)
+                || HasRenderableDrawings(document.PageSettings.HeaderFloatingDrawingsByType)
+                || HasRenderableDrawings(document.PageSettings.FooterFloatingDrawingsByType);
+        }
     }
 
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
@@ -198,10 +214,15 @@ internal sealed partial class DocxRenderer
                 string? containerStoryKind,
                 string? containerStoryVariantType)
             {
+                string ResolveTextEmissionStoryKind()
+                {
+                    return string.IsNullOrWhiteSpace(line.StoryKind) ? fallbackStoryKind : line.StoryKind;
+                }
+
                 lines.Add(ToTextEmissionLineSnapshot(
                     pageIndex,
                     isStaticStory,
-                    ResolveTextEmissionStoryKind(line, fallbackStoryKind),
+                    ResolveTextEmissionStoryKind(),
                     line.StoryVariantType,
                     containerStoryKind,
                     containerStoryVariantType,
@@ -338,22 +359,6 @@ internal sealed partial class DocxRenderer
             : ResolveTextEmissionFontScale(markupContext);
     }
 
-    private static bool HasRenderableContent(DocxDocument document)
-    {
-        return document.BodyElements.Count != 0
-            || HasRenderableDrawings(document.FloatingDrawings)
-            || document.HeaderParagraphs.Count != 0
-            || document.FooterParagraphs.Count != 0
-            || HasBodyElements(document.HeaderBodyElementsByType)
-            || HasBodyElements(document.FooterBodyElementsByType)
-            || HasBodyElements(document.PageSettings.HeaderBodyElementsByType)
-            || HasBodyElements(document.PageSettings.FooterBodyElementsByType)
-            || HasRenderableDrawings(document.HeaderFloatingDrawingsByType)
-            || HasRenderableDrawings(document.FooterFloatingDrawingsByType)
-            || HasRenderableDrawings(document.PageSettings.HeaderFloatingDrawingsByType)
-            || HasRenderableDrawings(document.PageSettings.FooterFloatingDrawingsByType);
-    }
-
     private static bool HasBodyElements(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> elementsByType)
     {
         return elementsByType.Values.Any(elements => elements.Count != 0);
@@ -385,7 +390,7 @@ internal sealed partial class DocxRenderer
         double textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
         bool useWordCompatibleTextProfile = UsesWordCompatibleAllMarkupTextProfile(markupContext);
         bool suppressCommentReferenceSpacer = ShouldSuppressWordCompatibleCommentReferenceSpacer(markupContext);
-        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations(layout, fontResources, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken);
+        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations();
         var pages = new List<PdfPage>(layout.Pages.Count);
         int imageIndex = 1;
 
@@ -483,7 +488,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 ref imageIndex);
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layout, layoutPage, pageIndex, fontResources, pageNumber, layout.Pages.Count, bookmarkDestinations, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count);
             pages.Add(new PdfPage(
                 layoutPage.Width,
                 layoutPage.Height,
@@ -497,76 +502,125 @@ internal sealed partial class DocxRenderer
         }
 
         return pages;
-    }
 
-    private static IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(
-        DocxLayout layout,
-        DocxLayoutPage page,
-        int pageIndex,
-        DocxFontResources fontResources,
-        int pageNumber,
-        int pageCount,
-        IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations,
-        double textEmissionFontScale,
-        double textEmissionBaselineOffset,
-        double textEmissionXOffset,
-        bool suppressCommentReferenceSpacer,
-        bool useWordCompatibleTextProfile,
-        CancellationToken cancellationToken)
-    {
-        var annotations = new List<PdfLinkAnnotation>();
-        foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
+        IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations()
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (line.SourceParagraph is not { } paragraph ||
-                paragraph.Hyperlinks.Count == 0)
-            {
-                continue;
-            }
-
-            IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
-            foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile))
+            var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
+            for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex < 0 || segment.Width <= 0d)
+                DocxLayoutPage page = layout.Pages[pageIndex];
+                int pageNumber = pageIndex + 1;
+                foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
                 {
-                    continue;
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (line.SourceParagraph is not { } paragraph ||
+                        paragraph.BookmarkAnchors.Count == 0)
+                    {
+                        continue;
+                    }
 
-                DocxHyperlinkSpan? link = links.FirstOrDefault(item => IsHyperlinkSegment(item, segment.SourceTextRunIndex));
-                if (link is null)
-                {
-                    continue;
-                }
+                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile)
+                        .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
+                        .ToArray();
+                    if (segments.Count == 0)
+                    {
+                        continue;
+                    }
 
-                double ascender = segment.Resource.Embedded.Font.Os2.WindowsAscender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
-                double descender = segment.Resource.Embedded.Font.Os2.WindowsDescender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
-                double annotationWidth = ResolveHyperlinkAnnotationWidth(segment, useWordCompatibleTextProfile);
-                if (IsExternalHyperlink(link))
-                {
-                    annotations.Add(PdfLinkAnnotation.ToUri(
-                        segment.X,
-                        segment.BaselineY - descender,
-                        annotationWidth,
-                        ascender + descender,
-                        link.Target ?? string.Empty));
-                }
-                else if (!string.IsNullOrEmpty(link.Anchor) &&
-                    bookmarkDestinations.TryGetValue(link.Anchor, out PdfLinkDestination destination))
-                {
-                    annotations.Add(PdfLinkAnnotation.ToDestination(
-                        segment.X,
-                        segment.BaselineY - descender,
-                        annotationWidth,
-                        ascender + descender,
-                        destination));
+                    foreach (DocxBookmarkAnchor bookmark in paragraph.BookmarkAnchors)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (string.IsNullOrEmpty(bookmark.Name) || destinations.ContainsKey(bookmark.Name))
+                        {
+                            continue;
+                        }
+
+                        if (!TryResolveBookmarkDestinationSegment(segments, bookmark, out DocxTextEmissionSegment? target, out double targetX))
+                        {
+                            continue;
+                        }
+
+                        double ascender = target.Resource.Embedded.Font.Os2.WindowsAscender * target.FontSize / target.Resource.Embedded.Font.UnitsPerEm;
+                        destinations[bookmark.Name] = new PdfLinkDestination(
+                            pageIndex,
+                            targetX,
+                            target.BaselineY + ascender,
+                            Zoom: null);
+                    }
                 }
             }
+
+            return destinations;
         }
 
-        return annotations;
-    }
+        IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount)
+        {
+            var annotations = new List<PdfLinkAnnotation>();
+            foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (line.SourceParagraph is not { } paragraph ||
+                    paragraph.Hyperlinks.Count == 0)
+                {
+                    continue;
+                }
 
+                IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
+                foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex < 0 || segment.Width <= 0d)
+                    {
+                        continue;
+                    }
+
+                    DocxHyperlinkSpan? link = links.FirstOrDefault(item => IsHyperlinkSegment(item, segment.SourceTextRunIndex));
+                    if (link is null)
+                    {
+                        continue;
+                    }
+
+                    double ascender = segment.Resource.Embedded.Font.Os2.WindowsAscender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
+                    double descender = segment.Resource.Embedded.Font.Os2.WindowsDescender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
+                    double annotationWidth = ResolveHyperlinkAnnotationWidth(segment, useWordCompatibleTextProfile);
+                    if (IsExternalHyperlink(link))
+                    {
+                        annotations.Add(PdfLinkAnnotation.ToUri(
+                            segment.X,
+                            segment.BaselineY - descender,
+                            annotationWidth,
+                            ascender + descender,
+                            link.Target ?? string.Empty));
+                    }
+                    else if (!string.IsNullOrEmpty(link.Anchor) &&
+                        bookmarkDestinations.TryGetValue(link.Anchor, out PdfLinkDestination destination))
+                    {
+                        annotations.Add(PdfLinkAnnotation.ToDestination(
+                            segment.X,
+                            segment.BaselineY - descender,
+                            annotationWidth,
+                            ascender + descender,
+                            destination));
+                    }
+                }
+            }
+
+            return annotations;
+
+        bool IsHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
+        {
+            return sourceTextRunIndex >= link.SourceRunStartIndex &&
+                sourceTextRunIndex < link.SourceRunStartIndex + link.SourceRunCount;
+        }
+
+        bool IsExternalHyperlink(DocxHyperlinkSpan link)
+        {
+            return !string.IsNullOrEmpty(link.Target) &&
+                string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase);
+        }
+        }
+    }
     private static double ResolveHyperlinkAnnotationWidth(
         DocxTextEmissionSegment segment,
         bool useWordCompatibleTextProfile)
@@ -589,65 +643,6 @@ internal sealed partial class DocxRenderer
             segment.Width,
             plan).PlannedEmittedAdvance;
         return emittedAdvance > 0d ? emittedAdvance : segment.Width;
-    }
-
-    private static IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations(
-        DocxLayout layout,
-        DocxFontResources fontResources,
-        double textEmissionFontScale,
-        double textEmissionBaselineOffset,
-        double textEmissionXOffset,
-        bool suppressCommentReferenceSpacer,
-        bool useWordCompatibleTextProfile,
-        CancellationToken cancellationToken)
-    {
-        var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
-        for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            DocxLayoutPage page = layout.Pages[pageIndex];
-            int pageNumber = pageIndex + 1;
-            foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (line.SourceParagraph is not { } paragraph ||
-                    paragraph.BookmarkAnchors.Count == 0)
-                {
-                    continue;
-                }
-
-                IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile)
-                    .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
-                    .ToArray();
-                if (segments.Count == 0)
-                {
-                    continue;
-                }
-
-                foreach (DocxBookmarkAnchor bookmark in paragraph.BookmarkAnchors)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (string.IsNullOrEmpty(bookmark.Name) || destinations.ContainsKey(bookmark.Name))
-                    {
-                        continue;
-                    }
-
-                    if (!TryResolveBookmarkDestinationSegment(segments, bookmark, out DocxTextEmissionSegment? target, out double targetX))
-                    {
-                        continue;
-                    }
-
-                    double ascender = target.Resource.Embedded.Font.Os2.WindowsAscender * target.FontSize / target.Resource.Embedded.Font.UnitsPerEm;
-                    destinations[bookmark.Name] = new PdfLinkDestination(
-                        pageIndex,
-                        targetX,
-                        target.BaselineY + ascender,
-                        Zoom: null);
-                }
-            }
-        }
-
-        return destinations;
     }
 
     private static bool TryResolveBookmarkDestinationSegment(
@@ -692,17 +687,6 @@ internal sealed partial class DocxRenderer
         return true;
     }
 
-    private static bool IsHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
-    {
-        return sourceTextRunIndex >= link.SourceRunStartIndex &&
-            sourceTextRunIndex < link.SourceRunStartIndex + link.SourceRunCount;
-    }
-
-    private static bool IsExternalHyperlink(DocxHyperlinkSpan link)
-    {
-        return !string.IsNullOrEmpty(link.Target) &&
-            string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase);
-    }
 
     private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken)
     {
@@ -1038,11 +1022,17 @@ internal sealed partial class DocxRenderer
             barBottom,
             WordCompatibleAllMarkupRevisionBarWidthPoints,
             barHeight);
-    }
 
-    private static bool HasTextLineRevision(DocxTextLineLayout line)
-    {
-        return CollectTextLineRevisions(line).Count != 0;
+        bool HasTableRowRevision(DocxTableRowLayout row)
+        {
+            return row.RevisionCount != 0 ||
+                row.Table.Revisions?.Count > 0;
+        }
+
+        bool HasTextLineRevision(DocxTextLineLayout line)
+        {
+            return CollectTextLineRevisions(line).Count != 0;
+        }
     }
 
     private static IReadOnlyList<DocxRevisionInfo> CollectTextLineRevisions(DocxTextLineLayout line)
@@ -1070,12 +1060,6 @@ internal sealed partial class DocxRenderer
         }
 
         revisions.AddRange(run.Revisions);
-    }
-
-    private static bool HasTableRowRevision(DocxTableRowLayout row)
-    {
-        return row.RevisionCount != 0 ||
-            row.Table.Revisions?.Count > 0;
     }
 
     private static void RenderTextLine(
@@ -1195,14 +1179,14 @@ internal sealed partial class DocxRenderer
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics);
             }
         }
-    }
 
-    private static bool HasCommentRangeBounds(DocxCommentRange range)
-    {
-        return range.StartSourceRunIndex is not null ||
-            range.StartTextOffset is not null ||
-            range.EndSourceRunIndex is not null ||
-            range.EndTextOffset is not null;
+        bool HasCommentRangeBounds(DocxCommentRange range)
+        {
+            return range.StartSourceRunIndex is not null ||
+                range.StartTextOffset is not null ||
+                range.EndSourceRunIndex is not null ||
+                range.EndTextOffset is not null;
+        }
     }
 
     private static bool TryResolveWordCompatibleCommentReferenceMarkerBounds(

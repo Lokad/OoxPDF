@@ -18,7 +18,77 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     private WindowsFontResolver(IReadOnlyList<string> fontDirectories)
     {
-        cache = GetOrCreateCache(fontDirectories);
+        cache = GetOrCreateCache();
+
+        Lazy<IReadOnlyList<FontFaceResolution>> GetOrCreateCache()
+        {
+            string cacheKey = string.Join(
+                "|",
+                fontDirectories
+                    .Where(d => !string.IsNullOrWhiteSpace(d))
+                    .Select(Path.GetFullPath)
+                    .Order(StringComparer.OrdinalIgnoreCase));
+            lock (CacheLock)
+            {
+                if (!DiscoveryCaches.TryGetValue(cacheKey, out Lazy<IReadOnlyList<FontFaceResolution>>? cached))
+                {
+                    cached = new Lazy<IReadOnlyList<FontFaceResolution>>(() => Discover());
+                    DiscoveryCaches[cacheKey] = cached;
+                }
+
+                return cached;
+
+            IReadOnlyList<FontFaceResolution> Discover()
+            {
+                var fonts = new List<FontFaceResolution>();
+                foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
+                        ? SearchOption.AllDirectories
+                        : SearchOption.TopDirectoryOnly;
+                    foreach (string path in Directory.EnumerateFiles(fontsDirectory, "*.*", searchOption)
+                                 .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                                     p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
+                                     p.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
+                                 .Order(StringComparer.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            byte[] bytes = File.ReadAllBytes(path);
+                            var source = new FileFontProgramSource(path);
+                            int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
+                            for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
+                            {
+                                OpenTypeFont font = OpenTypeFont.Load(bytes, faceIndex);
+                                if (!string.IsNullOrWhiteSpace(font.FamilyName))
+                                {
+                                    fonts.Add(new FontFaceResolution(
+                                        font.FamilyName,
+                                        font.FamilyName,
+                                        new FontStyleKey(
+                                            Bold: font.Os2.WeightClass >= 600,
+                                            Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
+                                            WeightClass: font.Os2.WeightClass,
+                                            FaceIndex: faceIndex,
+                                            HasMathTable: font.TableTags.Contains("MATH")),
+                                        source,
+                                        IsFallback: false));
+                                }
+                            }
+                        }
+                        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+                        {
+                            // Ignore fonts outside the minimal parser's current scope.
+                        }
+                    }
+                }
+
+                return fonts
+                    .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+            }
+        }
     }
 
     public FontFaceResolution Resolve(FontRequest request)
@@ -66,75 +136,6 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         return GetDiscoveredFonts();
     }
 
-    private static Lazy<IReadOnlyList<FontFaceResolution>> GetOrCreateCache(IReadOnlyList<string> fontDirectories)
-    {
-        string cacheKey = string.Join(
-            "|",
-            fontDirectories
-                .Where(d => !string.IsNullOrWhiteSpace(d))
-                .Select(Path.GetFullPath)
-                .Order(StringComparer.OrdinalIgnoreCase));
-        lock (CacheLock)
-        {
-            if (!DiscoveryCaches.TryGetValue(cacheKey, out Lazy<IReadOnlyList<FontFaceResolution>>? cached))
-            {
-                cached = new Lazy<IReadOnlyList<FontFaceResolution>>(() => Discover(fontDirectories));
-                DiscoveryCaches[cacheKey] = cached;
-            }
-
-            return cached;
-        }
-    }
-
-    private static IReadOnlyList<FontFaceResolution> Discover(IReadOnlyList<string> fontDirectories)
-    {
-        var fonts = new List<FontFaceResolution>();
-        foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
-                ? SearchOption.AllDirectories
-                : SearchOption.TopDirectoryOnly;
-            foreach (string path in Directory.EnumerateFiles(fontsDirectory, "*.*", searchOption)
-                         .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
-                             p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
-                             p.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
-                         .Order(StringComparer.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    byte[] bytes = File.ReadAllBytes(path);
-                    var source = new FileFontProgramSource(path);
-                    int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
-                    for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
-                    {
-                        OpenTypeFont font = OpenTypeFont.Load(bytes, faceIndex);
-                        if (!string.IsNullOrWhiteSpace(font.FamilyName))
-                        {
-                            fonts.Add(new FontFaceResolution(
-                                font.FamilyName,
-                                font.FamilyName,
-                                new FontStyleKey(
-                                    Bold: font.Os2.WeightClass >= 600,
-                                    Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
-                                    WeightClass: font.Os2.WeightClass,
-                                    FaceIndex: faceIndex,
-                                    HasMathTable: font.TableTags.Contains("MATH")),
-                                source,
-                                IsFallback: false));
-                        }
-                    }
-                }
-                catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
-                {
-                    // Ignore fonts outside the minimal parser's current scope.
-                }
-            }
-        }
-
-        return fonts
-            .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
 
     private static IReadOnlyList<string> GetDefaultFontDirectories()
     {
