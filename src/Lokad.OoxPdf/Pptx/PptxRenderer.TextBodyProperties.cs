@@ -66,6 +66,33 @@ internal sealed partial class PptxRenderer
             rotation,
             rotationSource,
             ExplicitWrapWidth: null);
+
+        static PptxTextBodyPropertySource MergeTextBodyPropertySources(
+            PptxTextBodyPropertySource first,
+            PptxTextBodyPropertySource second)
+        {
+            if (first == second)
+            {
+                return first;
+            }
+
+            if (first == PptxTextBodyPropertySource.DirectBodyPr || second == PptxTextBodyPropertySource.DirectBodyPr)
+            {
+                return PptxTextBodyPropertySource.DirectBodyPr;
+            }
+
+            if (first == PptxTextBodyPropertySource.InheritedBodyPr || second == PptxTextBodyPropertySource.InheritedBodyPr)
+            {
+                return PptxTextBodyPropertySource.InheritedBodyPr;
+            }
+
+            if (first == PptxTextBodyPropertySource.TableCellStyle || second == PptxTextBodyPropertySource.TableCellStyle)
+            {
+                return PptxTextBodyPropertySource.TableCellStyle;
+            }
+
+            return PptxTextBodyPropertySource.DefaultValue;
+        }
     }
 
     private static (string? Value, PptxTextBodyPropertySource Source) ReadTextBodyAttributeWithSource(
@@ -87,33 +114,6 @@ internal sealed partial class PptxRenderer
         }
 
         return (null, PptxTextBodyPropertySource.DefaultValue);
-    }
-
-    private static PptxTextBodyPropertySource MergeTextBodyPropertySources(
-        PptxTextBodyPropertySource first,
-        PptxTextBodyPropertySource second)
-    {
-        if (first == second)
-        {
-            return first;
-        }
-
-        if (first == PptxTextBodyPropertySource.DirectBodyPr || second == PptxTextBodyPropertySource.DirectBodyPr)
-        {
-            return PptxTextBodyPropertySource.DirectBodyPr;
-        }
-
-        if (first == PptxTextBodyPropertySource.InheritedBodyPr || second == PptxTextBodyPropertySource.InheritedBodyPr)
-        {
-            return PptxTextBodyPropertySource.InheritedBodyPr;
-        }
-
-        if (first == PptxTextBodyPropertySource.TableCellStyle || second == PptxTextBodyPropertySource.TableCellStyle)
-        {
-            return PptxTextBodyPropertySource.TableCellStyle;
-        }
-
-        return PptxTextBodyPropertySource.DefaultValue;
     }
 
     private static TextInsets ReadPresetTextRectInsets(XElement shape, double width, double height)
