@@ -573,7 +573,7 @@ internal sealed partial class PptxRenderer
             double luma = (0.2126d * red + 0.7152d * green + 0.0722d * blue) / 255d;
             if (recolor.Kind == PptxSceneImageRecolorKind.Grayscale)
             {
-                byte gray = ToByte(luma * 255d);
+                byte gray = PptxColorResolver.ToByte(luma * 255d);
                 transformed[i] = gray;
                 transformed[i + 1] = gray;
                 transformed[i + 2] = gray;
@@ -601,7 +601,7 @@ internal sealed partial class PptxRenderer
             double value = channel / 255d;
             value = ApplyContrast(value, recolor.Contrast);
             value = ApplyBrightness(value, recolor.Brightness);
-            return ToByte(value * 255d);
+            return PptxColorResolver.ToByte(value * 255d);
 
             double ApplyContrast(double value, double contrast)
             {
@@ -651,7 +651,7 @@ internal sealed partial class PptxRenderer
 
     private static byte Interpolate(byte from, byte to, double ratio)
     {
-        return ToByte(from + (to - from) * Math.Clamp(ratio, 0d, 1d));
+        return PptxColorResolver.ToByte(from + (to - from) * Math.Clamp(ratio, 0d, 1d));
     }
 
     private static bool TryReadShapePictureFill(

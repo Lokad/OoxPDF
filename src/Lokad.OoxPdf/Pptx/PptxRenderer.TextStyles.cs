@@ -105,7 +105,7 @@ internal sealed partial class PptxRenderer
             color = hyperlinkColor;
             colorSource = PptxRunTextColorSource.ThemeHyperlink;
         }
-        else if (TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
+        else if (PptxColorResolver.TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
             colorSource = PptxRunTextColorSource.RunSolidFill;
@@ -127,7 +127,7 @@ internal sealed partial class PptxRenderer
             colorSource = PptxRunTextColorSource.DefaultNoFill;
             alpha = 0d;
         }
-        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
+        else if (PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
         {
             color = defaultColor;
             colorSource = PptxRunTextColorSource.DefaultSolidFill;
@@ -219,7 +219,7 @@ internal sealed partial class PptxRenderer
         double? width = line.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : null;
-        if (!TryReadSolidColorWithAlpha(line, theme, colorMap, out RgbColor color, out double alpha))
+        if (!PptxColorResolver.TryReadSolidColorWithAlpha(line, theme, colorMap, out RgbColor color, out double alpha))
         {
             return false;
         }

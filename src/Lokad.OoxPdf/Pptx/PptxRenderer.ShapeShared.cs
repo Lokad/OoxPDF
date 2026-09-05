@@ -114,14 +114,14 @@ internal sealed partial class PptxRenderer
             ? inheritedLineWidth
             : null;
         PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
-        if (explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha, styleLineWidth))
+        if (explicitLine is not null && PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, PptxColorMap.Default, out color, out lineWidth, out alpha, styleLineWidth))
         {
             return true;
         }
 
         if (explicitLine?.Attribute("w") is { } explicitWidthAttribute &&
             lineReference.Style is not null &&
-            TryReadSolidColorWithAlpha(lineReference.Style, theme, lineReference.Reference, out color, out alpha))
+            PptxColorResolver.TryReadSolidColorWithAlpha(lineReference.Style, theme, lineReference.Reference, out color, out alpha))
         {
             lineWidth = OoxUnits.EmuToPoints(long.Parse(explicitWidthAttribute.Value, CultureInfo.InvariantCulture));
             return true;
@@ -138,7 +138,7 @@ internal sealed partial class PptxRenderer
         lineWidth = lineReference.Style.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
-        return TryReadSolidColorWithAlpha(lineReference.Style, theme, lineReference.Reference, out color, out alpha);
+        return PptxColorResolver.TryReadSolidColorWithAlpha(lineReference.Style, theme, lineReference.Reference, out color, out alpha);
     }
 
     private static bool TryReadStyleLineWidth(XElement shape, PptxTheme theme, out double lineWidth)
