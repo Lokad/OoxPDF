@@ -397,4 +397,74 @@ internal sealed partial class PptxRenderer
     {
         public static ChartMarkerStyle Default { get; } = new(PptxSceneChartMarkerSymbol.Circle, "circle", null, PptxChartMarkerMetricRules.DefaultChartMarkerSize, null, null, false);
     }
+
+    private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);
+
+    private enum ChartPolarKind
+    {
+        Pie,
+        Doughnut
+    }
+
+    private readonly record struct ChartPolarLayout(
+        ChartPolarKind Kind,
+        ChartPlotBox PlotBox,
+        ChartPolarGeometry Geometry,
+        double ExplosionReserve,
+        bool HasLegend);
+
+    private enum ChartRadarStyle
+    {
+        Marker,
+        Filled
+    }
+
+    private readonly record struct ChartRadarGeometryRule(double CenterXRatio, double CenterYRatio, double RadiusRatio);
+
+    private readonly record struct ChartRadarLabelRules(
+        double CategoryVerticalGapFactor,
+        double CategoryHorizontalGapFactor,
+        double CategoryBaselineBaseFactor,
+        double CategoryBaselineSineFactor,
+        double CategoryBaselineSineSquaredFactor,
+        double ValueGapFactor,
+        double ValueBaselineOffsetFactor,
+        double ValueWidthFactor);
+
+    private readonly record struct ChartRadarLayout(
+        ChartPlotBox PlotBox,
+        ChartPolarGeometry Geometry,
+        ChartRadarStyle Style,
+        int PointCount,
+        ChartRadarLabelRules LabelRules)
+    {
+        public bool IsFilled => Style == ChartRadarStyle.Filled;
+    }
+
+    private readonly record struct ChartRadarLabelFrame(
+        double X,
+        double Y,
+        double Width,
+        double Height,
+        TextAlignment Alignment);
+
+    private enum ChartPlotBoxPreset
+    {
+        DefaultCartesian,
+        BarDefault,
+        BarOverlayOnly,
+        BarNoTitleBottomLegend,
+        BarTitleNoLegend,
+        BarTitleNoLegendInsideCrossing,
+        HorizontalBarTitleNoLegend,
+        LineNoTitleRightLegend,
+        LineTitleRightLegend
+    }
+
+    private readonly record struct ChartPlotBoxRatios(double Left, double Top, double Width, double Height)
+    {
+        public double Right => Left + Width;
+
+        public double Bottom => Top + Height;
+    }
 }

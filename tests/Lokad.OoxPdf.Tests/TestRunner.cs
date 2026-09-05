@@ -8,9 +8,9 @@ internal static class TestRunner
         nameof(CliTests.CliReturnsTwoForInvalidArguments),
         nameof(CliTests.CliReturnsOneForConversionFailure),
         nameof(CliTests.CliStrictReturnsThreeWhenWarningsAreEmitted),
-        nameof(PptxTests.PptxSceneBuilderBuildsResolvedNodeLists),
-        nameof(PptxTests.PptxSyntheticRotatedTextBoxProducesTransform),
-        nameof(PptxTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs)
+        nameof(PptxModelTests.PptxSceneBuilderBuildsResolvedNodeLists),
+        nameof(PptxTypographyTests.PptxSyntheticRotatedTextBoxProducesTransform),
+        nameof(PptxTypographyTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs)
     };
 
     public static int Run(params Action[] tests)

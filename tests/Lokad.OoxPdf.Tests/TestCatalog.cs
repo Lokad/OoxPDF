@@ -14,6 +14,41 @@ internal static class TestCatalog
         .. FromType("pdf", typeof(PdfWriterTests)),
         .. FromType(ClassifyPptx, typeof(PptxTests)),
         .. FromType(ClassifyDocx, typeof(DocxTests)),
+        .. FromType("docx-images", typeof(DocxImagesTests)),
+        .. FromType("docx-numbering", typeof(DocxNumberingTests)),
+        .. FromType("docx-text", typeof(DocxTextTests)),
+        .. FromType("docx-text", typeof(DocxTextWrapTests)),
+        .. FromType("docx-text", typeof(DocxTextSpacingTests)),
+        .. FromType("docx-page", typeof(DocxPageTests)),
+        .. FromType("docx-page", typeof(DocxHeaderFooterTests)),
+        .. FromType("docx-page", typeof(DocxPageMarkupTests)),
+        .. FromType("docx-page", typeof(DocxFootnotesTests)),
+        .. FromType("docx-tables", typeof(DocxTablesTests)),
+        .. FromType("docx-tables", typeof(DocxTableCellsTests)),
+        .. FromType("docx-tables", typeof(DocxTablesLayoutTests)),
+        .. FromType("docx-tables", typeof(DocxTablesMarkupTests)),
+        .. FromType("docx-core", typeof(DocxCoreTests)),
+        .. FromType("docx-core", typeof(DocxHyperlinksTests)),
+        .. FromType("docx-core", typeof(DocxFontRenderingTests)),
+        .. FromType("docx-core", typeof(DocxFieldsTests)),
+        .. FromType("docx-core", typeof(DocxRevisionsTests)),
+        .. FromType("docx-core", typeof(DocxMarkupTests)),
+        .. FromType("docx-core", typeof(DocxCommentsTests)),
+        .. FromType("docx-core", typeof(DocxInspectionTests)),
+        .. FromType("pptx-composition", typeof(PptxCompositionTests)),
+        .. FromType("pptx-core", typeof(PptxCoreTests)),
+        .. FromType("pptx-tables", typeof(PptxTablesTests)),
+        .. FromType("pptx-images", typeof(PptxImagesTests)),
+        .. FromType("pptx-model", typeof(PptxModelTests)),
+        .. FromType("pptx-model", typeof(PptxDiagnosticsTests)),
+        .. FromType("pptx-shapes", typeof(PptxShapesTests)),
+        .. FromType("pptx-charts", typeof(PptxChartsTests)),
+        .. FromType("pptx-charts", typeof(PptxChartLegendsTests)),
+        .. FromType("pptx-charts", typeof(PptxChartAxesTests)),
+        .. FromType("pptx-charts", typeof(PptxChartRenderingTests)),
+        .. FromType("pptx-typography", typeof(PptxTypographyTests)),
+        .. FromType("pptx-typography", typeof(PptxTextSpacingTests)),
+        .. FromType("pptx-typography", typeof(PptxTextLayoutTests)),
         .. FromType("imaging", typeof(ImagingTests)),
         .. FromType("fonts", typeof(FontTests))
     ];
@@ -127,3 +162,19 @@ internal static class TestCatalog
         return "docx-core";
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

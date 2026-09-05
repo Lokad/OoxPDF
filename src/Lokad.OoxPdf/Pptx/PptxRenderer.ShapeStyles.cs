@@ -512,4 +512,99 @@ internal sealed partial class PptxRenderer
             (x, y)
         ];
     }
+
+    private enum TextVerticalAnchor
+    {
+        Unknown,
+        Top,
+        Middle,
+        Bottom
+    }
+
+    private enum PptxTextWrapMode
+    {
+        Unknown,
+        Square,
+        None
+    }
+
+    private enum PptxTextVerticalOverflow
+    {
+        Unknown,
+        Overflow,
+        Clip,
+        Ellipsis
+    }
+
+    private enum PptxTextOrientation
+    {
+        Unknown,
+        Horizontal,
+        Vertical,
+        Vertical270,
+        EastAsianVertical,
+        MongolianVertical,
+        WordArtVertical,
+        WordArtVerticalRightToLeft
+    }
+
+    private enum LineEndKind
+    {
+        None,
+        Triangle,
+        Arrow,
+        Stealth,
+        Diamond,
+        Oval
+    }
+
+    private readonly record struct LineEndStyle(LineEndKind Kind, double WidthScale, double LengthScale)
+    {
+        public bool IsNone => Kind == LineEndKind.None;
+    }
+
+    private readonly record struct LineStyle(bool HasLine, RgbColor Color, double Width, double Alpha, IReadOnlyList<double> DashPattern, int? Cap, int? Join)
+    {
+        public bool HasDash => DashPattern is { Count: > 0 };
+    }
+
+    private readonly record struct FillStyle(bool HasFill, RgbColor Color, double Alpha);
+
+    private sealed record GradientFill(double AngleDegrees, IReadOnlyList<GradientStop> Stops);
+
+    private readonly record struct GradientStop(double Offset, RgbColor Color, double Alpha);
+
+    private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
+    {
+        public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
+    }
+
+    private readonly record struct FillRect(double Left, double Top, double Right, double Bottom);
+
+    private readonly record struct ShapePatternFill(string Preset, RgbColor Foreground, RgbColor Background, double Alpha);
+
+    private readonly record struct ShapePictureFill(
+        string RelationshipId,
+        string? TargetPartName,
+        PptxSceneImageResource? Resource,
+        CropRect Crop,
+        FillRect Fill,
+        double Alpha);
+
+    private readonly record struct Glow(RgbColor Color, double Alpha, double Radius);
+
+    private readonly record struct OuterShadow(RgbColor Color, double Alpha, double OffsetX, double OffsetY, double BlurRadius);
+
+    private readonly record struct SvgPaint(RgbColor? Color, SvgGradient? Gradient);
+
+    private sealed record SvgGradient(double X1, double Y1, double X2, double Y2, IReadOnlyList<SvgGradientStop> Stops);
+
+    private readonly record struct SvgGradientStop(double Offset, RgbColor Color);
+
+    private readonly record struct SvgPathBounds(double MinX, double MinY, double MaxX, double MaxY)
+    {
+        public double CenterX => (MinX + MaxX) / 2d;
+
+        public double CenterY => (MinY + MaxY) / 2d;
+    }
 }
