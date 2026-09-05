@@ -340,7 +340,7 @@ internal sealed partial class PptxSceneBuilder
     internal static PptxSceneFillStyle ReadTableCellFill(XElement cell, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
-        return TryReadSolidColorWithAlpha(cellProperties, theme, colorMap, out RgbColor color, out double alpha)
+        return PptxColorResolver.TryReadSolidColorWithAlpha(cellProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
     }
@@ -368,7 +368,7 @@ internal sealed partial class PptxSceneBuilder
         }
 
         if (line.Element(DrawingNamespace + "noFill") is not null ||
-            !TryReadSolidColorWithAlpha(line, theme, colorMap, out RgbColor color, out double alpha))
+            !PptxColorResolver.TryReadSolidColorWithAlpha(line, theme, colorMap, out RgbColor color, out double alpha))
         {
             return new PptxSceneTableCellBorder(IsSpecified: true, default);
         }

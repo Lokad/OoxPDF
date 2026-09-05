@@ -215,7 +215,7 @@ internal sealed partial class PptxSceneBuilder
         }
 
         XElement wrapper = new(DrawingNamespace + "solidFill", new XElement(colorElement));
-        return TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out color, out _);
+        return PptxColorResolver.TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out color, out _);
     }
 
     private static PptxSceneRect ReadPercentageRectangle(XElement element)

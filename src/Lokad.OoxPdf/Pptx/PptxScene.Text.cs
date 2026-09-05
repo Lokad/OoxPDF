@@ -159,12 +159,12 @@ internal sealed partial class PptxSceneBuilder
         PptxColorMap colorMap)
     {
         double fontSize = ReadFontSize(defaultRunProperties, null);
-        RgbColor color = TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double alpha)
+        RgbColor color = PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double alpha)
             ? defaultColor
             : TryReadShapeFontColor(shape, theme, colorMap, out RgbColor shapeColor)
                 ? shapeColor
                 : new RgbColor(0, 0, 0);
-        if (!TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out _, out alpha))
+        if (!PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out _, out alpha))
         {
             alpha = 1d;
         }
@@ -194,12 +194,12 @@ internal sealed partial class PptxSceneBuilder
             color = hyperlinkColor;
             alpha = 1d;
         }
-        else if (TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
+        else if (PptxColorResolver.TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
             alpha = runAlpha;
         }
-        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
+        else if (PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
         {
             color = defaultColor;
             alpha = defaultAlpha;
@@ -273,11 +273,6 @@ internal sealed partial class PptxSceneBuilder
             : 0d;
     }
 
-    private static bool IsStrikeEnabled(XElement? runProperties, XElement? defaultRunProperties)
-    {
-        return IsStrikeEnabled(ReadStrikeValue(runProperties, defaultRunProperties));
-    }
-
     private static bool IsStrikeEnabled(string? value)
     {
         return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
@@ -310,31 +305,6 @@ internal sealed partial class PptxSceneBuilder
         XElement? fontRef = shape
             .Element(PresentationNamespace + "style")
             ?.Element(DrawingNamespace + "fontRef");
-        return TryReadSolidColorWithAlpha(fontRef, theme, colorMap, out color, out _);
-    }
-
-    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
-    {
-        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, out color, out alpha);
-    }
-
-    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double alpha)
-    {
-        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, colorMap, out color, out alpha);
-    }
-
-    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, PptxColorMap colorMap, XElement? placeholderColorContainer, out RgbColor color, out double alpha)
-    {
-        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, colorMap, placeholderColorContainer, out color, out alpha);
-    }
-
-    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, XElement? placeholderColorContainer, out RgbColor color, out double alpha)
-    {
-        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, placeholderColorContainer, out color, out alpha);
-    }
-
-    private static double ReadAlpha(XElement? colorContainer)
-    {
-        return PptxColorResolver.ReadAlpha(colorContainer);
+        return PptxColorResolver.TryReadSolidColorWithAlpha(fontRef, theme, colorMap, out color, out _);
     }
 }

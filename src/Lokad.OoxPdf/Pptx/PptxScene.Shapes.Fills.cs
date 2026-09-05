@@ -59,7 +59,7 @@ internal sealed partial class PptxSceneBuilder
 
     private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)
     {
-        if (!TryReadSolidColorWithAlpha(gradientStop, theme, colorMap, out RgbColor color, out double alpha))
+        if (!PptxColorResolver.TryReadSolidColorWithAlpha(gradientStop, theme, colorMap, out RgbColor color, out double alpha))
         {
             stop = default;
             return false;
@@ -98,10 +98,10 @@ internal sealed partial class PptxSceneBuilder
             return false;
         }
 
-        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, colorMap, out RgbColor foregroundColor, out _)
+        RgbColor foreground = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, colorMap, out RgbColor foregroundColor, out _)
             ? foregroundColor
             : new RgbColor(0, 0, 0);
-        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
+        RgbColor background = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
             ? backgroundColor
             : new RgbColor(255, 255, 255);
         fill = new PptxScenePatternFill(true, true, false, preset, foreground, background, 1d);
@@ -130,18 +130,18 @@ internal sealed partial class PptxSceneBuilder
             return false;
         }
 
-        if (TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out color, out alpha))
+        if (PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out color, out alpha))
         {
             return true;
         }
 
         if (fillReference.Style is not null &&
-            TryReadSolidColorWithAlpha(fillReference.Style, theme, colorMap, fillReference.Reference, out color, out alpha))
+            PptxColorResolver.TryReadSolidColorWithAlpha(fillReference.Style, theme, colorMap, fillReference.Reference, out color, out alpha))
         {
             return true;
         }
 
-        return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, colorMap, out color, out alpha);
+        return fillReference.Index > 0 && PptxColorResolver.TryReadSolidColorWithAlpha(fillReference.Reference, theme, colorMap, out color, out alpha);
     }
 
     private static bool TryReadInheritedGroupFill(
@@ -170,7 +170,7 @@ internal sealed partial class PptxSceneBuilder
                 return false;
             }
 
-            if (TryReadSolidColorWithAlpha(groupProperties, theme, colorMap, out color, out alpha))
+            if (PptxColorResolver.TryReadSolidColorWithAlpha(groupProperties, theme, colorMap, out color, out alpha))
             {
                 return true;
             }

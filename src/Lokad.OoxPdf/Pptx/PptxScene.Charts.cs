@@ -342,7 +342,7 @@ internal sealed partial class PptxSceneBuilder
     internal static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         bool noFill = shapeProperties?.Element(DrawingNamespace + "noFill") is not null;
-        PptxSceneFillStyle fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
+        PptxSceneFillStyle fill = !noFill && PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
         return new PptxSceneChartShapeStyle(

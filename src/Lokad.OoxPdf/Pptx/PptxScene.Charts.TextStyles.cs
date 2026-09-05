@@ -90,7 +90,7 @@ internal sealed partial class PptxSceneBuilder
                 ? sizeHundredths / 100d
                 : null;
         double? characterSpacing = ReadOptionalChartCharacterSpacing(defaultRunProperties);
-        RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
+        RgbColor? color = PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
         bool? bold = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");
@@ -156,7 +156,7 @@ internal sealed partial class PptxSceneBuilder
                 ? sizeHundredths / 100d
                 : null;
         double? characterSpacing = ReadOptionalChartCharacterSpacing(runProperties);
-        RgbColor? color = TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
+        RgbColor? color = PptxColorResolver.TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
         bool? bold = ReadOptionalOoxmlBooleanAttribute(runProperties, "b");

@@ -371,7 +371,7 @@ internal sealed partial class PptxSceneBuilder
             .Element(PresentationNamespace + "cSld")?
             .Element(PresentationNamespace + "bg")?
             .Element(PresentationNamespace + "bgPr");
-        return TryReadSolidColorWithAlpha(background, theme, colorMap, out RgbColor color, out double alpha)
+        return PptxColorResolver.TryReadSolidColorWithAlpha(background, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneBackground(true, color, alpha)
             : default;
     }

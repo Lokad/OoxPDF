@@ -297,11 +297,6 @@ internal sealed partial class PptxRenderer
             : 0d;
     }
 
-    private static bool IsStrikeEnabled(XElement? runProperties, XElement? defaultRunProperties)
-    {
-        return IsStrikeEnabled(ReadStrikeValue(runProperties, defaultRunProperties));
-    }
-
     private static bool IsStrikeEnabled(string? value)
     {
         return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);

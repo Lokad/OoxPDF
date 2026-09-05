@@ -28,14 +28,14 @@ internal sealed partial class PptxSceneBuilder
         double? styleLineWidth = TryReadStyleLineWidth(lineReference, out double inheritedLineWidth)
             ? inheritedLineWidth
             : null;
-        if (shapeProperties is not null && explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, styleLineWidth))
+        if (shapeProperties is not null && explicitLine is not null && PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, styleLineWidth))
         {
             return true;
         }
 
         if (explicitLine?.Attribute("w") is { } explicitWidthAttribute &&
             lineReference.Style is not null &&
-            TryReadSolidColorWithAlpha(lineReference.Style, theme, colorMap, lineReference.Reference, out color, out alpha))
+            PptxColorResolver.TryReadSolidColorWithAlpha(lineReference.Style, theme, colorMap, lineReference.Reference, out color, out alpha))
         {
             lineWidth = OoxUnits.EmuToPoints(long.Parse(explicitWidthAttribute.Value, CultureInfo.InvariantCulture));
             return true;
@@ -104,7 +104,7 @@ internal sealed partial class PptxSceneBuilder
 
         if (lineStyle is null ||
             lineStyle.Element(DrawingNamespace + "noFill") is not null ||
-            !TryReadSolidColorWithAlpha(lineStyle, theme, colorMap, lineReference.Reference, out RgbColor color, out double alpha))
+            !PptxColorResolver.TryReadSolidColorWithAlpha(lineStyle, theme, colorMap, lineReference.Reference, out RgbColor color, out double alpha))
         {
             line = default;
             return false;
@@ -134,29 +134,6 @@ internal sealed partial class PptxSceneBuilder
             ReadLineJoin(shapeProperties),
             ReadLineJoinValue(shapeProperties), true);
         return true;
-    }
-
-    private static bool TryReadLineWithAlpha(
-        XElement shapeProperties,
-        PptxTheme theme,
-        out RgbColor color,
-        out double lineWidth,
-        out double alpha,
-        double? fallbackLineWidth)
-    {
-        return TryReadLineWithAlpha(shapeProperties, theme, PptxColorMap.Default, out color, out lineWidth, out alpha, fallbackLineWidth);
-    }
-
-    private static bool TryReadLineWithAlpha(
-        XElement shapeProperties,
-        PptxTheme theme,
-        PptxColorMap colorMap,
-        out RgbColor color,
-        out double lineWidth,
-        out double alpha,
-        double? fallbackLineWidth)
-    {
-        return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, fallbackLineWidth);
     }
 
     private static bool TryReadPresetDash(XElement? shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)

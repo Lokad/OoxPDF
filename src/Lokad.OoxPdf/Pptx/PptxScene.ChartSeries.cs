@@ -80,7 +80,7 @@ internal sealed partial class PptxSceneBuilder
     private static PptxSceneFillStyle ReadChartSeriesFill(XElement series, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? shapeProperties = series.Element(ChartNamespace + "spPr");
-        return TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
+        return PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
     }
@@ -118,10 +118,10 @@ internal sealed partial class PptxSceneBuilder
             return default;
         }
 
-        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, colorMap, out RgbColor foregroundColor, out _)
+        RgbColor foreground = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, colorMap, out RgbColor foregroundColor, out _)
             ? foregroundColor
             : new RgbColor(0, 0, 0);
-        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
+        RgbColor background = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
             ? backgroundColor
             : new RgbColor(255, 255, 255);
         return new PptxScenePatternFill(
@@ -152,7 +152,7 @@ internal sealed partial class PptxSceneBuilder
             marker is not null,
             marker?.Element(ChartNamespace + "spPr") is not null);
         XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
-        PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
+        PptxSceneFillStyle fill = PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
         return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, sizeValue, size, fill, ReadChartLine(shapeProperties, theme, colorMap));
@@ -222,7 +222,7 @@ internal sealed partial class PptxSceneBuilder
 
     private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
-        return TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
+        return PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
     }
@@ -252,7 +252,7 @@ internal sealed partial class PptxSceneBuilder
 
         bool widthSpecified = line?.Attribute("w") is not null;
         return shapeProperties is not null &&
-            TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: null)
+            PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: null)
                 ? new PptxSceneLineStyle(
                     true,
                     color,

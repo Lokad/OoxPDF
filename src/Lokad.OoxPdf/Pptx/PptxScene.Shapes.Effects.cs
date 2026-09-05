@@ -52,7 +52,7 @@ internal sealed partial class PptxSceneBuilder
             glow = new PptxSceneGlow(
                 true,
                 color,
-                ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement))),
+                PptxColorResolver.ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement))),
                 radius);
             return radius > SceneEffectTolerance;
         }
@@ -82,7 +82,7 @@ internal sealed partial class PptxSceneBuilder
         if (colorElement is not null &&
             TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
         {
-            double alpha = ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
+            double alpha = PptxColorResolver.ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
             double blurRadius = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(outerShadow, "blurRad", 0));
             double distance = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(outerShadow, "dist", 0));
             double direction = OoxXml.ParseOptionalLong(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
