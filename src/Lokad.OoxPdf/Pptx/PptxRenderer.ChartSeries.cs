@@ -387,19 +387,18 @@ internal sealed partial class PptxRenderer
     {
         if (scenePlot is not null)
         {
-            return ResolveChartGrouping(scenePlot.GroupingKind, defaultGrouping);
+            return ResolveGrouping(scenePlot.GroupingKind);
         }
 
-        return ResolveChartGrouping(
-            PptxSceneBuilder.ParseChartGrouping(PptxSceneBuilder.ReadChartElementValue(plotElement, "grouping")),
-            defaultGrouping);
-    }
+        return ResolveGrouping(
+            PptxSceneBuilder.ParseChartGrouping(PptxSceneBuilder.ReadChartElementValue(plotElement, "grouping")));
 
-    private static PptxSceneChartGrouping ResolveChartGrouping(PptxSceneChartGrouping value, PptxSceneChartGrouping defaultGrouping)
-    {
-        return value == PptxSceneChartGrouping.Unknown
-            ? defaultGrouping
-            : value;
+        PptxSceneChartGrouping ResolveGrouping(PptxSceneChartGrouping value)
+        {
+            return value == PptxSceneChartGrouping.Unknown
+                ? defaultGrouping
+                : value;
+        }
     }
 
     private static PptxSceneChartBarDirection ReadSceneOrXmlChartBarDirection(PptxSceneChartPlot? scenePlot, XElement plotElement)
@@ -407,13 +406,13 @@ internal sealed partial class PptxRenderer
         return scenePlot is not null
             ? ResolveChartBarDirection(scenePlot.BarDirectionKind)
             : ResolveChartBarDirection(PptxSceneBuilder.ParseChartBarDirection(PptxSceneBuilder.ReadChartElementValue(plotElement, "barDir")));
-    }
 
-    private static PptxSceneChartBarDirection ResolveChartBarDirection(PptxSceneChartBarDirection value)
-    {
-        return value == PptxSceneChartBarDirection.Unknown
-            ? PptxSceneChartBarDirection.Column
-            : value;
+        PptxSceneChartBarDirection ResolveChartBarDirection(PptxSceneChartBarDirection value)
+        {
+            return value == PptxSceneChartBarDirection.Unknown
+                ? PptxSceneChartBarDirection.Column
+                : value;
+        }
     }
 
     private static PptxSceneChartScatterStyle ReadSceneOrXmlChartScatterStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
@@ -437,13 +436,13 @@ internal sealed partial class PptxRenderer
         return scenePlot is not null
             ? ResolveChartRadarStyle(scenePlot.RadarStyleKind)
             : ResolveChartRadarStyle(PptxSceneBuilder.ParseChartRadarStyle(PptxSceneBuilder.ReadChartElementValue(plotElement, "radarStyle")));
-    }
 
-    private static PptxSceneChartRadarStyle ResolveChartRadarStyle(PptxSceneChartRadarStyle value)
-    {
-        return value == PptxSceneChartRadarStyle.Unknown
-            ? PptxSceneChartRadarStyle.Standard
-            : value;
+        PptxSceneChartRadarStyle ResolveChartRadarStyle(PptxSceneChartRadarStyle value)
+        {
+            return value == PptxSceneChartRadarStyle.Unknown
+                ? PptxSceneChartRadarStyle.Standard
+                : value;
+        }
     }
 
     private static PptxSceneChartDisplayBlanksAs ReadSceneOrXmlChartDisplayBlanksAs(PptxSceneChart? sceneChart, XDocument chartXml)
@@ -454,13 +453,13 @@ internal sealed partial class PptxRenderer
         }
 
         return ResolveChartDisplayBlanksAs(PptxSceneBuilder.ReadChartOptions(chartXml).DisplayBlanksAsKind);
-    }
 
-    private static PptxSceneChartDisplayBlanksAs ResolveChartDisplayBlanksAs(PptxSceneChartDisplayBlanksAs value)
-    {
-        return value == PptxSceneChartDisplayBlanksAs.Unknown
-            ? PptxSceneChartDisplayBlanksAs.Gap
-            : value;
+        PptxSceneChartDisplayBlanksAs ResolveChartDisplayBlanksAs(PptxSceneChartDisplayBlanksAs value)
+        {
+            return value == PptxSceneChartDisplayBlanksAs.Unknown
+                ? PptxSceneChartDisplayBlanksAs.Gap
+                : value;
+        }
     }
 
     private static bool ReadSceneOrXmlChartPlotVisibleOnly(PptxSceneChart? sceneChart, XDocument chartXml)
