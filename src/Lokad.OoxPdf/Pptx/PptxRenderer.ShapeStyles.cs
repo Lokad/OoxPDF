@@ -607,4 +607,42 @@ internal sealed partial class PptxRenderer
 
         public double CenterY => (MinY + MaxY) / 2d;
     }
+
+    private static LineEndStyle ReadLineEnd(XElement shapeProperties, string elementName)
+    {
+        XElement? end = shapeProperties
+            .Element(DrawingNamespace + "ln")
+            ?.Element(DrawingNamespace + elementName);
+        LineEndKind kind = ReadLineEndKind((string?)end?.Attribute("type"));
+        return new LineEndStyle(
+            kind,
+            ReadLineEndScale((string?)end?.Attribute("w")),
+            ReadLineEndScale((string?)end?.Attribute("len")));
+    }
+
+    private static LineEndStyle ToLineEndStyle(PptxSceneLineEnd lineEnd)
+    {
+        return new LineEndStyle(
+            lineEnd.Kind switch
+            {
+                PptxSceneLineEndKind.Triangle => LineEndKind.Triangle,
+                PptxSceneLineEndKind.Arrow => LineEndKind.Arrow,
+                PptxSceneLineEndKind.Stealth => LineEndKind.Stealth,
+                PptxSceneLineEndKind.Diamond => LineEndKind.Diamond,
+                PptxSceneLineEndKind.Oval => LineEndKind.Oval,
+                _ => LineEndKind.None
+            },
+            lineEnd.WidthScale,
+            lineEnd.LengthScale);
+    }
+
+    private static LineStyle ToLineStyle(PptxSceneLineStyle line)
+    {
+        return new LineStyle(line.HasLine, line.Color, line.Width, line.Alpha, line.DashPattern ?? [], line.Cap, line.Join);
+    }
+
+    private static FillStyle ToFillStyle(PptxSceneFillStyle fill)
+    {
+        return new FillStyle(fill.HasFill, fill.Color, fill.Alpha);
+    }
 }

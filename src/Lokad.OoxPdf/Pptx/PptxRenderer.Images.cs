@@ -653,4 +653,102 @@ internal sealed partial class PptxRenderer
     {
         return ToByte(from + (to - from) * Math.Clamp(ratio, 0d, 1d));
     }
+
+    private static bool TryReadShapePictureFill(
+        XElement shapeProperties,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        List<PdfImageResource>? images,
+        Dictionary<string, PdfImageXObject?>? imageCache,
+        ref int imageIndex,
+        ShapePictureFill? pictureFillOverride,
+        out string? name,
+        out PdfImageXObject? image,
+        out CropRect crop,
+        out FillRect fillRect,
+        out double alpha)
+    {
+        name = null;
+        image = null;
+        crop = default;
+        fillRect = default;
+        alpha = 1d;
+        if (images is null || pictureFillOverride is null || !CanRenderPictureFillPreset(ReadPreset(shapeProperties)))
+        {
+            return false;
+        }
+
+        ShapePictureFill resolvedPictureFill = pictureFillOverride.Value;
+        if (resolvedPictureFill.Resource is null)
+        {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "IMAGE_MISSING_PART",
+                OoxPdfSeverity.Error,
+                "Referenced image part was missing and the image was ignored.",
+                resolvedPictureFill.TargetPartName,
+                PageIndex: null,
+                SlideIndex: slideIndex,
+                Feature: "image",
+                Fallback: "Ignored"));
+            return false;
+        }
+
+        image = GetOrCreateImage(resolvedPictureFill.Resource, PptxSceneImageRecolor.None, imageCache, diagnosticSink, slideIndex);
+        if (image is null)
+        {
+            return false;
+        }
+
+        crop = resolvedPictureFill.Crop;
+        fillRect = resolvedPictureFill.Fill;
+        alpha = resolvedPictureFill.Alpha;
+        name = "Im" + imageIndex++;
+        return true;
+    }
+
+    private static bool CanRenderPictureFillPreset(string preset)
+    {
+        return preset is "rect" or "ellipse" or "roundRect" ||
+            TryCreatePresetPolygonPoints(preset, 0d, 0d, 1d, 1d, out _);
+    }
+
+    private static void ClipToPresetShape(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+    {
+        if (preset == "ellipse")
+        {
+            graphics.ClipEllipse(x, y, width, height);
+        }
+        else if (preset == "roundRect")
+        {
+            graphics.ClipRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, presetAdjustmentsOverride, width, height));
+        }
+        else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
+        {
+            graphics.ClipPolygon(polygonPoints);
+        }
+        else
+        {
+            graphics.ClipRectangle(x, y, width, height);
+        }
+    }
+
+    private static void DrawImageFill(PdfGraphicsBuilder graphics, string imageName, double x, double y, double width, double height, CropRect crop)
+    {
+        if (crop.IsEmpty)
+        {
+            graphics.DrawImage(imageName, x, y, width, height);
+        }
+        else
+        {
+            graphics.DrawImageCropped(imageName, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+        }
+    }
 }
