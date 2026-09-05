@@ -236,7 +236,7 @@ internal sealed partial class DocxReader
             bodyElements,
             [],
             [],
-            (string?)story.Attribute(WordprocessingNamespace + "type"))
+            ParseRelatedStoryType((string?)story.Attribute(WordprocessingNamespace + "type")))
         {
             FloatingDrawings = floatingDrawings,
             CommentMetadata = kind == DocxRelatedStoryKind.Comment
@@ -250,6 +250,36 @@ internal sealed partial class DocxReader
                     threadMetadata?.IsResolved)
                 : null
         };
+
+        DocxRelatedStoryType? ParseRelatedStoryType(string? value)
+        {
+            if (value is null)
+            {
+                return null;
+            }
+
+            if (value.Equals("normal", StringComparison.OrdinalIgnoreCase))
+            {
+                return DocxRelatedStoryType.Normal;
+            }
+
+            if (value.Equals("separator", StringComparison.OrdinalIgnoreCase))
+            {
+                return DocxRelatedStoryType.Separator;
+            }
+
+            if (value.Equals("continuationSeparator", StringComparison.OrdinalIgnoreCase))
+            {
+                return DocxRelatedStoryType.ContinuationSeparator;
+            }
+
+            if (value.Equals("continuationNotice", StringComparison.OrdinalIgnoreCase))
+            {
+                return DocxRelatedStoryType.ContinuationNotice;
+            }
+
+            return DocxRelatedStoryType.Unknown;
+        }
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.

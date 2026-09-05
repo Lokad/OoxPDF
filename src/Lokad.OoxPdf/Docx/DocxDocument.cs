@@ -55,9 +55,10 @@ internal sealed record DocxRelatedStory(
     IReadOnlyList<DocxBodyElement> BodyElements,
     IReadOnlyList<DocxParagraph> FallbackParagraphs,
     IReadOnlyList<DocxTable> FallbackTables,
-    string? Type)
+    DocxRelatedStoryType? Type)
 {
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
+    public bool IsNormalStoryType => Type is null || Type == DocxRelatedStoryType.Normal;
     public DocxCommentMetadata? CommentMetadata { get; init; }
     public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
         ? FallbackParagraphs

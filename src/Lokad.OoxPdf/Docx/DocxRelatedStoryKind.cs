@@ -33,3 +33,38 @@ internal static class DocxRelatedStoryKindExtensions
         };
     }
 }
+
+/// <summary>
+/// Closed w:type of a footnote/endnote story element (separator and continuation
+/// variants versus normal note bodies). The reader assigns this at the boundary from
+/// the raw attribute; a missing attribute stays null (absent), which layout treats
+/// like Normal. Unknown spellings map to Unknown rather than throwing, so the
+/// reader stays total over invalid documents.
+/// </summary>
+internal enum DocxRelatedStoryType
+{
+    Normal,
+    Separator,
+    ContinuationSeparator,
+    ContinuationNotice,
+    Unknown
+}
+
+internal static class DocxRelatedStoryTypeExtensions
+{
+    /// <summary>
+    /// Historical w:type spelling. Normal maps back to normal so inspection snapshots
+    /// stay byte-comparable; a missing attribute is represented by null, never by this method.
+    /// </summary>
+    public static string ToValueString(this DocxRelatedStoryType type)
+    {
+        return type switch
+        {
+            DocxRelatedStoryType.Normal => "normal",
+            DocxRelatedStoryType.Separator => "separator",
+            DocxRelatedStoryType.ContinuationSeparator => "continuationSeparator",
+            DocxRelatedStoryType.ContinuationNotice => "continuationNotice",
+            _ => "unknown",
+        };
+    }
+}

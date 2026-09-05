@@ -76,7 +76,7 @@ internal sealed record DocxLayoutSnapshot(
                     story.Story.Kind.ToValueString(),
                     story.Story.PartName,
                     story.Story.Id,
-                    story.Story.Type,
+                    story.Story.Type?.ToValueString(),
                     story.Story.BodyElements.Count,
                     story.Story.BodyElements.OfType<DocxParagraphElement>().Count(),
                     DocxBlockTraversal.EnumerateBodyTables(story.Story).Count(),
@@ -394,12 +394,6 @@ internal sealed record DocxLayoutSnapshot(
         return hasInlineImage ? "InlineImage" : "Unknown";
     }
 
-    private static bool IsNormalRelatedStory(DocxRelatedStory story)
-    {
-        return string.IsNullOrEmpty(story.Type) ||
-            string.Equals(story.Type, "normal", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static DocxLayoutPageSnapshot ToSnapshot(DocxLayoutPage page)
     {
         IReadOnlyList<DocxLayoutColumnFrameSnapshot> columnFrames = page.ColumnFrames.Select(frame => new DocxLayoutColumnFrameSnapshot(
@@ -420,7 +414,7 @@ internal sealed record DocxLayoutSnapshot(
                 story.StoryLayout.Story.Kind.ToValueString(),
                 story.StoryLayout.Story.PartName,
                 story.StoryLayout.Story.Id,
-                story.StoryLayout.Story.Type,
+                story.StoryLayout.Story.Type?.ToValueString(),
                 story.SourceBlockIndex,
                 story.X,
                 story.TopY,
@@ -482,8 +476,8 @@ internal sealed record DocxLayoutSnapshot(
             page.StaticInlineImages.Count,
             page.StaticTableRows.Count,
             page.PlacedRelatedStories.Count,
-            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && IsNormalRelatedStory(story.StoryLayout.Story)),
-            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && IsNormalRelatedStory(story.StoryLayout.Story)),
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && story.StoryLayout.Story.IsNormalStoryType),
+            page.PlacedRelatedStories.Count(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && story.StoryLayout.Story.IsNormalStoryType),
             page.PlacedRelatedStories.Sum(story => story.TextLines.Count),
             page.PlacedRelatedStories.Sum(story => story.InlineImages.Count),
             page.PlacedRelatedStories.Sum(story => story.TableRows.Count),

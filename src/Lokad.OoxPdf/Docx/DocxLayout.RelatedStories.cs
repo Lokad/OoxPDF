@@ -22,7 +22,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
-        DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, DocxRelatedStoryKind.Footnote, "separator");
+        DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
         for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -94,7 +94,7 @@ internal sealed partial class DocxLayoutEngine
                 ? relatedStoryLayouts
                 : resolveRelatedStoryLayouts(ResolvePageBodyWidth(page));
             storyByKey = CreateRelatedStoryLookup(pageRelatedStoryLayouts);
-            DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(pageRelatedStoryLayouts, DocxRelatedStoryKind.Footnote, "separator");
+            DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(pageRelatedStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
             List<DocxReferencedRelatedStoryLayout> pageFootnoteStories = [];
             foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
             {
@@ -867,7 +867,7 @@ internal sealed partial class DocxLayoutEngine
         var storyByKey = new Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>();
         foreach (DocxRelatedStoryLayout story in relatedStoryLayouts)
         {
-            if (story.Story.Id is not null && IsNormalRelatedStory(story.Story))
+            if (story.Story.Id is not null && story.Story.IsNormalStoryType)
             {
                 storyByKey.TryAdd((story.Story.Kind, story.Story.Id), story);
             }
@@ -876,22 +876,16 @@ internal sealed partial class DocxLayoutEngine
         return storyByKey;
     }
 
-    private static bool IsNormalRelatedStory(DocxRelatedStory story)
-    {
-        return string.IsNullOrEmpty(story.Type) ||
-            string.Equals(story.Type, "normal", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static DocxRelatedStoryLayout? FindSpecialRelatedStoryLayout(
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
         DocxRelatedStoryKind kind,
-        string type)
+        DocxRelatedStoryType type)
     {
         return relatedStoryLayouts.FirstOrDefault(story =>
             story.Story.Id is not null &&
             story.ContentHeight > 0d &&
             story.Story.Kind == kind &&
-            string.Equals(story.Story.Type, type, StringComparison.OrdinalIgnoreCase));
+            story.Story.Type == type);
     }
 
     private static IReadOnlyList<DocxRelatedStoryLayout> CreateRelatedStoryLayouts(

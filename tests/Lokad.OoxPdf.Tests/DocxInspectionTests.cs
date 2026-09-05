@@ -809,8 +809,8 @@ internal static class DocxInspectionTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(3, document.RelatedStories.Count);
-        TestAssert.Equal("separator", document.RelatedStories.Single(story => story.Id == "-1").Type ?? string.Empty);
-        TestAssert.Equal("continuationSeparator", document.RelatedStories.Single(story => story.Id == "0").Type ?? string.Empty);
+        TestAssert.Equal("separator", document.RelatedStories.Single(story => story.Id == "-1").Type?.ToValueString() ?? string.Empty);
+        TestAssert.Equal("continuationSeparator", document.RelatedStories.Single(story => story.Id == "0").Type?.ToValueString() ?? string.Empty);
         TestAssert.True(document.RelatedStories.Single(story => story.Id == "2").Type is null, "Normal note bodies without w:type should remain normal rather than receiving an inferred type token.");
 
         DocxLayoutSnapshot layoutSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
