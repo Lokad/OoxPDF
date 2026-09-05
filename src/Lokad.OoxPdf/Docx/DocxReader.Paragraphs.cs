@@ -555,7 +555,13 @@ internal sealed partial class DocxReader
                 }
                 else if (IsInlineReferenceElement(child))
                 {
-                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions);
+                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions,
+                        inlineReferences: inlineReferences,
+                        commentRanges: commentRanges,
+                        openCommentRanges: openCommentRanges,
+                        inlineReferenceCounters: inlineReferenceCounters,
+                        documentSettings: documentSettings,
+                        runs: runs);
                 }
                 else
                 {
@@ -816,7 +822,13 @@ internal sealed partial class DocxReader
             {
                 if (IsInlineReferenceElement(child))
                 {
-                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions);
+                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions,
+                        inlineReferences: inlineReferences,
+                        commentRanges: commentRanges,
+                        openCommentRanges: openCommentRanges,
+                        inlineReferenceCounters: inlineReferenceCounters,
+                        documentSettings: documentSettings,
+                        runs: runs);
                 }
                 else
                 {
@@ -873,135 +885,17 @@ internal sealed partial class DocxReader
             int textOffset = 0;
             foreach (XElement child in run.Elements())
             {
-                AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRuns, revision, revisions);
+                AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRuns, revision, revisions,
+                    inlineReferences: inlineReferences,
+                    commentRanges: commentRanges,
+                    openCommentRanges: openCommentRanges,
+                    inlineReferenceCounters: inlineReferenceCounters,
+                    documentSettings: documentSettings,
+                    runs: runs);
 
                 textOffset += ReadRunTextChild(child).Length;
                 childIndex++;
             }
-        }
-
-        void AddInlineReference(
-            XElement child,
-            int currentSourceRunIndex,
-            int childIndex,
-            int textOffset,
-            DocxResolvedRunProperties resolvedRun,
-            DocxRunStyleResolution runStyleResolution,
-            bool emitDisplayRun,
-            DocxRevisionInfo? revision,
-            IReadOnlyList<DocxRevisionInfo> revisions)
-        {
-            if (ResolveInlineReferenceKind(child) is not { } kind)
-            {
-                return;
-            }
-
-            string? customMarkFollows = kind == DocxRelatedStoryKind.Footnote || kind == DocxRelatedStoryKind.Endnote
-                ? (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows")
-                : null;
-            string? displayText = ResolveInlineReferenceDisplayText(kind, customMarkFollows);
-            inlineReferences.Add(new DocxInlineReference(
-                kind,
-                (string?)child.Attribute(WordprocessingNamespace + "id"),
-                customMarkFollows,
-                displayText,
-                currentSourceRunIndex,
-                childIndex,
-                textOffset)
-            {
-                Revision = revision,
-                Revisions = revisions
-            });
-            if (kind == DocxRelatedStoryKind.Comment)
-            {
-                AddCommentReferenceRange((string?)child.Attribute(WordprocessingNamespace + "id"), currentSourceRunIndex, textOffset);
-            }
-
-            if (emitDisplayRun && displayText is not null)
-            {
-                AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution, revision);
-            }
-        }
-
-        void AddCommentReferenceRange(string? id, int currentSourceRunIndex, int textOffset)
-        {
-            int rangeIndex = commentRanges.FindIndex(range =>
-                string.Equals(range.Id, id, StringComparison.Ordinal) &&
-                range.ReferenceSourceRunIndex is null);
-            if (rangeIndex >= 0)
-            {
-                commentRanges[rangeIndex] = commentRanges[rangeIndex] with
-                {
-                    ReferenceSourceRunIndex = currentSourceRunIndex,
-                    ReferenceTextOffset = textOffset
-                };
-                return;
-            }
-
-            int openRangeIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
-            if (openRangeIndex >= 0)
-            {
-                DocxCommentRangeStart start = openCommentRanges[openRangeIndex];
-                openCommentRanges.RemoveAt(openRangeIndex);
-                commentRanges.Add(new DocxCommentRange(
-                    id,
-                    start.SourceRunIndex,
-                    start.TextOffset,
-                    EndSourceRunIndex: null,
-                    EndTextOffset: null,
-                    currentSourceRunIndex,
-                    textOffset));
-                return;
-            }
-
-            commentRanges.Add(new DocxCommentRange(
-                id,
-                StartSourceRunIndex: null,
-                StartTextOffset: null,
-                EndSourceRunIndex: null,
-                EndTextOffset: null,
-                currentSourceRunIndex,
-                textOffset));
-        }
-
-        string? ResolveInlineReferenceDisplayText(DocxRelatedStoryKind kind, string? customMarkFollows)
-        {
-            if (!string.IsNullOrEmpty(customMarkFollows) || (kind != DocxRelatedStoryKind.Footnote && kind != DocxRelatedStoryKind.Endnote))
-            {
-                return null;
-            }
-
-            if (inlineReferenceCounters is null)
-            {
-                return null;
-            }
-
-            DocxNoteReferenceSettings settings = kind == DocxRelatedStoryKind.Endnote
-                ? (documentSettings ?? DocxDocumentSettings.Empty).EndnoteReferenceSettings
-                : (documentSettings ?? DocxDocumentSettings.Empty).FootnoteReferenceSettings;
-            inlineReferenceCounters.TryGetValue(kind, out int current);
-            int next = current == 0 ? settings.NumberStart ?? 1 : current + 1;
-            inlineReferenceCounters[kind] = next;
-            return FormatNoteReferenceNumber(next, settings.NumberFormatValue);
-        }
-
-        void AddInlineReferenceDisplayRun(
-            string displayText,
-            int currentSourceRunIndex,
-            int textOffset,
-            DocxResolvedRunProperties resolvedRun,
-            DocxRunStyleResolution runStyleResolution,
-            DocxRevisionInfo? revision)
-        {
-            AddResolvedTextRuns(
-                runs,
-                displayText,
-                resolvedRun with { VerticalAlignmentValue = "superscript" },
-                runStyleResolution,
-                currentSourceRunIndex,
-                textOffset,
-                revision,
-                revisions: null);
         }
 
         static bool IsInlineReferenceElement(XElement element)
@@ -1009,20 +903,6 @@ internal sealed partial class DocxReader
             return ResolveInlineReferenceKind(element) is not null;
         }
 
-        static DocxRelatedStoryKind? ResolveInlineReferenceKind(XElement element)
-        {
-            if (element.Name == WordprocessingNamespace + "commentReference")
-            {
-                return DocxRelatedStoryKind.Comment;
-            }
-
-            if (element.Name == WordprocessingNamespace + "footnoteReference")
-            {
-                return DocxRelatedStoryKind.Footnote;
-            }
-
-            return element.Name == WordprocessingNamespace + "endnoteReference" ? DocxRelatedStoryKind.Endnote : null;
-        }
     }
 
     private static void AddBookmarkAnchor(
@@ -1162,6 +1042,151 @@ internal sealed partial class DocxReader
             InstructionRunCount = instructionRunCount,
             ResultRunCount = resultRunCount
         });
+    }
+
+    private static DocxRelatedStoryKind? ResolveInlineReferenceKind(XElement element)
+    {
+        if (element.Name == WordprocessingNamespace + "commentReference")
+        {
+            return DocxRelatedStoryKind.Comment;
+        }
+
+        if (element.Name == WordprocessingNamespace + "footnoteReference")
+        {
+            return DocxRelatedStoryKind.Footnote;
+        }
+
+        return element.Name == WordprocessingNamespace + "endnoteReference" ? DocxRelatedStoryKind.Endnote : null;
+    }
+
+    private static void AddInlineReference(
+        XElement child,
+        int currentSourceRunIndex,
+        int childIndex,
+        int textOffset,
+        DocxResolvedRunProperties resolvedRun,
+        DocxRunStyleResolution runStyleResolution,
+        bool emitDisplayRun,
+        DocxRevisionInfo? revision,
+        IReadOnlyList<DocxRevisionInfo> revisions,
+        List<DocxInlineReference> inlineReferences,
+        List<DocxCommentRange> commentRanges,
+        List<DocxCommentRangeStart> openCommentRanges,
+        Dictionary<DocxRelatedStoryKind, int>? inlineReferenceCounters,
+        DocxDocumentSettings? documentSettings,
+        List<DocxTextRun> runs)
+    {
+        if (ResolveInlineReferenceKind(child) is not { } kind)
+        {
+            return;
+        }
+
+        string? customMarkFollows = kind == DocxRelatedStoryKind.Footnote || kind == DocxRelatedStoryKind.Endnote
+            ? (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows")
+            : null;
+        string? displayText = ResolveInlineReferenceDisplayText(kind, customMarkFollows);
+        inlineReferences.Add(new DocxInlineReference(
+            kind,
+            (string?)child.Attribute(WordprocessingNamespace + "id"),
+            customMarkFollows,
+            displayText,
+            currentSourceRunIndex,
+            childIndex,
+            textOffset)
+        {
+            Revision = revision,
+            Revisions = revisions
+        });
+        if (kind == DocxRelatedStoryKind.Comment)
+        {
+            AddCommentReferenceRange((string?)child.Attribute(WordprocessingNamespace + "id"), currentSourceRunIndex, textOffset);
+        }
+
+        if (emitDisplayRun && displayText is not null)
+        {
+            AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution, revision);
+        }
+
+        void AddCommentReferenceRange(string? id, int currentSourceRunIndex, int textOffset)
+        {
+            int rangeIndex = commentRanges.FindIndex(range =>
+                string.Equals(range.Id, id, StringComparison.Ordinal) &&
+                range.ReferenceSourceRunIndex is null);
+            if (rangeIndex >= 0)
+            {
+                commentRanges[rangeIndex] = commentRanges[rangeIndex] with
+                {
+                    ReferenceSourceRunIndex = currentSourceRunIndex,
+                    ReferenceTextOffset = textOffset
+                };
+                return;
+            }
+
+            int openRangeIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
+            if (openRangeIndex >= 0)
+            {
+                DocxCommentRangeStart start = openCommentRanges[openRangeIndex];
+                openCommentRanges.RemoveAt(openRangeIndex);
+                commentRanges.Add(new DocxCommentRange(
+                    id,
+                    start.SourceRunIndex,
+                    start.TextOffset,
+                    EndSourceRunIndex: null,
+                    EndTextOffset: null,
+                    currentSourceRunIndex,
+                    textOffset));
+                return;
+            }
+
+            commentRanges.Add(new DocxCommentRange(
+                id,
+                StartSourceRunIndex: null,
+                StartTextOffset: null,
+                EndSourceRunIndex: null,
+                EndTextOffset: null,
+                currentSourceRunIndex,
+                textOffset));
+        }
+
+        string? ResolveInlineReferenceDisplayText(DocxRelatedStoryKind kind, string? customMarkFollows)
+        {
+            if (!string.IsNullOrEmpty(customMarkFollows) || (kind != DocxRelatedStoryKind.Footnote && kind != DocxRelatedStoryKind.Endnote))
+            {
+                return null;
+            }
+
+            if (inlineReferenceCounters is null)
+            {
+                return null;
+            }
+
+            DocxNoteReferenceSettings settings = kind == DocxRelatedStoryKind.Endnote
+                ? (documentSettings ?? DocxDocumentSettings.Empty).EndnoteReferenceSettings
+                : (documentSettings ?? DocxDocumentSettings.Empty).FootnoteReferenceSettings;
+            inlineReferenceCounters.TryGetValue(kind, out int current);
+            int next = current == 0 ? settings.NumberStart ?? 1 : current + 1;
+            inlineReferenceCounters[kind] = next;
+            return FormatNoteReferenceNumber(next, settings.NumberFormatValue);
+        }
+
+        void AddInlineReferenceDisplayRun(
+            string displayText,
+            int currentSourceRunIndex,
+            int textOffset,
+            DocxResolvedRunProperties resolvedRun,
+            DocxRunStyleResolution runStyleResolution,
+            DocxRevisionInfo? revision)
+        {
+            AddResolvedTextRuns(
+                runs,
+                displayText,
+                resolvedRun with { VerticalAlignmentValue = "superscript" },
+                runStyleResolution,
+                currentSourceRunIndex,
+                textOffset,
+                revision,
+                revisions: null);
+        }
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
