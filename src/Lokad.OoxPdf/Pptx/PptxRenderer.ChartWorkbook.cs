@@ -256,7 +256,7 @@ internal sealed partial class PptxRenderer
         ChartWorkbookRangeCell Cell,
         string Text);
 
-    private sealed class ChartWorkbookData
+    private sealed partial class ChartWorkbookData
     {
         private readonly IReadOnlyDictionary<string, ChartWorksheetData> sheets;
         private readonly ChartWorkbookStyles styles;
