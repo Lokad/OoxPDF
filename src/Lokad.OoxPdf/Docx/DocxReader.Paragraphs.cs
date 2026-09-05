@@ -94,7 +94,7 @@ internal sealed partial class DocxReader
             }
             else if (IsRevisionMarkerElement(child))
             {
-                AddRevisionMarker(child);
+                AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges, sourceRunIndex, runs);
             }
         }
 
@@ -138,7 +138,7 @@ internal sealed partial class DocxReader
             }
             else if (IsRevisionMarkerElement(child))
             {
-                AddRevisionMarker(child);
+                AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges, sourceRunIndex, runs);
             }
         }
 
@@ -250,50 +250,6 @@ internal sealed partial class DocxReader
             Revisions = paragraphRevisions,
             HasDeletedParagraphMark = hasDeletedParagraphMark
         };
-
-        void AddRevisionMarker(XElement marker)
-        {
-            AddRevision(paragraphRevisions, CreateRevisionInfo(marker));
-            if (!TryResolveRevisionRangeMarker(marker, out DocxRevisionKind? resolvedKind, out bool isStart) ||
-                resolvedKind is not { } kind)
-            {
-                return;
-            }
-
-            if (isStart)
-            {
-                openRevisionRanges.Add(new DocxRevisionRangeStart(
-                    kind,
-                    (string?)marker.Attribute(WordprocessingNamespace + "id"),
-                    (string?)marker.Attribute(WordprocessingNamespace + "name"),
-                    (string?)marker.Attribute(WordprocessingNamespace + "author"),
-                    (string?)marker.Attribute(WordprocessingNamespace + "date"),
-                    sourceRunIndex,
-                    runs.Sum(run => run.Text.Length)));
-                return;
-            }
-
-            string? id = (string?)marker.Attribute(WordprocessingNamespace + "id");
-            int startIndex = openRevisionRanges.FindLastIndex(start =>
-                start.Kind == kind &&
-                string.Equals(start.Id, id, StringComparison.Ordinal));
-            DocxRevisionRangeStart? startRange = startIndex < 0 ? null : openRevisionRanges[startIndex];
-            if (startIndex >= 0)
-            {
-                openRevisionRanges.RemoveAt(startIndex);
-            }
-
-            revisionRanges.Add(new DocxRevisionRange(
-                kind,
-                id,
-                startRange?.Name,
-                startRange?.Author,
-                startRange?.Date,
-                startRange?.SourceRunIndex,
-                startRange?.TextOffset,
-                sourceRunIndex,
-                runs.Sum(run => run.Text.Length)));
-        }
 
         void AddHyperlinkSpan(
             XElement hyperlink,
@@ -1142,6 +1098,56 @@ internal sealed partial class DocxReader
             runs.Sum(run => run.Text.Length),
             ReferenceSourceRunIndex: null,
             ReferenceTextOffset: null));
+    }
+
+    private static void AddRevisionMarker(
+        XElement marker,
+        List<DocxRevisionInfo> paragraphRevisions,
+        List<DocxRevisionRangeStart> openRevisionRanges,
+        List<DocxRevisionRange> revisionRanges,
+        int sourceRunIndex,
+        List<DocxTextRun> runs)
+    {
+        AddRevision(paragraphRevisions, CreateRevisionInfo(marker));
+        if (!TryResolveRevisionRangeMarker(marker, out DocxRevisionKind? resolvedKind, out bool isStart) ||
+            resolvedKind is not { } kind)
+        {
+            return;
+        }
+
+        if (isStart)
+        {
+            openRevisionRanges.Add(new DocxRevisionRangeStart(
+                kind,
+                (string?)marker.Attribute(WordprocessingNamespace + "id"),
+                (string?)marker.Attribute(WordprocessingNamespace + "name"),
+                (string?)marker.Attribute(WordprocessingNamespace + "author"),
+                (string?)marker.Attribute(WordprocessingNamespace + "date"),
+                sourceRunIndex,
+                runs.Sum(run => run.Text.Length)));
+            return;
+        }
+
+        string? id = (string?)marker.Attribute(WordprocessingNamespace + "id");
+        int startIndex = openRevisionRanges.FindLastIndex(start =>
+            start.Kind == kind &&
+            string.Equals(start.Id, id, StringComparison.Ordinal));
+        DocxRevisionRangeStart? startRange = startIndex < 0 ? null : openRevisionRanges[startIndex];
+        if (startIndex >= 0)
+        {
+            openRevisionRanges.RemoveAt(startIndex);
+        }
+
+        revisionRanges.Add(new DocxRevisionRange(
+            kind,
+            id,
+            startRange?.Name,
+            startRange?.Author,
+            startRange?.Date,
+            startRange?.SourceRunIndex,
+            startRange?.TextOffset,
+            sourceRunIndex,
+            runs.Sum(run => run.Text.Length)));
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
