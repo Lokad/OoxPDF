@@ -64,7 +64,6 @@ internal sealed partial class DocxRenderer
             : "Commented [Comment " + id + "]: ";
     }
 
-
     internal static string BuildCommentBalloonPreview(DocxRelatedStoryLayout? storyLayout)
     {
         return BuildCommentBalloonPreview(storyLayout, []);

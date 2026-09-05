@@ -631,5 +631,4 @@ internal sealed partial class PptxRenderer
             graphics.ClipRectangleEvenOdd(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
         }
     }
-
 }
