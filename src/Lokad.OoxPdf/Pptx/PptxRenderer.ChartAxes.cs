@@ -660,13 +660,13 @@ internal sealed partial class PptxRenderer
         }
 
         return extents.Min > 0d ? extents.Min : extents.Max;
-    }
 
-    private static PptxSceneChartAxisCrosses ResolveChartAxisCrosses(PptxSceneChartAxisCrosses crosses)
-    {
-        return crosses == PptxSceneChartAxisCrosses.Unknown
-            ? PptxSceneChartAxisCrosses.AutoZero
-            : crosses;
+        PptxSceneChartAxisCrosses ResolveChartAxisCrosses(PptxSceneChartAxisCrosses crosses)
+        {
+            return crosses == PptxSceneChartAxisCrosses.Unknown
+                ? PptxSceneChartAxisCrosses.AutoZero
+                : crosses;
+        }
     }
 
     private static bool ReadSceneOrXmlValueAxisReversed(PptxSceneChartAxis? sceneAxis, XElement? valueAxis)
@@ -678,11 +678,11 @@ internal sealed partial class PptxRenderer
 
         return ResolveChartAxisReversed(PptxSceneBuilder.ParseChartAxisOrientation(
             PptxSceneBuilder.ReadChartElementValue(valueAxis?.Element(ChartNamespace + "scaling"), "orientation")));
-    }
 
-    private static bool ResolveChartAxisReversed(PptxSceneChartAxisOrientation orientation)
-    {
-        return orientation == PptxSceneChartAxisOrientation.MaximumMinimum;
+        bool ResolveChartAxisReversed(PptxSceneChartAxisOrientation orientation)
+        {
+            return orientation == PptxSceneChartAxisOrientation.MaximumMinimum;
+        }
     }
 
     private static double GetChartValuePlotRatio(ChartValueExtents extents, double value, bool reversed)
@@ -999,13 +999,13 @@ internal sealed partial class PptxRenderer
         string majorTickMark = PptxSceneBuilder.ReadChartElementValue(xmlAxis, "majorTickMark");
         return ResolveChartAxisTickMark(PptxSceneBuilder.ParseChartAxisTickMark(
             string.IsNullOrEmpty(majorTickMark) ? "none" : majorTickMark));
-    }
 
-    private static PptxSceneChartAxisTickMark ResolveChartAxisTickMark(PptxSceneChartAxisTickMark tickMark)
-    {
-        return tickMark == PptxSceneChartAxisTickMark.Unknown
-            ? PptxSceneChartAxisTickMark.None
-            : tickMark;
+        PptxSceneChartAxisTickMark ResolveChartAxisTickMark(PptxSceneChartAxisTickMark tickMark)
+        {
+            return tickMark == PptxSceneChartAxisTickMark.Unknown
+                ? PptxSceneChartAxisTickMark.None
+                : tickMark;
+        }
     }
 
     private static PptxSceneChartTickLabelPosition ResolveChartTickLabelPosition(PptxSceneChartTickLabelPosition position)
@@ -1127,17 +1127,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool ResolveValueAxisLabelsRightSide(XElement? axis, bool defaultRightSide)
-    {
-        string tickLabelPosition = PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos");
-        return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) switch
-        {
-            PptxSceneChartTickLabelPosition.High => true,
-            PptxSceneChartTickLabelPosition.Low => false,
-            _ => defaultRightSide
-        };
-    }
-
     private static bool ResolveSceneOrXmlValueAxisLabelsRightSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
     {
         if (sceneAxis is null)
@@ -1151,6 +1140,17 @@ internal sealed partial class PptxRenderer
             PptxSceneChartTickLabelPosition.Low => false,
             _ => defaultRightSide
         };
+
+        bool ResolveValueAxisLabelsRightSide(XElement? axis, bool defaultRightSide)
+        {
+            string tickLabelPosition = PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos");
+            return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) switch
+            {
+                PptxSceneChartTickLabelPosition.High => true,
+                PptxSceneChartTickLabelPosition.Low => false,
+                _ => defaultRightSide
+            };
+        }
     }
 
     private static double ResolveSceneOrXmlCategoryAxisLabelOffsetScale(PptxSceneChartAxis? sceneAxis, XElement? axis)
@@ -1185,13 +1185,13 @@ internal sealed partial class PptxRenderer
 
         string crossBetween = PptxSceneBuilder.ReadChartElementValue(axis, "crossBetween");
         return ResolveChartAxisCrossBetween(PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween)) == PptxSceneChartAxisCrossBetween.MidpointCategory;
-    }
 
-    private static PptxSceneChartAxisCrossBetween ResolveChartAxisCrossBetween(PptxSceneChartAxisCrossBetween crossBetween)
-    {
-        return crossBetween == PptxSceneChartAxisCrossBetween.Unknown
-            ? PptxSceneChartAxisCrossBetween.Between
-            : crossBetween;
+        PptxSceneChartAxisCrossBetween ResolveChartAxisCrossBetween(PptxSceneChartAxisCrossBetween crossBetween)
+        {
+            return crossBetween == PptxSceneChartAxisCrossBetween.Unknown
+                ? PptxSceneChartAxisCrossBetween.Between
+                : crossBetween;
+        }
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)
