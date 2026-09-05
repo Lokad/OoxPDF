@@ -624,7 +624,7 @@ internal sealed partial class DocxReader
                 other.ShadingColor ?? ShadingColor,
                 other.VerticalAlignmentValue ?? VerticalAlignmentValue,
                 other.Borders.Count == 0 ? Borders : other.Borders,
-                MergeTableCellMargins(other.Margins, Margins),
+                other.Margins.Merge(Margins),
                 other.NoWrap ?? NoWrap,
                 other.NoWrapValue ?? NoWrapValue,
                 other.FitText ?? FitText,

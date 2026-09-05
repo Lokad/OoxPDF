@@ -1195,6 +1195,19 @@ internal sealed record DocxTableCellMargins(
     string? LeftValue)
 {
     public static DocxTableCellMargins Empty { get; } = new(null, null, null, null, null, null, null, null);
+
+    public DocxTableCellMargins Merge(DocxTableCellMargins inherited)
+    {
+        return new DocxTableCellMargins(
+            TopPoints ?? inherited.TopPoints,
+            RightPoints ?? inherited.RightPoints,
+            BottomPoints ?? inherited.BottomPoints,
+            LeftPoints ?? inherited.LeftPoints,
+            TopValue ?? inherited.TopValue,
+            RightValue ?? inherited.RightValue,
+            BottomValue ?? inherited.BottomValue,
+            LeftValue ?? inherited.LeftValue);
+    }
 }
 
 internal enum DocxTextAlignment

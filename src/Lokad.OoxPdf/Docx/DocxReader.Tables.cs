@@ -63,7 +63,7 @@ internal sealed partial class DocxReader
             AddRevision(rowRevisions, rowElements[rowIndex].Revision);
             AddRevisions(rowRevisions, ReadPropertyChangeRevisions(rowProperties));
             DocxTableCellMargins rowExceptionMargins = ReadTablePropertyExceptionCellMargins(row);
-            DocxTableCellMargins rowInheritedMargins = MergeTableCellMargins(rowExceptionMargins, MergeTableCellMargins(tableCellMargins, tableStyle.Cell.Margins));
+            DocxTableCellMargins rowInheritedMargins = rowExceptionMargins.Merge(tableCellMargins.Merge(tableStyle.Cell.Margins));
             var cells = new List<DocxTableCell>();
             DocxRevisionScopedElement[] cellElements = EnumerateRevisionScopedChildren(row.Elements(), markupMode, WordprocessingNamespace + "tc").ToArray();
             for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
@@ -131,8 +131,8 @@ internal sealed partial class DocxReader
                     cellIndex,
                     rowElements.Length,
                     cellElements.Length);
-                DocxTableCellMargins inheritedMargins = MergeTableCellMargins(rowInheritedMargins, conditionalStyle.Margins);
-                DocxTableCellMargins margins = MergeTableCellMargins(ReadTableCellMargins(cellProperties), inheritedMargins);
+                DocxTableCellMargins inheritedMargins = rowInheritedMargins.Merge(conditionalStyle.Margins);
+                DocxTableCellMargins margins = ReadTableCellMargins(cellProperties).Merge(inheritedMargins);
                 cells.Add(new DocxTableCell(
                     text,
                     paragraphs,
@@ -402,20 +402,6 @@ internal sealed partial class DocxReader
             ReadMarginValue(margins, "right"),
             ReadMarginValue(margins, "bottom"),
             ReadMarginValue(margins, "left"));
-    }
-
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static DocxTableCellMargins MergeTableCellMargins(DocxTableCellMargins direct, DocxTableCellMargins inherited)
-    {
-        return new DocxTableCellMargins(
-            direct.TopPoints ?? inherited.TopPoints,
-            direct.RightPoints ?? inherited.RightPoints,
-            direct.BottomPoints ?? inherited.BottomPoints,
-            direct.LeftPoints ?? inherited.LeftPoints,
-            direct.TopValue ?? inherited.TopValue,
-            direct.RightValue ?? inherited.RightValue,
-            direct.BottomValue ?? inherited.BottomValue,
-            direct.LeftValue ?? inherited.LeftValue);
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
