@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -181,7 +182,7 @@ internal sealed class PptxTheme
         };
     }
 
-    public bool TryGetFillStyle(int index, out XElement fillStyle)
+    public bool TryGetFillStyle(int index, [NotNullWhen(true)] out XElement? fillStyle)
     {
         if (index > 0 && index <= FillStyles.Count)
         {
@@ -189,11 +190,11 @@ internal sealed class PptxTheme
             return true;
         }
 
-        fillStyle = null!;
+        fillStyle = null;
         return false;
     }
 
-    public bool TryGetLineStyle(int index, out XElement lineStyle)
+    public bool TryGetLineStyle(int index, [NotNullWhen(true)] out XElement? lineStyle)
     {
         if (index > 0 && index <= LineStyles.Count)
         {
@@ -201,11 +202,11 @@ internal sealed class PptxTheme
             return true;
         }
 
-        lineStyle = null!;
+        lineStyle = null;
         return false;
     }
 
-    public bool TryGetEffectStyle(int index, out XElement effectStyle)
+    public bool TryGetEffectStyle(int index, [NotNullWhen(true)] out XElement? effectStyle)
     {
         if (index > 0 && index <= EffectStyles.Count)
         {
@@ -213,7 +214,7 @@ internal sealed class PptxTheme
             return true;
         }
 
-        effectStyle = null!;
+        effectStyle = null;
         return false;
     }
 

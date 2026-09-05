@@ -1269,13 +1269,13 @@ internal sealed partial class PptxRenderer
                     afterLeadingManualLineBreak = false;
                 }
 
-                if (bulletPending)
+                if (bulletPending && bulletText is not null)
                 {
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Bullet, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
-                    double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);
-                    TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, StrictClip: strictClip);
+                    double bulletEndX = bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);
+                    TextRun bulletRun = new(bulletText, bulletX, cursorY, bulletWidth, frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, StrictClip: strictClip);
                     line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator, 0d));
                     bulletPending = false;
                 }
@@ -1495,9 +1495,9 @@ internal sealed partial class PptxRenderer
                         pendingVisibleLeadingAdjustment = 0d;
                         noBreakAnchorSpan = null;
                         pendingNoBreakAdvanceText = string.Empty;
-                        if (movedNoBreakCluster)
+                        if (movedNoBreakCluster && movedNoBreakSpan is not null)
                         {
-                            TextRun movedRun = movedNoBreakSpan!.Run with { X = cursorX, Y = cursorY };
+                            TextRun movedRun = movedNoBreakSpan.Run with { X = cursorX, Y = cursorY };
                             double movedEndX = cursorX + movedRun.Width;
                             maxFontSize = Math.Max(maxFontSize, movedRun.FontSize);
                             line.Add(

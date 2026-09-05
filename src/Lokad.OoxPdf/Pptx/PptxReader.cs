@@ -37,13 +37,13 @@ internal sealed class PptxReader
             string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
             if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
             {
-                slides.Add(new PptxSlide(relationship.ResolvedTarget!, slides.Count));
+                slides.Add(new PptxSlide(relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part."), slides.Count));
             }
         }
 
         if (slides.Count == 0)
         {
-            slides.AddRange(relationships.Values.Select(r => new PptxSlide(r.ResolvedTarget!, slides.Count)));
+            slides.AddRange(relationships.Values.Select(r => new PptxSlide(r.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part."), slides.Count)));
         }
 
         return new PptxDocument(presentationPart.Name, slides, width, height);

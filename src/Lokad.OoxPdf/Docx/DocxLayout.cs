@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
@@ -250,7 +251,7 @@ internal sealed record DocxLayoutSnapshot(
     {
         return items
             .Where(item => item.SourceBlockIndex is not null)
-            .GroupBy(item => item.SourceBlockIndex!.Value)
+            .GroupBy(item => item.SourceBlockIndex ?? int.MaxValue)
             .OrderBy(group => group.Key)
             .Select(group =>
             {
@@ -493,7 +494,7 @@ internal sealed record DocxLayoutSnapshot(
             .SelectMany((page, pageIndex) => page.Items
                 .Where(item => item.SourceBlockIndex is not null)
                 .Select(item => (pageIndex, item)))
-            .GroupBy(entry => entry.item.SourceBlockIndex!.Value)
+            .GroupBy(entry => entry.item.SourceBlockIndex ?? int.MaxValue)
             .OrderBy(group => group.Key)
             .Select(group => new DocxLayoutSourceBlockSnapshot(
                 group.Key,
@@ -678,14 +679,14 @@ internal sealed record DocxLayoutSnapshot(
                 int[] paragraphIndexes = storyItems
                     .Select(item => item.SourceParagraphIndex)
                     .Where(index => index is not null)
-                    .Select(index => index!.Value)
+                    .OfType<int>()
                     .Distinct()
                     .OrderBy(index => index)
                     .ToArray();
                 int[] lineIndexes = storyItems
                     .Select(item => item.SourceLineIndex)
                     .Where(index => index is not null)
-                    .Select(index => index!.Value)
+                    .OfType<int>()
                     .Distinct()
                     .OrderBy(index => index)
                     .ToArray();
@@ -2175,7 +2176,7 @@ internal sealed class DocxLayoutEngine
             foreach (DocxInlineReferenceLocation location in sectionGroup)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (TryResolveReferencedRelatedStoryLayout(storyByKey, location, out DocxRelatedStoryLayout storyLayout))
+                if (TryResolveReferencedRelatedStoryLayout(storyByKey, location, out DocxRelatedStoryLayout? storyLayout))
                 {
                     sectionEndStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
                 }
@@ -2194,7 +2195,7 @@ internal sealed class DocxLayoutEngine
             foreach (DocxInlineReferenceLocation location in documentEndLocations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (TryResolveReferencedRelatedStoryLayout(storyByKey, location, out DocxRelatedStoryLayout storyLayout))
+                if (TryResolveReferencedRelatedStoryLayout(storyByKey, location, out DocxRelatedStoryLayout? storyLayout))
                 {
                     documentEndStories.Add(storyLayout);
                 }
@@ -2368,9 +2369,9 @@ internal sealed class DocxLayoutEngine
     private static bool TryResolveReferencedRelatedStoryLayout(
         IReadOnlyDictionary<(string Kind, string Id), DocxRelatedStoryLayout> storyByKey,
         DocxInlineReferenceLocation location,
-        out DocxRelatedStoryLayout storyLayout)
+        [NotNullWhen(true)] out DocxRelatedStoryLayout? storyLayout)
     {
-        storyLayout = null!;
+        storyLayout = null;
         if (location.Reference.Id is null ||
             !storyByKey.TryGetValue((location.Reference.Kind, location.Reference.Id), out DocxRelatedStoryLayout? resolvedLayout) ||
             resolvedLayout is null)
@@ -2574,7 +2575,7 @@ internal sealed class DocxLayoutEngine
         return page.Items
             .Select(GetSourceBlockIndex)
             .Where(index => index is not null)
-            .Select(index => index!.Value)
+            .OfType<int>()
             .Distinct()
             .OrderBy(index => index);
     }
@@ -5272,7 +5273,7 @@ internal sealed class DocxLayoutEngine
 
             if (preferredWidths.All(width => width is > 0d))
             {
-                return preferredWidths.Select(width => width!.Value).ToArray();
+                return preferredWidths.Select(width => width ?? 0d).ToArray();
             }
         }
 
@@ -5926,16 +5927,16 @@ internal sealed class DocxLayoutEngine
             bool cellPageBreakUpperBoundaryInsideNestedTable = false;
             int currentPageNumber = getPageNumber();
             int currentPageIndex = Math.Max(0, currentPageNumber - 1);
-            if (useCellPageBreakBoundaryPartition)
+            if (useCellPageBreakBoundaryPartition && textMeasurer is not null)
             {
                 if (fragmentOffsetFromRowTop > 0.001d &&
-                    TryResolveTableCellParagraphBoundaryIndex(cell, cellWidth, rowTopPadding, fragmentOffsetFromRowTop, textMeasurer!, defaultTabStopPoints, currentPageNumber, pageCount, out int lowerParagraphBoundaryIndex, paragraphSpacingScale))
+                    TryResolveTableCellParagraphBoundaryIndex(cell, cellWidth, rowTopPadding, fragmentOffsetFromRowTop, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, out int lowerParagraphBoundaryIndex, paragraphSpacingScale))
                 {
                     cellPageBreakLowerParagraphBoundaryIndex = lowerParagraphBoundaryIndex;
                 }
 
                 if (fragmentOffsetFromRowTop > 0.001d &&
-                    TryResolveTableCellNestedTableBoundary(cell, cellWidth, rowTopPadding, fragmentOffsetFromRowTop, textMeasurer!, defaultTabStopPoints, currentPageNumber, pageCount, out DocxNestedTableBoundary lowerNestedTableBoundary, paragraphSpacingScale))
+                    TryResolveTableCellNestedTableBoundary(cell, cellWidth, rowTopPadding, fragmentOffsetFromRowTop, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, out DocxNestedTableBoundary lowerNestedTableBoundary, paragraphSpacingScale))
                 {
                     cellPageBreakLowerNestedTableBoundaryIndex = lowerNestedTableBoundary.BoundaryIndex;
                     cellPageBreakLowerBoundaryInsideNestedTable = lowerNestedTableBoundary.IsInsideNestedTable;
@@ -5943,13 +5944,13 @@ internal sealed class DocxLayoutEngine
 
                 double fragmentEndFromRowTop = fragmentOffsetFromRowTop + rowHeight;
                 if (fragmentEndFromRowTop < fullRowHeight - 0.001d &&
-                    TryResolveTableCellParagraphBoundaryIndex(cell, cellWidth, rowTopPadding, fragmentEndFromRowTop, textMeasurer!, defaultTabStopPoints, currentPageNumber, pageCount, out int upperParagraphBoundaryIndex, paragraphSpacingScale))
+                    TryResolveTableCellParagraphBoundaryIndex(cell, cellWidth, rowTopPadding, fragmentEndFromRowTop, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, out int upperParagraphBoundaryIndex, paragraphSpacingScale))
                 {
                     cellPageBreakUpperParagraphBoundaryIndex = upperParagraphBoundaryIndex;
                 }
 
                 if (fragmentEndFromRowTop < fullRowHeight - 0.001d &&
-                    TryResolveTableCellNestedTableBoundary(cell, cellWidth, rowTopPadding, fragmentEndFromRowTop, textMeasurer!, defaultTabStopPoints, currentPageNumber, pageCount, out DocxNestedTableBoundary upperNestedTableBoundary, paragraphSpacingScale))
+                    TryResolveTableCellNestedTableBoundary(cell, cellWidth, rowTopPadding, fragmentEndFromRowTop, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, out DocxNestedTableBoundary upperNestedTableBoundary, paragraphSpacingScale))
                 {
                     cellPageBreakUpperNestedTableBoundaryIndex = upperNestedTableBoundary.BoundaryIndex + (upperNestedTableBoundary.IsInsideNestedTable ? 1 : 0);
                     cellPageBreakUpperBoundaryInsideNestedTable = upperNestedTableBoundary.IsInsideNestedTable;
@@ -7731,11 +7732,11 @@ internal sealed class DocxLayoutEngine
     {
         foreach (DocxTabStop tabStop in tabStops
             .Where(tabStop => tabStop.PositionPoints is not null && IsPositioningTabStop(tabStop))
-            .OrderBy(tabStop => tabStop.PositionPoints!.Value))
+            .OrderBy(tabStop => tabStop.PositionPoints ?? 0d))
         {
-            if (tabStop.PositionPoints!.Value > width + 0.001d)
+            if ((tabStop.PositionPoints ?? 0d) > width + 0.001d)
             {
-                return new DocxResolvedTabStop(tabStop.PositionPoints.Value, tabStop.Value);
+                return new DocxResolvedTabStop(tabStop.PositionPoints ?? 0d, tabStop.Value);
             }
         }
 

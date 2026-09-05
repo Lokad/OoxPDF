@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -548,7 +549,7 @@ internal sealed partial class DocxRenderer
                         segment.BaselineY - descender,
                         annotationWidth,
                         ascender + descender,
-                        link.Target!));
+                        link.Target ?? string.Empty));
                 }
                 else if (!string.IsNullOrEmpty(link.Anchor) &&
                     bookmarkDestinations.TryGetValue(link.Anchor, out PdfLinkDestination destination))
@@ -652,10 +653,10 @@ internal sealed partial class DocxRenderer
     private static bool TryResolveBookmarkDestinationSegment(
         IReadOnlyList<DocxTextEmissionSegment> segments,
         DocxBookmarkAnchor bookmark,
-        out DocxTextEmissionSegment target,
+        [NotNullWhen(true)] out DocxTextEmissionSegment? target,
         out double targetX)
     {
-        target = null!;
+        target = null;
         targetX = 0d;
         int sourceRunIndex = bookmark.SourceRunIndex;
         int sourceOffset = Math.Max(0, bookmark.TextOffset);
@@ -754,21 +755,22 @@ internal sealed partial class DocxRenderer
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         CancellationToken cancellationToken)
     {
-        var resolvedRuns = new List<DocxResolvedRunTypeface>();
+        var resolvedRuns = new List<(DocxResolvedRunTypeface Run, FontFaceResolution Resolution)>();
         foreach (DocxResolvedRunTypeface run in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (LoadFont(run.Resolution, fontCache, cancellationToken) is not null)
+            if (run.Resolution is not { } resolution || LoadFont(resolution, fontCache, cancellationToken) is null)
             {
-                resolvedRuns.Add(run);
+                continue;
             }
+            resolvedRuns.Add((run, resolution));
         }
 
-        foreach (IGrouping<(string StableId, int FaceIndex), DocxResolvedRunTypeface> group in resolvedRuns.GroupBy(run => (run.Resolution!.Source.StableId, run.Resolution.FontFaceIndex)))
+        foreach (IGrouping<(string StableId, int FaceIndex), (DocxResolvedRunTypeface Run, FontFaceResolution Resolution)> group in resolvedRuns.GroupBy(item => (item.Resolution.Source.StableId, item.Resolution.FontFaceIndex)))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            FontFaceResolution resolution = group.First().Resolution!;
-            IReadOnlyList<int> glyphs = CollectRunGlyphs(group, cancellationToken);
+            FontFaceResolution resolution = group.First().Resolution;
+            IReadOnlyList<int> glyphs = CollectRunGlyphs(group.Select(item => item.Run), cancellationToken);
             if (glyphs.Count == 0)
             {
                 continue;
@@ -784,7 +786,7 @@ internal sealed partial class DocxRenderer
             string name = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             var runResource = new DocxRunFontResource(name, embedded, resolution);
             resources.Add(new PdfFontResource(name, embedded));
-            foreach (DocxResolvedRunTypeface run in group)
+            foreach (DocxResolvedRunTypeface run in group.Select(item => item.Run))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 runResources[run.Run] = runResource;
@@ -865,9 +867,9 @@ internal sealed partial class DocxRenderer
         foreach (DocxResolvedRunTypeface run in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (LoadFont(run.Resolution, fontCache, cancellationToken) is not null)
+            if (run.Resolution is { } fontResolution && LoadFont(fontResolution, fontCache, cancellationToken) is not null)
             {
-                return run.Resolution!;
+                return fontResolution;
             }
         }
 
@@ -1872,8 +1874,9 @@ internal sealed partial class DocxRenderer
         return group
             .Select(BuildMarkupBalloonGroupBodyPart)
             .Where(part => !string.IsNullOrWhiteSpace(part))
+            .OfType<string>()
             .Distinct(StringComparer.Ordinal)
-            .ToArray()!;
+            .ToArray();
     }
 
     private static string? BuildMarkupBalloonGroupBodyPart(DocxMarkupBalloonCandidate candidate)
@@ -1893,8 +1896,9 @@ internal sealed partial class DocxRenderer
         return group
             .Select(BuildWordCompatibleMarkupBalloonGroupBodyPart)
             .Where(part => !string.IsNullOrWhiteSpace(part))
+            .OfType<string>()
             .Distinct(StringComparer.Ordinal)
-            .ToArray()!;
+            .ToArray();
     }
 
     private static string? BuildWordCompatibleMarkupBalloonGroupBodyPart(DocxMarkupBalloonCandidate candidate)
@@ -2060,11 +2064,11 @@ internal sealed partial class DocxRenderer
         var candidates = new List<DocxMarkupBalloonCandidate>();
         Dictionary<string, DocxRelatedStoryLayout> commentStories = relatedStories
             .Where(story => story.Story.Kind == "Comment" && story.Story.Id is not null)
-            .GroupBy(story => story.Story.Id!, StringComparer.Ordinal)
+            .GroupBy(story => story.Story.Id ?? string.Empty, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         Dictionary<string, DocxRelatedStoryLayout[]> commentRepliesByParentId = relatedStories
             .Where(story => story.Story.Kind == "Comment" && story.Story.CommentMetadata?.ParentCommentId is not null)
-            .GroupBy(story => story.Story.CommentMetadata!.ParentCommentId!, StringComparer.Ordinal)
+            .GroupBy(story => story.Story.CommentMetadata?.ParentCommentId ?? string.Empty, StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,
                 group => group
@@ -2968,15 +2972,13 @@ internal sealed partial class DocxRenderer
 
         string[] authors = revisions
             .Select(revision => FirstNonEmpty(revision.Author))
-            .Where(author => author is not null)
-            .Select(author => author!)
+            .OfType<string>()
             .Distinct(StringComparer.Ordinal)
             .OrderBy(author => author, StringComparer.Ordinal)
             .ToArray();
         string[] dates = revisions
             .Select(revision => FormatCommentDate(revision.Date))
-            .Where(date => date is not null)
-            .Select(date => date!)
+            .OfType<string>()
             .Distinct(StringComparer.Ordinal)
             .OrderBy(date => date, StringComparer.Ordinal)
             .ToArray();

@@ -451,12 +451,12 @@ internal sealed record DocxStructureSnapshot(
         Dictionary<string, int> visibleInlineCounts = EnumerateParagraphs(document)
             .SelectMany(paragraph => paragraph.InlineReferences)
             .Where(reference => reference.Kind == "Comment" && !string.IsNullOrWhiteSpace(reference.Id))
-            .GroupBy(reference => reference.Id!, StringComparer.Ordinal)
+            .GroupBy(reference => reference.Id ?? string.Empty, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         Dictionary<string, int> visibleRangeCounts = EnumerateParagraphs(document)
             .SelectMany(paragraph => paragraph.CommentRanges)
             .Where(range => !string.IsNullOrWhiteSpace(range.Id))
-            .GroupBy(range => range.Id!, StringComparer.Ordinal)
+            .GroupBy(range => range.Id ?? string.Empty, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         var packageAnchorIds = new HashSet<string>(document.PackageCommentAnchorIds, StringComparer.Ordinal);
         var hiddenAnchorIds = new HashSet<string>(document.HiddenCommentAnchorIds, StringComparer.Ordinal);
@@ -467,10 +467,10 @@ internal sealed record DocxStructureSnapshot(
             {
                 string? id = story.Id;
                 bool hasId = !string.IsNullOrWhiteSpace(id);
-                int inlineCount = hasId && visibleInlineCounts.TryGetValue(id!, out int foundInlineCount) ? foundInlineCount : 0;
-                int rangeCount = hasId && visibleRangeCounts.TryGetValue(id!, out int foundRangeCount) ? foundRangeCount : 0;
-                bool hasPackageAnchor = hasId && packageAnchorIds.Contains(id!);
-                bool hasHiddenAnchor = hasId && hiddenAnchorIds.Contains(id!);
+                int inlineCount = hasId && id is not null && visibleInlineCounts.TryGetValue(id, out int foundInlineCount) ? foundInlineCount : 0;
+                int rangeCount = hasId && id is not null && visibleRangeCounts.TryGetValue(id, out int foundRangeCount) ? foundRangeCount : 0;
+                bool hasPackageAnchor = hasId && id is not null && packageAnchorIds.Contains(id);
+                bool hasHiddenAnchor = hasId && id is not null && hiddenAnchorIds.Contains(id);
                 string status = !hasId
                     ? "Unsupported"
                     : inlineCount != 0 || rangeCount != 0
@@ -1183,13 +1183,13 @@ internal sealed record DocxStructureSnapshot(
     private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
     {
         return EnumerateParagraphs(document)
-            .Where(paragraph => paragraph.ListLabel is not null)
-            .GroupBy(paragraph => new
+            .SelectMany(paragraph => paragraph.ListLabel is { } label ? new[] { (Paragraph: paragraph, Label: label) } : [])
+            .GroupBy(item => new
             {
-                paragraph.ListLabel!.NumberId,
-                paragraph.ListLabel.Level,
-                paragraph.ListLabel.FormatValue,
-                paragraph.ListLabel.SuffixValue
+                item.Label.NumberId,
+                item.Label.Level,
+                item.Label.FormatValue,
+                item.Label.SuffixValue
             })
             .Select(group => new DocxStructureListUsageSnapshot(
                 group.Key.NumberId,
@@ -1197,14 +1197,14 @@ internal sealed record DocxStructureSnapshot(
                 group.Key.FormatValue,
                 group.Key.SuffixValue,
                 group.Count(),
-                group.Sum(TextLength),
-                group.Count(paragraph => paragraph.ListLabel!.Indent.LeftPoints is not null),
-                group.Count(paragraph => paragraph.ListLabel!.Indent.RightPoints is not null),
-                group.Count(paragraph => paragraph.ListLabel!.Indent.FirstLinePoints is not null),
-                group.Count(paragraph => paragraph.ListLabel!.Indent.HangingPoints is not null),
-                group.Count(paragraph => paragraph.ListLabel!.Indent.NumberingTabPositionPoints is not null),
-                group.Count(paragraph => HasParagraphIndentOverride(paragraph.EffectiveProperties.Indent)),
-                group.Count(paragraph => paragraph.EffectiveProperties.TabStops.Any(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase)))))
+                group.Sum(item => TextLength(item.Paragraph)),
+                group.Count(item => item.Label.Indent.LeftPoints is not null),
+                group.Count(item => item.Label.Indent.RightPoints is not null),
+                group.Count(item => item.Label.Indent.FirstLinePoints is not null),
+                group.Count(item => item.Label.Indent.HangingPoints is not null),
+                group.Count(item => item.Label.Indent.NumberingTabPositionPoints is not null),
+                group.Count(item => HasParagraphIndentOverride(item.Paragraph.EffectiveProperties.Indent)),
+                group.Count(item => item.Paragraph.EffectiveProperties.TabStops.Any(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase)))))
             .ToArray();
     }
 
@@ -1291,7 +1291,7 @@ internal sealed record DocxStructureSnapshot(
             .Where(revision => revision.PropertyChangeFamily is not null)
             .SelectMany(revision => revision.PropertyElementNames.Select(name => new
             {
-                Family = revision.PropertyChangeFamily!,
+                Family = revision.PropertyChangeFamily ?? string.Empty,
                 revision.SourceElement,
                 PropertyElementName = name
             }))

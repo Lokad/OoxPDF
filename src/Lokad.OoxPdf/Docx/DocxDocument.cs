@@ -139,8 +139,9 @@ internal static class DocxBlockTraversal
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType,
         out IReadOnlyList<DocxBodyElement> bodyElements)
     {
-        if (bodyElementsByType.TryGetValue(variantType, out bodyElements!))
+        if (bodyElementsByType.TryGetValue(variantType, out IReadOnlyList<DocxBodyElement>? foundElements))
         {
+            bodyElements = foundElements;
             return true;
         }
 

@@ -295,16 +295,14 @@ internal sealed class DocxReader
             .ToArray();
         string[] packageAnchorIds = anchors
             .Select(ReadCommentAnchorId)
-            .Where(id => id is not null)
-            .Select(id => id!)
+            .OfType<string>()
             .Distinct(StringComparer.Ordinal)
             .OrderBy(id => id, StringComparer.Ordinal)
             .ToArray();
         string[] hiddenAnchorIds = anchors
             .Where(anchor => IsInsideExcludedRevisionContainer(anchor, markupMode))
             .Select(ReadCommentAnchorId)
-            .Where(id => id is not null)
-            .Select(id => id!)
+            .OfType<string>()
             .Distinct(StringComparer.Ordinal)
             .OrderBy(id => id, StringComparer.Ordinal)
             .ToArray();
@@ -1109,7 +1107,7 @@ internal sealed class DocxReader
             return false;
         }
 
-        int columnCount = int.Parse(finalColumns.Attribute(WordprocessingNamespace + "num")!.Value, CultureInfo.InvariantCulture);
+        int columnCount = (int)OoxXml.ParseRequiredLong(finalColumns, WordprocessingNamespace + "num", "column count");
         int supportedColumnBreaks = body
             .Elements(WordprocessingNamespace + "p")
             .SelectMany(paragraph => paragraph.Descendants(WordprocessingNamespace + "br"))
@@ -3237,8 +3235,8 @@ internal sealed class DocxReader
         return paragraph.Runs
             .Select(run => run.SourceRunIndex)
             .Concat(paragraph.InlineReferences.Select(reference => reference.SourceRunIndex))
-            .Concat(paragraph.CommentRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex, range.ReferenceSourceRunIndex }).Where(index => index is not null).Select(index => index!.Value))
-            .Concat(paragraph.RevisionRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex }).Where(index => index is not null).Select(index => index!.Value))
+            .Concat(paragraph.CommentRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex, range.ReferenceSourceRunIndex }).OfType<int>())
+            .Concat(paragraph.RevisionRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex }).OfType<int>())
             .Concat(paragraph.FieldReferences.Select(field => field.SourceRunIndex))
             .Concat(paragraph.Hyperlinks.Select(link => link.SourceRunStartIndex))
             .Concat(paragraph.BookmarkAnchors.Select(anchor => anchor.SourceRunIndex))
@@ -3856,8 +3854,7 @@ internal sealed class DocxReader
         return properties
             ?.Elements()
             .Select(CreateRevisionInfo)
-            .Where(revision => revision is not null)
-            .Select(revision => revision!)
+            .OfType<DocxRevisionInfo>()
             .ToArray() ?? [];
     }
 
@@ -4303,8 +4300,8 @@ internal sealed class DocxReader
     {
         Dictionary<string, string> commentIdByParagraphId = stories
             .Where(story => story.CommentMetadata?.ParagraphId is not null && story.Id is not null)
-            .GroupBy(story => story.CommentMetadata!.ParagraphId!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().Id!, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(story => story.CommentMetadata?.ParagraphId ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Id ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         return stories
             .Select(story =>
             {

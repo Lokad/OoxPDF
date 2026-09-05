@@ -1112,7 +1112,7 @@ internal sealed partial class PptxRenderer
         OoxPart? workbookPart = workbookPackage
             .GetRelationships("/", cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.Type == WorkbookRelationshipType && relationship.ResolvedTarget is not null)
-            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
+            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
             .FirstOrDefault(part => part is not null);
         workbookPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == WorkbookContentType);
         if (workbookPart is null)
@@ -1194,7 +1194,7 @@ internal sealed partial class PptxRenderer
         OoxPart? sharedStringsPart = workbookPackage
             .GetRelationships(workbookPart.Name, cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.Type == SharedStringsRelationshipType && relationship.ResolvedTarget is not null)
-            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
+            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
             .FirstOrDefault(part => part is not null);
         sharedStringsPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == SharedStringsContentType);
         if (sharedStringsPart is null)
@@ -1290,7 +1290,7 @@ internal sealed partial class PptxRenderer
         OoxPart? stylesPart = workbookPackage
             .GetRelationships(workbookPart.Name, cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.Type == SpreadsheetStylesRelationshipType && relationship.ResolvedTarget is not null)
-            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
+            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
             .FirstOrDefault(part => part is not null);
         stylesPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == SpreadsheetStylesContentType);
         if (stylesPart is null)
@@ -1600,8 +1600,8 @@ internal sealed partial class PptxRenderer
                 .Select(ReadWorkbookTableFilterColumn)
                 .ToArray() ?? [];
             int[] filterColumnIds = filterColumns
-                .Where(column => column.ColumnId is not null)
-                .Select(column => column.ColumnId!.Value)
+                .Select(column => column.ColumnId)
+                .OfType<int>()
                 .ToArray();
             int headerRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "headerRowCount") ?? 1;
             int totalsRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "totalsRowCount") ?? 0;

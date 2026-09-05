@@ -244,7 +244,7 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             foreach (IGrouping<string, PptxTextGlyphLayout> group in span.GlyphSpan.Glyphs.GroupBy(
-                        glyph => string.IsNullOrWhiteSpace(glyph.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : glyph.Typeface!,
+                        glyph => string.IsNullOrWhiteSpace(glyph.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : glyph.Typeface,
                          StringComparer.OrdinalIgnoreCase))
             {
                 uses.Add(new TextFontUse(group.Key, span.GlyphSpan.Bold, span.GlyphSpan.Italic, group.Select(glyph => glyph.CodePoint).ToArray()));
@@ -912,7 +912,7 @@ internal sealed partial class PptxRenderer
         while (index < span.GlyphSpan.Glyphs.Count)
         {
             PptxTextGlyphLayout first = span.GlyphSpan.Glyphs[index];
-            string typeface = string.IsNullOrWhiteSpace(first.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : first.Typeface!;
+            string typeface = string.IsNullOrWhiteSpace(first.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : first.Typeface;
             int start = index;
             index++;
             while (index < span.GlyphSpan.Glyphs.Count &&

@@ -14,7 +14,7 @@ internal static class PptxFormatSchemeResolver
             .Element(PresentationNamespace + "style")
             ?.Element(DrawingNamespace + "fillRef");
         int index = ReadIndex(reference);
-        return index > 0 && theme.TryGetFillStyle(index, out XElement style)
+        return index > 0 && theme.TryGetFillStyle(index, out XElement? style)
             ? new PptxFormatSchemeReference(reference, index, style)
             : new PptxFormatSchemeReference(reference, index, null);
     }
@@ -25,7 +25,7 @@ internal static class PptxFormatSchemeResolver
             .Element(PresentationNamespace + "style")
             ?.Element(DrawingNamespace + "lnRef");
         int index = ReadIndex(reference);
-        return index > 0 && theme.TryGetLineStyle(index, out XElement style)
+        return index > 0 && theme.TryGetLineStyle(index, out XElement? style)
             ? new PptxFormatSchemeReference(reference, index, style)
             : new PptxFormatSchemeReference(reference, index, null);
     }

@@ -476,7 +476,7 @@ internal sealed partial class PptxRenderer
                 .Where(element => element.Name.LocalName == "stop")
                 .Select(ReadSvgGradientStop)
                 .Where(stop => stop.Color is not null)
-                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color!.Value))
+                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? default))
                 .OrderBy(stop => stop.Offset)
                 .ToArray();
             if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)

@@ -211,7 +211,7 @@ internal sealed partial class PptxRenderer
                     string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
                     candidate.AxisKind == kind))
                 .Where(axis => axis is not null)
-                .Select(axis => axis!)
+                .OfType<PptxSceneChartAxis>()
                 .ToArray();
         }
 
@@ -239,7 +239,7 @@ internal sealed partial class PptxRenderer
                     string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
                     IsCategoryLike(candidate)))
                 .Where(axis => axis is not null)
-                .Select(axis => axis!)
+                .OfType<PptxSceneChartAxis>()
                 .ToArray();
         }
 
@@ -2326,13 +2326,13 @@ internal sealed partial class PptxRenderer
     private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
     {
         XElement? scaling = valueAxis?.Element(ChartNamespace + "scaling");
-        if (scaling is null)
+        if (valueAxis is null || scaling is null)
         {
             return fallback;
         }
 
-        double min = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis!, "min").Value ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis!, "max").Value ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+        double min = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "min").Value ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
+        double max = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "max").Value ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -3307,8 +3307,7 @@ internal sealed partial class PptxRenderer
     {
         ChartIndexedTextVector labels = ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly);
         IReadOnlyList<ChartIndexedTextPoint> points = labels.DensePoints()
-            .Where(point => point is not null)
-            .Select(point => point!.Value)
+            .OfType<ChartIndexedTextPoint>()
             .ToArray();
         var entries = new List<ChartLegendEntry>(points.Count);
         foreach (ChartIndexedTextPoint point in points.OrderBy(point => point.Index))
@@ -3892,7 +3891,7 @@ internal sealed partial class PptxRenderer
                     PptxSceneChartDataLabelPosition labelPosition = ResolveStackedBarDataLabelPosition(effectiveOptions.PositionKind, stacked);
                     double x = ResolveHorizontalBarDataLabelX(labelPosition, barBaseX, barEndX, labelWidth);
                     double y = categoryY + (stacked ? (barSlot - labelHeight) / 2d : seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d);
-                    ChartIndexedNumberPoint point = points[category]!.Value;
+                    ChartIndexedNumberPoint point = points[category] ?? default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
@@ -3958,7 +3957,7 @@ internal sealed partial class PptxRenderer
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                     PptxSceneChartDataLabelPosition labelPosition = ResolveStackedBarDataLabelPosition(effectiveOptions.PositionKind, stacked);
                     double y = ResolveVerticalBarDataLabelY(labelPosition, barBaseY, barEndY, labelHeight);
-                    ChartIndexedNumberPoint point = points[category]!.Value;
+                    ChartIndexedNumberPoint point = points[category] ?? default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
@@ -4046,7 +4045,7 @@ internal sealed partial class PptxRenderer
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, colorMap, effectiveOptions);
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                ChartIndexedNumberPoint point = points[i]!.Value;
+                ChartIndexedNumberPoint point = points[i] ?? default;
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
@@ -5122,7 +5121,7 @@ internal sealed partial class PptxRenderer
             !string.Equals(legacyNumberFormat, "General", StringComparison.OrdinalIgnoreCase)
             ? FormatChartNumber(value, legacyNumberFormat)
             : IsRenderableChartFormatCode(sourceFormatCode)
-                ? FormatChartNumber(value, sourceFormatCode!)
+                ? FormatChartNumber(value, sourceFormatCode)
             : FormatChartAxisLabel(value, null);
     }
 
@@ -5679,7 +5678,7 @@ internal sealed partial class PptxRenderer
             IsRenderableChartFormatCode(numberFormat.FormatCode);
     }
 
-    private static bool IsRenderableChartFormatCode(string? formatCode)
+    private static bool IsRenderableChartFormatCode([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? formatCode)
     {
         return !string.IsNullOrWhiteSpace(formatCode) &&
             !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase);
@@ -7109,8 +7108,8 @@ internal sealed partial class PptxRenderer
 
     private static (double Min, double Max) GetClusteredPointValueExtents(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series)
     {
-        double maxValue = Math.Max(0d, series.SelectMany(points => points).Select(point => point?.Value).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(points => points).Select(point => point?.Value).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Min());
+        double maxValue = Math.Max(0d, series.SelectMany(points => points).Select(point => point?.Value).OfType<double>().DefaultIfEmpty(0d).Max());
+        double minValue = Math.Min(0d, series.SelectMany(points => points).Select(point => point?.Value).OfType<double>().DefaultIfEmpty(0d).Min());
         return (minValue, maxValue);
     }
 
@@ -7778,8 +7777,7 @@ internal sealed partial class PptxRenderer
     {
         IEnumerable<double> values = series
             .SelectMany(item => item.Points)
-            .Where(point => point?.Value is not null)
-            .Select(point => point!.Value!.Value!.Value);
+            .Select(point => point is { } unwrapped ? unwrapped.Value ?? 0d : 0d);
         double maxValue = Math.Max(0d, values.DefaultIfEmpty(0d).Max());
         double minValue = Math.Min(0d, values.DefaultIfEmpty(0d).Min());
         return new ChartValueExtents(minValue, maxValue);
@@ -8665,13 +8663,12 @@ internal sealed partial class PptxRenderer
             .GroupBy(point => point.Index)
             .ToDictionary(group => group.Key, group => group.First());
         return values.DensePoints()
-            .Where(point => point is not null)
-            .Select(point => point!.Value)
+            .OfType<ChartIndexedNumberPoint>()
             .Where(point => point.Value is > 0d)
             .OrderBy(point => point.Index)
             .Select(point => new ChartIndexedPieSlice(
                 point.Index,
-                point.Value!.Value,
+                (point.Value ?? 0d),
                 point,
                 workbookPoints.TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null))
             .ToArray();

@@ -144,8 +144,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     private static IReadOnlyList<string> DistinctFamilies(params string?[] families)
     {
         return families
-            .Where(family => !string.IsNullOrWhiteSpace(family))
-            .Select(family => family!)
+            .OfType<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

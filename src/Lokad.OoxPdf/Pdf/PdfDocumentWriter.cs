@@ -26,7 +26,7 @@ internal sealed class PdfDocumentWriter
         List<PdfImageXObject> images = pages
             .SelectMany(p => p.Images
                 .Select(i => i.Image)
-                .Concat(p.ExtGStates.Where(s => s.SoftMask is not null).Select(s => s.SoftMask!.Image))
+                .Concat(p.ExtGStates.Select(s => s.SoftMask?.Image).OfType<PdfImageXObject>())
                 .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image))))
             .DistinctBy(i => i.ResourceKey)
             .ToList();
@@ -77,8 +77,7 @@ internal sealed class PdfDocumentWriter
         int softMaskObjectBase = shadingObjectBase + shadings.Count;
         List<PdfLuminositySoftMask> softMasks = pages
             .SelectMany(p => p.ExtGStates)
-            .Where(s => s.SoftMask is not null)
-            .Select(s => s.SoftMask!)
+            .Select(s => s.SoftMask).OfType<PdfLuminositySoftMask>()
             .DistinctBy(s => s.ResourceKey)
             .ToList();
         var softMaskObjects = new Dictionary<string, int>(StringComparer.Ordinal);
