@@ -306,7 +306,9 @@ internal sealed partial class DocxReader
                         fieldTextLengthStart,
                         hasCachedResult,
                         rendersCachedResult: false,
-                        usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
+                        usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
+                        fieldReferences: fieldReferences,
+                        runs: runs);
                     return;
                 }
 
@@ -322,7 +324,9 @@ internal sealed partial class DocxReader
                     fieldTextLengthStart,
                     hasCachedResult,
                     rendersCachedResult: false,
-                    usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
+                    usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
+                    fieldReferences: fieldReferences,
+                    runs: runs);
                 return;
             }
 
@@ -340,43 +344,9 @@ internal sealed partial class DocxReader
                 fieldTextRunIndex,
                 fieldTextLengthStart,
                 hasCachedResult,
-                rendersCachedResult: hasCachedResult, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
-        }
-
-        void AddFieldReference(
-            DocxFieldKind kind,
-            DocxFieldSourceKind sourceKind,
-            string? instruction,
-            string? placeholder,
-            int fieldSourceRunIndex,
-            int fieldTextRunIndex,
-            int fieldTextLengthStart,
-            bool hasCachedResult,
-            bool rendersCachedResult,
-            bool usesPlaceholder,
-            bool hasSeparate,
-            int nestingDepth,
-            int instructionRunCount,
-            int resultRunCount)
-        {
-            fieldReferences.Add(new DocxFieldReference(
-                kind,
-                sourceKind,
-                instruction,
-                placeholder,
-                fieldSourceRunIndex,
-                fieldTextRunIndex,
-                runs.Count - fieldTextRunIndex,
-                runs.Sum(run => run.Text.Length) - fieldTextLengthStart)
-            {
-                HasSeparate = hasSeparate,
-                HasCachedResult = hasCachedResult,
-                RendersCachedResult = rendersCachedResult,
-                UsesPlaceholder = usesPlaceholder,
-                NestingDepth = nestingDepth,
-                InstructionRunCount = instructionRunCount,
-                ResultRunCount = resultRunCount
-            });
+                rendersCachedResult: hasCachedResult, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
+                fieldReferences: fieldReferences,
+                runs: runs);
         }
 
         void AddHyperlinkContainer(XElement hyperlink, DocxRevisionInfo? revision)
@@ -517,7 +487,9 @@ internal sealed partial class DocxReader
                     placeholder,
                     currentSourceRunIndex,
                     fieldTextRunIndex,
-                    fieldTextLengthStart, hasCachedResult: false, rendersCachedResult: false, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0);
+                    fieldTextLengthStart, hasCachedResult: false, rendersCachedResult: false, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
+                    fieldReferences: fieldReferences,
+                    runs: runs);
             }
 
             images.AddRange(ReadInlineImages(run, package, relationships, revision));
@@ -688,7 +660,9 @@ internal sealed partial class DocxReader
                 field.HasSeparate,
                 field.NestingDepth,
                 field.InstructionRunCount,
-                field.ResultRunCount);
+                field.ResultRunCount,
+                fieldReferences: fieldReferences,
+                runs: runs);
         }
 
         void AddComplexFieldInstruction(
@@ -730,7 +704,9 @@ internal sealed partial class DocxReader
                     fieldTextRunIndex,
                     fieldTextLengthStart,
                     usesPlaceholder: placeholder is not null,
-                    instructionRunCount: 1, hasCachedResult: false, rendersCachedResult: false, hasSeparate: false, nestingDepth: 0, resultRunCount: 0);
+                    instructionRunCount: 1, hasCachedResult: false, rendersCachedResult: false, hasSeparate: false, nestingDepth: 0, resultRunCount: 0,
+                    fieldReferences: fieldReferences,
+                    runs: runs);
                 return;
             }
 
@@ -1150,6 +1126,44 @@ internal sealed partial class DocxReader
             runs.Sum(run => run.Text.Length)));
     }
 
+    private static void AddFieldReference(
+        DocxFieldKind kind,
+        DocxFieldSourceKind sourceKind,
+        string? instruction,
+        string? placeholder,
+        int fieldSourceRunIndex,
+        int fieldTextRunIndex,
+        int fieldTextLengthStart,
+        bool hasCachedResult,
+        bool rendersCachedResult,
+        bool usesPlaceholder,
+        bool hasSeparate,
+        int nestingDepth,
+        int instructionRunCount,
+        int resultRunCount,
+        List<DocxFieldReference> fieldReferences,
+        List<DocxTextRun> runs)
+    {
+        fieldReferences.Add(new DocxFieldReference(
+            kind,
+            sourceKind,
+            instruction,
+            placeholder,
+            fieldSourceRunIndex,
+            fieldTextRunIndex,
+            runs.Count - fieldTextRunIndex,
+            runs.Sum(run => run.Text.Length) - fieldTextLengthStart)
+        {
+            HasSeparate = hasSeparate,
+            HasCachedResult = hasCachedResult,
+            RendersCachedResult = rendersCachedResult,
+            UsesPlaceholder = usesPlaceholder,
+            NestingDepth = nestingDepth,
+            InstructionRunCount = instructionRunCount,
+            ResultRunCount = resultRunCount
+        });
+    }
+
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static void AddResolvedTextRuns(
         List<DocxTextRun> runs,
@@ -1300,3 +1314,4 @@ internal sealed partial class DocxReader
             ?.Attribute(WordprocessingNamespace + "val");
     }
 }
+
