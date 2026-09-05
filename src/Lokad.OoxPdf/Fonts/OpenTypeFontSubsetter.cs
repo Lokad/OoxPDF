@@ -14,7 +14,7 @@ internal static class OpenTypeFontSubsetter
     private const ushort WeHaveATwoByTwo = 0x0080;
     private const ushort WeHaveInstructions = 0x0100;
 
-    public static OpenTypeFontSubset? Create(OpenTypeFont font, IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, CancellationToken cancellationToken = default)
+    public static OpenTypeFontSubset? Create(OpenTypeFont font, IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, CancellationToken cancellationToken)
     {
         try
         {

@@ -289,7 +289,7 @@ internal static class PublicApiTests
 
         public bool ObservedCanBeCanceled { get; private set; }
 
-        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
+        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
         {
             WasCalled = true;
             ObservedCanBeCanceled = ct.CanBeCanceled;

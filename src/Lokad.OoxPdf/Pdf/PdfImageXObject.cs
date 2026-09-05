@@ -31,7 +31,7 @@ internal sealed class PdfImageXObject
 
     public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{ColorSpace}:{BitsPerComponent}:{Bytes.Length}:{HashPrefix(Bytes)}:{Alpha?.Length ?? 0}:{(Alpha is null ? "none" : HashPrefix(Alpha))}";
 
-    public static PdfImageXObject Jpeg(int width, int height, byte[] bytes, int componentCount = 3, int bitsPerComponent = 8)
+    public static PdfImageXObject Jpeg(int width, int height, byte[] bytes, int componentCount, int bitsPerComponent)
     {
         string colorSpace = componentCount switch
         {

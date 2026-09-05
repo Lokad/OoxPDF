@@ -80,7 +80,7 @@ internal static class FontTests
             IsFallback: false);
 
         var resolver = new PresentationFontResolver(new SingleFontResolver(resolution));
-        (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = resolver.ResolvePresentationOpenTypeFont(new FontRequest(font.FamilyName));
+        (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = resolver.ResolvePresentationOpenTypeFont(new FontRequest(font.FamilyName), CancellationToken.None);
 
         if (resolved is null)
         {
@@ -480,9 +480,9 @@ internal static class FontTests
             return;
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "The scale".EnumerateRunes().Select(rune => rune.Value));
-        string positioning = TestAssert.NotNull(embedded.EncodeGlyphPositioningArray("The scale", 0d, 18d, forcePositioningArray: true));
-        string widths = embedded.BuildWidthArray();
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "The scale".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        string positioning = TestAssert.NotNull(embedded.EncodeGlyphPositioningArray("The scale", 0d, 18d, forcePositioningArray: true, kerningEnabled: true));
+        string widths = embedded.BuildWidthArray(CancellationToken.None);
         string encodedGlyph = embedded.EncodeGlyphHex("h");
         TestAssert.True(encodedGlyph.Length == 4, "Expected a single encoded CID for 'h'.");
         int cid = int.Parse(encodedGlyph, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
@@ -501,14 +501,14 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(arial);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
 
         TestAssert.True(embedded.UsesSubsetFontProgram, "Expected PDF font embedding to use a subset font program.");
         TestAssert.True(embedded.FontProgramBytes.Length < font.Bytes.Length / 4, "Expected a tiny two-glyph subset compared to the source font.");
         TestAssert.Equal("0001", embedded.EncodeGlyphHex("A"));
         TestAssert.Equal("0002", embedded.EncodeGlyphHex("z"));
-        TestAssert.Contains("1 [", embedded.BuildWidthArray());
-        TestAssert.Contains("2 [", embedded.BuildWidthArray());
+        TestAssert.Contains("1 [", embedded.BuildWidthArray(CancellationToken.None));
+        TestAssert.Contains("2 [", embedded.BuildWidthArray(CancellationToken.None));
 
         OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
         TestAssert.True(subset.GlyphCount < font.GlyphCount, "Expected the subset font to expose fewer glyphs than the source font.");
@@ -534,7 +534,7 @@ internal static class FontTests
             return;
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "é".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "é".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
         OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
         ushort subsetGlyph = subset.MapCodePoint('é');
 
@@ -747,8 +747,8 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(arial);
-        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c));
-        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c));
+        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
+        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c), CancellationToken.None);
 
         TestAssert.True(first.ResourceKey != second.ResourceKey, "Subsets over different codepoint sets must not merge: subset CID assignment is only valid for its own set.");
     }
@@ -763,14 +763,14 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(arial);
-        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c));
-        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c));
+        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
+        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
 
         TestAssert.Equal(first.ResourceKey, second.ResourceKey);
-        PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second]);
+        PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second], CancellationToken.None);
         TestAssert.Equal(first.ResourceKey, merged.ResourceKey);
         TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), merged.EncodeGlyphHex("ABCDEF"));
-        TestAssert.Equal(first.BuildWidthArray(), merged.BuildWidthArray());
+        TestAssert.Equal(first.BuildWidthArray(CancellationToken.None), merged.BuildWidthArray(CancellationToken.None));
     }
     private sealed class StubHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses) : HttpMessageHandler
     {

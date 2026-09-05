@@ -6,7 +6,7 @@ internal sealed partial class PptxRenderer
 {
     internal static PptxSceneSnapshot InspectScene(PptxDocument document, OoxPackage package)
     {
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         return new PptxSceneSnapshot(scene.Slides.Select(ToSnapshot).ToArray());
     }
 

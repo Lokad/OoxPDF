@@ -37,17 +37,32 @@ public static class OoxPdfConverter
         ConvertCore(input, output, options, cancellationToken);
     }
 
-    public static Task ConvertAsync(string inputPath, string outputPath, CancellationToken cancellationToken = default)
+    public static Task ConvertAsync(string inputPath, string outputPath)
+    {
+        return ConvertAsync(inputPath, outputPath, new OoxPdfOptions(), CancellationToken.None);
+    }
+
+    public static Task ConvertAsync(string inputPath, string outputPath, OoxPdfOptions? options)
+    {
+        return ConvertAsync(inputPath, outputPath, options, CancellationToken.None);
+    }
+
+    public static Task ConvertAsync(string inputPath, string outputPath, CancellationToken cancellationToken)
     {
         return ConvertAsync(inputPath, outputPath, new OoxPdfOptions(), cancellationToken);
     }
 
-    public static Task ConvertAsync(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken = default)
+    public static Task ConvertAsync(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken)
     {
         return Task.Run(() => ConvertCore(inputPath, outputPath, options, cancellationToken), cancellationToken);
     }
 
-    public static Task ConvertAsync(Stream input, Stream output, OoxPdfOptions? options, CancellationToken cancellationToken = default)
+    public static Task ConvertAsync(Stream input, Stream output, OoxPdfOptions? options)
+    {
+        return ConvertAsync(input, output, options, CancellationToken.None);
+    }
+
+    public static Task ConvertAsync(Stream input, Stream output, OoxPdfOptions? options, CancellationToken cancellationToken)
     {
         return Task.Run(() => ConvertCore(input, output, options, cancellationToken), cancellationToken);
     }
@@ -130,7 +145,12 @@ public static class OoxPdfConverter
         };
     }
 
-    public static OoxPdfInputKind DetectInputKind(string inputPath, OoxPdfInputKind requestedKind = OoxPdfInputKind.Auto)
+    public static OoxPdfInputKind DetectInputKind(string inputPath)
+    {
+        return DetectInputKind(inputPath, OoxPdfInputKind.Auto);
+    }
+
+    public static OoxPdfInputKind DetectInputKind(string inputPath, OoxPdfInputKind requestedKind)
     {
         if (requestedKind is OoxPdfInputKind.Pptx or OoxPdfInputKind.Docx)
         {

@@ -161,7 +161,7 @@ internal sealed partial class PptxRenderer
         WorkbookRange
     }
 
-    private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha, string? PatternPreset = null, RgbColor? BackgroundColor = null);
+    private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha, string? PatternPreset, RgbColor? BackgroundColor);
 
     private readonly record struct ChartRectangle(double X, double Y, double Width, double Height);
 

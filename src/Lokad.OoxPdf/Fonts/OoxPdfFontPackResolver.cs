@@ -32,7 +32,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         string packId,
         Uri sourceUri,
         HttpClient httpClient,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packId);
         ArgumentNullException.ThrowIfNull(sourceUri);
@@ -400,7 +400,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
         public string StableId => "ooxpdf-font-pack:" + packId + ":" + file.Sha256;
 
-        public async ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
+        public async ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
         {
             if (cachedBytes is ReadOnlyMemory<byte> cached)
             {

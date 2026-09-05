@@ -21,7 +21,7 @@ internal static class OoxXml
         return long.Parse(value, CultureInfo.InvariantCulture);
     }
 
-    public static long ParseOptionalLong(XElement element, string name, long defaultValue = 0L)
+    public static long ParseOptionalLong(XElement element, string name, long defaultValue)
     {
         return element.Attribute(name) is { } attribute
             ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)

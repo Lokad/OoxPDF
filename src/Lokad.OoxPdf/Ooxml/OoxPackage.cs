@@ -21,14 +21,14 @@ internal sealed class OoxPackage
 
     public IReadOnlyCollection<OoxPart> Parts => parts.Values;
 
-    public static OoxPackage Open(string path, CancellationToken cancellationToken = default)
+    public static OoxPackage Open(string path, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         using FileStream stream = File.OpenRead(path);
         return Open(stream, cancellationToken);
     }
 
-    public static OoxPackage Open(Stream stream, CancellationToken cancellationToken = default)
+    public static OoxPackage Open(Stream stream, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
@@ -89,7 +89,7 @@ internal sealed class OoxPackage
         return parts.TryGetValue(OoxPath.NormalizePartName(partName), out OoxPart? part) ? part : null;
     }
 
-    public IReadOnlyList<OoxRelationship> GetRelationships(string sourcePartName, CancellationToken cancellationToken = default)
+    public IReadOnlyList<OoxRelationship> GetRelationships(string sourcePartName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         string relationshipPartName = OoxPath.GetRelationshipPartName(sourcePartName);
@@ -103,7 +103,7 @@ internal sealed class OoxPackage
         return ParseRelationships(stream, sourcePartName, cancellationToken);
     }
 
-    public static IReadOnlyList<OoxRelationship> ParseRelationships(Stream stream, string sourcePartName, CancellationToken cancellationToken = default)
+    public static IReadOnlyList<OoxRelationship> ParseRelationships(Stream stream, string sourcePartName, CancellationToken cancellationToken)
     {
 
         XDocument document = SafeXml.Load(stream, cancellationToken);

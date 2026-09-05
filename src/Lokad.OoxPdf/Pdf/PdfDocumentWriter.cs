@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal sealed class PdfDocumentWriter
 {
-    public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken = default)
+    public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(stream);
         if (pages.Count == 0)
@@ -495,7 +495,7 @@ internal sealed class PdfDocumentWriter
             $"<< /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(start.Red)} {FormatColor(start.Green)} {FormatColor(start.Blue)}] /C1 [{FormatColor(end.Red)} {FormatColor(end.Green)} {FormatColor(end.Blue)}] /N 1 >>");
     }
 
-    private static byte[] Compress(ReadOnlySpan<byte> bytes, CancellationToken cancellationToken = default)
+    private static byte[] Compress(ReadOnlySpan<byte> bytes, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var output = new MemoryStream();

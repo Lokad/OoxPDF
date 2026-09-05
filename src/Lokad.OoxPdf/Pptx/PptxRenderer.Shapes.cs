@@ -1065,8 +1065,8 @@ internal sealed partial class PptxRenderer
                 tip,
                 (baseSample.X + normalAtBase.X * markerWidth / 2d, baseSample.Y + normalAtBase.Y * markerWidth / 2d),
                 (tip.X - direction.X * markerLength * OfficeStraightStealthLineEndNotchFactor, tip.Y - direction.Y * markerLength * OfficeStraightStealthLineEndNotchFactor),
-                (baseSample.X - normalAtBase.X * markerWidth / 2d, baseSample.Y - normalAtBase.Y * markerWidth / 2d)
-            ]);
+                (baseSample.X - normalAtBase.X * markerWidth / 2d, baseSample.Y - normalAtBase.Y * markerWidth / 2d)],
+            false);
         }
         else
         {
@@ -1075,8 +1075,8 @@ internal sealed partial class PptxRenderer
             [
                 tip,
                 (baseSample.X + normalAtBase.X * arrowHalfWidth, baseSample.Y + normalAtBase.Y * arrowHalfWidth),
-                (baseSample.X - normalAtBase.X * arrowHalfWidth, baseSample.Y - normalAtBase.Y * arrowHalfWidth)
-            ]);
+                (baseSample.X - normalAtBase.X * arrowHalfWidth, baseSample.Y - normalAtBase.Y * arrowHalfWidth)],
+            false);
         }
 
         graphics.FillCurrentPath();
@@ -2514,18 +2514,18 @@ internal sealed partial class PptxRenderer
 
         if (headArrow)
         {
-            AppendOfficeArrowHeadPath(graphics, x1, y1, ux, uy, nx, ny, lineWidth);
+            AppendOfficeArrowHeadPath(graphics, x1, y1, ux, uy, nx, ny, lineWidth, false);
         }
 
         if (tailArrow)
         {
-            AppendOfficeArrowHeadPath(graphics, x2, y2, -ux, -uy, -nx, -ny, lineWidth);
+            AppendOfficeArrowHeadPath(graphics, x2, y2, -ux, -uy, -nx, -ny, lineWidth, false);
         }
 
         graphics.FillCurrentPath();
     }
 
-    private static void AppendOfficeArrowHeadPath(PdfGraphicsBuilder graphics, double tipX, double tipY, double ux, double uy, double nx, double ny, double lineWidth, bool splitTrailingCurve = false)
+    private static void AppendOfficeArrowHeadPath(PdfGraphicsBuilder graphics, double tipX, double tipY, double ux, double uy, double nx, double ny, double lineWidth, bool splitTrailingCurve)
     {
         tipX -= ux * 0.01d;
         tipY -= uy * 0.01d;
@@ -2714,7 +2714,7 @@ internal sealed partial class PptxRenderer
             AppendClosedLinePath(graphics, path.Value.Points, explicitClosingLine: true);
             if (path.Value.TailSubpath is { } tailSubpath)
             {
-                AppendClosedLinePath(graphics, tailSubpath);
+                AppendClosedLinePath(graphics, tailSubpath, false);
             }
 
             graphics.FillCurrentPath();
@@ -2851,7 +2851,7 @@ internal sealed partial class PptxRenderer
         return bodySamples;
     }
 
-    private static void AppendClosedLinePath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, bool explicitClosingLine = false)
+    private static void AppendClosedLinePath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, bool explicitClosingLine)
     {
         if (points.Count == 0)
         {
@@ -2969,7 +2969,7 @@ internal sealed partial class PptxRenderer
             double uy = -awayDirection.Y / length;
             double nx = -uy;
             double ny = ux;
-            AppendOfficeArrowHeadPath(graphics, tipX, tipY, ux, uy, nx, ny, lineWidth);
+            AppendOfficeArrowHeadPath(graphics, tipX, tipY, ux, uy, nx, ny, lineWidth, false);
             graphics.FillCurrentPath();
             return;
         }

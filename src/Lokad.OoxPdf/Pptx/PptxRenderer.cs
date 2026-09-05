@@ -14,12 +14,12 @@ internal sealed partial class PptxRenderer
 {
     private readonly PresentationFontResolver fontResolver;
 
-    public PptxRenderer(IFontResolver? fontResolver = null)
+    public PptxRenderer(IFontResolver? fontResolver)
     {
         this.fontResolver = new PresentationFontResolver(fontResolver);
     }
 
-    public IReadOnlyList<PdfPage> RenderBlankPages(PptxDocument document, CancellationToken cancellationToken = default)
+    public IReadOnlyList<PdfPage> RenderBlankPages(PptxDocument document, CancellationToken cancellationToken)
     {
         var pages = new PdfPage[document.Slides.Count];
         for (int i = 0; i < pages.Length; i++)
@@ -31,7 +31,7 @@ internal sealed partial class PptxRenderer
         return pages;
     }
 
-    public IReadOnlyList<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null, CancellationToken cancellationToken = default)
+    public IReadOnlyList<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<PdfPage>(document.Slides.Count);
@@ -65,7 +65,7 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
             cancellationToken.ThrowIfCancellationRequested();
-            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, cancellationToken: cancellationToken);
+            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken: cancellationToken);
             RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.MasterPartName, context.MasterColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
             RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.LayoutPartName, context.LayoutColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
             RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlidePartName, context.SlideColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken);
@@ -82,7 +82,7 @@ internal sealed partial class PptxRenderer
         int slideIndex,
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (slideIndex < 0 || slideIndex >= document.Slides.Count)
@@ -99,7 +99,7 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        return CreateRenderContext(document, scene.Theme, slide, slideXml, sceneSlide, new PresentationFontResolver(), imageCache, diagnosticSink, cancellationToken);
+        return CreateRenderContext(document, scene.Theme, slide, slideXml, sceneSlide, new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
     }
 
     private static PptxRenderContext CreateRenderContext(

@@ -18,7 +18,7 @@ internal sealed partial class PptxRenderer
         ref int imageIndex,
         GroupTransform transform,
         bool renderPlaceholders,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         foreach (PptxSceneNode node in nodes)
         {

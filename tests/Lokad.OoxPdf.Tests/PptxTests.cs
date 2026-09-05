@@ -525,10 +525,10 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSnapshot sceneSnapshot = PptxRenderer.InspectScene(document, package);
 
         TestAssert.Equal(1, scene.Slides.Count);
@@ -1703,9 +1703,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneNode shapeNode = scene.Slides[0].SlideNodes[0];
         PptxSceneNodeSnapshot shapeSnapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
         string pdf = File.ReadAllText(output, Encoding.ASCII);
@@ -1758,9 +1758,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(scene.Slides[0].SlideNodes[0].Shape?.Line.HasLine == true, "Expected explicit <a:ln> to produce a scene line.");
         TestAssert.Equal(0.75d, scene.Slides[0].SlideNodes[0].Shape?.Line.Width ?? 0d);
@@ -1833,9 +1833,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(scene.Slides[0].SlideNodes[0].Shape?.Line.HasLine == true, "Expected style line color to complete the explicit connector line.");
         TestAssert.Equal(1d, scene.Slides[0].SlideNodes[0].Shape?.Line.Width ?? 0d);
@@ -3373,8 +3373,8 @@ internal static class PptxTests
         TestAssert.Contains("/F1 9.96 Tf", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(9.96d, frame.Paragraphs[0].Runs[0].FontSize);
 
@@ -3475,8 +3475,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         IReadOnlyList<PptxTextFrameModelSnapshot> frames = PptxRenderer.InspectTextFrameModels(document, package, 0);
 
         PptxTextFrameModelSnapshot rect = frames.Single(frame => frame.Paragraphs[0].Runs[0].Text == "RECT");
@@ -3535,8 +3535,8 @@ internal static class PptxTests
         TestAssert.Contains("/F1 9.96 Tf", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(10d, frame.Paragraphs[0].Runs[0].FontSize);
 
@@ -3607,8 +3607,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         Dictionary<double, double> grid = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
             .ToDictionary(run => run.LayoutFontSize, run => run.PdfFontSize);
@@ -3753,8 +3753,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Runs)
@@ -3819,8 +3819,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextRunModelSnapshot linkRun = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Runs)
@@ -3949,8 +3949,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(14.4d, frame.InsetLeft);
@@ -4027,8 +4027,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Unknown", frame.Orientation);
@@ -4069,8 +4069,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(7.2d, frame.InsetLeft);
@@ -4155,8 +4155,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(72d, frame.InsetLeft);
@@ -4262,8 +4262,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Top", frame.VerticalAnchor);
@@ -4332,8 +4332,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(2, frame.InheritedPlaceholderCount);
@@ -4373,8 +4373,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextRunModelSnapshot[] runs = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .Single()
@@ -4454,8 +4454,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.True(frame.Paragraphs[0].HasManualLineBreak, "Expected literal line-feed text to preserve manual line-break state.");
@@ -4501,8 +4501,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.True(frame.Paragraphs[0].HasVisibleContent, "Expected the text model to preserve paragraph-visible-content state.");
@@ -4551,8 +4551,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -4579,8 +4579,8 @@ internal static class PptxTests
         }
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -4632,8 +4632,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFlowFrameSnapshot flowFrame = PptxRenderer.InspectTextFlow(document, package, 0).Frames.Single();
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
@@ -4677,8 +4677,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -4725,8 +4725,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, 0).ToArray();
@@ -4782,8 +4782,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, 0).ToArray();
         TestAssert.Equal(2, models.Length);
@@ -4841,8 +4841,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         OpenTypeFont font = OpenTypeFont.Load(arial);
@@ -4881,8 +4881,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         double expectedOffset = (frame.TextHeight - 18d * 1.2d * 0.9d) / 2d;
@@ -4915,8 +4915,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -4952,8 +4952,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -4996,8 +4996,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5041,8 +5041,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5080,8 +5080,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5116,8 +5116,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5154,8 +5154,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5201,8 +5201,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameLayoutSnapshot[] frames = PptxRenderer.InspectTextLayout(document, package, 0).Frames.ToArray();
         PptxTextLineLayoutSnapshot[] controlLines = frames[0].Paragraphs.SelectMany(paragraph => paragraph.Lines).ToArray();
@@ -5238,8 +5238,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5463,8 +5463,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         PptxTextParagraphModelSnapshot paragraph = frame.Paragraphs.Single();
@@ -5496,8 +5496,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5541,8 +5541,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5583,8 +5583,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5623,8 +5623,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -5735,8 +5735,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .Single()
@@ -5781,8 +5781,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .Single()
@@ -5828,8 +5828,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .Single()
@@ -5885,8 +5885,8 @@ internal static class PptxTests
 
         string wideInput = WritePackage(12000000);
         using FileStream wideStream = File.OpenRead(wideInput);
-        OoxPackage widePackage = OoxPackage.Open(wideStream);
-        PptxDocument wideDocument = new PptxReader().Read(widePackage);
+        OoxPackage widePackage = OoxPackage.Open(wideStream, CancellationToken.None);
+        PptxDocument wideDocument = new PptxReader().Read(widePackage, CancellationToken.None);
         PptxTextFrameModelSnapshot wideFrame = PptxRenderer.InspectTextFrameModels(wideDocument, widePackage, 0).Single();
         PptxTextLineLayoutSnapshot wideLine = PptxRenderer.InspectTextLayout(wideDocument, widePackage, 0)
             .Frames
@@ -5900,8 +5900,8 @@ internal static class PptxTests
         long narrowWidthEmu = (long)Math.Round((targetTextWidth + wideFrame.InsetLeft + wideFrame.InsetRight) * emusPerPoint);
         string narrowInput = WritePackage(narrowWidthEmu);
         using FileStream narrowStream = File.OpenRead(narrowInput);
-        OoxPackage narrowPackage = OoxPackage.Open(narrowStream);
-        PptxDocument narrowDocument = new PptxReader().Read(narrowPackage);
+        OoxPackage narrowPackage = OoxPackage.Open(narrowStream, CancellationToken.None);
+        PptxDocument narrowDocument = new PptxReader().Read(narrowPackage, CancellationToken.None);
         PptxTextFrameModelSnapshot narrowFrame = PptxRenderer.InspectTextFrameModels(narrowDocument, narrowPackage, 0).Single();
         PptxTextLineLayoutSnapshot[] narrowLines = PptxRenderer.InspectTextLayout(narrowDocument, narrowPackage, 0)
             .Frames
@@ -5955,8 +5955,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .Single()
@@ -6013,8 +6013,8 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             IReadOnlyList<PptxTextParagraphModelSnapshot> paragraphs = PptxRenderer.InspectTextFrameModels(document, package, 0)
                 .Single()
                 .Paragraphs;
@@ -6068,8 +6068,8 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxTextFrameLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0).Frames.Single();
             string[] bulletTexts = layout.Paragraphs
                 .SelectMany(paragraph => paragraph.Lines)
@@ -6188,8 +6188,8 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
                 .Single()
                 .Paragraphs
@@ -6272,8 +6272,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextSpanLayoutSnapshot span = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames.SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
@@ -6313,8 +6313,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
 
         string expected = "A" + char.ConvertFromUtf32(0x4E2D) + "B";
@@ -6386,8 +6386,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Microsoft YaHei", frame.Paragraphs[0].Runs[0].Typeface);
@@ -6395,7 +6395,7 @@ internal static class PptxTests
         TestAssert.Equal("Tahoma", frame.Paragraphs[0].Runs[2].Typeface);
         TestAssert.Equal("MinorComplexScript", frame.Paragraphs[0].Runs[2].TypefaceSource);
 
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneTextParagraph sceneParagraph = scene.Slides[0].SlideNodes[0].TextBody!.Paragraphs[0];
         TestAssert.Equal("Microsoft YaHei", sceneParagraph.Runs[0].ResolvedStyle.Typeface ?? string.Empty);
         TestAssert.Equal(PptxThemeTypefaceSource.MajorEastAsian, sceneParagraph.Runs[0].ResolvedStyle.TypefaceSource);
@@ -6494,8 +6494,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-centered-bold-cambria-width.pptx");
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
         PptxTextGlyphRunSnapshot bold = glyphRuns.Single(run => run.FrameIndex == 0);
@@ -6568,8 +6568,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-cambria-math-dense-wrap-probe.pptx");
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -6592,8 +6592,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-highlighted-headline-runs.pptx");
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -6660,8 +6660,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-boundary-invariance-probe.pptx");
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
         string[] glyphRunTexts = glyphRuns.Select(run => run.Text).ToArray();
@@ -6732,8 +6732,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -6779,7 +6779,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(times), "To".Select(c => (int)c));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(times), "To".Select(c => (int)c), CancellationToken.None);
         string expected = "[<" + embedded.EncodeGlyphHex("T") + "><" + embedded.EncodeGlyphHex("o") + ">] TJ";
         TestAssert.Contains(expected, pdf);
     }
@@ -6820,8 +6820,8 @@ internal static class PptxTests
         TestAssert.Contains("30 Tc", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single();
         TestAssert.Equal(30d, glyphRun.LayoutCharacterSpacing);
         TestAssert.Equal(30d, glyphRun.PdfCharacterSpacing);
@@ -6904,8 +6904,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single();
         TestAssert.True(glyphRun.TableRowIndex == 0, "Expected the inspected run to come from the table cell.");
         TestAssert.True(Math.Abs(glyphRun.PdfCharacterSpacing) < 0.001d, $"Expected table text to keep residual PDF spacing in TJ positioning instead of promoting it to Tc, got {glyphRun.PdfCharacterSpacing.ToString("0.###", CultureInfo.InvariantCulture)}.");
@@ -7016,8 +7016,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextSpanLayoutSnapshot[] spans = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7094,8 +7094,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot firstLine = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames.Single()
@@ -7227,8 +7227,8 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
                 .SelectMany(frame => frame.Paragraphs)
                 .SelectMany(paragraph => paragraph.Runs)
@@ -7308,8 +7308,8 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
                 .SelectMany(frame => frame.Paragraphs)
                 .SelectMany(paragraph => paragraph.Runs)
@@ -7355,8 +7355,8 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
                 .SelectMany(frame => frame.Paragraphs)
                 .SelectMany(paragraph => paragraph.Runs)
@@ -7443,8 +7443,8 @@ internal static class PptxTests
         TestAssert.Contains(" re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single(run => run.Text == "Strike");
         TestAssert.True(glyphRun.StrikeWidth is not null && glyphRun.StrikeHeight is not null, "Expected glyph-run inspection to expose strike geometry.");
         TestAssert.True(Math.Abs(glyphRun.StrikeWidth.GetValueOrDefault() - glyphRun.Width) < 0.01d, "Expected strike geometry to be owned by the emitted glyph-run width.");
@@ -7626,8 +7626,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7668,8 +7668,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
@@ -7713,8 +7713,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7758,8 +7758,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7800,8 +7800,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7842,8 +7842,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         string emittedText = string.Concat(PptxRenderer.InspectTextGlyphRuns(document, package, 0).Select(run => run.Text));
 
@@ -7861,8 +7861,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-spautofit-headline-wrap-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7894,8 +7894,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-bold-wrap-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         string[] renderedLines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7919,8 +7919,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-trailing-emphasis-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -7972,8 +7972,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8053,8 +8053,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         IReadOnlyList<PptxTextLineLayoutSnapshot> lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8091,8 +8091,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8134,8 +8134,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8196,8 +8196,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8247,8 +8247,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextBaselineMetricSnapshot metric = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8292,8 +8292,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextBaselineMetricSnapshot metric = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8337,8 +8337,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextBaselineMetricSnapshot metric = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8384,8 +8384,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8437,8 +8437,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8487,8 +8487,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         int[] columnCounts = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8541,8 +8541,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         int[] columnCounts = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8586,8 +8586,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8632,8 +8632,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot model = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
@@ -8722,8 +8722,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] secondParagraphLines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8770,8 +8770,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8814,8 +8814,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
             .Frames
@@ -8900,8 +8900,8 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             string[] glyphRunTexts = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
                 .Select(run => run.Text)
                 .ToArray();
@@ -8935,8 +8935,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-03-text-anchor-overflow.pptx");
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         string[] glyphRunTexts = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
             .Select(run => run.Text)
@@ -9020,8 +9020,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
 
@@ -9148,8 +9148,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-justify-port.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextLineLayoutSnapshot justifiedLine = layout.Frames
@@ -9204,8 +9204,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-alignment-values-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, 0);
         string[] alignments = flow.Frames
@@ -9249,8 +9249,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-spautofit-tracking-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, 0);
         PptxTextFlowRunSnapshot[] runs = flow.Frames
@@ -9294,8 +9294,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-highlight-single.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
 
@@ -9317,8 +9317,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-highlighted-headline-runs.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
 
@@ -9340,8 +9340,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-spautofit-tracking-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
             .First(run => run.Glyphs.Count > 2);
@@ -9364,8 +9364,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-spautofit-tracking-narrow-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
         PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
@@ -9394,8 +9394,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-slide3-narrow-cambria-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
         PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
@@ -9424,8 +9424,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-spautofit-numbered-tc-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
         Dictionary<double, int> buckets = glyphRuns
@@ -9453,8 +9453,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-noautofit-numbered-tc-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
         Dictionary<double, int> buckets = glyphRuns
@@ -9483,8 +9483,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-spautofit-numbered-run-split-tc-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
         Dictionary<double, int> buckets = glyphRuns
@@ -9536,8 +9536,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFlowRunSnapshot[] flowRuns = PptxRenderer.InspectTextFlow(document, package, 0)
             .Frames
@@ -9576,8 +9576,8 @@ internal static class PptxTests
             "Cases",
             "pptx-ladder-04-typography-punctuation-boundaries.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         string[] firstLineTexts = layout.Frames
@@ -9622,8 +9622,8 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         string[] firstLineTexts = layout.Frames
@@ -9653,8 +9653,8 @@ internal static class PptxTests
             ? parsed
             : 0;
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, slideIndex);
         PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, slideIndex);
         PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, slideIndex).ToArray();
@@ -10175,8 +10175,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
         PptxSceneSlideSnapshot slide = snapshot.Slides[0];
 
@@ -10401,9 +10401,9 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneNode node = scene.Slides[0].SlideNodes[0];
         PptxSceneRunStyle style = node.TextBody!.Paragraphs[0].Runs[0].ResolvedStyle;
 
@@ -10767,8 +10767,8 @@ internal static class PptxTests
         AssertContainsTextMatrixAtX(pdf, 79.2d);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextFrameModelSnapshot textFrame = PptxRenderer.InspectTextFrameModels(document, package, 0)
             .Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Slide title")));
         TestAssert.True(textFrame.InheritedPlaceholderCount >= 1, "Expected text model to expose inherited placeholder participation.");
@@ -10930,8 +10930,8 @@ internal static class PptxTests
         TestAssert.Contains("71 395 146 74 re S", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxSceneNodeSnapshot picture = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes.Single();
         TestAssert.True(picture.HasPicture, "Expected scene inspection to identify the picture node.");
         TestAssert.True(picture.PictureHasLine, "Expected scene inspection to expose the picture outline.");
@@ -12148,9 +12148,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneNode textNode = scene.Slides[0].SlideNodes[0];
         PptxSceneNode coverNode = scene.Slides[0].SlideNodes[1];
         PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
@@ -12206,9 +12206,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[0];
         PptxSceneNode unknownGraphicFrame = sceneSlide.SlideNodes[1];
         PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[1];
@@ -12569,8 +12569,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxTextFrameModelSnapshot[] tableFrames = PptxRenderer.InspectTableTextFrameModels(document, package, 0).ToArray();
 
         TestAssert.Equal(2, tableFrames.Length);
@@ -12617,8 +12617,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot[] tableFrames = PptxRenderer.InspectTableTextFrameModels(document, package, 0).ToArray();
         TestAssert.Equal(2, tableFrames.Length);
@@ -13117,9 +13117,9 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
-            PptxSceneTableCell cell = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Table?.Rows[0].Cells[0]
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            PptxSceneTableCell cell = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Table?.Rows[0].Cells[0]
                 ?? throw new InvalidOperationException("Expected table cell scene node.");
 
             TestAssert.Equal(1, cell.LeadingEmptyTextParagraphCount);
@@ -13245,8 +13245,8 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
             .Where(run => run.Text.Contains("Next", StringComparison.Ordinal) || run.Text.Contains("up", StringComparison.Ordinal))
@@ -15765,9 +15765,9 @@ internal static class PptxTests
 
         OoxPdfConverter.Convert(input, output);
 
-        OoxPackage package = OoxPackage.Open(input);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneChart chart = scene.Slides[0].SlideNodes.Select(node => node.Chart).First(chartNode => chartNode is not null)!;
         TestAssert.Equal(0.35d, chart.Title.TextRuns[0].TextStyle.Alpha ?? 0d);
 
@@ -16636,9 +16636,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneChartTitle? sceneTitle = scene.Slides[0].SlideNodes[0].Chart?.Title;
         TestAssert.Equal("Series", sceneTitle?.Text ?? string.Empty);
         TestAssert.True(sceneTitle?.IsAutoGenerated == true, "Expected the typed scene chart model to own auto-title inference.");
@@ -19585,9 +19585,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        OoxPackage package = OoxPackage.Open(input);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneChart lineChartScene = scene.Slides[0].SlideNodes
             .Select(node => node.Chart)
             .First(chart => chart?.TargetPartName == "/ppt/charts/chart1.xml")!;
@@ -19988,7 +19988,7 @@ internal static class PptxTests
         object date1904Workbook = Activator.CreateInstance(workbookType, [sheets, true]) ?? throw new InvalidOperationException("Expected date1904 workbook instance.");
         TestAssert.True((bool?)date1904Property.GetValue(date1904Workbook) == true, "Expected workbook date1904 metadata to survive construction.");
         using MemoryStream embeddedWorkbookStream = new(EmbeddedChartWorkbook());
-        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream);
+        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
         var readWorkbookData = typeof(PptxRenderer).GetMethod(
             "ReadWorkbookData",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
@@ -20476,7 +20476,7 @@ internal static class PptxTests
         TestAssert.True((bool?)blankWorkbookCell.GetType().GetProperty("HasCell")?.GetValue(blankWorkbookCell) == false, "Expected missing workbook source cells to preserve HasCell=false.");
 
         using MemoryStream embeddedWorkbookStream = new(EmbeddedChartWorkbook());
-        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream);
+        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
         var readWorkbookData = typeof(PptxRenderer).GetMethod(
             "ReadWorkbookData",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
@@ -21465,7 +21465,7 @@ internal static class PptxTests
                 </cs:colorStyle>
                 """)
         });
-        PptxSceneChart chart = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Chart
+        PptxSceneChart chart = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Chart
             ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
 
@@ -21531,7 +21531,7 @@ internal static class PptxTests
                 """)
         });
 
-        PptxSceneChart chart = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Chart
+        PptxSceneChart chart = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Chart
             ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneChartStyleEntry legendStyle = chart.StylePart.Entries.FirstOrDefault(entry => entry.Role == "legend");
 
@@ -21661,9 +21661,9 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[0];
         TestAssert.True(sceneSlide.SlideNodes.Any(node => node.Picture?.HasVideo == true), "Expected video provenance to be owned by the scene picture.");
         TestAssert.True(sceneSlide.SlideNodes.Any(node => node.Picture?.HasAudio == true), "Expected audio provenance to be owned by the scene picture.");
@@ -21714,9 +21714,9 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[0];
         TestAssert.True(sceneSlide.SlideNodes.Any(node => node.IsSmartArtGraphicFrame), "Expected SmartArt classification to be owned by the scene node.");
 
@@ -21761,9 +21761,9 @@ internal static class PptxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[0];
         TestAssert.True(sceneSlide.HasTransition, "Expected transition provenance to be owned by the scene slide.");
         TestAssert.True(sceneSlide.HasTiming, "Expected timing provenance to be owned by the scene slide.");
@@ -21818,9 +21818,9 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[0];
         PptxSceneNode sceneNode = sceneSlide.SlideNodes[0];
         TestAssert.True(sceneNode.Shape?.HasUnsupportedTransparency == true, "Expected unsupported alpha provenance to be owned by the scene shape.");
@@ -21912,9 +21912,9 @@ internal static class PptxTests
                 """
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[0];
         TestAssert.True(
             sceneSlide.LayoutNodes.Any(node => node.Shape?.HasUnsupportedTransparency == true),
@@ -22040,7 +22040,7 @@ internal static class PptxTests
                 </a:theme>
                 """)
         });
-        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutEffects = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -22081,9 +22081,9 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
-            PptxSceneShape shape = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Shape
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            PptxSceneShape shape = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Shape
                 ?? throw new InvalidOperationException("Expected shape scene node.");
             PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
 
@@ -22130,7 +22130,7 @@ internal static class PptxTests
             </c:chartSpace>
             """;
         (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
-        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         PptxSceneChart chart = sceneSlide.SlideNodes[0].Chart
             ?? throw new InvalidOperationException("Expected chart scene node.");
 
@@ -22182,7 +22182,7 @@ internal static class PptxTests
             </c:chartSpace>
             """;
         (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
-        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         PptxSceneChart chart = sceneSlide.SlideNodes[0].Chart
             ?? throw new InvalidOperationException("Expected chart scene node.");
 
@@ -22229,9 +22229,9 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
-            PptxSceneShape shape = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Shape
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            PptxSceneShape shape = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Shape
                 ?? throw new InvalidOperationException("Expected shape scene node.");
             PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
 
@@ -22275,9 +22275,9 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
-            PptxSceneTextBody textBody = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].TextBody
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            PptxSceneTextBody textBody = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].TextBody
                 ?? throw new InvalidOperationException("Expected shape text body scene node.");
             PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
 
@@ -22311,7 +22311,7 @@ internal static class PptxTests
             </c:chartSpace>
             """;
         (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
-        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         TestAssert.Equal("futureVert", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.OrientationValue ?? string.Empty);
         TestAssert.Equal("ellipsis", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.VerticalOverflowValue ?? string.Empty);
         PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
@@ -22374,7 +22374,7 @@ internal static class PptxTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [new PptxSceneBuilder().Build(document, package).Slides[0], slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0], slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink]);
 
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Chart legend/data-label ellipsis defaults should not warn unless an overflowing chart text-frame surface is unsupported.");
     }
@@ -22428,9 +22428,9 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
-            PptxSceneTableCell cell = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Table?.Rows[0].Cells[0]
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            PptxSceneTableCell cell = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Table?.Rows[0].Cells[0]
                 ?? throw new InvalidOperationException("Expected table cell scene node.");
 
             TestAssert.True(cell.HasUnsupportedTextOrientation, "Expected unsupported table-cell text orientation state to remain scene-owned.");
@@ -22473,9 +22473,9 @@ internal static class PptxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            PptxDocument document = new PptxReader().Read(package);
-            PptxScene scene = new PptxSceneBuilder().Build(document, package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
             PptxSceneShape shape = scene.Slides[0].SlideNodes[0].Shape ?? throw new InvalidOperationException("Expected shape scene node.");
             TestAssert.True(shape.CustomGeometry.HasGeometry, "Expected the supported custom path to remain parsed.");
             TestAssert.True(shape.CustomGeometry.HasUnsupportedGeometry, "Expected unsupported custom path provenance to remain scene-owned.");
@@ -22581,7 +22581,7 @@ internal static class PptxTests
     private static PptxScene BuildSingleChartPackageScene(string chartXml)
     {
         (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
-        return new PptxSceneBuilder().Build(document, package);
+        return new PptxSceneBuilder().Build(document, package, CancellationToken.None);
     }
 
     private static (PptxDocument Document, OoxPackage Package) BuildSingleChartPackage(
@@ -22627,8 +22627,8 @@ internal static class PptxTests
         string input = TestFixtures.WriteTempPackage(".pptx", parts);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        PptxDocument document = new PptxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         return (document, package);
     }
 

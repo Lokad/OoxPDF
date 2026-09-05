@@ -2,7 +2,7 @@ namespace Lokad.OoxPdf.Fonts;
 
 internal static class FontProgramLoader
 {
-    public static OpenTypeFont? Load(FontFaceResolution? resolution, CancellationToken cancellationToken = default)
+    public static OpenTypeFont? Load(FontFaceResolution? resolution, CancellationToken cancellationToken)
     {
         if (resolution is null)
         {

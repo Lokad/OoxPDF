@@ -29,12 +29,12 @@ internal static class OoxmlTests
             ["ppt/slides/slide1.xml"] = "<p:sld xmlns:p=\"p\"/>"
         });
 
-        OoxPackage package = OoxPackage.Open(packageStream);
+        OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
 
         OoxPart presentation = TestAssert.NotNull(package.GetPart("/ppt/presentation.xml"));
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml", presentation.ContentType);
 
-        IReadOnlyList<OoxRelationship> relationships = package.GetRelationships("/");
+        IReadOnlyList<OoxRelationship> relationships = package.GetRelationships("/", CancellationToken.None);
         TestAssert.Equal(1, relationships.Count);
         TestAssert.Equal("/ppt/presentation.xml", relationships[0].ResolvedTarget);
     }

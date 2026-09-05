@@ -7,7 +7,7 @@ internal sealed class PresentationFontResolver
     private readonly IFontCatalog fontCatalog;
     private readonly Dictionary<string, OpenTypeFont?> openTypeFonts = new(StringComparer.OrdinalIgnoreCase);
 
-    public PresentationFontResolver(IFontResolver? primary = null)
+    public PresentationFontResolver(IFontResolver? primary)
     {
         this.primary = primary ?? new WindowsFontResolver();
         windowsCatalog = this.primary as WindowsFontResolver ?? new WindowsFontResolver();
@@ -26,7 +26,7 @@ internal sealed class PresentationFontResolver
             : primary.Resolve(request);
     }
 
-    public (FontFaceResolution Resolution, OpenTypeFont Font)? ResolvePresentationOpenTypeFont(FontRequest request, CancellationToken cancellationToken = default)
+    public (FontFaceResolution Resolution, OpenTypeFont Font)? ResolvePresentationOpenTypeFont(FontRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         FontFaceResolution resolution = ResolvePresentationTextFace(request);
@@ -39,7 +39,7 @@ internal sealed class PresentationFontResolver
         return fontCatalog.GetDiscoveredFonts();
     }
 
-    private OpenTypeFont? LoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken = default)
+    private OpenTypeFont? LoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);

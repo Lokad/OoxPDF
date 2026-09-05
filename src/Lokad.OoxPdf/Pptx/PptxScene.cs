@@ -1668,17 +1668,17 @@ internal readonly record struct PptxSceneImageRecolor(
             null);
     }
 
-    public static PptxSceneImageRecolor Duotone(RgbColor dark, RgbColor light, string? kindValue = "duotone")
+    public static PptxSceneImageRecolor Duotone(RgbColor dark, RgbColor light, string? kindValue)
     {
         return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Duotone, 0d, 0d, dark, light, 0d, kindValue, null, null, null);
     }
 
-    public static PptxSceneImageRecolor Grayscale(string? kindValue = "grayscl")
+    public static PptxSceneImageRecolor Grayscale(string? kindValue)
     {
         return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Grayscale, 0d, 0d, default, default, 0d, kindValue, null, null, null);
     }
 
-    public static PptxSceneImageRecolor BiLevel(double threshold, string? kindValue = "biLevel", string? thresholdValue = null)
+    public static PptxSceneImageRecolor BiLevel(double threshold, string? kindValue, string? thresholdValue)
     {
         return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.BiLevel, 0d, 0d, default, default, Math.Clamp(threshold, 0d, 1d), kindValue, null, null, thresholdValue);
     }
@@ -2114,7 +2114,7 @@ internal sealed class PptxSceneBuilder
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
     private const string ChartStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartStyle";
 
-    public PptxScene Build(PptxDocument document, OoxPackage package, CancellationToken cancellationToken = default)
+    public PptxScene Build(PptxDocument document, OoxPackage package, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName, cancellationToken);
@@ -2194,7 +2194,7 @@ internal sealed class PptxSceneBuilder
         return new PptxScene(document, theme, slides);
     }
 
-    private static XDocument LoadXml(OoxPart part, CancellationToken cancellationToken = default)
+    private static XDocument LoadXml(OoxPart part, CancellationToken cancellationToken)
     {
         using Stream stream = part.OpenRead();
         return SafeXml.Load(stream, cancellationToken);
@@ -2228,7 +2228,7 @@ internal sealed class PptxSceneBuilder
         return PptxColorMap.FromElement(overrideColorMap, inheritedColorMap);
     }
 
-    private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType, CancellationToken cancellationToken = default)
+    private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? relationship = package.GetRelationships(sourcePartName, cancellationToken)
@@ -2236,7 +2236,7 @@ internal sealed class PptxSceneBuilder
         return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
-    private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(OoxPackage package, string sourcePartName, CancellationToken cancellationToken = default)
+    private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(OoxPackage package, string sourcePartName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return package.GetRelationships(sourcePartName, cancellationToken)
@@ -2251,7 +2251,7 @@ internal sealed class PptxSceneBuilder
         PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
@@ -2281,7 +2281,7 @@ internal sealed class PptxSceneBuilder
         PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement child in container.Elements())
@@ -2428,10 +2428,10 @@ internal sealed class PptxSceneBuilder
         }
 
         return new PptxSceneBounds(
-            OoxXml.ParseOptionalLong(offset, "x"),
-            OoxXml.ParseOptionalLong(offset, "y"),
-            OoxXml.ParseOptionalLong(extents, "cx"),
-            OoxXml.ParseOptionalLong(extents, "cy"),
+            OoxXml.ParseOptionalLong(offset, "x", 0L),
+            OoxXml.ParseOptionalLong(offset, "y", 0L),
+            OoxXml.ParseOptionalLong(extents, "cx", 0L),
+            OoxXml.ParseOptionalLong(extents, "cy", 0L),
             transform.Attribute("rot") is { } rotation ? long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d : 0d,
             OoxXml.ReadBool(transform, "flipH"),
             OoxXml.ReadBool(transform, "flipV"));
@@ -2521,7 +2521,7 @@ internal sealed class PptxSceneBuilder
         PptxTheme theme,
         PptxColorMap colorMap,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? graphicData = frame
@@ -2800,7 +2800,7 @@ internal sealed class PptxSceneBuilder
                 showBubbleSize,
                 showBubbleSizeValue,
                 ReadChartLeaderLines(label, theme, colorMap),
-                ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
+                ReadChartText(label.Element(ChartNamespace + "tx"), false) ?? string.Empty,
                 ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme, colorMap),
                 ParseChartDataLabelPosition(ReadChartElementValue(label, "dLblPos")),
                 ReadChartElementValue(label, "dLblPos"),
@@ -2923,7 +2923,7 @@ internal sealed class PptxSceneBuilder
         return (string?)element?.Attribute("val");
     }
 
-    internal static (int? Value, string RawValue) ReadChartPointIndexAttribute(XElement? point, bool requireNonNegative = false)
+    internal static (int? Value, string RawValue) ReadChartPointIndexAttribute(XElement? point, bool requireNonNegative)
     {
         string value = (string?)point?.Attribute("idx") ?? string.Empty;
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
@@ -3262,7 +3262,7 @@ internal sealed class PptxSceneBuilder
 
     private static string? ReadChartSeriesName(XElement series)
     {
-        return ReadChartText(series.Element(ChartNamespace + "tx"));
+        return ReadChartText(series.Element(ChartNamespace + "tx"), false);
     }
 
     private static PptxSceneChartSeriesDataSources ReadChartSeriesDataSources(XElement series)
@@ -3309,7 +3309,7 @@ internal sealed class PptxSceneBuilder
         return default;
     }
 
-    internal static string? ReadChartText(XElement? text, bool trimLiteral = false)
+    internal static string? ReadChartText(XElement? text, bool trimLiteral)
     {
         string? literal = text?
             .Descendants(ChartNamespace + "v")
@@ -3369,10 +3369,10 @@ internal sealed class PptxSceneBuilder
     {
         return ReadChartNumberPoints(series
             .Elements(ChartNamespace + elementName)
-            .Descendants(ChartNamespace + "pt"));
+            .Descendants(ChartNamespace + "pt"), false);
     }
 
-    internal static IReadOnlyList<PptxSceneChartNumberPoint> ReadChartNumberPoints(IEnumerable<XElement> sourcePoints, bool requireNonNegativeIndex = false)
+    internal static IReadOnlyList<PptxSceneChartNumberPoint> ReadChartNumberPoints(IEnumerable<XElement> sourcePoints, bool requireNonNegativeIndex)
     {
         var points = new List<PptxSceneChartNumberPoint>();
         int ordinal = 0;
@@ -3450,7 +3450,7 @@ internal sealed class PptxSceneBuilder
     {
         return ReadChartStringPoints(series
             .Elements(ChartNamespace + elementName)
-            .Descendants(ChartNamespace + "pt"));
+            .Descendants(ChartNamespace + "pt"), false);
     }
 
     private static IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> ReadChartSeriesStringLevels(XElement series, string elementName)
@@ -3458,12 +3458,12 @@ internal sealed class PptxSceneBuilder
         return series
             .Elements(ChartNamespace + elementName)
             .Descendants(ChartNamespace + "lvl")
-            .Select(level => ReadChartStringPoints(level.Elements(ChartNamespace + "pt")))
+            .Select(level => ReadChartStringPoints(level.Elements(ChartNamespace + "pt"), false))
             .Where(points => points.Count != 0)
             .ToArray();
     }
 
-    internal static IReadOnlyList<PptxSceneChartStringPoint> ReadChartStringPoints(IEnumerable<XElement> sourcePoints, bool requireNonNegativeIndex = false)
+    internal static IReadOnlyList<PptxSceneChartStringPoint> ReadChartStringPoints(IEnumerable<XElement> sourcePoints, bool requireNonNegativeIndex)
     {
         var points = new List<PptxSceneChartStringPoint>();
         int ordinal = 0;
@@ -3571,7 +3571,7 @@ internal sealed class PptxSceneBuilder
                 noMultiLevelLabelsValue,
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
-                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap)));
+                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap, null, "", null)));
         }
 
         return axes;
@@ -3912,19 +3912,19 @@ internal sealed class PptxSceneBuilder
             .FirstOrDefault();
         if (chart is null)
         {
-            return EmptyChartTitle(IsAutoDeleted: null);
+            return EmptyChartTitle(IsAutoDeleted: null, IsAutoDeletedValue: "");
         }
 
         (bool? isAutoDeleted, string isAutoDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(chart, "autoTitleDeleted");
         return ReadChartTitleElement(chart.Element(ChartNamespace + "title"), theme, colorMap, isAutoDeleted, isAutoDeletedValue, plots);
     }
 
-    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, bool? isAutoDeleted = null, string isAutoDeletedValue = "", IReadOnlyList<PptxSceneChartPlot>? plots = null)
+    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, bool? isAutoDeleted, string isAutoDeletedValue, IReadOnlyList<PptxSceneChartPlot>? plots)
     {
         return ReadChartTitleElement(title, theme, PptxColorMap.Default, isAutoDeleted, isAutoDeletedValue, plots);
     }
 
-    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, PptxColorMap colorMap, bool? isAutoDeleted = null, string isAutoDeletedValue = "", IReadOnlyList<PptxSceneChartPlot>? plots = null)
+    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, PptxColorMap colorMap, bool? isAutoDeleted, string isAutoDeletedValue, IReadOnlyList<PptxSceneChartPlot>? plots)
     {
         if (title is null)
         {
@@ -3952,7 +3952,7 @@ internal sealed class PptxSceneBuilder
 
         (bool? overlay, string overlayValue) = ReadOptionalOoxmlBooleanElementWithValue(title, "overlay");
         XElement? textElement = title?.Element(ChartNamespace + "tx");
-        string? text = ReadChartText(textElement);
+        string? text = ReadChartText(textElement, false);
 
         return new PptxSceneChartTitle(
             string.IsNullOrWhiteSpace(text) ? null : text,
@@ -3982,7 +3982,7 @@ internal sealed class PptxSceneBuilder
         return string.IsNullOrWhiteSpace(name) ? null : name;
     }
 
-    private static PptxSceneChartTitle EmptyChartTitle(bool? IsAutoDeleted, string IsAutoDeletedValue = "")
+    private static PptxSceneChartTitle EmptyChartTitle(bool? IsAutoDeleted, string IsAutoDeletedValue)
     {
         return new PptxSceneChartTitle(
             null,
@@ -4036,7 +4036,7 @@ internal sealed class PptxSceneBuilder
             ReadChartTextStyleOverride(legend, theme, colorMap));
     }
 
-    private static PptxSceneChartExternalData ReadChartExternalData(OoxPackage package, string chartPartName, XDocument? chartXml, CancellationToken cancellationToken = default)
+    private static PptxSceneChartExternalData ReadChartExternalData(OoxPackage package, string chartPartName, XDocument? chartXml, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? externalData = chartXml?.Root?.Element(ChartNamespace + "externalData");
@@ -4066,7 +4066,7 @@ internal sealed class PptxSceneBuilder
             autoUpdateValue);
     }
 
-    private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken = default)
+    private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? colorRelationship = package.GetRelationships(chartPartName, cancellationToken)
@@ -4194,7 +4194,7 @@ internal sealed class PptxSceneBuilder
         return element.Name.LocalName == "variation";
     }
 
-    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken = default)
+    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? styleRelationship = package.GetRelationships(chartPartName, cancellationToken)
@@ -4430,12 +4430,12 @@ internal sealed class PptxSceneBuilder
 
     internal static bool IsOoxmlBooleanElementEnabled(XElement? element)
     {
-        return OoxBoolean.ParseElement(element);
+        return OoxBoolean.ParseElement(element, false, null);
     }
 
     internal static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
     {
-        return OoxBoolean.ParseElement(element, defaultValue);
+        return OoxBoolean.ParseElement(element, defaultValue, null);
     }
 
     private static bool? ReadOptionalOoxmlBooleanAttribute(XElement element, string attributeName)
@@ -4860,17 +4860,17 @@ internal sealed class PptxSceneBuilder
             return PptxSceneGroupTransform.Identity;
         }
 
-        long width = OoxXml.ParseOptionalLong(extents, "cx");
-        long height = OoxXml.ParseOptionalLong(extents, "cy");
-        long childWidth = Math.Max(1, OoxXml.ParseOptionalLong(childExtents, "cx"));
-        long childHeight = Math.Max(1, OoxXml.ParseOptionalLong(childExtents, "cy"));
+        long width = OoxXml.ParseOptionalLong(extents, "cx", 0L);
+        long height = OoxXml.ParseOptionalLong(extents, "cy", 0L);
+        long childWidth = Math.Max(1, OoxXml.ParseOptionalLong(childExtents, "cx", 0L));
+        long childHeight = Math.Max(1, OoxXml.ParseOptionalLong(childExtents, "cy", 0L));
         return new PptxSceneGroupTransform(
-            OoxXml.ParseOptionalLong(offset, "x"),
-            OoxXml.ParseOptionalLong(offset, "y"),
+            OoxXml.ParseOptionalLong(offset, "x", 0L),
+            OoxXml.ParseOptionalLong(offset, "y", 0L),
             width,
             height,
-            OoxXml.ParseOptionalLong(childOffset, "x"),
-            OoxXml.ParseOptionalLong(childOffset, "y"),
+            OoxXml.ParseOptionalLong(childOffset, "x", 0L),
+            OoxXml.ParseOptionalLong(childOffset, "y", 0L),
             width / (double)childWidth,
             height / (double)childHeight,
             transform!.Attribute("rot") is { } rotation ? long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d : 0d,

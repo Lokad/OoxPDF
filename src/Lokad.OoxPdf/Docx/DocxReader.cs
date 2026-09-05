@@ -72,9 +72,9 @@ internal sealed class DocxReader
     private const double WordAutomaticParagraphSpacingPoints = 14d;
     public DocxDocument Read(
         OoxPackage package,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        CancellationToken cancellationToken = default,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final)
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken,
+        OoxPdfDocxMarkupMode markupMode)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart documentPart = FindDocumentPart(package, cancellationToken);
@@ -329,8 +329,8 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement[] paragraphs = document
@@ -376,9 +376,9 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         int? sourceParagraphIndex,
         int? sourceBlockIndex,
-        DocxRevisionInfo? revision = null,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        DocxRevisionInfo? revision,
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
         XElement? positionH = anchor.Element(WordprocessingDrawingNamespace + "positionH");
@@ -519,8 +519,8 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship>? relationships,
         DocxStyleSet? styles,
         DocxNumberingSet? numbering,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? titlePage = sectionProperties?.Element(WordprocessingNamespace + "titlePg");
@@ -622,7 +622,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (diagnosticSink is null)
         {
@@ -631,7 +631,12 @@ internal sealed class DocxReader
 
         cancellationToken.ThrowIfCancellationRequested();
         var emitted = new HashSet<string>(StringComparer.Ordinal);
-        void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored", bool approximated = false)
+        void EmitUnsupported(string id, string feature)
+        {
+            Emit(id, feature, "", "Ignored", false);
+        }
+
+        void Emit(string id, string feature, string diagnosticPartName, string fallback, bool approximated)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!emitted.Add(id))
@@ -668,7 +673,9 @@ internal sealed class DocxReader
                 Emit(
                     "DOCX_UNSUPPORTED_COMMENTS",
                     "comments",
-                    diagnosticPartName);
+                    diagnosticPartName,
+                    "Ignored",
+                    false);
             }
         }
 
@@ -680,12 +687,13 @@ internal sealed class DocxReader
                 Emit(
                     "DOCX_APPROXIMATED_TRACKED_CHANGES",
                     "tracked changes",
+                    diagnosticPartName: "",
                     fallback: "Approximated",
                     approximated: true);
             }
             else
             {
-                Emit("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
+                EmitUnsupported("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
             }
         }
 
@@ -697,6 +705,7 @@ internal sealed class DocxReader
                     ? "DOCX_APPROXIMATED_FORMATTING_REVISIONS"
                     : "DOCX_UNSUPPORTED_FORMATTING_REVISIONS",
                 "formatting revisions",
+                diagnosticPartName: "",
                 fallback: markupContext.ApproximatesFormattingRevisions ? "Approximated" : "Ignored",
                 approximated: markupContext.ApproximatesFormattingRevisions);
         }
@@ -704,50 +713,50 @@ internal sealed class DocxReader
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedComplexFields(document))
         {
-            Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field");
+            EmitUnsupported("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(MathNamespace + "oMath").Any() ||
             document.Descendants(MathNamespace + "oMathPara").Any())
         {
-            Emit("DOCX_UNSUPPORTED_EQUATION", "equation");
+            EmitUnsupported("DOCX_UNSUPPORTED_EQUATION", "equation");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(WordprocessingNamespace + "object").Any())
         {
-            Emit("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object");
+            EmitUnsupported("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(WordprocessingDrawingNamespace + "anchor").Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, relationships)))
         {
-            Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing");
+            EmitUnsupported("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(ChartNamespace + "chart").Any())
         {
-            Emit("DOCX_UNSUPPORTED_CHART", "chart drawing payload");
+            EmitUnsupported("DOCX_UNSUPPORTED_CHART", "chart drawing payload");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants().Any(element => element.Name.Namespace == DiagramNamespace))
         {
-            Emit("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload");
+            EmitUnsupported("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedVml(document, relationships))
         {
-            Emit("DOCX_UNSUPPORTED_VML", "VML drawing payload");
+            EmitUnsupported("DOCX_UNSUPPORTED_VML", "VML drawing payload");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (HasExternalDrawingImage(document, relationships))
         {
-            Emit("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image");
+            EmitUnsupported("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -757,7 +766,7 @@ internal sealed class DocxReader
                 "DOCX_APPROXIMATED_FOOTNOTE",
                 "footnote",
                 ResolveRelatedPartNameOrDefault(package, partName, FootnotesRelationshipType, FootnotesContentType, cancellationToken),
-                "Approximated");
+                "Approximated", false);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -767,19 +776,19 @@ internal sealed class DocxReader
                 "DOCX_APPROXIMATED_ENDNOTE",
                 "endnote",
                 ResolveRelatedPartNameOrDefault(package, partName, EndnotesRelationshipType, EndnotesContentType, cancellationToken),
-                "Approximated");
+                "Approximated", false);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedMultiColumnSection(document))
         {
-            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", fallback: "Explicit break-only column flow is supported");
+            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", diagnosticPartName: "", fallback: "Explicit break-only column flow is supported", approximated: false);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
         {
-            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "unsupported manual column break container", fallback: "Visible body column breaks are supported");
+            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "unsupported manual column break container", diagnosticPartName: "", fallback: "Visible body column breaks are supported", approximated: false);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -787,7 +796,7 @@ internal sealed class DocxReader
             .Elements(WordprocessingNamespace + "sectPr")
             .Any(IsUnsupportedParagraphSectionBreak))
         {
-            Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "continuous or unknown paragraph section break", fallback: "Partially supported");
+            Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "continuous or unknown paragraph section break", diagnosticPartName: "", fallback: "Partially supported", approximated: false);
         }
 
         XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, StylesContentType, out string? stylesPartName, cancellationToken);
@@ -799,12 +808,12 @@ internal sealed class DocxReader
                 .Elements(WordprocessingNamespace + "spacing")
                 .Any(HasUnsupportedParagraphSpacingVariant))
             {
-                Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated");
+                Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated", false);
             }
 
             if (HasUnsupportedTableBorderStyle(styles))
             {
-                Emit("DOCX_TABLE_BORDER_STYLE", "table border style", stylesPartName ?? partName, "Approximated");
+                Emit("DOCX_TABLE_BORDER_STYLE", "table border style", stylesPartName ?? partName, "Approximated", false);
             }
 
             if (HasUnsupportedTableCellTextDirection(styles))
@@ -816,7 +825,7 @@ internal sealed class DocxReader
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedTableBorderStyle(document))
         {
-            Emit("DOCX_TABLE_BORDER_STYLE", "table border style", partName, "Approximated");
+            Emit("DOCX_TABLE_BORDER_STYLE", "table border style", partName, "Approximated", false);
         }
 
         if (HasUnsupportedTableCellTextDirection(document))
@@ -829,7 +838,7 @@ internal sealed class DocxReader
             numbering.Descendants(WordprocessingNamespace + "lvl")
                 .Any(HasUnsupportedNumberingIndent))
         {
-            Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated");
+            Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated", false);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -837,13 +846,13 @@ internal sealed class DocxReader
             styles?.Descendants(WordprocessingNamespace + "ind").Any(HasCharacterUnitIndent) == true ||
             numbering?.Descendants(WordprocessingNamespace + "ind").Any(HasCharacterUnitIndent) == true)
         {
-            Emit("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", "character-unit paragraph indent");
+            EmitUnsupported("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", "character-unit paragraph indent");
         }
 
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
             p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
         {
-            Emit("DOCX_UNSUPPORTED_MACRO", "macro");
+            EmitUnsupported("DOCX_UNSUPPORTED_MACRO", "macro");
         }
     }
 
@@ -1439,7 +1448,7 @@ internal sealed class DocxReader
             value.Equals("inset", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName, CancellationToken cancellationToken = default)
+    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
@@ -1453,12 +1462,12 @@ internal sealed class DocxReader
         return SafeXml.Load(stream, cancellationToken);
     }
 
-    private static string ResolveRelatedPartNameOrDefault(OoxPackage package, string documentPartName, string relationshipType, string contentType, CancellationToken cancellationToken = default)
+    private static string ResolveRelatedPartNameOrDefault(OoxPackage package, string documentPartName, string relationshipType, string contentType, CancellationToken cancellationToken)
     {
         return FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken)?.Name ?? documentPartName;
     }
 
-    private static OoxPart? FindRelatedPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, CancellationToken cancellationToken = default)
+    private static OoxPart? FindRelatedPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? relationship = package.GetRelationships(documentPartName, cancellationToken)
@@ -1468,7 +1477,7 @@ internal sealed class DocxReader
             : package.GetPart(relationship.ResolvedTarget);
     }
 
-    private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken = default)
+    private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken)
     {
         XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, FontTableContentType, out _, cancellationToken);
         XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, ThemeContentType, out _, cancellationToken);
@@ -1538,8 +1547,8 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         var paragraphs = new List<DocxParagraph>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
@@ -1547,7 +1556,7 @@ internal sealed class DocxReader
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "p"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: DocxDocumentSettings.Empty, markupMode: markupMode, cancellationToken: cancellationToken);
+            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: DocxDocumentSettings.Empty, inheritedRevision: null, markupMode: markupMode, cancellationToken: cancellationToken);
             if (parsed is not null)
             {
                 paragraphs.Add(parsed);
@@ -1564,12 +1573,12 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxTableCellStyle? tableCellStyle = null,
-        Dictionary<string, int>? inlineReferenceCounters = null,
-        DocxDocumentSettings? documentSettings = null,
-        DocxRevisionInfo? inheritedRevision = null,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        DocxTableCellStyle? tableCellStyle,
+        Dictionary<string, int>? inlineReferenceCounters,
+        DocxDocumentSettings? documentSettings,
+        DocxRevisionInfo? inheritedRevision,
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -1705,7 +1714,7 @@ internal sealed class DocxReader
             }
         }
 
-        void AddRevisionRunContainer(XElement container, DocxRevisionInfo? inheritedRevision = null)
+        void AddRevisionRunContainer(XElement container, DocxRevisionInfo? inheritedRevision)
         {
             if (!IsIncludedRevisionContainer(container, markupMode))
             {
@@ -2270,7 +2279,7 @@ internal sealed class DocxReader
                 }
 
                 complexFieldStack.RemoveAt(complexFieldStack.Count - 1);
-                AddComplexFieldReference(field);
+                AddComplexFieldReference(field, null, null);
             }
         }
 
@@ -2292,7 +2301,7 @@ internal sealed class DocxReader
             complexFieldStack.Clear();
         }
 
-        void AddComplexFieldReference(DocxComplexFieldState field, string? instruction = null, string? placeholder = null)
+        void AddComplexFieldReference(DocxComplexFieldState field, string? instruction, string? placeholder)
         {
             instruction ??= field.Instruction.ToString();
             placeholder ??= ResolveFieldPlaceholder(instruction);
@@ -2653,7 +2662,8 @@ internal sealed class DocxReader
                 runStyleResolution,
                 currentSourceRunIndex,
                 textOffset,
-                revision);
+                revision,
+                revisions: null);
         }
 
         static bool IsInlineReferenceElement(XElement element)
@@ -2803,10 +2813,10 @@ internal sealed class DocxReader
         string text,
         DocxResolvedRunProperties resolvedRun,
         DocxRunStyleResolution styleResolution,
-        int sourceRunIndex = -1,
-        int sourceTextOffsetInRun = 0,
-        DocxRevisionInfo? revision = null,
-        IReadOnlyList<DocxRevisionInfo>? revisions = null)
+        int sourceRunIndex,
+        int sourceTextOffsetInRun,
+        DocxRevisionInfo? revision,
+        IReadOnlyList<DocxRevisionInfo>? revisions)
     {
         var segment = new StringBuilder();
         bool? currentComplexScript = null;
@@ -2840,8 +2850,8 @@ internal sealed class DocxReader
         bool complexScript,
         int sourceRunIndex,
         int sourceTextOffsetInRun,
-        DocxRevisionInfo? revision = null,
-        IReadOnlyList<DocxRevisionInfo>? revisions = null)
+        DocxRevisionInfo? revision,
+        IReadOnlyList<DocxRevisionInfo>? revisions)
     {
         bool bold = complexScript
             ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
@@ -3052,8 +3062,8 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         XDocument? settings,
         DocxDocumentSettings documentSettings,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         var elements = new List<DocxBodyElement>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
@@ -3081,7 +3091,7 @@ internal sealed class DocxReader
 
                 if (IsRunPageBreakOnlyParagraph(element, markupMode))
                 {
-                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                     elements.Add(DocxBodyElementFactory.CreatePageBreak("runBreak", "page", breakParagraph));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
@@ -3094,7 +3104,7 @@ internal sealed class DocxReader
 
                 if (IsRunColumnBreakOnlyParagraph(element, markupMode))
                 {
-                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                     elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column", breakParagraph));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
@@ -3114,7 +3124,7 @@ internal sealed class DocxReader
                         {
                             if (string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase))
                             {
-                                elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column"));
+                                elements.Add(DocxBodyElementFactory.CreateManualBreak("runBreak", "column", null));
                             }
                             else
                             {
@@ -3129,7 +3139,7 @@ internal sealed class DocxReader
                             continue;
                         }
 
-                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                         if (splitParagraph is not null)
                         {
                             elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part)));
@@ -3145,7 +3155,7 @@ internal sealed class DocxReader
                     continue;
                 }
 
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                 if (paragraph is not null)
                 {
                     elements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
@@ -3986,8 +3996,8 @@ internal sealed class DocxReader
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         XDocument? settings,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default,
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken,
         DocxRevisionInfo? inheritedRevision = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -4034,8 +4044,8 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         string relationshipType,
         string referenceElementName,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
@@ -4090,8 +4100,8 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         string relationshipType,
         string referenceElementName,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         var drawings = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
@@ -4133,12 +4143,12 @@ internal sealed class DocxReader
         string documentPartName,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, "Footnote", "footnote", markupMode, cancellationToken))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, "Endnote", "endnote", markupMode, cancellationToken))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, "Footnote", "footnote", markupMode, cancellationToken, null))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, "Endnote", "endnote", markupMode, cancellationToken, null))
             .ToArray();
     }
 
@@ -4147,8 +4157,8 @@ internal sealed class DocxReader
         string documentPartName,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         IReadOnlyDictionary<string, DocxCommentThreadMetadata> threadMetadataByParagraphId =
             ReadCommentThreadMetadata(package, documentPartName, cancellationToken);
@@ -4176,9 +4186,9 @@ internal sealed class DocxReader
         string contentType,
         string kind,
         string storyElementName,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default,
-        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId = null)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
@@ -4215,9 +4225,9 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default,
-        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId = null)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxBodyElement> bodyElements = ReadRelatedStoryBodyElements(
@@ -4260,7 +4270,7 @@ internal sealed class DocxReader
     private static IReadOnlyDictionary<string, DocxCommentThreadMetadata> ReadCommentThreadMetadata(
         OoxPackage package,
         string documentPartName,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, CommentsExtendedRelationshipType, CommentsExtendedContentType, cancellationToken);
@@ -4327,8 +4337,8 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement[] paragraphs = story
@@ -4371,8 +4381,8 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         var bodyElements = new List<DocxBodyElement>();
         foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(elements, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
@@ -4382,7 +4392,7 @@ internal sealed class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: null, documentSettings: null, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                 if (paragraph is not null)
                 {
                     bodyElements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
@@ -4390,7 +4400,7 @@ internal sealed class DocxReader
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, markupMode: markupMode, cancellationToken: cancellationToken, inheritedRevision: inheritedRevision);
+                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: null, markupMode: markupMode, cancellationToken: cancellationToken, inheritedRevision: inheritedRevision);
                 if (table is not null)
                 {
                     bodyElements.Add(DocxBodyElementFactory.CreateTable(table));
@@ -4407,8 +4417,8 @@ internal sealed class DocxReader
         DocxNumberingSet numbering,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default)
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
     {
         var wrapper = new XDocument(new XElement(WordprocessingNamespace + "document", new XElement(WordprocessingNamespace + "body", paragraphElements)));
         return ReadParagraphs(wrapper, styles, numbering, package, relationships, markupMode, cancellationToken);
@@ -4421,10 +4431,10 @@ internal sealed class DocxReader
         Dictionary<(string NumId, int Level), int> numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        Dictionary<string, int>? inlineReferenceCounters = null,
-        DocxDocumentSettings? documentSettings = null,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default,
+        Dictionary<string, int>? inlineReferenceCounters,
+        DocxDocumentSettings? documentSettings,
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken,
         DocxRevisionInfo? inheritedRevision = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -4652,10 +4662,10 @@ internal sealed class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxTableCellStyle tableCellStyle,
-        Dictionary<string, int>? inlineReferenceCounters = null,
-        DocxDocumentSettings? documentSettings = null,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        CancellationToken cancellationToken = default,
+        Dictionary<string, int>? inlineReferenceCounters,
+        DocxDocumentSettings? documentSettings,
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken,
         DocxRevisionInfo? inheritedRevision = null)
     {
         var elements = new List<DocxBodyElement>();
@@ -4698,7 +4708,7 @@ internal sealed class DocxReader
                         if (part.BreakValue is not null)
                         {
                             elements.Add(string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase)
-                                ? DocxBodyElementFactory.CreateManualBreak("runBreak", "column")
+                                ? DocxBodyElementFactory.CreateManualBreak("runBreak", "column", null)
                                 : DocxBodyElementFactory.CreatePageBreak("runBreak", part.BreakValue));
                             continue;
                         }
@@ -5307,7 +5317,7 @@ internal sealed class DocxReader
         return resolved;
     }
 
-    private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName, CancellationToken cancellationToken = default)
+    private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? styleRelationship = package.GetRelationships(documentPartName, cancellationToken)
@@ -5362,7 +5372,7 @@ internal sealed class DocxReader
             else if (type == "table")
             {
                 tableStyles[styleId] = ReadTableStyle(style);
-                if (OoxBoolean.ParseAttribute(style, WordprocessingNamespace + "default"))
+                if (OoxBoolean.ParseAttribute(style, WordprocessingNamespace + "default", false))
                 {
                     defaultTableStyleId = styleId;
                 }
@@ -5418,7 +5428,7 @@ internal sealed class DocxReader
             style.ConditionalRegions.Count);
     }
 
-    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken = default)
+    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? numberingRelationship = package.GetRelationships(documentPartName, cancellationToken)
@@ -5852,7 +5862,7 @@ internal sealed class DocxReader
             return null;
         }
 
-        return OoxBoolean.ParseElement(element, valueAttributeName: WordprocessingNamespace + "val");
+        return OoxBoolean.ParseElement(element, false, valueAttributeName: WordprocessingNamespace + "val");
     }
 
     private static double? ReadTwipsAttribute(XElement? element, XName name)
@@ -5939,7 +5949,7 @@ internal sealed class DocxReader
             : defaultValue;
     }
 
-    private static OoxPart FindDocumentPart(OoxPackage package, CancellationToken cancellationToken = default)
+    private static OoxPart FindDocumentPart(OoxPackage package, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? packageRelationship = package.GetRelationships("/", cancellationToken)

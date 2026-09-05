@@ -1545,7 +1545,7 @@ internal sealed class DocxLayoutEngine
         double Scale,
         IReadOnlyList<double> ResolvedColumnWidths);
 
-    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode)
     {
         reserveMarkupMargin = markupGeometryMode is OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin or OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         paragraphSpacingScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
@@ -1553,14 +1553,14 @@ internal sealed class DocxLayoutEngine
             : 1d;
     }
 
-    public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded, CancellationToken cancellationToken = default)
+    public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IDocxTextMeasurer? textMeasurer = embedded is null ? null : new DocxEmbeddedTextMeasurer(embedded);
         return Create(document, textMeasurer, cancellationToken);
     }
 
-    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken = default)
+    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
@@ -1857,7 +1857,7 @@ internal sealed class DocxLayoutEngine
                 EnsureFootnoteReserveForSourceBlock(elementIndex);
             }
 
-            IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1);
+            IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1, null);
             if (textMeasurer is not null && textSpans.Count > 0)
             {
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer);
@@ -2005,7 +2005,7 @@ internal sealed class DocxLayoutEngine
     private static IReadOnlyDictionary<int, double> CreateFootnoteReserveHeightBySourceBlock(
         DocxDocument document,
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var reserveHeightBySourceBlock = new Dictionary<int, double>();
         if (relatedStoryLayouts.Count == 0)
@@ -2057,7 +2057,7 @@ internal sealed class DocxLayoutEngine
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (pages.Count == 0)
         {
@@ -2135,7 +2135,7 @@ internal sealed class DocxLayoutEngine
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
         HashSet<(string Kind, string Id)> placedStoryKeys,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         List<DocxInlineReferenceLocation> endnoteLocations = ResolveReferencedRelatedStoryLocations(document, "Endnote", placedStoryKeys).ToList();
         if (endnoteLocations.Count == 0)
@@ -2208,7 +2208,7 @@ internal sealed class DocxLayoutEngine
         List<DocxLayoutPage> outputPages,
         int sectionEndPageIndex,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
@@ -2920,7 +2920,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (textMeasurer is null || stories.Count == 0)
@@ -2946,6 +2946,8 @@ internal sealed class DocxLayoutEngine
                 textMeasurer,
                 defaultTabStopPoints,
                 paragraphSpacingScale,
+                pageNumber: null,
+                pageCount: null,
                 cancellationToken: cancellationToken);
         }
 
@@ -2959,9 +2961,9 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        int? pageNumber = null,
-        int? pageCount = null,
-        CancellationToken cancellationToken = default)
+        int? pageNumber,
+        int? pageCount,
+        CancellationToken cancellationToken)
     {
         var textLines = new List<DocxTextLineLayout>();
         var inlineImages = new List<DocxInlineImageLayout>();
@@ -3106,7 +3108,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default,
+        CancellationToken cancellationToken,
         int? pageNumber = null,
         int? pageCount = null)
     {
@@ -3271,7 +3273,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var layouts = new DocxFloatingDrawingLayout[drawings.Count];
         for (int i = 0; i < drawings.Count; i++)
@@ -3292,6 +3294,9 @@ internal sealed class DocxLayoutEngine
                 sourceBlock?.FirstPageIndex,
                 sourceBlock?.FirstColumnIndex,
                 sourceBlock,
+                storyKind: null,
+                storyVariantType: null,
+                pageCount: null,
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
@@ -3306,7 +3311,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var layouts = new List<DocxFloatingDrawingLayout>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
@@ -3338,7 +3343,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
         {
@@ -3369,13 +3374,13 @@ internal sealed class DocxLayoutEngine
         int? anchorPageIndex,
         int? anchorColumnIndex,
         DocxLayoutSourceBlockBounds? sourceBlock,
-        string? storyKind = null,
-        string? storyVariantType = null,
-        int? pageCount = null,
-        IDocxTextMeasurer? textMeasurer = null,
-        double defaultTabStopPoints = WordDefaultTabStopPoints,
-        double paragraphSpacingScale = 1d,
-        CancellationToken cancellationToken = default)
+        string? storyKind,
+        string? storyVariantType,
+        int? pageCount,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        double paragraphSpacingScale,
+        CancellationToken cancellationToken)
     {
         DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
         DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
@@ -3442,7 +3447,7 @@ internal sealed class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (textMeasurer is null ||
             drawing.TextBoxBodyElements.Count == 0 ||
@@ -3701,7 +3706,7 @@ internal sealed class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -3774,7 +3779,7 @@ internal sealed class DocxLayoutEngine
         IDocxStaticTextMetricsProvider staticMetrics,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
@@ -4813,12 +4818,12 @@ internal sealed class DocxLayoutEngine
         return false;
     }
 
-    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber = null)
+    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber)
     {
         double height = 0d;
         double fontSize = GetParagraphFontSize(paragraph);
         double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
-        IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber);
+        IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, null);
         if (textSpans.Count != 0)
         {
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
@@ -4841,7 +4846,7 @@ internal sealed class DocxLayoutEngine
         return height;
     }
 
-    private static double EstimateFirstTableRowHeight(DocxTable table, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber = null, double paragraphSpacingScale = 1d)
+    private static double EstimateFirstTableRowHeight(DocxTable table, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double paragraphSpacingScale)
     {
         DocxTableRow? row = table.Rows.FirstOrDefault();
         if (row is null)
@@ -5109,7 +5114,7 @@ internal sealed class DocxLayoutEngine
         Action finishPage,
         Func<bool> hasPageContent,
         Action markBoundaryContent,
-        CancellationToken cancellationToken = default,
+        CancellationToken cancellationToken,
         double paragraphSpacingScale = 1d)
     {
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
@@ -5184,7 +5189,7 @@ internal sealed class DocxLayoutEngine
         double pageContentHeight,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
-        CancellationToken cancellationToken = default,
+        CancellationToken cancellationToken,
         int? pageNumber = null,
         int? pageCount = null,
         double paragraphSpacingScale = 1d)
@@ -6566,7 +6571,8 @@ internal sealed class DocxLayoutEngine
             defaultTabStopPoints,
             pageNumber: pageNumber,
             pageCount: pageCount,
-            paragraphSpacingScale: paragraphSpacingScale);
+            paragraphSpacingScale: paragraphSpacingScale,
+            cancellationToken: CancellationToken.None);
         return frame.RowHeights.Sum();
     }
 
@@ -6738,7 +6744,7 @@ internal sealed class DocxLayoutEngine
             : cell.VerticalAlignmentValue?.Equals("center", StringComparison.OrdinalIgnoreCase) == true
                 ? extra / 2d
                 : 0d;
-        return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset);
+        return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset, 0d);
     }
 
     private static IReadOnlyList<DocxInlineImageLayout> LayoutTableCellInlineImages(
@@ -6902,7 +6908,8 @@ internal sealed class DocxLayoutEngine
                     defaultTabStopPoints,
                     pageNumber: pageNumber,
                     pageCount: pageCount,
-                    paragraphSpacingScale: paragraphSpacingScale);
+                    paragraphSpacingScale: paragraphSpacingScale,
+                    cancellationToken: CancellationToken.None);
                 int nestedPageNumber = pageNumber ?? pageIndex + 1;
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
@@ -7052,7 +7059,7 @@ internal sealed class DocxLayoutEngine
         return height;
     }
 
-    private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY, double deltaX = 0d)
+    private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY, double deltaX)
     {
         return lines
             .Select(line => line with
@@ -7066,7 +7073,7 @@ internal sealed class DocxLayoutEngine
             .ToArray();
     }
 
-    private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images, double deltaY, double deltaX = 0d)
+    private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images, double deltaY, double deltaX)
     {
         return images
             .Select(image => image with { X = image.X + deltaX, Y = image.Y + deltaY })
@@ -7103,7 +7110,7 @@ internal sealed class DocxLayoutEngine
         return value is null ? null : value.Value + delta;
     }
 
-    private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows, double deltaY, double deltaX = 0d)
+    private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows, double deltaY, double deltaX)
     {
         return rows
             .Select(row => row with
@@ -7118,7 +7125,7 @@ internal sealed class DocxLayoutEngine
             .ToArray();
     }
 
-    private static DocxTableCellLayout ShiftTableCell(DocxTableCellLayout cell, double deltaY, double deltaX = 0d)
+    private static DocxTableCellLayout ShiftTableCell(DocxTableCellLayout cell, double deltaY, double deltaX)
     {
         return cell with
         {
@@ -7158,7 +7165,7 @@ internal sealed class DocxLayoutEngine
         return DocxLineMetrics.ResolveTableCellFirstBaselineInset(paragraphs);
     }
 
-    private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs, int? pageNumber = null, int? pageCount = null)
+    private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs, int? pageNumber, int? pageCount)
     {
         if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
         {

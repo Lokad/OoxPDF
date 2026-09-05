@@ -118,7 +118,7 @@ internal static class PdfWriterTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(arial);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
 
         string pdf = WritePdfText(new[] { page });
@@ -281,7 +281,7 @@ internal static class PdfWriterTests
 
     public static void WritesLuminositySoftMaskFormXObject()
     {
-        PdfImageXObject image = PdfImageXObject.Jpeg(2, 1, [0xFF, 0xD8, 0xFF, 0xD9]);
+        PdfImageXObject image = PdfImageXObject.Jpeg(2, 1, [0xFF, 0xD8, 0xFF, 0xD9], 3, 8);
         var mask = new PdfLuminositySoftMask(image, 10, 20, 30, 40, 0.1d, 0.2d, 0.3d, 0.4d);
         var graphics = new PdfGraphicsBuilder();
         graphics.SetLuminositySoftMask(mask, 0.5d, 1d);
@@ -322,7 +322,7 @@ internal static class PdfWriterTests
     private static string WritePdfText(IReadOnlyList<PdfPage> pages)
     {
         using var stream = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(stream, pages);
+        PdfDocumentWriter.WriteBlank(stream, pages, CancellationToken.None);
         return Encoding.ASCII.GetString(stream.ToArray());
     }
 

@@ -121,8 +121,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxPageSettings settings = document.PageSettings;
 
         TestAssert.Equal("16840", settings.WidthValue ?? string.Empty);
@@ -144,7 +144,7 @@ internal static class DocxTests
         TestAssert.Equal(3, settings.FootnoteReferenceSettings.NumberStart ?? 0);
         TestAssert.Equal("sectEnd", settings.EndnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal("eachSect", settings.EndnoteReferenceSettings.NumberRestartValue ?? string.Empty);
-        DocxLayoutPageSnapshot pageSnapshot = new DocxRenderer().InspectLayout(document).Pages.Single();
+        DocxLayoutPageSnapshot pageSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document).Pages.Single();
         TestAssert.Equal(108d, pageSnapshot.MarginLeft);
         TestAssert.Equal(72d, pageSnapshot.MarginRight);
         TestAssert.Equal("beneathText", pageSnapshot.SectionFootnotePositionValue ?? string.Empty);
@@ -186,8 +186,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.True(document.Paragraphs[0].SnapToGrid == false, "Explicit w:snapToGrid val=0 should opt out.");
         TestAssert.Equal("0", document.Paragraphs[0].SnapToGridValue ?? string.Empty);
@@ -355,8 +355,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs[0];
         TestAssert.True(paragraph.Runs[0].Bold, "Expected w:b w:val=\"on\" to enable bold.");
@@ -398,8 +398,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs[0];
         TestAssert.Equal(2d, paragraph.Runs[0].CharacterSpacingPoints);
@@ -694,8 +694,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(DocxTextAlignment.Center, document.Paragraphs[0].Alignment);
         TestAssert.Equal("center", document.Paragraphs[0].AlignmentValue ?? string.Empty);
@@ -769,8 +769,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal("Risky", paragraph.StyleId ?? string.Empty);
@@ -868,8 +868,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         DocxTextRun run = paragraph.Runs.Single();
@@ -899,14 +899,14 @@ internal static class DocxTests
 
         DocxStyleDefinitionSummary childStyle = document.StyleCatalog.ParagraphStyles.Single(style => style.StyleId == "Child");
         TestAssert.True(childStyle.BasedOnStyleId == "Base" && childStyle.HasParagraphProperties && childStyle.HasRunProperties, "The DOCX style catalog should retain private-safe paragraph style topology after resolved properties are applied.");
-        DocxStructureSnapshot structure = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(2, structure.StyleCatalog.ParagraphStyles.Count);
         DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.True(block.ParagraphStyleFound == true, "Structure snapshots should expose private-safe paragraph style resolution.");
         TestAssert.Equal(2, block.ParagraphStyleDepth ?? 0);
         TestAssert.True(block.HasDirectParagraphProperties == false, "Structure snapshots should distinguish pStyle-only pPr from direct paragraph overrides.");
 
-        DocxLayoutItemSnapshot line = new DocxRenderer().InspectLayout(document).Pages
+        DocxLayoutItemSnapshot line = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document).Pages
             .SelectMany(page => page.Items)
             .Single(item => item.Kind == "TextLine");
         TestAssert.Equal("Child", line.ParagraphStyleId ?? string.Empty);
@@ -947,8 +947,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraphElement[] paragraphs = document.BodyElements.OfType<DocxParagraphElement>().ToArray();
         TestAssert.Equal(3, paragraphs.Length);
@@ -1002,7 +1002,7 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(2, document.BodyElements.Count);
         TestAssert.True(document.BodyElements[0] is DocxTableElement, "The authored terminal table should remain a table body element.");
@@ -1081,8 +1081,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("doNotCompress", document.Settings.CharacterSpacingControlValue ?? string.Empty);
         TestAssert.Equal("720", document.Settings.DefaultTabStopValue ?? string.Empty);
@@ -1146,11 +1146,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -1196,8 +1196,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal(36d, paragraph.SpacingBeforePoints);
@@ -1239,8 +1239,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal(1.15d, paragraph.LineSpacingFactor);
@@ -1282,8 +1282,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(2, document.Paragraphs.Count);
         TestAssert.Equal(1.2d, document.Paragraphs[0].LineSpacingFactor);
@@ -1352,8 +1352,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxFontTableEntry entry = document.FontCatalog.Entries.Single();
         TestAssert.Equal("Corporate Sans", entry.Name);
@@ -1408,8 +1408,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxRunFonts fonts = document.Paragraphs.Single().Runs.Single().Fonts;
         TestAssert.Equal("Corporate Sans", fonts.Ascii ?? string.Empty);
@@ -1479,8 +1479,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTextRun run = document.Paragraphs.Single().Runs.Single();
         TestAssert.Equal("Paragraph Sans", run.FontFamily ?? string.Empty);
@@ -1500,7 +1500,7 @@ internal static class DocxTests
         TestAssert.True(run.StyleResolution.HasTableStyleRunProperties == false, "Body paragraph runs should not report table-style run contribution.");
         TestAssert.Equal("Emphasis", run.EffectiveProperties.StyleResolution.CharacterStyleId ?? string.Empty);
 
-        DocxLayoutItemSnapshot line = new DocxRenderer().InspectLayout(document).Pages
+        DocxLayoutItemSnapshot line = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document).Pages
             .SelectMany(page => page.Items)
             .Single(item => item.Kind == "TextLine");
         TestAssert.True(line.CharacterStyleTextSegmentCount > 0, "Layout snapshots should expose character-style text segment provenance.");
@@ -1562,8 +1562,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTextRun run = document.Paragraphs.Single().Runs.Single();
         TestAssert.Equal("Base Sans", run.FontFamily ?? string.Empty);
@@ -1647,7 +1647,7 @@ internal static class DocxTests
                 new DocxThemeFonts("Theme Display", "Theme Sans")));
         var resolver = new MapFontResolver(["Installed Sans", "Theme Sans"], "Resolver Fallback");
 
-        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
 
         TestAssert.Equal(DocxTypefaceResolutionSource.FontTableAlternate, resolved.Source);
         TestAssert.Equal("Installed Sans", resolved.RequestedFamily ?? string.Empty);
@@ -1694,7 +1694,7 @@ internal static class DocxTests
                     MinorComplexScriptTypeface: "Theme Bidi",
                     MinorEastAsiaTypeface: "Theme East")));
         var resolver = new MapFontResolver(["Theme East", "Theme Bidi"], "Resolver Fallback");
-        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver);
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
 
         DocxResolvedRunTypeface eastAsian = fontPlan.Runs.Single(run => run.Run.Text == "\u6f22\u5b57");
         DocxResolvedRunTypeface complexScript = fontPlan.Runs.Single(run => run.Run.Text == "\u0633\u0644\u0627\u0645");
@@ -1728,7 +1728,7 @@ internal static class DocxTests
                 new DocxThemeFonts("Theme Display", "Theme Sans")));
         var resolver = new MapFontResolver(["Corporate Sans", "Installed Sans", "Theme Display"], "Resolver Fallback");
 
-        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
 
         TestAssert.Equal(DocxTypefaceResolutionSource.Primary, resolved.Source);
         TestAssert.Equal("Corporate Sans", resolved.RequestedFamily ?? string.Empty);
@@ -1742,7 +1742,7 @@ internal static class DocxTests
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         var resolver = new MapFontResolver(["Body Sans"], "Resolver Fallback");
 
-        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
 
         TestAssert.Equal("Cell text", resolved.Run.Text);
         TestAssert.Equal(DocxTypefaceResolutionSource.ResolverFallback, resolved.Source);
@@ -1756,7 +1756,7 @@ internal static class DocxTests
         DocxDocument document = CreateFontPlanDocument(run, DocxFontCatalog.Empty);
         var resolver = new MapFontResolver([DocxRenderer.DefaultDocumentTypefaceRequest], "Resolver Fallback");
 
-        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
 
         TestAssert.Equal(DocxTypefaceResolutionSource.ResolverFallback, resolved.Source);
         TestAssert.Equal(DocxRenderer.DefaultDocumentTypefaceRequest, resolved.RequestedFamily ?? string.Empty);
@@ -1769,7 +1769,7 @@ internal static class DocxTests
         DocxDocument document = CreateFontPlanDocument(run, DocxFontCatalog.Empty);
         var resolver = new MapFontResolver(["Aptos", "Calibri", "Arial"], "Resolver Fallback");
 
-        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver).Runs.Single();
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
 
         TestAssert.Equal(DocxTypefaceResolutionSource.ResolverFallback, resolved.Source);
         TestAssert.Equal(DocxRenderer.DefaultDocumentTypefaceRequest, resolved.RequestedFamily ?? string.Empty);
@@ -1809,7 +1809,7 @@ internal static class DocxTests
             []);
         var resolver = new MapFontResolver(["Body Sans", "Cell Sans"], "Resolver Fallback");
 
-        string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
+        string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
 
         TestAssert.Equal("Body|Cell", plannedTexts);
     }
@@ -1936,7 +1936,7 @@ internal static class DocxTests
 
         DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(document).ToArray();
         DocxTable[] tables = DocxBlockTraversal.EnumerateBodyTables(document).ToArray();
-        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver);
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
 
         TestAssert.Equal(1, paragraphs.Length);
         TestAssert.Equal("Nested cell", paragraphs[0].Runs.Single().Text);
@@ -1975,7 +1975,7 @@ internal static class DocxTests
         DocxDocument document = CreateFontPlanDocument([paragraph], DocxFontCatalog.Empty);
         var resolver = new MapFontResolver(["Body Sans", "Marker Sans"], "Resolver Fallback");
 
-        DocxResolvedRunTypeface marker = DocxFontPlan.Create(document, resolver).Runs.Single(run => run.Run.Text == "#");
+        DocxResolvedRunTypeface marker = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single(run => run.Run.Text == "#");
 
         TestAssert.Equal("Marker Sans", marker.RequestedFamily ?? string.Empty);
         TestAssert.Equal(DocxTypefaceResolutionSource.Primary, marker.Source);
@@ -1999,7 +1999,7 @@ internal static class DocxTests
                 DocxThemeFonts.Empty));
         var resolver = new MapFontResolver(["Primary Sans", "Installed Sans"], "Resolver Fallback");
 
-        DocxFontPlanSnapshot snapshot = new DocxRenderer(resolver).InspectFontPlan(document);
+        DocxFontPlanSnapshot snapshot = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectFontPlan(document);
 
         TestAssert.Equal(3, snapshot.RunCount);
         TestAssert.Equal(1, snapshot.PrimaryCount);
@@ -2025,7 +2025,7 @@ internal static class DocxTests
         };
         DocxDocument document = CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
 
-        DocxFontPlanSnapshot snapshot = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution)).InspectFontPlan(document);
+        DocxFontPlanSnapshot snapshot = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectFontPlan(document);
 
         DocxFontMetricBucketSnapshot bucket = snapshot.MetricBuckets.Single();
         TestAssert.Equal(DocxTypefaceResolutionSource.Primary.ToString(), bucket.Source);
@@ -2177,7 +2177,7 @@ internal static class DocxTests
             }
         };
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(new MapFontResolver([], "Fallback")).InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
 
         TestAssert.Equal(4, snapshot.BlockCount);
         TestAssert.Equal(1, snapshot.ParagraphBlockCount);
@@ -2263,7 +2263,7 @@ internal static class DocxTests
         DocxTable table = CreateSingleCellTable("Plain 123", 20d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
 
         DocxStructureTableSnapshot tableSnapshot = snapshot.Tables.Single();
         DocxStructureTableCellSnapshot cellSnapshot = tableSnapshot.Rows.Single().Cells.Single();
@@ -2295,7 +2295,7 @@ internal static class DocxTests
             [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxStructureTableSnapshot tableSnapshot = new DocxRenderer()
+        DocxStructureTableSnapshot tableSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectStructure(document)
             .Tables
             .Single();
@@ -2342,7 +2342,7 @@ internal static class DocxTests
         };
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/docx", annotation.Uri);
@@ -2385,7 +2385,7 @@ internal static class DocxTests
         };
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/source-run", annotation.Uri);
@@ -2438,6 +2438,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -2446,7 +2447,7 @@ internal static class DocxTests
             .Lines
             .SelectMany(line => line.Segments)
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
@@ -2500,6 +2501,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -2509,7 +2511,7 @@ internal static class DocxTests
             .Single(line => line.StoryKind == "TextBox" && line.ContainerStoryKind == "Body")
             .Segments
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.X - linkSegment.X) < 0.001d,
@@ -2572,6 +2574,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -2581,7 +2584,7 @@ internal static class DocxTests
             .Single(line => line.IsStaticStory && line.StoryKind == "TextBox" && line.ContainerStoryKind == "Header")
             .Segments
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.X - linkSegment.X) < 0.001d,
@@ -2605,7 +2608,7 @@ internal static class DocxTests
         };
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(0, page.Annotations.Count);
     }
@@ -2645,7 +2648,7 @@ internal static class DocxTests
             [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal DOCX links should not be emitted as URI actions.");
@@ -2713,7 +2716,7 @@ internal static class DocxTests
             [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to a PDF page destination.");
@@ -2774,7 +2777,7 @@ internal static class DocxTests
             [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to a PDF page destination.");
@@ -2815,7 +2818,7 @@ internal static class DocxTests
             [new DocxTableRow([new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/cell", annotation.Uri);
@@ -2872,6 +2875,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -2880,7 +2884,7 @@ internal static class DocxTests
             .Lines
             .SelectMany(line => line.Segments)
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.X - linkSegment.X) < 0.001d,
@@ -2925,16 +2929,16 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(after)
             ]
         };
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        var renderer = new DocxRenderer();
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        PdfPage[] pages = renderer.RenderBlankPages(document).ToArray();
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, pages.Length);
         TestAssert.Equal(0, pages[0].Annotations.Count);
@@ -2998,7 +3002,7 @@ internal static class DocxTests
                 RelatedStories = [footnoteStory]
             };
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/footnote", annotation.Uri);
@@ -3060,7 +3064,7 @@ internal static class DocxTests
                 RelatedStories = [endnoteStory]
             };
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/endnote", annotation.Uri);
@@ -3129,7 +3133,7 @@ internal static class DocxTests
                 RelatedStories = [footnoteStory]
             };
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal placed-footnote links should not be emitted as URI actions.");
@@ -3199,7 +3203,7 @@ internal static class DocxTests
                 RelatedStories = [endnoteStory]
             };
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal placed-endnote links should not be emitted as URI actions.");
@@ -3251,7 +3255,7 @@ internal static class DocxTests
             [],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/textbox", annotation.Uri);
@@ -3309,7 +3313,7 @@ internal static class DocxTests
             [body],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/static-textbox", annotation.Uri);
@@ -3364,7 +3368,7 @@ internal static class DocxTests
             [],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal floating text-box links should not be emitted as URI actions.");
@@ -3428,7 +3432,7 @@ internal static class DocxTests
             [linkParagraph],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal static floating text-box links should not be emitted as URI actions.");
@@ -3479,7 +3483,7 @@ internal static class DocxTests
             ]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal table-cell links should not be emitted as URI actions.");
@@ -3538,7 +3542,7 @@ internal static class DocxTests
             [body],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/header", annotation.Uri);
@@ -3595,7 +3599,7 @@ internal static class DocxTests
             [body],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/footer", annotation.Uri);
@@ -3656,7 +3660,7 @@ internal static class DocxTests
             [target],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal static-story links should not be emitted as URI actions.");
@@ -3759,7 +3763,7 @@ internal static class DocxTests
         };
         var resolver = new MapFontResolver(["Default Sans", "First Sans", "Even Sans", "Section Sans", "Section Footer Sans"], "Resolver Fallback");
 
-        string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
+        string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
 
         TestAssert.Equal("DefaultHeader|EvenFooter|FirstHeader|SectionFooter|SectionHeader", plannedTexts);
     }
@@ -3779,9 +3783,9 @@ internal static class DocxTests
         };
         DocxDocument document = CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
         var resolver = new SingleResolutionFontResolver(font.Value.Resolution);
-        DocxFontPlan plan = DocxFontPlan.Create(document, resolver);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
 
-        double measured = new DocxFontPlanTextMeasurer(plan).MeasureText(run, text, run.FontSize);
+        double measured = new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None).MeasureText(run, text, run.FontSize);
         double expected = MeasureOpenTypeText(font.Value.Font, text, run.FontSize);
 
         TestAssert.True(Math.Abs(measured - expected) < 0.000001d, "Font-plan measurement should use the resolved OpenType face, including TTC face index, instead of a hard-coded font.");
@@ -3806,8 +3810,8 @@ internal static class DocxTests
             null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -3838,8 +3842,8 @@ internal static class DocxTests
             null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FontSizeWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FontSizeWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -3874,8 +3878,8 @@ internal static class DocxTests
             null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FontSizeWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FontSizeWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -3925,8 +3929,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -3955,8 +3959,8 @@ internal static class DocxTests
             null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -4002,8 +4006,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -4050,8 +4054,8 @@ internal static class DocxTests
             [paragraph],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -4095,8 +4099,8 @@ internal static class DocxTests
             [paragraph],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FontSizeWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FontSizeWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -4522,8 +4526,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.True(runs[0].Underline, "Expected w:u single to keep underline enabled.");
@@ -4587,8 +4591,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.Equal("subscript", runs[0].VerticalAlignmentValue ?? string.Empty);
@@ -4646,8 +4650,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.True(runs[0].Strike, "Expected w:strike to enable strike.");
@@ -5038,8 +5042,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.Equal("yellow", runs[0].HighlightValue ?? string.Empty);
@@ -5199,8 +5203,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.True(!runs[0].SmallCaps, "Expected w:smallCaps val=0 to disable small caps.");
@@ -5260,8 +5264,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.True(runs[1].Hidden, "Expected inherited w:vanish to mark the run as hidden.");
@@ -5269,8 +5273,8 @@ internal static class DocxTests
         TestAssert.True(!runs[2].Hidden, "Expected w:vanish val=0 to keep the run visible.");
         TestAssert.Equal("0", runs[2].HiddenValue ?? string.Empty);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -5300,8 +5304,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -5329,8 +5333,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -5370,8 +5374,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -5413,7 +5417,7 @@ internal static class DocxTests
             [],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout line = layout.FloatingDrawings.Single().TextBoxLayout!.TextLines.Single();
 
         TestAssert.True(line.X > 70d, "Floating text-box right alignment should use the compact dynamic-field width, not the literal NUMPAGES placeholder width.");
@@ -5462,10 +5466,10 @@ internal static class DocxTests
             [floatingDrawing],
             [],
             [],
-            [new DocxParagraphElement(firstPage), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondPage)],
+            [new DocxParagraphElement(firstPage), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondPage)],
             [firstPage, secondPage],
             []);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot textBoxLine = renderer.InspectTextEmission(document).Lines
             .Single(line => line.StoryKind == "TextBox");
@@ -5503,8 +5507,8 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -5534,8 +5538,8 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -5568,7 +5572,7 @@ internal static class DocxTests
             [],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(1, layout.Pages.Count);
         DocxTextLineLayout keptLine = layout.Pages[0].Items
@@ -5617,12 +5621,12 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(paragraph),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(secondPage)
             ],
             [paragraph, secondPage],
             []);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionSegmentSnapshot[] visibleSegments = renderer.InspectTextEmission(document)
             .Lines
@@ -5699,7 +5703,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(bodyParagraph),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(secondPage)
             ],
             [bodyParagraph, secondPage],
@@ -5707,7 +5711,7 @@ internal static class DocxTests
         {
             RelatedStories = [footnoteStory]
         };
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot footnoteLine = renderer.InspectTextEmission(document).Lines
             .Single(line => line.StoryKind == "Footnote");
@@ -5789,7 +5793,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(bodyParagraph),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(secondPage)
             ],
             [bodyParagraph, secondPage],
@@ -5797,7 +5801,7 @@ internal static class DocxTests
         {
             RelatedStories = [endnoteStory]
         };
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot endnoteLine = renderer.InspectTextEmission(document).Lines
             .Single(line => line.StoryKind == "Endnote");
@@ -5868,8 +5872,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.Equal("Before ", runs[0].Text);
@@ -5917,8 +5921,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         TestAssert.Equal(4, paragraph.FieldReferences.Count);
@@ -5956,7 +5960,7 @@ internal static class DocxTests
         TestAssert.Equal(1, complexPage.ResultRunCount);
         TestAssert.Equal("{PAGE}{NUMPAGES}TargetValue{PAGE}", string.Concat(paragraph.Runs.Select(run => run.Text)));
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         DocxStructureStorySnapshot bodyStory = snapshot.Stories.Single(story => story.Kind == "Body");
         TestAssert.Equal(4, snapshot.FieldReferenceCount);
@@ -6059,7 +6063,7 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxRelatedStory footnoteStory = document.RelatedStories.Single(story => story.Kind == "Footnote" && story.Id == "5");
         DocxRelatedStory endnoteStory = document.RelatedStories.Single(story => story.Kind == "Endnote" && story.Id == "7");
         DocxParagraph footnote = footnoteStory.Paragraphs.Single();
@@ -6078,7 +6082,7 @@ internal static class DocxTests
         TestAssert.True(endnotePage.SourceKind == "ComplexInstruction" && endnotePage.HasSeparate && endnotePage.HasCachedResult && !endnotePage.RendersCachedResult && endnotePage.UsesPlaceholder, "Complex PAGE fields in endnotes should keep metadata without rendering stale cached results.");
         TestAssert.True(endnoteNumPages.SourceKind == "Simple" && endnoteNumPages.UsesPlaceholder && !endnoteNumPages.HasCachedResult, "Simple NUMPAGES fields in endnotes should remain dynamic placeholders.");
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(4, snapshot.FieldReferenceCount);
         TestAssert.Equal(2, snapshot.PageFieldReferenceCount);
         TestAssert.Equal(2, snapshot.NumPagesFieldReferenceCount);
@@ -6120,12 +6124,13 @@ internal static class DocxTests
         TestAssert.True(endnote.FieldReferences.Any(field => field.Kind == "NumPages" && field.SourceKind == "Simple" && field.UsesPlaceholder), "The fixture should keep a dynamic endnote NUMPAGES placeholder.");
 
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxTextEmissionLineSnapshot[] noteLines = renderer.InspectTextEmission(document).Lines
             .Where(line => line.StoryKind == "Footnote" || line.StoryKind == "Endnote")
             .ToArray();
-        PdfLinkAnnotation[] annotations = renderer.RenderBlankPages(document)
+        PdfLinkAnnotation[] annotations = renderer.RenderBlankPages(document, null, CancellationToken.None)
             .SelectMany(page => page.Annotations)
             .ToArray();
 
@@ -6180,8 +6185,8 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxTextRun[] runs = new DocxReader().Read(package).Paragraphs[0].Runs.ToArray();
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxTextRun[] runs = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Paragraphs[0].Runs.ToArray();
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
@@ -6239,8 +6244,8 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs[0];
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxParagraph paragraph = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Paragraphs[0];
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
@@ -6306,8 +6311,8 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
@@ -6326,7 +6331,7 @@ internal static class DocxTests
         TestAssert.Equal(1, inner.TextRunCount);
         TestAssert.Equal("2026".Length, inner.TextLength);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(2, snapshot.ComplexFieldReferenceCount);
         TestAssert.Equal(2, snapshot.CachedResultFieldReferenceCount);
         TestAssert.Equal(2, snapshot.RenderedCachedResultFieldReferenceCount);
@@ -6388,8 +6393,8 @@ internal static class DocxTests
             DiagnosticSink = diagnostics.Add
         });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxParagraph paragraph = new DocxReader().Read(package, markupMode: OoxPdfDocxMarkupMode.AllMarkup).Paragraphs.Single();
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxParagraph paragraph = new DocxReader().Read(package, null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup).Paragraphs.Single();
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
@@ -6448,8 +6453,8 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs.Single();
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxParagraph paragraph = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Paragraphs.Single();
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
@@ -6507,8 +6512,8 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs.Single();
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxParagraph paragraph = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Paragraphs.Single();
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
@@ -6561,8 +6566,8 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
@@ -6609,8 +6614,8 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
@@ -6659,8 +6664,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
 
         TestAssert.Equal("Before ", runs[0].Text);
@@ -6764,8 +6769,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs[0];
         DocxTextRun[] runs = paragraph.Runs.ToArray();
 
@@ -6785,7 +6790,7 @@ internal static class DocxTests
         TestAssert.Equal(1, link.TextRunCount);
         TestAssert.Equal(4, link.TextLength);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(1, snapshot.HyperlinkCount);
         TestAssert.Equal(1, snapshot.ExternalHyperlinkCount);
@@ -6836,8 +6841,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         TestAssert.Equal(3, paragraph.InlineReferences.Count);
@@ -6860,7 +6865,7 @@ internal static class DocxTests
         TestAssert.Equal(1, endnote.RunChildIndex);
         TestAssert.Equal(5, endnote.TextOffsetInRun);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(3, snapshot.InlineReferenceCount);
         TestAssert.Equal(3, snapshot.AnchoredInlineReferenceCount);
@@ -6904,8 +6909,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph first = document.Paragraphs[0];
         TestAssert.Equal(5, first.Runs.Count);
@@ -6923,7 +6928,7 @@ internal static class DocxTests
         TestAssert.Equal("2", second.Runs[1].Text);
         TestAssert.Equal("2", second.InlineReferences.Single().DisplayText ?? string.Empty);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureInlineReferenceSnapshot[] references = snapshot.InlineReferences.ToArray();
         TestAssert.Equal("1", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "2").DisplayText ?? string.Empty);
         TestAssert.Equal("1", references.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
@@ -6984,8 +6989,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph bodyParagraph = document.Paragraphs[0];
         TestAssert.Equal("iv", bodyParagraph.InlineReferences.Single(reference => reference.Kind == "Footnote").DisplayText ?? string.Empty);
@@ -7031,8 +7036,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         DocxBookmarkAnchor bookmark = paragraph.BookmarkAnchors.Single();
@@ -7047,7 +7052,7 @@ internal static class DocxTests
         TestAssert.Equal(2, link.TextRunStartIndex);
         TestAssert.Equal(1, link.TextRunCount);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         DocxStructureStorySnapshot bodyStory = snapshot.Stories.Single(story => story.Kind == "Body");
         TestAssert.Equal(1, snapshot.BookmarkAnchorCount);
@@ -7092,8 +7097,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxParagraph paragraph = new DocxReader().Read(package).Paragraphs.Single();
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxParagraph paragraph = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Paragraphs.Single();
 
         DocxBookmarkAnchor bookmark = paragraph.BookmarkAnchors.Single();
         TestAssert.Equal("InnerTarget", bookmark.Name ?? string.Empty);
@@ -7139,12 +7144,12 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "AlphaBeta".EnumerateRunes().Select(rune => rune.Value));
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "AlphaBeta".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7187,11 +7192,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7233,11 +7238,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7285,11 +7290,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7337,11 +7342,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7387,11 +7392,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7437,11 +7442,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7487,11 +7492,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7541,11 +7546,11 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7588,8 +7593,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("non\u2011break\u00ADsoft", document.Paragraphs[0].Runs[0].Text);
     }
@@ -7624,8 +7629,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7666,8 +7671,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7709,8 +7714,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7757,8 +7762,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7805,8 +7810,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7851,8 +7856,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7896,8 +7901,8 @@ internal static class DocxTests
             [],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -7931,10 +7936,10 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), " Alpha Beta".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), " Alpha Beta".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -8073,8 +8078,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxPageBreakElement[] breaks = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
 
         TestAssert.Equal(2, breaks.Length);
@@ -8134,8 +8139,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxPageBreakElement[] breaks = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
 
         TestAssert.Equal(1, breaks.Length);
@@ -8176,8 +8181,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxBodyElement[] elements = document.BodyElements.ToArray();
 
         TestAssert.Equal(3, elements.Length);
@@ -8219,8 +8224,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxBodyElement[] elements = document.BodyElements.ToArray();
 
         TestAssert.Equal(3, elements.Length);
@@ -8232,7 +8237,7 @@ internal static class DocxTests
         TestAssert.True(manualBreak.BreakParagraph is not null, "The authored break paragraph should remain available for future column-flow layout.");
         TestAssert.Equal("Second", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(1, snapshot.ManualBreakBlockCount);
         DocxStructureBlockSnapshot block = snapshot.Blocks[1];
         TestAssert.Equal("ManualBreak", block.Kind);
@@ -8273,8 +8278,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxBodyElement[] elements = document.BodyElements.ToArray();
         TestAssert.Equal(3, elements.Length);
@@ -8282,7 +8287,7 @@ internal static class DocxTests
         TestAssert.True(elements[1] is DocxPageBreakElement, "The inline page break should become a body page break.");
         TestAssert.Equal("Beta", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal("Alpha", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
         TestAssert.Equal("Beta", layout.Pages[1].Items.OfType<DocxTextLineLayout>().Single().Text);
@@ -8328,8 +8333,8 @@ internal static class DocxTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MULTI_COLUMN"), "Explicit final-section column flow with authored column breaks should remain in the supported multi-column shape.");
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxBodyElement[] elements = document.BodyElements.ToArray();
         TestAssert.Equal(3, elements.Length);
@@ -8337,7 +8342,7 @@ internal static class DocxTests
         TestAssert.True(elements[1] is DocxManualBreakElement, "The inline column break should become a body manual break.");
         TestAssert.Equal("Right", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         TestAssert.Equal(1, snapshot.Pages.Count);
         TestAssert.Equal(2, snapshot.Pages[0].ColumnFrameCount);
         DocxLayoutItemSnapshot[] lines = snapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").ToArray();
@@ -8383,8 +8388,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxBodyElement[] elements = document.BodyElements.ToArray();
         TestAssert.Equal(3, elements.Length);
@@ -8423,8 +8428,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxBodyElement[] elements = document.BodyElements.ToArray();
         TestAssert.Equal(3, elements.Length);
@@ -8476,8 +8481,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxSectionBreakElement sectionBreak = document.BodyElements.OfType<DocxSectionBreakElement>().Single();
 
         TestAssert.Equal("continuous", sectionBreak.TypeValue ?? string.Empty);
@@ -8550,7 +8555,7 @@ internal static class DocxTests
             [first, second],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal("First", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
@@ -8612,7 +8617,7 @@ internal static class DocxTests
             [first, second],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(200d, layout.Pages[0].Width);
@@ -8698,14 +8703,14 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxSectionBreakElement(firstSectionSettings, "continuous", null, null, null, []),
                 new DocxParagraphElement(second)
             ],
             [first, second],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(200d, layout.Pages[0].Width);
@@ -8772,7 +8777,7 @@ internal static class DocxTests
             [first, second],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(3, layout.Pages.Count);
         TestAssert.Equal("First", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
@@ -8828,7 +8833,7 @@ internal static class DocxTests
             [first, second],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(2, layout.Pages[0].SectionProperties.ColumnDefinitions.Count);
@@ -8901,14 +8906,14 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxManualBreakElement("runBreak", "column"),
+                new DocxManualBreakElement("runBreak", "column", null),
                 new DocxParagraphElement(second),
                 new DocxSectionBreakElement(sectionSettings, "nextPage", "2", "1", "360", [])
             ],
             [first, second],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] lines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
 
         TestAssert.Equal(1, layout.Pages.Count);
@@ -8997,8 +9002,8 @@ internal static class DocxTests
             [indented],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9052,10 +9057,10 @@ internal static class DocxTests
             [first, second],
             []);
         var resolver = new SingleResolutionFontResolver(font.Value.Resolution);
-        DocxFontPlan plan = DocxFontPlan.Create(document, resolver);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new DocxFontPlanTextMeasurer(plan))
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9091,8 +9096,8 @@ internal static class DocxTests
             [new DocxParagraphElement(first), new DocxParagraphElement(empty), new DocxParagraphElement(second)],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9141,10 +9146,10 @@ internal static class DocxTests
             [new DocxParagraphElement(first), new DocxParagraphElement(second)],
             [first, second],
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9185,8 +9190,8 @@ internal static class DocxTests
             [new DocxParagraphElement(first), new DocxParagraphElement(second)],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9241,10 +9246,10 @@ internal static class DocxTests
             [new DocxParagraphElement(first), new DocxParagraphElement(second)],
             [first, second],
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9290,8 +9295,8 @@ internal static class DocxTests
             [new DocxParagraphElement(smallMinimum), new DocxParagraphElement(largeMinimum)],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9340,9 +9345,9 @@ internal static class DocxTests
             body,
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillFirstSecond".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillFirstSecond".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(3, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
@@ -9387,9 +9392,9 @@ internal static class DocxTests
             body,
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillKeepNext".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillKeepNext".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(4, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
@@ -9443,7 +9448,7 @@ internal static class DocxTests
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] lines = layout.Pages.Single().Items.OfType<DocxTextLineLayout>().ToArray();
 
         TestAssert.Equal(6, lines.Length);
@@ -9490,7 +9495,7 @@ internal static class DocxTests
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] firstPageLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
         DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
 
@@ -9547,9 +9552,9 @@ internal static class DocxTests
             body,
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillKeepChainEnd".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillKeepChainEnd".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
         DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
 
         TestAssert.Equal(2, layout.Pages.Count);
@@ -9597,9 +9602,9 @@ internal static class DocxTests
             body,
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
         DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
 
         TestAssert.Equal(2, layout.Pages.Count);
@@ -9643,10 +9648,10 @@ internal static class DocxTests
             body,
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout[] secondPageLines = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout[] secondPageLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[1]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -9693,9 +9698,9 @@ internal static class DocxTests
             body,
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
 
         TestAssert.Equal(6, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
         TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
@@ -9820,8 +9825,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxListLabel? label = document.Paragraphs.Single().ListLabel;
         TestAssert.Equal("\uF0A7", label?.Text ?? string.Empty);
@@ -9878,8 +9883,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxParagraph> paragraphs = document.Paragraphs;
 
         TestAssert.Equal("lowerRoman", paragraphs[0].ListLabel?.FormatValue ?? string.Empty);
@@ -9959,8 +9964,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("5.", document.Paragraphs[0].ListLabel?.Text ?? string.Empty);
         TestAssert.Equal("6.", document.Paragraphs[1].ListLabel?.Text ?? string.Empty);
@@ -10032,8 +10037,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxParagraph> paragraphs = document.Paragraphs;
 
         TestAssert.Equal("Item 9)", paragraphs[0].ListLabel?.Text ?? string.Empty);
@@ -10100,8 +10105,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("1.", document.Paragraphs[0].ListLabel?.Text ?? string.Empty);
         TestAssert.Equal("1.1.", document.Paragraphs[1].ListLabel?.Text ?? string.Empty);
@@ -10162,12 +10167,12 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value));
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -10235,12 +10240,12 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value));
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -10307,12 +10312,12 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value));
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -10379,12 +10384,12 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value));
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Indented".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -10451,12 +10456,12 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Near".EnumerateRunes().Select(rune => rune.Value));
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Near".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -10517,10 +10522,10 @@ internal static class DocxTests
             [new DocxParagraphElement(paragraph)],
             [paragraph],
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "• Item".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "• Item".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -10578,10 +10583,10 @@ internal static class DocxTests
             [new DocxParagraphElement(paragraph)],
             [paragraph],
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Alpha Beta".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Alpha Beta".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -10673,7 +10678,7 @@ internal static class DocxTests
         };
 
         DocxLayoutPage page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .Single();
         DocxTextLineLayout[] lines = page.Items.OfType<DocxTextLineLayout>().ToArray();
@@ -10891,15 +10896,15 @@ internal static class DocxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_VML", ids);
         TestAssert.Equal("Before VML note one\nVML note two After", string.Concat(paragraph.Runs.Select(run => run.Text)));
         TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.PropertyElementNames.Contains("pStyle")), "VML textbox paragraph formatting revisions should be retained as private-safe provenance.");
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(1, structure.FormattingRevisionCount);
         TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
@@ -11148,8 +11153,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
 
         TestAssert.Equal("114300", drawing.DistanceTopValue ?? string.Empty);
@@ -11178,7 +11183,7 @@ internal static class DocxTests
         TestAssert.Equal(0, drawing.SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, drawing.SourceBlockIndex ?? -1);
 
-        DocxStructureFloatingDrawingSnapshot snapshot = new DocxRenderer().InspectStructure(document).FloatingDrawings.Single();
+        DocxStructureFloatingDrawingSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).FloatingDrawings.Single();
         TestAssert.Equal("rIdImage1", snapshot.ImageRelationshipId ?? string.Empty);
         TestAssert.Equal("/word/media/image1.png", snapshot.ImagePartName ?? string.Empty);
         TestAssert.Equal("image/png", snapshot.ImageContentType ?? string.Empty);
@@ -11187,7 +11192,7 @@ internal static class DocxTests
         TestAssert.Equal(0, snapshot.SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, snapshot.SourceBlockIndex ?? -1);
 
-        DocxFloatingDrawingLayoutSnapshot layoutSnapshot = new DocxRenderer().InspectLayout(document).FloatingDrawings.Single();
+        DocxFloatingDrawingLayoutSnapshot layoutSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document).FloatingDrawings.Single();
         TestAssert.Equal(0, layoutSnapshot.SourceBlockIndex ?? -1);
         TestAssert.Equal(0, layoutSnapshot.SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, layoutSnapshot.PageStartIndex ?? -1);
@@ -11204,7 +11209,7 @@ internal static class DocxTests
         TestAssert.Equal(18d, layoutSnapshot.DistanceBottomPoints ?? 0d);
         TestAssert.Equal(27d, layoutSnapshot.DistanceLeftPoints ?? 0d);
         TestAssert.Equal(36d, layoutSnapshot.DistanceRightPoints ?? 0d);
-        DocxLayoutPageSnapshot layoutPage = new DocxRenderer().InspectLayout(document).Pages.Single();
+        DocxLayoutPageSnapshot layoutPage = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document).Pages.Single();
         TestAssert.Equal(layoutPage.MarginLeft, layoutSnapshot.HorizontalReferenceX ?? 0d);
         TestAssert.Equal(layoutPage.Width - layoutPage.MarginLeft - layoutPage.MarginRight, layoutSnapshot.HorizontalReferenceWidth ?? 0d);
         TestAssert.Equal(layoutSnapshot.AnchorBlockVerticalTop ?? 0d, layoutSnapshot.VerticalReferenceTop ?? 0d);
@@ -11295,18 +11300,18 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
         DocxParagraph textBoxParagraph = DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements).Single();
         TestAssert.Equal("Floating review note", string.Concat(textBoxParagraph.Runs.Select(run => run.Text)));
 
-        DocxStructureFloatingDrawingSnapshot structure = new DocxRenderer().InspectStructure(document).FloatingDrawings.Single();
+        DocxStructureFloatingDrawingSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).FloatingDrawings.Single();
         TestAssert.Equal(1, structure.TextBoxBlockCount);
         TestAssert.Equal(1, structure.TextBoxParagraphCount);
         TestAssert.Equal("Floating review note".Length, structure.TextBoxTextLength);
 
-        DocxFloatingDrawingLayoutSnapshot layout = new DocxRenderer().InspectLayout(document).FloatingDrawings.Single();
+        DocxFloatingDrawingLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document).FloatingDrawings.Single();
         TestAssert.Equal(1, layout.TextBoxTextLineCount);
         TestAssert.True(layout.TextBoxContentHeight > 0d, "Floating text box layout should measure text content height.");
         TestAssert.Equal("Offset", layout.HorizontalPlacementSource ?? string.Empty);
@@ -11410,7 +11415,7 @@ internal static class DocxTests
         };
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer());
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutPage page = layout.Pages.Single();
         DocxFloatingDrawingLayout textBoxLayout = layout.FloatingDrawings.Single(drawing => drawing.TextBoxLayout is not null);
         DocxFloatingDrawingLayout tableImageLayout = layout.FloatingDrawings
@@ -11470,10 +11475,10 @@ internal static class DocxTests
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
             [],
             []);
-        var renderer = new DocxRenderer();
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(1, layout.FloatingDrawings.Single().TextBoxTableRowCount);
         TestAssert.Contains(FormatPdfRgb(((byte)0, (byte)176, (byte)240), "rg"), page.Content);
@@ -11503,10 +11508,10 @@ internal static class DocxTests
             [new DocxParagraphElement(CreateDocxLayoutParagraph("Body", 10d, 12d))],
             [],
             []);
-        var renderer = new DocxRenderer();
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(1, layout.StaticFloatingDrawings.Single().TextBoxTableRowCount);
         TestAssert.Contains(FormatPdfRgb(((byte)146, (byte)208, (byte)80), "rg"), page.Content);
@@ -11557,13 +11562,13 @@ internal static class DocxTests
         {
             RelatedStories = [footnoteStory]
         };
-        var renderer = new DocxRenderer();
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.StoryLayout.Story.Id == "51");
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(1, placedStory.FloatingDrawings.Single().TextBoxLayout!.TableRows.Count);
         TestAssert.Contains(FormatPdfRgb(((byte)255, (byte)192, (byte)0), "rg"), page.Content);
@@ -11785,8 +11790,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("fixed", document.Tables[0].LayoutValue ?? string.Empty);
         TestAssert.Equal("2880", document.Tables[0].PreferredWidthValue ?? string.Empty);
@@ -11863,8 +11868,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("ShadedTable", document.Tables[0].StyleId ?? string.Empty);
         TestAssert.Equal("CFE2F3", document.Tables[0].Rows[0].Cells[0].FillHex ?? string.Empty);
@@ -11937,7 +11942,7 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTableCellMargins margins = document.Tables[0].Rows[0].Cells[0].Margins;
 
         TestAssert.Equal("108", margins.LeftValue ?? string.Empty);
@@ -11995,7 +12000,7 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTableCellMargins margins = document.Tables[0].Rows[0].Cells[0].Margins;
 
         TestAssert.Equal("240", margins.LeftValue ?? string.Empty);
@@ -12071,8 +12076,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTableCell firstHeader = document.Tables[0].Rows[0].Cells[0];
         DocxTableCell firstBody = document.Tables[0].Rows[1].Cells[0];
@@ -12155,8 +12160,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("fixed", document.Tables[0].LayoutValue ?? string.Empty);
         TestAssert.Equal("2880", document.Tables[0].PreferredWidthValue ?? string.Empty);
@@ -12233,8 +12238,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph firstParagraph = document.Tables[0].Rows[0].Cells[0].Paragraphs.Single();
         DocxParagraph secondParagraph = document.Tables[0].Rows[0].Cells[1].Paragraphs.Single();
@@ -12317,12 +12322,12 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph[] paragraphs = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.ToArray();
         TestAssert.True(paragraphs.All(paragraph => paragraph.EffectiveProperties.StyleResolution.HasTableStyleParagraphProperties), "Table style paragraph spacing should remain visible in the effective cell paragraph model.");
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTableRowLayout>()
             .Single()
@@ -12390,7 +12395,7 @@ internal static class DocxTests
                 """
         });
 
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(input));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(input, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         IReadOnlyList<DocxTextRun> runs = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single().Runs;
         TestAssert.Equal(3, runs.Count);
@@ -12454,7 +12459,7 @@ internal static class DocxTests
                 """
         });
 
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(input));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(input, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTextRun run = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single().Runs.Single();
 
         TestAssert.Equal(14d, run.FontSize);
@@ -12538,8 +12543,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTableCell first = document.Tables[0].Rows[0].Cells[0];
         DocxTableCell second = document.Tables[0].Rows[0].Cells[1];
@@ -12614,8 +12619,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTable table = document.Tables[0];
         TestAssert.Equal("0", table.Look?.FirstRowValue ?? string.Empty);
@@ -13032,7 +13037,7 @@ internal static class DocxTests
         TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 7, "Common border styles should render as filled strip geometry, including segmented and double-strip variants.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(4, table.VisibleBorderCount);
         TestAssert.Equal(1, table.SingleBorderCount);
         TestAssert.Equal(1, table.DoubleBorderCount);
@@ -13153,7 +13158,7 @@ internal static class DocxTests
         TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 3, "dashDotStroked borders should render dash-dot segments plus a center stroke.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(1, table.VisibleBorderCount);
         TestAssert.Equal(1, table.DashedBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
@@ -13211,7 +13216,7 @@ internal static class DocxTests
         TestAssert.Contains(" re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(1, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
     }
@@ -13268,7 +13273,7 @@ internal static class DocxTests
         TestAssert.Contains(" re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(1, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
     }
@@ -13326,7 +13331,7 @@ internal static class DocxTests
         TestAssert.True(pdf.Split(" rg", StringSplitOptions.None).Length - 1 >= 4, "3D table borders should emit separate light and dark fill colors.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(2, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
     }
@@ -13383,7 +13388,7 @@ internal static class DocxTests
         TestAssert.True(CountOccurrences(pdf, " l S") >= 8, "Wave table borders should render as repeated stroked wave segments.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(2, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
     }
@@ -13440,7 +13445,7 @@ internal static class DocxTests
         TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 3, "Triple borders should render as three filled strips.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(1, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
     }
@@ -13518,7 +13523,7 @@ internal static class DocxTests
         TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 18, "Compound table borders should render as separate thin/thick filled strips.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream))).Tables.Single();
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
         TestAssert.Equal(9, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
     }
@@ -13557,8 +13562,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.True(document.Tables[0].Rows[0].IsHeader, "Expected implicit tblHeader to mark the row as repeating.");
         TestAssert.True(document.Tables[0].Rows[0].HeaderValue is null, "Expected implicit tblHeader to preserve a null source token.");
@@ -13603,8 +13608,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
 
         TestAssert.Equal("top", cells[0].VerticalAlignmentValue ?? string.Empty);
@@ -13648,8 +13653,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
 
         TestAssert.Equal("tbRl", cells[0].TextDirectionValue ?? string.Empty);
@@ -13692,8 +13697,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
 
         TestAssert.True(cells[0].NoWrap, "Expected implicit w:noWrap to disable automatic cell text wrapping.");
@@ -13738,8 +13743,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
 
         TestAssert.True(cells[0].FitText, "Expected implicit w:tcFitText to fit cell text to its extents.");
@@ -13791,8 +13796,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxTableCellMargins margins = new DocxReader().Read(package).Tables[0].Rows[0].Cells[0].Margins;
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxTableCellMargins margins = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Tables[0].Rows[0].Cells[0].Margins;
 
         TestAssert.Equal("120", margins.TopValue ?? string.Empty);
         TestAssert.Equal("180", margins.RightValue ?? string.Empty);
@@ -13837,8 +13842,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
         TestAssert.Equal(2, cell.GridSpan);
@@ -13880,8 +13885,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxTable table = new DocxReader().Read(package).Tables[0];
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxTable table = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Tables[0];
 
         TestAssert.True(!table.HasExplicitGrid, "Missing tblGrid should remain distinguishable from authored grid geometry.");
         TestAssert.Equal(3, table.ColumnWidthsPoints.Count);
@@ -13925,8 +13930,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTableCell restart = document.Tables[0].Rows[0].Cells[0];
         DocxTableCell continuation = document.Tables[0].Rows[1].Cells[0];
@@ -13980,8 +13985,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxTableCellBorder> borders = document.Tables[0].Rows[0].Cells[0].Borders;
 
         TestAssert.Equal(3, borders.Count);
@@ -14045,8 +14050,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         IReadOnlyList<DocxTableCellBorder> first = document.Tables[0].Rows[0].Cells[0].Borders;
         IReadOnlyList<DocxTableCellBorder> inner = document.Tables[0].Rows[1].Cells[1].Borders;
@@ -14123,8 +14128,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         IReadOnlyList<DocxTableCellBorder> first = document.Tables[0].Rows[0].Cells[0].Borders;
         IReadOnlyList<DocxTableCellBorder> inner = document.Tables[0].Rows[1].Cells[1].Borders;
@@ -14175,8 +14180,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxTableCellBorder> borders = document.Tables[0].Rows[0].Cells[0].Borders;
 
         TestAssert.Equal("123456", borders.Single(border => border.Edge == "left").Color ?? string.Empty);
@@ -14253,8 +14258,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         IReadOnlyList<DocxTableCellBorder> borders = document.Tables[0].Rows[0].Cells[0].Borders;
         TestAssert.Equal("nil", borders.Single(border => border.Edge == "top").Value ?? string.Empty);
@@ -14325,8 +14330,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         IReadOnlyList<DocxTableRow> rows = document.Tables[0].Rows;
         TestAssert.Equal("bottom", rows[0].Cells[0].VerticalAlignmentValue ?? string.Empty);
@@ -14371,8 +14376,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
 
         TestAssert.Equal("D9EAD3", cells[0].FillHex ?? string.Empty);
@@ -14500,8 +14505,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
         TestAssert.Equal("Alpha Beta", cell.Text);
@@ -14550,8 +14555,8 @@ internal static class DocxTests
         var diagnostics = new List<OoxPdfDiagnostic>();
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package, diagnostics.Add);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, diagnostics.Add, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Visible table-cell column breaks should be preserved structurally without a stale unsupported diagnostic.");
 
@@ -14608,8 +14613,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(1, document.BodyElements.OfType<DocxTableElement>().Count());
         TestAssert.Equal(2, document.Tables.Count);
@@ -14669,8 +14674,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
 
         TestAssert.Equal("1.", cell.Paragraphs[0].ListLabel?.Text ?? string.Empty);
@@ -14680,9 +14685,9 @@ internal static class DocxTests
             return;
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Item".EnumerateRunes().Select(rune => rune.Value));
-        DocxTextLineLayout line = new DocxLayoutEngine()
-            .Create(document, embedded)
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Item".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -14802,8 +14807,8 @@ internal static class DocxTests
         TestAssert.Contains("72.48 683.52 143.52 0.48 re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxTableRow row = new DocxReader().Read(package).Tables[0].Rows[0];
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxTableRow row = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Tables[0].Rows[0];
         TestAssert.Equal("720", row.HeightValue ?? string.Empty);
         TestAssert.True(row.HeightRuleValue is null, "Missing hRule should stay distinct from exact/auto.");
     }
@@ -14849,8 +14854,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxTableRow row = new DocxReader().Read(package).Tables[0].Rows[0];
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxTableRow row = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Tables[0].Rows[0];
 
         TestAssert.True(row.TablePropertyExceptionCellMargins is not null, "Expected row-level tblPrEx cell margins to stay distinct from cell margins.");
         TestAssert.Equal("0", row.TablePropertyExceptionCellMargins!.TopValue ?? string.Empty);
@@ -14893,8 +14898,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxTableRow row = new DocxReader().Read(package).Tables[0].Rows[0];
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxTableRow row = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Tables[0].Rows[0];
 
         TestAssert.True(row.CantSplit, "Expected w:cantSplit to be preserved for row-fragment pagination.");
         TestAssert.Equal("1", row.CantSplitValue ?? string.Empty);
@@ -14943,11 +14948,11 @@ internal static class DocxTests
         DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
         DocxDocument document = CreateLayoutTestDocument([
             new DocxTableElement(first),
-            new DocxPageBreakElement("pageBreakBefore", null),
+            new DocxPageBreakElement("pageBreakBefore", null, null),
             new DocxTableElement(second)
         ], [first, second]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded: null, cancellationToken: CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
@@ -14960,11 +14965,11 @@ internal static class DocxTests
         DocxTable second = CreateSingleCellTable("second", rowHeight: 20d);
         DocxDocument document = CreateLayoutTestDocument([
             new DocxTableElement(first),
-            new DocxManualBreakElement("runBreak", "column"),
+            new DocxManualBreakElement("runBreak", "column", null),
             new DocxTableElement(second)
         ], [first, second]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded: null, cancellationToken: CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
@@ -15003,7 +15008,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
 
@@ -15028,7 +15033,7 @@ internal static class DocxTests
             new DocxTableElement(second)
         ], [first, second]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded: null, cancellationToken: CancellationToken.None);
 
         TestAssert.Equal(3, layout.Pages.Count);
         TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
@@ -15057,7 +15062,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded: null, cancellationToken: CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
@@ -15092,7 +15097,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
 
@@ -15160,7 +15165,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
 
@@ -15197,7 +15202,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
 
@@ -15237,7 +15242,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
 
@@ -15281,7 +15286,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        IReadOnlyList<PdfPage> pages = new DocxRenderer().RenderBlankPages(document);
+        IReadOnlyList<PdfPage> pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None);
 
         TestAssert.Equal(2, pages.Count);
         TestAssert.DoesNotContain("10.48 10 59.52 0.48 re f", pages[0].Content);
@@ -15316,7 +15321,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
 
@@ -15374,7 +15379,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] splitFragments = layout.Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .Where(row => row.RowIndex == 1)
@@ -15433,8 +15438,8 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxTableRowLayout[] splitFragments = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout[] splitFragments = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .Where(row => row.RowIndex == 1)
@@ -15455,8 +15460,8 @@ internal static class DocxTests
             [new DocxTableRow([new DocxTableCell("Plain", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cell = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cell = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -15489,7 +15494,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded: null, cancellationToken: CancellationToken.None);
         DocxTableRowLayout firstPageRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
         DocxTableRowLayout secondPageRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single();
 
@@ -15522,7 +15527,7 @@ internal static class DocxTests
             [new DocxTableRow([new DocxTableCell("Cell", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(paragraph)], [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         DocxTableRowLayout row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
         DocxTextLineLayout following = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single();
@@ -15557,7 +15562,7 @@ internal static class DocxTests
             [filler, heading],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal("Filler", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
@@ -15593,7 +15598,7 @@ internal static class DocxTests
             [filler, heading],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout keptRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single();
 
         TestAssert.Equal(2, layout.Pages.Count);
@@ -15648,8 +15653,8 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxTableRowLayout[] rows = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout[] rows = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -15716,7 +15721,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout restartRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single(row => row.RowIndex == 1);
         DocxTableRowLayout continuationRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single(row => row.RowIndex == 2);
         DocxTableCellLayout continuationCell = continuationRow.Cells.Single();
@@ -15807,7 +15812,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableCellLayout continuationCell = secondPageRows.Single(row => row.RowIndex == 3).Cells.Single();
 
@@ -15849,7 +15854,7 @@ internal static class DocxTests
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded: null);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded: null, cancellationToken: CancellationToken.None);
 
         DocxTableRowLayout row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
         TestAssert.Equal(170d, row.Y);
@@ -15872,8 +15877,8 @@ internal static class DocxTests
             PreferredWidthPoints: 60d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -15898,8 +15903,8 @@ internal static class DocxTests
             PreferredWidthType: "dxa");
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -15924,8 +15929,8 @@ internal static class DocxTests
             PreferredWidthType: "pct");
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -15948,8 +15953,8 @@ internal static class DocxTests
             HasExplicitGrid: false);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -15973,8 +15978,8 @@ internal static class DocxTests
             HasExplicitGrid: false);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -15997,8 +16002,8 @@ internal static class DocxTests
             HasExplicitGrid: false);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16020,8 +16025,8 @@ internal static class DocxTests
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16048,8 +16053,8 @@ internal static class DocxTests
             ]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout[] rows = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout[] rows = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16073,8 +16078,8 @@ internal static class DocxTests
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16096,8 +16101,8 @@ internal static class DocxTests
             ], 20d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16122,8 +16127,8 @@ internal static class DocxTests
             IndentType: "dxa");
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16147,8 +16152,8 @@ internal static class DocxTests
             CellSpacingType: "dxa");
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16200,9 +16205,9 @@ internal static class DocxTests
         var cell = new DocxTableCell("Alpha BG", [firstParagraph, secondParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 44d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Alpha BG".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Alpha BG".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
 
         DocxTableCellLayout cellLayout = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
         TestAssert.Equal(2, cellLayout.TextLines.Count);
@@ -16244,8 +16249,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [60d], [new DocxTableRow([cell], 36d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, embedded: null)
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16275,15 +16280,15 @@ internal static class DocxTests
         };
         var outerTable = new DocxTable(null, [80d], [new DocxTableRow([outerCell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable, nestedTable]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "Nested".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "Nested".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, embedded);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
         DocxTableRowLayout outerRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
         DocxTableCellLayout outerCellLayout = outerRow.Cells.Single();
         DocxTableRowLayout nestedRow = outerCellLayout.NestedRows.Single();
         DocxTextLineLayout nestedLine = nestedRow.Cells.Single().TextLines.Single();
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxTextEmissionLineSnapshot[] emissionLines = renderer.InspectTextEmission(document).Lines
             .Where(line => !line.IsStaticStory)
             .ToArray();
@@ -16314,10 +16319,10 @@ internal static class DocxTests
         };
         var outerTable = new DocxTable(null, [90d], [new DocxTableRow([outerCell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable, nestedTable]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "BeforeNestedAfter".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "BeforeNestedAfter".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTableCellLayout outerCellLayout = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTableCellLayout outerCellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16347,14 +16352,14 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(after)
             ]
         };
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
 
         TestAssert.Equal(2, layout.Pages.Count);
@@ -16385,7 +16390,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(after)
             ]
         };
@@ -16405,7 +16410,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
@@ -16436,7 +16441,7 @@ internal static class DocxTests
         {
             BodyElements = beforeParagraphs
                 .Select<DocxParagraph, DocxBodyElement>(paragraph => new DocxParagraphElement(paragraph))
-                .Append(new DocxPageBreakElement("runBreak", "page"))
+                .Append(new DocxPageBreakElement("runBreak", "page", null))
                 .Append(new DocxParagraphElement(after))
                 .ToArray()
         };
@@ -16456,7 +16461,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
 
         TestAssert.Equal(3, layout.Pages.Count);
@@ -16500,7 +16505,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(earlyBefore),
-                new DocxPageBreakElement("earlyBreak", "page"),
+                new DocxPageBreakElement("earlyBreak", "page", null),
                 new DocxParagraphElement(earlyAfter)
             ]
         };
@@ -16510,15 +16515,15 @@ internal static class DocxTests
             [
                 new DocxParagraphElement(laterFirst),
                 new DocxParagraphElement(laterMiddle),
-                new DocxPageBreakElement("laterBreak", "page"),
+                new DocxPageBreakElement("laterBreak", "page", null),
                 new DocxParagraphElement(laterAfter)
             ]
         };
         DocxTable table = new(null, [60d, 60d], [new DocxTableRow([earlyCell, laterCell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
@@ -16543,15 +16548,15 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(after)
             ]
         };
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
@@ -16574,15 +16579,15 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxTableElement(beforeNestedTable),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxTableElement(afterNestedTable)
             ]
         };
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, beforeNestedTable, afterNestedTable]);
 
-        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
@@ -16605,15 +16610,15 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxManualBreakElement("runBreak", "column"),
+                new DocxManualBreakElement("runBreak", "column", null),
                 new DocxParagraphElement(after)
             ]
         };
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .Single()
@@ -16636,7 +16641,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(earlyBefore),
-                new DocxPageBreakElement("earlyBreak", "page"),
+                new DocxPageBreakElement("earlyBreak", "page", null),
                 new DocxParagraphElement(earlyAfter)
             ]
         };
@@ -16646,15 +16651,15 @@ internal static class DocxTests
             [
                 new DocxTableElement(beforeNestedTable),
                 new DocxTableElement(middleNestedTable),
-                new DocxPageBreakElement("laterBreak", "page"),
+                new DocxPageBreakElement("laterBreak", "page", null),
                 new DocxTableElement(afterNestedTable)
             ]
         };
         DocxTable table = new(null, [60d, 90d], [new DocxTableRow([earlyCell, nestedCell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, beforeNestedTable, middleNestedTable, afterNestedTable]);
 
-        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
@@ -16683,7 +16688,7 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(earlyBefore),
-                new DocxPageBreakElement("earlyBreak", "page"),
+                new DocxPageBreakElement("earlyBreak", "page", null),
                 new DocxParagraphElement(earlyAfter)
             ]
         };
@@ -16694,8 +16699,8 @@ internal static class DocxTests
         DocxTable table = new(null, [60d, 90d], [new DocxTableRow([earlyCell, nestedCell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, nestedTable]);
 
-        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout[] rowFragments = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
@@ -16743,10 +16748,10 @@ internal static class DocxTests
         var cell = new DocxTableCell("Inset", [paragraph], null, null, null, null, [], margins);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 30d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Inset".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Inset".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16782,10 +16787,10 @@ internal static class DocxTests
         var cell = new DocxTableCell("Flush", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 30d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Flush".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Flush".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16826,10 +16831,10 @@ internal static class DocxTests
         var cell = new DocxTableCell("Bordered", [paragraph], null, null, null, null, borders, DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 30d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Bordered".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "Bordered".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16859,8 +16864,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16888,8 +16893,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [30d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine()
-            .Create(document, new FractionalLineHeightTextMeasurer())
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FractionalLineHeightTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16926,8 +16931,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16956,8 +16961,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null, TablePropertyExceptionCellMargins: rowExceptionMargins)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -16981,8 +16986,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [40d, 40d], [new DocxTableRow([defaultCell, topMarginCell], 30d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17010,8 +17015,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17041,8 +17046,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17079,10 +17084,10 @@ internal static class DocxTests
         var bottomCell = new DocxTableCell("V", [paragraph], null, null, null, "bottom", [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [40d, 40d, 40d], [new DocxTableRow([topCell, centerCell, bottomCell], 60d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "V".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "V".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17119,10 +17124,10 @@ internal static class DocxTests
         var cell = new DocxTableCell("First Second", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "First Second".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "First Second".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17156,8 +17161,8 @@ internal static class DocxTests
             PreferredWidthPoints: 34d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17194,8 +17199,8 @@ internal static class DocxTests
             PreferredWidthPoints: 34d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17235,8 +17240,8 @@ internal static class DocxTests
             PreferredWidthPoints: 16d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17278,8 +17283,8 @@ internal static class DocxTests
             PreferredWidthPoints: 25d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17316,8 +17321,8 @@ internal static class DocxTests
             PreferredWidthPoints: 25d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17353,8 +17358,8 @@ internal static class DocxTests
             PreferredWidthPoints: 20d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17401,7 +17406,7 @@ internal static class DocxTests
             [new DocxTableRow([cell], 10d)],
             PreferredWidthPoints: 16d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
         DocxTextEmissionLineSnapshot[] splitLines = snapshot.Lines
@@ -17439,7 +17444,7 @@ internal static class DocxTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines.Single(line => !line.IsStaticStory);
         int[] visibleLengths = line.Segments
@@ -17520,7 +17525,7 @@ internal static class DocxTests
             [],
             [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
@@ -17552,10 +17557,10 @@ internal static class DocxTests
         var cell = new DocxTableCell("First Second", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d, HeightValue: "200", HeightRuleValue: "exact")]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "First Second".EnumerateRunes().Select(rune => rune.Value));
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "First Second".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, embedded)
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded, CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17590,8 +17595,8 @@ internal static class DocxTests
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 10d, HeightValue: "200", HeightRuleValue: "exact")]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTableRowLayout>()
@@ -17649,7 +17654,7 @@ internal static class DocxTests
             CellSpacingPoints: 1d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
         TestAssert.Equal(1, snapshot.Tables.Count);
         DocxTableSnapshot tableSnapshot = snapshot.Tables.Single();
@@ -17767,7 +17772,7 @@ internal static class DocxTests
         DocxTable table = CreateSingleCellTable("Plain 123", 20d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
         DocxTableRowSnapshot row = snapshot.Pages[0].TableRows.Single();
         DocxTableCellSnapshot cell = row.Cells.Single();
@@ -17788,7 +17793,7 @@ internal static class DocxTests
         DocxTable table = CreateSingleCellTable("Alpha\u00ADBeta Gamma\u200BDelta", 20d);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
         DocxTableCellSnapshot cell = snapshot.Pages[0].TableRows.Single().Cells.Single();
         TestAssert.Equal(5, cell.LongestBreakableTokenLength);
@@ -17803,15 +17808,15 @@ internal static class DocxTests
             BodyElements =
             [
                 new DocxParagraphElement(paragraph),
-                new DocxManualBreakElement("runBreak", "column"),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxManualBreakElement("runBreak", "column", null),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxTableElement(nestedTable)
             ]
         };
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table, nestedTable]);
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
         DocxTableCellSnapshot cellSnapshot = snapshot.Pages[0].TableRows.Single().Cells.Single();
         TestAssert.Equal(4, cellSnapshot.BodyElementCount);
@@ -17851,7 +17856,7 @@ internal static class DocxTests
         DocxTable table = new(null, [90d], [new DocxTableRow([ownerCell], 24d), new DocxTableRow([continuationCell], 24d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
         DocxTableCellSnapshot continuationSnapshot = snapshot.Pages[0].TableRows[1].Cells.Single();
         TestAssert.Equal("VerticalMergeOwner", continuationSnapshot.VisualOwnership);
@@ -17872,10 +17877,10 @@ internal static class DocxTests
         input = Path.GetFullPath(input);
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
         DocxTableRowSnapshot[] rows = snapshot.Pages.SelectMany(page => page.TableRows).ToArray();
         TestAssert.Equal(5, rows.Length);
@@ -17898,7 +17903,7 @@ internal static class DocxTests
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], 50d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
 
         DocxTableCellSnapshot cellSnapshot = snapshot.Pages[0].TableRows.Single().Cells.Single();
@@ -17935,7 +17940,7 @@ internal static class DocxTests
         var cell = new DocxTableCell(string.Empty, [first, second], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], 50d)]);
         DocxDocument document = CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot[] lines = renderer.InspectTextEmission(document).Lines
             .Where(line => !line.IsStaticStory)
@@ -18008,7 +18013,7 @@ internal static class DocxTests
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), markupMode: OoxPdfDocxMarkupMode.AllMarkup, markupGeometryMode: OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
         DocxTextEmissionLineSnapshot textBoxLine = snapshot.Lines.Single(line => line.CommentReferenceCount == 1);
@@ -18058,7 +18063,7 @@ internal static class DocxTests
             [new DocxParagraphElement(first), new DocxParagraphElement(second)],
             []);
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items
             .Where(item => item.Kind == "TextLine")
             .ToArray();
@@ -18141,7 +18146,7 @@ internal static class DocxTests
             [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(defaultAutoList), new DocxParagraphElement(plainParagraph)],
             []);
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items
             .Where(item => item.Kind == "TextLine")
             .ToArray();
@@ -18199,7 +18204,7 @@ internal static class DocxTests
             label);
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        DocxLayoutItemSnapshot line = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()))
+        DocxLayoutItemSnapshot line = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None))
             .Pages[0]
             .Items
             .Single(item => item.Kind == "TextLine");
@@ -18288,7 +18293,7 @@ internal static class DocxTests
             [new DocxParagraphElement(spacedParagraph), new DocxParagraphElement(numberedParagraph)],
             [spacedParagraph, numberedParagraph],
             []);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
 
@@ -18444,7 +18449,7 @@ internal static class DocxTests
             [new DocxParagraphElement(paragraph)],
             [paragraph],
             []);
-        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution));
+        var renderer = new DocxRenderer(new SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines.Single();
 
@@ -18468,7 +18473,7 @@ internal static class DocxTests
             ],
             [first, second]);
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
 
         TestAssert.Equal(1, snapshot.Pages.Count);
         TestAssert.Equal(4, snapshot.Pages[0].SourceBlockCount);
@@ -18517,7 +18522,7 @@ internal static class DocxTests
         };
         DocxDocument document = CreateLayoutTestDocument([new DocxParagraphElement(imageParagraph)], []);
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
 
         TestAssert.Equal(1, snapshot.Pages.Count);
         TestAssert.Equal(1, snapshot.Pages[0].InlineImageCount);
@@ -18607,7 +18612,7 @@ internal static class DocxTests
             [body],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         DocxTextLineLayout[] staticLines = layout.Pages[0].StaticTextLines.ToArray();
         TestAssert.Equal(2, staticLines.Length);
@@ -18702,7 +18707,7 @@ internal static class DocxTests
             RelatedStories = [endnoteStory]
         };
 
-        DocxLayoutSnapshot snapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
         TestAssert.True(snapshot.Pages.Count >= 2, "The oversized endnote story should create a continuation page.");
         DocxLayoutPageSnapshot[] endnotePages = snapshot.Pages
@@ -18743,7 +18748,7 @@ internal static class DocxTests
             [body],
             []);
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
 
         DocxStaticStoryLayoutSnapshot headerStory = snapshot.Pages[0].StaticStories.Single();
         TestAssert.True(headerStory.Kind == "Header" && headerStory.VariantType == "default" && headerStory.TextLineCount == 1 && headerStory.ParagraphCount == 1 && headerStory.TextLength == 2, "Static header layout should select body elements directly instead of requiring the legacy paragraph map.");
@@ -18778,7 +18783,7 @@ internal static class DocxTests
             [body],
             [headerTable]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         DocxTableRowLayout staticRow = layout.Pages[0].StaticTableRows.Single();
         TestAssert.True(staticRow.StoryKind == "Header" && staticRow.StoryVariantType == "default", "Static header table rows should retain selected-story provenance.");
@@ -18825,11 +18830,11 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             [headerTable]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal("Header 1", layout.Pages[0].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
@@ -18861,11 +18866,11 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             [headerTable]);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal("Total 2", layout.Pages[0].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
@@ -18896,11 +18901,11 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         DocxFloatingDrawingLayout[] staticDrawings = layout.StaticFloatingDrawings.OrderBy(drawing => drawing.AnchorPageIndex).ToArray();
@@ -18936,7 +18941,7 @@ internal static class DocxTests
             [],
             [headerTable]);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(CountPdfTextShows(page.Content) >= 1, "Static header body elements should pass the renderer's empty-document guard instead of producing a blank page.");
     }
@@ -18989,7 +18994,7 @@ internal static class DocxTests
             [],
             []);
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(1, page.Images.Count);
         TestAssert.Contains("/Im1 Do", page.Content);
@@ -19066,14 +19071,14 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.StoryLayout.Story.Id == "42");
         DocxFloatingDrawingLayout placedDrawing = placedStory.FloatingDrawings.Single();
         TestAssert.True(placedDrawing.PlacedX >= document.MarginLeftPoints, "Placed footnote floating drawings should be translated from note-local coordinates into the page margin frame.");
 
-        PdfPage page = new DocxRenderer().RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(1, page.Images.Count);
         TestAssert.Contains("/Im1 Do", page.Content);
@@ -19111,11 +19116,11 @@ internal static class DocxTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page"), new DocxParagraphElement(secondBody)],
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement("runBreak", "page", null), new DocxParagraphElement(secondBody)],
             [firstBody, secondBody],
             []);
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
 
         TestAssert.Equal(2, snapshot.Pages.Count);
         TestAssert.Equal("first", snapshot.Pages[0].StaticStories.Single().VariantType ?? string.Empty);
@@ -19163,7 +19168,7 @@ internal static class DocxTests
             [body],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         DocxInlineImageLayout staticImage = layout.Pages[0].StaticInlineImages.Single();
         TestAssert.True(staticImage.Image == headerImage && staticImage.Width == 36d && staticImage.Height == 18d, "Static header inline images should be first-class page layout items with image geometry.");
@@ -19230,7 +19235,7 @@ internal static class DocxTests
             [body],
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         DocxTextLineLayout[] staticLines = layout.Pages[0].StaticTextLines.ToArray();
         TestAssert.Equal(2, staticLines.Length);
@@ -19328,8 +19333,8 @@ internal static class DocxTests
             [body],
             []);
 
-        DocxTextLineLayout[] staticLines = new DocxLayoutEngine()
-            .Create(document, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] staticLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .StaticTextLines
             .ToArray();
@@ -19471,8 +19476,8 @@ internal static class DocxTests
 
         using (FileStream stream = File.OpenRead(input))
         {
-            OoxPackage package = OoxPackage.Open(stream);
-            DocxDocument document = new DocxReader().Read(package);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
             TestAssert.Equal(3, document.HeaderParagraphsByType.Count);
             TestAssert.Equal(1, document.HeaderParagraphs.Count);
         }
@@ -19534,18 +19539,18 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         IReadOnlyList<DocxBodyElement> headerElements = document.HeaderBodyElementsByType["default"];
         TestAssert.True(headerElements.Count == 1 && headerElements.Single() is DocxTableElement, "Static header parts should preserve tables as body elements instead of dropping them from the paragraph inventory.");
         TestAssert.Equal(0, document.HeaderParagraphsByType["default"].Count);
         TestAssert.Equal(1, document.PageSettings.HeaderBodyElementsByType["default"].Count);
 
-        DocxStructureStorySnapshot headerStory = new DocxRenderer().InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
+        DocxStructureStorySnapshot headerStory = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
         TestAssert.True(headerStory.BlockCount == 1 && headerStory.TableCount == 1 && headerStory.ParagraphCount == 0 && headerStory.TextLength == 17, "Static header structure snapshots should derive counts from body elements, including table-cell paragraphs.");
 
-        DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"));
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"), CancellationToken.None);
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Header table text"), "Static header table-cell runs should participate in DOCX font planning through block traversal.");
     }
 
@@ -19624,8 +19629,8 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream);
-        DocxDocument document = new DocxReader().Read(package);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxFloatingDrawing drawing = document.HeaderFloatingDrawingsByType["default"].Single();
         TestAssert.Equal(1, document.PageSettings.HeaderFloatingDrawingsByType["default"].Count);
@@ -19634,10 +19639,10 @@ internal static class DocxTests
         TestAssert.Equal(0, drawing.SourceParagraphIndex ?? -1);
         TestAssert.True(drawing.SourceBlockIndex is null, "Header floating drawings should not pretend to belong to a body block.");
 
-        DocxStructureStorySnapshot story = new DocxRenderer().InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
+        DocxStructureStorySnapshot story = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
         TestAssert.True(story.FloatingDrawingCount == 1 && story.ParagraphCount == 1, "Static header story snapshots should expose anchored drawing ownership without rendering it yet.");
 
-        DocxLayoutSnapshot layout = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
         DocxFloatingDrawingLayoutSnapshot layoutDrawing = layout.StaticFloatingDrawings.Single();
         TestAssert.True(layout.FloatingDrawings.Count == 0 && layoutDrawing.StoryKind == "Header" && layoutDrawing.StoryVariantType == "default", "Selected header drawings should be laid out in the static drawing stream, not mixed with body floating drawings.");
         TestAssert.Equal(0, layoutDrawing.AnchorPageIndex ?? -1);
@@ -20226,7 +20231,7 @@ internal static class DocxTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MULTI_COLUMN"), "Explicit break-only final-section column flow should not emit the stale blanket multi-column diagnostic.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         TestAssert.Equal(1, document.BodyElements.OfType<DocxManualBreakElement>().Count(element => element.Value == "column"));
     }
 
@@ -20280,7 +20285,7 @@ internal static class DocxTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_TRACKED_CHANGES"), "Supported visible inserted runs inside hyperlinks should not be rejected by run-only tracked-change diagnostics.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal("Nested", string.Concat(paragraph.Runs.Select(run => run.Text)));
         TestAssert.Equal(1, paragraph.BookmarkAnchors.Count);
@@ -20332,7 +20337,7 @@ internal static class DocxTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_TRACKED_CHANGES"), "Final-view moved-to runs should not be rejected as unsupported tracked changes.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal("Before Moved after", string.Concat(paragraph.Runs.Select(run => run.Text)));
     }
@@ -20361,7 +20366,7 @@ internal static class DocxTests
 
         DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         string text = ParagraphTexts(allDocument);
-        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(allDocument)
             .Where(placement => placement.Kind == "Revision")
             .ToArray();
@@ -20423,7 +20428,7 @@ internal static class DocxTests
         TestAssert.True(merged.Hyperlinks.Single().TextRunStartIndex > 0 && merged.Hyperlinks.Single().SourceRunStartIndex > 0, "Merged hyperlinks should be shifted after the first paragraph's runs.");
         TestAssert.True(merged.FieldReferences.Single().TextRunIndex > 0 && merged.FieldReferences.Single().SourceRunIndex > 0, "Merged field references should be shifted after the first paragraph's runs.");
         TestAssert.True(merged.InlineReferences.Single(reference => reference.Kind == "Comment").SourceRunIndex > 0, "Merged comment anchors should keep a source run after index shifting.");
-        TestAssert.True(new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(simpleDocument).RevisionItemCount >= 1, "Simple markup should still expose a change bar candidate for the consumed deleted paragraph mark.");
+        TestAssert.True(new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(simpleDocument).RevisionItemCount >= 1, "Simple markup should still expose a change bar candidate for the consumed deleted paragraph mark.");
     }
 
     public static void DocxMarkupModesCollapseRevisedParagraphSpacingBeforeLayout()
@@ -20474,7 +20479,7 @@ internal static class DocxTests
 
         static DocxLayoutItemSnapshot[] TextLineSnapshots(DocxDocument document, OoxPdfDocxMarkupMode mode)
         {
-            return new DocxRenderer(markupMode: mode)
+            return new DocxRenderer(null, mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .InspectLayout(document)
                 .Pages.SelectMany(page => page.Items)
                 .Where(item => item.Kind == "TextLine")
@@ -20555,7 +20560,7 @@ internal static class DocxTests
         TestAssert.Equal(1, table.Rows.Count);
         TestAssert.Equal("Visible row", RowTexts(table));
 
-        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
         TestAssert.True(layout.SourceBlocks.Any(block => block.SourceBlockIndex == 1 && block.Kind == "Table"), "Layout source-block snapshots should retain the visible table block after filtering.");
         TestAssert.True(layout.Tables.Single().RowCount == 1, "Table layout snapshots should report only the visible row after final-view filtering.");
@@ -20563,7 +20568,7 @@ internal static class DocxTests
         TestAssert.True(layout.Pages.Any(page => page.PlacedFootnoteStoryCount == 1), "Footnote placement should still resolve the filtered inline reference source index.");
         TestAssert.True(layout.Pages.Any(page => page.PlacedEndnoteStoryCount == 1), "Endnote placement should still resolve the filtered inline reference source index.");
 
-        PdfPage[] pages = renderer.RenderBlankPages(document).ToArray();
+        PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
         TestAssert.True(pages.SelectMany(page => page.Annotations).Any(annotation => annotation.Uri == "https://example.invalid/source-index"), "External hyperlink annotations should still be emitted after revision filtering.");
         TestAssert.True(pages.SelectMany(page => page.Annotations).Any(annotation => annotation.Destination is { PageIndex: 0 }), "Internal hyperlink destinations should still resolve from filtered bookmark anchors.");
 
@@ -20589,9 +20594,10 @@ internal static class DocxTests
         DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
 
         PdfPage[] pages = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .ToArray();
 
         PdfLinkAnnotation[] externalLinks = pages
@@ -20656,10 +20662,10 @@ internal static class DocxTests
         AssertPageBreakRevisions(simpleDocument, ["Insertion:611"]);
         AssertPageBreakRevisions(allDocument, ["Insertion:611", "Deletion:612"]);
 
-        TestAssert.Equal(2, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final).InspectLayout(finalDocument).Pages.Count);
-        TestAssert.Equal(2, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Original).InspectLayout(originalDocument).Pages.Count);
-        TestAssert.Equal(2, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(simpleDocument).Pages.Count);
-        TestAssert.Equal(3, new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectLayout(allDocument).Pages.Count);
+        TestAssert.Equal(2, new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(finalDocument).Pages.Count);
+        TestAssert.Equal(2, new DocxRenderer(null, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(originalDocument).Pages.Count);
+        TestAssert.Equal(2, new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(simpleDocument).Pages.Count);
+        TestAssert.Equal(3, new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(allDocument).Pages.Count);
 
         static void AssertKeepRules(
             DocxDocument document,
@@ -20776,7 +20782,7 @@ internal static class DocxTests
         TestAssert.Equal("Insertion:101|Deletion:102", string.Join("|", revisedParagraphs.Select(element => $"{element.Paragraph.Revisions.Single().Kind}:{element.Paragraph.Revisions.Single().Id}")));
         TestAssert.Equal("Insertion:103|Deletion:104", string.Join("|", revisedTables.Select(element => $"{element.Table.Revisions.Single().Kind}:{element.Table.Revisions.Single().Id}")));
 
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.True(structure.Blocks.Count(block => block.RevisionCount != 0) >= 4, "Structure inspection should continue to see block revision provenance after body-element wrappers retain it.");
     }
 
@@ -20793,7 +20799,7 @@ internal static class DocxTests
 
         TestAssert.Equal("Before|Controlled paragraph|After", string.Join("|", paragraphs.Select(ParagraphText)));
         TestAssert.True(controlledParagraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.PropertyElementNames.Contains("pStyle")), "Block content controls should expose paragraph formatting revisions to markup inspection.");
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(1, structure.FormattingRevisionCount);
         TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
         TestAssert.Equal(3, structure.ParagraphBlockCount);
@@ -20952,7 +20958,7 @@ internal static class DocxTests
         });
         using FileStream stream = File.OpenRead(input);
 
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal(2, paragraph.RevisionRanges.Count);
@@ -20961,7 +20967,7 @@ internal static class DocxTests
         TestAssert.True(moveFrom.Id == "7" && moveFrom.Name == "move-from" && moveFrom.Author == "A" && moveFrom.Date == "2026-06-05T00:00:00Z" && moveFrom.StartSourceRunIndex == 0 && moveFrom.EndSourceRunIndex == 1, "Move-from range markers should preserve metadata and source coordinates.");
         TestAssert.True(moveTo.Id == "8" && moveTo.Name == "move-to" && moveTo.Author == "B" && moveTo.Date == "2026-06-06T00:00:00Z" && moveTo.StartSourceRunIndex == 1 && moveTo.EndSourceRunIndex == 2, "Move-to range markers should preserve metadata and source coordinates.");
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(2, snapshot.Blocks.Single().RevisionRangeCount);
         DocxStructureRevisionRangeSnapshot[] ranges = snapshot.RevisionRanges!.ToArray();
         TestAssert.Equal(2, ranges.Length);
@@ -21016,7 +21022,7 @@ internal static class DocxTests
         });
 
         DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        DocxStructureRevisionRangeSnapshot[] ranges = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxStructureRevisionRangeSnapshot[] ranges = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectStructure(document)
             .RevisionRanges!
             .ToArray();
@@ -21127,10 +21133,10 @@ internal static class DocxTests
             }
         };
 
-        var allMarkupRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var allMarkupRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxMarkupBalloonPlacementSnapshot[] commentPlacements = allMarkupRenderer.InspectMarkupBalloons(commentDocument).ToArray();
         DocxMarkupBalloonPlacementSnapshot[] revisionPlacements = allMarkupRenderer.InspectMarkupBalloons(revisionDocument).ToArray();
-        DocxLayoutSnapshot layout = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup, markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin).InspectLayout(hideMarkupDocument);
+        DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin).InspectLayout(hideMarkupDocument);
 
         TestAssert.True(commentPlacements.All(placement => placement.Kind != "Comment"), "revisionView comments=0 should suppress comment balloons in all-markup inspection.");
         TestAssert.True(revisionPlacements.All(placement => placement.Kind != "Revision"), "revisionView insDel=0 should suppress revision balloons in all-markup inspection.");
@@ -21143,11 +21149,11 @@ internal static class DocxTests
         string input = WriteTrackedChangeModeProbeDocx();
         DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
         DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        var finalRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final);
-        var allRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var finalRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var allRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        PdfPage finalPage = finalRenderer.RenderBlankPages(finalDocument).Single();
-        PdfPage allPage = allRenderer.RenderBlankPages(allDocument).Single();
+        PdfPage finalPage = finalRenderer.RenderBlankPages(finalDocument, null, CancellationToken.None).Single();
+        PdfPage allPage = allRenderer.RenderBlankPages(allDocument, null, CancellationToken.None).Single();
         DocxLayoutPageSnapshot finalLayoutPage = finalRenderer.InspectLayout(finalDocument).Pages.Single();
         DocxLayoutPageSnapshot allLayoutPage = allRenderer.InspectLayout(allDocument).Pages.Single();
 
@@ -21167,13 +21173,14 @@ internal static class DocxTests
     {
         string input = WriteTrackedChangeModeProbeDocx();
         DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        var preserveRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var preserveRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var reserveRenderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
 
-        PdfPage preservePage = preserveRenderer.RenderBlankPages(allDocument).Single();
-        PdfPage reservePage = reserveRenderer.RenderBlankPages(allDocument).Single();
+        PdfPage preservePage = preserveRenderer.RenderBlankPages(allDocument, null, CancellationToken.None).Single();
+        PdfPage reservePage = reserveRenderer.RenderBlankPages(allDocument, null, CancellationToken.None).Single();
         DocxLayoutSnapshot preserveLayout = preserveRenderer.InspectLayout(allDocument);
         DocxLayoutSnapshot reserveLayout = reserveRenderer.InspectLayout(allDocument);
         DocxLayoutPageSnapshot preserveLayoutPage = preserveLayout.Pages.Single();
@@ -21219,7 +21226,7 @@ internal static class DocxTests
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxMarkupBalloonPlacementSnapshot placement = renderer
             .InspectMarkupBalloons(document)
@@ -21295,6 +21302,7 @@ internal static class DocxTests
         };
 
         DocxLayoutSnapshot layout = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
             .InspectLayout(document);
@@ -21318,8 +21326,9 @@ internal static class DocxTests
             "Cases",
             "docx-markup-margin-mirrored.docx"));
         DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        var preserveRenderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var preserveRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var reserveRenderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
 
@@ -21374,7 +21383,7 @@ internal static class DocxTests
             [],
             [
                 new DocxParagraphElement(first),
-                new DocxPageBreakElement("runBreak", "page"),
+                new DocxPageBreakElement("runBreak", "page", null),
                 new DocxParagraphElement(second)
             ],
             [first, second],
@@ -21386,7 +21395,7 @@ internal static class DocxTests
             }
         };
 
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin).Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(30d, layout.Pages[0].MarginLeft);
@@ -21403,6 +21412,7 @@ internal static class DocxTests
     public static void DocxMarkupReserveMarginModelsLandscapeColumnsAndWideTables()
     {
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
 
@@ -21454,9 +21464,11 @@ internal static class DocxTests
         string input = WriteTrackedChangeModeProbeDocx();
         DocxDocument allDocument = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         var reserveRenderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
         var wordRenderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -21484,9 +21496,11 @@ internal static class DocxTests
         DocxDocument finalDocument = ReadDocx(input, OoxPdfDocxMarkupMode.Final);
         DocxDocument simpleDocument = ReadDocx(input, OoxPdfDocxMarkupMode.SimpleMarkup);
         var finalRenderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.Final,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var simpleRenderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.SimpleMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -21503,13 +21517,13 @@ internal static class DocxTests
     {
         DocxParagraph softHyphen = CreateDocxLayoutParagraph("ABCDEFGHIJKLMNOPQRST\u00ADUVWXYZABCDEFGHIJKLMNOPQRSTUV", 10d, 12d);
         DocxDocument softHyphenDocument = CreateAllMarkupWrapProbeDocument([softHyphen]);
-        DocxTextLineLayout[] preserveSoftHyphen = new DocxLayoutEngine()
-            .Create(softHyphenDocument, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] preserveSoftHyphen = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(softHyphenDocument, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTextLineLayout>()
             .ToArray();
         DocxTextLineLayout[] wordSoftHyphen = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(softHyphenDocument, new FamilyWidthTextMeasurer())
+            .Create(softHyphenDocument, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTextLineLayout>()
             .ToArray();
@@ -21521,13 +21535,13 @@ internal static class DocxTests
 
         DocxParagraph nonbreaking = CreateDocxLayoutParagraph("Alpha\u00A0Beta Gamma Delta Epsilon Zeta Eta Theta Iota Kappa", 10d, 12d);
         DocxDocument nonbreakingDocument = CreateAllMarkupWrapProbeDocument([nonbreaking]);
-        DocxTextLineLayout[] preserveNonbreaking = new DocxLayoutEngine()
-            .Create(nonbreakingDocument, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] preserveNonbreaking = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(nonbreakingDocument, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTextLineLayout>()
             .ToArray();
         DocxTextLineLayout[] wordNonbreaking = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(nonbreakingDocument, new FamilyWidthTextMeasurer())
+            .Create(nonbreakingDocument, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTextLineLayout>()
             .ToArray();
@@ -21539,13 +21553,13 @@ internal static class DocxTests
 
         DocxParagraph tabs = CreateDocxLayoutParagraph("Alpha\tBeta Gamma Delta Epsilon Zeta Eta Theta Iota", 10d, 12d);
         DocxDocument tabDocument = CreateAllMarkupWrapProbeDocument([tabs]);
-        DocxTextLineLayout[] preserveTabs = new DocxLayoutEngine()
-            .Create(tabDocument, new FamilyWidthTextMeasurer())
+        DocxTextLineLayout[] preserveTabs = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(tabDocument, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTextLineLayout>()
             .ToArray();
         DocxTextLineLayout[] wordTabs = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(tabDocument, new FamilyWidthTextMeasurer())
+            .Create(tabDocument, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTextLineLayout>()
             .ToArray();
@@ -21561,7 +21575,7 @@ internal static class DocxTests
         DocxParagraph punctuation = CreateDocxLayoutParagraph("Alpha, beta; gamma: delta. Epsilon zeta eta theta iota kappa lambda.", 10d, 12d);
         DocxDocument punctuationDocument = CreateAllMarkupWrapProbeDocument([punctuation]);
         DocxTextLineLayout[] wordPunctuation = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(punctuationDocument, new FamilyWidthTextMeasurer())
+            .Create(punctuationDocument, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTextLineLayout>()
             .ToArray();
@@ -21607,9 +21621,10 @@ internal static class DocxTests
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        DocxTextEmissionSnapshot preserve = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxTextEmissionSnapshot preserve = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectTextEmission(document);
         DocxTextEmissionSnapshot wordCompatible = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectTextEmission(document);
@@ -21667,6 +21682,7 @@ internal static class DocxTests
         };
 
         DocxLayoutItemSnapshot reserveSecond = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
             .InspectLayout(document)
@@ -21675,6 +21691,7 @@ internal static class DocxTests
             .Skip(1)
             .First();
         DocxLayoutItemSnapshot wordSecond = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectLayout(document)
@@ -21725,11 +21742,11 @@ internal static class DocxTests
         };
 
         DocxTextLineLayout reserveSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .FloatingDrawings.Single()
             .TextBoxLayout!.TextLines.Skip(1).First();
         DocxTextLineLayout wordSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .FloatingDrawings.Single()
             .TextBoxLayout!.TextLines.Skip(1).First();
 
@@ -21781,11 +21798,11 @@ internal static class DocxTests
         };
 
         DocxTextLineLayout reserveSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .StaticFloatingDrawings.Single()
             .TextBoxLayout!.TextLines.Skip(1).First();
         DocxTextLineLayout wordSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .StaticFloatingDrawings.Single()
             .TextBoxLayout!.TextLines.Skip(1).First();
 
@@ -21832,12 +21849,12 @@ internal static class DocxTests
         };
 
         DocxTableRowLayout reserveRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTableRowLayout>()
             .Single();
         DocxTableRowLayout wordRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTableRowLayout>()
             .Single();
@@ -21895,12 +21912,12 @@ internal static class DocxTests
         };
 
         DocxTableRowLayout reserveOuterRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTableRowLayout>()
             .Single();
         DocxTableRowLayout wordOuterRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTableRowLayout>()
             .Single();
@@ -22010,7 +22027,7 @@ internal static class DocxTests
         };
 
         DocxLayoutPage page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer())
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages
             .Single();
         DocxTableRowLayout outerRow = page.Items.OfType<DocxTableRowLayout>().Single();
@@ -22081,9 +22098,9 @@ internal static class DocxTests
         };
 
         DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new FamilyWidthTextMeasurer());
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer());
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, reserve.Pages.Count);
         TestAssert.Equal(1, reserve.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
@@ -22127,9 +22144,9 @@ internal static class DocxTests
         };
 
         DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new FamilyWidthTextMeasurer());
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new FamilyWidthTextMeasurer());
+            .Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] wordLines = wordCompatible.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
 
         TestAssert.Equal(2, reserve.Pages.Count);
@@ -22176,13 +22193,14 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxTextEmissionSegmentSnapshot[] preserveVisible = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxTextEmissionSegmentSnapshot[] preserveVisible = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectTextEmission(document)
             .Lines.Single()
             .Segments
             .Where(segment => !segment.IsTerminalLineSpace)
             .ToArray();
         DocxTextEmissionSegmentSnapshot[] wordVisible = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectTextEmission(document)
@@ -22244,6 +22262,7 @@ internal static class DocxTests
         };
 
         DocxTextEmissionLineSnapshot[] wordLines = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectTextEmission(document)
@@ -22326,6 +22345,7 @@ internal static class DocxTests
         };
 
         DocxTextEmissionLineSnapshot[] wordLines = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectTextEmission(document)
@@ -22515,6 +22535,7 @@ internal static class DocxTests
             string flowName)
         {
             DocxTextEmissionSegmentSnapshot[] segments = new DocxRenderer(
+                    fontResolver: null,
                     markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                     markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .InspectTextEmission(document)
@@ -22539,12 +22560,13 @@ internal static class DocxTests
     {
         string input = WriteCommentMarkerProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0.949 g", page.Content);
@@ -22563,9 +22585,10 @@ internal static class DocxTests
         DocxDocument document = ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
 
         PdfPage[] pages = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .ToArray();
 
         TestAssert.True(pages.Length >= 2, "The mirrored-margin fixture should render odd and even review pages.");
@@ -22601,9 +22624,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -22648,9 +22672,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -22700,9 +22725,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -22760,9 +22786,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -22823,9 +22850,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -22871,9 +22899,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -22922,9 +22951,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -22952,12 +22982,13 @@ internal static class DocxTests
     {
         string input = WriteTrackedChangeModeProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 rg", page.Content);
@@ -23047,9 +23078,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
@@ -23067,12 +23099,13 @@ internal static class DocxTests
     {
         string input = WriteTrackedChangeModeProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.True(
@@ -23132,12 +23165,13 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Revision");
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(1, placement.WordCompatibleBodySummaryPartCount);
         TestAssert.True(
@@ -23156,9 +23190,9 @@ internal static class DocxTests
     {
         string input = WriteTrackedChangeModeProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
 
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -23184,7 +23218,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
 
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -23194,8 +23228,8 @@ internal static class DocxTests
     {
         string input = WriteTrackedChangeModeProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
-        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
         DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
@@ -23214,10 +23248,10 @@ internal static class DocxTests
     {
         string input = WriteTableFormattingRevisionProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
 
-        DocxLayoutSnapshot layout = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(document);
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+        DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(layout.Pages.SelectMany(page => page.Items).Any(item => item.Kind == "TableRow" && item.RevisionCount != 0), "Simple-markup layout should treat structural table-row revisions as changed items.");
         TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Tables.Single().Rows.Single().Revisions), "rg"), page.Content);
@@ -23317,8 +23351,8 @@ internal static class DocxTests
 
     private static void AssertSimpleMarkupTableRowChangeBarRendered(DocxDocument document, DocxTable table, string flowName)
     {
-        string content = string.Concat(new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup)
-            .RenderBlankPages(document)
+        string content = string.Concat(new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Select(page => page.Content));
         string color = FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(table.Rows.Single().Revisions), "rg");
         TestAssert.True(content.Contains(color, StringComparison.Ordinal), "Simple-markup should draw a row revision color for " + flowName + ".");
@@ -23359,10 +23393,10 @@ internal static class DocxTests
                 RelatedStories = [footnoteStory],
                 MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
             };
-        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(
             layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
@@ -23405,10 +23439,10 @@ internal static class DocxTests
                 RelatedStories = [endnoteStory],
                 MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
             };
-        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(
             layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
@@ -23440,7 +23474,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
 
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -23473,7 +23507,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
 
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -23483,9 +23517,9 @@ internal static class DocxTests
     {
         string input = WriteCommentMarkerProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
 
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Contains("1 0.753 0 rg", page.Content);
         TestAssert.Contains("0.851 0.592 0 RG", page.Content);
@@ -23661,8 +23695,8 @@ internal static class DocxTests
 
     private static void AssertSimpleMarkupCommentMarkerRendered(DocxDocument document, string flowName)
     {
-        DocxLayoutSnapshot layout = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).InspectLayout(document);
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup).RenderBlankPages(document).Single();
+        DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(CountOccurrences(page.Content, "1 0.753 0 rg") >= 1, "Comment markers should use the expected marker fill color for " + flowName + ".");
         TestAssert.True(CountOccurrences(page.Content, "0.851 0.592 0 RG") >= 1, "Comment markers should use the expected marker outline color for " + flowName + ".");
@@ -23685,10 +23719,11 @@ internal static class DocxTests
     private static void AssertWordCompatibleCommentRangeMarkerRendered(DocxDocument document, string flowName)
     {
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(
             CountOccurrences(page.Content, " 11.625 re f") >= 1,
@@ -23785,9 +23820,9 @@ internal static class DocxTests
     {
         string input = WriteCommentMarkerProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Contains("0.5 w", page.Content);
         TestAssert.Contains(" re B*", page.Content);
@@ -23830,7 +23865,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
 
         TestAssert.True(
@@ -23876,7 +23911,7 @@ internal static class DocxTests
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
         DocxMarkupBalloonPlacementSnapshot commentPlacement = placements.Single(placement => placement.Kind == "Comment");
 
@@ -23918,7 +23953,7 @@ internal static class DocxTests
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
 
-        DocxMarkupBalloonPlacementSnapshot endnoteCommentPlacement = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot endnoteCommentPlacement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(endnoteDocument)
             .Single(placement => placement.Kind == "Comment");
 
@@ -23962,7 +23997,7 @@ internal static class DocxTests
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
         DocxMarkupBalloonPlacementSnapshot revisionPlacement = placements.Single(placement => placement.Kind == "Revision");
 
@@ -24004,7 +24039,7 @@ internal static class DocxTests
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
 
-        DocxMarkupBalloonPlacementSnapshot endnoteRevisionPlacement = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot endnoteRevisionPlacement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(endnoteDocument)
             .Single(placement => placement.Kind == "Revision");
 
@@ -24049,7 +24084,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .ToArray();
 
@@ -24100,7 +24135,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .ToArray();
 
@@ -24131,7 +24166,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
 
         TestAssert.True(
@@ -24167,7 +24202,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
 
         TestAssert.True(
@@ -24251,7 +24286,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
 
         TestAssert.True(
@@ -24285,7 +24320,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
 
         TestAssert.True(
@@ -24324,7 +24359,7 @@ internal static class DocxTests
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document);
 
         TestAssert.True(
@@ -24360,7 +24395,7 @@ internal static class DocxTests
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
 
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> endnotePlacements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> endnotePlacements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(endnoteDocument);
 
         TestAssert.True(
@@ -24425,12 +24460,13 @@ internal static class DocxTests
     {
         string input = WriteCommentMarkerProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
-        PdfPage preservePage = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).RenderBlankPages(document).Single();
+        PdfPage preservePage = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
         PdfPage wordPage = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
-            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document).Single();
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(
             CountPdfTextShows(wordPage.Content) < CountPdfTextShows(preservePage.Content),
@@ -24441,12 +24477,13 @@ internal static class DocxTests
     {
         string input = WriteCommentMarkerProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
@@ -24510,9 +24547,10 @@ internal static class DocxTests
         };
 
         PdfPage page = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
@@ -24733,6 +24771,7 @@ internal static class DocxTests
     public static void DocxWordCompatibleAllMarkupAnchorsStoryTableCommentConnectorsAtCellRangeEnd()
     {
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -24909,11 +24948,12 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.True(
             textEmission.Lines.Count(line => !line.IsStaticStory && line.TextLength != 0) >= 2,
@@ -24979,11 +25019,12 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         DocxMarkupBalloonPlacementSnapshot[] placements = renderer.InspectMarkupBalloons(document).ToArray();
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         DocxMarkupBalloonPlacementSnapshot mixedPlacement = placements.Single(placement => placement.Kind == "Markup");
         TestAssert.True(
@@ -25069,12 +25110,13 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Comment");
-        PdfPage page = renderer.RenderBlankPages(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         int renderedSeparatorLines = Regex.Matches(page.Content, @"(?<x1>-?[0-9.]+) (?<y>-?[0-9.]+) m (?<x2>-?[0-9.]+) \k<y> l S")
             .Cast<Match>()
@@ -25167,6 +25209,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -25252,6 +25295,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -25340,6 +25384,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
+            fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
@@ -25405,9 +25450,10 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxTextEmissionSnapshot preserve = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxTextEmissionSnapshot preserve = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectTextEmission(document);
         DocxTextEmissionSnapshot wordCompatible = new DocxRenderer(
+                fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectTextEmission(document);
@@ -25427,9 +25473,9 @@ internal static class DocxTests
     {
         string input = WriteTrackedChangeModeProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
-        PdfPage page = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).RenderBlankPages(document).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Contains(FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "RG"), page.Content);
         TestAssert.Contains(" re B*", page.Content);
@@ -25472,7 +25518,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] revisionPlacements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] revisionPlacements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .Where(placement => placement.RevisionCandidateCount != 0)
             .ToArray();
@@ -25684,7 +25730,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .ToArray();
         DocxMarkupBalloonPlacementSnapshot[] balloons = placements
@@ -25766,7 +25812,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .Where(placement => placement.Kind == "Revision")
             .ToArray();
@@ -25819,7 +25865,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .Where(placement => !placement.IsOverflowSummary)
             .OrderByDescending(placement => placement.AnchorY)
@@ -25882,7 +25928,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .Where(placement => !placement.IsOverflowSummary)
             .ToArray();
@@ -25935,7 +25981,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .Where(placement => !placement.IsOverflowSummary)
             .OrderBy(placement => placement.LaneBandIndex)
@@ -25998,7 +26044,7 @@ internal static class DocxTests
             BodyElements = [new DocxParagraphElement(bodyParagraph)],
             RelatedStories = [commentStory]
         };
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
 
         string preview = DocxRenderer.BuildCommentBalloonPreview(layout.RelatedStories.Single());
 
@@ -26010,8 +26056,8 @@ internal static class DocxTests
     {
         string input = WriteTrackedChangeModeProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
-        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxStructureSnapshot structure = renderer.InspectStructure(document);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
@@ -26043,8 +26089,8 @@ internal static class DocxTests
     {
         string input = WriteCommentMarkerProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
-        var renderer = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxStructureSnapshot structure = renderer.InspectStructure(document);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
@@ -26063,12 +26109,12 @@ internal static class DocxTests
     {
         string input = WriteCommentAnchorAccountingProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.Final);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal("1|2", string.Join("|", document.PackageCommentAnchorIds));
         TestAssert.Equal("2", string.Join("|", document.HiddenCommentAnchorIds));
 
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.Final).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(2, structure.PackageCommentAnchorIdCount);
         TestAssert.Equal(1, structure.HiddenCommentAnchorIdCount);
         TestAssert.Equal(1, structure.ResolvedCommentStoryAnchorCount);
@@ -26092,8 +26138,8 @@ internal static class DocxTests
         DocxStructureCommentStoryAnchorSnapshot FinalAnchor(string id, OoxPdfDocxMarkupMode mode)
         {
             using FileStream stream = File.OpenRead(input);
-            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: mode);
-            return new DocxRenderer(markupMode: mode)
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: mode);
+            return new DocxRenderer(null, mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .InspectStructure(document)
                 .CommentStoryAnchors!
                 .Single(anchor => anchor.Id == id);
@@ -26117,8 +26163,8 @@ internal static class DocxTests
         (int StructureReferences, int LayoutReferences, int TextReferences, int RenderedCommentCandidates) Counts(OoxPdfDocxMarkupMode mode)
         {
             using FileStream stream = File.OpenRead(input);
-            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: mode);
-            var renderer = new DocxRenderer(markupMode: mode);
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: mode);
+            var renderer = new DocxRenderer(null, mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             return (
                 renderer.InspectStructure(document).CommentReferenceCount,
                 renderer.InspectLayout(document).CommentReferenceCount,
@@ -26198,7 +26244,7 @@ internal static class DocxTests
         });
         using FileStream stream = File.OpenRead(input);
 
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         TestAssert.Equal(3, document.RelatedStories.Count(story => story.Kind == "Comment"));
         DocxRelatedStory parent = document.RelatedStories.Single(story => story.Kind == "Comment" && story.Id == "1");
@@ -26210,7 +26256,7 @@ internal static class DocxTests
         TestAssert.True(reply.CommentMetadata?.ParagraphId == "22222222" && reply.CommentMetadata.ParentParagraphId == "11111111" && reply.CommentMetadata.ParentCommentId == "1" && reply.CommentMetadata.IsResolved == false, "Reply comment extension metadata should resolve the parent comment id through the parent paragraph id.");
         TestAssert.True(secondReply.CommentMetadata?.ParagraphId == "33333333" && secondReply.CommentMetadata.ParentParagraphId == "11111111" && secondReply.CommentMetadata.ParentCommentId == "1" && secondReply.CommentMetadata.IsResolved == false, "Second reply metadata should resolve to the same parent comment thread.");
 
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureStorySnapshot parentSnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "1");
         DocxStructureStorySnapshot replySnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "2");
         DocxStructureStorySnapshot secondReplySnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "3");
@@ -26218,7 +26264,7 @@ internal static class DocxTests
         TestAssert.True(replySnapshot.HasCommentAuthor && replySnapshot.HasCommentInitials && replySnapshot.HasCommentDate && replySnapshot.CommentParagraphId == "22222222" && replySnapshot.CommentParentParagraphId == "11111111" && replySnapshot.CommentParentId == "1" && replySnapshot.CommentResolved == false, "Structure snapshots should expose private-safe threaded reply ownership.");
         TestAssert.True(secondReplySnapshot.HasCommentAuthor && secondReplySnapshot.CommentParagraphId == "33333333" && secondReplySnapshot.CommentParentParagraphId == "11111111" && secondReplySnapshot.CommentParentId == "1", "Structure snapshots should expose private-safe ownership for every reply in the thread.");
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxRelatedStoryLayout parentLayout = layout.RelatedStories.Single(story => story.Story.Id == "1");
         DocxRelatedStoryLayout replyLayout = layout.RelatedStories.Single(story => story.Story.Id == "2");
         DocxRelatedStoryLayout secondReplyLayout = layout.RelatedStories.Single(story => story.Story.Id == "3");
@@ -26235,7 +26281,7 @@ internal static class DocxTests
         TestAssert.Contains("Reply 2024-01-03 open Reply comment", wordCompatibleThreadedPreview);
         TestAssert.Contains("Reply 2024-01-04 open Second reply", wordCompatibleThreadedPreview);
 
-        DocxMarkupBalloonPlacementSnapshot parentBalloon = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxMarkupBalloonPlacementSnapshot parentBalloon = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)
             .Single(placement => placement.Kind == "Comment");
         TestAssert.True(
@@ -26293,13 +26339,13 @@ internal static class DocxTests
         });
         using FileStream stream = File.OpenRead(input);
 
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
         DocxInlineReference reference = document.Paragraphs.Single().InlineReferences.Single();
         TestAssert.True(reference.Revision?.Kind == "Insertion" && reference.Revision.Author == "A" && reference.Revision.Date == "2026-06-04T00:00:00Z" && reference.Revision.SourceElement == "ins", "Inline references inside revision containers should retain direct revision metadata.");
         TestAssert.Equal(1, reference.Revisions.Count);
 
-        DocxStructureInlineReferenceSnapshot snapshot = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup)
+        DocxStructureInlineReferenceSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectStructure(document)
             .InlineReferences
             .Single();
@@ -26603,7 +26649,7 @@ internal static class DocxTests
     {
         string input = WriteFormattingRevisionProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
         DocxParagraph paragraph = document.Paragraphs.Single();
 
         TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == "ParagraphPropertiesChange" && revision.SourceElement == "pPrChange"), "Paragraph formatting revisions should retain private-safe provenance.");
@@ -26615,7 +26661,7 @@ internal static class DocxTests
         TestAssert.Contains("Formatted paragraph: alignment", revisionPreview);
         TestAssert.Contains("Formatted run: color, bold", revisionPreview);
 
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         TestAssert.Equal(3, structure.RevisionCount);
         TestAssert.Equal(3, structure.OtherRevisionCount);
         TestAssert.Equal(3, structure.FormattingRevisionCount);
@@ -26690,7 +26736,7 @@ internal static class DocxTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
 
         TestAssert.Equal(3, structure.FormattingRevisionCount);
         TestAssert.Equal(2, structure.RunFormattingRevisionCount);
@@ -26703,7 +26749,7 @@ internal static class DocxTests
     {
         string input = WriteTableFormattingRevisionProbeDocx();
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream), markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
         DocxTable table = document.BodyElements.OfType<DocxTableElement>().Single().Table;
         DocxTableRow row = table.Rows.Single();
         DocxTableCell cell = row.Cells.Single();
@@ -26715,7 +26761,7 @@ internal static class DocxTests
         TestAssert.Contains("Formatted row: row height", DocxRenderer.BuildRevisionBalloonPreview(row.Revisions));
         TestAssert.Contains("Formatted cell: cell width", DocxRenderer.BuildRevisionBalloonPreview(cell.Revisions));
 
-        DocxStructureSnapshot structure = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectStructure(document);
+        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Table");
         DocxStructureTableSnapshot tableSnapshot = structure.Tables.Single();
         DocxStructureTableRowSnapshot rowSnapshot = tableSnapshot.Rows.Single();
@@ -26731,7 +26777,7 @@ internal static class DocxTests
         TestAssert.Equal(1, structure.RowFormattingRevisionCount);
         TestAssert.Equal(1, structure.CellFormattingRevisionCount);
         TestAssert.True((structure.FormattingRevisionProperties ?? []).Any(property => property.Family == "Table" && property.PropertyElementName == "tblBorders"), "Table formatting revision property snapshots should count table borders.");
-        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(markupMode: OoxPdfDocxMarkupMode.AllMarkup).InspectMarkupBalloons(document);
+        IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(document);
         int revisionCandidateCount = placements
             .Where(placement => placement.Kind == "Revision")
             .Sum(placement => placement.CandidateCount);
@@ -26746,7 +26792,7 @@ internal static class DocxTests
     private static DocxDocument ReadDocx(string input, OoxPdfDocxMarkupMode mode)
     {
         using FileStream stream = File.OpenRead(input);
-        return new DocxReader().Read(OoxPackage.Open(stream), markupMode: mode);
+        return new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: mode);
     }
 
     private static DocxTable ReadSingleTable(string input, OoxPdfDocxMarkupMode mode)
@@ -28225,7 +28271,7 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(3, document.BodyElements.Count);
         TestAssert.True(document.BodyElements[0] is DocxParagraphElement, "Text before the nested break should remain a paragraph fragment.");
@@ -28273,7 +28319,7 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(3, document.BodyElements.Count);
         TestAssert.True(document.BodyElements[0] is DocxParagraphElement, "Moved-to text before the break should remain a paragraph fragment.");
@@ -28439,14 +28485,14 @@ internal static class DocxTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(3, document.RelatedStories.Count);
         TestAssert.Equal("separator", document.RelatedStories.Single(story => story.Id == "-1").Type ?? string.Empty);
         TestAssert.Equal("continuationSeparator", document.RelatedStories.Single(story => story.Id == "0").Type ?? string.Empty);
         TestAssert.True(document.RelatedStories.Single(story => story.Id == "2").Type is null, "Normal note bodies without w:type should remain normal rather than receiving an inferred type token.");
 
-        DocxLayoutSnapshot layoutSnapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot layoutSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
         TestAssert.Equal("separator", layoutSnapshot.RelatedStories.Single(story => story.Id == "-1").Type ?? string.Empty);
         TestAssert.Equal("continuationSeparator", layoutSnapshot.RelatedStories.Single(story => story.Id == "0").Type ?? string.Empty);
         DocxLayoutPageSnapshot footnotePage = layoutSnapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 1);
@@ -28567,7 +28613,7 @@ internal static class DocxTests
             d.PartName == "/word/document.xml"), "Story-body diagnostics should not be flattened to document.xml when the related body part exists.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph referenceParagraph = document.Paragraphs.Single();
         TestAssert.Equal(3, referenceParagraph.InlineReferences.Count);
         DocxInlineReference commentReference = referenceParagraph.InlineReferences.Single(reference => reference.Kind == "Comment");
@@ -28598,7 +28644,7 @@ internal static class DocxTests
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
 
-        DocxStructureSnapshot snapshot = new DocxRenderer().InspectStructure(document);
+        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureBlockSnapshot referenceBlock = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(3, snapshot.InlineReferenceCount);
         TestAssert.Equal(3, snapshot.AnchoredInlineReferenceCount);
@@ -28629,7 +28675,7 @@ internal static class DocxTests
         TestAssert.True(endnoteReferenceSnapshot.SourceRunIndex == 3 && endnoteReferenceSnapshot.TextOffsetInRun == 0, "Endnote reference snapshot should preserve source marker offsets.");
         TestAssert.True(endnoteReferenceSnapshot.ResolvedStoryKind == "Endnote" && endnoteReferenceSnapshot.ResolvedStoryPartName == "/word/endnotes.xml" && endnoteReferenceSnapshot.ResolvedStoryId == "3" && endnoteReferenceSnapshot.ResolvedStoryTextLength == 12, "Endnote reference snapshot should resolve to the endnote story body.");
 
-        DocxLayoutSnapshot layoutSnapshot = new DocxRenderer().InspectLayout(document);
+        DocxLayoutSnapshot layoutSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
         TestAssert.Equal(3, layoutSnapshot.RelatedStories.Count);
         DocxRelatedStoryLayoutSnapshot commentLayout = layoutSnapshot.RelatedStories.Single(story => story.Kind == "Comment");
         TestAssert.True(commentLayout.PartName == "/word/comments.xml" && commentLayout.Id == "1" && commentLayout.BlockCount == 3 && commentLayout.ParagraphCount == 2 && commentLayout.TableCount == 1, "Related-story layout snapshots should preserve comment story ownership without flattening it into body layout.");
@@ -28645,7 +28691,7 @@ internal static class DocxTests
         TestAssert.True(footnotePage.PlacedRelatedItems.Any(item => item.Kind == "PlacedTextLine") && endnotePage.PlacedRelatedItems.Any(item => item.Kind == "PlacedTextLine"), "Placed related-story item snapshots should still expose page-owned note text lines for PDF-flow diagnostics.");
         TestAssert.True(layoutSnapshot.Pages.SelectMany(page => page.PlacedRelatedItems.Select(item => (Page: page, Item: item))).All(pair => pair.Item.Y >= pair.Page.MarginBottom), "Placed related-story items should be shifted from the unpaged story canvas into the page note area.");
 
-        DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"));
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"), CancellationToken.None);
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment body"), "Related story runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment link"), "Related story hyperlink runs should participate in DOCX font planning.");
         TestAssert.True(fontPlan.Runs.Any(run => run.Run.Text == "Comment table"), "Related story table runs should participate in DOCX font planning.");
@@ -28696,7 +28742,7 @@ internal static class DocxTests
             RelatedStories = [commentStory]
         };
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxRelatedStoryLayoutSnapshot storySnapshot = snapshot.RelatedStories.Single();
 
         TestAssert.True(storySnapshot.Kind == "Comment" && storySnapshot.PartName == "/word/comments.xml" && storySnapshot.Id == "9", "Related-story layout snapshots should preserve the owning story identity.");
@@ -28757,7 +28803,7 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutPageSnapshot footnotePage = snapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 1);
         double footnoteTop = footnotePage.PlacedRelatedItems.Max(item => item.Y + item.Height);
         double bodyBottom = footnotePage.Items.Min(item => item.Y);
@@ -28810,7 +28856,7 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.StoryLayout.Story.Id == "17");
@@ -28902,7 +28948,7 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.StoryLayout.Story.Id == "23");
@@ -28958,7 +29004,7 @@ internal static class DocxTests
             RelatedStories = [firstStory, secondStory]
         };
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutPageSnapshot footnotePage = snapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 2);
         DocxPlacedRelatedStoryLayoutSnapshot[] placedStories = footnotePage.PlacedRelatedStories.ToArray();
         DocxPlacedRelatedStoryLayoutSnapshot firstPlaced = placedStories.Single(story => story.Id == "31");
@@ -29011,12 +29057,12 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxPlacedRelatedStoryLayoutSnapshot placedStory = snapshot.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.Kind == "Footnote" && story.Id == "16");
-        PdfPage placedPage = new DocxRenderer()
-            .RenderBlankPages(document)
+        PdfPage placedPage = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, null, CancellationToken.None)
             .Single(page => page.Content.Contains(" re W n", StringComparison.Ordinal));
 
         TestAssert.True(placedStory.ContentHeight > placedStory.Height, "The overlong footnote should retain full-story height while exposing the clipped page slice height.");
@@ -29096,7 +29142,7 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         int footnotePageIndex = Array.FindIndex(snapshot.Pages.ToArray(), page => page.PlacedFootnoteStoryCount == 1);
 
@@ -29172,7 +29218,7 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         int footnotePageIndex = Array.FindIndex(snapshot.Pages.ToArray(), page => page.PlacedFootnoteStoryCount == 1);
 
@@ -29285,7 +29331,7 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         int footnotePageIndex = Array.FindIndex(snapshot.Pages.ToArray(), page => page.PlacedFootnoteStoryCount == 1);
 
@@ -29351,7 +29397,7 @@ internal static class DocxTests
             RelatedStories = [footnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         int footnotePageIndex = Array.FindIndex(snapshot.Pages.ToArray(), page => page.PlacedFootnoteStoryCount == 1);
 
@@ -29420,7 +29466,7 @@ internal static class DocxTests
             RelatedStories = [endnoteStory]
         };
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutPageSnapshot endnotePage = snapshot.Pages.Single(page => page.PlacedEndnoteStoryCount == 1);
 
         TestAssert.True(snapshot.Pages.Count >= 2, "The next-page section break should separate the two sections.");
@@ -29508,7 +29554,7 @@ internal static class DocxTests
             RelatedStories = [endnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.StoryLayout.Story.Id == "25");
@@ -29601,7 +29647,7 @@ internal static class DocxTests
             RelatedStories = [endnoteStory]
         };
 
-        DocxLayout layout = new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.StoryLayout.Story.Id == "26");
@@ -29679,7 +29725,7 @@ internal static class DocxTests
             RelatedStories = [firstEndnoteStory, secondEndnoteStory]
         };
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         int secondSectionPageIndex = snapshot.Pages
             .Select((page, pageIndex) => (page, pageIndex))
             .First(item => item.page.Items.Any(pageItem => pageItem.SourceBlockIndex == 2))
@@ -29748,7 +29794,7 @@ internal static class DocxTests
             RelatedStories = [endnoteStory]
         };
 
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine().Create(document, new FamilyWidthTextMeasurer()));
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new FamilyWidthTextMeasurer(), CancellationToken.None));
         int secondSectionPageIndex = snapshot.Pages
             .Select((page, pageIndex) => (page, pageIndex))
             .First(item => item.page.Items.Any(pageItem => pageItem.SourceBlockIndex == 2))
@@ -30205,7 +30251,7 @@ internal static class DocxTests
         TestAssert.DoesNotContain("DOCX_STYLE_PARAGRAPH_KEEP_RULE", ids);
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument styledDocument = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument styledDocument = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxParagraph[] fillers =
         [
             CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
@@ -30232,7 +30278,7 @@ internal static class DocxTests
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
 
-        DocxLayout layout = new DocxLayoutEngine().Create(compactDocument, new FamilyWidthTextMeasurer());
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(compactDocument, new FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
 
         TestAssert.Equal(2, layout.Pages.Count);
@@ -30297,7 +30343,7 @@ internal static class DocxTests
         TestAssert.DoesNotContain("DOCX_STYLE_PARAGRAPH_SPACING", ids);
 
         using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream));
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxStructureStyleUsageSnapshot styleUsage = DocxStructureSnapshot.FromDocument(document).StyleUsages.Single(usage => usage.Kind == "Paragraph");
         TestAssert.Equal(2, styleUsage.BeforeSpacingTokenParagraphCount);
         TestAssert.Equal(2, styleUsage.AfterSpacingTokenParagraphCount);
@@ -30366,7 +30412,7 @@ internal static class DocxTests
     {
         try
         {
-            ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync().AsTask().GetAwaiter().GetResult();
+            ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
             OpenTypeFont first = OpenTypeFont.Load(bytes.ToArray(), 0);
             OpenTypeFont selected = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
             return selected.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase)
@@ -30392,7 +30438,7 @@ internal static class DocxTests
         {
             try
             {
-                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync().AsTask().GetAwaiter().GetResult();
+                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
                 OpenTypeFont font = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
                 if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
                 {
@@ -30420,7 +30466,7 @@ internal static class DocxTests
         {
             try
             {
-                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync().AsTask().GetAwaiter().GetResult();
+                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
                 OpenTypeFont font = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
                 if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
                 {

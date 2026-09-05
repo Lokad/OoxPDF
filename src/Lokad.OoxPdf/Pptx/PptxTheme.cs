@@ -55,7 +55,7 @@ internal sealed class PptxTheme
 
     public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], [], []);
 
-    public static PptxTheme Load(OoxPackage package, string presentationPartName, CancellationToken cancellationToken = default)
+    public static PptxTheme Load(OoxPackage package, string presentationPartName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? themeRelationship = package.GetRelationships(presentationPartName, cancellationToken)

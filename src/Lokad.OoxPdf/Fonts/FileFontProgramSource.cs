@@ -15,7 +15,7 @@ public sealed class FileFontProgramSource : IFontProgramSource
 
     public string StableId => "file:" + path;
 
-    public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
+    public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
     {
         if (cachedBytes is ReadOnlyMemory<byte> bytes)
         {

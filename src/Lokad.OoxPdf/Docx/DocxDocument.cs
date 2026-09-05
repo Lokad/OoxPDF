@@ -426,9 +426,9 @@ internal sealed record DocxImplicitParagraphElement(string SourceKind) : DocxBod
     }
 }
 
-internal sealed record DocxPageBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph = null) : DocxBodyElement;
+internal sealed record DocxPageBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
 
-internal sealed record DocxManualBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph = null) : DocxBodyElement;
+internal sealed record DocxManualBreakElement(string SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
 
 internal sealed record DocxSectionColumn(
     string? WidthValue,
@@ -472,7 +472,7 @@ internal static class DocxBodyElementFactory
         };
     }
 
-    public static DocxManualBreakElement CreateManualBreak(string sourceKind, string? value, DocxParagraph? breakParagraph = null)
+    public static DocxManualBreakElement CreateManualBreak(string sourceKind, string? value, DocxParagraph? breakParagraph)
     {
         return new DocxManualBreakElement(sourceKind, value, breakParagraph)
         {

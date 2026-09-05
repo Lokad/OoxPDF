@@ -112,7 +112,7 @@ internal sealed class PdfGraphicsBuilder
             "S";
         if (!extGStates.Any(state => state.ResourceName.Equals(resourceName, StringComparison.Ordinal)))
         {
-            extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha));
+            extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha, null));
         }
 
         builder.Append('/').Append(resourceName).AppendLine(" gs");

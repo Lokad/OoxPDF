@@ -12,7 +12,7 @@ internal static class OoxBoolean
             value.Equals("on", StringComparison.OrdinalIgnoreCase));
     }
 
-    public static bool ParseAttribute(XElement? element, XName attributeName, bool defaultValue = false)
+    public static bool ParseAttribute(XElement? element, XName attributeName, bool defaultValue)
     {
         string? value = (string?)element?.Attribute(attributeName);
         return value is null ? defaultValue : IsTrue(value);
@@ -24,7 +24,7 @@ internal static class OoxBoolean
         return attribute is null ? null : IsTrue(attribute.Value);
     }
 
-    public static bool ParseElement(XElement? element, bool defaultValue = false, XName? valueAttributeName = null)
+    public static bool ParseElement(XElement? element, bool defaultValue, XName? valueAttributeName)
     {
         if (element is null)
         {
@@ -35,8 +35,4 @@ internal static class OoxBoolean
         return value is null || IsTrue(value);
     }
 
-    public static bool? ParseOptionalElement(XElement? element, XName? valueAttributeName = null)
-    {
-        return element is null ? null : ParseElement(element, valueAttributeName: valueAttributeName);
-    }
 }

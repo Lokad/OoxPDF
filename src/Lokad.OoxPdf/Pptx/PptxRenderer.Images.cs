@@ -62,7 +62,7 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor recolor,
         LineStyle line,
         OuterShadow? outerShadow,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (targetPartName is null)
@@ -320,7 +320,7 @@ internal sealed partial class PptxRenderer
         return new FillRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 
-    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, CancellationToken cancellationToken = default)
+    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, CancellationToken cancellationToken)
     {
         XDocument svg;
         using (var stream = new MemoryStream(bytes))

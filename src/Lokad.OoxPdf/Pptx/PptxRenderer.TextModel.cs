@@ -11,7 +11,7 @@ internal sealed partial class PptxRenderer
 {
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
         if (context is null)
         {
             return [];
@@ -26,7 +26,7 @@ internal sealed partial class PptxRenderer
 
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
         if (context is null)
         {
             return [];
@@ -330,7 +330,7 @@ internal sealed partial class PptxRenderer
             lineSpacingScale,
             compatibleLineSpacing,
             compatibleDefaultLineSpacingFactor,
-            shapeFontColor);
+            shapeFontColor, default);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
             TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)) / 2d),
@@ -740,7 +740,7 @@ internal sealed partial class PptxRenderer
         bool compatibleLineSpacing,
         double compatibleDefaultLineSpacingFactor,
         RgbColor? shapeFontColor,
-        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+        PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         var paragraphs = new List<PptxTextParagraphModel>();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))

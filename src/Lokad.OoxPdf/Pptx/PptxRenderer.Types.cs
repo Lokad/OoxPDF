@@ -743,7 +743,7 @@ internal sealed partial class PptxRenderer
 
         public double EndX { get; private set; } = startX;
 
-        public void Add(PptxTextRunModel? sourceRun, TextRun run, double endX, IReadOnlyList<PptxTextAtomLayout>? atoms = null, PptxTextGlyphSpanLayout? glyphSpan = null)
+        public void Add(PptxTextRunModel? sourceRun, TextRun run, double endX, IReadOnlyList<PptxTextAtomLayout>? atoms, PptxTextGlyphSpanLayout? glyphSpan)
         {
             Spans.Add(new PptxTextSpanLayout(
                 sourceRun,
@@ -806,7 +806,7 @@ internal sealed partial class PptxRenderer
     {
         public static LineSpacing Absolute(double points) => new(points, true, true, false);
 
-        public static LineSpacing Multiple(double factor, bool isExplicit, bool useNormalLineAdvance = true) => new(factor, false, isExplicit, useNormalLineAdvance);
+        public static LineSpacing Multiple(double factor, bool isExplicit, bool useNormalLineAdvance) => new(factor, false, isExplicit, useNormalLineAdvance);
 
         public LineSpacing ScaleExplicit(double factor)
         {
@@ -829,13 +829,13 @@ internal sealed partial class PptxRenderer
         private readonly Dictionary<string, FontFaceResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
 
-        public TextAdvanceEstimator(PresentationFontResolver? resolver = null, CancellationToken cancellationToken = default)
+        public TextAdvanceEstimator(PresentationFontResolver? resolver, CancellationToken cancellationToken)
         {
-            this.resolver = resolver ?? new PresentationFontResolver();
+            this.resolver = resolver ?? new PresentationFontResolver(null);
             this.cancellationToken = cancellationToken;
         }
 
-        public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
+        public double Measure(string text, double fontSize, string? familyName, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
         {
             if (fontSize <= 0d)
             {
@@ -886,7 +886,7 @@ internal sealed partial class PptxRenderer
             return Math.Max(0d, points + Math.Max(0, runeCount - 1) * characterSpacing);
         }
 
-        public double MeasureBoundaryAdvance(int previousCodePoint, int nextCodePoint, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
+        public double MeasureBoundaryAdvance(int previousCodePoint, int nextCodePoint, double fontSize, string? familyName, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
         {
             ResolvedGlyphFont? previousResolved = ResolveGlyphFont(familyName, bold, italic, previousCodePoint);
             ResolvedGlyphFont? nextResolved = ResolveGlyphFont(familyName, bold, italic, nextCodePoint);
@@ -953,7 +953,7 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold = false, bool italic = false)
+        public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold, bool italic)
         {
             return ResolveFont(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
         }

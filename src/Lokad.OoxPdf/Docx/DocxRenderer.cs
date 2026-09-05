@@ -121,15 +121,15 @@ internal sealed partial class DocxRenderer
     private readonly DocxMarkupContext markupContext;
 
     public DocxRenderer(
-        IFontResolver? fontResolver = null,
-        OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final,
-        OoxPdfDocxMarkupGeometryMode markupGeometryMode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+        IFontResolver? fontResolver,
+        OoxPdfDocxMarkupMode markupMode,
+        OoxPdfDocxMarkupGeometryMode markupGeometryMode)
     {
         this.fontResolver = fontResolver ?? new WindowsFontResolver();
         markupContext = DocxMarkupContext.FromMode(markupMode, markupGeometryMode);
     }
 
-    public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink = null, CancellationToken cancellationToken = default)
+    public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!HasRenderableContent(document))
@@ -142,18 +142,18 @@ internal sealed partial class DocxRenderer
 
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
-        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext));
+        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
     }
 
     internal IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> InspectMarkupBalloons(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext));
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -172,14 +172,14 @@ internal sealed partial class DocxRenderer
 
     internal DocxFontPlanSnapshot InspectFontPlan(DocxDocument document)
     {
-        return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver));
+        return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, CancellationToken.None));
     }
 
     internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext));
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
@@ -373,7 +373,7 @@ internal sealed partial class DocxRenderer
         IFontResolver fontResolver,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
@@ -511,7 +511,7 @@ internal sealed partial class DocxRenderer
         double textEmissionXOffset,
         bool suppressCommentReferenceSpacer,
         bool useWordCompatibleTextProfile,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var annotations = new List<PdfLinkAnnotation>();
         foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
@@ -598,7 +598,7 @@ internal sealed partial class DocxRenderer
         double textEmissionXOffset,
         bool suppressCommentReferenceSpacer,
         bool useWordCompatibleTextProfile,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
@@ -703,7 +703,7 @@ internal sealed partial class DocxRenderer
             string.Equals(link.TargetMode, "External", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken = default)
+    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver, cancellationToken);
@@ -752,7 +752,7 @@ internal sealed partial class DocxRenderer
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var resolvedRuns = new List<DocxResolvedRunTypeface>();
         foreach (DocxResolvedRunTypeface run in plan.Runs)
@@ -798,7 +798,7 @@ internal sealed partial class DocxRenderer
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         FontFaceResolution resolution = ResolveDocumentBaseFont(plan, fontResolver, fontCache, cancellationToken);
         OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
@@ -834,7 +834,7 @@ internal sealed partial class DocxRenderer
         return runResource;
     }
 
-    private static IReadOnlyList<int> CollectRunGlyphs(IEnumerable<DocxResolvedRunTypeface> runs, CancellationToken cancellationToken = default)
+    private static IReadOnlyList<int> CollectRunGlyphs(IEnumerable<DocxResolvedRunTypeface> runs, CancellationToken cancellationToken)
     {
         var glyphs = new HashSet<int>();
         foreach (DocxResolvedRunTypeface run in runs)
@@ -860,7 +860,7 @@ internal sealed partial class DocxRenderer
         DocxFontPlan plan,
         IFontResolver fontResolver,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         foreach (DocxResolvedRunTypeface run in plan.Runs)
         {
@@ -877,7 +877,7 @@ internal sealed partial class DocxRenderer
     private static OpenTypeFont? LoadFont(
         FontFaceResolution? resolution,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (resolution is null)
@@ -5346,7 +5346,7 @@ internal sealed partial class DocxRenderer
         DocxTextEmissionPlan plan,
         bool syntheticItalic)
     {
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true);
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: true);
         if (positioningArray is not null)
         {
             graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing);

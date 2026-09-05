@@ -52,7 +52,7 @@ internal sealed class PdfEmbeddedFont
 
     public string ResourceKey => BaseFontName + "-U" + CodepointSetHash;
 
-    public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken = default)
+    public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken)
     {
         var unicodeByOriginalGlyph = new SortedDictionary<ushort, int>();
         foreach (int codePoint in codePoints)
@@ -70,7 +70,7 @@ internal sealed class PdfEmbeddedFont
         return CreateFromOriginalGlyphs(font, "LOKAD+" + SanitizeName(font.FamilyName) + "-" + fontHash, unicodeByOriginalGlyph, cancellationToken);
     }
 
-    public static PdfEmbeddedFont Merge(IEnumerable<PdfEmbeddedFont> fonts, CancellationToken cancellationToken = default)
+    public static PdfEmbeddedFont Merge(IEnumerable<PdfEmbeddedFont> fonts, CancellationToken cancellationToken)
     {
         PdfEmbeddedFont[] items = fonts.ToArray();
         if (items.Length == 0)
@@ -114,7 +114,7 @@ internal sealed class PdfEmbeddedFont
         return new PdfEmbeddedFont(font, baseFontName, sortedGlyphs, subset);
     }
 
-    public string BuildToUnicodeCMap(CancellationToken cancellationToken = default)
+    public string BuildToUnicodeCMap(CancellationToken cancellationToken)
     {
         var builder = new StringBuilder();
         builder.AppendLine("/CIDInit /ProcSet findresource begin");
@@ -155,7 +155,7 @@ internal sealed class PdfEmbeddedFont
         return builder.ToString();
     }
 
-    public string BuildWidthArray(CancellationToken cancellationToken = default)
+    public string BuildWidthArray(CancellationToken cancellationToken)
     {
         if (UnicodeByOriginalGlyph.Count == 0)
         {
@@ -215,7 +215,7 @@ internal sealed class PdfEmbeddedFont
 
     public string? EncodeGlyphPositioningArray(string text)
     {
-        return EncodeGlyphPositioningArray(text, 0d, 1d);
+        return EncodeGlyphPositioningArray(text, 0d, 1d, false, true);
     }
 
     public bool TryGetEncodedCid(ushort originalGlyph, out ushort cid)
@@ -223,7 +223,7 @@ internal sealed class PdfEmbeddedFont
         return TryGetCid(originalGlyph, out cid);
     }
 
-    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray = false, bool kerningEnabled = true)
+    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray, bool kerningEnabled)
     {
         var glyphs = new List<EncodedGlyph>();
         foreach (Rune rune in text.EnumerateRunes())

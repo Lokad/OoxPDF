@@ -8,7 +8,7 @@ internal sealed class PdfObjectWriter
     private readonly CancellationToken cancellationToken;
     private readonly List<long> offsets = [];
 
-    public PdfObjectWriter(Stream stream, CancellationToken cancellationToken = default)
+    public PdfObjectWriter(Stream stream, CancellationToken cancellationToken)
     {
         this.stream = stream;
         this.cancellationToken = cancellationToken;

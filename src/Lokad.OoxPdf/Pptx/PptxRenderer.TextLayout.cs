@@ -20,7 +20,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<TextRun> ReadSceneTextRunsForInspection(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
         if (context is null)
         {
             return [];
@@ -36,7 +36,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
         if (context is null)
         {
             return [];
@@ -97,7 +97,7 @@ internal sealed partial class PptxRenderer
 
     internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
         if (context is null)
         {
             return new PptxTextLayoutSnapshot([]);
@@ -110,7 +110,7 @@ internal sealed partial class PptxRenderer
 
     internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
         if (context is null)
         {
             return new PptxTextFlowSnapshot([]);
@@ -413,8 +413,8 @@ internal sealed partial class PptxRenderer
         int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
-        PresentationFontResolver? fontResolver = null,
-        CancellationToken cancellationToken = default)
+        PresentationFontResolver? fontResolver,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var advanceEstimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
@@ -433,7 +433,7 @@ internal sealed partial class PptxRenderer
     {
         frameModel = ResetEstimatedVerticalAnchorOffset(frameModel);
         PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document, advanceEstimator);
-        PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
+        PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, true);
         if (HasShapeAutoFit(frameModel.BodyProperties) && UsesRotatedFrameAutoFit(frameModel.Orientation))
         {
             PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
@@ -456,7 +456,7 @@ internal sealed partial class PptxRenderer
         {
             PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
             return ApplyActualVerticalAnchorOffsetIfNeeded(
-                BuildTextFrameLayout(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator),
+                BuildTextFrameLayout(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, true),
                 document,
                 advanceEstimator,
                 allowWrapping: true);
@@ -515,7 +515,7 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextFlowModel BuildTextFlowModel(IReadOnlyList<PptxTextFrameModel> frames, PptxDocument document)
     {
-        var advanceEstimator = new TextAdvanceEstimator();
+        var advanceEstimator = new TextAdvanceEstimator(null, CancellationToken.None);
         return new PptxTextFlowModel(frames.Select(frame => BuildTextFlowFrame(frame, document, advanceEstimator)).ToArray());
     }
 
@@ -988,10 +988,10 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<TextRun> FlattenTextLayout(PptxTextLayoutModel layout)
     {
-        return FlattenTextLayoutToSpans(layout).Select(span => span.Run).ToArray();
+        return FlattenTextLayoutToSpans(layout, null).Select(span => span.Run).ToArray();
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout, PresentationFontResolver? fontResolver = null)
+    private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout, PresentationFontResolver? fontResolver)
     {
         PptxPositionedTextSpan[] spans = layout.Frames
             .SelectMany((frame, frameIndex) => frame.Paragraphs.Select((paragraph, paragraphIndex) => new
@@ -1071,7 +1071,7 @@ internal sealed partial class PptxRenderer
         }
 
         var result = new List<PptxPositionedTextSpan>(spans.Count);
-        var advanceEstimator = new TextAdvanceEstimator(fontResolver);
+        var advanceEstimator = new TextAdvanceEstimator(fontResolver, CancellationToken.None);
         foreach (IGrouping<int, PptxPositionedTextSpan> frameSpans in spans.GroupBy(span => span.FrameIndex))
         {
             PptxPositionedTextSpan[] frame = frameSpans.ToArray();
@@ -1129,24 +1129,24 @@ internal sealed partial class PptxRenderer
             Run = run,
             EndX = run.X + width,
             Atoms = BuildTextAtoms(run, advanceEstimator, PptxTextAtomKind.Word),
-            GlyphSpan = BuildGlyphSpan(run, advanceEstimator)
+            GlyphSpan = BuildGlyphSpan(run, advanceEstimator, 0d)
         };
     }
 
-    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping = true)
+    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping)
     {
-        PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.StrictFit);
+        PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.StrictFit, 0, 0);
         if (TryResolveOfficeOverflowColumnLineBalance(layout, out int lineBalanceTarget, out int lineBalanceStartColumn))
         {
             return BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.LineCountBalance, lineBalanceTarget, lineBalanceStartColumn);
         }
 
         return ShouldUseOfficeOverflowColumnBalance(layout)
-            ? BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.OverflowBalance)
+            ? BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.OverflowBalance, 0, 0)
             : layout;
     }
 
-    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping, PptxTextColumnBreakMode columnBreakMode, int lineBalanceTarget = 0, int lineBalanceStartColumn = 0)
+    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping, PptxTextColumnBreakMode columnBreakMode, int lineBalanceTarget, int lineBalanceStartColumn)
     {
         PptxTextFrameModel frame = flowFrame.Model;
         allowWrapping &= TextBodyAllowsWrapping(frame.BodyProperties);
@@ -1274,9 +1274,9 @@ internal sealed partial class PptxRenderer
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Bullet, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
-                    double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
+                    double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);
                     TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, StrictClip: strictClip);
-                    line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator));
+                    line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator, 0d));
                     bulletPending = false;
                 }
 
@@ -1324,7 +1324,7 @@ internal sealed partial class PptxRenderer
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                         TextRun tabRun = new(" ", cursorX, cursorY, PptxTextMetricRules.MinimumWidth(tabSpaceWidth), frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: true, Outline: runStyle.Outline, StrictClip: strictClip);
-                        line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
+                        line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator, 0d));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops);
                         line.AdvanceTo(cursorX);
                         previousAdvanceCodePoint = null;
@@ -1380,7 +1380,7 @@ internal sealed partial class PptxRenderer
                             double chunkClipWidth = frame.Orientation == PptxTextOrientation.Horizontal ? columnClipWidth : frame.TextClipWidth;
                             TextRun textRun = new(chunk, chunkX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, chunkClipX, frame.TextClipY, chunkClipWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline, StrictClip: strictClip);
                             double chunkLeadingAdjustment = pendingVisibleLeadingAdjustment + chunkBoundaryAdjustment;
-                            line.Add(modelRun, textRun, cursorX + chunkTotalWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator, chunkLeadingAdjustment));
+                            line.Add(modelRun, textRun, cursorX + chunkTotalWidth, BuildTextAtoms(textRun, advanceEstimator, null), BuildGlyphSpan(textRun, advanceEstimator, chunkLeadingAdjustment));
                             pendingVisibleLeadingAdjustment = 0d;
                             cursorX += chunkTotalWidth;
                             line.AdvanceTo(cursorX);
@@ -1471,7 +1471,7 @@ internal sealed partial class PptxRenderer
                                 string lineEndSpaces = currentSegment[..leadingSpaceCount];
                                 double lineEndSpaceWidth = advanceEstimator.Measure(lineEndSpaces, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                                 TextRun spaceRun = new(lineEndSpaces, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(lineEndSpaceWidth), frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: false, Outline: runStyle.Outline, StrictClip: strictClip);
-                                line.Add(modelRun, spaceRun, cursorX + lineEndSpaceWidth, BuildTextAtoms(spaceRun, advanceEstimator, PptxTextAtomKind.Space), BuildGlyphSpan(spaceRun, advanceEstimator));
+                                line.Add(modelRun, spaceRun, cursorX + lineEndSpaceWidth, BuildTextAtoms(spaceRun, advanceEstimator, PptxTextAtomKind.Space), BuildGlyphSpan(spaceRun, advanceEstimator, 0d));
                                 cursorX += lineEndSpaceWidth;
                                 line.AdvanceTo(cursorX);
                             }
@@ -1504,8 +1504,8 @@ internal sealed partial class PptxRenderer
                                 movedNoBreakSpan.SourceRun,
                                 movedRun,
                                 movedEndX,
-                                BuildTextAtoms(movedRun, advanceEstimator),
-                                BuildGlyphSpan(movedRun, advanceEstimator));
+                                BuildTextAtoms(movedRun, advanceEstimator, null),
+                                BuildGlyphSpan(movedRun, advanceEstimator, 0d));
                             cursorX = movedEndX;
                             previousAdvanceCodePoint = LastCodePoint(movedRun.Text);
 
@@ -1536,7 +1536,7 @@ internal sealed partial class PptxRenderer
                         double textRunX = cursorX + segmentBoundaryAdjustment;
                         TextRun textRun = new(currentSegment, textRunX, cursorY, PptxTextMetricRules.MinimumWidth(segmentIntrinsicWidth), frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline, StrictClip: strictClip);
                         double leadingAdjustment = pendingVisibleLeadingAdjustment + segmentBoundaryAdjustment;
-                        line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator, leadingAdjustment));
+                        line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator, null), BuildGlyphSpan(textRun, advanceEstimator, leadingAdjustment));
                         pendingVisibleLeadingAdjustment = 0d;
                         noBreakAnchorSpan = null;
                         pendingNoBreakAdvanceText = string.Empty;
@@ -1912,8 +1912,8 @@ internal sealed partial class PptxRenderer
         int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
-        PresentationFontResolver? fontResolver = null,
-        CancellationToken cancellationToken = default)
+        PresentationFontResolver? fontResolver,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement current = new(shape);
@@ -2167,7 +2167,7 @@ internal sealed partial class PptxRenderer
         return last;
     }
 
-    private static IReadOnlyList<PptxTextAtomLayout> BuildTextAtoms(TextRun run, TextAdvanceEstimator advanceEstimator, PptxTextAtomKind? forcedKind = null)
+    private static IReadOnlyList<PptxTextAtomLayout> BuildTextAtoms(TextRun run, TextAdvanceEstimator advanceEstimator, PptxTextAtomKind? forcedKind)
     {
         if (run.Text.Length == 0)
         {
@@ -2210,7 +2210,7 @@ internal sealed partial class PptxRenderer
         return atoms;
     }
 
-    private static PptxTextGlyphSpanLayout BuildGlyphSpan(TextRun run, TextAdvanceEstimator advanceEstimator, double leadingAdjustment = 0d)
+    private static PptxTextGlyphSpanLayout BuildGlyphSpan(TextRun run, TextAdvanceEstimator advanceEstimator, double leadingAdjustment)
     {
         var glyphs = new List<PptxTextGlyphLayout>();
         OpenTypeFont? previousFont = null;
@@ -2570,7 +2570,7 @@ internal sealed partial class PptxRenderer
                 Run = wordRun,
                 EndX = word.X + word.Width,
                 Atoms = [word],
-                GlyphSpan = BuildGlyphSpan(wordRun, advanceEstimator)
+                GlyphSpan = BuildGlyphSpan(wordRun, advanceEstimator, 0d)
             };
         }
     }
@@ -2712,7 +2712,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxColorMap colorMap,
         double fontScale,
-        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+        PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         return ResolveRunTextStyle(
             cascade.DirectProperties,
@@ -2731,7 +2731,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxColorMap colorMap,
         double fontScale,
-        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+        PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
@@ -3332,10 +3332,10 @@ internal sealed partial class PptxRenderer
 
         if (spacing?.Element(DrawingNamespace + "spcPct")?.Attribute("val") is { } percent)
         {
-            return LineSpacing.Multiple(Math.Max(PptxTextMetricRules.MinimumLineSpacing, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d), true);
+            return LineSpacing.Multiple(Math.Max(PptxTextMetricRules.MinimumLineSpacing, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d), true, true);
         }
 
-        return LineSpacing.Multiple(1d, false);
+        return LineSpacing.Multiple(1d, false, true);
     }
 
     private static LineSpacing ApplyCompatibleLineSpacing(LineSpacing lineSpacing, bool compatibleLineSpacing, double defaultLineSpacingFactor)
@@ -3369,7 +3369,7 @@ internal sealed partial class PptxRenderer
         TextAdvanceEstimator advanceEstimator,
         bool useOfficeBaselineFloor,
         bool shapeAutoFit,
-        bool useExplicitMultipleBaselineOffset = true)
+        bool useExplicitMultipleBaselineOffset)
     {
         bool startsWithManualLineBreak = paragraph.Runs.FirstOrDefault()?.Kind == PptxTextRunKind.Break;
         PptxTextRunModel? firstRun = paragraph.Runs.FirstOrDefault(run => run.Kind != PptxTextRunKind.Break);
@@ -3416,7 +3416,7 @@ internal sealed partial class PptxRenderer
         return defaultFontSize;
     }
 
-    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor, bool useExplicitMultipleBaselineOffset = true)
+    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor, bool useExplicitMultipleBaselineOffset)
     {
         if (lineSpacing.IsAbsolute)
         {
@@ -3434,7 +3434,7 @@ internal sealed partial class PptxRenderer
         ResolvedRunTextStyle? style,
         TextAdvanceEstimator advanceEstimator,
         bool useOfficeBaselineFloor,
-        bool useExplicitMultipleBaselineOffset = true)
+        bool useExplicitMultipleBaselineOffset)
     {
         if (lineSpacing.IsAbsolute)
         {
@@ -3446,7 +3446,7 @@ internal sealed partial class PptxRenderer
             : BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor);
     }
 
-    private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor, bool useExplicitMultipleBaselineOffset = true)
+    private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor, bool useExplicitMultipleBaselineOffset)
     {
         return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor, useExplicitMultipleBaselineOffset) : fontSize * PptxTextMetricRules.OfficeManualBreakBaselineFallback;
     }
@@ -3779,7 +3779,7 @@ internal sealed partial class PptxRenderer
         PptxTextBodyProperties bodyProperties)
     {
         double height = 0d;
-        var advanceEstimator = new TextAdvanceEstimator();
+        var advanceEstimator = new TextAdvanceEstimator(null, CancellationToken.None);
         bool allowWrapping = TextBodyAllowsWrapping(bodyProperties);
         bool attachSpacesToFollowingWord = HasNoAutoFit(bodyProperties);
         bool useWindowsFontBoxForDefaultLineSpacing = !IsTableCellVerticalAnchorSource(bodyProperties.VerticalAnchorSource);

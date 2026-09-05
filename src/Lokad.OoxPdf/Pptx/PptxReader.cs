@@ -11,7 +11,7 @@ internal sealed class PptxReader
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     private const string SlideRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
 
-    public PptxDocument Read(OoxPackage package, CancellationToken cancellationToken = default)
+    public PptxDocument Read(OoxPackage package, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart presentationPart = FindPresentationPart(package, cancellationToken);

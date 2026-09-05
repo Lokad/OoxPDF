@@ -13,7 +13,7 @@ internal sealed partial class PptxRenderer
     internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex)
     {
         IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex);
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, [], new PresentationFontResolver());
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, [], new PresentationFontResolver(null), "F", CancellationToken.None);
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
@@ -211,7 +211,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, fontResolver ?? new PresentationFontResolver(), resourcePrefix);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, fontResolver ?? new PresentationFontResolver(null), resourcePrefix, CancellationToken.None);
         DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
     }
@@ -226,7 +226,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, legacyTextRuns, new PresentationFontResolver());
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, legacyTextRuns, new PresentationFontResolver(null), "F", CancellationToken.None);
         DrawTextSpansWithFonts(textSpans, graphics, renderedFonts.Fonts);
         DrawTextRunsWithFonts(legacyTextRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
@@ -236,8 +236,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxPositionedTextSpan> textSpans,
         IReadOnlyList<TextRun> legacyTextRuns,
         PresentationFontResolver fontResolver,
-        string resourcePrefix = "F",
-        CancellationToken cancellationToken = default)
+        string resourcePrefix,
+        CancellationToken cancellationToken)
     {
         var uses = new List<TextFontUse>();
         foreach (PptxPositionedTextSpan span in textSpans)
@@ -261,7 +261,7 @@ internal sealed partial class PptxRenderer
         return CreateRenderedFonts(uses, fontResolver, resourcePrefix, cancellationToken);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix = "F", CancellationToken cancellationToken = default)
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken)
     {
         if (textRuns.Count == 0)
         {
@@ -279,7 +279,7 @@ internal sealed partial class PptxRenderer
             .ToArray(), fontResolver, resourcePrefix, cancellationToken);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken = default)
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken)
     {
         if (uses.Count == 0)
         {
@@ -534,7 +534,7 @@ internal sealed partial class PptxRenderer
         return Math.Max(0d, glyphs.Sum(glyph => glyph.Advance) + glyphs.Sum(glyph => glyph.AdjustmentBefore));
     }
 
-    private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns, bool compareHighlight = true)
+    private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns, bool compareHighlight)
     {
         var coalesced = new List<TextRun>(textRuns.Count);
         foreach (TextRun run in textRuns)
@@ -544,7 +544,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, compareHighlight))
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, compareHighlight, true))
             {
                 TextRun previous = coalesced[^1];
                 coalesced[^1] = previous with
@@ -562,7 +562,7 @@ internal sealed partial class PptxRenderer
         return coalesced;
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> CoalesceAdjacentTextSpans(IReadOnlyList<PptxPositionedTextSpan> textSpans, bool compareHighlight = true)
+    private static IReadOnlyList<PptxPositionedTextSpan> CoalesceAdjacentTextSpans(IReadOnlyList<PptxPositionedTextSpan> textSpans, bool compareHighlight)
     {
         var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
         foreach (PptxPositionedTextSpan span in textSpans)
@@ -598,7 +598,7 @@ internal sealed partial class PptxRenderer
         return coalesced;
     }
 
-    private static bool CanCoalesceTextSpan(PptxPositionedTextSpan left, PptxPositionedTextSpan right, bool compareHighlight = true)
+    private static bool CanCoalesceTextSpan(PptxPositionedTextSpan left, PptxPositionedTextSpan right, bool compareHighlight)
     {
         if (left.SourceRun is not null &&
             right.SourceRun is not null &&
@@ -611,7 +611,7 @@ internal sealed partial class PptxRenderer
         return CanCoalesceTextRun(left.Run, right.Run, compareHighlight, PreservesHighlightTextOperationBoundaries(left, right));
     }
 
-    private static bool CanCoalesceTextRun(TextRun left, TextRun right, bool compareHighlight = true, bool preserveHighlightBoundary = true)
+    private static bool CanCoalesceTextRun(TextRun left, TextRun right, bool compareHighlight, bool preserveHighlightBoundary)
     {
         return Math.Abs(left.Y - right.Y) < PptxTextMetricRules.CoordinateTolerance &&
             Math.Abs(left.FontSize - right.FontSize) < PptxTextMetricRules.CoordinateTolerance &&
@@ -699,7 +699,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run))
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, true, true))
             {
                 TextRun previous = coalesced[^1];
                 coalesced[^1] = previous with
@@ -728,7 +728,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run))
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run, true, true))
             {
                 PptxPositionedTextSpan previous = coalesced[^1];
                 TextRun mergedRun = previous.Run with

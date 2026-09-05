@@ -22,7 +22,7 @@ internal sealed record DocxResolvedRunTypeface(
 
 internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 {
-    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken = default)
+    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateBodyParagraphs(document)
@@ -70,7 +70,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return drawings.SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements));
     }
 
-    private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver, CancellationToken cancellationToken = default)
+    private static DocxResolvedRunTypeface ResolveRunTypeface(DocxTextRun run, DocxFontCatalog fontCatalog, IFontResolver fontResolver, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxEffectiveRunProperties effective = run.EffectiveProperties;
@@ -158,7 +158,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     private readonly CancellationToken cancellationToken;
     private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts = new();
 
-    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution = null, CancellationToken cancellationToken = default)
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken)
     {
         runs = plan.Runs;
         this.fallbackResolution = fallbackResolution;
@@ -334,7 +334,7 @@ internal sealed record DocxFontPlanSnapshot(
         int runCount,
         FontFaceResolution? resolution)
     {
-        OpenTypeFont? font = FontProgramLoader.Load(resolution);
+        OpenTypeFont? font = FontProgramLoader.Load(resolution, CancellationToken.None);
         if (font is null)
         {
             return new DocxFontMetricBucketSnapshot(

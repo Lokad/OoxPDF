@@ -740,7 +740,7 @@ internal sealed partial class PptxRenderer
         List<PptxPositionedTextSpan> spans,
         List<PptxTableCellTextFrame> textFrames,
         PptxColorMap colorMap,
-        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+        PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight, declaredTableHeight, tableHeightSlackFactor, x, y, width, height, colorMap, tableStyleTextStyle);
         if (tableTextFrame is null)
@@ -752,7 +752,7 @@ internal sealed partial class PptxRenderer
         spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
     }
 
-    private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, int rowIndex, int columnIndex, int rowSpan, int columnSpan, double declaredRowHeight, double declaredRowSpanHeight, double declaredTableHeight, double tableHeightSlackFactor, double x, double y, double width, double height, PptxColorMap colorMap, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+    private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, int rowIndex, int columnIndex, int rowSpan, int columnSpan, double declaredRowHeight, double declaredRowSpanHeight, double declaredTableHeight, double tableHeightSlackFactor, double x, double y, double width, double height, PptxColorMap colorMap, PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         XElement? textBody = sceneCell.LayoutTextBody;
         if (textBody is null)
