@@ -974,7 +974,7 @@ internal sealed partial record DocxLayoutSnapshot(
         int current = 0;
         foreach (char value in text)
         {
-            if (IsTextProfileBreakableWhitespaceChar(value))
+            if (DocxTextBreakRules.IsBreakableWhitespaceChar(value))
             {
                 longest = Math.Max(longest, current);
                 current = 0;
@@ -997,17 +997,6 @@ internal sealed partial record DocxLayoutSnapshot(
         }
 
         return Math.Max(longest, current);
-    }
-
-    private static bool IsTextProfileBreakableWhitespaceChar(char value)
-    {
-        return char.IsWhiteSpace(value) &&
-            !IsTextProfileNoBreakWhitespaceChar(value);
-    }
-
-    private static bool IsTextProfileNoBreakWhitespaceChar(char value)
-    {
-        return value is '\u00A0' or '\u202F' or '\u2007';
     }
 
     private static bool IsTextProfileHiddenBreakCharacter(char value)

@@ -190,8 +190,8 @@ internal sealed partial class DocxLayoutEngine
 
             if (before == '\u2011' ||
                 after == '\u2011' ||
-                IsNoBreakWhitespaceChar(before) ||
-                IsNoBreakWhitespaceChar(after))
+                DocxTextBreakRules.IsNoBreakWhitespaceChar(before) ||
+                DocxTextBreakRules.IsNoBreakWhitespaceChar(after))
             {
                 return false;
             }
@@ -459,10 +459,10 @@ internal sealed partial class DocxLayoutEngine
 
         var tokens = new List<TextToken>();
         int start = 0;
-        bool inBreakableWhitespace = IsBreakableWhitespaceChar(text[0]);
+        bool inBreakableWhitespace = DocxTextBreakRules.IsBreakableWhitespaceChar(text[0]);
         for (int i = 1; i < text.Length; i++)
         {
-            bool breakableWhitespace = IsBreakableWhitespaceChar(text[i]);
+            bool breakableWhitespace = DocxTextBreakRules.IsBreakableWhitespaceChar(text[i]);
             if (breakableWhitespace == inBreakableWhitespace)
             {
                 continue;
@@ -477,17 +477,6 @@ internal sealed partial class DocxLayoutEngine
         return tokens;
     }
 
-    private static bool IsBreakableWhitespaceChar(char value)
-    {
-        return char.IsWhiteSpace(value) &&
-            !IsNoBreakWhitespaceChar(value);
-    }
-
-    private static bool IsNoBreakWhitespaceChar(char value)
-    {
-        return value is '\u00A0' or '\u202F' or '\u2007';
-    }
-
     private static class DocxLineBreakOpportunities
     {
         public static bool IsOpportunityAfter(char value)
@@ -498,6 +487,6 @@ internal sealed partial class DocxLayoutEngine
 
     private readonly record struct TextToken(string Text, int Start, int Length)
     {
-        public bool IsBreakableWhitespace => Text.All(IsBreakableWhitespaceChar);
+        public bool IsBreakableWhitespace => Text.All(DocxTextBreakRules.IsBreakableWhitespaceChar);
     }
 }

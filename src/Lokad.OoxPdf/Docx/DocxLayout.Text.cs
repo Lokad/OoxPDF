@@ -299,7 +299,7 @@ internal sealed partial class DocxLayoutEngine
             for (int i = text.Length - 1; i >= 0; i--)
             {
                 index--;
-                if (!IsBreakableWhitespaceChar(text[i]))
+                if (!DocxTextBreakRules.IsBreakableWhitespaceChar(text[i]))
                 {
                     return index + 1;
                 }
