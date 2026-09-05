@@ -55,7 +55,7 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
-                RenderBarChart(graphics, theme, colorMap, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions.Grouping, seriesFills, pointFills, pointStrokes, valueAxisOptions.MajorGridlines, valueAxisOptions.MinorGridlines, valueAxisOptions.GridlineStyle, axesStyle, plotAreaStyle, valueExtents, valueAxisOptions.Units, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barOptions.VaryColors.Value, barOptions.GapWidth, barOptions.Overlap);
+                RenderBarChart(graphics, theme, colorMap, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied);
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -105,24 +105,16 @@ internal sealed partial class PptxRenderer
                         plotBox,
                         extraSeriesVectors,
                         extraHorizontalBars,
-                        extraBarOptions.Grouping,
+                        extraBarOptions,
                         extraSeriesFills,
                         extraPointFills,
                         extraPointStrokes,
-                        majorGridlines: false,
-                        minorGridlines: false,
-                        ChartGridlineStyle.Empty,
+                        extraValueAxisOptions with { MajorGridlines = false, MinorGridlines = false, GridlineStyle = ChartGridlineStyle.Empty },
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
                         ChartShapeStyle.Empty,
                         extraValueExtents,
-                        extraValueAxisOptions.Units,
-                        extraValueAxisOptions.CrossingValue,
-                        extraValueAxisOptions.Reversed,
                         valueAxisLabelsVisible: false,
-                        manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied,
-                        extraBarOptions.VaryColors.Value,
-                        extraBarOptions.GapWidth,
-                        extraBarOptions.Overlap);
+                        manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied);
                     fonts.AddRange(RenderBarDataLabels(
                         theme,
                         colorMap,
