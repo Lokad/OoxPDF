@@ -305,7 +305,24 @@ internal sealed partial class PptxRenderer
         bool Underline,
         bool Strike,
         string? RequestedTypeface,
-        PptxThemeTypefaceSource? TypefaceSource);
+        PptxThemeTypefaceSource? TypefaceSource)
+    {
+        public ChartTextStyle Merge(ChartTextStyleOverride next)
+        {
+            return new ChartTextStyle(
+                next.FontFamily ?? FontFamily,
+                next.FontSize ?? FontSize,
+                next.CharacterSpacing ?? CharacterSpacing,
+                next.Color ?? Color,
+                next.Alpha ?? Alpha,
+                next.Bold ?? Bold,
+                next.Italic ?? Italic,
+                next.Underline ?? Underline,
+                next.Strike ?? Strike,
+                next.FontFamily is null ? RequestedTypeface : next.RequestedTypeface,
+                next.FontFamily is null ? TypefaceSource : next.TypefaceSource);
+        }
+    }
 
     private readonly record struct ChartTextStyleOverride(
         string? FontFamily,

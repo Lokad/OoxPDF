@@ -802,7 +802,7 @@ internal sealed partial class PptxRenderer
             Strike: false,
             typeface.RequestedTypeface,
             typeface.Typeface is null ? null : typeface.Source);
-        return MergeChartTextStyle(style, options.TextStyle);
+        return style.Merge(options.TextStyle);
     }
 
     private static ChartDataLabelOptions ResolveChartDataLabelOptions(ChartDataLabelOptions options, int index)
@@ -986,7 +986,7 @@ internal sealed partial class PptxRenderer
             .Where(run => !string.IsNullOrEmpty(run.Text))
             .Select(run =>
             {
-                ChartTextStyle runStyle = MergeChartTextStyle(style, run.TextStyle);
+                ChartTextStyle runStyle = style.Merge(run.TextStyle);
                 return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, textMeasurer.Measure(run.Text, runStyle)));
             })
             .Where(run => run.Width > 0d)
@@ -1053,8 +1053,8 @@ internal sealed partial class PptxRenderer
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml, XElement? element, double fallbackFontSize)
     {
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, colorMap, fallbackFontSize);
-        style = MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(chartXml.Root, theme, colorMap)));
-        style = MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(element, theme, colorMap)));
+        style = style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(chartXml.Root, theme, colorMap)));
+        style = style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(element, theme, colorMap)));
         return style;
     }
 
@@ -1066,7 +1066,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize);
-        return MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartAxisTextStyleOverride(sceneChart, sceneAxis, chartStyleRole)));
+        return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartAxisTextStyleOverride(sceneChart, sceneAxis, chartStyleRole)));
     }
 
     private static ChartTextStyle CreateDefaultChartTextStyle(PptxTheme theme, double fallbackFontSize)
@@ -1120,22 +1120,6 @@ internal sealed partial class PptxRenderer
 
         PptxThemeTypefaceResolution majorLatin = theme.ResolveTypefaceWithSource("+mj-lt");
         return majorLatin.Typeface is null ? default : majorLatin;
-    }
-
-    private static ChartTextStyle MergeChartTextStyle(ChartTextStyle style, ChartTextStyleOverride next)
-    {
-        return new ChartTextStyle(
-            next.FontFamily ?? style.FontFamily,
-            next.FontSize ?? style.FontSize,
-            next.CharacterSpacing ?? style.CharacterSpacing,
-            next.Color ?? style.Color,
-            next.Alpha ?? style.Alpha,
-            next.Bold ?? style.Bold,
-            next.Italic ?? style.Italic,
-            next.Underline ?? style.Underline,
-            next.Strike ?? style.Strike,
-            next.FontFamily is null ? style.RequestedTypeface : next.RequestedTypeface,
-            next.FontFamily is null ? style.TypefaceSource : next.TypefaceSource);
     }
 
     private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement, PptxTheme theme, PptxColorMap colorMap)

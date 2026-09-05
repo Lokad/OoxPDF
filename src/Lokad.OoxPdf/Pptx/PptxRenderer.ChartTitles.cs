@@ -305,9 +305,9 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
-        style = MergeChartTextStyle(style, chartTextStyle);
-        style = MergeChartTextStyle(style, chartStyleRoleTextStyle);
-        style = MergeChartTextStyle(style, titleTextStyle);
+        style = style.Merge(chartTextStyle);
+        style = style.Merge(chartStyleRoleTextStyle);
+        style = style.Merge(titleTextStyle);
         string trimmed = text.Trim();
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         var textMeasurer = new ChartTextMeasurer(fontResolver);
@@ -482,9 +482,9 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
-        style = MergeChartTextStyle(style, chartTextStyle);
-        style = MergeChartTextStyle(style, chartStyleRoleTextStyle);
-        style = MergeChartTextStyle(style, titleTextStyle);
+        style = style.Merge(chartTextStyle);
+        style = style.Merge(chartStyleRoleTextStyle);
+        style = style.Merge(titleTextStyle);
         RenderChartShapeStyle(graphics, titleBox.X, titleBox.Y, titleBox.Width, titleBox.Height, shapeStyle);
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         double baselineY = titleBox.Y + titleBox.Height * PptxChartMetricRules.TitleBaselineYRatio;
@@ -633,7 +633,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
-        style = MergeChartTextStyle(style, ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartTitleTextStyleOverride(sceneChart)));
+        style = style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartTitleTextStyleOverride(sceneChart)));
         ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(sceneChart.Title.TextStyle);
         return ResolveAutoChartTitleTextStyle(style, titleStyle, isAutoTitle);
     }
