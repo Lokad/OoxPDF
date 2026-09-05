@@ -544,4 +544,92 @@ internal sealed partial class PptxRenderer
     {
         return IsManualLayoutFactorMode(mode) || (missingModeIsFactor && string.IsNullOrEmpty(modeValue));
     }
+
+    private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)
+    {
+        if (ToGlow(style.Glow) is { } glow)
+        {
+            DrawGlow(graphics, "rect", x, y, width, height, glow);
+        }
+
+        if (ToOuterShadow(style.OuterShadow) is { } outerShadow)
+        {
+            DrawOuterShadow(graphics, "rect", x, y, width, height, outerShadow);
+        }
+
+        if (style.GradientFill is { } gradientFill)
+        {
+            DrawLinearGradientFill(graphics, gradientFill, x, y, width, height);
+        }
+        else if (style.Fill is { } fill)
+        {
+            FillChartRectangle(graphics, x, y, width, height, fill);
+        }
+
+        if (style.Stroke is { } stroke)
+        {
+            if (stroke.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, stroke.Alpha);
+            }
+
+            graphics.SetStrokeRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
+            graphics.SetLineWidth(stroke.Width);
+            if (stroke.DashPattern is { Count: > 0 })
+            {
+                graphics.SetLineDash(stroke.DashPattern);
+            }
+
+            if (stroke.Cap is { } cap)
+            {
+                graphics.SetLineCap(cap);
+            }
+
+            if (stroke.Join is { } join)
+            {
+                graphics.SetLineJoin(join);
+            }
+
+            graphics.StrokeRectangle(x, y, width, height);
+            if (stroke.DashPattern is { Count: > 0 })
+            {
+                graphics.ClearLineDash();
+            }
+
+            if (stroke.Cap is not null)
+            {
+                graphics.SetLineCap(0);
+            }
+
+            if (stroke.Join is not null)
+            {
+                graphics.SetLineJoin(0);
+            }
+            if (stroke.Alpha < 1d)
+            {
+                graphics.RestoreState();
+            }
+        }
+    }
+
+    private static void RenderInChartPlotAreaClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, Action render)
+    {
+        graphics.SaveState();
+        try
+        {
+            ClipChartPlotArea();
+            render();
+        }
+        finally
+        {
+            graphics.RestoreState();
+        }
+
+        void ClipChartPlotArea()
+        {
+            graphics.ClipRectangleEvenOdd(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
+        }
+    }
+
 }

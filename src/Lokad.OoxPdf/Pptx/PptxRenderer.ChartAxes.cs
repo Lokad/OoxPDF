@@ -202,93 +202,6 @@ internal sealed partial class PptxRenderer
             : axisUnits;
     }
 
-    private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)
-    {
-        if (ToGlow(style.Glow) is { } glow)
-        {
-            DrawGlow(graphics, "rect", x, y, width, height, glow);
-        }
-
-        if (ToOuterShadow(style.OuterShadow) is { } outerShadow)
-        {
-            DrawOuterShadow(graphics, "rect", x, y, width, height, outerShadow);
-        }
-
-        if (style.GradientFill is { } gradientFill)
-        {
-            DrawLinearGradientFill(graphics, gradientFill, x, y, width, height);
-        }
-        else if (style.Fill is { } fill)
-        {
-            FillChartRectangle(graphics, x, y, width, height, fill);
-        }
-
-        if (style.Stroke is { } stroke)
-        {
-            if (stroke.Alpha < 1d)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(1d, stroke.Alpha);
-            }
-
-            graphics.SetStrokeRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
-            graphics.SetLineWidth(stroke.Width);
-            if (stroke.DashPattern is { Count: > 0 })
-            {
-                graphics.SetLineDash(stroke.DashPattern);
-            }
-
-            if (stroke.Cap is { } cap)
-            {
-                graphics.SetLineCap(cap);
-            }
-
-            if (stroke.Join is { } join)
-            {
-                graphics.SetLineJoin(join);
-            }
-
-            graphics.StrokeRectangle(x, y, width, height);
-            if (stroke.DashPattern is { Count: > 0 })
-            {
-                graphics.ClearLineDash();
-            }
-
-            if (stroke.Cap is not null)
-            {
-                graphics.SetLineCap(0);
-            }
-
-            if (stroke.Join is not null)
-            {
-                graphics.SetLineJoin(0);
-            }
-            if (stroke.Alpha < 1d)
-            {
-                graphics.RestoreState();
-            }
-        }
-    }
-
-    private static void RenderInChartPlotAreaClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, Action render)
-    {
-        graphics.SaveState();
-        try
-        {
-            ClipChartPlotArea();
-            render();
-        }
-        finally
-        {
-            graphics.RestoreState();
-        }
-
-        void ClipChartPlotArea()
-        {
-            graphics.ClipRectangleEvenOdd(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
-        }
-    }
-
     private sealed class ChartTextMeasurer
     {
         private readonly TextAdvanceEstimator estimator;
@@ -448,52 +361,6 @@ internal sealed partial class PptxRenderer
         {
             return orientation == PptxSceneChartAxisOrientation.MaximumMinimum;
         }
-    }
-
-    private static IReadOnlyDictionary<int, double> ReadChartPointExplosions(XElement chartElement)
-    {
-        var explosions = new Dictionary<int, double>();
-        XElement? series = chartElement.Element(ChartNamespace + "ser");
-        if (series is null)
-        {
-            return explosions;
-        }
-
-        (double? seriesExplosion, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(series, "explosion");
-        if (seriesExplosion is { } seriesExplosionValue)
-        {
-            double fraction = Math.Clamp(seriesExplosionValue / 100d, 0d, 1d);
-            int pointCount = PptxSceneBuilder
-                .ReadChartNumberPoints(
-                    series
-                        .Elements(ChartNamespace + "val")
-                        .Descendants(ChartNamespace + "pt"),
-                    requireNonNegativeIndex: true)
-                .Select(point => point.HasParsedIndex ? point.Index : -1)
-                .Where(index => index >= 0)
-                .DefaultIfEmpty(-1)
-                .Max() + 1;
-            for (int index = 0; index < pointCount; index++)
-            {
-                explosions[index] = fraction;
-            }
-        }
-
-        foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
-        {
-            if (!PptxSceneBuilder.TryReadChartNonNegativeIndex(point, out int index, out _))
-            {
-                continue;
-            }
-
-            (double? explosion, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(point, "explosion");
-            if (explosion is { } explosionValue)
-            {
-                explosions[index] = Math.Clamp(explosionValue / 100d, 0d, 1d);
-            }
-        }
-
-        return explosions;
     }
 
     private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
@@ -808,24 +675,4 @@ internal sealed partial class PptxRenderer
             : ToChartSeriesStroke(PptxSceneBuilder.ReadChartAxisLine(axis, theme), null);
     }
 
-    private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)
-    {
-        var series = new List<ChartIndexedScatterSeries>();
-        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
-        {
-            ChartIndexedNumberVector xValues = ReadChartNumberVector(element.Element(ChartNamespace + "xVal"), workbook, plotVisibleOnly);
-            ChartIndexedNumberVector yValues = ReadChartNumberVector(element.Element(ChartNamespace + "yVal"), workbook, plotVisibleOnly);
-            ChartIndexedNumberVector bubbleSizes = readBubbleSize
-                ? ReadChartNumberVector(element.Element(ChartNamespace + "bubbleSize"), workbook, plotVisibleOnly)
-                : default;
-            if (xValues.DensePoints().Count == 0 && yValues.DensePoints().Count == 0)
-            {
-                continue;
-            }
-
-            series.Add(new ChartIndexedScatterSeries(xValues, yValues, bubbleSizes, readBubbleSize));
-        }
-
-        return series;
-    }
 }
