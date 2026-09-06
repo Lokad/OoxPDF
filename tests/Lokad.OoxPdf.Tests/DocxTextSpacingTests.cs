@@ -726,7 +726,8 @@ internal static class DocxTextSpacingTests
             0,
             DocxNumberingIndent.Empty,
             new DocxTextRunStyle(10d, null, false, false, false, null, null, new DocxRunFonts(null, null, null, null, null, null, null, null)));
-        var autoSpacing = new DocxParagraphSpacing(null, null, null, null, null, null, "276", "auto", null);
+        var defaultAutoSpacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "auto", null);
+        var explicit115Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, "276", "auto", null);
         var flooredList = new DocxParagraph(
             [new DocxTextRun("Floored", 10d, null, false, false, false, null, null)],
             [],
@@ -737,7 +738,7 @@ internal static class DocxTextSpacingTests
             0d,
             1.15d,
             null,
-            autoSpacing,
+            defaultAutoSpacing,
             DocxParagraphKeepRules.Empty,
             label);
         var listWithoutBeforeSpacing = new DocxParagraph(
@@ -750,7 +751,20 @@ internal static class DocxTextSpacingTests
             0d,
             1.15d,
             null,
-            autoSpacing,
+            defaultAutoSpacing,
+            DocxParagraphKeepRules.Empty,
+            label);
+        var explicit115List = new DocxParagraph(
+            [new DocxTextRun("Explicit 115", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.15d,
+            null,
+            explicit115Spacing,
             DocxParagraphKeepRules.Empty,
             label);
         var defaultAutoList = new DocxParagraph(
@@ -776,11 +790,11 @@ internal static class DocxTextSpacingTests
             0d,
             1.15d,
             null,
-            autoSpacing,
+            explicit115Spacing,
             DocxParagraphKeepRules.Empty,
             null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(defaultAutoList), new DocxParagraphElement(plainParagraph)],
+            [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(explicit115List), new DocxParagraphElement(defaultAutoList), new DocxParagraphElement(plainParagraph)],
             []);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
@@ -788,23 +802,104 @@ internal static class DocxTextSpacingTests
             .Where(item => item.Kind == "TextLine")
             .ToArray();
 
-        TestAssert.Equal(4, textLines.Length);
+        TestAssert.Equal(5, textLines.Length);
         TestAssert.Equal(10d, textLines[0].SingleLineHeightPoints ?? 0d);
         TestAssert.Equal(0d, textLines[0].PendingAfterSpacingPoints ?? -1d);
         TestAssert.Equal(6d, textLines[0].ParagraphBeforeSpacingPoints ?? 0d);
         TestAssert.Equal(0d, textLines[0].ParagraphAfterSpacingPoints ?? -1d);
         TestAssert.True(textLines[0].ContextualSpacingSuppressed == false, "First paragraph should report that contextual spacing suppression did not apply.");
-        TestAssert.Equal(1.19d, textLines[0].EffectiveLineSpacingFactor ?? 0d);
-        TestAssert.True(Math.Abs((textLines[0].LineHeightPoints ?? 0d) - 11.9d) < 0.0001d, "Effective line height should be the measured single-line height multiplied by the effective factor.");
-        TestAssert.True(textLines[0].LineSpacingFactorFloorApplied == true, "Positive before-spacing list paragraphs should report the Word-compatible auto-line floor.");
+        TestAssert.Equal(1.16d, textLines[0].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(Math.Abs((textLines[0].LineHeightPoints ?? 0d) - 11.6d) < 0.0001d, "Effective line height should be the measured single-line height multiplied by the effective factor.");
+        TestAssert.True(textLines[0].LineSpacingFactorFloorApplied == true, "Default-auto list paragraphs should report the Word-compatible auto-line floor.");
         TestAssert.Equal(0d, textLines[1].PendingAfterSpacingPoints ?? -1d);
         TestAssert.Equal(0d, textLines[1].ParagraphBeforeSpacingPoints ?? -1d);
-        TestAssert.Equal(1.15d, textLines[1].EffectiveLineSpacingFactor ?? 0d);
-        TestAssert.True(textLines[1].LineSpacingFactorFloorApplied == false, "Lists without positive before spacing should not report the floor.");
-        TestAssert.Equal(1.2d, textLines[2].EffectiveLineSpacingFactor ?? 0d);
-        TestAssert.True(textLines[2].LineSpacingFactorFloorApplied == false, "Missing w:line list paragraphs should use the Word default auto factor without the explicit-line floor.");
-        TestAssert.Equal(1.15d, textLines[3].EffectiveLineSpacingFactor ?? 0d);
-        TestAssert.True(textLines[3].LineSpacingFactorFloorApplied == false, "Non-list paragraphs should not report the list floor.");
+        TestAssert.Equal(1.16d, textLines[1].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(textLines[1].LineSpacingFactorFloorApplied == true, "List paragraphs report the floor without requiring positive before spacing (Office line-height probe 2026-09-06).");
+        TestAssert.Equal(1.15d, textLines[2].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(Math.Abs((textLines[2].LineHeightPoints ?? 0d) - 11.5d) < 0.0001d, "Explicit w:line factors are honored as-authored for lists (Office explicit-115 probe 2026-09-06: explicit 1.15 pitches 14.04 at 10pt Calibri).");
+        TestAssert.True(textLines[2].LineSpacingFactorFloorApplied == false, "Explicit w:line list paragraphs should not report the default-auto floor.");
+        TestAssert.Equal(1.2d, textLines[3].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(textLines[3].LineSpacingFactorFloorApplied == false, "Above-minimum default-auto list paragraphs should keep their factor without reporting the floor.");
+        TestAssert.Equal(1.15d, textLines[4].EffectiveLineSpacingFactor ?? 0d);
+        TestAssert.True(textLines[4].LineSpacingFactorFloorApplied == false, "Non-list paragraphs should not report the list floor.");
+    }
+
+    public static void DocxLayoutReservesListLabelFirstLineExtraLeading()
+    {
+        DocxListLabel tallLabel = new DocxListLabel(
+            "*",
+            "bullet",
+            "*",
+            "tab",
+            "1",
+            0,
+            DocxNumberingIndent.Empty,
+            new DocxTextRunStyle(10d, null, false, false, false, null, "Label Metrics", new DocxRunFonts("Label Metrics", null, null, null, null, null, null, null)));
+        DocxListLabel plainLabel = new DocxListLabel(
+            "*",
+            "bullet",
+            "*",
+            "tab",
+            "1",
+            0,
+            DocxNumberingIndent.Empty,
+            new DocxTextRunStyle(10d, null, false, false, false, null, null, new DocxRunFonts(null, null, null, null, null, null, null, null)));
+        DocxParagraph plainListHead = new DocxParagraph(
+            [new DocxTextRun("Head", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.15d,
+            null,
+            new DocxParagraphSpacing(null, null, null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            plainLabel);
+        DocxParagraph tallList = new DocxParagraph(
+            [new DocxTextRun("Tall", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.15d,
+            null,
+            new DocxParagraphSpacing(null, null, null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            tallLabel);
+        DocxParagraph plainList = new DocxParagraph(
+            [new DocxTextRun("Flat", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            6d,
+            0d,
+            1.15d,
+            null,
+            new DocxParagraphSpacing(null, null, null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            plainLabel);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(
+            [new DocxParagraphElement(plainListHead), new DocxParagraphElement(tallList), new DocxParagraphElement(plainList)],
+            []);
+
+        DocxLayoutItemSnapshot[] textLines = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None))
+            .Pages[0]
+            .Items
+            .Where(item => item.Kind == "TextLine")
+            .ToArray();
+
+        // FamilyWidthTextMeasurer reports ascender 1.1x for the Label Metrics family and 1.0x otherwise,
+        // so the tall-label item reserves 1pt of extra top leading (Office style-line probe 2026-09-06:
+        // Symbol-bullet first-line gaps exceed body prediction while Calibri-bullet gaps match it).
+        TestAssert.Equal(3, textLines.Length);
+        double firstPitch = Math.Abs(textLines[1].Y - textLines[0].Y);
+        double secondPitch = Math.Abs(textLines[2].Y - textLines[1].Y);
+        TestAssert.True(Math.Abs(firstPitch - secondPitch - 1.0d) < 0.0001d, "The tall-label first line should reserve the label-ascender excess as extra top leading.");
     }
 
     public static void DocxLayoutSnapshotReportsListLabelLineHeightMetricCandidates()
@@ -850,7 +945,8 @@ internal static class DocxTextSpacingTests
         TestAssert.Equal(10d, line.ListLabelSingleLineHeightPoints ?? 0d);
         TestAssert.Equal(12d, line.BodyWindowsLineHeightPoints ?? 0d);
         TestAssert.Equal(14d, line.ListLabelWindowsLineHeightPoints ?? 0d);
-        TestAssert.Equal(11.9d, Math.Round(line.LineHeightPoints ?? 0d, 2));
+        // Explicit w:line 276 (1.15) is honored as-authored for lists (Office explicit-115 probe 2026-09-06).
+        TestAssert.Equal(11.5d, Math.Round(line.LineHeightPoints ?? 0d, 2));
         TestAssert.Equal("BodySingleLineAuto", line.LineHeightSource ?? string.Empty);
         TestAssert.True((line.ListLabelWindowsLineHeightPoints ?? 0d) > (line.BodyWindowsLineHeightPoints ?? 0d), "Snapshot should expose when list-label Windows extents exceed body extents.");
     }

@@ -584,8 +584,8 @@ internal static class DocxTextTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
-        TestAssert.Equal(36d, paragraph.SpacingBeforePoints);
-        TestAssert.Equal(48d, paragraph.SpacingAfterPoints);
+        TestAssert.Equal(34.5d, paragraph.SpacingBeforePoints);
+        TestAssert.Equal(46d, paragraph.SpacingAfterPoints);
         TestAssert.Equal("150", paragraph.Spacing.BeforeLinesValue ?? string.Empty);
         TestAssert.Equal("200", paragraph.Spacing.AfterLinesValue ?? string.Empty);
     }

@@ -169,7 +169,7 @@ internal sealed partial class DocxLayoutEngine
 {
     private const double WordDefaultTabStopPoints = 36d;
     private const double InlineImageParagraphGapPoints = 6d;
-    private const double WordListMinimumAutoLineSpacingFactor = 1.19d;
+    private const double WordListMinimumAutoLineSpacingFactor = 1.16d;
     private const double FootnoteSeparatorGapPoints = 3d;
     private const double FootnoteSeparatorWidthPoints = 120d;
     private const double FootnoteSeparatorThicknessPoints = 0.5d;
@@ -551,6 +551,11 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxWrappedTextLine line = lines[lineIndex];
+                    if (firstLine)
+                    {
+                        cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
+                    }
+
                     if (cursorY - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
                     {
                         AdvanceColumnOrPage();
@@ -622,6 +627,7 @@ internal sealed partial class DocxLayoutEngine
                     EnsureFootnoteReserveForSourceBlock(elementIndex);
                 }
 
+                cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
                 cursorY -= lineHeight;
                 activeColumnHasContent = true;
             }

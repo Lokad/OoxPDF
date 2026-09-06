@@ -92,10 +92,11 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveAutoLineSpacingFactor(DocxParagraph paragraph, out bool floorApplied)
     {
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
+        // Office floors default-auto lists (no w:line) to the list minimum but honors explicit w:line factors as-authored
+        // (line-height probe 2026-09-06: default bullets pitch 14.16 at 10pt; explicit-115 probe: explicit 1.15 pitches 14.04, explicit 1.0 pitches 12.12).
         if (paragraph.ListLabel is not null &&
             effective.LineSpacingPoints is null &&
-            effective.SpacingBeforePoints > 0d &&
-            effective.Spacing.LineRuleValue?.Equals("auto", StringComparison.OrdinalIgnoreCase) == true)
+            effective.Spacing.LineValue is null)
         {
             double effectiveFactor = Math.Max(effective.LineSpacingFactor, WordListMinimumAutoLineSpacingFactor);
             floorApplied = effectiveFactor > effective.LineSpacingFactor;
@@ -104,6 +105,29 @@ internal sealed partial class DocxLayoutEngine
 
         floorApplied = false;
         return effective.LineSpacingFactor;
+    }
+
+    // Word reserves extra top leading on the first line of a list item when the label ascender exceeds the body ascender
+    // (style-line probe 2026-09-06: Symbol-bullet first-line gaps pitch 16.32 vs 15.84 body-predicted at 10pt;
+    // Calibri-bullet first-line gaps match body prediction, so the excess is label-specific, not per-list).
+    private static double ResolveListLabelFirstLineExtraLeading(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer)
+    {
+        if (paragraph.ListLabel is null ||
+            textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
+        {
+            return 0d;
+        }
+
+        if (paragraph.EffectiveProperties.LineSpacingPoints is not null)
+        {
+            return 0d;
+        }
+
+        DocxTextRun? bodyRun = paragraph.Runs.FirstOrDefault();
+        DocxTextRun labelRun = CreateListLabelRun(paragraph.ListLabel, bodyRun, fontSize);
+        double bodyAscender = staticMetrics.MeasureWindowsAscender(bodyRun, fontSize);
+        double labelAscender = staticMetrics.MeasureWindowsAscender(labelRun, labelRun.EffectiveProperties.FontSize);
+        return Math.Max(0d, labelAscender - bodyAscender);
     }
 
     private static double QuantizeTableCellWrappedLineHeight(double lineHeight, int wrappedLineCount)

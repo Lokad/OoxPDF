@@ -21,8 +21,8 @@ namespace Lokad.OoxPdf.Docx;
 //   Assembly: Core.Read tail builds the DocxDocument from stage outputs.
 internal sealed partial class DocxReader
 {
-    private const double WordUntokenedAutoLineSpacingFactor = 1.2d;
-    private const double WordSpacingTokenAutoLineSpacingFactor = 1.2d;
+    private const double WordUntokenedAutoLineSpacingFactor = 1.15d;
+    private const double WordSpacingTokenAutoLineSpacingFactor = 1.15d;
     private const double WordDefaultSpacingAfterPoints = 8d;
 
     private sealed class DocxComplexFieldState

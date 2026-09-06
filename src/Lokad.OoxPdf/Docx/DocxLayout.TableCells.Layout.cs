@@ -183,6 +183,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 if (paragraph.Images.Count == 0)
                 {
+                    cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                     cursorY -= lineHeight;
                 }
             }
@@ -210,6 +211,11 @@ internal sealed partial class DocxLayoutEngine
                 for (int lineIndex = 0; lineIndex < wrappedLines.Length; lineIndex++)
                 {
                     DocxWrappedTextLine line = wrappedLines[lineIndex];
+                    if (firstLine)
+                    {
+                        cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
+                    }
+
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints, pageNumber);
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {

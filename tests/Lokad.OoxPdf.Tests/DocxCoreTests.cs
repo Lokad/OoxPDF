@@ -504,8 +504,9 @@ internal static class DocxCoreTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(2, document.Paragraphs.Count);
-        TestAssert.Equal(1.2d, document.Paragraphs[0].LineSpacingFactor);
-        TestAssert.Equal(1.2d, document.Paragraphs[1].LineSpacingFactor);
+        // Office auto single spacing measures 1.15 (line-height probe 2026-09-06: public Calibri bullets pitch 14.16 at 10pt).
+        TestAssert.Equal(1.15d, document.Paragraphs[0].LineSpacingFactor);
+        TestAssert.Equal(1.15d, document.Paragraphs[1].LineSpacingFactor);
     }
 
     public static void DocxReaderPreservesRunFontTokens()
