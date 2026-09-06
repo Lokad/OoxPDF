@@ -860,4 +860,52 @@ internal static class DocxTextWrapTests
         TestAssert.Equal("FGH", lines[1].Text);
         TestAssert.True(lines[0].EndsWithIntraTokenBreak, "wordWrap off should permit safe character-level line breaks for overwide Latin tokens.");
     }
+
+    public static void DocxParagraphLayoutKeepsLineWithOverflowingTerminalSpace()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:ind w:left="3950" w:right="3950"/></w:pPr>
+                      <w:r><w:t xml:space="preserve">aaaa bbbb cccc </w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        // Word measures terminal spaces but does not wrap for them (width probe 2026-09-06: a 99.3pt token stays on one 100pt line despite its 2.03pt terminal space).
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.Equal("aaaa bbbb cccc ", lines[0].Text);
+    }
 }
