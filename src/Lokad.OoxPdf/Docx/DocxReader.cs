@@ -8,6 +8,17 @@ using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
 
+// Reader pipeline stages (entry: Core.Read; each file owns one stage):
+//   1. Package (Core.cs): main-part resolution plus relationship maps.
+//   2. Settings plus markup profile (Core.cs): document settings plus markup context.
+//   3. Probes (Probes.cs): comment-anchor inventory plus unsupported-feature diagnostics.
+//   4. Catalogs (Styles.cs, TableStyles.cs, Numbering.cs, font loading): style, numbering and font sets.
+//   5. Sections (Sections.cs): section breaks plus page settings.
+//   6. Body (Body.cs dispatch): paragraphs, runs and fields (Paragraphs.cs plus Fields plus Spacing) plus tables (Tables.cs).
+//   7. Stories (Stories.cs): headers, footers, related and comment stories.
+//   8. Markup predicates (Markup.cs): revision containers, markers and info, consumed inline by body readers.
+//   Shared: Records.cs resolved-property bags travel between stages.
+//   Assembly: Core.Read tail builds the DocxDocument from stage outputs.
 internal sealed partial class DocxReader
 {
     private const double WordUntokenedAutoLineSpacingFactor = 1.2d;
