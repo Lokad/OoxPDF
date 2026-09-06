@@ -469,17 +469,7 @@ internal sealed partial class PptxRenderer
             return string.Empty;
         }
 
-        var builder = new StringBuilder();
-        int current = value;
-        while (current > 0)
-        {
-            current--;
-            char letter = (char)((upper ? 'A' : 'a') + current % 26);
-            builder.Insert(0, letter);
-            current /= 26;
-        }
-
-        return builder.ToString();
+        return OoxNumbering.ToAlphabetic(value, upper);
     }
 
     private static string FormatRomanNumber(int value, bool upper)
@@ -489,35 +479,7 @@ internal sealed partial class PptxRenderer
             return string.Empty;
         }
 
-        (int Value, string Numeral)[] numerals =
-        [
-            (1000, "M"),
-            (900, "CM"),
-            (500, "D"),
-            (400, "CD"),
-            (100, "C"),
-            (90, "XC"),
-            (50, "L"),
-            (40, "XL"),
-            (10, "X"),
-            (9, "IX"),
-            (5, "V"),
-            (4, "IV"),
-            (1, "I")
-        ];
-
-        var builder = new StringBuilder();
-        int current = value;
-        foreach ((int numeralValue, string numeral) in numerals)
-        {
-            while (current >= numeralValue)
-            {
-                builder.Append(numeral);
-                current -= numeralValue;
-            }
-        }
-
-        string result = builder.ToString();
+        string result = OoxNumbering.ToRomanUpper(value);
         return upper ? result : result.ToLowerInvariant();
     }
 

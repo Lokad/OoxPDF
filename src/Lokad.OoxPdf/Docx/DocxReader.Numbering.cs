@@ -23,7 +23,7 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: numeral-builder pair kept together.
+    // Single caller; loop core shared via OoxNumbering, per-spec edge guard stays.
     private static string ToAlphabeticNumber(int value, bool upper)
     {
         if (value <= 0)
@@ -31,20 +31,10 @@ internal sealed partial class DocxReader
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
-        var builder = new StringBuilder();
-        int current = value;
-        while (current > 0)
-        {
-            current--;
-            char letter = (char)((upper ? 'A' : 'a') + current % 26);
-            builder.Insert(0, letter);
-            current /= 26;
-        }
-
-        return builder.ToString();
+        return OoxNumbering.ToAlphabetic(value, upper);
     }
 
-    // Single caller; kept static: numeral-builder pair kept together.
+    // Single caller; loop core shared via OoxNumbering, per-spec edge guard stays.
     private static string ToRomanNumeral(int value)
     {
         if (value <= 0 || value > 3999)
@@ -52,34 +42,7 @@ internal sealed partial class DocxReader
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
-        ReadOnlySpan<(int Value, string Text)> numerals =
-        [
-            (1000, "M"),
-            (900, "CM"),
-            (500, "D"),
-            (400, "CD"),
-            (100, "C"),
-            (90, "XC"),
-            (50, "L"),
-            (40, "XL"),
-            (10, "X"),
-            (9, "IX"),
-            (5, "V"),
-            (4, "IV"),
-            (1, "I")
-        ];
-        var builder = new StringBuilder();
-        int current = value;
-        foreach ((int numeralValue, string numeralText) in numerals)
-        {
-            while (current >= numeralValue)
-            {
-                builder.Append(numeralText);
-                current -= numeralValue;
-            }
-        }
-
-        return builder.ToString();
+        return OoxNumbering.ToRomanUpper(value);
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
