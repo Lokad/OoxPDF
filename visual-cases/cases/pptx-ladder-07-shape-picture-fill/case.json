@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-shape-picture-fill.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "images", "shape-fill"],
+  "tags": ["pptx", "ladder", "images", "shape-fill", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
