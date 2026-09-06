@@ -47,9 +47,9 @@ for (int i = 2; i < args.Length; i++)
 Directory.CreateDirectory(outputDirectory);
 
 using FileStream stream = File.OpenRead(inputPath);
-OoxPackage package = OoxPackage.Open(stream);
-DocxDocument document = new DocxReader().Read(package, markupMode: markupMode);
-var renderer = new DocxRenderer(markupMode: markupMode, markupGeometryMode: markupGeometryMode);
+OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+DocxDocument document = new DocxReader().Read(package, diagnosticSink: null, CancellationToken.None, markupMode: markupMode);
+var renderer = new DocxRenderer(fontResolver: null, markupMode: markupMode, markupGeometryMode: markupGeometryMode);
 
 var options = new JsonSerializerOptions
 {
