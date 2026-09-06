@@ -52,20 +52,13 @@ internal sealed partial class PptxRenderer
                     chartLayout.PlotAreaBox,
                     plotBox,
                     areaSeriesVectors,
-                    areaOptions.Stacked,
-                    areaOptions.PercentStacked,
+                    areaOptions,
                     seriesFills,
                     seriesStrokes,
-                    valueAxisOptions.MajorGridlines,
-                    valueAxisOptions.MinorGridlines,
-                    valueAxisOptions.GridlineStyle,
+                    valueAxisOptions,
                     axesStyle,
                     plotAreaStyle,
-                    valueExtents,
-                    valueAxisOptions.Units,
-                    valueAxisOptions.CrossingValue,
-                    valueAxisOptions.Reversed,
-                    areaOptions.DisplayBlanksAs);
+                    valueExtents);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
                     fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook, plotVisibleOnly), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis), categoryLabelsTopSide: false, fontResolver: fontResolver));

@@ -19,21 +19,23 @@ internal sealed partial class PptxRenderer
         ChartLayoutBox plotAreaBox,
         ChartPlotBox plotBox,
         IReadOnlyList<ChartIndexedNumberVector> series,
-        bool stacked,
-        bool percentStacked,
+        ChartAreaPlotOptions areaOptions,
         IReadOnlyList<ChartSeriesFill?> seriesFills,
         IReadOnlyList<ChartSeriesStroke?> seriesStrokes,
-        bool majorGridlines,
-        bool minorGridlines,
-        ChartGridlineStyle gridlineStyle,
+        ChartValueAxisRenderOptions valueAxisOptions,
         ChartAxesStyle axesStyle,
         ChartShapeStyle plotAreaStyle,
-        ChartValueExtents valueExtents,
-        ChartAxisUnits axisUnits,
-        double? valueAxisCrossingValue,
-        bool valueAxisReversed,
-        PptxSceneChartDisplayBlanksAs displayBlanksAs)
+        ChartValueExtents valueExtents)
     {
+        bool stacked = areaOptions.Stacked;
+        bool percentStacked = areaOptions.PercentStacked;
+        bool majorGridlines = valueAxisOptions.MajorGridlines;
+        bool minorGridlines = valueAxisOptions.MinorGridlines;
+        ChartGridlineStyle gridlineStyle = valueAxisOptions.GridlineStyle;
+        ChartAxisUnits axisUnits = valueAxisOptions.Units;
+        double? valueAxisCrossingValue = valueAxisOptions.CrossingValue;
+        bool valueAxisReversed = valueAxisOptions.Reversed;
+        PptxSceneChartDisplayBlanksAs displayBlanksAs = areaOptions.DisplayBlanksAs;
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
