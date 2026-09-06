@@ -7,7 +7,10 @@
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.1,
+    "maxChangedPixelRatioAtThreshold16": 0.002
   },
   "allowedUnsupportedFeatures": []
 }
