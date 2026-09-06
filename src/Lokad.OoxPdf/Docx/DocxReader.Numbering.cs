@@ -46,7 +46,7 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)
+    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters, DocxStyleSet styles, string? paragraphStyleId, DocxResolvedRunProperties? tableStyleRun, double? directSize)
     {
         XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
         string? numId = (string?)numberingProperties?
@@ -72,10 +72,11 @@ internal sealed partial class DocxReader
             return null;
         }
 
+        DocxTextRunStyle labelStyle = ResolveListLabelStyle(numberingLevel.Style, paragraphProperties, styles, paragraphStyleId, tableStyleRun, directSize);
         if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
         {
             string bulletText = string.IsNullOrEmpty(numberingLevel.Text) ? "\u2022" : numberingLevel.Text;
-            return new DocxListLabel(bulletText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, numberingLevel.Style);
+            return new DocxListLabel(bulletText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle);
         }
 
         var key = (numId, level);
@@ -89,7 +90,51 @@ internal sealed partial class DocxReader
         }
 
         string labelText = ResolveNumberingLevelText(numberingLevel.Text, numId, counters);
-        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, numberingLevel.Style);
+        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle);
+    }
+
+    private const double WordListLabelFallbackMaxPoints = 12d;
+
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    private static DocxTextRunStyle ResolveListLabelStyle(DocxTextRunStyle levelStyle, XElement? paragraphProperties, DocxStyleSet styles, string? paragraphStyleId, DocxResolvedRunProperties? tableStyleRun, double? directSize)
+    {
+        // Office sizes bullets from the numbering level, then paragraph/table styles (style-less paragraphs
+        // resolve through Normal), then document defaults outright, and only then body runs capped at 12pt
+        // (bullet-chain probes 2026-09-06: style 14pt wins over direct 10/18pt; docDefaults 8/20pt win over direct;
+        // absent docDefaults, 14/18pt directs emit 12pt bullets while 10pt directs emit 10pt).
+        if (levelStyle.FontSize is not null)
+        {
+            return levelStyle;
+        }
+
+        XElement? markRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
+        if (ReadRunProperties(markRunProperties).FontSize is { } markSize)
+        {
+            return levelStyle with { FontSize = markSize };
+        }
+
+        double? styleSize = tableStyleRun?.FontSize;
+        foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId ?? "Normal", styles.ParagraphStyles))
+        {
+            styleSize = paragraphStyle.Run.FontSize ?? styleSize;
+        }
+
+        if (styleSize is not null)
+        {
+            return levelStyle with { FontSize = styleSize };
+        }
+
+        if (styles.RunDefaults.FontSize is { } defaultsSize)
+        {
+            return levelStyle with { FontSize = defaultsSize };
+        }
+
+        if (directSize is { } bodySize && bodySize > WordListLabelFallbackMaxPoints)
+        {
+            return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
+        }
+
+        return levelStyle;
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
