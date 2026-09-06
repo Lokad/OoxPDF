@@ -3,11 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-shapes.pptx",
   "dpi": 144,
-  "tags": ["pptx", "shapes", "smoke"],
+  "tags": ["pptx", "shapes", "smoke", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.02,
+    "maxChangedPixelRatioAtThreshold16": 0.0008
   },
   "allowedUnsupportedFeatures": []
 }
