@@ -342,4 +342,23 @@ internal sealed partial class PptxSceneBuilder
             _ => PptxSceneChartAxisTickMark.Unknown
         };
     }
+
+    private static bool? ReadOptionalOoxmlBooleanElement(XElement parent, string elementName)
+    {
+        XElement? element = parent.Element(ChartNamespace + elementName);
+        return element is null ? null : IsOoxmlBooleanElementEnabled(element);
+    }
+
+    private static (bool? Value, string RawValue) ReadOptionalOoxmlBooleanElementWithValue(XElement? parent, string elementName)
+    {
+        XElement? element = parent?.Element(ChartNamespace + elementName);
+        return element is null
+            ? (null, string.Empty)
+            : (IsOoxmlBooleanElementEnabled(element), (string?)element.Attribute("val") ?? string.Empty);
+    }
+
+    private static bool? ReadOptionalOoxmlBooleanAttribute(XElement element, string attributeName)
+    {
+        return OoxBoolean.ParseOptionalAttribute(element, attributeName);
+    }
 }

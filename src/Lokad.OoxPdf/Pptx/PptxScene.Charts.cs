@@ -308,20 +308,6 @@ internal sealed partial class PptxSceneBuilder
         return overrides;
     }
 
-    private static bool? ReadOptionalOoxmlBooleanElement(XElement parent, string elementName)
-    {
-        XElement? element = parent.Element(ChartNamespace + elementName);
-        return element is null ? null : IsOoxmlBooleanElementEnabled(element);
-    }
-
-    private static (bool? Value, string RawValue) ReadOptionalOoxmlBooleanElementWithValue(XElement? parent, string elementName)
-    {
-        XElement? element = parent?.Element(ChartNamespace + elementName);
-        return element is null
-            ? (null, string.Empty)
-            : (IsOoxmlBooleanElementEnabled(element), (string?)element.Attribute("val") ?? string.Empty);
-    }
-
     internal static PptxSceneChartNumberFormat ReadChartNumberFormat(XElement parent)
     {
         XElement? numberFormat = parent.Element(ChartNamespace + "numFmt");
@@ -728,11 +714,6 @@ internal sealed partial class PptxSceneBuilder
     internal static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
     {
         return OoxBoolean.ParseElement(element, defaultValue, null);
-    }
-
-    private static bool? ReadOptionalOoxmlBooleanAttribute(XElement element, string attributeName)
-    {
-        return OoxBoolean.ParseOptionalAttribute(element, attributeName);
     }
 
 }
