@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-01-master-background.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "background", "master"],
+  "tags": ["pptx", "ladder", "background", "master", "locked"],
   "expected": {
     "minAgentRating": 5,
     "pageCountMustMatch": true,

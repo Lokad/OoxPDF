@@ -54,9 +54,13 @@ internal sealed partial class PptxRenderer
             var graphics = new PdfGraphicsBuilder();
             PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken);
 
-            RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
-            RenderBackground(context, context.SceneSlide.LayoutBackground, graphics, defaultWhenMissing: false);
-            RenderBackground(context, context.SceneSlide.SlideBackground, graphics, defaultWhenMissing: true);
+            bool masterBackgroundPainted = RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
+            bool layoutBackgroundPainted = RenderBackground(context, context.SceneSlide.LayoutBackground, graphics, defaultWhenMissing: false);
+            bool slideBackgroundPainted = RenderBackground(context, context.SceneSlide.SlideBackground, graphics, defaultWhenMissing: false);
+            if (!masterBackgroundPainted && !layoutBackgroundPainted && !slideBackgroundPainted)
+            {
+                RenderBackground(context, context.SceneSlide.SlideBackground, graphics, defaultWhenMissing: true);
+            }
             cancellationToken.ThrowIfCancellationRequested();
             var orderedImages = new List<PdfImageResource>();
             var orderedChartFonts = new List<PdfFontResource>();
