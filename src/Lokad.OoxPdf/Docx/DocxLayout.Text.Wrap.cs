@@ -88,6 +88,21 @@ internal sealed partial class DocxLayoutEngine
                 !token.IsBreakableWhitespace &&
                 MeasureTextSpansForWrapping(SliceTextSpans(spans, lineStart, candidateLength), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber) > maxWidth(lineIndex))
             {
+                // Word also breaks an overlong token after a hyphen (or slash) when the prefix fits the remaining width; previously only line-leading overwide tokens used preferred breaks.
+                double usedWidth = MeasureTextSpansForWrapping(SliceTextSpans(spans, lineStart, lineLength), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber);
+                double remainingWidth = maxWidth(lineIndex) - usedWidth;
+                if (remainingWidth > 0d &&
+                    TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, out int preferredBreakLength))
+                {
+                    yield return CreateWrappedTextLine(text, spans, lineStart, lineLength + preferredBreakLength, endsWithIntraTokenBreak: true);
+                    lineIndex++;
+                    lineStart = token.Start + preferredBreakLength;
+                    lineLength = 0;
+                    tokens = ReplaceToken(tokens, tokenIndex, new TextToken(text.Substring(lineStart, token.Length - preferredBreakLength), lineStart, token.Length - preferredBreakLength));
+                    tokenIndex--;
+                    continue;
+                }
+
                 yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false);
                 lineIndex++;
                 lineStart = token.Start;

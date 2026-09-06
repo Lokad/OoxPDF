@@ -587,6 +587,49 @@ internal static class DocxTextWrapTests
         TestAssert.Equal("DEFG", lines[1].Text);
         TestAssert.True(lines[0].EndsWithIntraTokenBreak, "Soft-hyphen body splits should be marked as intra-token line endings.");
     }
+    public static void DocxParagraphLayoutBreaksOverlongTokenAfterHyphenWhenPrefixFits()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("AA BB-well C", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            50d,
+            200d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            []);
+
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("AA BB-", lines[0].Text);
+        TestAssert.Equal("well C", lines[1].Text);
+        TestAssert.True(lines[0].EndsWithIntraTokenBreak, "Greedy hyphen splits should be marked as intra-token line endings.");
+    }
+
 
     public static void DocxParagraphLayoutSuppressesUnbrokenSoftHyphens()
     {
