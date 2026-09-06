@@ -2026,6 +2026,148 @@ internal static class DocxTablesTests
         TestAssert.Equal("0000FF", document.Tables[0].Rows[3].Cells[0].FillHex ?? string.Empty);
     }
 
+    public static void DocxReaderTableStyleBandsLeadingEdgeWithoutHeaderEmphasis()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="table" w:styleId="LeadBand">
+                    <w:tblPr><w:tblStyleRowBandSize w:val="1"/><w:tblStyleColBandSize w:val="1"/></w:tblPr>
+                    <w:tcPr><w:shd w:fill="DDDDDD"/></w:tcPr>
+                    <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:fill="FF0000"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="firstCol"><w:tcPr><w:shd w:fill="FF0000"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="lastRow"><w:tcPr><w:shd w:fill="FF0000"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="lastCol"><w:tcPr><w:shd w:fill="FF0000"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="band1Horz"><w:tcPr><w:shd w:fill="00FF00"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="band2Horz"><w:tcPr><w:shd w:fill="0000FF"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="band1Vert"><w:tcPr><w:shd w:fill="00FF00"/></w:tcPr></w:tblStylePr>
+                    <w:tblStylePr w:type="band2Vert"><w:tcPr><w:shd w:fill="0000FF"/></w:tcPr></w:tblStylePr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="LeadBand"/><w:tblLook w:val="0000" w:firstRow="0" w:firstColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc><w:p><w:r><w:t>A0</w:t></w:r></w:p></w:tc></w:tr>
+                      <w:tr><w:tc><w:p><w:r><w:t>A1</w:t></w:r></w:p></w:tc></w:tr>
+                      <w:tr><w:tc><w:p><w:r><w:t>A2</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="LeadBand"/><w:tblLook w:val="0000" w:firstRow="0" w:firstColumn="0" w:noHBand="1" w:noVBand="0"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>B0</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>B1</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>B2</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="LeadBand"/><w:tblLook w:val="0020" w:firstRow="1" w:firstColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc><w:p><w:r><w:t>C0</w:t></w:r></w:p></w:tc></w:tr>
+                      <w:tr><w:tc><w:p><w:r><w:t>C1</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="LeadBand"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>D00</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>D01</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>D10</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>D11</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="LeadBand"/><w:tblLook w:val="00A0" w:firstRow="1" w:firstColumn="1" w:noHBand="0" w:noVBand="0"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>E00</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>E01</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>E10</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>E11</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>E20</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>E21</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:tbl>
+                      <w:tblPr><w:tblStyle w:val="LeadBand"/><w:tblLook w:val="0140" w:firstRow="0" w:lastRow="1" w:firstColumn="0" w:lastColumn="1" w:noHBand="0" w:noVBand="0"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>F00</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>F01</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>F10</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>F11</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+
+        TestAssert.Equal("00FF00", document.Tables[0].Rows[0].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("0000FF", document.Tables[0].Rows[1].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[0].Rows[2].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[1].Rows[0].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("0000FF", document.Tables[1].Rows[0].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[1].Rows[0].Cells[2].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[2].Rows[0].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[2].Rows[1].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[3].Rows[0].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[3].Rows[0].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[3].Rows[1].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[3].Rows[1].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[4].Rows[0].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[4].Rows[0].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[4].Rows[1].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[4].Rows[1].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[4].Rows[2].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("0000FF", document.Tables[4].Rows[2].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("00FF00", document.Tables[5].Rows[0].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[5].Rows[0].Cells[1].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[5].Rows[1].Cells[0].FillHex ?? string.Empty);
+        TestAssert.Equal("FF0000", document.Tables[5].Rows[1].Cells[1].FillHex ?? string.Empty);
+    }
+
     public static void DocxReaderPreservesTableLookTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

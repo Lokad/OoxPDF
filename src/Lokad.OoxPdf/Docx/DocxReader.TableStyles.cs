@@ -236,7 +236,7 @@ internal sealed partial class DocxReader
         DocxTableCellStyle resolved = tableStyle.Cell;
         IEnumerable<string> regions = conditionalFormat?.IsDefined == true
             ? EnumerateTableStyleRegions(conditionalFormat)
-            : EnumerateTableStyleRegions(tableLook, tableStyle.Table.RowBandSize, tableStyle.Table.ColumnBandSize, rowIndex, cellIndex, rowCount, cellCount);
+            : EnumerateTableStyleRegions(tableLook, tableStyle.Table.RowBandSize, tableStyle.Table.ColumnBandSize, rowIndex, cellIndex, rowCount, cellCount, tableStyle.ConditionalRegions.ContainsKey("firstRow"), tableStyle.ConditionalRegions.ContainsKey("firstCol"), tableStyle.ConditionalRegions.ContainsKey("lastRow"), tableStyle.ConditionalRegions.ContainsKey("lastCol"));
         foreach (string region in regions)
         {
             if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableCellStyle? style))
@@ -318,14 +318,41 @@ internal sealed partial class DocxReader
         int rowIndex,
         int cellIndex,
         int rowCount,
-        int cellCount)
+        int cellCount,
+        bool hasFirstRowRegion,
+        bool hasFirstColRegion,
+        bool hasLastRowRegion,
+        bool hasLastColRegion)
     {
         bool firstRow = tableLook.FirstRow != false;
         bool lastRow = tableLook.LastRow == true;
-        bool firstColumn = tableLook.FirstColumn == true;
+        // Absent tblLook enables first-column emphasis in Word (band probe 2026-09-06: no-look col0 takes firstCol, matching firstRow).
+        bool firstColumn = tableLook.FirstColumn != false;
         bool lastColumn = tableLook.LastColumn == true;
         bool horizontalBand = tableLook.NoHorizontalBand != true;
-        bool verticalBand = tableLook.NoVerticalBand != true;
+        // Absent tblLook disables vertical banding in Word (band probe 2026-09-06: no-look vert-only style paints no fills), matching unchecked Banded Columns; horizontal banding stays on by default.
+        bool verticalBand = tableLook.NoVerticalBand == false;
+
+        // Banding skips an emphasized header row/column only along its own axis when the style defines the matching edge region (band probes 2026-09-06: probe4B header row unshaded, probe5B/probe6/probe10 headers take the edge region, probe11 header row still takes cross-axis bands); otherwise bands start at row0/col0 (probes 7/8T1). Edge regions yield after bands so they win same-property ties.
+        bool excludeLeadingRow = firstRow && hasFirstRowRegion;
+        bool excludeLeadingColumn = firstColumn && hasFirstColRegion;
+        bool edgeRow = excludeLeadingRow && rowIndex == 0;
+        bool edgeLastRow = lastRow && rowIndex == rowCount - 1 && hasLastRowRegion;
+        bool edgeCol = excludeLeadingColumn && cellIndex == 0;
+        bool edgeLastCol = lastColumn && cellIndex == cellCount - 1 && hasLastColRegion;
+
+        // Horizontal bands win over vertical bands on cells matching both (probe6/probe8T1/probe10 interiors follow the row band).
+        string? verticalBandRegion = ResolveBandRegion(cellIndex, columnBandSize ?? 1, "band1Vert", "band2Vert", excludeLeading: excludeLeadingColumn);
+        if (verticalBand && !edgeCol && !edgeLastCol && verticalBandRegion is not null)
+        {
+            yield return verticalBandRegion;
+        }
+
+        string? horizontalBandRegion = ResolveBandRegion(rowIndex, rowBandSize ?? 1, "band1Horz", "band2Horz", excludeLeading: excludeLeadingRow);
+        if (horizontalBand && !edgeRow && !edgeLastRow && horizontalBandRegion is not null)
+        {
+            yield return horizontalBandRegion;
+        }
 
         if (firstRow && rowIndex == 0)
         {
@@ -366,29 +393,19 @@ internal sealed partial class DocxReader
         {
             yield return "seCell";
         }
-
-        string? horizontalBandRegion = ResolveBandRegion(rowIndex, rowBandSize ?? 1, "band1Horz", "band2Horz");
-        if (horizontalBand && horizontalBandRegion is not null)
-        {
-            yield return horizontalBandRegion;
-        }
-
-        string? verticalBandRegion = ResolveBandRegion(cellIndex, columnBandSize ?? 1, "band1Vert", "band2Vert");
-        if (verticalBand && verticalBandRegion is not null)
-        {
-            yield return verticalBandRegion;
-        }
     }
 
-    private static string? ResolveBandRegion(int index, int bandSize, string firstBand, string secondBand)
+    private static string? ResolveBandRegion(int index, int bandSize, string firstBand, string secondBand, bool excludeLeading)
     {
-        if (index == 0)
+        // Word bands the leading row/column unless header emphasis meets a matching edge region (band probes 2026-09-06: edgeless probes 7/8T1 band row0/col0, otherwise band1 restarts after the header).
+        int startIndex = excludeLeading ? 1 : 0;
+        if (index < startIndex)
         {
             return null;
         }
 
         int effectiveBandSize = Math.Max(1, bandSize);
-        int bandIndex = (index - 1) / effectiveBandSize;
+        int bandIndex = (index - startIndex) / effectiveBandSize;
         return bandIndex % 2 == 0 ? firstBand : secondBand;
     }
 }
