@@ -165,7 +165,7 @@ internal sealed partial class PptxRenderer
         PptxTextSpanLayout? baselineSpan = line.Spans.FirstOrDefault();
         ResolvedRunTextStyle? baselineStyle = baselineSpan?.SourceRun?.Style;
         double baselineFontSize = baselineSpan?.Run.FontSize ?? maxFontSize;
-        PptxTextBaselineMetricLayout baselineMetric = ReadBaselineMetric(baselineFontSize, baselineStyle, advanceEstimator, useOfficeBaselineFloor);
+        PptxTextBaselineMetricLayout baselineMetric = ReadBaselineMetric(baselineFontSize, baselineStyle, advanceEstimator, useOfficeBaselineFloor, lineSpacing);
         return new PptxTextLineBoxLayout(
             lineTopY,
             baselineY,

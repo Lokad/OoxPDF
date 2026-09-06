@@ -33,12 +33,12 @@ internal sealed partial class PptxRenderer
     {
         if (lineSpacing.IsAbsolute)
         {
-            return Math.Max(BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor: false), lineSpacing.Value - fontSize * PptxTextMetricRules.AbsoluteLineBaselineGapFallback);
+            return Math.Max(BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor: false, lineSpacing), lineSpacing.Value - fontSize * PptxTextMetricRules.AbsoluteLineBaselineGapFallback);
         }
 
         return lineSpacing.IsExplicit && useExplicitMultipleBaselineOffset
             ? ReadExplicitMultipleBaselineOffset(lineSpacing, fontSize)
-            : BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor);
+            : BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor, lineSpacing);
     }
 
     private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor, bool useExplicitMultipleBaselineOffset)
@@ -80,7 +80,7 @@ internal sealed partial class PptxRenderer
         return fontSize * PptxTextMetricRules.OfficeBaselineFallback;
     }
 
-    private static double BaselineOffset(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
+    private static double BaselineOffset(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor, LineSpacing lineSpacing)
     {
         if (style is null)
         {
@@ -106,10 +106,18 @@ internal sealed partial class PptxRenderer
             metricRatio = Math.Max(PptxTextMetricRules.OfficeBaselineFallback, metricRatio);
         }
 
+        // Tall-font cap (Office probes 2026-09-06): only fonts whose Windows ascent exceeds the em box (Aptos Display 2068/2048) cap the first baseline at lineAdvance minus Windows descent; normal fonts (Calibri 1950/2048) keep winAscent and fallback metrics never cap.
+        if (!lineSpacing.IsExplicit && fontSize > 0d && ascenderRatio > PptxTextMetricRules.MaximumOfficeBaselineWindowsAscenderRatio && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio)
+        {
+            double lineAdvance = ReadLineAdvance(lineSpacing, fontSize);
+            double windowsDescender = font.Os2.WindowsDescender / (double)font.UnitsPerEm * fontSize;
+            metricRatio = Math.Min(metricRatio, (lineAdvance - windowsDescender) / fontSize);
+        }
+
         return fontSize * metricRatio;
     }
 
-    private static PptxTextBaselineMetricLayout ReadBaselineMetric(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
+    private static PptxTextBaselineMetricLayout ReadBaselineMetric(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor, LineSpacing lineSpacing)
     {
         const double fallbackRatio = PptxTextMetricRules.OfficeBaselineFallback;
         if (style is null)
@@ -140,6 +148,14 @@ internal sealed partial class PptxRenderer
         if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, runStyle, advanceEstimator, ascenderRatio))
         {
             ratio = Math.Max(fallbackRatio, ratio);
+        }
+
+        // Tall-font cap (Office probes 2026-09-06): only fonts whose Windows ascent exceeds the em box (Aptos Display 2068/2048) cap the first baseline at lineAdvance minus Windows descent; normal fonts (Calibri 1950/2048) keep winAscent and fallback metrics never cap.
+        if (!lineSpacing.IsExplicit && fontSize > 0d && ascenderRatio > PptxTextMetricRules.MaximumOfficeBaselineWindowsAscenderRatio && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio)
+        {
+            double lineAdvance = ReadLineAdvance(lineSpacing, fontSize);
+            double windowsDescender = font.Os2.WindowsDescender / (double)font.UnitsPerEm * fontSize;
+            ratio = Math.Min(ratio, (lineAdvance - windowsDescender) / fontSize);
         }
         return new PptxTextBaselineMetricLayout(
             source,
