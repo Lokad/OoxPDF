@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-image-crop.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "images", "crop"],
+  "tags": ["pptx", "ladder", "images", "crop", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

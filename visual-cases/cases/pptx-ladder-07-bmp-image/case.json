@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-bmp-image.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "images", "bmp"],
+  "tags": ["pptx", "ladder", "images", "bmp", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
