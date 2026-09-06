@@ -3,7 +3,12 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-blank.pptx",
   "dpi": 144,
-  "tags": ["pptx", "blank", "smoke"],
+  "tags": [
+    "pptx",
+    "blank",
+    "smoke",
+    "locked"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
