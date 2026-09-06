@@ -213,6 +213,12 @@ internal sealed partial class PptxRenderer
         return bodyProperties.AutofitModeValue == "noAutofit";
     }
 
+    // Office default when bodyPr carries no autofit element (North-clone probes 2026-09-06: absent-autofit content centers by line advances).
+    private static bool HasAbsentAutofit(PptxTextBodyProperties bodyProperties)
+    {
+        return bodyProperties.AutofitModeValue == string.Empty;
+    }
+
     private static (XElement? Element, string Mode, PptxTextBodyPropertySource Source) ReadTextAutofit(
         XElement textBody,
         XElement? inheritedTextBody)
