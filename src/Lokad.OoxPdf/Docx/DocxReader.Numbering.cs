@@ -46,7 +46,7 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters, DocxStyleSet styles, string? paragraphStyleId, DocxResolvedRunProperties? tableStyleRun, double? directSize)
+    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, double? directSize)
     {
         XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
         string? numId = (string?)numberingProperties?
@@ -72,7 +72,7 @@ internal sealed partial class DocxReader
             return null;
         }
 
-        DocxTextRunStyle labelStyle = ResolveListLabelStyle(numberingLevel.Style, paragraphProperties, styles, paragraphStyleId, tableStyleRun, directSize);
+        DocxTextRunStyle labelStyle = ResolveListLabelStyle(numberingLevel.Style, paragraphProperties, styles, paragraphStyleId, tableCellStyle, directSize);
         if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
         {
             string bulletText = string.IsNullOrEmpty(numberingLevel.Text) ? "\u2022" : numberingLevel.Text;
@@ -96,12 +96,13 @@ internal sealed partial class DocxReader
     private const double WordListLabelFallbackMaxPoints = 12d;
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static DocxTextRunStyle ResolveListLabelStyle(DocxTextRunStyle levelStyle, XElement? paragraphProperties, DocxStyleSet styles, string? paragraphStyleId, DocxResolvedRunProperties? tableStyleRun, double? directSize)
+    private static DocxTextRunStyle ResolveListLabelStyle(DocxTextRunStyle levelStyle, XElement? paragraphProperties, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, double? directSize)
     {
         // Office sizes bullets from the numbering level, then paragraph/table styles (style-less paragraphs
-        // resolve through Normal), then document defaults outright, and only then body runs capped at 12pt
-        // (bullet-chain probes 2026-09-06: style 14pt wins over direct 10/18pt; docDefaults 8/20pt win over direct;
-        // absent docDefaults, 14/18pt directs emit 12pt bullets while 10pt directs emit 10pt).
+        // resolve through Normal), then unstyled table cells fall back to 12pt, then document defaults outright,
+        // and only then body runs capped at 12pt (bullet-chain probes 2026-09-06: style 14pt wins over direct 10/18pt;
+        // docDefaults 8/20pt win over direct body runs; unstyled table cells emit 12pt bullets at direct 9/10/14/18pt;
+        // unstyled body runs emit direct size up to the 12pt cap; cells-with-docDefaults untested, cascade order assumed).
         if (levelStyle.FontSize is not null)
         {
             return levelStyle;
@@ -113,7 +114,7 @@ internal sealed partial class DocxReader
             return levelStyle with { FontSize = markSize };
         }
 
-        double? styleSize = tableStyleRun?.FontSize;
+        double? styleSize = tableCellStyle?.Run.FontSize;
         foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId ?? "Normal", styles.ParagraphStyles))
         {
             styleSize = paragraphStyle.Run.FontSize ?? styleSize;
@@ -122,6 +123,11 @@ internal sealed partial class DocxReader
         if (styleSize is not null)
         {
             return levelStyle with { FontSize = styleSize };
+        }
+
+        if (tableCellStyle is not null)
+        {
+            return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
         }
 
         if (styles.RunDefaults.FontSize is { } defaultsSize)
