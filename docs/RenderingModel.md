@@ -32,6 +32,30 @@ DOCX layout is flow-based. The renderer converts twips to points, computes the c
 
 Current text layout intentionally avoids complex shaping. Bold/italic use a hybrid: prefer a real font face on exact non-fallback matches, otherwise synthesize (stroked bold pass, oblique shear). Font programs flow through FontRequest, FontFaceResolution, IFontProgramSource, OpenTypeFont, and the subsetted embedded PDF font (see README Fonts And Portability).
 
+## Shape, media, and table pipeline (PPTX)
+
+Shape rendering is a dispatch-plus-lanes pipeline, not one module. `PptxRenderer.Shapes.cs` owns
+dispatch (`RenderBackground`, two `RenderShape` overloads, group transforms) and fans out to
+single-home lanes:
+
+- `ShapeShared.cs`: cross-file shared infra - group-transform application, pattern-fill stroking,
+  shape line and font-color readers. These live in Shared (not a Readers file) because shape
+  dispatch, text, and scene readers all call them.
+- `ShapeStyles.cs`: scene-to-renderer style converters (`ToShapePatternFill`, `ToGradientFill`,
+  `ToShapePictureFill`, `ToGlow`, `ToOuterShadow`, line-end/dash/cap/join readers, `ToLineStyle`,
+  `ToFillStyle`).
+- `ShapeGeometry.cs`: custom-geometry engine (guide/formula evaluation, path readers, bezier builders).
+- `ShapeConnectors.cs`: line-end markers and arrowheads plus the curved-connector bezier engine.
+- `ShapeEffects.cs`: effect emission (outer shadow, glow, gradient and preset fills, preset arcs).
+- `Images.cs` (plus `Images.Svg.cs`): the media home - picture-frame rendering, image cache and
+  recolor, crop/fill-rect conversion, plus picture-fill IO (`TryReadShapePictureFill`,
+  `DrawImageFill`). Picture fills ride the shape fill-resolution path: `RenderShape` resolves them
+  mid-dispatch and draws through the image cache, so fill IO stays with the cache instead of
+  splitting across shape files.
+- Tables: `Tables.cs` (frame pipeline), `Tables.Borders.cs` (border-stroking lane), `TableStyles.cs`
+  (style resolution). Scene-side readers mirror the split: `PptxScene.Shapes.cs` core plus the
+  `Shapes.Lines`, `Shapes.Fills`, `Shapes.Effects`, and `Shapes.Pictures` lanes.
+
 ## PDF Layer
 
 The PDF writer emits a static PDF with deterministic object ordering, stable resource names, subsetted embedded TrueType/CID fonts, ToUnicode maps, path drawing, text drawing, and JPEG/PNG image XObjects. PNG alpha is represented with a soft mask when needed.
