@@ -11,8 +11,18 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents)
     {
+        bool stacked = lineOptions.Stacked;
+        bool percentStacked = lineOptions.PercentStacked;
+        IReadOnlyList<ChartBooleanOption> smoothSeries = lineOptions.SmoothSeries;
+        bool majorGridlines = valueAxisOptions.MajorGridlines;
+        bool minorGridlines = valueAxisOptions.MinorGridlines;
+        ChartGridlineStyle gridlineStyle = valueAxisOptions.GridlineStyle;
+        ChartAxisUnits axisUnits = valueAxisOptions.Units;
+        double? valueAxisCrossingValue = valueAxisOptions.CrossingValue;
+        bool valueAxisReversed = valueAxisOptions.Reversed;
+        PptxSceneChartDisplayBlanksAs displayBlanksAs = lineOptions.DisplayBlanksAs;
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
