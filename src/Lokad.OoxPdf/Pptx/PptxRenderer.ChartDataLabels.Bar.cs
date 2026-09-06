@@ -19,19 +19,21 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedNumberVector> series,
         IReadOnlyList<RgbColor>? chartPalette,
         ChartValueExtents extents,
-        bool horizontalBars,
-        bool valueAxisReversed,
-        PptxSceneChartGrouping grouping,
-        double gapWidthPercent,
+        ChartBarPlotOptions barOptions,
+        ChartValueAxisRenderOptions valueAxisOptions,
         IReadOnlyList<ChartSeriesFill?> seriesFills,
         IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills,
-        bool varyColors,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames,
         PresentationFontResolver? fontResolver)
     {
+        bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
+        bool valueAxisReversed = valueAxisOptions.Reversed;
+        PptxSceneChartGrouping grouping = barOptions.Grouping;
+        double gapWidthPercent = barOptions.GapWidth;
+        bool varyColors = barOptions.VaryColors.Value;
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
             return [];
