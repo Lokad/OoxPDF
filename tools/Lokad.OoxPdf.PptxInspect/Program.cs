@@ -20,8 +20,8 @@ HashSet<int>? slideFilter = ReadSlideFilter(args);
 Directory.CreateDirectory(outputDirectory);
 
 using FileStream stream = File.OpenRead(inputPath);
-OoxPackage package = OoxPackage.Open(stream);
-PptxDocument document = new PptxReader().Read(package);
+OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 IEnumerable<PptxSlide> slides = document.Slides;
 if (slideFilter is not null)
 {
