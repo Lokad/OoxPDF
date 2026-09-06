@@ -3,7 +3,13 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-image-flip.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "images", "flip"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "images",
+    "flip",
+    "locked"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
