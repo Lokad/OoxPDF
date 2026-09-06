@@ -1211,7 +1211,7 @@ internal static class DocxTablesLayoutTests
             .Single();
 
         TestAssert.Equal(cellLayout.X + 12d, cellLayout.TextLines[0].X);
-        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 14d, cellLayout.TextLines[0].BaselineY);
+        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 11d * 0.94d - 3d, cellLayout.TextLines[0].BaselineY);
     }
 
     public static void DocxTableLayoutStageDoesNotInventHorizontalCellPadding()
@@ -1250,7 +1250,7 @@ internal static class DocxTablesLayoutTests
             .Single();
 
         TestAssert.Equal(cellLayout.X, cellLayout.TextLines[0].X);
-        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d, cellLayout.TextLines[0].BaselineY);
+        TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d * 0.94d, cellLayout.TextLines[0].BaselineY);
     }
 
     public static void DocxTableLayoutStageStartsTextInsideVisibleCellBorder()

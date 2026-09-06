@@ -100,7 +100,8 @@ internal static class DocxLineMetrics
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)
     {
         DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
-        return firstTextParagraph is null ? 0d : firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize);
+        // Word places the in-cell first baseline with the body rule (shading probes 2026-09-06: in-cell offsets match winAscent like body text); the full-em inset sat 0.05em too deep.
+        return firstTextParagraph is null ? 0d : firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize) * WordAutoLineBaselineOffsetEm;
     }
 }
 

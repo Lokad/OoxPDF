@@ -368,11 +368,11 @@ internal static class DocxTablesMarkupTests
         DocxTableRowSnapshot[] rows = snapshot.Pages.SelectMany(page => page.TableRows).ToArray();
         TestAssert.Equal(5, rows.Length);
         TestAssert.True(rows.All(row => row.CellCount == 4), "The Office-authored baseline fixture should keep a stable 5x4 table.");
-        TestAssert.Equal(8d, rows[0].Cells[0].FirstBaselineInset);
-        TestAssert.Equal(11d, rows[1].Cells[0].FirstBaselineInset);
-        TestAssert.Equal(16d, rows[2].Cells[0].FirstBaselineInset);
-        TestAssert.Equal(11d, rows[3].Cells[0].FirstBaselineInset);
-        TestAssert.Equal(16d, rows[4].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(8d * 0.94d, rows[0].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(11d * 0.94d, rows[1].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(16d * 0.94d, rows[2].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(11d * 0.94d, rows[3].Cells[0].FirstBaselineInset);
+        TestAssert.Equal(16d * 0.94d, rows[4].Cells[0].FirstBaselineInset);
         TestAssert.True(rows[0].Cells[0].MarginTopPoints is null || rows[0].Cells[0].MarginTopPoints == 0d, "Zero top padding may serialize as absent or zero.");
         TestAssert.Equal(6d, rows[3].Cells[0].MarginTopPoints ?? 0d);
         TestAssert.Equal(6d, rows[4].Cells[0].MarginTopPoints ?? 0d);
