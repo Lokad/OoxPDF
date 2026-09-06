@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-text-alpha.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "effects", "alpha", "text"],
+  "tags": ["pptx", "ladder", "effects", "alpha", "text", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
