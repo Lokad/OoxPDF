@@ -772,6 +772,23 @@ internal static class FontTests
         TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), merged.EncodeGlyphHex("ABCDEF"));
         TestAssert.Equal(first.BuildWidthArray(CancellationToken.None), merged.BuildWidthArray(CancellationToken.None));
     }
+    public static void PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string calibri = Path.Combine(fontsDirectory, "calibri.ttf");
+        if (!File.Exists(calibri))
+        {
+            return;
+        }
+        OpenTypeFont font = OpenTypeFont.Load(calibri);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, new[] { 65, 32, 160, 66 }, CancellationToken.None);
+        string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
+        TestAssert.Contains("<0020>", cmap);
+        TestAssert.DoesNotContain("<00A0>", cmap);
+        TestAssert.True(embedded.EncodeGlyphHex(" \u00A0").Length > 0, "Both space variants must still encode (shared subset glyph).");
+    }
+
+
     private sealed class StubHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses) : HttpMessageHandler
     {
         public List<string> Requests { get; } = [];

@@ -74,7 +74,7 @@ internal sealed class PdfEmbeddedFont
         {
             cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(codePoint);
-            if (glyph != 0)
+            if (glyph != 0 && (!unicodeByOriginalGlyph.TryGetValue(glyph, out int existing) || (existing != 0x20 && codePoint == 0x20)))
             {
                 unicodeByOriginalGlyph[glyph] = codePoint;
             }
@@ -105,7 +105,10 @@ internal sealed class PdfEmbeddedFont
             foreach ((ushort glyph, int codePoint) in font.UnicodeByOriginalGlyph)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                unicodeByOriginalGlyph[glyph] = codePoint;
+                if (!unicodeByOriginalGlyph.TryGetValue(glyph, out int existingMerge) || (existingMerge != 0x20 && codePoint == 0x20))
+                {
+                    unicodeByOriginalGlyph[glyph] = codePoint;
+                }
             }
         }
 
@@ -306,7 +309,13 @@ internal sealed class PdfEmbeddedFont
         {
             if (TryGetCid(originalGlyph, out ushort cid))
             {
-                unicodeByCid[cid] = codePoint;
+                // When subsetting merges identically-outlined glyphs (e.g. space and NBSP) into one CID,
+                // report plain space: Office also extracts spaces there (NBSP probe 2026-09-06: 15 source NBSPs,
+                // Word reference decodes 245 spaces and 0 NBSP while we decoded 315 NBSPs).
+                if (!unicodeByCid.TryGetValue(cid, out int existing) || (existing != 0x20 && codePoint == 0x20))
+                {
+                    unicodeByCid[cid] = codePoint;
+                }
             }
         }
 
