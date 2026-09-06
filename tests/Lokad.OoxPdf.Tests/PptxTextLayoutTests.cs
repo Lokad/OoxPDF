@@ -501,7 +501,7 @@ internal static class PptxTextLayoutTests
             "Expected clipped ellipse text to keep emitting a glyph run at the preset text-rectangle origin.");
     }
 
-    public static void PptxSyntheticRectTextUsesOfficeBaselineFloorButEllipseKeepsFontMetric()
+    public static void PptxSyntheticRectAndEllipseTextUseOfficeBaselineFloor()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -558,8 +558,8 @@ internal static class PptxTextLayoutTests
             Math.Abs(rectMetric.Ratio - 0.974d) < 0.001d,
             "Expected rectangular text frame to use the Office baseline floor. Actual ratio: " + rectMetric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
         TestAssert.True(
-            ellipseMetric.Ratio < 0.974d && ellipseMetric.Ratio > 0.89d,
-            "Expected ellipse preset text frame to keep the resolved Arial font ascender metric. Actual ratio: " + ellipseMetric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
+            Math.Abs(ellipseMetric.Ratio - 0.974d) < 0.001d,
+            "Expected ellipse preset text frame to use the Office baseline floor (small-label-origin Office probe 2026-09-06). Actual ratio: " + ellipseMetric.Ratio.ToString("0.###", CultureInfo.InvariantCulture));
     }
 
     public static void PptxSyntheticRectTextKeepsCalibriMetricBelowOfficeBaselineFloor()

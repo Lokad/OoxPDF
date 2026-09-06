@@ -96,7 +96,7 @@ internal sealed partial class PptxRenderer
             bool afterLeadingManualLineBreak = false;
             bool shapeAutoFit = HasShapeAutoFit(frame.BodyProperties);
             bool useExplicitMultipleBaselineOffset = ShouldUseExplicitMultipleBaselineOffset(frame, paragraphStyle.LineSpacing);
-            double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator, frame.UseOfficeBaselineFloor, shapeAutoFit, useExplicitMultipleBaselineOffset);
+            double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset);
             double cursorX = paragraphTextX;
             double maxFontSize = 0d;
             var line = new TextLayoutLine(paragraphTextX);
@@ -112,11 +112,9 @@ internal sealed partial class PptxRenderer
                 {
                     double lineFontSize = ResolveLineFontSize(maxFontSize, flowRun.Style.FontSize);
                     bool leadingManualBreak = line.Spans.Count == 0;
-                    bool useManualBreakFallback = leadingManualBreak || !shapeAutoFit;
+                    bool useManualBreakFallback = (leadingManualBreak || !shapeAutoFit) && !frame.BodyProperties.CompatibleLineSpacing;
                     AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator);
-                    double lineAdvance = useManualBreakFallback
-                        ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize)
-                        : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                    double lineAdvance = useManualBreakFallback ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize) : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                     cursorLineTop -= lineAdvance;
                     MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
                     columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
@@ -164,11 +162,9 @@ internal sealed partial class PptxRenderer
                     {
                         double lineFontSize = ResolveLineFontSize(maxFontSize, runStyle.FontSize);
                         bool leadingManualBreak = line.Spans.Count == 0;
-                        bool useManualBreakFallback = leadingManualBreak || !shapeAutoFit;
+                        bool useManualBreakFallback = (leadingManualBreak || !shapeAutoFit) && !frame.BodyProperties.CompatibleLineSpacing;
                         AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator);
-                        double lineAdvance = useManualBreakFallback
-                            ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize)
-                            : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                        double lineAdvance = useManualBreakFallback ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize) : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                         cursorLineTop -= lineAdvance;
                         MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
                         columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;

@@ -347,13 +347,12 @@ internal sealed partial class PptxRenderer
         LineSpacing lineSpacing,
         TextAdvanceEstimator advanceEstimator,
         bool useOfficeBaselineFloor,
-        bool shapeAutoFit,
         bool useExplicitMultipleBaselineOffset)
     {
         bool startsWithManualLineBreak = paragraph.Runs.FirstOrDefault()?.Kind == PptxTextRunKind.Break;
         PptxTextRunModel? firstRun = paragraph.Runs.FirstOrDefault(run => run.Kind != PptxTextRunKind.Break);
         double fontSize = firstRun?.Style.NominalFontSize ?? paragraph.FirstLineFallbackFontSize;
-        return startsWithManualLineBreak || (paragraph.HasManualLineBreak && !shapeAutoFit)
+        return startsWithManualLineBreak || paragraph.HasManualLineBreak
             ? ManualBreakBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor, useExplicitMultipleBaselineOffset)
             : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator, useOfficeBaselineFloor, useExplicitMultipleBaselineOffset);
     }
@@ -688,6 +687,11 @@ internal sealed partial class PptxRenderer
 
         double metricAdvance = fontSize * metricRatio;
         double windowsAscenderRatio = font.Os2.WindowsAscender / (double)font.UnitsPerEm;
+        if (useWindowsFontBoxForDefaultLineSpacing)
+        {
+            return Math.Max(ReadLineAdvance(lineSpacing, fontSize), metricAdvance);
+        }
+
         if (!useWindowsFontBoxForDefaultLineSpacing &&
             windowsAscenderRatio > PptxTextMetricRules.MaximumOfficeBaselineWindowsAscenderRatio &&
             metricRatio <= PptxTextMetricRules.MaximumTableAnchorCompressedFontBoxRatio)
@@ -709,7 +713,7 @@ internal sealed partial class PptxRenderer
         TextAdvanceEstimator advanceEstimator)
     {
         double paragraphAdvance = ReadLineAdvance(lineSpacing, fontSize);
-        if (lineSpacing.IsExplicit || !useWindowsFontBoxForDefaultLineSpacing)
+        if (lineSpacing.IsExplicit || useWindowsFontBoxForDefaultLineSpacing)
         {
             return paragraphAdvance;
         }

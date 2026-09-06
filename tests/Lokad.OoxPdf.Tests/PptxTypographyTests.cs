@@ -1631,13 +1631,8 @@ internal static class PptxTypographyTests
         TestAssert.True(Math.Abs(percentSpacingLines[1].BaselineY - pointSpacingLines[1].BaselineY) < 0.01d, "Expected anchored follow-up paragraph baselines to stay equivalent after empty endParaRPr spacing.");
     }
 
-    public static void PptxSyntheticVerticalAnchorUsesResolvedFontBoxForVisibleLines()
+    public static void PptxSyntheticVerticalAnchorUsesLineAdvanceForVisibleLines()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            return;
-        }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -1665,14 +1660,12 @@ internal static class PptxTypographyTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
-        OpenTypeFont font = OpenTypeFont.Load(arial);
         const double fontSize = 18d;
-        double fontBoxHeight = fontSize * (font.Os2.WindowsAscender + font.Os2.WindowsDescender) / font.UnitsPerEm;
-        double expectedOffset = (frame.TextHeight - fontBoxHeight * 2d) / 2d;
+        double expectedOffset = (frame.TextHeight - 2d * fontSize * 1.2d) / 2d;
 
         TestAssert.Equal("Middle", frame.VerticalAnchor);
         TestAssert.True(Math.Abs(frame.VerticalOffset - expectedOffset) < 0.01d,
-            $"Expected middle-anchor offset to use resolved OS/2 Windows font-box height; expected {expectedOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt, got {frame.VerticalOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+            $"Expected middle-anchor offset to use line advance (Office anchor-slack rule, anchor probe 2026-09-06); expected {expectedOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt, got {frame.VerticalOffset.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
     }
 
     public static void PptxSyntheticMiddleAnchorUsesSignedActualSlackWhenWrappedTextOverflows()
@@ -1837,7 +1830,7 @@ internal static class PptxTypographyTests
         double expectedAdvance = 12d * 1.2d;
         TestAssert.True(Math.Abs((lines[0].TopY - lines[1].TopY) - expectedAdvance) < 0.01d,
             $"Expected a non-leading manual break to keep the normal line grid; expected {expectedAdvance.ToString("0.###", CultureInfo.InvariantCulture)}pt, got {(lines[0].TopY - lines[1].TopY).ToString("0.###", CultureInfo.InvariantCulture)}pt.");
-        TestAssert.True(Math.Abs(lines[0].BaselineOffset - (12d * 0.974d)) < 0.01d, "Expected the first line before a manual break to keep the normal baseline offset.");
+        TestAssert.True(Math.Abs(lines[0].BaselineOffset - (12d * 0.9344d)) < 0.01d, "Expected the first line before a manual break to keep the manual-break baseline offset (Office fit-fixture: manual-break first baselines match the manual constant, not the floor).");
     }
 
     public static void PptxSyntheticTextWrapNoneKeepsLongTextOnOneLine()

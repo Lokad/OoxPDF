@@ -317,7 +317,7 @@ internal sealed partial class PptxRenderer
         RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, colorMap, out RgbColor fontColor)
             ? fontColor
             : null;
-        bool useOfficeBaselineFloor = TextFrameUsesOfficeBaselineFloor(shape, bodyProperties);
+        bool useOfficeBaselineFloor = TextFrameUsesOfficeBaselineFloor(shape);
         IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(
             shape,
             textBody,
@@ -562,18 +562,10 @@ internal sealed partial class PptxRenderer
             paragraphs);
     }
 
-    private static bool TextFrameUsesOfficeBaselineFloor(XElement shape, PptxTextBodyProperties bodyProperties)
+    private static bool TextFrameUsesOfficeBaselineFloor(XElement shape)
     {
-        if (bodyProperties.VerticalAnchor != TextVerticalAnchor.Top)
-        {
-            return false;
-        }
-
-        XElement? geometry = shape
-            .Element(PresentationNamespace + "spPr")
-            ?.Element(DrawingNamespace + "prstGeom");
-        string? preset = (string?)geometry?.Attribute("prst");
-        return string.IsNullOrEmpty(preset) || string.Equals(preset, "rect", StringComparison.Ordinal);
+        // Office applies the baseline floor regardless of preset geometry (rect proven by the anchor ladder, ellipse proven by small-label-origin at 0.04pt).
+        return true;
     }
 
     private static (double Y, double Height) IntersectVerticalTextClipWithSlide(double y, double height, double slideHeight)
