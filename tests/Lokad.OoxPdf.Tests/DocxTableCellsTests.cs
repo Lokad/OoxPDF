@@ -1807,6 +1807,26 @@ internal static class DocxTableCellsTests
         TestAssert.Equal("Second", secondPageRows[1].Cells[0].Cell.Text);
     }
 
+    public static void DocxTableRowHeightIncludesListLabelFirstLineExtraLeading()
+    {
+        DocxListLabel tallLabel = new DocxListLabel("*", "bullet", "*", "tab", "1", 0, DocxNumberingIndent.Empty, new DocxTextRunStyle(10d, null, false, false, false, null, "Label Metrics", new DocxRunFonts("Label Metrics", null, null, null, null, null, null, null)));
+        DocxListLabel flatLabel = new DocxListLabel("*", "bullet", "*", "tab", "1", 0, DocxNumberingIndent.Empty, new DocxTextRunStyle(10d, null, false, false, false, null, null, new DocxRunFonts(null, null, null, null, null, null, null, null)));
+        DocxParagraphSpacing autoSpacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "auto", null);
+        DocxParagraph tallItem = new DocxParagraph([new DocxTextRun("Tall", 10d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1.15d, null, autoSpacing, DocxParagraphKeepRules.Empty, tallLabel);
+        DocxParagraph flatItem = new DocxParagraph([new DocxTextRun("Flat", 10d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1.15d, null, autoSpacing, DocxParagraphKeepRules.Empty, flatLabel);
+        var tallRow = new DocxTableRow([new DocxTableCell("Tall", [tallItem], null, null, null, null, [], DocxTableCellMargins.Empty)], null);
+        var flatRow = new DocxTableRow([new DocxTableCell("Flat", [flatItem], null, null, null, null, [], DocxTableCellMargins.Empty)], null);
+        var table = new DocxTable(null, [400d], [tallRow, flatRow]);
+        var document = new DocxDocument(400d, 400d, 10d, 10d, 10d, 10d, DocxPageSettings.Empty, [], [], [], [new DocxTableElement(table)], [], [table]);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxTableRowLayout[] rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableRowLayout[] tallRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        TestAssert.Equal(2, tallRows.Length);
+        TestAssert.Equal(12.6d, Math.Round(tallRows[0].Height, 4));
+        TestAssert.Equal(11.6d, Math.Round(tallRows[1].Height, 4));
+    }
+
+
     public static void DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault()
     {
         DocxParagraph firstParagraph = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);

@@ -71,10 +71,12 @@ internal sealed partial class DocxLayoutEngine
                 double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
                 int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count();
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
+                contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                 contentHeight += lineCount * lineHeight;
             }
             else if (paragraph.Images.Count == 0)
             {
+                contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                 contentHeight += lineHeight;
             }
 
@@ -589,10 +591,12 @@ internal sealed partial class DocxLayoutEngine
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
             double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
             double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
             height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
         }
         else if (paragraph.Images.Count == 0)
         {
+            height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
             height += lineHeight;
         }
 
