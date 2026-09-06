@@ -28,7 +28,7 @@ internal sealed class PdfGraphicsBuilder
             return;
         }
 
-        builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" rg");
+        builder.Append(PdfDocumentWriter.FormatColor(red)).Append(' ').Append(PdfDocumentWriter.FormatColor(green)).Append(' ').Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" rg");
     }
 
     public void SetStrokeRgb(byte red, byte green, byte blue)
@@ -38,17 +38,17 @@ internal sealed class PdfGraphicsBuilder
             return;
         }
 
-        builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" RG");
+        builder.Append(PdfDocumentWriter.FormatColor(red)).Append(' ').Append(PdfDocumentWriter.FormatColor(green)).Append(' ').Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" RG");
     }
 
     public void SetLineWidth(double width)
     {
-        builder.Append(N(width)).AppendLine(" w");
+        builder.Append(PdfDocumentWriter.FormatNumber(width)).AppendLine(" w");
     }
 
     public void SetLineDash(double dashLength, double gapLength)
     {
-        builder.Append('[').Append(N(dashLength)).Append(' ').Append(N(gapLength)).AppendLine("] 0 d");
+        builder.Append('[').Append(PdfDocumentWriter.FormatNumber(dashLength)).Append(' ').Append(PdfDocumentWriter.FormatNumber(gapLength)).AppendLine("] 0 d");
     }
 
     public void SetLineDash(IReadOnlyList<double> lengths)
@@ -56,7 +56,7 @@ internal sealed class PdfGraphicsBuilder
         builder.Append('[');
         foreach (double length in lengths)
         {
-            builder.Append(N(length)).Append(' ');
+            builder.Append(PdfDocumentWriter.FormatNumber(length)).Append(' ');
         }
 
         builder.AppendLine("] 0 d");
@@ -141,19 +141,19 @@ internal sealed class PdfGraphicsBuilder
 
     public void Transform(double a, double b, double c, double d, double e, double f)
     {
-        builder.Append(N(a)).Append(' ').Append(N(b)).Append(' ');
-        builder.Append(N(c)).Append(' ').Append(N(d)).Append(' ');
-        builder.Append(N(e)).Append(' ').Append(N(f)).AppendLine(" cm");
+        builder.Append(PdfDocumentWriter.FormatNumber(a)).Append(' ').Append(PdfDocumentWriter.FormatNumber(b)).Append(' ');
+        builder.Append(PdfDocumentWriter.FormatNumber(c)).Append(' ').Append(PdfDocumentWriter.FormatNumber(d)).Append(' ');
+        builder.Append(PdfDocumentWriter.FormatNumber(e)).Append(' ').Append(PdfDocumentWriter.FormatNumber(f)).AppendLine(" cm");
     }
 
     public void FillRectangle(double x, double y, double width, double height)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re f");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re f");
     }
 
     public void FillRectangleEvenOdd(double x, double y, double width, double height)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re f*");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re f*");
     }
 
     public void FillRectangleWithTilingPattern(double x, double y, double width, double height, PdfTilingPattern pattern)
@@ -197,12 +197,12 @@ internal sealed class PdfGraphicsBuilder
 
     public void StrokeRectangle(double x, double y, double width, double height)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re S");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re S");
     }
 
     public void FillStrokeRectangleEvenOdd(double x, double y, double width, double height)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re B*");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re B*");
     }
 
     public void FillRoundedRectangle(double x, double y, double width, double height, double radius)
@@ -225,12 +225,12 @@ internal sealed class PdfGraphicsBuilder
 
     public void ClipRectangle(double x, double y, double width, double height)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W n");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re W n");
     }
 
     public void ClipRectangleEvenOdd(double x, double y, double width, double height)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W* n");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re W* n");
     }
 
     public void ClipOpenRectangleEvenOdd(double x, double y, double width, double height)
@@ -264,8 +264,8 @@ internal sealed class PdfGraphicsBuilder
 
     public void StrokeLine(double x1, double y1, double x2, double y2)
     {
-        builder.Append(N(x1)).Append(' ').Append(N(y1)).Append(" m ");
-        builder.Append(N(x2)).Append(' ').Append(N(y2)).AppendLine(" l S");
+        builder.Append(PdfDocumentWriter.FormatNumber(x1)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y1)).Append(" m ");
+        builder.Append(PdfDocumentWriter.FormatNumber(x2)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y2)).AppendLine(" l S");
     }
 
     public void FillPolygon((double X, double Y)[] points)
@@ -282,12 +282,12 @@ internal sealed class PdfGraphicsBuilder
 
     public void MoveTo(double x, double y)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).AppendLine(" m");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" m");
     }
 
     public void LineTo(double x, double y)
     {
-        builder.Append(N(x)).Append(' ').Append(N(y)).AppendLine(" l");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" l");
     }
 
     public void CurveTo(double x1, double y1, double x2, double y2, double x3, double y3)
@@ -399,25 +399,25 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("BT");
         if (!TryAppendFillGray(red, green, blue))
         {
-            builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" rg");
+            builder.Append(PdfDocumentWriter.FormatColor(red)).Append(' ').Append(PdfDocumentWriter.FormatColor(green)).Append(' ').Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" rg");
         }
 
         if (textRenderingMode is 1 or 2)
         {
             if (!TryAppendStrokeGray(strokeRed, strokeGreen, strokeBlue))
             {
-                builder.Append(C(strokeRed)).Append(' ').Append(C(strokeGreen)).Append(' ').Append(C(strokeBlue)).AppendLine(" RG");
+                builder.Append(PdfDocumentWriter.FormatColor(strokeRed)).Append(' ').Append(PdfDocumentWriter.FormatColor(strokeGreen)).Append(' ').Append(PdfDocumentWriter.FormatColor(strokeBlue)).AppendLine(" RG");
             }
 
-            builder.Append(N(strokeWidth)).AppendLine(" w");
+            builder.Append(PdfDocumentWriter.FormatNumber(strokeWidth)).AppendLine(" w");
             builder.Append(textRenderingMode.ToString(CultureInfo.InvariantCulture)).AppendLine(" Tr");
         }
 
-        builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(' ').Append(N(fontSize)).AppendLine(" Tf");
-        builder.Append(Math.Abs(characterSpacing) > 0.001d ? N(characterSpacing) : "0").AppendLine(" Tc");
+        builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(' ').Append(PdfDocumentWriter.FormatNumber(fontSize)).AppendLine(" Tf");
+        builder.Append(Math.Abs(characterSpacing) > 0.001d ? PdfDocumentWriter.FormatNumber(characterSpacing) : "0").AppendLine(" Tc");
 
         double shear = italic ? SyntheticItalicShear : 0d;
-        builder.Append("1 0 ").Append(N(shear)).Append(" 1 ").Append(N(x)).Append(' ').Append(N(y)).AppendLine(" Tm");
+        builder.Append("1 0 ").Append(PdfDocumentWriter.FormatNumber(shear)).Append(" 1 ").Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" Tm");
         builder.AppendLine(textOperator);
         if (textRenderingMode is 1 or 2)
         {
@@ -430,7 +430,7 @@ internal sealed class PdfGraphicsBuilder
     public void DrawImage(string imageResourceName, double x, double y, double width, double height)
     {
         builder.AppendLine("q");
-        builder.Append(N(width)).Append(" 0 0 ").Append(N(height)).Append(' ').Append(N(x)).Append(' ').Append(N(y)).AppendLine(" cm");
+        builder.Append(PdfDocumentWriter.FormatNumber(width)).Append(" 0 0 ").Append(PdfDocumentWriter.FormatNumber(height)).Append(' ').Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" cm");
         builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(imageResourceName)).AppendLine(" Do");
         builder.AppendLine("Q");
     }
@@ -445,7 +445,7 @@ internal sealed class PdfGraphicsBuilder
         double imageY = y - cropBottom * scaledHeight;
 
         builder.AppendLine("q");
-        builder.Append(N(scaledWidth)).Append(" 0 0 ").Append(N(scaledHeight)).Append(' ').Append(N(imageX)).Append(' ').Append(N(imageY)).AppendLine(" cm");
+        builder.Append(PdfDocumentWriter.FormatNumber(scaledWidth)).Append(" 0 0 ").Append(PdfDocumentWriter.FormatNumber(scaledHeight)).Append(' ').Append(PdfDocumentWriter.FormatNumber(imageX)).Append(' ').Append(PdfDocumentWriter.FormatNumber(imageY)).AppendLine(" cm");
         builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(imageResourceName)).AppendLine(" Do");
         builder.AppendLine("Q");
     }
@@ -465,7 +465,7 @@ internal sealed class PdfGraphicsBuilder
         double ox = rx * kappa;
         double oy = ry * kappa;
 
-        builder.Append(N(cx + rx)).Append(' ').Append(N(cy)).AppendLine(" m");
+        builder.Append(PdfDocumentWriter.FormatNumber(cx + rx)).Append(' ').Append(PdfDocumentWriter.FormatNumber(cy)).AppendLine(" m");
         Curve(cx + rx, cy + oy, cx + ox, cy + ry, cx, cy + ry);
         Curve(cx - ox, cy + ry, cx - rx, cy + oy, cx - rx, cy);
         Curve(cx - rx, cy - oy, cx - ox, cy - ry, cx, cy - ry);
@@ -479,13 +479,13 @@ internal sealed class PdfGraphicsBuilder
         double r = Math.Clamp(radius, 0d, Math.Min(width, height) / 2d);
         double ox = r * kappa;
 
-        builder.Append(N(x)).Append(' ').Append(N(y + height - r)).AppendLine(" m");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y + height - r)).AppendLine(" m");
         Curve(x, y + height - r + ox, x + r - ox, y + height, x + r, y + height);
-        builder.Append(N(x + width - r)).Append(' ').Append(N(y + height)).AppendLine(" l");
+        builder.Append(PdfDocumentWriter.FormatNumber(x + width - r)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y + height)).AppendLine(" l");
         Curve(x + width - r + ox, y + height, x + width, y + height - r + ox, x + width, y + height - r);
-        builder.Append(N(x + width)).Append(' ').Append(N(y + r)).AppendLine(" l");
+        builder.Append(PdfDocumentWriter.FormatNumber(x + width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y + r)).AppendLine(" l");
         Curve(x + width, y + r - ox, x + width - r + ox, y, x + width - r, y);
-        builder.Append(N(x + r)).Append(' ').Append(N(y)).AppendLine(" l");
+        builder.Append(PdfDocumentWriter.FormatNumber(x + r)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" l");
         Curve(x + r - ox, y, x, y + r - ox, x, y + r);
         builder.AppendLine("h");
     }
@@ -494,10 +494,10 @@ internal sealed class PdfGraphicsBuilder
     {
         double right = x + width;
         double top = y + height;
-        builder.Append(N(x)).Append(' ').Append(N(top)).AppendLine(" m");
-        builder.Append(N(right)).Append(' ').Append(N(top)).AppendLine(" l");
-        builder.Append(N(right)).Append(' ').Append(N(y)).AppendLine(" l");
-        builder.Append(N(x)).Append(' ').Append(N(y)).AppendLine(" l");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(top)).AppendLine(" m");
+        builder.Append(PdfDocumentWriter.FormatNumber(right)).Append(' ').Append(PdfDocumentWriter.FormatNumber(top)).AppendLine(" l");
+        builder.Append(PdfDocumentWriter.FormatNumber(right)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" l");
+        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" l");
     }
 
     private void AppendPolygonPath((double X, double Y)[] points)
@@ -507,10 +507,10 @@ internal sealed class PdfGraphicsBuilder
             return;
         }
 
-        builder.Append(N(points[0].X)).Append(' ').Append(N(points[0].Y)).AppendLine(" m");
+        builder.Append(PdfDocumentWriter.FormatNumber(points[0].X)).Append(' ').Append(PdfDocumentWriter.FormatNumber(points[0].Y)).AppendLine(" m");
         for (int i = 1; i < points.Length; i++)
         {
-            builder.Append(N(points[i].X)).Append(' ').Append(N(points[i].Y)).AppendLine(" l");
+            builder.Append(PdfDocumentWriter.FormatNumber(points[i].X)).Append(' ').Append(PdfDocumentWriter.FormatNumber(points[i].Y)).AppendLine(" l");
         }
 
         builder.AppendLine("h");
@@ -518,14 +518,9 @@ internal sealed class PdfGraphicsBuilder
 
     private void Curve(double x1, double y1, double x2, double y2, double x3, double y3)
     {
-        builder.Append(N(x1)).Append(' ').Append(N(y1)).Append(' ');
-        builder.Append(N(x2)).Append(' ').Append(N(y2)).Append(' ');
-        builder.Append(N(x3)).Append(' ').Append(N(y3)).AppendLine(" c");
-    }
-
-    private static string C(byte value)
-    {
-        return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
+        builder.Append(PdfDocumentWriter.FormatNumber(x1)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y1)).Append(' ');
+        builder.Append(PdfDocumentWriter.FormatNumber(x2)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y2)).Append(' ');
+        builder.Append(PdfDocumentWriter.FormatNumber(x3)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y3)).AppendLine(" c");
     }
 
     private bool TryAppendFillGray(byte red, byte green, byte blue)
@@ -535,7 +530,7 @@ internal sealed class PdfGraphicsBuilder
             return false;
         }
 
-        builder.Append(C(red)).AppendLine(" g");
+        builder.Append(PdfDocumentWriter.FormatColor(red)).AppendLine(" g");
         return true;
     }
 
@@ -546,12 +541,7 @@ internal sealed class PdfGraphicsBuilder
             return false;
         }
 
-        builder.Append(C(red)).AppendLine(" G");
+        builder.Append(PdfDocumentWriter.FormatColor(red)).AppendLine(" G");
         return true;
-    }
-
-    private static string N(double value)
-    {
-        return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 }

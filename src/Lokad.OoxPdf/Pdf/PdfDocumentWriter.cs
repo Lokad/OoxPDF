@@ -532,12 +532,12 @@ internal sealed class PdfDocumentWriter
         return output.ToArray();
     }
 
-    private static string FormatNumber(double value)
+    internal static string FormatNumber(double value)
     {
         return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 
-    private static string FormatColor(byte value)
+    internal static string FormatColor(byte value)
     {
         return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
     }

@@ -76,19 +76,19 @@ internal sealed class PdfTilingPattern
         lineWidth = Math.Max(0.001d, lineWidth);
 
         var builder = new StringBuilder();
-        builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" RG");
-        builder.Append(N(lineWidth)).AppendLine(" w");
+        builder.Append(PdfDocumentWriter.FormatColor(red)).Append(' ').Append(PdfDocumentWriter.FormatColor(green)).Append(' ').Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" RG");
+        builder.Append(PdfDocumentWriter.FormatNumber(lineWidth)).AppendLine(" w");
         if (up)
         {
-            builder.Append("0 0 m ").Append(N(tileSize)).Append(' ').Append(N(tileSize)).AppendLine(" l S");
-            builder.Append(N(-tileSize)).Append(" 0 m 0 ").Append(N(tileSize)).AppendLine(" l S");
-            builder.Append(N(tileSize)).Append(" 0 m ").Append(N(tileSize * 2d)).Append(' ').Append(N(tileSize)).AppendLine(" l S");
+            builder.Append("0 0 m ").Append(PdfDocumentWriter.FormatNumber(tileSize)).Append(' ').Append(PdfDocumentWriter.FormatNumber(tileSize)).AppendLine(" l S");
+            builder.Append(PdfDocumentWriter.FormatNumber(-tileSize)).Append(" 0 m 0 ").Append(PdfDocumentWriter.FormatNumber(tileSize)).AppendLine(" l S");
+            builder.Append(PdfDocumentWriter.FormatNumber(tileSize)).Append(" 0 m ").Append(PdfDocumentWriter.FormatNumber(tileSize * 2d)).Append(' ').Append(PdfDocumentWriter.FormatNumber(tileSize)).AppendLine(" l S");
         }
         else
         {
-            builder.Append("0 ").Append(N(tileSize)).Append(" m ").Append(N(tileSize)).AppendLine(" 0 l S");
-            builder.Append(N(-tileSize)).Append(' ').Append(N(tileSize)).AppendLine(" m 0 0 l S");
-            builder.Append(N(tileSize)).Append(' ').Append(N(tileSize)).Append(" m ").Append(N(tileSize * 2d)).AppendLine(" 0 l S");
+            builder.Append("0 ").Append(PdfDocumentWriter.FormatNumber(tileSize)).Append(" m ").Append(PdfDocumentWriter.FormatNumber(tileSize)).AppendLine(" 0 l S");
+            builder.Append(PdfDocumentWriter.FormatNumber(-tileSize)).Append(' ').Append(PdfDocumentWriter.FormatNumber(tileSize)).AppendLine(" m 0 0 l S");
+            builder.Append(PdfDocumentWriter.FormatNumber(tileSize)).Append(' ').Append(PdfDocumentWriter.FormatNumber(tileSize)).Append(" m ").Append(PdfDocumentWriter.FormatNumber(tileSize * 2d)).AppendLine(" 0 l S");
         }
 
         return new PdfTilingPattern(tileSize, tileSize, builder.ToString());
@@ -106,8 +106,8 @@ internal sealed class PdfTilingPattern
         double patternLineWidth = Math.Max(0.001d, lineWidth / matrixScale);
 
         var builder = new StringBuilder();
-        builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" RG");
-        builder.Append(N(patternLineWidth)).AppendLine(" w");
+        builder.Append(PdfDocumentWriter.FormatColor(red)).Append(' ').Append(PdfDocumentWriter.FormatColor(green)).Append(' ').Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" RG");
+        builder.Append(PdfDocumentWriter.FormatNumber(patternLineWidth)).AppendLine(" w");
         if (up)
         {
             builder.Append("0 0 m 16 16 l S\n");
@@ -232,16 +232,6 @@ internal sealed class PdfTilingPattern
     {
         int result = value % modulus;
         return result < 0 ? result + modulus : result;
-    }
-
-    private static string C(byte value)
-    {
-        return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
-    }
-
-    private static string N(double value)
-    {
-        return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 }
 
