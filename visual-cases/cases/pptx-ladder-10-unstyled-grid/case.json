@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-unstyled-grid.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "tables", "table-style"],
+  "tags": ["pptx", "ladder", "tables", "table-style", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

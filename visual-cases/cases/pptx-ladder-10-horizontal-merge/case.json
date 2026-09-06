@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-horizontal-merge.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "tables"],
+  "tags": ["pptx", "ladder", "tables", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

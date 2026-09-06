@@ -3,14 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-cell-margins.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "tables", "cell-margins"],
+  "tags": ["pptx", "ladder", "tables", "cell-margins", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.26,
-    "maxChangedPixelRatioAtThreshold16": 0.00216
+    "maxMeanAbsoluteError": 0.04,
+    "maxChangedPixelRatioAtThreshold16": 0.001
   },
   "allowedUnsupportedFeatures": []
 }
