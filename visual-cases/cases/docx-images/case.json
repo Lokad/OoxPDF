@@ -3,11 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-images.docx",
   "dpi": 144,
-  "tags": ["docx", "images", "smoke"],
+  "tags": ["docx", "images", "smoke", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.04,
+    "maxChangedPixelRatioAtThreshold16": 0.0015
   },
   "allowedUnsupportedFeatures": []
 }
