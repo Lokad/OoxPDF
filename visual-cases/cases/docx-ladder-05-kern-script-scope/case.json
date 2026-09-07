@@ -1,0 +1,22 @@
+{
+  "id": "docx-ladder-05-kern-script-scope",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-05-kern-script-scope.docx",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "wrapping",
+    "typography",
+    "kern"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 3.0,
+    "maxChangedPixelRatioAtThreshold16": 0.03
+  },
+  "allowedUnsupportedFeatures": []
+}
