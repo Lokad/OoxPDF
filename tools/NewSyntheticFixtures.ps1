@@ -540,7 +540,7 @@ New-ZipPackage -Path (Join-Path $cases "docx-markup-review.docx") -Entries @{
     </w:p>
     <w:p>
       <w:r><w:t>Move tracking shows </w:t></w:r>
-      <w:moveFrom w:id="3" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:delText>the source phrase </w:delText></w:r></w:moveFrom>
+      <w:moveFrom w:id="3" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:t>the source phrase </w:t></w:r></w:moveFrom>
       <w:moveTo w:id="4" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:r><w:t>the destination phrase </w:t></w:r></w:moveTo>
       <w:r><w:t>without private content.</w:t></w:r>
     </w:p>

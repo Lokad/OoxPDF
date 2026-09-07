@@ -54,7 +54,7 @@ New-ZipPackage -Path (Join-Path $cases "docx-private-grounded-review.docx") -Ent
   <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
   <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
   <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
-  <Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.ms-word.commentsExtended+xml"/>
+  <Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml"/>
 </Types>
 '@
     "_rels/.rels" = @'
@@ -97,19 +97,24 @@ New-ZipPackage -Path (Join-Path $cases "docx-private-grounded-review.docx") -Ent
       <w:r><w:t>Anchored text box follows this paragraph.</w:t></w:r>
       <w:r>
         <w:drawing>
-          <wp:anchor simplePos="0" relativeHeight="251658241" behindDoc="0" layoutInCell="1" allowOverlap="1">
-            <wp:extent cx="2743200" cy="914400"/>
+          <wp:anchor simplePos="0" relativeHeight="251658241" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">
+            <wp:simplePos x="0" y="0"/>
             <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
             <wp:positionV relativeFrom="page"><wp:posOffset>1828800</wp:posOffset></wp:positionV>
+            <wp:extent cx="2743200" cy="914400"/>
             <wp:wrapSquare wrapText="bothSides"/>
+            <wp:docPr id="1" name="TextBox 1"/>
             <a:graphic>
               <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
                 <wps:wsp>
+                  <wps:cNvSpPr txBox="1"/>
+                  <wps:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></wps:spPr>
                   <wps:txbx>
                     <w:txbxContent>
                       <w:p><w:r><w:t>Anchored review note</w:t></w:r></w:p>
                     </w:txbxContent>
                   </wps:txbx>
+                  <wps:bodyPr/>
                 </wps:wsp>
               </a:graphicData>
             </a:graphic>

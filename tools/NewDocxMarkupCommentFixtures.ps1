@@ -60,7 +60,7 @@ function New-ContentTypes {
         '  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>'
     )
     if ($CommentsExtended) {
-        $overrides += '  <Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.ms-word.commentsExtended+xml"/>'
+        $overrides += '  <Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml"/>'
     }
     if ($Header) {
         $overrides += '  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'
@@ -416,14 +416,18 @@ New-CommentFixture `
     <w:p>
       <w:r>
         <w:drawing>
-          <wp:anchor simplePos="0" relativeHeight="251658241" behindDoc="0" layoutInCell="1" allowOverlap="1">
-            <wp:extent cx="3200400" cy="1097280"/>
+          <wp:anchor simplePos="0" relativeHeight="251658241" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">
+            <wp:simplePos x="0" y="0"/>
             <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
             <wp:positionV relativeFrom="page"><wp:posOffset>1828800</wp:posOffset></wp:positionV>
+            <wp:extent cx="3200400" cy="1097280"/>
             <wp:wrapNone/>
+            <wp:docPr id="1" name="TextBox 1"/>
             <a:graphic>
               <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
                 <wps:wsp>
+                  <wps:cNvSpPr txBox="1"/>
+                  <wps:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></wps:spPr>
                   <wps:txbx>
                     <w:txbxContent>
                       <w:p>
@@ -435,6 +439,7 @@ New-CommentFixture `
                       </w:p>
                     </w:txbxContent>
                   </wps:txbx>
+                  <wps:bodyPr/>
                 </wps:wsp>
               </a:graphicData>
             </a:graphic>
