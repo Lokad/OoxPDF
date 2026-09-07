@@ -99,7 +99,7 @@ internal sealed partial class DocxReader
     private static DocxTextRunStyle ResolveListLabelStyle(DocxTextRunStyle levelStyle, XElement? paragraphProperties, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle)
     {
         // Office sizes bullets from the numbering level, then paragraph/table styles (style-less paragraphs
-        // resolve through Normal), then unstyled table cells fall back to 12pt, then document defaults outright,
+        // resolve through Normal), then document defaults outright, then unstyled table cells fall back to 12pt,
         // and otherwise flat 12pt (bullet-chain probes 2026-09-06: style 14pt wins over direct 10/18pt;
         // docDefaults 8/20pt win over direct body runs; unstyled table cells emit 12pt bullets at direct 9/10/14/18pt;
         // labsize/nosize probes 2026-09-07: unresolvable style and defaults emit flat 12pt labels at direct 9/14/18pt
@@ -127,14 +127,15 @@ internal sealed partial class DocxReader
             return levelStyle with { FontSize = styleSize };
         }
 
-        if (tableCellStyle is not null)
-        {
-            return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
-        }
-
         if (styles.RunDefaults.FontSize is { } defaultsSize)
         {
             return levelStyle with { FontSize = defaultsSize };
+        }
+        // Unstyled table cells fall back to 12pt only when document defaults resolve no size either
+        // (celldef probe 2026-09-07: docDefaults 8pt wins over the cell fallback at direct 9/14pt).
+        if (tableCellStyle is not null)
+        {
+            return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
         }
 
         // No resolvable level, mark, style, cell, or default size: Word falls back to flat 12pt
