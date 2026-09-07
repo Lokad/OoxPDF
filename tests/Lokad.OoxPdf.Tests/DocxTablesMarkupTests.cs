@@ -1163,7 +1163,7 @@ internal static class DocxTablesMarkupTests
         TestAssert.Equal("Keep", wordCompatible.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
     }
 
-    public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfileInTableCells()
+    public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTrackingInTableCells()
     {
         var deletionRevision = new DocxRevisionInfo(DocxRevisionKind.Deletion, "3", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
         var moveFromRevision = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
@@ -1208,8 +1208,9 @@ internal static class DocxTablesMarkupTests
         DocxTextEmissionSegmentSnapshot wordInsertion = RevisionSegment(wordLines, "Insertion");
         DocxTextEmissionSegmentSnapshot wordMoveTo = RevisionSegment(wordLines, "MoveTo");
 
-        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing - 0.060d) < 0.0001d, "Word-compatible moved-from table text should use the deleted-text positioning profile.");
-        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing - 0.126d) < 0.0001d, "Word-compatible moved-to table text should use the inserted-text positioning profile.");
+        // Office A/B (W5-K1): revision runs carry font kerning only, like body text.
+        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-from table text should not invent deleted-text tracking.");
+        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-to table text should not invent inserted-text tracking.");
         TestAssert.True(Math.Abs(wordMoveFrom.X - wordDeletion.X) < 0.001d, "Word-compatible moved-from table text should share the deleted-text X positioning branch.");
         TestAssert.True(Math.Abs(wordMoveTo.X - wordInsertion.X) < 0.001d, "Word-compatible moved-to table text should share the inserted-text X positioning branch.");
 

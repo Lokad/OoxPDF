@@ -45,12 +45,15 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupLineMetricScale = 0.79359971328d;
 
     private const double WordCompatibleAllMarkupMaxBodyTextFontSizePoints = 11.625d;
-    private const double WordCompatibleAllMarkupBodyPositioningCharacterSpacingPoints = 0.071d;
-    private const double WordCompatibleAllMarkupHeadingPositioningCharacterSpacingPoints = 0.043d;
-    private const double WordCompatibleAllMarkupPunctuationPositioningCharacterSpacingPoints = 0.102d;
-    private const double WordCompatibleAllMarkupInsertionPositioningCharacterSpacingPoints = 0.126d;
-    private const double WordCompatibleAllMarkupDeletionPositioningCharacterSpacingPoints = 0.060d;
-    private const double WordCompatibleAllMarkupShortWordPositioningCharacterSpacingPoints = 0.024d;
+    // Office A/B (W5-K1 dense ref: Word kern tightens 23pt over the body; per-gap tracking is
+    // removed, kerning carries advances). Kept as named zero hooks, not deleted, so any future
+    // Office-measured per-class tracking has somewhere to land.
+    private const double WordCompatibleAllMarkupBodyPositioningCharacterSpacingPoints = 0d;
+    private const double WordCompatibleAllMarkupHeadingPositioningCharacterSpacingPoints = 0d;
+    private const double WordCompatibleAllMarkupPunctuationPositioningCharacterSpacingPoints = 0d;
+    private const double WordCompatibleAllMarkupInsertionPositioningCharacterSpacingPoints = 0d;
+    private const double WordCompatibleAllMarkupDeletionPositioningCharacterSpacingPoints = 0d;
+    private const double WordCompatibleAllMarkupShortWordPositioningCharacterSpacingPoints = 0d;
     private const double WordCompatibleAllMarkupBodyXOffsetAsymptotePoints = -3.0d;
     private const double WordCompatibleAllMarkupBodyXOffsetDecayPoints = 55.0d;
     private const double WordCompatibleAllMarkupDeletionXOffsetPoints = 2.707d;

@@ -783,7 +783,7 @@ internal static class DocxMarkupTests
             "Word-compatible all-markup should scale static text-box paragraph spacing with the print profile.");
     }
 
-    public static void DocxWordCompatibleAllMarkupAddsBodyPositioningSpacing()
+    public static void DocxWordCompatibleAllMarkupOmitsInventedBodyTracking()
     {
         DocxParagraph paragraph = new(
             [
@@ -840,12 +840,14 @@ internal static class DocxMarkupTests
         TestAssert.True(Math.Abs(preserveSegment.PositioningCharacterSpacing) < 0.0001d, "Preserve layout should not invent positioned body tracking.");
         TestAssert.Equal("None", wordSegment.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(wordSegment.PdfCharacterSpacing) < 0.0001d, "Word-compatible body tracking should stay out of PDF Tc.");
+        // Office A/B (W5-K1 dense ref: Word kern tightens 23pt total over the body while the
+        // legacy 0.071-per-gap tracking widened it 102pt): no invented per-gap tracking.
         TestAssert.True(
-            Math.Abs(wordSegment.PositioningCharacterSpacing - 0.071d) < 0.0001d,
-            "Word-compatible all-markup should emit the Office-like body tracking through positioned glyph advances.");
+            Math.Abs(wordSegment.PositioningCharacterSpacing) < 0.0001d,
+            "Word-compatible all-markup should not invent body tracking beyond font kerning.");
         TestAssert.True(
-            wordSegment.AdvanceProfile.PositioningCharacterSpacingGapTotal > 0.5d,
-            "Text-emission snapshots should expose the positioned body tracking contribution.");
+            Math.Abs(wordSegment.AdvanceProfile.PositioningCharacterSpacingGapTotal) < 0.0001d,
+            "Text-emission snapshots should expose no positioned body tracking contribution.");
         TestAssert.True(
             Math.Abs(wordSegment.AdvanceProfile.TextStateCharacterSpacingGapTotal) < 0.0001d,
             "Word-compatible body tracking should not become PDF text-state spacing.");
@@ -854,7 +856,7 @@ internal static class DocxMarkupTests
             "Word-compatible all-markup should shift later body text operations toward Office-like emitted x origins.");
     }
 
-    public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfile()
+    public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTracking()
     {
         var deletionRevision = new DocxRevisionInfo(DocxRevisionKind.Deletion, "3", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
         var moveFromRevision = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
@@ -899,8 +901,9 @@ internal static class DocxMarkupTests
         DocxTextEmissionSegmentSnapshot wordInsertion = RevisionSegment(wordLines, "Insertion");
         DocxTextEmissionSegmentSnapshot wordMoveTo = RevisionSegment(wordLines, "MoveTo");
 
-        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing - 0.060d) < 0.0001d, "Word-compatible moved-from text should use the deleted-text positioning profile.");
-        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing - 0.126d) < 0.0001d, "Word-compatible moved-to text should use the inserted-text positioning profile.");
+        // Office A/B (W5-K1): revision runs carry font kerning only, like body text.
+        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-from text should not invent deleted-text tracking.");
+        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-to text should not invent inserted-text tracking.");
         TestAssert.True(Math.Abs(wordMoveFrom.X - wordDeletion.X) < 0.001d, "Word-compatible moved-from text should share the deleted-text X positioning branch.");
         TestAssert.True(Math.Abs(wordMoveTo.X - wordInsertion.X) < 0.001d, "Word-compatible moved-to text should share the inserted-text X positioning branch.");
 
@@ -937,7 +940,7 @@ internal static class DocxMarkupTests
         }
     }
 
-    public static void DocxWordCompatibleAllMarkupUsesMoveRevisionPositioningProfileAcrossTextFlows()
+    public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTrackingAcrossTextFlows()
     {
         DocxParagraph floatingTextBoxParagraph = CreateMoveRevisionParagraph();
         DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(floatingTextBoxParagraph)]);
@@ -1086,11 +1089,11 @@ internal static class DocxMarkupTests
             DocxTextEmissionSegmentSnapshot moveTo = segments.Single(segment => segment.RevisionKind == "MoveTo");
 
             TestAssert.True(
-                Math.Abs(moveFrom.PositioningCharacterSpacing - 0.060d) < 0.0001d,
-                "Word-compatible moved-from text should use the deleted-text positioning profile in " + flowName + ".");
+                Math.Abs(moveFrom.PositioningCharacterSpacing) < 0.0001d,
+                "Word-compatible moved-from text should not invent deleted-text tracking in " + flowName + ".");
             TestAssert.True(
-                Math.Abs(moveTo.PositioningCharacterSpacing - 0.126d) < 0.0001d,
-                "Word-compatible moved-to text should use the inserted-text positioning profile in " + flowName + ".");
+                Math.Abs(moveTo.PositioningCharacterSpacing) < 0.0001d,
+                "Word-compatible moved-to text should not invent inserted-text tracking in " + flowName + ".");
         }
     }
 
