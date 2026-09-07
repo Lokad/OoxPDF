@@ -1257,7 +1257,7 @@ internal sealed partial class DocxReader
             : resolvedRun.FontFamily;
         runs.Add(new DocxTextRun(
             text,
-            resolvedRun.FontSize ?? DocxDefaults.FontSizePoints,
+            resolvedRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
             resolvedRun.ColorHex,
             bold,
             italic,

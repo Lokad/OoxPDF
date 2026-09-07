@@ -1,0 +1,16 @@
+{
+  "id": "docx-body-unstyled-size",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-body-unstyled-size.docx",
+  "dpi": 144,
+  "tags": ["docx", "typography", "body-size"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.02,
+    "maxChangedPixelRatioAtThreshold16": 0.0005
+  },
+  "allowedUnsupportedFeatures": []
+}

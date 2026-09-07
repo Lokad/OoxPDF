@@ -544,7 +544,9 @@ internal static class DocxTextTests
         TestAssert.Equal("Alpha", lines[0].Text);
         TestAssert.Equal(" ", lines[1].Text);
         TestAssert.Equal("Beta", lines[2].Text);
-        TestAssert.Equal(22d, Math.Round(lines[0].BaselineY - lines[2].BaselineY, 3));
+        // Office A/B 2026-09-07 (probe-labsize bodysize/empty): styles-less unsized runs (including the empty
+        // paragraph mark) resolve flat 12pt, and the fake-metrics lines equal font size by construction.
+        TestAssert.Equal(24d, Math.Round(lines[0].BaselineY - lines[2].BaselineY, 3));
     }
 
     public static void DocxReaderAppliesParagraphLineBasedSpacing()

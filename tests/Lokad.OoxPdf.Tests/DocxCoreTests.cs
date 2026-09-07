@@ -913,4 +913,18 @@ internal static class DocxCoreTests
         TestAssert.Equal(DocxLineMetrics.MeasureWindowsAscender(font.Value.Font, 10d), bucket.WindowsAscenderPoints ?? 0d);
         TestAssert.Equal(DocxLineMetrics.MeasureWindowsDescender(font.Value.Font, 10d), bucket.WindowsDescenderPoints ?? 0d);
     }
+    public static void DocxReaderSizesUnresolvableRunsAtTwelvePoints()
+    {
+        // Office A/B 2026-09-07 (probe-labsize bodysize): styles-less and styles-without-size-or-defaults
+        // emit 12pt bodies at unsized runs while sized runs keep direct size.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Plain</w:t></w:r></w:p><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>Sized</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        TestAssert.Equal(12d, document.Paragraphs[0].Runs.Single().FontSize);
+        TestAssert.Equal(9d, document.Paragraphs[1].Runs.Single().FontSize);
+    }
 }
