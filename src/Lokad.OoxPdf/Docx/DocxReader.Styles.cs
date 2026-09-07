@@ -177,7 +177,9 @@ internal sealed partial class DocxReader
             result = result.Merge(tableProperties);
         }
 
-        foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
+        // Unstyled paragraphs inherit through Normal like numbering does (bodysize-normal11 probe 2026-09-07:
+        // Normal-11pt unsized runs resolve 11pt in Word, not the unstyled fallback).
+        foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId ?? "Normal", styles.ParagraphStyles))
         {
             result = result.Merge(paragraphStyle.Run);
         }

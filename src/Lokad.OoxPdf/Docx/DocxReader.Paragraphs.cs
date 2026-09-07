@@ -265,7 +265,8 @@ internal sealed partial class DocxReader
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
                 if (firstRun is null)
                 {
-                    runs.Add(new DocxTextRun(placeholder, DocxDefaults.FontSizePoints, null, false, false, false, null, null)
+                    double placeholderSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize ?? DocxDefaults.UnstyledRunFontSizePoints;
+                    runs.Add(new DocxTextRun(placeholder, placeholderSize, null, false, false, false, null, null)
                     {
                         SourceRunIndex = fieldSourceRunIndex,
                         Revision = revision,
