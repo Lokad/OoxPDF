@@ -13,6 +13,37 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private static bool ShouldRenderRevisionBalloon(DocxMarkupContext markupContext, IReadOnlyList<DocxRevisionInfo> revisions)
+    {
+        if (!markupContext.RendersRevisionBalloons || revisions.Count == 0)
+        {
+            return false;
+        }
+
+        if (markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+        {
+            return true;
+        }
+
+        // Word-compatible print shows insertions, deletions, and moves inline and reserves
+        // margin balloons for property (formatting) revisions and comments (Office A/B:
+        // dense-revisions, balloon-lane-bands, and review references carry zero
+        // insertion/deletion/move balloons alongside inline revision styling). A property
+        // change with no property elements (for example an empty rPrChange) is void: Word
+        // shows no balloon for it, so it cannot sustain one either.
+        return revisions.Any(static revision => IsPropertyChangeRevision(revision.Kind) && revision.PropertyElementNames.Count != 0);
+    }
+
+    private static bool IsPropertyChangeRevision(DocxRevisionKind kind)
+    {
+        return kind is DocxRevisionKind.RunPropertiesChange
+            or DocxRevisionKind.ParagraphPropertiesChange
+            or DocxRevisionKind.TablePropertiesChange
+            or DocxRevisionKind.TableRowPropertiesChange
+            or DocxRevisionKind.TableCellPropertiesChange
+            or DocxRevisionKind.SectionPropertiesChange;
+    }
+
     private static void RenderMarkupBalloons(
         DocxLayoutPage page,
         IReadOnlyList<DocxRelatedStoryLayout> relatedStories,
@@ -336,7 +367,7 @@ internal sealed partial class DocxRenderer
                     }
                 }
 
-                if (markupContext.RendersRevisionBalloons && paragraph.Revisions.Count != 0)
+                if (ShouldRenderRevisionBalloon(markupContext, paragraph.Revisions))
                 {
                     int key = RuntimeHelpers.GetHashCode(paragraph);
                     if (!renderedRevisions.Add(key))
@@ -373,7 +404,7 @@ internal sealed partial class DocxRenderer
                 foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, floatingDrawings))
                 {
                     IReadOnlyList<DocxRevisionInfo> tableRevisions = row.Table.Revisions ?? [];
-                    if (tableRevisions.Count != 0)
+                    if (ShouldRenderRevisionBalloon(markupContext, tableRevisions))
                     {
                         string tableKey = TableBalloonKey(row);
                         if (renderedTableRevisions.Add(tableKey))
@@ -403,7 +434,7 @@ internal sealed partial class DocxRenderer
                     }
 
                     IReadOnlyList<DocxRevisionInfo> rowRevisions = row.Revisions ?? [];
-                    if (rowRevisions.Count != 0)
+                    if (ShouldRenderRevisionBalloon(markupContext, rowRevisions))
                     {
                         string rowKey = TableRowBalloonKey(row);
                         if (renderedTableRowRevisions.Add(rowKey))
@@ -436,7 +467,7 @@ internal sealed partial class DocxRenderer
                     {
                         DocxTableCellLayout cell = row.Cells[cellIndex];
                         IReadOnlyList<DocxRevisionInfo> cellRevisions = cell.Cell.Revisions;
-                        if (cellRevisions.Count == 0)
+                        if (!ShouldRenderRevisionBalloon(markupContext, cellRevisions))
                         {
                             continue;
                         }

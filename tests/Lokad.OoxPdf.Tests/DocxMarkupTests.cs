@@ -993,9 +993,32 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatibleAllMarkupRendersRevisionBalloonTextWithOfficeFont()
     {
-        string input = DocxTests.WriteTrackedChangeModeProbeDocx();
-        using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        // Office A/B: Word balloons formatting revisions (insertions/deletions/moves render
+        // inline), so the font probe below uses a formatting revision.
+        DocxParagraph formatParagraph = DocxTests.CreateDocxLayoutParagraph("Formatted revision anchor", 10d, 12d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "1", "Reviewer", "2026-06-01T00:00:00Z", "rPrChange", null, propertyElementNames: ["b"])
+            ]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(formatParagraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
 
         PdfPage page = new DocxRenderer(
                 fontResolver: null,

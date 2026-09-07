@@ -697,7 +697,9 @@ internal static class DocxCommentsTests
             ],
             Revisions =
             [
-                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-01T00:00:00Z", "inserted", null, [])
+                // Office A/B: Word shows insertions inline, so the grouped revision candidate below
+                // is a formatting revision (the only revision kind Word balloons).
+                new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "1", "Reviewer", "2026-06-01T00:00:00Z", "rPrChange", null, propertyElementNames: ["b"])
             ]
         };
         DocxParagraph commentParagraph = DocxTests.CreateDocxLayoutParagraph("Public comment alpha beta gamma delta epsilon for wrapping", 10d, 12d);
@@ -1364,6 +1366,118 @@ internal static class DocxCommentsTests
         TestAssert.True(revisionBalloons.Length < 4, "Grouping should reduce one-balloon-per-revision churn in dense review pages.");
         TestAssert.True(revisionBalloons.Any(placement => placement.CandidateCount == 3), "Nearby dense revision anchors should group into capped chunks before starting a new balloon.");
         TestAssert.True(revisionBalloons.All(placement => placement.CandidateCount <= 3), "Nearby revision grouping should cap dense chunks instead of hiding too many edits behind one balloon.");
+    }
+
+    public static void DocxWordCompatibleAllMarkupSkipsInlineRevisionBalloons()
+    {
+        // Office A/B (dense-revisions, balloon-lane-bands, review references): Word shows
+        // insertions, deletions, and moves inline with zero revision balloons.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Dense ins del move", 5d, 5d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "A", "2026-06-10T00:00:00Z", "ins", null, []),
+                new DocxRevisionInfo(DocxRevisionKind.Deletion, "2", "A", "2026-06-10T00:00:00Z", "del", null, []),
+                new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "3", "A", "2026-06-10T00:00:00Z", "moveFrom", null, [])
+            ]
+        };
+        var document = new DocxDocument(
+            220d,
+            240d,
+            55d,
+            15d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Revision")
+            .ToArray();
+
+        TestAssert.Equal(0, revisionBalloons.Length);
+    }
+
+    public static void DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons()
+    {
+        // Office A/B (review reference): an empty rPrChange sustains no Word balloon.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Void format anchor", 5d, 5d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "A", "2026-06-10T00:00:00Z", "ins", null, []),
+                new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "2", "A", "2026-06-10T00:00:00Z", "rPrChange", null, [])
+            ]
+        };
+        var document = new DocxDocument(
+            220d,
+            240d,
+            55d,
+            15d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Revision")
+            .ToArray();
+
+        TestAssert.Equal(0, revisionBalloons.Length);
+    }
+
+    public static void DocxWordCompatibleAllMarkupKeepsFormattingRevisionBalloons()
+    {
+        // Office A/B (grounded review reference): Word balloons formatting revisions.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Formatted run", 5d, 5d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "9", "A", "2026-06-10T00:00:00Z", "rPrChange", null, propertyElementNames: ["b"])
+            ]
+        };
+        var document = new DocxDocument(
+            220d,
+            240d,
+            55d,
+            15d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] revisionBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Revision")
+            .ToArray();
+
+        TestAssert.Equal(1, revisionBalloons.Length);
     }
 
     public static void DocxMarkupBalloonLayoutOffsetsNearbyMixedConnectorAnchors()
