@@ -3,7 +3,7 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-plain-paragraph.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "paragraph"],
+  "tags": ["docx", "ladder", "paragraph", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

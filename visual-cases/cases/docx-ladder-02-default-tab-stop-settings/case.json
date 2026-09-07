@@ -3,7 +3,7 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-default-tab-stop-settings.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "paragraph", "tabs", "settings"],
+  "tags": ["docx", "ladder", "paragraph", "tabs", "settings", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

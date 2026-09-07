@@ -3,13 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-00-blank.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "blank"],
+  "tags": ["docx", "ladder", "blank", "locked"],
   "expected": {
     "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.01,
+    "maxMeanAbsoluteError": 0,
     "maxChangedPixelRatioAtThreshold16": 0
   },
   "allowedUnsupportedFeatures": []

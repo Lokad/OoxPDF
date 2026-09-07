@@ -3,11 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-numbering.docx",
   "dpi": 144,
-  "tags": ["docx", "numbering", "smoke"],
+  "tags": ["docx", "numbering", "smoke", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.04,
+    "maxChangedPixelRatioAtThreshold16": 0.0015
   },
   "allowedUnsupportedFeatures": []
 }

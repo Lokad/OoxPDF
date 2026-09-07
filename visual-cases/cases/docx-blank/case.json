@@ -3,11 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-blank.docx",
   "dpi": 144,
-  "tags": ["docx", "blank", "smoke"],
+  "tags": ["docx", "blank", "smoke", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0,
+    "maxChangedPixelRatioAtThreshold16": 0
   },
   "allowedUnsupportedFeatures": []
 }
