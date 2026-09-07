@@ -94,6 +94,14 @@ internal sealed partial class OpenTypeFont
         }
     }
 
+    private static readonly HashSet<string> KernScriptTags = new(StringComparer.Ordinal)
+    {
+        "latn",
+        "cyrl",
+        "grek",
+        "DFLT",
+    };
+
     private static HashSet<ushort> ReadGposKernLookupIndices(byte[] bytes, int gposOffset, int tableEnd)
     {
         var lookupIndices = new HashSet<ushort>();
@@ -103,12 +111,18 @@ internal sealed partial class OpenTypeFont
             return lookupIndices;
         }
 
+        HashSet<int>? scriptFeatures = ReadGposKernScriptFeatureIndices(bytes, gposOffset, tableEnd);
         ushort featureCount = U16(bytes, featureList);
         for (int i = 0; i < featureCount && featureList + 2 + i * 6 + 6 <= tableEnd; i++)
         {
             int record = featureList + 2 + i * 6;
             string tag = Encoding.ASCII.GetString(bytes, record, 4);
             if (!tag.Equals("kern", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (scriptFeatures is not null && !scriptFeatures.Contains(i))
             {
                 continue;
             }
@@ -127,6 +141,62 @@ internal sealed partial class OpenTypeFont
         }
 
         return lookupIndices;
+    }
+
+    private static HashSet<int>? ReadGposKernScriptFeatureIndices(byte[] bytes, int gposOffset, int tableEnd)
+    {
+        int scriptList = gposOffset + U16(bytes, gposOffset + 4);
+        if (scriptList + 2 > tableEnd)
+        {
+            return null;
+        }
+
+        ushort scriptCount = U16(bytes, scriptList);
+        var accepted = new HashSet<int>();
+        for (int i = 0; i < scriptCount && scriptList + 2 + i * 6 + 6 <= tableEnd; i++)
+        {
+            int record = scriptList + 2 + i * 6;
+            string tag = Encoding.ASCII.GetString(bytes, record, 4).Trim();
+            if (!KernScriptTags.Contains(tag))
+            {
+                continue;
+            }
+
+            int script = scriptList + U16(bytes, record + 4);
+            if (script + 4 > tableEnd)
+            {
+                continue;
+            }
+
+            int defaultLangSys = U16(bytes, script);
+            if (defaultLangSys != 0)
+            {
+                CollectScriptFeatureIndices(bytes, script + defaultLangSys, tableEnd, accepted);
+            }
+
+            ushort langSysCount = U16(bytes, script + 2);
+            for (int j = 0; j < langSysCount && script + 4 + j * 6 + 6 <= tableEnd; j++)
+            {
+                int langRecord = script + 4 + j * 6;
+                CollectScriptFeatureIndices(bytes, script + U16(bytes, langRecord + 4), tableEnd, accepted);
+            }
+        }
+
+        return accepted.Count > 0 ? accepted : null;
+    }
+
+    private static void CollectScriptFeatureIndices(byte[] bytes, int langSys, int tableEnd, HashSet<int> accepted)
+    {
+        if (langSys + 6 > tableEnd)
+        {
+            return;
+        }
+
+        ushort featureCount = U16(bytes, langSys + 4);
+        for (int i = 0; i < featureCount && langSys + 6 + i * 2 + 2 <= tableEnd; i++)
+        {
+            accepted.Add(U16(bytes, langSys + 6 + i * 2));
+        }
     }
 
     private static void ReadGposPairAdjustmentLookupSubtable(

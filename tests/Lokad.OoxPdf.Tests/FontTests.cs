@@ -304,6 +304,20 @@ internal static class FontTests
             "Expected at least one Cambria extension GPOS kerning pair in the typography probe words.");
     }
 
+    public static void OpenTypeParserIgnoresNonLatinScriptGposKerning()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string calibri = Path.Combine(fontsDirectory, "calibri.ttf");
+        if (!File.Exists(calibri))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(calibri);
+        AssertNoKerning(font, (char)34, (char)44);
+        AssertHasKerning(font, (char)84, (char)111);
+    }
+
     public static void OpenTypeParserMapsWindowsSymbolCmap()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
