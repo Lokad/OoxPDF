@@ -185,12 +185,15 @@ internal enum DocxTableCellVisualOwnership
 
 internal sealed record DocxRunFontResource(string Name, PdfEmbeddedFont Embedded, FontFaceResolution Resolution);
 
+internal sealed record DocxFallbackFontEntry(OpenTypeFont Font, DocxRunFontResource Resource);
+
 internal sealed record DocxFontResources(
     DocxFontPlan Plan,
     IDocxTextMeasurer? TextMeasurer,
     IReadOnlyList<PdfFontResource> Resources,
     IReadOnlyDictionary<DocxTextRun, DocxRunFontResource> RunResources,
-    DocxRunFontResource? Fallback);
+    DocxRunFontResource? Fallback,
+    IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> FallbackChains);
 
 internal sealed record DocxTextEmissionSegment(
     string Text,

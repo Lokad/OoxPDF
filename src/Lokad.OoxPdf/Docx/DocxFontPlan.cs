@@ -157,12 +157,15 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     private readonly FontFaceResolution? fallbackResolution;
     private readonly CancellationToken cancellationToken;
     private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts = new();
+    private readonly IFontResolver? fontResolver;
+    private readonly Dictionary<(string StableId, int FaceIndex, string? PrimaryFamily, bool Bold, bool Italic), IReadOnlyList<OpenTypeFont?>> candidateChains = new();
 
-    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken)
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken, IFontResolver? fontResolver = null)
     {
         runs = plan.Runs;
         this.fallbackResolution = fallbackResolution;
         this.cancellationToken = cancellationToken;
+        this.fontResolver = fontResolver;
     }
 
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
@@ -180,6 +183,30 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             return 0d;
         }
 
+        IReadOnlyList<OpenTypeFont?> candidates = ResolveCandidateFonts(run, resolved, resolution, font);
+        if (candidates.Count <= 1)
+        {
+            return MeasureSingleFontText(run, text, fontSize, font);
+        }
+
+        double widthPoints = 0d;
+        foreach (FontCoverageSpan span in FontCoverageFallback.SplitByCoverage(text, candidates, cancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            OpenTypeFont? spanFont = span.FontIndex < 0 ? font : candidates[span.FontIndex];
+            if (spanFont is null || spanFont.UnitsPerEm == 0)
+            {
+                continue;
+            }
+
+            widthPoints += MeasureSingleFontRawText(text.Substring(span.Start, span.Length), fontSize, spanFont);
+        }
+
+        return DocxTextSpacing.AddCharacterSpacing(widthPoints, run, text);
+    }
+
+    private double MeasureSingleFontText(DocxTextRun? run, string text, double fontSize, OpenTypeFont font)
+    {
         double units = 0d;
         ushort previousGlyph = 0;
         foreach (Rune rune in text.EnumerateRunes())
@@ -196,6 +223,26 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         }
 
         return DocxTextSpacing.AddCharacterSpacing(units * fontSize / font.UnitsPerEm, run, text);
+    }
+
+    private double MeasureSingleFontRawText(string text, double fontSize, OpenTypeFont font)
+    {
+        double units = 0d;
+        ushort previousGlyph = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ushort glyph = font.MapCodePoint(rune.Value);
+            if (previousGlyph != 0 && glyph != 0)
+            {
+                units += font.GetKerning(previousGlyph, glyph);
+            }
+
+            units += font.GetAdvanceWidth(glyph);
+            previousGlyph = glyph;
+        }
+
+        return units * fontSize / font.UnitsPerEm;
     }
 
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
@@ -225,6 +272,40 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         cancellationToken.ThrowIfCancellationRequested();
         OpenTypeFont? font = ResolveFont(run);
         return font is null ? 0d : DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
+    }
+
+    private IReadOnlyList<OpenTypeFont?> ResolveCandidateFonts(DocxTextRun? run, DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)
+    {
+        bool bold = run is not null && run.Bold;
+        bool italic = run is not null && run.Italic;
+        string? primaryFamily = resolved?.ResolvedFamily;
+        var key = (resolution.Source.StableId, resolution.FontFaceIndex, primaryFamily, bold, italic);
+        if (candidateChains.TryGetValue(key, out IReadOnlyList<OpenTypeFont?>? cached))
+        {
+            return cached;
+        }
+
+        var candidates = new List<OpenTypeFont?>();
+        if (fontResolver is null)
+        {
+            candidates.Add(primary);
+        }
+        else
+        {
+            foreach (FontFaceResolution candidate in DocxFontFallbackRules.ResolveCandidateResolutions(fontResolver, run, primaryFamily, resolution, fallbackResolution))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                OpenTypeFont? candidateFont = candidates.Count == 0 ? primary : LoadFont(candidate);
+                if (candidateFont is not null && !candidates.Contains(candidateFont))
+                {
+                    candidates.Add(candidateFont);
+                }
+            }
+        }
+
+        IReadOnlyList<OpenTypeFont?> chain = candidates;
+        candidateChains[key] = chain;
+        return chain;
     }
 
     private DocxResolvedRunTypeface? ResolveRun(DocxTextRun? run)

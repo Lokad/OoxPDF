@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using Lokad.OoxPdf;
+using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 
@@ -331,6 +333,106 @@ internal static class FontTests
         ushort glyph = font.MapCodePoint(0xF0B7);
 
         TestAssert.True(glyph > 0, "Expected a glyph mapping for the common Symbol bullet code point.");
+    }
+
+    public static void FontCoverageFallbackSplitsByGlyphCoverage()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string calibri = Path.Combine(fontsDirectory, "calibri.ttf");
+        string symbol = Path.Combine(fontsDirectory, "symbol.ttf");
+        if (!File.Exists(calibri) || !File.Exists(symbol))
+        {
+            return;
+        }
+        OpenTypeFont primary = OpenTypeFont.Load(calibri);
+        OpenTypeFont fallback = OpenTypeFont.Load(symbol);
+        IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage("a" + (char)0xF0B7 + "b", [primary, fallback], CancellationToken.None);
+        TestAssert.Equal(3, spans.Count);
+        TestAssert.Equal(new FontCoverageSpan(0, 0, 1), spans[0]);
+        TestAssert.Equal(new FontCoverageSpan(1, 1, 1), spans[1]);
+        TestAssert.Equal(new FontCoverageSpan(0, 2, 1), spans[2]);
+    }
+    public static void FontCoverageFallbackReportsUncoveredRunes()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string calibri = Path.Combine(fontsDirectory, "calibri.ttf");
+        if (!File.Exists(calibri))
+        {
+            return;
+        }
+        OpenTypeFont primary = OpenTypeFont.Load(calibri);
+        string text = "a" + char.ConvertFromUtf32(0x1F600) + "b";
+        IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage(text, [primary], CancellationToken.None);
+        TestAssert.Equal(3, spans.Count);
+        TestAssert.Equal(new FontCoverageSpan(0, 0, 1), spans[0]);
+        TestAssert.Equal(new FontCoverageSpan(-1, 1, 2), spans[1]);
+        TestAssert.Equal(new FontCoverageSpan(0, 3, 1), spans[2]);
+    }
+
+    public static void DocxMeasurerFallsBackPerCharacterForMissingGlyphs()
+    {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
+        if (symbolResolution.IsFallback)
+        {
+            return;
+        }
+
+        OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
+        if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
+        {
+            return;
+        }
+
+        string body = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+              <w:body>
+                <w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">a[BULLET]b</w:t></w:r></w:p>
+                <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+              </w:body>
+            </w:document>
+            """.Replace("[BULLET]", ((char)0xF0B7).ToString());
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = body
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        DocxResolvedRunTypeface resolved = plan.Runs.Single(run => run.Run.Text.IndexOf((char)0xF0B7) >= 0);
+        if (resolved.Resolution is not FontFaceResolution primaryResolution)
+        {
+            return;
+        }
+
+        OpenTypeFont? primaryFont = FontProgramLoader.Load(primaryResolution, CancellationToken.None);
+        if (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) != 0)
+        {
+            return;
+        }
+
+        string text = "a" + (char)0xF0B7 + "b";
+        var measurer = new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None, resolver);
+        double actual = measurer.MeasureText(resolved.Run, text, 9d);
+        double expected =
+            primaryFont.GetAdvanceWidth(primaryFont.MapCodePoint(97)) * 9d / primaryFont.UnitsPerEm +
+            symbolFont.GetAdvanceWidth(symbolFont.MapCodePoint(0xF0B7)) * 9d / symbolFont.UnitsPerEm +
+            primaryFont.GetAdvanceWidth(primaryFont.MapCodePoint(98)) * 9d / primaryFont.UnitsPerEm;
+        TestAssert.True(Math.Abs(actual - expected) < 0.000001d, "Expected per-character fallback to measure the bullet in the Symbol face.");
     }
 
     private static void AssertNoKerning(OpenTypeFont font, char leftChar, char rightChar)

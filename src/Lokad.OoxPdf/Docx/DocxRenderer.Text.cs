@@ -103,6 +103,86 @@ internal sealed partial class DocxRenderer
         pageImages.Add(new PdfImageResource(imageName, xObject));
     }
 
+    private static void AddEmissionSegmentWithFontFallback(
+        List<DocxTextEmissionSegment> emissionSegments,
+        DocxTextEmissionSegment segment,
+        DocxFontResources fontResources)
+    {
+        if (segment.IsTerminalLineSpace ||
+            string.IsNullOrEmpty(segment.Text) ||
+            !fontResources.FallbackChains.TryGetValue(segment.StyleRun, out IReadOnlyList<DocxFallbackFontEntry>? chain) ||
+            chain.Count <= 1)
+        {
+            emissionSegments.Add(segment);
+            return;
+        }
+
+        var fonts = new OpenTypeFont?[chain.Count];
+        for (int i = 0; i < chain.Count; i++)
+        {
+            fonts[i] = chain[i].Font;
+        }
+
+        IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage(segment.Text, fonts, CancellationToken.None);
+        bool needsFallback = false;
+        foreach (FontCoverageSpan span in spans)
+        {
+            if (span.FontIndex > 0)
+            {
+                needsFallback = true;
+                break;
+            }
+        }
+
+        if (!needsFallback)
+        {
+            emissionSegments.Add(segment);
+            return;
+        }
+
+        IDocxTextMeasurer? measurer = fontResources.TextMeasurer;
+        if (measurer is null)
+        {
+            emissionSegments.Add(segment);
+            return;
+        }
+
+        var widths = new double[spans.Count];
+        double total = 0d;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            widths[i] = measurer.MeasureText(segment.StyleRun, segment.Text.Substring(spans[i].Start, spans[i].Length), segment.FontSize);
+            total += widths[i];
+        }
+
+        if (total <= 0d)
+        {
+            emissionSegments.Add(segment);
+            return;
+        }
+
+        bool italic = segment.StyleRun.EffectiveProperties.Italic;
+        double scale = segment.Width / total;
+        double x = segment.X;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            FontCoverageSpan span = spans[i];
+            DocxFallbackFontEntry entry = span.FontIndex < 0 ? chain[0] : chain[span.FontIndex];
+            double spanWidth = i == spans.Count - 1 ? segment.X + segment.Width - x : widths[i] * scale;
+            emissionSegments.Add(segment with
+            {
+                Text = segment.Text.Substring(span.Start, span.Length),
+                Resource = entry.Resource,
+                X = x,
+                Width = spanWidth,
+                SyntheticBold = ShouldApplySyntheticBold(segment.StyleRun, entry.Resource),
+                SyntheticItalic = italic && !entry.Resource.Resolution.Italic,
+                SourceTextOffsetInRun = segment.SourceTextOffsetInRun + span.Start
+            });
+            x += spanWidth;
+        }
+    }
+
     private static IReadOnlyList<DocxTextEmissionSegment> CreateTextEmissionSegments(
         DocxTextLineLayout line,
         DocxFontResources fontResources,
@@ -161,7 +241,7 @@ internal sealed partial class DocxRenderer
                     ReadColor(emissionEffective.ColorHex));
                 string emittedText = ResolveStaticFieldPlaceholders(part.Text, pageNumber, pageCount);
                 double emittedWidth = ResolveSubstitutedFieldEmissionWidth(part.Text, emittedText, emissionStyleRun, fontSize, fontResources.TextMeasurer, part.Width);
-                emissionSegments.Add(new DocxTextEmissionSegment(
+                AddEmissionSegmentWithFontFallback(emissionSegments, new DocxTextEmissionSegment(
                     emittedText,
                     emissionStyleRun,
                     resource,
@@ -178,7 +258,7 @@ internal sealed partial class DocxRenderer
                     IsTerminalLineSpace: false,
                     segment.SourceTextRunIndex,
                     currentPartSourceTextOffset,
-                    segment.Role));
+                    segment.Role), fontResources);
                 substitutedFieldXAdjustment += emittedWidth - part.Width;
             }
         }
