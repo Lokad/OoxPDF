@@ -512,8 +512,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (textMeasurer is null || stories.Count == 0)
@@ -541,8 +540,7 @@ internal sealed partial class DocxLayoutEngine
                 paragraphSpacingScale,
                 pageNumber: null,
                 pageCount: null,
-                cancellationToken: cancellationToken,
-                unscaledTextMeasurer: unscaledTextMeasurer);
+                cancellationToken: cancellationToken);
         }
 
         return layouts;
@@ -557,8 +555,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         int? pageNumber,
         int? pageCount,
-        CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        CancellationToken cancellationToken)
     {
         var textLines = new List<DocxTextLineLayout>();
         var inlineImages = new List<DocxInlineImageLayout>();
@@ -693,8 +690,7 @@ internal sealed partial class DocxLayoutEngine
             paragraphSpacingScale,
             cancellationToken,
             pageNumber,
-            pageCount,
-            unscaledTextMeasurer);
+            pageCount);
         return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), floatingDrawings, tableRows.ToArray(), Math.Abs(cursorY));
     }
 }

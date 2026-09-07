@@ -172,7 +172,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
-        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode, effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
+        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode, effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
     }
 
@@ -180,7 +180,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
@@ -207,7 +207,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
@@ -807,7 +807,7 @@ internal sealed partial class DocxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken, fontResources.TextMeasurer);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken);
         markupContext = WithFirstPinYOffset(markupContext, document, layout);
         DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);

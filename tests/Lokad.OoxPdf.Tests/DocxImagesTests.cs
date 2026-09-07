@@ -528,40 +528,20 @@ internal static class DocxImagesTests
         };
     }
 
-    public static void DocxWordCompatibleFloatingTextBoxMeasuresContentUnscaled()
-    {
-        // Office A/B (w6a1d-tbx reference): floating-textbox content prints unscaled
-        // (12pt beside scaled body), so WC layout must measure it with the raw measurer.
-        // The legacy three-arg path keeps scaled measurement as its fallback contract.
-        DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument("Box text");
-        var raw = new DocxTests.FamilyWidthTextMeasurer();
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(raw, 0.842391d, 0.7936d);
-        DocxLayoutEngine engine = new(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-
-        double legacyWidth = engine.Create(document, scaled, CancellationToken.None)
-            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Single().Width ?? -1d;
-        double unscaledWidth = engine.Create(document, scaled, CancellationToken.None, raw)
-            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Single().Width ?? -1d;
-
-        TestAssert.True(Math.Abs(legacyWidth - 8d * 5d * 0.842391d) < 0.001d, "Legacy textbox layout should keep scaled measurement. Width=" + legacyWidth);
-        TestAssert.Equal(8d * 5d, unscaledWidth);
-    }
-
     public static void DocxWordCompatibleFloatingTextBoxWrapsInsideInsetContentWidth()
     {
-        // Office defaults inset the content box (0.1in sides); with raw advances the
-        // crafted text fits the full extent but wraps inside the inset width.
-        DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 18) + " " + new string('Y', 3));
-        var raw = new DocxTests.FamilyWidthTextMeasurer();
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(raw, 0.842391d, 0.7936d);
-        DocxLayoutEngine engine = new(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        // Office defaults inset the content box (0.1in sides); the crafted text fits the
+        // full extent but wraps inside the inset width (END-to-END against pre-insets layout).
+        // Textbox content scales with the page like body text (tbxrev probe refutes the
+        // unscaled-content reading of the s=1 fixture).
+        DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 21) + " " + new string('Y', 2));
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, scaled, CancellationToken.None)
+            .FloatingDrawings.Single().TextBoxLayout?.TextLines.ToArray() ?? [];
 
-        int legacyLines = engine.Create(document, scaled, CancellationToken.None)
-            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Count ?? -1;
-        int unscaledLines = engine.Create(document, scaled, CancellationToken.None, raw)
-            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Count ?? -1;
-
-        TestAssert.Equal(1, legacyLines);
-        TestAssert.Equal(2, unscaledLines);
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.True(lines[0].Text.StartsWith(new string('X', 21), StringComparison.Ordinal), "First inset line should hold the leading run. Text=[" + lines[0].Text + "]");
+        TestAssert.True(lines[1].Text.EndsWith("Y", StringComparison.Ordinal), "Inset overflow should wrap to a second line. Text=[" + lines[1].Text + "]");
     }
 }
