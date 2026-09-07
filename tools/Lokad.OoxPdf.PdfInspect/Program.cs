@@ -1681,10 +1681,10 @@ internal static class PdfToUnicodeMap
                 }
                 else
                 {
-                    int targetStart = ReadHexInt(match.Groups["target"].Value);
+                    string targetHex = match.Groups["target"].Value;
                     for (int code = start; code <= end; code++)
                     {
-                        map[code] = char.ConvertFromUtf32(targetStart + code - start);
+                        map[code] = DecodeRangeTarget(targetHex, code - start);
                     }
                 }
             }
@@ -1708,6 +1708,36 @@ internal static class PdfToUnicodeMap
     {
         byte[] bytes = Convert.FromHexString(value);
         return Encoding.BigEndianUnicode.GetString(bytes);
+    }
+
+    private static string DecodeRangeTarget(string targetHex, int offset)
+    {
+        byte[] bytes = Convert.FromHexString(targetHex);
+        if (bytes.Length == 2)
+        {
+            int codepoint = (bytes[0] << 8) | bytes[1];
+            int stepped = codepoint + offset;
+            if (stepped < 0 || stepped > 0x10FFFF || (stepped >= 0xD800 && stepped <= 0xDFFF))
+            {
+                return "\uFFFD";
+            }
+
+            return char.ConvertFromUtf32(stepped);
+        }
+
+        if (bytes.Length >= 2)
+        {
+            int last = ((bytes[bytes.Length - 2] << 8) | bytes[bytes.Length - 1]) + offset;
+            if (last >= 0 && last <= 0xFFFF && (last < 0xD800 || last > 0xDFFF))
+            {
+                byte[] stepped = (byte[])bytes.Clone();
+                stepped[stepped.Length - 2] = (byte)(last >> 8);
+                stepped[stepped.Length - 1] = (byte)(last & 0xFF);
+                return Encoding.BigEndianUnicode.GetString(stepped);
+            }
+        }
+
+        return DecodeUtf16Hex(targetHex);
     }
 }
 
