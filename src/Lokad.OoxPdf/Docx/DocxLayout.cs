@@ -171,8 +171,15 @@ internal sealed partial class DocxLayoutEngine
     private const double InlineImageParagraphGapPoints = 6d;
     private const double WordListMinimumAutoLineSpacingFactor = 1.16d;
     private const double FootnoteSeparatorGapPoints = 3d;
-    private const double FootnoteSeparatorWidthPoints = 120d;
-    private const double FootnoteSeparatorThicknessPoints = 0.5d;
+    // Word draws the footnote separator rule 144 points wide regardless of page width or separator story content
+    // (footnote Office probes 2026-09-07: identical rects with pBdr, borderless, thick-pBdr, absent-story, and narrow-page variants).
+    private const double FootnoteSeparatorWidthPoints = 144d;
+    // Word rule thickness measures 0.72 to 0.84 across probes (likely export-grid snapping around 0.75); midpoint taken.
+    private const double FootnoteSeparatorThicknessPoints = 0.75d;
+    // Word rule bottom sits this far above the separator space baseline (2.04 and 2.16 across probes).
+    private const double FootnoteSeparatorRuleBottomOffsetPoints = 2.1d;
+    // Word separator space baselines sit within 0.15 of the separator block bottom on both probes; midpoint taken.
+    private const double FootnoteSeparatorBaselineOffsetPoints = 0.15d;
     private const double UnpagedRelatedStoryCanvasHeightPoints = 100000d;
     private const double PreferredMarkupMarginPoints = 207d;
     private const double MinimumMarkupBodyWidthPoints = 216d;

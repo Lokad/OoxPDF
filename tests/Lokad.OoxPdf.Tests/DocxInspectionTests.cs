@@ -749,7 +749,7 @@ internal static class DocxInspectionTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE"), "Body paragraph keep/widow rules are parsed and consumed by page layout, so they should not emit stale unsupported diagnostics.");
     }
 
-    public static void DocxReaderPreservesFootnoteStoryTypesWithoutPlacingSeparators()
+    public static void DocxReaderPreservesFootnoteStoryTypesWithGenericSeparatorRectangle()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -821,7 +821,7 @@ internal static class DocxInspectionTests
         TestAssert.Equal(2, placedStories.Length);
         DocxPlacedRelatedStoryLayoutSnapshot separatorStory = placedStories.Single(story => story.Type == "separator");
         DocxPlacedRelatedStoryLayoutSnapshot placedStory = placedStories.Single(story => story.Id == "2");
-        TestAssert.True(separatorStory.SourceBlockIndex == 0 && separatorStory.TopY > placedStory.TopY && separatorStory.SeparatorY is null, "Structural footnote separator stories should be placed above normal note bodies without drawing the generic separator rectangle.");
+        TestAssert.True(separatorStory.SourceBlockIndex == 0 && separatorStory.TopY > placedStory.TopY && separatorStory.SeparatorY is not null, "Office draws the 144pt separator rule whether or not a separator story exists (footnote probes 2026-09-07), so structural separator stories carry the generic rectangle.");
         TestAssert.True(placedStory.Type is null && placedStory.SeparatorY is null, "Only normal footnote stories should count as placed note bodies once separator stories are structural.");
         TestAssert.True(!placedStories.Any(story => story.Type == "continuationSeparator"), "Continuation separator stories should remain unplaced until actual multi-page note continuation is modeled.");
     }

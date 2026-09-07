@@ -369,6 +369,20 @@ internal sealed partial class DocxLayoutEngine
         DocxTextLineLayout Line,
         int? SourceBlockIndex);
 
+
+    // Word lays separator stories compact around the rule and space instead of a full line box, so the
+    // blank baseline rides at the story bottom (see constants in DocxLayout); shifting is rigid across lines.
+    private static DocxPlacedRelatedStoryLayout ShiftSeparatorStoryToBaseline(DocxPlacedRelatedStoryLayout placed, double bottom)
+    {
+        if (placed.TextLines.Count == 0)
+        {
+            return placed;
+        }
+
+        double currentBaseline = placed.TextLines[^1].BaselineY;
+        return placed with { TextLines = ShiftTextLines(placed.TextLines, bottom + FootnoteSeparatorBaselineOffsetPoints - currentBaseline, 0d) };
+    }
+
     private static DocxPlacedRelatedStoryLayout PlaceRelatedStory(DocxLayoutPage page, int pageIndex, DocxRelatedStoryLayout storyLayout, int sourceBlockIndex)
     {
         double storyHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
@@ -394,14 +408,16 @@ internal sealed partial class DocxLayoutEngine
         {
             double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
             double separatorTop = cursorTop + FootnoteSeparatorGapPoints + separatorHeight;
-            placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorY: null));
+            double separatorBottom = separatorTop - separatorHeight;
+            DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorY: separatorBottom + FootnoteSeparatorRuleBottomOffsetPoints);
+            placedStories.Add(ShiftSeparatorStoryToBaseline(placedSeparator, separatorBottom));
         }
 
         bool firstStory = true;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
             double? separatorY = separatorLayout is null && firstStory
-                ? cursorTop + FootnoteSeparatorGapPoints
+                ? cursorTop + FootnoteSeparatorGapPoints + FootnoteSeparatorRuleBottomOffsetPoints
                 : null;
             placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, story.StoryLayout, story.Location.SourceBlockIndex, cursorTop, separatorY));
             cursorTop -= ResolvePlacedStoryHeight(story.StoryLayout, page);
