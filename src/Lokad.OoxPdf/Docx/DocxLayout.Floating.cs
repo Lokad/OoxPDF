@@ -294,6 +294,101 @@ internal sealed partial class DocxLayoutEngine
         insetBottom = ReadInsetEmuPoints(drawing.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu);
     }
 
+    internal static void ResolveInlineTextBoxContentInsets(DocxInlineTextBox textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom)
+    {
+        insetLeft = ReadInsetEmuPoints(textBox.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu);
+        insetTop = ReadInsetEmuPoints(textBox.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu);
+        insetRight = ReadInsetEmuPoints(textBox.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu);
+        insetBottom = ReadInsetEmuPoints(textBox.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu);
+    }
+
+    // Inline boxes join the scaled body flow uniformly (Office: the w6-inline probe shows
+    // the box 191.1 wide equals 252 times s with 9.1pt content), so extents and insets
+    // scale with the layout spacing scale like every other fixed design length (W6-a1).
+    // Content measures with the ambient (scaled on WC pages) measurer; no raw threading
+    // and no emission map apply: coordinates are absolute flow space from birth.
+    internal static double EstimateInlineTextBoxHeight(DocxInlineTextBox textBox, double paragraphSpacingScale)
+    {
+        return (ReadEmuPoints(textBox.ExtentCyValue) ?? 0d) * paragraphSpacingScale;
+    }
+
+    internal static DocxInlineTextBoxLayout? CreateInlineTextBoxLayout(
+        DocxInlineTextBox textBox,
+        int sourceBlockIndex,
+        double x,
+        double width,
+        double boxTop,
+        DocxTextAlignment alignment,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        double paragraphSpacingScale,
+        int pageNumber,
+        CancellationToken cancellationToken)
+    {
+        double? extentWidth = ReadEmuPoints(textBox.ExtentCxValue);
+        double? extentHeight = ReadEmuPoints(textBox.ExtentCyValue);
+        if (textMeasurer is null ||
+            textBox.BodyElements.Count == 0 ||
+            extentWidth is not { } fileWidth ||
+            fileWidth <= 0d ||
+            extentHeight is not { } fileHeight ||
+            fileHeight <= 0d)
+        {
+            return null;
+        }
+
+        ResolveInlineTextBoxContentInsets(textBox, out double insetLeft, out double insetTop, out double insetRight, out _);
+        double boxWidth = Math.Min(width, fileWidth * paragraphSpacingScale);
+        double contentWidth = Math.Max(1d, boxWidth - (insetLeft + insetRight) * paragraphSpacingScale);
+        var story = new DocxRelatedStory(
+            DocxRelatedStoryKind.TextBox,
+            "inline-textbox",
+            null,
+            textBox.BodyElements,
+            [],
+            [], null);
+        DocxRelatedStoryLayout storyLayout = CreateRelatedStoryLayout(
+            story,
+            storyIndex: -1,
+            contentWidth,
+            textMeasurer,
+            defaultTabStopPoints,
+            paragraphSpacingScale,
+            pageNumber: pageNumber,
+            pageCount: null,
+            cancellationToken: cancellationToken);
+        double boxX = alignment switch
+        {
+            DocxTextAlignment.Center => x + Math.Max(0, width - boxWidth) / 2d,
+            DocxTextAlignment.Right => x + Math.Max(0, width - boxWidth),
+            _ => x
+        };
+        double contentX = boxX + insetLeft * paragraphSpacingScale;
+        double contentTop = boxTop - insetTop * paragraphSpacingScale;
+        // Autofit-grow: the block grows when content exceeds the declared extent (Word
+        // default); shrinking behavior stays queued under autofit W6-b.
+        double boxHeight = Math.Max(fileHeight * paragraphSpacingScale, storyLayout.ContentHeight);
+        return new DocxInlineTextBoxLayout(
+            textBox,
+            boxX,
+            boxTop,
+            boxWidth,
+            boxHeight,
+            ShiftTextLines(storyLayout.TextLines, contentTop, contentX),
+            storyLayout.InlineImages
+                .Select(image => image with
+                {
+                    X = contentX + image.X,
+                    Y = contentTop + image.Y,
+                    PageIndex = pageNumber
+                })
+                .ToArray(),
+            ShiftTableRows(storyLayout.TableRows, contentTop, contentX),
+            sourceBlockIndex,
+            SourceParagraphIndex: 0,
+            StoryKind: null,
+            StoryVariantType: null);
+    }
     private static double ReadInsetEmuPoints(string? value, long defaultEmu)
     {
         return ReadEmuPoints(value) ?? OoxUnits.EmuToPoints(defaultEmu);

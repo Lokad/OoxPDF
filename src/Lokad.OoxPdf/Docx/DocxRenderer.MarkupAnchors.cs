@@ -279,6 +279,22 @@ internal sealed partial class DocxRenderer
             yield return row;
         }
 
+        foreach (DocxLayoutItem item in page.Items)
+        {
+            if (item is not DocxInlineTextBoxLayout box)
+            {
+                continue;
+            }
+
+            foreach (DocxTableRowLayout row in box.TableRows)
+            {
+                foreach (DocxTableRowLayout nested in EnumerateTableRows(row))
+                {
+                    yield return nested;
+                }
+            }
+        }
+
         foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
         {
             foreach (DocxTableRowLayout row in EnumerateFloatingDrawingTextBoxTableRows(story.FloatingDrawings))

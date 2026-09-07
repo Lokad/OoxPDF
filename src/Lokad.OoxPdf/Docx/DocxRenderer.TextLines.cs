@@ -44,6 +44,7 @@ internal sealed partial class DocxRenderer
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumeratePlacedRelatedStoryTextLines(page))
+            .Concat(EnumerateInlineTextBoxTextLines(page))
             .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(EnumeratePageFloatingDrawings(layout, pageIndex), map))
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
     }
@@ -125,10 +126,36 @@ internal sealed partial class DocxRenderer
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumeratePlacedRelatedStoryTextLines(page))
+            .Concat(EnumerateInlineTextBoxTextLines(page))
             .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(floatingDrawings, map))
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
     }
 
+    // Inline-textbox content lives in absolute flow space (placed at layout time), so
+    // anchor/snapshot/link consumers take box lines directly with the body offsets.
+    private static IEnumerable<DocxTextLineLayout> EnumerateInlineTextBoxTextLines(DocxLayoutPage page)
+    {
+        foreach (DocxLayoutItem item in page.Items)
+        {
+            if (item is not DocxInlineTextBoxLayout box)
+            {
+                continue;
+            }
+
+            foreach (DocxTextLineLayout line in box.TextLines)
+            {
+                yield return line;
+            }
+
+            foreach (DocxTableRowLayout row in box.TableRows)
+            {
+                foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
+                {
+                    yield return cellLine;
+                }
+            }
+        }
+    }
     private sealed record DocxTextEmissionLineSource(
         DocxTextLineLayout Line,
         bool IsStaticStory,
@@ -172,6 +199,17 @@ internal sealed partial class DocxRenderer
                     story.StoryLayout.Story.Kind.ToValueString(),
                     story.StoryLayout.Story.Id);
             }
+        }
+
+        foreach (DocxTextLineLayout line in EnumerateInlineTextBoxTextLines(page))
+        {
+            yield return new DocxTextEmissionLineSource(
+                line,
+                IsStaticStory: false,
+                "TextBox",
+                line.StoryVariantType,
+                "Body",
+                null);
         }
     }
 

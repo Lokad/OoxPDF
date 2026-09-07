@@ -141,6 +141,7 @@ internal sealed partial record DocxLayoutSnapshot(
             DocxTextLineLayout text => text.SourceBlockIndex,
             DocxInlineImageLayout image => image.SourceBlockIndex,
             DocxTableRowLayout row => row.Table.SourceBlockIndex,
+            DocxInlineTextBoxLayout box => box.SourceBlockIndex,
             _ => null
         };
     }
@@ -152,6 +153,7 @@ internal sealed partial record DocxLayoutSnapshot(
             DocxTextLineLayout text => (text.BaselineY, text.FontSize),
             DocxInlineImageLayout image => (image.Y, image.Height),
             DocxTableRowLayout row => (row.Y, row.Height),
+            DocxInlineTextBoxLayout box => (box.BoxTop, box.BoxHeight),
             _ => (0d, 0d)
         };
     }
@@ -630,7 +632,32 @@ internal sealed partial record DocxLayoutSnapshot(
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
                 image.StoryVariantType, TextLines: null, ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),
-            DocxTableRowLayout row => new DocxLayoutItemSnapshot(
+            DocxInlineTextBoxLayout box => new DocxLayoutItemSnapshot(
+                "InlineTextBox",
+                box.BoxX,
+                box.BoxTop,
+                box.BoxWidth,
+                box.BoxHeight,
+                TextLength: box.TextLines.Sum(line => line.Text.Length),
+                CellCount: 0,
+                columnIndex,
+                box.SourceBlockIndex,
+                box.SourceParagraphIndex,
+                SourceLineIndex: null,
+                LineHeightPoints: null,
+                AppliedBeforeSpacingPoints: null,
+                SingleLineHeightPoints: null,
+                ListLabelSingleLineHeightPoints: null,
+                BodyWindowsLineHeightPoints: null,
+                ListLabelWindowsLineHeightPoints: null,
+                EffectiveLineSpacingFactor: null,
+                LineSpacingFactorFloorApplied: null,
+                IsFirstParagraphLine: null,
+                PendingAfterSpacingPoints: null,
+                ParagraphBeforeSpacingPoints: null,
+                ParagraphAfterSpacingPoints: null,
+                ContextualSpacingSuppressed: null,
+                box.StoryVariantType, TextLines: box.TextLines.Select(line => ToSnapshot(line, [])).ToArray(), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),            DocxTableRowLayout row => new DocxLayoutItemSnapshot(
                 "TableRow",
                 row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
                 row.Y,
@@ -758,6 +785,7 @@ internal sealed partial record DocxLayoutSnapshot(
             DocxTextLineLayout text => (text.X, text.Width),
             DocxInlineImageLayout image => (image.X, image.Width),
             DocxTableRowLayout row => (row.Table.TableX, row.Table.ResolvedTableWidth),
+            DocxInlineTextBoxLayout box => (box.BoxX, box.BoxWidth),
             _ => (0d, 0d)
         };
     }

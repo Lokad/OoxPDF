@@ -630,7 +630,7 @@ internal sealed partial class DocxLayoutEngine
                     cursorY -= lineHeight;
                 }
             }
-            else if (paragraph.Images.Count == 0)
+            else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
             {
                 if (cursorY - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
                 {
@@ -671,6 +671,37 @@ internal sealed partial class DocxLayoutEngine
                     SourceParagraphIndex: 0, StoryKind: null, StoryVariantType: null));
                 activeColumnHasContent = true;
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
+            }
+
+            foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (cursorY - EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) < CurrentFrameBottom() && HasCurrentColumnContent())
+                {
+                    AdvanceColumnOrPage();
+                    EnsureFootnoteReserveForSourceBlock(elementIndex);
+                }
+
+                DocxInlineTextBoxLayout? textBoxLayout = CreateInlineTextBoxLayout(
+                    textBox,
+                    elementIndex,
+                    x,
+                    width,
+                    cursorY,
+                    effective.Alignment,
+                    textMeasurer,
+                    defaultTabStopPoints,
+                    paragraphSpacingScale,
+                    pages.Count + 1,
+                    cancellationToken);
+                if (textBoxLayout is null)
+                {
+                    continue;
+                }
+
+                currentItems.Add(textBoxLayout);
+                activeColumnHasContent = true;
+                cursorY -= textBoxLayout.BoxHeight + InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;

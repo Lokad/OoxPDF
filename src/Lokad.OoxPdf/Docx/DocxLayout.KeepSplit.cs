@@ -309,7 +309,7 @@ internal sealed partial class DocxLayoutEngine
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
             height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
         }
-        else if (paragraph.Images.Count == 0)
+        else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
         {
             height += lineHeight;
         }
@@ -319,6 +319,11 @@ internal sealed partial class DocxLayoutEngine
             double imageWidth = Math.Min(availableWidth, image.WidthPoints);
             double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
             height += imageHeight + InlineImageParagraphGapPoints;
+        }
+
+        foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
+        {
+            height += EstimateInlineTextBoxHeight(textBox, fixedScale) + InlineImageParagraphGapPoints;
         }
 
         return height;

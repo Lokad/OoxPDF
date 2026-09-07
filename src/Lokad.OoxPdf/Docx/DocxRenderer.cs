@@ -1141,6 +1141,9 @@ internal sealed partial class DocxRenderer
             case DocxTableRowLayout row:
                 RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
                 break;
+            case DocxInlineTextBoxLayout textBox:
+                RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+                break;
         }
     }
 

@@ -24,6 +24,7 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxInlineReference> InlineReferences { get; init; } = [];
     public IReadOnlyList<DocxCommentRange> CommentRanges { get; init; } = [];
     public IReadOnlyList<DocxRevisionRange> RevisionRanges { get; init; } = [];
+    public IReadOnlyList<DocxInlineTextBox> InlineTextBoxes { get; init; } = [];
     public IReadOnlyList<DocxFieldReference> FieldReferences { get; init; } = [];
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
@@ -547,6 +548,21 @@ internal sealed record DocxRunFonts(
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
 {
+    public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+}
+
+// An inline DrawingML textbox (wp:inline plus wps:txbx, no blip): unlike floating
+// drawings it has no page placement and joins body flow as a block. Extents and
+// insets are file values; the layout scales them into its space.
+internal sealed record DocxInlineTextBox(
+    string? ExtentCxValue,
+    string? ExtentCyValue,
+    string? TextBoxInsetLeftValue = null,
+    string? TextBoxInsetTopValue = null,
+    string? TextBoxInsetRightValue = null,
+    string? TextBoxInsetBottomValue = null)
+{
+    public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 }
 

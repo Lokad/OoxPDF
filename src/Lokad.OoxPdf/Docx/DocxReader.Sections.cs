@@ -171,6 +171,64 @@ internal sealed partial class DocxReader
         return images;
     }
 
+    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    // Inline DrawingML textboxes (wp:inline plus wps:txbx, no blip) parse beside inline
+    // pictures; the content joins body flow as a block at layout time.
+    private static IReadOnlyList<DocxInlineTextBox> ReadInlineTextBoxes(
+        XElement run,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPdfDocxMarkupMode markupMode,
+        DocxRevisionInfo? revision,
+        CancellationToken cancellationToken)
+    {
+        var textBoxes = new List<DocxInlineTextBox>();
+        foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (ReadDrawingImage(inline, package, relationships, revision) is not null)
+            {
+                continue;
+            }
+
+            XElement? textBoxContent = inline
+                .Descendants(WordprocessingNamespace + "txbxContent")
+                .FirstOrDefault();
+            if (textBoxContent is null)
+            {
+                continue;
+            }
+
+            XElement? extent = inline.Element(WordprocessingDrawingNamespace + "extent");
+            XElement? textBoxBodyProperties = inline
+                .Descendants(WordprocessingShapeNamespace + "bodyPr")
+                .FirstOrDefault();
+            textBoxes.Add(new DocxInlineTextBox(
+                (string?)extent?.Attribute("cx"),
+                (string?)extent?.Attribute("cy"),
+                (string?)textBoxBodyProperties?.Attribute("lIns"),
+                (string?)textBoxBodyProperties?.Attribute("tIns"),
+                (string?)textBoxBodyProperties?.Attribute("rIns"),
+                (string?)textBoxBodyProperties?.Attribute("bIns"))
+            {
+                Revisions = RevisionList(revision),
+                BodyElements = ReadRelatedStoryBodyElements(
+                    textBoxContent.Elements(),
+                    styles,
+                    numbering,
+                    new Dictionary<(string NumId, int Level), int>(),
+                    package,
+                    relationships,
+                    markupMode,
+                    cancellationToken)
+            });
+        }
+
+        return textBoxes;
+    }
+
     private static DocxInlineImage? ReadDrawingImage(
         XElement drawing,
         OoxPackage package,

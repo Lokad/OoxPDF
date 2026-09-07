@@ -106,6 +106,23 @@ internal sealed record DocxInlineImageLayout(
     string? StoryKind,
     string? StoryVariantType) : DocxLayoutItem;
 
+// An inline textbox laid out as a body-flow block. Coordinates are absolute flow
+// space (the box origin is known at layout time), so consumers use them directly
+// with the body offsets; no emission map applies.
+internal sealed record DocxInlineTextBoxLayout(
+    DocxInlineTextBox TextBox,
+    double BoxX,
+    double BoxTop,
+    double BoxWidth,
+    double BoxHeight,
+    IReadOnlyList<DocxTextLineLayout> TextLines,
+    IReadOnlyList<DocxInlineImageLayout> InlineImages,
+    IReadOnlyList<DocxTableRowLayout> TableRows,
+    int? SourceBlockIndex,
+    int? SourceParagraphIndex,
+    string? StoryKind,
+    string? StoryVariantType) : DocxLayoutItem;
+
 internal sealed record DocxTableRowLayout(
     DocxTableLayoutContext Table,
     int RowIndex,

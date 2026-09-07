@@ -39,6 +39,7 @@ internal sealed partial class DocxReader
             tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
+        var inlineTextBoxes = new List<DocxInlineTextBox>();
         var inlineReferences = new List<DocxInlineReference>();
         var commentRanges = new List<DocxCommentRange>();
         var openCommentRanges = new List<DocxCommentRangeStart>();
@@ -176,7 +177,7 @@ internal sealed partial class DocxReader
 
         FinalizeOpenComplexFields();
 
-        if (runs.Count == 0 && images.Count == 0)
+        if (runs.Count == 0 && images.Count == 0 && inlineTextBoxes.Count == 0)
         {
             DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
                 paragraphMarkRunProperties,
@@ -241,6 +242,7 @@ internal sealed partial class DocxReader
             WordWrap = resolvedParagraph.WordWrap,
             WordWrapValue = resolvedParagraph.WordWrapValue,
             StyleResolution = styleResolution,
+            InlineTextBoxes = inlineTextBoxes,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
             RevisionRanges = revisionRanges,
@@ -395,6 +397,7 @@ internal sealed partial class DocxReader
                     effectiveRevisions,
                     ref currentPageInstructionSeen);
                 images.AddRange(ReadInlineImages(run, package, relationships, revision));
+                inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
                 return;
             }
 
@@ -450,6 +453,7 @@ internal sealed partial class DocxReader
             }
 
             images.AddRange(ReadInlineImages(run, package, relationships, revision));
+            inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
         }
 
         void AddParagraphDisplayText(

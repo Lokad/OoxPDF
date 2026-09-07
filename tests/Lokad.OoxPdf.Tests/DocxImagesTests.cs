@@ -656,4 +656,116 @@ internal static class DocxImagesTests
         TestAssert.True(Math.Abs(mapped.BaselineY - yOffset - expectedY) < 0.000000001d, "Pre-compensated Y must land center-scaled through the body offset.");
         TestAssert.True(expectedY - (designY - yOffset) > 10d, "Center-scale must sit well above the first-pin prediction that stranded textbox text under its clip.");
     }
+
+    public static void DocxReaderReadsInlineTextBoxContent()
+    {
+        // Inline DrawingML textboxes must parse like floating ones (extent, bodyPr insets,
+        // txbxContent elements); today the reader drops them (no blip, no image).
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:drawing>
+                          <wp:inline>
+                            <wp:extent cx="3200400" cy="1097280"/>
+                            <wp:docPr id="1" name="TextBox 1"/>
+                            <a:graphic>
+                              <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                                <wps:wsp>
+                                  <wps:cNvSpPr txBox="1"/>
+                                  <wps:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></wps:spPr>
+                                  <wps:txbx>
+                                    <w:txbxContent>
+                                      <w:p><w:r><w:t>Box text</w:t></w:r></w:p>
+                                    </w:txbxContent>
+                                  </wps:txbx>
+                                  <wps:bodyPr lIns="182880" tIns="91440" rIns="182880" bIns="91440"/>
+                                </wps:wsp>
+                              </a:graphicData>
+                            </a:graphic>
+                          </wp:inline>
+                        </w:drawing>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        TestAssert.True(paragraph.Images.Count == 0, "An inline textbox carries no blip and must not parse as a picture.");
+        DocxInlineTextBox textBox = paragraph.InlineTextBoxes.Single();
+        TestAssert.Equal("3200400", textBox.ExtentCxValue ?? "?");
+        TestAssert.Equal("1097280", textBox.ExtentCyValue ?? "?");
+        TestAssert.Equal("182880", textBox.TextBoxInsetLeftValue ?? "?");
+        TestAssert.Equal("91440", textBox.TextBoxInsetTopValue ?? "?");
+        TestAssert.Equal("182880", textBox.TextBoxInsetRightValue ?? "?");
+        TestAssert.Equal("91440", textBox.TextBoxInsetBottomValue ?? "?");
+        DocxParagraph boxParagraph = ((DocxParagraphElement)textBox.BodyElements.Single()).Paragraph;
+        TestAssert.Equal("Box text", string.Concat(boxParagraph.Runs.Select(run => run.Text)));
+    }
+
+    public static void DocxWordCompatibleInlineTextBoxLaysOutScaledContentInFlow()
+    {
+        // Office A/B (w6-inline probe, Word-COM rendered): inline boxes join the scaled
+        // body flow uniformly (box 191.1 equals 252 times s, content 9.1pt), so the layout
+        // measures content scaled in the scaled content box and places it in flow.
+        const double printScale = 0.758834d;
+        DocxParagraph textBoxParagraph = DocxTests.CreateDocxLayoutParagraph(new string('X', 18), 10d, 12d);
+        var textBox = new DocxInlineTextBox("1371600", "457200", "91440", "45720", "91440", "45720")
+        {
+            BodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        DocxParagraph hostParagraph = DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(hostParagraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
+            .Create(document, scaled, CancellationToken.None);
+        DocxInlineTextBoxLayout box = layout.Pages[0].Items.OfType<DocxInlineTextBoxLayout>().Single();
+        TestAssert.True(Math.Abs(box.BoxWidth - 108d * printScale) < 0.001d, "Inline box width should scale uniformly with the page. Width=" + box.BoxWidth.ToString(CultureInfo.InvariantCulture));
+        DocxTextLineLayout line = box.TextLines.Single();
+        TestAssert.True(Math.Abs(line.Width - 90d * printScale) < 0.001d, "Inline box content should measure scaled like body text. Width=" + line.Width.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(line.X - (box.BoxX + 7.2d * printScale)) < 0.001d, "Inline box content should start at the scaled inset. X=" + line.X.ToString(CultureInfo.InvariantCulture));
+    }
 }
