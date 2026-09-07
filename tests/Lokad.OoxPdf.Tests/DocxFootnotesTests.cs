@@ -49,10 +49,13 @@ internal static class DocxFootnotesTests
             [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public edge comment body", 10d, 12d))],
             [],
             [], null);
+        // Near-edge clamp calibration: anchor = L - L * (1 - s) - 3.18 with s = 200 / 346.5,
+        // so L = 4 lands at -0.87 and clamps to 0.5 (L = 10 no longer reaches the edge
+        // under the lane-fit print scale).
         DocxDocument document = new(
             200d,
             240d,
-            10d,
+            4d,
             120d,
             20d,
             20d,

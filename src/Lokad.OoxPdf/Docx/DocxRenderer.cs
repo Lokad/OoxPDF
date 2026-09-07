@@ -42,12 +42,9 @@ internal sealed record DocxMarkupBalloonPlacementSnapshot(
 internal sealed partial class DocxRenderer
 {
     internal const string DefaultDocumentTypefaceRequest = DocxFontFallbackRules.DefaultDocumentTypefaceRequest;
-    private const double WordCompatibleAllMarkupPrintScale = 0.842391d;
     private const double WordCompatibleAllMarkupLineMetricScale = 0.79359971328d;
-    private const double WordCompatibleAllMarkupTextXOffsetPoints = -16.15d;
     private const double WordCompatibleAllMarkupTextBaselineYOffsetPoints = 69.58d;
     private const double WordCompatibleAllMarkupMaxBodyTextFontSizePoints = 11.625d;
-    private const double WordCompatibleAllMarkupTerminalLineSpaceFontSizePoints = DocxDefaults.FontSizePoints * WordCompatibleAllMarkupPrintScale;
     private const double WordCompatibleAllMarkupBodyPositioningCharacterSpacingPoints = 0.071d;
     private const double WordCompatibleAllMarkupHeadingPositioningCharacterSpacingPoints = 0.043d;
     private const double WordCompatibleAllMarkupPunctuationPositioningCharacterSpacingPoints = 0.102d;
@@ -58,12 +55,13 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupBodyXOffsetDecayPoints = 55.0d;
     private const double WordCompatibleAllMarkupDeletionXOffsetPoints = 2.707d;
     private const double WordCompatibleAllMarkupInsertionXOffsetPoints = 2.140d;
-    private const double WordCompatibleAllMarkupBalloonAnchorYOffsetPoints = 84.84d;
+    // Balloon title lands on the anchor row minus ~0.5 (Office: dense/c14/mirrored/threaded refs).
+    // = text baseline offset (69.58) + title rule (top inset 11.15 - height 20.48 + first baseline 11.27 + 0.5).
+    private const double WordCompatibleAllMarkupBalloonAnchorYOffsetPoints = 72.02d;
     private const double WordCompatibleAllMarkupBalloonHeightPoints = 20.48d;
     private const double WordCompatibleAllMarkupBalloonTopInsetPoints = 11.15d;
     private const double WordCompatibleAllMarkupConnectorStrokeWidthPoints = 0.475d;
     private const double WordCompatibleAllMarkupConnectorBodyAnchorInsetPoints = 3.18d;
-    private const double WordCompatibleAllMarkupBalloonTextFontSizePoints = 6.975d;
     private const double WordCompatibleAllMarkupBalloonTextInsetXPoints = 3.25d;
     private const double WordCompatibleAllMarkupBalloonTitlePositioningCharacterSpacingPoints = 0.03357d;
     private const double WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints = 2.541d;
@@ -71,7 +69,7 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints = -2.968d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints = 11.27d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints = WordCompatibleAllMarkupBalloonHeightPoints - WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints;
-    private const double WordCompatibleAllMarkupCommentThreadReplyHeightPoints = WordCompatibleAllMarkupBalloonTextFontSizePoints * 1.2d;
+    private const double WordCompatibleAllMarkupCommentThreadReplyHeightPoints = 8.37d;
     private const double WordCompatibleAllMarkupCommentThreadSeparatorYOffsetPoints = 1.9d;
     private const int WordCompatibleAllMarkupCommentThreadMaxSeparatorLineCount = 2;
     private const double WordCompatibleAllMarkupLaneBackgroundRightBleedPoints = 0.37d;
@@ -162,7 +160,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
-        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode, effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
     }
 
@@ -170,7 +168,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -196,7 +194,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
@@ -298,7 +296,102 @@ internal sealed partial class DocxRenderer
 
     private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document)
     {
-        return markupContext.ApplyDocumentSettings(document.Settings);
+        DocxMarkupContext effective = markupContext.ApplyDocumentSettings(document.Settings);
+        double printScale = ResolveWordCompatiblePrintScale(document, effective);
+        // Office: body X lands at margin times scale, so the uniform shift is margin times (scale - 1).
+        double xOffset = effective.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
+            effective.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
+            effective.ExpandsMarkupMargin
+            ? -document.MarginLeftPoints * (1d - printScale)
+            : 0d;
+        return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset };
+    }
+
+    private const double WordCompatibleBalloonLaneWidthPoints = 266.5d;
+
+    internal static double ResolveWordCompatiblePrintScale(DocxDocument document, DocxMarkupContext markupContext)
+    {
+        // Office A/B (print-with-balloons probes across margins, orientations, and content):
+        // Word reserves a fixed balloon lane beside the body and scales the page so
+        // left margin + body + lane fits the paper width. Revisions alone balloon nothing
+        // and print unscaled.
+        if (markupContext.Mode != OoxPdfDocxMarkupMode.AllMarkup ||
+            markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
+            !markupContext.ExpandsMarkupMargin ||
+            !HasWordCompatibleBalloonContent(document, markupContext))
+        {
+            return 1d;
+        }
+
+        double bodyWidth = document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints;
+        double designWidth = document.MarginLeftPoints + bodyWidth + WordCompatibleBalloonLaneWidthPoints;
+        if (designWidth <= 0d)
+        {
+            return 1d;
+        }
+
+        return document.PageWidthPoints / designWidth;
+    }
+
+    private static bool HasWordCompatibleBalloonContent(DocxDocument document, DocxMarkupContext markupContext)
+    {
+        if (markupContext.RendersCommentBalloons &&
+            document.RelatedStories.Any(story => story.Kind == DocxRelatedStoryKind.Comment))
+        {
+            return true;
+        }
+
+        return markupContext.RendersRevisionBalloons && HasNonVoidPropertyChangeRevision(document);
+    }
+
+    private static bool HasNonVoidPropertyChangeRevision(DocxDocument document)
+    {
+        foreach (DocxParagraph paragraph in document.Paragraphs)
+        {
+            if (HasNonVoidPropertyChange(paragraph.Revisions))
+            {
+                return true;
+            }
+        }
+
+        foreach (DocxTable table in document.Tables)
+        {
+            if (HasNonVoidPropertyChange(table.Revisions))
+            {
+                return true;
+            }
+
+            foreach (DocxTableRow row in table.Rows)
+            {
+                if (HasNonVoidPropertyChange(row.Revisions))
+                {
+                    return true;
+                }
+
+                foreach (DocxTableCell cell in row.Cells)
+                {
+                    if (HasNonVoidPropertyChange(cell.Revisions))
+                    {
+                        return true;
+                    }
+
+                    foreach (DocxParagraph paragraph in cell.Paragraphs)
+                    {
+                        if (HasNonVoidPropertyChange(paragraph.Revisions))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasNonVoidPropertyChange(IReadOnlyList<DocxRevisionInfo> revisions)
+    {
+        return revisions.Any(revision => IsPropertyChangeRevision(revision.Kind) && revision.PropertyElementNames.Count != 0);
     }
 
     private static IDocxTextMeasurer? ResolveLayoutTextMeasurer(DocxFontResources fontResources, DocxMarkupContext markupContext)
@@ -313,11 +406,7 @@ internal sealed partial class DocxRenderer
 
     private static double ResolveTextEmissionFontScale(DocxMarkupContext markupContext)
     {
-        return markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
-            markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
-            markupContext.ExpandsMarkupMargin
-            ? WordCompatibleAllMarkupPrintScale
-            : 1d;
+        return markupContext.WordCompatiblePrintScale;
     }
 
     private static double ResolveTextEmissionBaselineOffset(DocxMarkupContext markupContext)
@@ -331,11 +420,7 @@ internal sealed partial class DocxRenderer
 
     private static double ResolveTextEmissionXOffset(DocxMarkupContext markupContext)
     {
-        return markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
-            markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
-            markupContext.ExpandsMarkupMargin
-            ? WordCompatibleAllMarkupTextXOffsetPoints
-            : 0d;
+        return markupContext.WordCompatibleTextXOffset;
     }
 
     private static bool UsesWordCompatibleAllMarkupTextProfile(DocxMarkupContext markupContext)
@@ -384,7 +469,7 @@ internal sealed partial class DocxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken);
         DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);

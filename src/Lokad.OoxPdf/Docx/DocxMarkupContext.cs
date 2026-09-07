@@ -15,7 +15,9 @@ internal sealed record DocxMarkupContext(
     bool ApproximatesFormattingRevisions,
     bool RendersCommentBalloons,
     bool RendersRevisionBalloons,
-    bool ExpandsMarkupMargin)
+    bool ExpandsMarkupMargin,
+    double WordCompatiblePrintScale = 1d,
+    double WordCompatibleTextXOffset = 0d)
 {
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)
     {

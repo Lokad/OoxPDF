@@ -508,7 +508,7 @@ internal sealed partial class DocxRenderer
     {
         double fontSize = GetSegmentFontSize(segment, line.FontSize) * fontScale;
         return ShouldCapWordCompatibleAllMarkupTextFontSize(fontSize, useWordCompatibleTextProfile)
-            ? WordCompatibleAllMarkupMaxBodyTextFontSizePoints
+            ? 15d * fontScale
             : fontSize;
     }
 
@@ -520,7 +520,7 @@ internal sealed partial class DocxRenderer
     {
         double fontSize = GetSegmentFontSize(segment, line.FontSize) * fontScale;
         return ShouldCapWordCompatibleAllMarkupTextFontSize(fontSize, useWordCompatibleTextProfile)
-            ? WordCompatibleAllMarkupTerminalLineSpaceFontSizePoints
+            ? 11d * fontScale
             : fontSize;
     }
 

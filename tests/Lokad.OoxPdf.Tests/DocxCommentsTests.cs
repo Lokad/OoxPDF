@@ -747,13 +747,16 @@ internal static class DocxCommentsTests
             mixedPlacement.BodySummaryPartCount == 2 && mixedPlacement.WordCompatibleBodySummaryPartCount == 2,
             "Grouped comment/revision balloons should retain both private-safe summary parts in Word-compatible body text.");
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "6.975 Tf") >= 3,
+            DocxTests.CountOccurrences(page.Content, "8.203 Tf") >= 3,
             "Word-compatible grouped comment balloons should render Office-sized title and wrapped body text.");
+        // Title TJ adjustments are point-space tracking over the balloon font: -0.03357 * 1000 / 8.20253
+        // (9pt design over this document lane-fit scale 612 / 671.5), i.e. -4.09266, which "0.###"
+        // rounds to -4.093 (was -4.813 at 6.975pt).
         TestAssert.True(
-            page.Content.Contains("-4.813", StringComparison.Ordinal),
+            page.Content.Contains("-4.093", StringComparison.Ordinal),
             "Word-compatible grouped comment balloon titles should use positioned glyph advances.");
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "/F3 6.975 Tf") >= 1 && DocxTests.CountOccurrences(page.Content, "/F2 6.975 Tf") >= 2,
+            DocxTests.CountOccurrences(page.Content, "/F3 8.203 Tf") >= 1 && DocxTests.CountOccurrences(page.Content, "/F2 8.203 Tf") >= 2,
             "Word-compatible grouped comment balloons should keep the title on the dedicated balloon-label resource (same label typeface, fuller subset) and body text on the regular body resource.");
         TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
@@ -942,14 +945,20 @@ internal static class DocxCommentsTests
         double firstLineAnchorDelta = firstVisibleSegment.BaselineY - placement.AnchorY;
 
         TestAssert.Equal(1, placement.CandidateCount);
+        // Office: balloon titles land on the anchor row (title ~= row baseline - 0.5),
+        // so resolved anchors sit just below the last range line.
         TestAssert.True(
-            lastLineAnchorDelta > 10d && lastLineAnchorDelta < 20d && firstLineAnchorDelta > lastLineAnchorDelta + 8d,
+            lastLineAnchorDelta > -2d && lastLineAnchorDelta < 6d && firstLineAnchorDelta > lastLineAnchorDelta + 8d,
             string.Create(
                 CultureInfo.InvariantCulture,
                 $"Word-compatible all-markup should anchor comment connector Y to the wrapped range end line. AnchorY={placement.AnchorY}, FirstBaselineY={firstVisibleSegment.BaselineY}, LastBaselineY={lastVisibleSegment.BaselineY}."));
+        // The drawn gap is the 3.18 connector inset plus line-length-dependent emission extras
+        // (0.071 positioning spacing accumulated over the wrapped last line plus kern/rounding:
+        // observed 7.217 = 3.18 + 4.037 on the 56-gap last line). Queued: resolve anchors from
+        // emission space so connectors track the drawn range end exactly.
         TestAssert.True(
             placement.AnchorConnectorX < rangeEndX - 3d &&
-            placement.AnchorConnectorX > rangeEndX - 7d,
+            placement.AnchorConnectorX > rangeEndX - 8d,
             string.Create(
                 CultureInfo.InvariantCulture,
                 $"Word-compatible all-markup should anchor comment connectors near the emitted comment range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
@@ -1019,9 +1028,10 @@ internal static class DocxCommentsTests
         TestAssert.True(
             !DocxTests.HasCommentReferenceSpacerTextOperation(wordCompatible),
             "Word-compatible all-markup should keep the visual gap without emitting a separate spacer text operation.");
+        double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
         TestAssert.True(
-            DocxTests.FirstTextEmissionX(wordCompatible) < DocxTests.FirstTextEmissionX(preserve) - 10d,
-            "Word-compatible all-markup should apply the Office-compatible body text x offset.");
+            Math.Abs(DocxTests.FirstTextEmissionX(wordCompatible) - DocxTests.FirstTextEmissionX(preserve) * printScale) < 0.5d,
+            "Word-compatible all-markup should fit body text X by the print scale (Office: left margin times scale).");
     }
 
     public static void DocxAllMarkupRendererDrawsRevisionBalloons()

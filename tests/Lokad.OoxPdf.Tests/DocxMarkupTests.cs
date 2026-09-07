@@ -37,6 +37,78 @@ internal static class DocxMarkupTests
         TestAssert.Equal(0d, allLayoutPage.MarkupMarginReservePoints);
     }
 
+    public static void DocxWordCompatiblePrintScaleReservesBalloonLane()
+    {
+        // Office A/B (print-with-balloons probes): Word scales the page so left margin + body +
+        // a fixed balloon lane fits the paper width.
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
+        {
+            RelatedStories =
+            [
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+            ]
+        };
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
+
+        TestAssert.True(Math.Abs(scale - (612d / 806.5d)) < 0.000000001d, "Print scale should fit margin, body, and balloon lane to the paper.");
+    }
+
+    public static void DocxWordCompatiblePrintScaleSkipsBalloonlessDocuments()
+    {
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
+
+    public static void DocxWordCompatiblePrintScaleSkipsInsertionOnlyRevisions()
+    {
+        // Office A/B (revisions-only probe): ins/del balloon nothing and print unscaled.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Dense ins", 5d, 5d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "A", "2026-06-10T00:00:00Z", "ins", null, [])
+            ]
+        };
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], []);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
+
+    public static void DocxWordCompatiblePrintScaleKeepsFormattingRevisions()
+    {
+        // Office A/B (formatting-only probe): Word balloons formatting revisions and scales.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Formatted run", 5d, 5d) with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "9", "A", "2026-06-10T00:00:00Z", "rPrChange", null, propertyElementNames: ["b"])
+            ]
+        };
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], []);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        TestAssert.True(Math.Abs(DocxRenderer.ResolveWordCompatiblePrintScale(document, context) - (612d / 806.5d)) < 0.000000001d, "Formatting revisions should reserve the balloon lane.");
+    }
+
+    public static void DocxWordCompatiblePrintScaleStaysUnitOutsideWordCompatible()
+    {
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
+        {
+            RelatedStories =
+            [
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+            ]
+        };
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
+
     public static void DocxMarkupReserveMarginGeometryShrinksBodyAndPreservesMediaBox()
     {
         string input = DocxTests.WriteTrackedChangeModeProbeDocx();
@@ -173,7 +245,14 @@ internal static class DocxMarkupTests
     public static void DocxMarkupWordCompatibleGeometryUsesReserveMarginFallback()
     {
         string input = DocxTests.WriteTrackedChangeModeProbeDocx();
-        DocxDocument allDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument allDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup) with
+        {
+            // Balloon content triggers the word-compatible print scale (Office: print shrinks iff balloons show).
+            RelatedStories =
+            [
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+            ]
+        };
         var reserveRenderer = new DocxRenderer(
             fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
@@ -330,6 +409,10 @@ internal static class DocxMarkupTests
             [],
             [])
         {
+            RelatedStories =
+            [
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+            ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         DocxTextEmissionSnapshot preserve = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -389,6 +472,10 @@ internal static class DocxMarkupTests
             [],
             [])
         {
+            RelatedStories =
+            [
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+            ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
@@ -413,8 +500,8 @@ internal static class DocxMarkupTests
 
         TestAssert.Equal(8d, reserveSecond.AppliedBeforeSpacingPoints ?? -1d);
         TestAssert.True(
-            Math.Abs((wordSecond.AppliedBeforeSpacingPoints ?? 0d) - 6.739d) < 0.001d,
-            "Word-compatible all-markup should scale paragraph spacing with the print profile.");
+            Math.Abs((wordSecond.AppliedBeforeSpacingPoints ?? 0d) - (8d * 612d / 671.5d)) < 0.01d,
+            "Word-compatible all-markup should scale paragraph spacing with the print profile (8pt over the 612/(72+333+266.5) lane-fit scale).");
     }
 
     public static void DocxWordCompatibleAllMarkupScalesFloatingTextBoxSpacing()
@@ -1027,8 +1114,9 @@ internal static class DocxMarkupTests
             .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
+        // 9pt balloon design over this document lane-fit scale (612/(72+333+266.5)).
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "6.975 Tf") >= 2,
+            DocxTests.CountOccurrences(page.Content, "8.203 Tf") >= 2,
             "Word-compatible revision balloons should render Office-sized title and body text.");
         TestAssert.True(
             !page.Content.Contains(" 5.5 Tf", StringComparison.Ordinal),
@@ -1094,8 +1182,9 @@ internal static class DocxMarkupTests
         PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         TestAssert.Equal(1, placement.WordCompatibleBodySummaryPartCount);
+        // 9pt balloon design over this document lane-fit scale (612/(72+333+266.5)).
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "6.975 Tf") >= 4,
+            DocxTests.CountOccurrences(page.Content, "8.203 Tf") >= 4,
             "Long Word-compatible revision balloons should render title, first body line, continuation line, and terminal spacing at the Office-sized font.");
         TestAssert.True(
             DocxTests.CountOccurrences(page.Content, "] TJ") >= 2,

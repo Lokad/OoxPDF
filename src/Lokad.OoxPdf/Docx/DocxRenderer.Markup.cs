@@ -765,7 +765,8 @@ internal sealed partial class DocxRenderer
             AnchorY = group.Max(candidate => candidate.AnchorY),
             AnchorConnectorX = allRevisions
                 ? group.Select(candidate => candidate.AnchorConnectorX).DefaultIfEmpty(group[0].AnchorConnectorX).Average()
-                : group[0].AnchorConnectorX,
+                // Office: connectors attach at the range end, i.e. the last range line (lowest anchor).
+                : (group.MinBy(candidate => candidate.AnchorY)?.AnchorConnectorX ?? group[0].AnchorConnectorX),
             AnchorLeftX = group.Min(candidate => candidate.AnchorLeftX),
             AnchorRightX = group.Max(candidate => candidate.AnchorRightX),
             CandidateCount = group.Sum(candidate => candidate.CandidateCount),
@@ -977,7 +978,7 @@ internal sealed partial class DocxRenderer
         if (ShouldRenderWordCompatibleBalloonText(placement, markupContext))
         {
             RenderWordCompatibleCommentThreadSeparators(placement, graphics);
-            RenderWordCompatibleBalloonText(placement, graphics, labelResource, bodyResource);
+            RenderWordCompatibleBalloonText(placement, graphics, labelResource, bodyResource, markupContext.WordCompatiblePrintScale);
             return;
         }
 
@@ -1028,11 +1029,12 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonPlacement placement,
         PdfGraphicsBuilder graphics,
         DocxRunFontResource labelResource,
-        DocxRunFontResource bodyResource)
+        DocxRunFontResource bodyResource,
+        double wordCompatiblePrintScale)
     {
         string title = placement.WordCompatibleTitle ?? placement.Title;
         string body = placement.WordCompatibleBody ?? string.Empty;
-        double fontSize = WordCompatibleAllMarkupBalloonTextFontSizePoints;
+        double fontSize = 9d * wordCompatiblePrintScale;
         double textX = placement.X + WordCompatibleAllMarkupBalloonTextInsetXPoints;
         double firstBaselineY = ResolveWordCompatibleBalloonFirstBaselineY(placement);
         double lineGap = fontSize * 1.2d;

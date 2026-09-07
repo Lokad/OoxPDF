@@ -161,13 +161,13 @@ internal sealed partial class DocxRenderer
             DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
                 string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
             if (range is not null &&
-                TryResolveWordCompatibleCommentRangeBounds(line, range, out double startX, out double endX))
+                TryResolveWordCompatibleCommentRangeBounds(line, range, ResolveTextEmissionXOffset(markupContext), out double startX, out double endX))
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics);
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
-                TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, out startX, out endX))
+                TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, ResolveTextEmissionXOffset(markupContext), out startX, out endX))
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics);
@@ -186,6 +186,7 @@ internal sealed partial class DocxRenderer
     private static bool TryResolveWordCompatibleCommentReferenceMarkerBounds(
         DocxTextLineLayout line,
         DocxInlineReference reference,
+        double wordCompatibleXOffset,
         out double startX,
         out double endX)
     {
@@ -197,7 +198,7 @@ internal sealed partial class DocxRenderer
             return false;
         }
 
-        double centerX = anchorX + WordCompatibleAllMarkupTextXOffsetPoints;
+        double centerX = anchorX + wordCompatibleXOffset;
         startX = centerX - WordCompatibleAllMarkupCommentReferenceMarkerWidthPoints / 2d;
         endX = centerX + WordCompatibleAllMarkupCommentReferenceMarkerWidthPoints / 2d;
         return endX > startX;
@@ -206,6 +207,7 @@ internal sealed partial class DocxRenderer
     private static bool TryResolveWordCompatibleCommentRangeBounds(
         DocxTextLineLayout line,
         DocxCommentRange range,
+        double wordCompatibleXOffset,
         out double startX,
         out double endX)
     {
@@ -235,11 +237,9 @@ internal sealed partial class DocxRenderer
             return false;
         }
 
-        startX = layoutStartX +
-            WordCompatibleAllMarkupTextXOffsetPoints -
+        startX = layoutStartX + wordCompatibleXOffset -
             WordCompatibleAllMarkupCommentRangeStartInsetPoints;
-        endX = layoutEndX +
-            WordCompatibleAllMarkupTextXOffsetPoints -
+        endX = layoutEndX + wordCompatibleXOffset -
             WordCompatibleAllMarkupCommentRangeEndInsetPoints;
         return endX > startX;
     }

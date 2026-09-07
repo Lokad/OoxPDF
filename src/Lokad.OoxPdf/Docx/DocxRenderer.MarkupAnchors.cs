@@ -91,25 +91,24 @@ internal sealed partial class DocxRenderer
         if (range is not null)
         {
             if (UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-                TryResolveCommentRangeEndAnchor(line, anchorTextLines, paragraph, range, out _, out double wordCompatibleRangeEndX))
+                TryResolveCommentRangeEndAnchor(line, anchorTextLines, paragraph, range, out DocxTextLineLayout anchorLine, out double wordCompatibleRangeEndX))
             {
-                return wordCompatibleRangeEndX +
-                    WordCompatibleAllMarkupTextXOffsetPoints -
+                return wordCompatibleRangeEndX + ResolveTextEmissionXOffset(markupContext) -
                     WordCompatibleAllMarkupConnectorBodyAnchorInsetPoints;
             }
 
             if (TryResolveSourceOffsetAnchorX(line, range.StartSourceRunIndex, range.StartTextOffset, out double startX))
             {
-                return startX;
+                return startX + ResolveTextEmissionXOffset(markupContext);
             }
 
             if (TryResolveSourceOffsetAnchorX(line, range.EndSourceRunIndex, range.EndTextOffset, out double endX))
             {
-                return endX;
+                return endX + ResolveTextEmissionXOffset(markupContext);
             }
         }
 
-        return ResolveInlineReferenceAnchorX(line, reference);
+        return ResolveInlineReferenceAnchorX(line, reference) + ResolveTextEmissionXOffset(markupContext);
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateCommentAnchorSearchLines(

@@ -1774,8 +1774,10 @@ internal static class DocxTablesMarkupTests
             }
             else
             {
+                // Office: balloon titles land on the anchor row (title ~= row baseline - 0.5),
+                // so the resolved anchor sits 72.02 - 69.58 = 2.44 below the emitted baseline by construction.
                 TestAssert.True(
-                    anchorDelta > 10d && anchorDelta < 20d,
+                    anchorDelta > 0d && anchorDelta < 6d,
                     string.Create(
                         CultureInfo.InvariantCulture,
                         $"Word-compatible all-markup should anchor {flowName} comment connector Y to the story table-cell line. AnchorY={placement.AnchorY}, BaselineY={baselineY}."));
@@ -1854,12 +1856,16 @@ internal static class DocxTablesMarkupTests
         DocxTextEmissionSegmentSnapshot[] visibleSegments = line.Segments
             .Where(segment => !segment.IsTerminalLineSpace)
             .ToArray();
+        // Emission snapshots are output-space (segment X already includes the uniform print shift),
+        // so the emitted range end is X + advance with no extra print-scale factor.
         double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].AdvanceProfile.PlannedEmittedAdvance;
         double baselineY = visibleSegments[0].BaselineY;
         double tableLineAnchorDelta = baselineY - placement.AnchorY;
 
+        // Office: balloon titles land on the anchor row (title ~= row baseline - 0.5),
+        // so the resolved anchor sits 72.02 - 69.58 = 2.44 below the emitted baseline by construction.
         TestAssert.True(
-            tableLineAnchorDelta > 10d && tableLineAnchorDelta < 20d,
+            tableLineAnchorDelta > 0d && tableLineAnchorDelta < 6d,
             string.Create(
                 CultureInfo.InvariantCulture,
                 $"Word-compatible all-markup should anchor table comment connector Y to the table-cell line after the Office-compatible vertical offset. AnchorY={placement.AnchorY}, BaselineY={baselineY}."));
