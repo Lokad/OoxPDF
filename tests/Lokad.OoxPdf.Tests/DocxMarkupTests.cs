@@ -549,8 +549,8 @@ internal static class DocxMarkupTests
         TestAssert.True(wordTabs[0].Text.Contains('\t'), "The first narrowed review line should retain the authored tab field.");
         TestAssert.True(wordTabs[1].Text.StartsWith("Theta", StringComparison.Ordinal), "The narrowed review body should wrap after the tab field without losing following text.");
         TestAssert.True(
-            Math.Abs(wordTabs[0].Segments[1].X - (wordTabs[0].Segments[0].X + 36d)) < 0.001d,
-            "Tab field text should keep the default-tab stop origin after all-markup narrowing.");
+            Math.Abs(wordTabs[0].Segments[1].X - (wordTabs[0].Segments[0].X + 36d * 0.842391d)) < 0.001d,
+            "Tab field text should advance to the scaled default-tab stop origin after all-markup narrowing. X=" + wordTabs[0].Segments[1].X);
 
         DocxParagraph punctuation = DocxTests.CreateDocxLayoutParagraph("Alpha, beta; gamma: delta. Epsilon zeta eta theta iota kappa lambda.", 10d, 12d);
         DocxDocument punctuationDocument = DocxTests.CreateAllMarkupWrapProbeDocument([punctuation]);

@@ -71,7 +71,7 @@ internal sealed partial class DocxLayoutEngine
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
                 double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count();
+                int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count();
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                 contentHeight += lineCount * lineHeight;
@@ -208,7 +208,7 @@ internal sealed partial class DocxLayoutEngine
                     fontSize,
                     textMeasurer,
                     ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale),
-                    defaultTabStopPoints,
+                    defaultTabStopPoints * paragraphSpacingScale,
                     allowOverwideTokenBreaks: true,
                     dynamicFieldPageNumber: pageNumber).ToArray();
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, wrappedLines.Length);
@@ -220,7 +220,7 @@ internal sealed partial class DocxLayoutEngine
                         cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                     }
 
-                    double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints, pageNumber);
+                    double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pageNumber);
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -239,7 +239,7 @@ internal sealed partial class DocxLayoutEngine
                         fontSize,
                         textMeasurer,
                         ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale),
-                        defaultTabStopPoints,
+                        defaultTabStopPoints * paragraphSpacingScale,
                         pageNumber);
                     lineShape = FitTableCellLineText(lineShape, paragraphWidth);
                     lines.Add(new DocxTextLineLayout(
@@ -414,7 +414,7 @@ internal sealed partial class DocxLayoutEngine
                     double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
                     double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                    cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
+                    cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
                 }
                 else if (paragraph.Images.Count == 0)
                 {
@@ -595,7 +595,7 @@ internal sealed partial class DocxLayoutEngine
             double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
             height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
-            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
+            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
         }
         else if (paragraph.Images.Count == 0)
         {

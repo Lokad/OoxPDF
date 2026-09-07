@@ -112,13 +112,13 @@ internal sealed partial class DocxLayoutEngine
         double paragraphWidth = Math.Max(1d, bodyWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
         double continuationParagraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
         DocxTextRun firstRun = paragraph.Runs[0];
-        DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber).ToArray();
+        DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber).ToArray();
         var layouts = new List<DocxTextLineLayout>(lines.Length);
         bool firstLine = true;
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             DocxWrappedTextLine line = lines[lineIndex];
-            double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints, pageNumber);
+            double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber);
             double lineX = effective.Alignment switch
             {
                 DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -138,7 +138,7 @@ internal sealed partial class DocxLayoutEngine
                 fontSize,
                 textMeasurer,
                 ScaleTabStopPositions(effective.TabStops, fixedScale),
-                defaultTabStopPoints,
+                defaultTabStopPoints * fixedScale,
                 pageNumber);
             layouts.Add(new DocxTextLineLayout(
                 lineShape.Text,

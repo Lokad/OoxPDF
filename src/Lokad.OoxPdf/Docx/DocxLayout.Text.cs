@@ -58,10 +58,9 @@ internal sealed partial class DocxLayoutEngine
         return paragraph.Runs.Count == 0 ? DocxDefaults.FontSizePoints : paragraph.Runs.Max(run => run.EffectiveProperties.FontSize);
     }
 
-    // W6-e: explicit tab-stop positions join scaled space (Office: margin-relative design
-    // offsets scale uniformly, w6-tabstop probe); fixedScale reuses the layout spacing
-    // scale (identical in every mode). Default intervals stay unscaled per the
-    // narrowed-body special-tokens pin (unprobed either way).
+    // W6-e: tab-stop positions join scaled space (Office: margin-relative design offsets
+    // scale uniformly - explicit stops per the w6-tabstop probe, default intervals per the
+    // w6-deftab probe); fixedScale reuses the layout spacing scale (identical in every mode).
     private static IReadOnlyList<DocxTabStop> ScaleTabStopPositions(IReadOnlyList<DocxTabStop> tabStops, double fixedScale)
     {
         if (Math.Abs(fixedScale - 1d) < 0.000000001d)
