@@ -63,6 +63,15 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupConnectorStrokeWidthPoints = 0.475d;
     private const double WordCompatibleAllMarkupConnectorBodyAnchorInsetPoints = 3.18d;
     private const double WordCompatibleAllMarkupBalloonTextInsetXPoints = 3.25d;
+    // Office A/B (W5-X1 right-margin probes w5-xr72/w5-xr207 plus dense/landscape refs):
+    // Word balloon text starts at (bodyEndDesign + gap) times the lane-fit scale
+    // (implied gap 35.1/35.6/36.0/35.8 across the four datasets).
+    private const double WordCompatibleAllMarkupBalloonLaneGapPoints = 35.6d;
+    // Office A/B (same datasets plus dense balloon rects): balloon bodies are 233pt design
+    // wide (R72 176.6, R207 212.4, dense 14x 180.9: implied 232.7/233.0/233.1), and the gray
+    // lane is 259.4pt design wide ending at the page edge (259.2/259.5/259.5).
+    private const double WordCompatibleAllMarkupBalloonBodyWidthPoints = 233d;
+    private const double WordCompatibleAllMarkupLaneWidthPoints = 259.4d;
     private const double WordCompatibleAllMarkupBalloonTitlePositioningCharacterSpacingPoints = 0.03357d;
     private const double WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints = 2.541d;
     private const double WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints = -0.02186d;

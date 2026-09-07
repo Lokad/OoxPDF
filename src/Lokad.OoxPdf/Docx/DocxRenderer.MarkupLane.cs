@@ -35,6 +35,13 @@ internal sealed partial class DocxRenderer
         double x = ShouldUseLeftMarkupLane(page)
             ? WordCompatibleAllMarkupLaneBackgroundRightBleedPoints
             : page.Width - width - WordCompatibleAllMarkupLaneBackgroundRightBleedPoints;
+        if (!ShouldUseLeftMarkupLane(page) &&
+            Math.Abs(markupContext.WordCompatiblePrintScale - 1d) >= 0.000000001d)
+        {
+            // Office (W5-X1): the gray lane is 259.4pt design wide ending at the page edge.
+            width = WordCompatibleAllMarkupLaneWidthPoints * markupContext.WordCompatiblePrintScale;
+            x = page.Width - width - WordCompatibleAllMarkupLaneBackgroundRightBleedPoints;
+        }
         graphics.SetFillRgb(242, 242, 242);
         graphics.FillRectangle(x, bottom, width, height);
     }

@@ -228,6 +228,65 @@ internal static class DocxMarkupTests
         TestAssert.True(reserveRenderer.InspectMarkupBalloons(allDocument).All(placement => placement.X > reserveLayoutPage.Width - reserveLayoutPage.MarginRight + 4d), "Right-side balloon bodies should leave a connector stem inside the reserved review margin.");
     }
 
+    public static void DocxWordCompatibleBalloonLaneTracksScaledBodyEnd()
+    {
+        // Office A/B (W5-X1 right-margin probes w5-xr72/w5-xr207): Word balloon text starts at
+        // (bodyEndDesign + ~35.6) times the lane-fit scale (R72: 436.42; R207: 401.57). The
+        // layout-derived lane ignores the right margin (both start near 432.9).
+        double narrowLaneX = RightBalloonBodyX(CreateRightMarginBalloonDocument(72d));
+        double wideLaneX = RightBalloonBodyX(CreateRightMarginBalloonDocument(207d));
+        double narrowScale = 612d / 806.5d;
+        double wideScale = 612d / 671.5d;
+        TestAssert.True(
+            Math.Abs(narrowLaneX - (((72d + 468d) + 35.6d) * narrowScale - 3.25d)) < 1.5d,
+            $"Right-lane balloons should start at the scaled body end plus the Office lane gap. X={narrowLaneX}.");
+        TestAssert.True(
+            Math.Abs(wideLaneX - (((72d + 333d) + 35.6d) * wideScale - 3.25d)) < 1.5d,
+            $"Right-lane balloons should track the right margin through the print scale. X={wideLaneX}.");
+        TestAssert.True(
+            Math.Abs((narrowLaneX - wideLaneX) - 35.2d) < 1.5d,
+            $"Right-lane balloons should move with the scaled body end across right margins. Narrow={narrowLaneX}, Wide={wideLaneX}.");
+        // Office A/B (same refs plus dense balloon rects): bodies are 233pt design wide
+        // (R72 176.6, R207 212.4, dense 14x 180.9), not the fixed layout width.
+        double narrowWidth = RightBalloonBodyWidth(CreateRightMarginBalloonDocument(72d));
+        double wideWidth = RightBalloonBodyWidth(CreateRightMarginBalloonDocument(207d));
+        TestAssert.True(
+            Math.Abs(narrowWidth - (233d * narrowScale)) < 2d,
+            $"Right-lane balloon bodies should scale with the print scale. Width={narrowWidth}.");
+        TestAssert.True(
+            Math.Abs(wideWidth - (233d * wideScale)) < 2d,
+            $"Right-lane balloon bodies should widen on narrower bodies. Width={wideWidth}.");
+    }
+
+    private static DocxDocument CreateRightMarginBalloonDocument(double marginRightPoints)
+    {
+        DocxParagraph paragraph = DocxTests.CreateCommentRangeParagraph("Right margin lane probe body", "1");
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public lane probe comment", 10d, 12d))],
+            [],
+            [], null);
+        return new DocxDocument(612d, 792d, 72d, marginRightPoints, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+    }
+
+    private static double RightBalloonBodyWidth(DocxDocument document)
+    {
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        return renderer.InspectMarkupBalloons(document).Single(placement => placement.Kind == "Comment" && placement.Side == "Right").Width;
+    }
+
+    private static double RightBalloonBodyX(DocxDocument document)
+    {
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        return renderer.InspectMarkupBalloons(document).Single(placement => placement.Kind == "Comment" && placement.Side == "Right").X;
+    }
+
     public static void DocxMarkupBalloonAreaClampsImpossibleReviewLaneInsideMediaBox()
     {
         const double nominalMinimumBalloonBodyWidth = 24d;
@@ -1046,7 +1105,9 @@ internal static class DocxMarkupTests
             .ToArray();
 
         TestAssert.True(pages.Length >= 2, "The mirrored-margin fixture should render odd and even review pages.");
-        TestAssert.Contains("411.93 89.475 199.7 614.25 re f", pages[0].Content);
+        // Office (W5-X1): the gray lane is 259.4pt design wide ending at the page edge; the mirrored
+        // fixture (s = 612 / 824.5) prints it at 259.4 * s = 192.544 wide from x = 612 - 192.544 - 0.37.
+        TestAssert.Contains("419.086 89.475 192.544 614.25 re f", pages[0].Content);
         TestAssert.Contains("0.37 89.475 199.7 614.25 re f", pages[1].Content);
     }
 

@@ -176,7 +176,7 @@ internal sealed partial class DocxRenderer
             return [];
         }
 
-        DocxMarkupBalloonArea area = ResolveMarkupBalloonArea(page);
+        DocxMarkupBalloonArea area = ResolveMarkupBalloonArea(page, markupContext);
         DocxMarkupBalloonCandidate[] candidates = OrderMarkupBalloonCandidatesForPlacement(
                 GroupNearbyMarkupBalloonCandidates(
                     OrderMarkupBalloonCandidatesForPlacement(CollectMarkupBalloonCandidates(area.Width)),
@@ -927,7 +927,7 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static DocxMarkupBalloonArea ResolveMarkupBalloonArea(DocxLayoutPage page)
+    private static DocxMarkupBalloonArea ResolveMarkupBalloonArea(DocxLayoutPage page, DocxMarkupContext markupContext)
     {
         const double mediaInset = 2d;
         double leftAvailable = Math.Max(0d, page.MarginLeft - 8d);
@@ -947,6 +947,23 @@ internal sealed partial class DocxRenderer
 
         double rightLaneX = Math.Min(page.Width - laneWidth - 2d, page.Width - page.MarginRight + 4d);
         double rightBodyX = ClampMarkupBalloonBodyX(rightLaneX + stemWidth, bodyWidth, page.Width, mediaInset);
+        if (markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
+            markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
+            markupContext.ExpandsMarkupMargin &&
+            Math.Abs(markupContext.WordCompatiblePrintScale - 1d) >= 0.000000001d &&
+            !ShouldUseLeftMarkupLane(page))
+        {
+            // Office (W5-X1): lane geometry scales uniformly; the layout-derived lane ignores
+            // the right margin (it saturates at the preferred reserve) and never scales.
+            // Authored body end = layout right edge plus the reserved points.
+            double designBodyEnd = page.Width - page.MarginRight + page.MarkupMarginReservePoints;
+            double printScale = markupContext.WordCompatiblePrintScale;
+            bodyWidth = Math.Max(MinimumMarkupBalloonBodyWidthPoints, WordCompatibleAllMarkupBalloonBodyWidthPoints * printScale);
+            double scaledTextX = (designBodyEnd + WordCompatibleAllMarkupBalloonLaneGapPoints) * printScale;
+            // Word prints balloon bodies to within 1.4pt of the media edge (R72/R207/dense rects),
+            // so the scaled lane clamps at 1pt rather than the legacy 2pt guard.
+            rightBodyX = ClampMarkupBalloonBodyX(scaledTextX - WordCompatibleAllMarkupBalloonTextInsetXPoints, bodyWidth, page.Width, 1d);
+        }
         double rightConnectorX = Math.Max(mediaInset, rightBodyX - stemWidth);
         return new DocxMarkupBalloonArea("Right", rightBodyX, bodyWidth, rightConnectorX);
     }
