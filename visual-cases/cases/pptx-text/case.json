@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-text.pptx",
   "dpi": 144,
-  "tags": ["pptx", "text", "smoke"],
+  "tags": ["pptx", "text", "smoke", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

@@ -3,7 +3,7 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-body-unstyled-size.docx",
   "dpi": 144,
-  "tags": ["docx", "typography", "body-size"],
+  "tags": ["docx", "typography", "body-size", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
