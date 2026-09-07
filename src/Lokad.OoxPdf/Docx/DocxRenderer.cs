@@ -502,6 +502,10 @@ internal sealed partial class DocxRenderer
 
     private static double ResolveLayoutLineMetricScale(DocxMarkupContext markupContext)
     {
+        // Keep the fitted compromise: per-doc scaling was tried (W5-P2) and family-vetoed
+        // (R207-class pitch improved but dense-class regressed more). Word design line heights
+        // vary by resolved font (dense 17.65 vs R207 17.01 at the same 12pt), so no single
+        // scale fits all; per-font line-height modeling is queued instead.
         return markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
             markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
             markupContext.ExpandsMarkupMargin
