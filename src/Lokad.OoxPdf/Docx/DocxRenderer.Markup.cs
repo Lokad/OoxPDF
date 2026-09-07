@@ -688,7 +688,7 @@ internal sealed partial class DocxRenderer
             return anchorY;
         }
 
-        double resolved = anchorY - WordCompatibleAllMarkupBalloonAnchorYOffsetPoints;
+        double resolved = anchorY - (markupContext.WordCompatibleTextYOffset + WordCompatibleAllMarkupBalloonAnchorRowInsetPoints);
         return Math.Min(page.Height - page.MarginTop, Math.Max(page.MarginBottom, resolved));
     }
 

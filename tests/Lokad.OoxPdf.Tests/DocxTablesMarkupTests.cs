@@ -1775,7 +1775,7 @@ internal static class DocxTablesMarkupTests
             else
             {
                 // Office: balloon titles land on the anchor row (title ~= row baseline - 0.5),
-                // so the resolved anchor sits 72.02 - 69.58 = 2.44 below the emitted baseline by construction.
+                // so the resolved anchor sits the 2.44 row inset below the emitted baseline by construction.
                 TestAssert.True(
                     anchorDelta > 0d && anchorDelta < 6d,
                     string.Create(
@@ -1863,7 +1863,7 @@ internal static class DocxTablesMarkupTests
         double tableLineAnchorDelta = baselineY - placement.AnchorY;
 
         // Office: balloon titles land on the anchor row (title ~= row baseline - 0.5),
-        // so the resolved anchor sits 72.02 - 69.58 = 2.44 below the emitted baseline by construction.
+        // so the resolved anchor sits the 2.44 row inset below the emitted baseline by construction.
         TestAssert.True(
             tableLineAnchorDelta > 0d && tableLineAnchorDelta < 6d,
             string.Create(

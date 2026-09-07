@@ -109,6 +109,95 @@ internal static class DocxMarkupTests
         TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
     }
 
+    public static void DocxWordCompatibleTextYOffsetTracksTopMarginByPrintScale()
+    {
+        // Office A/B (W5-Y1 top-margin probes w5-ytop54/w5-ytop144): Word prints the
+        // first-body-baseline delta 68.25 for a 90pt top-margin delta (margin times the
+        // lane-fit scale); a constant baseline shift renders the full unscaled 90.
+        double lowFirst = FirstBodyEmissionBaseline(CreateTopMarginBalloonDocument(54d));
+        double highFirst = FirstBodyEmissionBaseline(CreateTopMarginBalloonDocument(144d));
+        TestAssert.True(
+            Math.Abs((lowFirst - highFirst) - 68.25d) < 1.0d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Word-compatible all-markup should scale top-margin differences by the print scale. Low={lowFirst}, High={highFirst}."));
+    }
+
+    public static void DocxWordCompatibleTextYOffsetPinsFirstBaseline()
+    {
+        // Office A/B (W5-Y1 top-margin probe w5-ytop54): laid-out first baseline 726.72 on a
+        // 792pt page pins to (726.72 - 396) * (1 - s), matching Word within 0.1pt.
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) with
+        {
+            WordCompatiblePrintScale = 612d / 806.5d
+        };
+
+        double yOffset = DocxRenderer.ResolveWordCompatibleTextYOffset(context, 726.72d, 792d);
+
+        double expected = (726.72d - (792d / 2d)) * (1d - (612d / 806.5d));
+        TestAssert.True(Math.Abs(yOffset - expected) < 0.000000001d, "Scaled pages should pin the laid-out first baseline to its center-scaled position.");
+    }
+
+    public static void DocxWordCompatibleTextYOffsetPinsFirstBaselineOffReference()
+    {
+        // Office A/B (landscape ref): laid-out first baseline 543.9 on a 612pt page pins to
+        // (543.9 - 306) * (1 - s), matching the Word balloon-title row within 0.6pt.
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) with
+        {
+            WordCompatiblePrintScale = 792d / 986.5d
+        };
+
+        double yOffset = DocxRenderer.ResolveWordCompatibleTextYOffset(context, 543.9d, 612d);
+
+        double expected = (543.9d - (612d / 2d)) * (1d - (792d / 986.5d));
+        TestAssert.True(Math.Abs(yOffset - expected) < 0.000000001d, "Off-reference pages should pin their own first baseline, not the reference shift.");
+    }
+
+    public static void DocxWordCompatibleTextYOffsetKeepsFittedAnchorWithoutBalloons()
+    {
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
+
+        TestAssert.Equal(1d, scale);
+        TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d));
+    }
+
+    public static void DocxWordCompatibleTextYOffsetStaysZeroOutsideWordCompatible()
+    {
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
+        {
+            RelatedStories =
+            [
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+            ]
+        };
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+
+        TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d));
+    }
+    private static DocxDocument CreateTopMarginBalloonDocument(double marginTopPoints)
+    {
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Top margin probe body", 10d, 12d);
+        return new DocxDocument(612d, 792d, 72d, 72d, marginTopPoints, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], [])
+        {
+            RelatedStories =
+            [
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+            ],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+    }
+
+    private static double FirstBodyEmissionBaseline(DocxDocument document)
+    {
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        return renderer.InspectTextEmission(document).Lines
+            .SelectMany(line => line.Segments)
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .Max(segment => segment.BaselineY);
+    }
+
     public static void DocxMarkupReserveMarginGeometryShrinksBodyAndPreservesMediaBox()
     {
         string input = DocxTests.WriteTrackedChangeModeProbeDocx();

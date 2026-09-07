@@ -43,7 +43,7 @@ internal sealed partial class DocxRenderer
 {
     internal const string DefaultDocumentTypefaceRequest = DocxFontFallbackRules.DefaultDocumentTypefaceRequest;
     private const double WordCompatibleAllMarkupLineMetricScale = 0.79359971328d;
-    private const double WordCompatibleAllMarkupTextBaselineYOffsetPoints = 69.58d;
+
     private const double WordCompatibleAllMarkupMaxBodyTextFontSizePoints = 11.625d;
     private const double WordCompatibleAllMarkupBodyPositioningCharacterSpacingPoints = 0.071d;
     private const double WordCompatibleAllMarkupHeadingPositioningCharacterSpacingPoints = 0.043d;
@@ -56,8 +56,8 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupDeletionXOffsetPoints = 2.707d;
     private const double WordCompatibleAllMarkupInsertionXOffsetPoints = 2.140d;
     // Balloon title lands on the anchor row minus ~0.5 (Office: dense/c14/mirrored/threaded refs).
-    // = text baseline offset (69.58) + title rule (top inset 11.15 - height 20.48 + first baseline 11.27 + 0.5).
-    private const double WordCompatibleAllMarkupBalloonAnchorYOffsetPoints = 72.02d;
+    // = doc-adaptive baseline shift + title rule (top inset 11.15 - height 20.48 + first baseline 11.27 + 0.5).
+    private const double WordCompatibleAllMarkupBalloonAnchorRowInsetPoints = 2.44d;
     private const double WordCompatibleAllMarkupBalloonHeightPoints = 20.48d;
     private const double WordCompatibleAllMarkupBalloonTopInsetPoints = 11.15d;
     private const double WordCompatibleAllMarkupConnectorStrokeWidthPoints = 0.475d;
@@ -169,6 +169,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, layout);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -195,6 +196,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
@@ -304,7 +306,14 @@ internal sealed partial class DocxRenderer
             effective.ExpandsMarkupMargin
             ? -document.MarginLeftPoints * (1d - printScale)
             : 0d;
-        return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset };
+        // The Y shift defaults to the fitted anchor here; scaled pages refine it from the
+        // laid-out first baseline once a layout exists (see ResolveFirstPinYOffset).
+        double yOffset = effective.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
+            effective.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
+            effective.ExpandsMarkupMargin
+            ? WordCompatibleTextYOffsetReferenceAnchorPoints
+            : 0d;
+        return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset, WordCompatibleTextYOffset = yOffset };
     }
 
     private const double WordCompatibleBalloonLaneWidthPoints = 266.5d;
@@ -409,13 +418,60 @@ internal sealed partial class DocxRenderer
         return markupContext.WordCompatiblePrintScale;
     }
 
+    // Fitted anchor: the 69.58 baseline shift is the pre-layout default and is kept for
+    // unscaled pages and lineless layouts.
+    private const double WordCompatibleTextYOffsetReferenceAnchorPoints = 69.58d;
+    internal static double ResolveWordCompatibleTextYOffset(DocxMarkupContext markupContext, double? firstBaselineY, double pageHeight)
+    {
+        // Office A/B (W5-Y1 top-margin probes w5-ytop54/w5-ytop144): Word scales Y about the
+        // page center with the print scale. Pin the laid-out first baseline to its center-scaled
+        // position with a slope-1 shift (the pre-shrunk layout keeps its own pitch), which fits
+        // the probes to 0.1pt and dense to 0.2pt. Unscaled pages and lineless layouts keep the
+        // fitted anchor.
+        if (markupContext.Mode != OoxPdfDocxMarkupMode.AllMarkup ||
+            markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
+            !markupContext.ExpandsMarkupMargin)
+        {
+            return 0d;
+        }
+
+        if (firstBaselineY is null ||
+            Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d)
+        {
+            return WordCompatibleTextYOffsetReferenceAnchorPoints;
+        }
+
+        return (firstBaselineY.Value - pageHeight / 2d) * (1d - markupContext.WordCompatiblePrintScale);
+    }
+
+    private static DocxMarkupContext WithFirstPinYOffset(DocxMarkupContext markupContext, DocxLayout layout)
+    {
+        if (layout.Pages.Count == 0)
+        {
+            return markupContext;
+        }
+
+        DocxLayoutPage page = layout.Pages[0];
+        double? firstBaselineY = null;
+        foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
+        {
+            firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
+        }
+
+        foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page))
+        {
+            firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
+        }
+
+        return markupContext with
+        {
+            WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height)
+        };
+    }
+
     private static double ResolveTextEmissionBaselineOffset(DocxMarkupContext markupContext)
     {
-        return markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
-            markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
-            markupContext.ExpandsMarkupMargin
-            ? WordCompatibleAllMarkupTextBaselineYOffsetPoints
-            : 0d;
+        return markupContext.WordCompatibleTextYOffset;
     }
 
     private static double ResolveTextEmissionXOffset(DocxMarkupContext markupContext)
@@ -470,6 +526,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken);
+        markupContext = WithFirstPinYOffset(markupContext, layout);
         DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
