@@ -1321,10 +1321,10 @@ internal static class DocxNumberingTests
             Math.Abs(page.ColumnFrames.Single().Width - (288d * 0.842391d)) < 0.000000001d,
             $"Word-compatible reserve should size the layout body to the authored body times scale. Width={page.ColumnFrames.Single().Width}.");
         TestAssert.True(lines.Length > 1, "The narrowed all-markup body frame should wrap the numbered paragraph.");
-        TestAssert.Equal(72d, firstLine.X);
+        TestAssert.True(Math.Abs(firstLine.X - (36d + 36d * 0.842391d)) < 0.000001d, "First-line X should add the scaled hanging-derived label offset to the margin. X=" + firstLine.X);
         TestAssert.Equal(DocxTextSegmentRole.ListLabel, labelSegment.Role);
         TestAssert.Equal("12.", labelSegment.Text);
-        TestAssert.Equal(72d, labelSegment.X);
+        TestAssert.True(Math.Abs(labelSegment.X - (36d + 36d * 0.842391d)) < 0.000001d, "Label X should match the scaled first-line start. X=" + labelSegment.X);
         TestAssert.Equal(15d, labelSegment.Width);
         TestAssert.Equal(11d, labelSegment.FontSize ?? 0d);
         TestAssert.Equal("LabelFace", labelSegment.StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
@@ -1332,13 +1332,13 @@ internal static class DocxNumberingTests
         TestAssert.True(labelSegment.StyleRun.EffectiveProperties.Bold, "Numbering label style should apply to the marker run.");
         TestAssert.Equal(DocxTextSegmentRole.ListSeparator, separatorSegment.Role);
         TestAssert.Equal(" ", separatorSegment.Text);
-        TestAssert.Equal(87d, separatorSegment.X);
+        TestAssert.True(Math.Abs(separatorSegment.X - (36d + 36d * 0.842391d + 15d)) < 0.000001d, "Separator X should follow the scaled label plus the measured label width. X=" + separatorSegment.X);
         TestAssert.Equal("BodyFace", separatorSegment.StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
         TestAssert.Equal(DocxTextSegmentRole.Text, bodySegment.Role);
-        TestAssert.Equal(132d, bodySegment.X);
+        TestAssert.True(Math.Abs(bodySegment.X - (36d + 96d * 0.842391d)) < 0.000001d, "Body X should add the scaled num-tab position to the margin. X=" + bodySegment.X);
         TestAssert.Equal("BodyFace", bodySegment.StyleRun.EffectiveProperties.FontFamily ?? string.Empty);
-        TestAssert.Equal(108d, lines[1].X);
-        TestAssert.True(lines.Skip(1).All(line => line.X == 108d), "Continuation lines should use the hanging indent text start.");
+        TestAssert.True(Math.Abs(lines[1].X - (36d + 72d * 0.842391d)) < 0.000001d, "Continuation X should add the scaled hanging indent to the margin. X=" + lines[1].X);
+        TestAssert.True(lines.Skip(1).All(line => Math.Abs(line.X - (36d + 72d * 0.842391d)) < 0.000001d), "Continuation lines should use the hanging indent text start.");
         TestAssert.True(
             firstLine.SourceParagraph?.Revisions.Single().PropertyElementNames.Contains("numberingChange") == true,
             "Revised numbering properties should stay attached to the numbered paragraph layout line.");

@@ -68,9 +68,9 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
             if (textSpans.Count != 0)
             {
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
-                double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
-                double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
+                double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count();
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
@@ -194,12 +194,12 @@ internal sealed partial class DocxLayoutEngine
             else
             {
                 DocxTextRun firstRun = paragraph.Runs[0];
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
-                double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
-                double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
+                double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
+                double labelStartOffset = GetParagraphLabelStartOffset(paragraph, paragraphSpacingScale);
                 double paragraphX = cellX + paddingLeft + textStartOffset;
-                double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
-                double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+                double paragraphWidth = Math.Max(1d, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                double continuationParagraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 bool firstLine = true;
                 DocxWrappedTextLine[] wrappedLines = WrapTextLines(
                     textSpans,
@@ -272,7 +272,7 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraph: paragraph, StoryVariantType: null, EmitsTerminalParagraphMark: false));
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
-                    paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+                    paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     cursorY -= lineHeight;
                 }
             }
@@ -411,9 +411,9 @@ internal sealed partial class DocxLayoutEngine
                 IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
                 if (textSpans.Count != 0)
                 {
-                    double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
-                    double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
-                    double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+                    double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
+                    double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                    double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
                 }
                 else if (paragraph.Images.Count == 0)
@@ -424,8 +424,8 @@ internal sealed partial class DocxLayoutEngine
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
-                double paragraphX = cellX + paddingLeft + GetParagraphStartOffset(paragraph);
-                double paragraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+                double paragraphX = cellX + paddingLeft + GetParagraphStartOffset(paragraph, paragraphSpacingScale);
+                double paragraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 double imageWidth = Math.Min(paragraphWidth, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
                 double imageX = paragraph.EffectiveProperties.Alignment switch
@@ -551,7 +551,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            cursorY -= MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount);
+            cursorY -= MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
@@ -582,7 +582,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
         int? pageNumber,
-        int? pageCount)
+        int? pageCount,
+        double fixedScale)
     {
         double height = 0d;
         double fontSize = GetParagraphFontSize(paragraph);
@@ -590,9 +591,9 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
         if (textSpans.Count != 0)
         {
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
-            double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph));
-            double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale);
+            double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
+            double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
             height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
             height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
         }

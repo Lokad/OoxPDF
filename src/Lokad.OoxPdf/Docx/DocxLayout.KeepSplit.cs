@@ -214,7 +214,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         DocxParagraph paragraph = paragraphElement.Paragraph;
-        double height = EstimateParagraphContentHeight(paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber);
+        double height = EstimateParagraphContentHeight(paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale);
         int paragraphCount = 1;
         int firstTableRowCount = 0;
         int nextSearchIndex = elementIndex + 1;
@@ -229,7 +229,7 @@ internal sealed partial class DocxLayoutEngine
                     paragraph.EffectiveProperties.SpacingAfterPoints * paragraphSpacingScale,
                     paragraphSpacingScale);
                 height += spacingProfile.AppliedBeforeSpacing;
-                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber);
+                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale);
                 paragraphCount++;
                 paragraph = nextParagraph.Paragraph;
                 nextSearchIndex = nextIndex + 1;
@@ -296,7 +296,7 @@ internal sealed partial class DocxLayoutEngine
         return false;
     }
 
-    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber)
+    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double fixedScale)
     {
         double height = 0d;
         double fontSize = GetParagraphFontSize(paragraph);
@@ -304,9 +304,9 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, null);
         if (textSpans.Count != 0)
         {
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
-            double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph));
-            double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph) - GetParagraphRightInset(paragraph));
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale);
+            double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
+            double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
             height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, paragraph.EffectiveProperties.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
         }
         else if (paragraph.Images.Count == 0)
@@ -324,24 +324,26 @@ internal sealed partial class DocxLayoutEngine
         return height;
     }
 
-    private static double GetParagraphTextStartOffset(DocxParagraph paragraph)
+    // W6-a1: fixed horizontal text offsets join scaled space; fixedScale reuses the
+    // layout spacing scale (identical in every mode).
+    private static double GetParagraphTextStartOffset(DocxParagraph paragraph, double fixedScale)
     {
         if (paragraph.ListLabel is null)
         {
-            return Math.Max(0d, paragraph.EffectiveProperties.Indent.LeftPoints ?? 0d);
+            return Math.Max(0d, paragraph.EffectiveProperties.Indent.LeftPoints ?? 0d) * fixedScale;
         }
 
         DocxNumberingIndent indent = ResolveListIndent(paragraph);
         double left = indent.LeftPoints ?? 0d;
         double firstLine = indent.FirstLinePoints ?? 0d;
-        return Math.Max(0d, left + firstLine);
+        return Math.Max(0d, left + firstLine) * fixedScale;
     }
 
-    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer)
+    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer, double fixedScale)
     {
         if (paragraph.ListLabel is null)
         {
-            return GetParagraphFirstLineIndentOffset(paragraph);
+            return GetParagraphFirstLineIndentOffset(paragraph, fixedScale);
         }
 
         bool IsNumberingTabSuffix(DocxListLabel label)
@@ -357,7 +359,7 @@ internal sealed partial class DocxLayoutEngine
 
         if (IsNumberingTabSuffix(paragraph.ListLabel))
         {
-            double textStart = GetParagraphTextStartOffset(paragraph);
+            double textStart = GetParagraphTextStartOffset(paragraph, fixedScale);
             return Math.Max(textStart, GetNumberingTabPosition() ?? 0d);
         }
 
@@ -367,7 +369,7 @@ internal sealed partial class DocxLayoutEngine
         DocxTextRun labelRun = CreateListLabelRun(paragraph.ListLabel, paragraph.Runs.FirstOrDefault(), fontSize);
         return Math.Max(
             0d,
-            GetParagraphLabelStartOffset(paragraph) +
+            GetParagraphLabelStartOffset(paragraph, fixedScale) +
                 textMeasurer.MeasureText(labelRun, paragraph.ListLabel.Text, labelRun.EffectiveProperties.FontSize) +
                 gap);
 
@@ -377,11 +379,11 @@ internal sealed partial class DocxLayoutEngine
                 .Where(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase))
                 .Select(tab => tab.PositionPoints)
                 .FirstOrDefault(position => position is not null);
-            return paragraphNumberingTab ?? paragraph.ListLabel?.Indent.NumberingTabPositionPoints;
+            return (paragraphNumberingTab ?? paragraph.ListLabel?.Indent.NumberingTabPositionPoints) * fixedScale;
         }
     }
 
-    private static double GetParagraphLabelStartOffset(DocxParagraph paragraph)
+    private static double GetParagraphLabelStartOffset(DocxParagraph paragraph, double fixedScale)
     {
         if (paragraph.ListLabel is null)
         {
@@ -392,7 +394,7 @@ internal sealed partial class DocxLayoutEngine
         double left = indent.LeftPoints ?? 0d;
         double hanging = indent.HangingPoints ?? 0d;
         double firstLine = indent.FirstLinePoints ?? 0d;
-        return Math.Max(0d, left - hanging + firstLine);
+        return Math.Max(0d, left - hanging + firstLine) * fixedScale;
     }
 
     private static DocxNumberingIndent ResolveListIndent(DocxParagraph paragraph)
@@ -435,25 +437,25 @@ internal sealed partial class DocxLayoutEngine
             indent.HangingValue is not null;
     }
 
-    private static double GetParagraphStartOffset(DocxParagraph paragraph)
+    private static double GetParagraphStartOffset(DocxParagraph paragraph, double fixedScale)
     {
         return paragraph.ListLabel is null
-            ? GetParagraphFirstLineIndentOffset(paragraph)
-            : GetParagraphLabelStartOffset(paragraph);
+            ? GetParagraphFirstLineIndentOffset(paragraph, fixedScale)
+            : GetParagraphLabelStartOffset(paragraph, fixedScale);
     }
 
-    private static double GetParagraphRightInset(DocxParagraph paragraph)
+    private static double GetParagraphRightInset(DocxParagraph paragraph, double fixedScale)
     {
-        return paragraph.ListLabel?.Indent.RightPoints ?? paragraph.EffectiveProperties.Indent.RightPoints ?? 0d;
+        return (paragraph.ListLabel?.Indent.RightPoints ?? paragraph.EffectiveProperties.Indent.RightPoints ?? 0d) * fixedScale;
     }
 
-    private static double GetParagraphFirstLineIndentOffset(DocxParagraph paragraph)
+    private static double GetParagraphFirstLineIndentOffset(DocxParagraph paragraph, double fixedScale)
     {
         DocxParagraphIndent indent = paragraph.EffectiveProperties.Indent;
         double left = indent.LeftPoints ?? 0d;
         double firstLine = indent.FirstLinePoints ?? 0d;
         double hanging = indent.HangingPoints ?? 0d;
-        return Math.Max(0d, left + firstLine - hanging);
+        return Math.Max(0d, left + firstLine - hanging) * fixedScale;
     }
 
     private static DocxParagraphLineShape CreateParagraphLineShape(

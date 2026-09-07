@@ -543,14 +543,14 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1, null);
             if (textMeasurer is not null && textSpans.Count > 0)
             {
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer);
-                double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
-                double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale);
+                double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
+                double labelStartOffset = GetParagraphLabelStartOffset(paragraph, paragraphSpacingScale);
                 double paragraphX = x + textStartOffset;
-                double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph));
+                double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
-                double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+                double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, effective.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1).ToArray();
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, CurrentFrameBottom(), HasCurrentColumnContent()))
                 {
@@ -626,7 +626,7 @@ internal sealed partial class DocxLayoutEngine
                     activeColumnHasContent = true;
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
-                    paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+                    paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     cursorY -= lineHeight;
                 }
             }

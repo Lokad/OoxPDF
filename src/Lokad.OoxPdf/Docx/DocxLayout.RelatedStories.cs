@@ -631,6 +631,7 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             IReadOnlyList<DocxTextLineLayout> paragraphLines = LayoutRelatedStoryParagraphTextLines(
                 paragraph,
+                paragraphSpacingScale,
                 elementIndex,
                 paragraphIndex,
                 story.Kind.ToValueString(),

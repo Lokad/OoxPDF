@@ -81,6 +81,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static IReadOnlyList<DocxTextLineLayout> LayoutRelatedStoryParagraphTextLines(
         DocxParagraph paragraph,
+        double fixedScale,
         int sourceBlockIndex,
         int sourceParagraphIndex,
         string storyKind,
@@ -102,12 +103,12 @@ internal sealed partial class DocxLayoutEngine
         DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
         double lineHeight = lineHeightProfile.LineHeight;
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
-        double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer);
-        double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph);
-        double labelStartOffset = GetParagraphLabelStartOffset(paragraph);
+        double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale);
+        double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, fixedScale);
+        double labelStartOffset = GetParagraphLabelStartOffset(paragraph, fixedScale);
         double paragraphX = textStartOffset;
-        double paragraphWidth = Math.Max(1d, bodyWidth - textStartOffset - GetParagraphRightInset(paragraph));
-        double continuationParagraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+        double paragraphWidth = Math.Max(1d, bodyWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
+        double continuationParagraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
         DocxTextRun firstRun = paragraph.Runs[0];
         DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, effective.TabStops, defaultTabStopPoints, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber).ToArray();
         var layouts = new List<DocxTextLineLayout>(lines.Length);
@@ -167,7 +168,7 @@ internal sealed partial class DocxLayoutEngine
                 SourceParagraph: paragraph, StoryVariantType: null, EmitsTerminalParagraphMark: false));
             firstLine = false;
             paragraphX = continuationTextStartOffset;
-            paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph));
+            paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             cursorY -= lineHeight;
         }
 

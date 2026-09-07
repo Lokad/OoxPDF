@@ -158,7 +158,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             consumedHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount);
+            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
             paragraphBoundaryIndex++;
             if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
             {
@@ -234,7 +234,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             consumedHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount);
+            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
             if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
             {
                 boundary = new DocxNestedTableBoundary(nestedTableIndex, IsInsideNestedTable: false);
