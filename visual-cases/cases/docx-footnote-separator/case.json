@@ -1,0 +1,14 @@
+{
+  "id": "docx-footnote-separator",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-footnote-separator.docx",
+  "dpi": 144,
+  "tags": ["docx", "footnotes", "typography", "separator", "synthetic", "approximate"],
+  "expected": {
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "candidateFontsMustBeEmbedded": true,
+    "candidateFontsMustHaveToUnicode": true
+  },
+  "allowedUnsupportedFeatures": []
+}
