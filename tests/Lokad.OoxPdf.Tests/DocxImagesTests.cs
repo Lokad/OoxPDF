@@ -415,4 +415,153 @@ internal static class DocxImagesTests
         DocxRelatedStorySourceBlockSnapshot imageBlock = storySnapshot.SourceBlocks.Single();
         TestAssert.True(imageBlock.Kind == "InlineImage" && imageBlock.InlineImageCount == 1 && imageBlock.ItemCount == 1 && imageBlock.ConsumedHeight >= 24d, "Related-story source-block snapshots should summarize image-only story blocks without page ownership.");
     }
+    public static void DocxReaderReadsFloatingTextBoxContentInsets()
+    {
+        // Office A/B (w6a1d-tbx reference): Word insets textbox content by the bodyPr
+        // values, so the reader must retain them on the drawing model.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:drawing>
+                          <wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="1" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">
+                            <wp:simplePos x="0" y="0"/>
+                            <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                            <wp:positionV relativeFrom="page"><wp:posOffset>1828800</wp:posOffset></wp:positionV>
+                            <wp:extent cx="3200400" cy="1097280"/>
+                            <wp:wrapNone/>
+                            <wp:docPr id="1" name="TextBox 1"/>
+                            <a:graphic>
+                              <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                                <wps:wsp>
+                                  <wps:cNvSpPr txBox="1"/>
+                                  <wps:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></wps:spPr>
+                                  <wps:txbx>
+                                    <w:txbxContent>
+                                      <w:p><w:r><w:t>Box text</w:t></w:r></w:p>
+                                    </w:txbxContent>
+                                  </wps:txbx>
+                                  <wps:bodyPr lIns="182880" tIns="91440" rIns="182880" bIns="91440"/>
+                                </wps:wsp>
+                              </a:graphicData>
+                            </a:graphic>
+                          </wp:anchor>
+                        </w:drawing>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
+        TestAssert.Equal("182880", drawing.TextBoxInsetLeftValue ?? "?");
+        TestAssert.Equal("91440", drawing.TextBoxInsetTopValue ?? "?");
+        TestAssert.Equal("182880", drawing.TextBoxInsetRightValue ?? "?");
+        TestAssert.Equal("91440", drawing.TextBoxInsetBottomValue ?? "?");
+    }
+
+    public static void DocxReaderLeavesMissingTextBoxContentInsetsNull()
+    {
+        // The text-box fixture carries no bodyPr insets; the model stays null so layout
+        // applies the Office defaults.
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-markup-comment-text-box.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
+        TestAssert.True(
+            drawing.TextBoxInsetLeftValue is null &&
+            drawing.TextBoxInsetTopValue is null &&
+            drawing.TextBoxInsetRightValue is null &&
+            drawing.TextBoxInsetBottomValue is null,
+            "Missing bodyPr insets should stay null on the drawing model.");
+    }
+
+    private static DocxDocument WriteFloatingTextBoxInsetLayoutDocument(string text)
+    {
+        DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d);
+        DocxParagraph textBoxParagraph = DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d);
+        DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        return new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+    }
+
+    public static void DocxWordCompatibleFloatingTextBoxMeasuresContentUnscaled()
+    {
+        // Office A/B (w6a1d-tbx reference): floating-textbox content prints unscaled
+        // (12pt beside scaled body), so WC layout must measure it with the raw measurer.
+        // The legacy three-arg path keeps scaled measurement as its fallback contract.
+        DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument("Box text");
+        var raw = new DocxTests.FamilyWidthTextMeasurer();
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(raw, 0.842391d, 0.7936d);
+        DocxLayoutEngine engine = new(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        double legacyWidth = engine.Create(document, scaled, CancellationToken.None)
+            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Single().Width ?? -1d;
+        double unscaledWidth = engine.Create(document, scaled, CancellationToken.None, raw)
+            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Single().Width ?? -1d;
+
+        TestAssert.True(Math.Abs(legacyWidth - 8d * 5d * 0.842391d) < 0.001d, "Legacy textbox layout should keep scaled measurement. Width=" + legacyWidth);
+        TestAssert.Equal(8d * 5d, unscaledWidth);
+    }
+
+    public static void DocxWordCompatibleFloatingTextBoxWrapsInsideInsetContentWidth()
+    {
+        // Office defaults inset the content box (0.1in sides); with raw advances the
+        // crafted text fits the full extent but wraps inside the inset width.
+        DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 18) + " " + new string('Y', 3));
+        var raw = new DocxTests.FamilyWidthTextMeasurer();
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(raw, 0.842391d, 0.7936d);
+        DocxLayoutEngine engine = new(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        int legacyLines = engine.Create(document, scaled, CancellationToken.None)
+            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Count ?? -1;
+        int unscaledLines = engine.Create(document, scaled, CancellationToken.None, raw)
+            .FloatingDrawings.Single().TextBoxLayout?.TextLines.Count ?? -1;
+
+        TestAssert.Equal(1, legacyLines);
+        TestAssert.Equal(2, unscaledLines);
+    }
 }

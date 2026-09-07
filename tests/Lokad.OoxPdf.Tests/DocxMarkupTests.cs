@@ -805,14 +805,16 @@ internal static class DocxMarkupTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
+        // Inset-narrowed content wraps the first paragraph, so the second paragraph starts
+        // at index 2 in both profiles.
         DocxTextLineLayout reserveSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
             .StaticFloatingDrawings.Single()
-            .TextBoxLayout!.TextLines.Skip(1).First();
+            .TextBoxLayout!.TextLines.Skip(2).First();
         DocxTextLineLayout wordSecond = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
             .StaticFloatingDrawings.Single()
-            .TextBoxLayout!.TextLines.Skip(1).First();
+            .TextBoxLayout!.TextLines.Skip(2).First();
 
         TestAssert.Equal(8d, reserveSecond.AppliedBeforeSpacing ?? -1d);
         TestAssert.True(

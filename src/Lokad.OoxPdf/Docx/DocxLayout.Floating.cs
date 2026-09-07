@@ -21,7 +21,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
         int? pageNumber,
-        int? pageCount)
+        int? pageCount,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         if (story.FloatingDrawings.Count == 0)
         {
@@ -49,7 +50,8 @@ internal sealed partial class DocxLayoutEngine
                     textMeasurer: textMeasurer,
                     defaultTabStopPoints: defaultTabStopPoints,
                     paragraphSpacingScale: paragraphSpacingScale,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken,
+                    unscaledTextMeasurer: unscaledTextMeasurer);
             })
             .ToArray();
 
@@ -181,7 +183,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         var layouts = new DocxFloatingDrawingLayout[drawings.Count];
         for (int i = 0; i < drawings.Count; i++)
@@ -206,6 +209,7 @@ internal sealed partial class DocxLayoutEngine
                 storyVariantType: null,
                 pageCount: null,
                 textMeasurer: textMeasurer,
+                unscaledTextMeasurer: unscaledTextMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
                 cancellationToken: cancellationToken);
@@ -219,7 +223,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         var layouts = new List<DocxFloatingDrawingLayout>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
@@ -251,7 +256,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
         {
@@ -270,8 +276,27 @@ internal sealed partial class DocxLayoutEngine
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                unscaledTextMeasurer: unscaledTextMeasurer);
         }
+    }
+
+    // Office defaults when bodyPr carries no explicit insets: 0.1in sides, 0.05in
+    // top and bottom (w6a1d-tbx reference measures exactly these).
+    private const long TextBoxDefaultHorizontalInsetEmu = 91440L;
+    private const long TextBoxDefaultVerticalInsetEmu = 45720L;
+
+    internal static void ResolveTextBoxContentInsets(DocxFloatingDrawing drawing, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom)
+    {
+        insetLeft = ReadInsetEmuPoints(drawing.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu);
+        insetTop = ReadInsetEmuPoints(drawing.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu);
+        insetRight = ReadInsetEmuPoints(drawing.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu);
+        insetBottom = ReadInsetEmuPoints(drawing.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu);
+    }
+
+    private static double ReadInsetEmuPoints(string? value, long defaultEmu)
+    {
+        return ReadEmuPoints(value) ?? OoxUnits.EmuToPoints(defaultEmu);
     }
 
     private static DocxFloatingDrawingLayout CreateFloatingDrawingLayout(
@@ -288,7 +313,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
         DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
@@ -349,6 +375,19 @@ internal sealed partial class DocxLayoutEngine
                 return null;
             }
 
+            // W6-d: floating-textbox content prints unscaled (Office: 12pt content beside
+            // scaled body), so scaled pages measure it raw with design insets. Frames stay
+            // unscaled in every mode; insets apply in every mode (file-geometry truth).
+            IDocxTextMeasurer contentMeasurer = textMeasurer;
+            double contentSpacingScale = paragraphSpacingScale;
+            if (unscaledTextMeasurer is not null &&
+                Math.Abs(paragraphSpacingScale - 1d) >= 0.000000001d)
+            {
+                contentMeasurer = unscaledTextMeasurer;
+                contentSpacingScale = 1d;
+            }
+
+            ResolveTextBoxContentInsets(drawing, out double insetLeft, out _, out double insetRight, out _);
             var story = new DocxRelatedStory(
                 DocxRelatedStoryKind.TextBox,
                 "floating-drawing",
@@ -359,10 +398,10 @@ internal sealed partial class DocxLayoutEngine
             return CreateRelatedStoryLayout(
                 story,
                 storyIndex: -1,
-                Math.Max(1d, width),
-                textMeasurer,
+                Math.Max(1d, width - insetLeft - insetRight),
+                contentMeasurer,
                 defaultTabStopPoints,
-                paragraphSpacingScale,
+                contentSpacingScale,
                 pageNumber: pageNumber,
                 pageCount: pageCount,
                 cancellationToken: cancellationToken);

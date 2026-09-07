@@ -358,6 +358,9 @@ internal sealed partial class DocxReader
             element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
         string? relationshipId = ReadDrawingImageRelationshipId(anchor);
         DocxInlineImage? image = ReadDrawingImage(anchor, package, relationships, revision);
+        XElement? textBoxBodyProperties = anchor
+            .Descendants(WordprocessingShapeNamespace + "bodyPr")
+            .FirstOrDefault();
         IReadOnlyList<DocxBodyElement> textBoxBodyElements = ReadTextBoxBodyElements(
             anchor,
             styles,
@@ -391,7 +394,11 @@ internal sealed partial class DocxReader
             relationshipId,
             image,
             sourceParagraphIndex,
-            sourceBlockIndex)
+            sourceBlockIndex,
+            (string?)textBoxBodyProperties?.Attribute("lIns"),
+            (string?)textBoxBodyProperties?.Attribute("tIns"),
+            (string?)textBoxBodyProperties?.Attribute("rIns"),
+            (string?)textBoxBodyProperties?.Attribute("bIns"))
         {
             Revisions = RevisionList(revision),
             TextBoxBodyElements = textBoxBodyElements

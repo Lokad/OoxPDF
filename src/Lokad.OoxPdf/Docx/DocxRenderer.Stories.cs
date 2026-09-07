@@ -160,18 +160,25 @@ internal sealed partial class DocxRenderer
             return;
         }
 
+        // W6-d: content sits in the inset content box (explicit bodyPr insets, else Office
+        // defaults), matching the layout content width.
+        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
+        double contentX = placedX + insetLeft;
+        double contentTop = placedTop - insetTop;
+        double contentWidth = Math.Max(0d, width - insetLeft - insetRight);
+        double contentHeight = Math.Max(0d, height - insetTop - insetBottom);
         graphics.SaveState();
-        graphics.ClipRectangle(placedX, placedTop - height, width, height);
+        graphics.ClipRectangle(contentX, contentTop - contentHeight, contentWidth, contentHeight);
         IReadOnlyList<DocxLayoutItem> items = textBoxLayout.TextLines
-            .Select(line => TranslateTextLine(line, placedX, placedTop))
+            .Select(line => TranslateTextLine(line, contentX, contentTop))
             .Cast<DocxLayoutItem>()
             .Concat(textBoxLayout.InlineImages.Select(image => image with
             {
-                X = placedX + image.X,
-                Y = placedTop + image.Y,
+                X = contentX + image.X,
+                Y = contentTop + image.Y,
                 PageIndex = drawing.AnchorPageIndex ?? image.PageIndex
             }))
-            .Concat(textBoxLayout.TableRows.Select(row => TranslateTableRow(row, placedX, placedTop)))
+            .Concat(textBoxLayout.TableRows.Select(row => TranslateTableRow(row, contentX, contentTop)))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)

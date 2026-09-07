@@ -24,7 +24,11 @@ internal sealed record DocxFloatingDrawing(
     string? ImageRelationshipId,
     DocxInlineImage? Image,
     int? SourceParagraphIndex,
-    int? SourceBlockIndex)
+    int? SourceBlockIndex,
+    string? TextBoxInsetLeftValue = null,
+    string? TextBoxInsetTopValue = null,
+    string? TextBoxInsetRightValue = null,
+    string? TextBoxInsetBottomValue = null)
 {
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public IReadOnlyList<DocxBodyElement> TextBoxBodyElements { get; init; } = [];

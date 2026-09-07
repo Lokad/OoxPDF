@@ -468,7 +468,8 @@ internal static class DocxPageTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout line = layout.FloatingDrawings.Single().TextBoxLayout!.TextLines.Single();
 
-        TestAssert.True(line.X > 70d, "Floating text-box right alignment should use the compact dynamic-field width, not the literal NUMPAGES placeholder width.");
+        // Inset-narrowed content shifts the right-aligned line left by the left inset.
+        TestAssert.True(line.X > 70d - 7.2d, "Floating text-box right alignment should use the compact dynamic-field width, not the literal NUMPAGES placeholder width.");
         TestAssert.True(line.Width < 30d, "Floating text-box line width should reflect the compact layout-time NUMPAGES proxy.");
         TestAssert.Equal("A {NUMPAGES} B", line.Text);
     }
