@@ -45,6 +45,14 @@ internal sealed partial class DocxRenderer
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateFloatingDrawingTextBoxTextLines(story.FloatingDrawings)));
     }
 
+    // Office A/B (w6-tbxctl probe): Word never balloons body-flow floating-textbox
+    // comments; static header/footer floatings keep the legacy path (unprobed).
+    internal static bool IsStaticStoryFloatingDrawing(DocxFloatingDrawingLayout drawing)
+    {
+        return string.Equals(drawing.StoryKind, "Header", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(drawing.StoryKind, "Footer", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static IEnumerable<DocxTextLineLayout> EnumerateMarkupBalloonAnchorTextLines(
         DocxLayoutPage page,
         IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings)
@@ -71,8 +79,7 @@ internal sealed partial class DocxRenderer
     {
         foreach (DocxFloatingDrawingLayout drawing in EnumeratePageFloatingDrawings(layout, pageIndex))
         {
-            bool isStaticStory = string.Equals(drawing.StoryKind, "Header", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(drawing.StoryKind, "Footer", StringComparison.OrdinalIgnoreCase);
+            bool isStaticStory = IsStaticStoryFloatingDrawing(drawing);
             foreach (DocxTextLineLayout line in EnumerateFloatingDrawingTextBoxTextLines(drawing))
             {
                 yield return new DocxTextEmissionLineSource(

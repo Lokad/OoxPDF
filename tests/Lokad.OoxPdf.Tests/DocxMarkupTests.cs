@@ -40,8 +40,9 @@ internal static class DocxMarkupTests
     public static void DocxWordCompatiblePrintScaleReservesBalloonLane()
     {
         // Office A/B (print-with-balloons probes): Word scales the page so left margin + body +
-        // a fixed balloon lane fits the paper width.
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
+        // a fixed balloon lane fits the paper width. The comment is body-anchored: balloons
+        // (and the lane) need anchors, so an anchorless part alone reserves nothing.
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Anchor", "1"))], [], [])
         {
             RelatedStories =
             [
@@ -132,7 +133,7 @@ internal static class DocxMarkupTests
             WordCompatiblePrintScale = 612d / 806.5d
         };
 
-        double yOffset = DocxRenderer.ResolveWordCompatibleTextYOffset(context, 726.72d, 792d);
+        double yOffset = DocxRenderer.ResolveWordCompatibleTextYOffset(context, 726.72d, 792d, hasBalloonContent: true);
 
         double expected = (726.72d - (792d / 2d)) * (1d - (612d / 806.5d));
         TestAssert.True(Math.Abs(yOffset - expected) < 0.000000001d, "Scaled pages should pin the laid-out first baseline to its center-scaled position.");
@@ -147,20 +148,30 @@ internal static class DocxMarkupTests
             WordCompatiblePrintScale = 792d / 986.5d
         };
 
-        double yOffset = DocxRenderer.ResolveWordCompatibleTextYOffset(context, 543.9d, 612d);
+        double yOffset = DocxRenderer.ResolveWordCompatibleTextYOffset(context, 543.9d, 612d, hasBalloonContent: true);
 
         double expected = (543.9d - (612d / 2d)) * (1d - (792d / 986.5d));
         TestAssert.True(Math.Abs(yOffset - expected) < 0.000000001d, "Off-reference pages should pin their own first baseline, not the reference shift.");
     }
 
-    public static void DocxWordCompatibleTextYOffsetKeepsFittedAnchorWithoutBalloons()
+    public static void DocxWordCompatibleTextYOffsetKeepsFittedAnchorWithBalloons()
     {
         var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
 
         TestAssert.Equal(1d, scale);
-        TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d));
+        TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: true));
+    }
+
+    public static void DocxWordCompatibleTextYOffsetDropsAnchorWithoutBalloons()
+    {
+        // Office A/B (w6-tbxctl text-box reference): Word prints balloonless unscaled pages
+        // plain, so the fitted anchor must not shift them.
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: false));
     }
 
     public static void DocxWordCompatibleTextYOffsetStaysZeroOutsideWordCompatible()
@@ -174,11 +185,19 @@ internal static class DocxMarkupTests
         };
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d));
+        TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: false));
     }
     private static DocxDocument CreateTopMarginBalloonDocument(double marginTopPoints)
     {
-        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Top margin probe body", 10d, 12d);
+        // The comment part needs a body anchor to reserve the lane (balloons need anchors).
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Top margin probe body", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+            ],
+            CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 20, 1, 0)]
+        };
         return new DocxDocument(612d, 792d, 72d, 72d, marginTopPoints, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], [])
         {
             RelatedStories =
@@ -393,13 +412,15 @@ internal static class DocxMarkupTests
     public static void DocxMarkupWordCompatibleGeometryUsesReserveMarginFallback()
     {
         string input = DocxTests.WriteTrackedChangeModeProbeDocx();
-        DocxDocument allDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup) with
+        DocxDocument readDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument allDocument = readDocument with
         {
             // Balloon content triggers the word-compatible print scale (Office: print shrinks iff balloons show).
             RelatedStories =
             [
                 new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
-            ]
+            ],
+            BodyElements = [.. readDocument.BodyElements, new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Balloon anchor", "1"))]
         };
         var reserveRenderer = new DocxRenderer(
             fontResolver: null,
@@ -552,7 +573,8 @@ internal static class DocxMarkupTests
     {
         // Office A/B (W5-C1 size probe w5-cap1422): a 22pt run prints at 16.656 = full
         // lane-fit scale, not the 15pt-design cap (11.4). Large body text scales uniformly.
-        DocxParagraph title = new(
+        // The comment part needs a body anchor to reserve the lane (balloons need anchors).
+        DocxParagraph title = new DocxParagraph(
             [new DocxTextRun("Oversized markup title", 22d, null, true, false, false, null, null)],
             [],
             null,
@@ -564,7 +586,14 @@ internal static class DocxMarkupTests
             null,
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
-            null);
+            null) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+            ],
+            CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 22, 1, 0)]
+        };
         DocxDocument document = new(
             612d,
             792d,
@@ -616,7 +645,8 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatibleAllMarkupScalesBodySpacing()
     {
-        DocxParagraph first = new(
+        // The comment part needs a body anchor to reserve the lane (balloons need anchors).
+        DocxParagraph first = new DocxParagraph(
             [new DocxTextRun("First paragraph", 11d, null, false, false, false, null, null)],
             [],
             null,
@@ -628,7 +658,14 @@ internal static class DocxMarkupTests
             null,
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
-            null);
+            null) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+            ],
+            CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 15, 1, 0)]
+        };
         DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second paragraph", 11d, 13.2d);
         DocxDocument document = new(
             612d,

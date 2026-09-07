@@ -181,7 +181,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
-        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, layout);
+        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -208,7 +208,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
-        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, layout);
+        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
@@ -354,15 +354,106 @@ internal sealed partial class DocxRenderer
         return document.PageWidthPoints / designWidth;
     }
 
+    // A page carries Word-compatible balloons when anchored comments or formatting
+    // revisions exist in any ballooning story (body, static, placed, floating text boxes).
+    // The lane-fit scale trigger stays narrower (body-anchored only); the anchor follows
+    // balloons wherever Word shows them.
+    private static bool HasAnyWordCompatibleBalloon(DocxDocument document)
+    {
+        return HasBalloonableCommentAnchor(document) || HasAnyNonVoidPropertyRevision(document);
+    }
+
     private static bool HasWordCompatibleBalloonContent(DocxDocument document, DocxMarkupContext markupContext)
     {
         if (markupContext.RendersCommentBalloons &&
-            document.RelatedStories.Any(story => story.Kind == DocxRelatedStoryKind.Comment))
+            HasBalloonableCommentAnchor(document))
         {
             return true;
         }
 
         return markupContext.RendersRevisionBalloons && HasNonVoidPropertyChangeRevision(document);
+    }
+
+    // Office A/B (w6-tbxctl probe, Word-COM rendered): Word balloons body-anchored
+    // comments but never body-flow floating-textbox ones, so a comment anchored only
+    // in floating drawings must not reserve the balloon lane. Static and placed
+    // floating textboxes keep the legacy trigger (unprobed). Anchors match parts by id,
+    // mirroring balloon matching, so orphan references reserve nothing either.
+    private static bool HasBalloonableCommentAnchor(DocxDocument document)
+    {
+        HashSet<string> commentPartIds = document.RelatedStories
+            .Where(story => story.Kind == DocxRelatedStoryKind.Comment && story.Id is not null)
+            .Select(story => story.Id ?? string.Empty)
+            .ToHashSet(StringComparer.Ordinal);
+        if (commentPartIds.Count == 0)
+        {
+            return false;
+        }
+
+        bool HasCommentReference(DocxParagraph paragraph)
+        {
+            return paragraph.InlineReferences.Any(reference =>
+                reference.Kind == DocxRelatedStoryKind.Comment &&
+                reference.Id is not null &&
+                commentPartIds.Contains(reference.Id));
+        }
+
+        bool TableHasCommentReference(DocxTable table)
+        {
+            foreach (DocxTableRow row in table.Rows)
+            {
+                foreach (DocxTableCell cell in row.Cells)
+                {
+                    if (DocxBlockTraversal.EnumerateBodyParagraphs(DocxTableCellContent.GetBodyElements(cell)).Any(HasCommentReference))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        if (document.Paragraphs.Any(HasCommentReference) || document.Tables.Any(TableHasCommentReference))
+        {
+            return true;
+        }
+
+        if (document.HeaderParagraphs.Concat(document.FooterParagraphs).Any(HasCommentReference) ||
+            DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType).Any(HasCommentReference) ||
+            DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType).Any(HasCommentReference) ||
+            DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings).Any(HasCommentReference))
+        {
+            return true;
+        }
+
+        bool StaticFloatingDrawingsHaveCommentReference(IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType)
+        {
+            return drawingsByType.Values
+                .SelectMany(drawings => drawings)
+                .SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements))
+                .Any(HasCommentReference);
+        }
+
+        if (StaticFloatingDrawingsHaveCommentReference(document.HeaderFloatingDrawingsByType) ||
+            StaticFloatingDrawingsHaveCommentReference(document.FooterFloatingDrawingsByType) ||
+            StaticFloatingDrawingsHaveCommentReference(document.PageSettings.HeaderFloatingDrawingsByType) ||
+            StaticFloatingDrawingsHaveCommentReference(document.PageSettings.FooterFloatingDrawingsByType))
+        {
+            return true;
+        }
+
+        foreach (DocxRelatedStory story in document.RelatedStories)
+        {
+            if (story.Paragraphs.Any(HasCommentReference) ||
+                story.Tables.Any(TableHasCommentReference) ||
+                story.FloatingDrawings.SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements)).Any(HasCommentReference))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool HasNonVoidPropertyChangeRevision(DocxDocument document)
@@ -415,6 +506,192 @@ internal sealed partial class DocxRenderer
         return revisions.Any(revision => IsPropertyChangeRevision(revision.Kind) && revision.PropertyElementNames.Count != 0);
     }
 
+    // Anchor-gating only: formatting revisions balloon from any story (body, static,
+    // placed, floating text boxes), so any of them sustains the fitted anchor. The
+    // lane-fit scale trigger stays body-scoped (see HasNonVoidPropertyChangeRevision).
+    // Section-break revisions never anchor balloons (no anchor line) and stay excluded.
+    private static bool HasAnyNonVoidPropertyRevision(DocxDocument document)
+    {
+        if (HasNonVoidPropertyChangeRevision(document))
+        {
+            return true;
+        }
+
+        foreach (DocxParagraph paragraph in ParaEnumerations())
+        {
+            if (HasNonVoidPropertyChange(paragraph.Revisions))
+            {
+                return true;
+            }
+        }
+
+        foreach (DocxTable table in TableEnumerations())
+        {
+            if (TableSubtreeHasNonVoidPropertyChange(table))
+            {
+                return true;
+            }
+        }
+
+        return false;
+
+        IEnumerable<DocxParagraph> ParaEnumerations()
+        {
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType))
+            {
+                yield return paragraph;
+            }
+
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
+            {
+                yield return paragraph;
+            }
+
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            {
+                yield return paragraph;
+            }
+
+            foreach (DocxRelatedStory story in document.RelatedStories)
+            {
+                foreach (DocxParagraph paragraph in story.Paragraphs)
+                {
+                    yield return paragraph;
+                }
+
+                foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(story.FloatingDrawings))
+                {
+                    yield return paragraph;
+                }
+            }
+
+            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.FloatingDrawings))
+            {
+                yield return paragraph;
+            }
+
+            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.HeaderFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
+            {
+                yield return paragraph;
+            }
+
+            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.FooterFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
+            {
+                yield return paragraph;
+            }
+
+            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.PageSettings.HeaderFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
+            {
+                yield return paragraph;
+            }
+
+            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.PageSettings.FooterFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
+            {
+                yield return paragraph;
+            }
+        }
+
+        IEnumerable<DocxParagraph> FloatingDrawingParagraphs(IEnumerable<DocxFloatingDrawing> drawings)
+        {
+            foreach (DocxFloatingDrawing drawing in drawings)
+            {
+                foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements))
+                {
+                    yield return paragraph;
+                }
+            }
+        }
+
+        IEnumerable<DocxTable> TableEnumerations()
+        {
+            foreach (DocxTable table in document.Tables)
+            {
+                yield return table;
+            }
+
+            foreach (DocxTable table in StaticStoryTables(document.HeaderBodyElementsByType))
+            {
+                yield return table;
+            }
+
+            foreach (DocxTable table in StaticStoryTables(document.FooterBodyElementsByType))
+            {
+                yield return table;
+            }
+
+            foreach (DocxTable table in StaticStoryTables(document.PageSettings.HeaderBodyElementsByType))
+            {
+                yield return table;
+            }
+
+            foreach (DocxTable table in StaticStoryTables(document.PageSettings.FooterBodyElementsByType))
+            {
+                yield return table;
+            }
+
+            foreach (DocxRelatedStory story in document.RelatedStories)
+            {
+                foreach (DocxTable table in story.Tables)
+                {
+                    yield return table;
+                }
+            }
+        }
+
+        IEnumerable<DocxTable> StaticStoryTables(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType)
+        {
+            foreach (IReadOnlyList<DocxBodyElement> elements in bodyElementsByType.Values)
+            {
+                foreach (DocxTable table in DocxBlockTraversal.EnumerateBodyTables(elements))
+                {
+                    yield return table;
+                }
+            }
+        }
+
+        bool TableSubtreeHasNonVoidPropertyChange(DocxTable table)
+        {
+            if (HasNonVoidPropertyChange(table.Revisions))
+            {
+                return true;
+            }
+
+            foreach (DocxTableRow row in table.Rows)
+            {
+                if (HasNonVoidPropertyChange(row.Revisions))
+                {
+                    return true;
+                }
+
+                foreach (DocxTableCell cell in row.Cells)
+                {
+                    if (HasNonVoidPropertyChange(cell.Revisions))
+                    {
+                        return true;
+                    }
+
+                    foreach (DocxParagraph paragraph in cell.Paragraphs)
+                    {
+                        if (HasNonVoidPropertyChange(paragraph.Revisions))
+                        {
+                            return true;
+                        }
+                    }
+
+                    foreach (DocxTable nested in DocxBlockTraversal.EnumerateBodyTables(DocxTableCellContent.GetBodyElements(cell)))
+                    {
+                        if (TableSubtreeHasNonVoidPropertyChange(nested))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
     private static IDocxTextMeasurer? ResolveLayoutTextMeasurer(DocxFontResources fontResources, DocxMarkupContext markupContext)
     {
         double textScale = ResolveTextEmissionFontScale(markupContext);
@@ -431,15 +708,15 @@ internal sealed partial class DocxRenderer
     }
 
     // Fitted anchor: the 69.58 baseline shift is the pre-layout default and is kept for
-    // unscaled pages and lineless layouts.
+    // unscaled pages with balloons and for lineless layouts. Balloonless unscaled pages
+    // print plain (Office: text-box reference), so they keep no shift.
     private const double WordCompatibleTextYOffsetReferenceAnchorPoints = 69.58d;
-    internal static double ResolveWordCompatibleTextYOffset(DocxMarkupContext markupContext, double? firstBaselineY, double pageHeight)
+    internal static double ResolveWordCompatibleTextYOffset(DocxMarkupContext markupContext, double? firstBaselineY, double pageHeight, bool hasBalloonContent)
     {
         // Office A/B (W5-Y1 top-margin probes w5-ytop54/w5-ytop144): Word scales Y about the
         // page center with the print scale. Pin the laid-out first baseline to its center-scaled
         // position with a slope-1 shift (the pre-shrunk layout keeps its own pitch), which fits
-        // the probes to 0.1pt and dense to 0.2pt. Unscaled pages and lineless layouts keep the
-        // fitted anchor.
+        // the probes to 0.1pt and dense to 0.2pt. Unscaled balloonless pages keep no shift.
         if (markupContext.Mode != OoxPdfDocxMarkupMode.AllMarkup ||
             markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
             !markupContext.ExpandsMarkupMargin)
@@ -447,16 +724,20 @@ internal sealed partial class DocxRenderer
             return 0d;
         }
 
-        if (firstBaselineY is null ||
-            Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d)
+        if (firstBaselineY is null)
         {
             return WordCompatibleTextYOffsetReferenceAnchorPoints;
+        }
+
+        if (Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d)
+        {
+            return hasBalloonContent ? WordCompatibleTextYOffsetReferenceAnchorPoints : 0d;
         }
 
         return (firstBaselineY.Value - pageHeight / 2d) * (1d - markupContext.WordCompatiblePrintScale);
     }
 
-    private static DocxMarkupContext WithFirstPinYOffset(DocxMarkupContext markupContext, DocxLayout layout)
+    private static DocxMarkupContext WithFirstPinYOffset(DocxMarkupContext markupContext, DocxDocument document, DocxLayout layout)
     {
         if (layout.Pages.Count == 0)
         {
@@ -477,7 +758,7 @@ internal sealed partial class DocxRenderer
 
         return markupContext with
         {
-            WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height)
+            WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height, HasAnyWordCompatibleBalloon(document))
         };
     }
 
@@ -542,7 +823,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken);
-        markupContext = WithFirstPinYOffset(markupContext, layout);
+        markupContext = WithFirstPinYOffset(markupContext, document, layout);
         DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);

@@ -1728,4 +1728,99 @@ internal static class DocxCommentsTests
             placements[0].Y >= placements[1].Y + placements[1].Height + 18d,
             "Distant review-anchor lane bands should remain visually separated instead of being treated as one collision band.");
     }
+    public static void DocxWordCompatibleAllMarkupSkipsFloatingTextBoxCommentBalloons()
+    {
+        // Office A/B (w6-tbxctl probe, Word-COM rendered): Word balloons body-anchored
+        // comments but never body-flow floating-textbox ones, so a textbox-only comment
+        // sustains no Word-compatible balloon and reserves no lane.
+        DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
+        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Text box review anchor", "5");
+        DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "5",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Text box comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] commentBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Comment")
+            .ToArray();
+
+        TestAssert.Equal(0, commentBalloons.Length);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
+
+    public static void DocxWordCompatibleAllMarkupKeepsBodyCommentBalloonAlongsideFloatingTextBoxComment()
+    {
+        // Companion to the suppression test: a body-anchored comment still balloons and
+        // reserves the lane when a floating-textbox comment is present.
+        DocxParagraph bodyParagraph = DocxTests.CreateCommentMarkerParagraph("Body review anchor", "6");
+        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Text box review anchor", "5");
+        DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        DocxRelatedStory bodyCommentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "6",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxRelatedStory textBoxCommentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "5",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Text box comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [floatingDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [bodyCommentStory, textBoxCommentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] commentBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Comment")
+            .ToArray();
+
+        TestAssert.Equal(1, commentBalloons.Length);
+        TestAssert.Equal(1, commentBalloons.Single().CandidateCount);
+        TestAssert.Equal(1, commentBalloons.Single().CommentCandidateCount);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.True(DocxRenderer.ResolveWordCompatiblePrintScale(document, context) < 1d, "A body-anchored comment should reserve the balloon lane.");
+    }
 }
