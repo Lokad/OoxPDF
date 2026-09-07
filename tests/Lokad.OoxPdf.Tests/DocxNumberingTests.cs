@@ -1316,7 +1316,10 @@ internal static class DocxNumberingTests
         DocxTextSegmentLayout separatorSegment = firstLine.Segments[1];
         DocxTextSegmentLayout bodySegment = firstLine.Segments[2];
 
-        TestAssert.Equal(216d, page.ColumnFrames.Single().Width);
+        // Break-equivalent reserve (W5-R): 360/36/36 body (288) times the default print scale.
+        TestAssert.True(
+            Math.Abs(page.ColumnFrames.Single().Width - (288d * 0.842391d)) < 0.000000001d,
+            $"Word-compatible reserve should size the layout body to the authored body times scale. Width={page.ColumnFrames.Single().Width}.");
         TestAssert.True(lines.Length > 1, "The narrowed all-markup body frame should wrap the numbered paragraph.");
         TestAssert.Equal(72d, firstLine.X);
         TestAssert.Equal(DocxTextSegmentRole.ListLabel, labelSegment.Role);

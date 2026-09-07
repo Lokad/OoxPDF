@@ -418,9 +418,11 @@ internal static class DocxMarkupTests
         DocxLayoutPageSnapshot wordLayoutPage = wordLayout.Pages.Single();
 
         TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup.ToString(), wordLayout.MarkupGeometryMode);
-        TestAssert.Equal(reserveLayout.MarkupMarginReservePoints, wordLayout.MarkupMarginReservePoints);
-        TestAssert.Equal(reserveLayoutPage.MarginRight, wordLayoutPage.MarginRight);
-        TestAssert.Equal(reserveLayoutPage.ColumnFrameWidthSum, wordLayoutPage.ColumnFrameWidthSum);
+        // Break-equivalent reserve (W5-R) sizes the WC body by the print scale instead of the
+        // preferred review margin, so the lanes no longer coincide; both still reserve review space.
+        TestAssert.True(wordLayout.MarkupMarginReservePoints > 0d, "Word-compatible all-markup should still reserve review space.");
+        TestAssert.True(wordLayoutPage.MarginRight < reserveLayoutPage.MarginRight, "Break-equivalent WC reserve should expand less than the preferred review margin.");
+        TestAssert.True(wordLayoutPage.ColumnFrameWidthSum > reserveLayoutPage.ColumnFrameWidthSum, "Break-equivalent WC body should be wider than the preferred-reserve body.");
         TestAssert.True(wordLayoutPage.TextLineHeightSum <= reserveLayoutPage.TextLineHeightSum + 0.001d, "Word-compatible all-markup should not increase aggregate text line metrics when the print-scale profile is active.");
         TestAssert.True(
             wordEmission.Lines.SelectMany(line => line.Segments).Max(segment => segment.PdfFontSize) <
@@ -451,9 +453,28 @@ internal static class DocxMarkupTests
         TestAssert.Equal(0d, simpleLayout.MarkupMarginReservePoints);
     }
 
+    public static void DocxWordCompatibleReserveMatchesAuthoredBreakWidth()
+    {
+        // Uniform-scale break equivalence (W5-P1): scaled metrics break at the layout body,
+        // which reads as layoutBody/scale in design space. The reserve must size the layout
+        // body to bodyW times scale so breaks land where Word full-design layout breaks them
+        // (612/72/72 portrait at s = 612/806.5 reserves to right margin 184.86, not 207).
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Reserve probe body", 10d, 12d);
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 612d / 806.5d)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        double expectedRight = 612d - 72d - ((612d - 72d - 72d) * (612d / 806.5d));
+        TestAssert.True(
+            Math.Abs(layout.Pages[0].MarginRight - expectedRight) < 0.5d,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Word-compatible reserve should size the layout body to the authored body times scale. MarginRight={layout.Pages[0].MarginRight}, Expected={expectedRight}."));
+    }
+
     public static void DocxWordCompatibleAllMarkupWrapsSpecialTokensInNarrowedBodyFrame()
     {
-        DocxParagraph softHyphen = DocxTests.CreateDocxLayoutParagraph("ABCDEFGHIJKLMNOPQRST\u00ADUVWXYZABCDEFGHIJKLMNOPQRSTUV", 10d, 12d);
+        DocxParagraph softHyphen = DocxTests.CreateDocxLayoutParagraph("ABCDEFGHIJKLMNOPQRST\u00ADUVWXYZABCDEFGHIJKLMNOPQRSTUVABCDEFGH", 10d, 12d);
         DocxDocument softHyphenDocument = DocxTests.CreateAllMarkupWrapProbeDocument([softHyphen]);
         DocxTextLineLayout[] preserveSoftHyphen = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(softHyphenDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -471,7 +492,7 @@ internal static class DocxMarkupTests
         TestAssert.True(wordSoftHyphen[0].Text.EndsWith('\u00AD'), "Word-compatible all-markup should use the hidden soft hyphen when the review margin narrows an otherwise fitting token.");
         TestAssert.True(wordSoftHyphen[0].EndsWithIntraTokenBreak, "Soft-hyphen wraps in the narrowed review body should keep intra-token provenance.");
 
-        DocxParagraph nonbreaking = DocxTests.CreateDocxLayoutParagraph("Alpha\u00A0Beta Gamma Delta Epsilon Zeta Eta Theta Iota Kappa", 10d, 12d);
+        DocxParagraph nonbreaking = DocxTests.CreateDocxLayoutParagraph("Alpha\u00A0Beta Gamma Delta Epsilon Zeta Eta Zed Theta Iota", 10d, 12d);
         DocxDocument nonbreakingDocument = DocxTests.CreateAllMarkupWrapProbeDocument([nonbreaking]);
         DocxTextLineLayout[] preserveNonbreaking = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(nonbreakingDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -489,7 +510,7 @@ internal static class DocxMarkupTests
         TestAssert.True(wordNonbreaking[0].Text.Contains("Alpha\u00A0Beta", StringComparison.Ordinal), "The narrowed review body should not split a nonbreaking-space token.");
         TestAssert.True(wordNonbreaking[1].Text.StartsWith("Theta", StringComparison.Ordinal), "The narrowed review body should wrap at the following breakable space.");
 
-        DocxParagraph tabs = DocxTests.CreateDocxLayoutParagraph("Alpha\tBeta Gamma Delta Epsilon Zeta Eta Theta Iota", 10d, 12d);
+        DocxParagraph tabs = DocxTests.CreateDocxLayoutParagraph("Alpha\tBeta Gamma Delta Epsilon Zeta Eta Zed Theta Iota", 10d, 12d);
         DocxDocument tabDocument = DocxTests.CreateAllMarkupWrapProbeDocument([tabs]);
         DocxTextLineLayout[] preserveTabs = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(tabDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)

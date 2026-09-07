@@ -1088,7 +1088,10 @@ internal static class DocxTablesMarkupTests
         DocxTableRowLayout nestedRow = secondCellLayout.NestedRows.Single();
         DocxTableCellLayout nestedCellLayout = nestedRow.Cells.Single();
 
-        TestAssert.Equal(333d, page.ColumnFrames.Single().Width);
+        // Break-equivalent reserve (W5-R): 612/72/72 body (468) times the default print scale.
+        TestAssert.True(
+            Math.Abs(page.ColumnFrames.Single().Width - (468d * 0.842391d)) < 0.000000001d,
+            $"Word-compatible reserve should size the layout body to the authored body times scale. Width={page.ColumnFrames.Single().Width}.");
         TestAssert.Equal(90d, outerRow.Table.TableX);
         TestAssert.Equal(240d, outerRow.Table.ResolvedTableWidth);
         TestAssert.Equal("fixed", outerRow.Table.LayoutValue ?? string.Empty);

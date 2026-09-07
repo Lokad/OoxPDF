@@ -277,6 +277,8 @@ internal sealed partial class DocxLayoutEngine
         DocxDocument document,
         DocxEffectiveSectionSettings section,
         bool reserveMarkupMargin,
+        bool retuneReserve,
+        double printScale,
         int pageNumber)
     {
         DocxPageSettings effectiveSettings = section.PageSettings;
@@ -309,11 +311,11 @@ internal sealed partial class DocxLayoutEngine
         {
             if (ShouldReserveLeftMarkupMargin(document, pageNumber))
             {
-                marginLeft = ResolveReservedMarkupLeftMargin(width, marginLeft, marginRight);
+                marginLeft = ResolveReservedMarkupLeftMargin(width, marginLeft, marginRight, printScale, retuneReserve);
             }
             else
             {
-                marginRight = ResolveReservedMarkupRightMargin(width, marginLeft, marginRight);
+                marginRight = ResolveReservedMarkupRightMargin(width, marginLeft, marginRight, printScale, retuneReserve);
             }
         }
 
@@ -379,7 +381,7 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static double ResolveReservedMarkupRightMargin(double pageWidth, double marginLeft, double marginRight)
+    private static double ResolveReservedMarkupRightMargin(double pageWidth, double marginLeft, double marginRight, double printScale, bool retuneReserve)
     {
         double bodyWidth = Math.Max(1d, pageWidth - marginLeft - marginRight);
         if (bodyWidth <= MinimumMarkupBodyWidthPoints)
@@ -388,10 +390,19 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double maxRightMargin = Math.Max(marginRight, pageWidth - marginLeft - MinimumMarkupBodyWidthPoints);
-        return Math.Max(marginRight, Math.Min(PreferredMarkupMarginPoints, maxRightMargin));
+        double preferredMargin = PreferredMarkupMarginPoints;
+        if (retuneReserve && Math.Abs(printScale - 1d) >= 0.000000001d)
+        {
+            // Uniform-scale break equivalence: scaled metrics break at the layout body, which
+            // reads as layoutBody/scale in design space. Size the layout body to the authored
+            // body times scale so breaks land where Word full-design layout breaks them.
+            preferredMargin = Math.Max(marginRight, pageWidth - marginLeft - bodyWidth * printScale);
+        }
+
+        return Math.Max(marginRight, Math.Min(preferredMargin, maxRightMargin));
     }
 
-    private static double ResolveReservedMarkupLeftMargin(double pageWidth, double marginLeft, double marginRight)
+    private static double ResolveReservedMarkupLeftMargin(double pageWidth, double marginLeft, double marginRight, double printScale, bool retuneReserve)
     {
         double bodyWidth = Math.Max(1d, pageWidth - marginLeft - marginRight);
         if (bodyWidth <= MinimumMarkupBodyWidthPoints)
@@ -400,7 +411,13 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double maxLeftMargin = Math.Max(marginLeft, pageWidth - marginRight - MinimumMarkupBodyWidthPoints);
-        return Math.Max(marginLeft, Math.Min(PreferredMarkupMarginPoints, maxLeftMargin));
+        double preferredMargin = PreferredMarkupMarginPoints;
+        if (retuneReserve && Math.Abs(printScale - 1d) >= 0.000000001d)
+        {
+            preferredMargin = Math.Max(marginLeft, pageWidth - marginRight - bodyWidth * printScale);
+        }
+
+        return Math.Max(marginLeft, Math.Min(preferredMargin, maxLeftMargin));
     }
 
     private static bool ShouldReserveLeftMarkupMargin(DocxDocument document, int pageNumber)

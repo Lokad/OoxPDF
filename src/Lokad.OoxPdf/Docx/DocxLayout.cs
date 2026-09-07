@@ -187,6 +187,8 @@ internal sealed partial class DocxLayoutEngine
     private const double TableCellNoWrapLineWidthPoints = 1_000_000d;
     private readonly bool reserveMarkupMargin;
     private readonly double paragraphSpacingScale;
+    private readonly bool retuneReserveToPrintScale;
+    private readonly double reservePrintScale;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -229,6 +231,8 @@ internal sealed partial class DocxLayoutEngine
         paragraphSpacingScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
             ? wordCompatiblePrintScale
             : 1d;
+        retuneReserveToPrintScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+        reservePrintScale = wordCompatiblePrintScale;
     }
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded, CancellationToken cancellationToken)
@@ -245,7 +249,7 @@ internal sealed partial class DocxLayoutEngine
         var currentItems = new List<DocxLayoutItem>();
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
-        DocxPageGeometry page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, pageNumber: 1);
+        DocxPageGeometry page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pageNumber: 1);
         int activeColumnIndex = 0;
         double x = ResolveActiveColumnFrame(page, activeColumnIndex).X;
         double width = ResolveActiveColumnFrame(page, activeColumnIndex).Width;
@@ -312,7 +316,7 @@ internal sealed partial class DocxLayoutEngine
                 currentItems.ToArray()));
             currentItems = [];
             activeColumnIndex = 0;
-            page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, pages.Count + 1);
+            page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             ApplyActiveColumnFrame();
             cursorY = page.Height - page.MarginTop;
             pendingSpacingAfter = 0d;
@@ -355,7 +359,7 @@ internal sealed partial class DocxLayoutEngine
         void ApplySectionAfterBreak(int elementIndex)
         {
             activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
-            page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, pages.Count + 1);
+            page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             activeColumnIndex = 0;
             ApplyActiveColumnFrame();
             activeColumnHasContent = false;

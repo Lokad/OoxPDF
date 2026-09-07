@@ -419,7 +419,10 @@ internal static class DocxRevisionsTests
         DocxFloatingDrawingLayout tableImageLayout = layout.FloatingDrawings
             .Single(drawing => drawing.Drawing.ImageRelationshipId == "rIdTableAnchor");
 
-        TestAssert.Equal(216d, page.ColumnFrames.Single().Width);
+        // Break-equivalent reserve (W5-R): 360/36/36 body (288) times the default print scale.
+        TestAssert.True(
+            Math.Abs(page.ColumnFrames.Single().Width - (288d * 0.842391d)) < 0.000000001d,
+            $"Word-compatible reserve should size the layout body to the authored body times scale. Width={page.ColumnFrames.Single().Width}.");
         TestAssert.Equal("0", textBoxLayout.Drawing.BehindDocumentValue ?? string.Empty);
         TestAssert.Equal("2", textBoxLayout.Drawing.RelativeHeightValue ?? string.Empty);
         TestAssert.Equal(0, textBoxLayout.AnchorPageIndex ?? -1);
@@ -440,8 +443,13 @@ internal static class DocxRevisionsTests
         TestAssert.Equal(0, tableImageLayout.AnchorColumnIndex ?? -1);
         TestAssert.Equal(1, tableImageLayout.Drawing.SourceBlockIndex ?? -1);
         TestAssert.Equal(36d, tableImageLayout.HorizontalReferenceX ?? -1d);
-        TestAssert.Equal(216d, tableImageLayout.HorizontalReferenceWidth ?? -1d);
-        TestAssert.Equal(216d, tableImageLayout.PlacedX ?? -1d);
+        // Break-equivalent reserve (W5-R): 360/36/36 body (288) times the default print scale.
+        TestAssert.True(
+            Math.Abs((tableImageLayout.HorizontalReferenceWidth ?? -1d) - (288d * 0.842391d)) < 0.000000001d,
+            $"Word-compatible column frames should size to the authored body times scale. Width={tableImageLayout.HorizontalReferenceWidth}.");
+        TestAssert.True(
+            Math.Abs((tableImageLayout.PlacedX ?? -1d) - (288d * 0.842391d)) < 0.000000001d,
+            $"Column-anchored drawings should place at the retuned column width. X={tableImageLayout.PlacedX}.");
         TestAssert.Equal(tableImageLayout.AnchorBlockVerticalTop ?? -1d, tableImageLayout.VerticalReferenceTop ?? -2d);
         TestAssert.Equal(
             tableImageLayout.AnchorBlockVerticalBottom ?? -1d,
@@ -449,7 +457,11 @@ internal static class DocxRevisionsTests
         TestAssert.Equal(tableImageLayout.VerticalReferenceTop ?? -1d, tableImageLayout.PlacedTop ?? -2d);
         TestAssert.Equal(DocxAnchorPlacementSource.Align, tableImageLayout.HorizontalPlacementSource);
         TestAssert.Equal(DocxAnchorPlacementSource.Offset, tableImageLayout.VerticalPlacementSource);
-        TestAssert.Equal(207d, tableImageLayout.WrapExclusionX ?? -1d);
+        // The wrap exclusion insets the placed drawing by the authored wrap distance, so it
+        // tracks the retuned column width instead of the legacy review margin.
+        TestAssert.True(
+            Math.Abs((tableImageLayout.WrapExclusionX ?? -1d) - ((tableImageLayout.PlacedX ?? -1d) - 9d)) < 0.000000001d,
+            $"Square-wrap exclusion should inset the placed drawing by the wrap distance. X={tableImageLayout.WrapExclusionX}.");
         TestAssert.Equal((tableImageLayout.PlacedTop ?? 0d) + 3d, tableImageLayout.WrapExclusionTop ?? -1d);
         TestAssert.Equal(63d, tableImageLayout.WrapExclusionWidth ?? -1d);
         TestAssert.Equal(27d, tableImageLayout.WrapExclusionHeight ?? -1d);
