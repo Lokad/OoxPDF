@@ -1907,6 +1907,38 @@ internal static class DocxTests
         }
     }
 
+    // Mirrors the production scaled measurer (advances times the layout scale, line metrics
+    // times the fitted compromise) so Word-compatible layout tests model production instead of
+    // pairing raw advances with scaled table geometry (W6-a1).
+    internal sealed class ScaledLayoutTextMeasurer(IDocxTextMeasurer inner, double textScale, double lineMetricScale) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize)
+        {
+            return inner.MeasureText(run, text, fontSize) * textScale;
+        }
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
+        {
+            return inner is IDocxLineMetricsProvider lineMetrics
+                ? lineMetrics.MeasureSingleLineHeight(run, fontSize) * lineMetricScale
+                : fontSize * 1.2d * lineMetricScale;
+        }
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+        {
+            return inner is IDocxStaticTextMetricsProvider staticMetrics
+                ? staticMetrics.MeasureWindowsAscender(run, fontSize) * lineMetricScale
+                : fontSize * lineMetricScale;
+        }
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+        {
+            return inner is IDocxStaticTextMetricsProvider staticMetrics
+                ? staticMetrics.MeasureWindowsDescender(run, fontSize) * lineMetricScale
+                : fontSize * 0.2d * lineMetricScale;
+        }
+    }
+
     internal sealed class FractionalLineHeightTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize)

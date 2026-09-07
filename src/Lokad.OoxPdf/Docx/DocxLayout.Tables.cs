@@ -96,7 +96,7 @@ internal sealed partial class DocxLayoutEngine
 
             double fragmentBottomY = rowHeight - firstFragmentHeight;
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-            double rowTopPadding = ResolveTableRowTopPadding(row);
+            double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
             for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
@@ -188,13 +188,13 @@ internal sealed partial class DocxLayoutEngine
         int? pageCount,
         double paragraphSpacingScale)
     {
-        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth);
+        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale);
         var tableContext = new DocxTableLayoutContext(
             tableIndex,
             sourceBlockIndex,
             table.Rows.Count,
             table.ColumnWidthsPoints.Count,
-            table.ColumnWidthsPoints.Sum(),
+            table.ColumnWidthsPoints.Sum() * paragraphSpacingScale,
             table.HasExplicitGrid,
             grid.ResolvedColumnWidths,
             grid.TargetTableWidth,
@@ -210,14 +210,14 @@ internal sealed partial class DocxLayoutEngine
         double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale)
         {
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-            double rowTopPadding = ResolveTableRowTopPadding(row);
+            double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
             double contentHeight = textMeasurer is null
                 ? 0d
                 : row.Cells
                     .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale))
                     .DefaultIfEmpty(0d)
                     .Max();
-            return ResolveTableRowHeight(row, contentHeight);
+            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale);
         }
 
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
@@ -229,11 +229,17 @@ internal sealed partial class DocxLayoutEngine
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
     }
 
-    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth)
+    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale)
     {
-        double tableX = x + Math.Max(0d, table.IndentPoints ?? 0d);
-        double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, table.IndentPoints ?? 0d));
-        double gridTableWidth = table.ColumnWidthsPoints.Sum();
+        // W6-a1: fixed table geometry joins scaled space (fixed lengths times the layout
+        // scale) so the uniform shift-composition maps frames like body text. Percent and
+        // auto widths key off the already-scaled available width and need no change.
+        // fixedScale reuses the layout spacing scale: identical in every mode (WC: s, else 1).
+        double indentPoints = Math.Max(0d, table.IndentPoints ?? 0d) * fixedScale;
+        double tableX = x + indentPoints;
+        double tableAvailableWidth = Math.Max(1d, availableWidth - indentPoints);
+        IReadOnlyList<double> gridPoints = table.ColumnWidthsPoints.Select(width => width * fixedScale).ToArray();
+        double gridTableWidth = gridPoints.Sum();
         double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;
         double ResolveTargetTableWidth()
         {
@@ -241,7 +247,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 if (table.PreferredWidthPoints is { } points)
                 {
-                    return points;
+                    return points * fixedScale;
                 }
         
                 double ResolveOuterTableCellContentInset()
@@ -254,17 +260,17 @@ internal sealed partial class DocxLayoutEngine
             
                     DocxTableCell firstCell = firstRow.Cells[0];
                     DocxTableCell lastCell = firstRow.Cells[^1];
-                    return ResolveTableCellHorizontalPadding(firstCell.Margins.LeftPoints) +
-                        ResolveTableCellBorderContentInset(firstCell, "left") +
-                        ResolveTableCellHorizontalPadding(lastCell.Margins.RightPoints) +
-                        ResolveTableCellBorderContentInset(lastCell, "right");
+                    return ResolveTableCellHorizontalPadding(firstCell.Margins.LeftPoints, fixedScale) +
+                        ResolveTableCellBorderContentInset(firstCell, "left", fixedScale) +
+                        ResolveTableCellHorizontalPadding(lastCell.Margins.RightPoints, fixedScale) +
+                        ResolveTableCellBorderContentInset(lastCell, "right", fixedScale);
                 }
         
                 if (table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
                     int.TryParse(table.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
                 {
                     double normalPercentageWidth = tableAvailableWidth * fiftiethsPercent / 5000d;
-                    double explicitGridWidth = table.HasExplicitGrid ? table.ColumnWidthsPoints.Sum() : 0d;
+                    double explicitGridWidth = table.HasExplicitGrid ? gridTableWidth : 0d;
                     double percentageBasis = explicitGridWidth > 0d && explicitGridWidth < normalPercentageWidth - 0.001d
                         ? tableAvailableWidth + ResolveOuterTableCellContentInset()
                         : tableAvailableWidth;
@@ -301,7 +307,7 @@ internal sealed partial class DocxLayoutEngine
                 int inferredColumnCount = GetMaxGridColumnCount(table);
                 return inferredColumnCount > 0
                     ? Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray()
-                    : table.ColumnWidthsPoints;
+                    : gridPoints;
             }
 
             double?[] preferredWidths = new double?[columnCount];
@@ -315,7 +321,7 @@ internal sealed partial class DocxLayoutEngine
                     {
                         if (cell.PreferredWidthPoints is { } points)
                         {
-                            return points;
+                            return points * fixedScale;
                         }
                 
                         if (cell.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
@@ -353,7 +359,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            return table.ColumnWidthsPoints;
+            return gridPoints;
         }
     }
 
@@ -365,12 +371,14 @@ internal sealed partial class DocxLayoutEngine
             .Max();
     }
 
-    private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight)
+    // W6-a1: fixed table geometry joins scaled space; fixedScale reuses the layout
+    // spacing scale (identical in every mode).
+    private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight, double fixedScale)
     {
         if (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
             row.HeightPoints is { } exactHeight)
         {
-            return Math.Max(1d, exactHeight);
+            return Math.Max(1d, exactHeight * fixedScale);
         }
 
         double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
@@ -379,7 +387,7 @@ internal sealed partial class DocxLayoutEngine
         if (row.HeightPoints is not null &&
             !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
         {
-            declaredHeight += ResolveTableRowTopPadding(row);
+            declaredHeight += ResolveTableRowTopPadding(row, fixedScale);
         }
 
         double height = Math.Max(declaredHeight, contentHeight);
@@ -587,7 +595,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-        double rowTopPadding = ResolveTableRowTopPadding(row);
+        double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
         var breakHeights = new List<double>();
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
@@ -657,8 +665,8 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
-        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "left", paragraphSpacingScale);
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "right", paragraphSpacingScale);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         heightBeforeBreak = rowTopPadding;
         double pendingSpacingAfter = 0d;
@@ -769,7 +777,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
-        double rowTopPadding = ResolveTableRowTopPadding(row);
+        double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
         double fullRowHeight = rowHeights[rowIndex];
         double fragmentOffsetFromRowTop = logicalRowTopY - cursorY;
         double cellX = tableContext.TableX;
@@ -857,10 +865,10 @@ internal sealed partial class DocxLayoutEngine
                 : cell;
             double contentY = isVerticalMergeContinuation ? visualY : fullVisualY;
             double contentHeight = isVerticalMergeContinuation ? visualHeight : fullVisualHeight;
-            double contentPaddingLeft = ResolveTableCellHorizontalPadding(contentCell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(contentCell, "left");
+            double contentPaddingLeft = ResolveTableCellHorizontalPadding(contentCell.Margins.LeftPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(contentCell, "left", paragraphSpacingScale);
             double contentPaddingTop = rowTopPadding;
-            double contentPaddingRight = ResolveTableCellHorizontalPadding(contentCell.Margins.RightPoints) + ResolveTableCellBorderContentInset(contentCell, "right");
-            double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints);
+            double contentPaddingRight = ResolveTableCellHorizontalPadding(contentCell.Margins.RightPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(contentCell, "right", paragraphSpacingScale);
+            double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
             IReadOnlyList<DocxTextLineLayout> textLines = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale)
@@ -896,7 +904,7 @@ internal sealed partial class DocxLayoutEngine
                 verticalMergeOwner,
                 visualOwnership,
                 nestedTableRows));
-            cellX += cellWidth + (table.CellSpacingPoints ?? 0d);
+            cellX += cellWidth + (table.CellSpacingPoints ?? 0d) * paragraphSpacingScale;
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }
 

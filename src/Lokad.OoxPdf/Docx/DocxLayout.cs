@@ -769,25 +769,27 @@ internal sealed partial class DocxLayoutEngine
         };
     }
 
-    private static double ResolveTableCellHorizontalPadding(double? points)
+    // W6-a1: fixed table geometry joins scaled space; fixedScale reuses the layout
+    // spacing scale (identical in every mode).
+    private static double ResolveTableCellHorizontalPadding(double? points, double fixedScale)
     {
-        return Math.Max(0d, points ?? 0d);
+        return Math.Max(0d, points ?? 0d) * fixedScale;
     }
 
-    private static double ResolveTableCellBorderContentInset(DocxTableCell cell, string edge)
+    private static double ResolveTableCellBorderContentInset(DocxTableCell cell, string edge, double fixedScale)
     {
-        return DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, edge)) / 2d;
+        return DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, edge)) / 2d * fixedScale;
     }
 
-    private static double ResolveTableCellVerticalPadding(double? points)
+    private static double ResolveTableCellVerticalPadding(double? points, double fixedScale)
     {
-        return Math.Max(0d, points ?? 0d);
+        return Math.Max(0d, points ?? 0d) * fixedScale;
     }
 
-    private static double ResolveTableRowTopPadding(DocxTableRow row)
+    private static double ResolveTableRowTopPadding(DocxTableRow row, double fixedScale)
     {
         return row.Cells
-            .Select(cell => ResolveTableCellVerticalPadding(cell.Margins.TopPoints))
+            .Select(cell => ResolveTableCellVerticalPadding(cell.Margins.TopPoints, fixedScale))
             .DefaultIfEmpty(0d)
             .Max();
     }

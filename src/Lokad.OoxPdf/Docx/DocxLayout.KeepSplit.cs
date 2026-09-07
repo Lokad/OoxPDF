@@ -256,14 +256,14 @@ internal sealed partial class DocxLayoutEngine
                 return 0d;
             }
 
-            DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth);
+            DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth, paragraphSpacingScale);
             double[] cellWidths = GetTableRowCellWidths(row, grid.EffectiveColumns, grid.Scale);
-            double rowTopPadding = ResolveTableRowTopPadding(row);
+            double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
             double contentHeight = row.Cells
                 .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, null, paragraphSpacingScale: paragraphSpacingScale))
                 .DefaultIfEmpty(0d)
                 .Max();
-            return ResolveTableRowHeight(row, contentHeight);
+            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale);
         }
     }
 

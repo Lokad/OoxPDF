@@ -127,8 +127,8 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
-        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "left", paragraphSpacingScale);
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "right", paragraphSpacingScale);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double consumedHeight = rowTopPadding;
         double pendingSpacingAfter = 0d;
@@ -193,8 +193,8 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints) + ResolveTableCellBorderContentInset(cell, "left");
-        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints) + ResolveTableCellBorderContentInset(cell, "right");
+        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "left", paragraphSpacingScale);
+        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "right", paragraphSpacingScale);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double consumedHeight = rowTopPadding;
         double pendingSpacingAfter = 0d;
