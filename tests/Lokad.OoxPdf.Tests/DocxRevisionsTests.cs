@@ -1712,4 +1712,93 @@ internal static class DocxRevisionsTests
         TestAssert.Equal(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout.ToString(), layout.MarkupGeometryMode);
         TestAssert.Equal(0d, layout.MarkupMarginReservePoints);
     }
+
+    public static void DocxReaderDropsSemanticallyVoidRunPropertyChange()
+    {
+        // Office A/B (w5-hdrrev header-void plus w5-bodyvoid body-void probes, Word-COM
+        // rendered): Word shows no revision balloon when a formatting revision records
+        // original properties identical to the current run (bold added to an
+        // already-bold run), so the reader drops it and the lane-fit scale stays 1.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:rPr><w:b/><w:rPrChange w:id="9" w:author="Reviewer" w:date="2026-06-10T00:00:00Z"><w:rPr><w:b/></w:rPr></w:rPrChange></w:rPr>
+                        <w:t>Bold stays bold</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        TestAssert.True(!paragraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.RunPropertiesChange), "A formatting revision with no net property change should be dropped at read.");
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
+
+    public static void DocxReaderKeepsEffectiveRunPropertyChange()
+    {
+        // Office A/B (w5-hdrrev2 header probe, Word-COM rendered): Word balloons a
+        // formatting revision whose recorded original properties differ from the
+        // current run (bold removed: original bold, current plain), so the reader keeps
+        // it and the lane-fit scale reserves the balloon lane.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:rPr><w:rPrChange w:id="9" w:author="Reviewer" w:date="2026-06-10T00:00:00Z"><w:rPr><w:b/></w:rPr></w:rPrChange></w:rPr>
+                        <w:t>Bold removed</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        DocxRevisionInfo revision = paragraph.Revisions.Single(revision => revision.Kind == DocxRevisionKind.RunPropertiesChange);
+        TestAssert.True(revision.PropertyElementNames.Contains("b"), "An effective formatting revision should keep its property names.");
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.True(DocxRenderer.ResolveWordCompatiblePrintScale(document, context) < 1d, "An effective formatting revision should reserve the balloon lane.");
+    }
 }

@@ -233,11 +233,150 @@ internal sealed partial class DocxReader
 
     private static IReadOnlyList<DocxRevisionInfo> ReadPropertyChangeRevisions(XElement? properties)
     {
-        return properties
-            ?.Elements()
-            .Select(CreateRevisionInfo)
-            .OfType<DocxRevisionInfo>()
-            .ToArray() ?? [];
+        if (properties is null)
+        {
+            return [];
+        }
+
+        var revisions = new List<DocxRevisionInfo>();
+        foreach (XElement change in properties.Elements())
+        {
+            DocxRevisionInfo? revision = CreateRevisionInfo(change);
+            if (revision is null)
+            {
+                continue;
+            }
+
+            // Office A/B (header-void and body-void probes): a property change whose
+            // recorded original properties are identical to the current properties is
+            // semantically void (for example bold added to an already-bold run) and
+            // sustains no Word balloon, so it is dropped at the reader boundary. Balloon
+            // emission, the lane-fit scale trigger, and revision counts all key off the
+            // retained model.
+            if (IsSemanticallyVoidPropertyChange(properties, change, revision))
+            {
+                continue;
+            }
+
+            revisions.Add(revision);
+        }
+
+        return revisions;
+    }
+
+    // Single caller; kept static: semantic-void property-change comparison.
+    private static bool IsSemanticallyVoidPropertyChange(XElement properties, XElement change, DocxRevisionInfo revision)
+    {
+        if (revision.PropertyChangeFamily is null || revision.PropertyElementNames.Count == 0)
+        {
+            return false;
+        }
+
+        XElement? originalProperties = null;
+        foreach (XElement child in change.Elements())
+        {
+            if (child.Name.Namespace != WordprocessingNamespace)
+            {
+                continue;
+            }
+
+            if (originalProperties is not null)
+            {
+                return false;
+            }
+
+            originalProperties = child;
+        }
+
+        if (originalProperties is null)
+        {
+            return false;
+        }
+
+        return OoxPropertyElementsEqual(originalProperties, properties, excludeChangeMarkers: true);
+    }
+
+    // Single caller; kept static: structural OOXML property comparison ignoring
+    // namespace-declaration spelling and insignificant whitespace, so a recorded
+    // original that only re-serializes the current properties compares void.
+    private static bool OoxPropertyElementsEqual(XElement original, XElement current, bool excludeChangeMarkers)
+    {
+        if (original.Name != current.Name)
+        {
+            return false;
+        }
+
+        List<XAttribute> originalAttributes = original.Attributes().Where(attribute => !attribute.IsNamespaceDeclaration).ToList();
+        List<XAttribute> currentAttributes = current.Attributes().Where(attribute => !attribute.IsNamespaceDeclaration).ToList();
+        if (originalAttributes.Count != currentAttributes.Count)
+        {
+            return false;
+        }
+
+        foreach (XAttribute attribute in originalAttributes)
+        {
+            XAttribute? match = current.Attribute(attribute.Name);
+            if (match is null || !string.Equals(match.Value, attribute.Value, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        List<XNode> originalContent = SignificantOoxContent(original).ToList();
+        List<XNode> currentContent = SignificantOoxContent(current)
+            .Where(node => !excludeChangeMarkers || node is not XElement element || RevisionPropertyChangeFamily(element) is null)
+            .ToList();
+        if (originalContent.Count != currentContent.Count)
+        {
+            return false;
+        }
+
+        for (int index = 0; index < originalContent.Count; index++)
+        {
+            if (originalContent[index] is XElement originalChild && currentContent[index] is XElement currentChild)
+            {
+                if (!OoxPropertyElementsEqual(originalChild, currentChild, excludeChangeMarkers: false))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            if (originalContent[index] is XText originalText && currentContent[index] is XText currentText)
+            {
+                if (!string.Equals(originalText.Value, currentText.Value, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Single caller; kept static: significant OOXML content (elements plus
+    // non-whitespace text; comments and processing instructions never decide voidness).
+    private static IEnumerable<XNode> SignificantOoxContent(XElement element)
+    {
+        foreach (XNode node in element.Nodes())
+        {
+            if (node is XText text)
+            {
+                if (!string.IsNullOrWhiteSpace(text.Value))
+                {
+                    yield return node;
+                }
+            }
+            else if (node is XElement)
+            {
+                yield return node;
+            }
+        }
     }
 
     private static DocxRevisionPropertyFamily? RevisionPropertyChangeFamily(XElement element)
