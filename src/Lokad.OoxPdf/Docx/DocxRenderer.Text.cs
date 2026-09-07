@@ -207,7 +207,7 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale, useWordCompatibleTextProfile);
+            double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale);
             double baselineY = GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY;
             int partSourceTextOffset = segment.SourceTextOffsetInRun;
             bool ShouldSuppressCommentReferenceSpacerPart(DocxTextEmissionPart part)
@@ -503,13 +503,12 @@ internal sealed partial class DocxRenderer
     private static double ResolveTextEmissionSegmentFontSize(
         DocxTextSegmentLayout segment,
         DocxTextLineLayout line,
-        double fontScale,
-        bool useWordCompatibleTextProfile)
+        double fontScale)
     {
-        double fontSize = GetSegmentFontSize(segment, line.FontSize) * fontScale;
-        return ShouldCapWordCompatibleAllMarkupTextFontSize(fontSize, useWordCompatibleTextProfile)
-            ? 15d * fontScale
-            : fontSize;
+        // Office A/B (W5-C1 size probe w5-cap1422): a 22pt run prints at full lane-fit scale
+        // (16.656), not the 15pt-design cap. Large body text scales uniformly; the cap only
+        // ever bound above 15pt design and is removed (terminal spacing keeps its own rule).
+        return GetSegmentFontSize(segment, line.FontSize) * fontScale;
     }
 
     private static double ResolveTerminalLineSpaceFontSize(
@@ -570,7 +569,7 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale, useWordCompatibleTextProfile);
+            double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale);
             foreach (DocxTextEmissionPart part in DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
             {
                 DocxTextRun emissionStyleRun = ResolveWordCompatibleAllMarkupEmissionStyleRun(

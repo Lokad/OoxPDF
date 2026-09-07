@@ -548,10 +548,12 @@ internal static class DocxMarkupTests
             "The narrowed review body should retain punctuation at line boundaries instead of dropping it during wrapping.");
     }
 
-    public static void DocxWordCompatibleAllMarkupCapsLargeBodyTextAndTerminalAdvance()
+    public static void DocxWordCompatibleAllMarkupScalesLargeBodyTextWithoutCap()
     {
+        // Office A/B (W5-C1 size probe w5-cap1422): a 22pt run prints at 16.656 = full
+        // lane-fit scale, not the 15pt-design cap (11.4). Large body text scales uniformly.
         DocxParagraph title = new(
-            [new DocxTextRun("One-page markup margin geometry", 15d, null, true, false, false, null, null)],
+            [new DocxTextRun("Oversized markup title", 22d, null, true, false, false, null, null)],
             [],
             null,
             DocxTextAlignment.Left,
@@ -584,6 +586,8 @@ internal static class DocxMarkupTests
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
         DocxTextEmissionSnapshot preserve = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectTextEmission(document);
         DocxTextEmissionSnapshot wordCompatible = new DocxRenderer(
@@ -600,14 +604,14 @@ internal static class DocxMarkupTests
         DocxTextEmissionSegmentSnapshot wordTerminal = wordSegments.Single(segment => segment.IsTerminalLineSpace);
 
         TestAssert.True(
-            wordVisibleFontSize < preserveVisibleFontSize - 1d,
-            "Word-compatible all-markup should cap oversized body text to the Office-like heading font size.");
+            Math.Abs(wordVisibleFontSize - (22d * scale)) < 0.05d,
+            $"Word-compatible all-markup should scale oversized body text at the full print scale. Word={wordVisibleFontSize}, Scale={scale}.");
         TestAssert.True(
             wordTerminal.PdfFontSize < wordVisibleFontSize - 1d,
-            "Word-compatible all-markup should emit terminal paragraph marks at body text size for capped heading lines.");
+            "Word-compatible all-markup should emit terminal paragraph marks below the scaled heading size.");
         TestAssert.True(
             wordTerminal.X < preserveTerminal.X - 25d,
-            "Word-compatible all-markup should place terminal paragraph marks at the capped emitted text advance.");
+            "Word-compatible all-markup should place terminal paragraph marks at the scaled emitted text advance.");
     }
 
     public static void DocxWordCompatibleAllMarkupScalesBodySpacing()
