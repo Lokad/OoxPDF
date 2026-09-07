@@ -172,7 +172,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
-        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode, effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode, effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
     }
 
@@ -180,7 +180,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
@@ -207,7 +207,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
@@ -264,7 +264,7 @@ internal sealed partial class DocxRenderer
                 AddLine(line, isStaticStory: false, "RelatedStory", line.StoryKind, line.StoryVariantType);
             }
 
-            foreach (DocxTextEmissionLineSource source in EnumerateRenderedFloatingDrawingTextBoxTextLines(layout, page, pageIndex))
+            foreach (DocxTextEmissionLineSource source in EnumerateRenderedFloatingDrawingTextBoxTextLines(layout, page, pageIndex, effectiveMarkupContext, page.Height))
             {
                 lines.Add(ToTextEmissionLineSnapshot(
                     pageIndex,
@@ -807,7 +807,7 @@ internal sealed partial class DocxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken);
+        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken, fontResources.TextMeasurer);
         markupContext = WithFirstPinYOffset(markupContext, document, layout);
         DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
@@ -838,7 +838,8 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
-                ref imageIndex);
+                ref imageIndex,
+                layoutPage.Height);
             RenderFloatingDrawings(
                 layout.StaticFloatingDrawings,
                 pageIndex,
@@ -850,7 +851,8 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
-                ref imageIndex);
+                ref imageIndex,
+                layoutPage.Height);
 
             IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage).ToArray();
             for (int itemIndex = 0; itemIndex < staticItems.Count; itemIndex++)
@@ -884,9 +886,9 @@ internal sealed partial class DocxRenderer
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, ref imageIndex);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, ref imageIndex, layoutPage.Height);
                 RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, ref imageIndex);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, ref imageIndex, layoutPage.Height);
             }
 
             RenderFloatingDrawings(
@@ -900,7 +902,8 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
-                ref imageIndex);
+                ref imageIndex,
+                layoutPage.Height);
             RenderFloatingDrawings(
                 layout.StaticFloatingDrawings,
                 pageIndex,
@@ -912,7 +915,8 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
-                ref imageIndex);
+                ref imageIndex,
+                layoutPage.Height);
 
             IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count);
             pages.Add(new PdfPage(
@@ -937,7 +941,7 @@ internal sealed partial class DocxRenderer
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutPage page = layout.Pages[pageIndex];
                 int pageNumber = pageIndex + 1;
-                foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
+                foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex, markupContext, page.Height))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (line.SourceParagraph is not { } paragraph ||
@@ -983,7 +987,7 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount)
         {
             var annotations = new List<PdfLinkAnnotation>();
-            foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
+            foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex, markupContext, page.Height))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (line.SourceParagraph is not { } paragraph ||

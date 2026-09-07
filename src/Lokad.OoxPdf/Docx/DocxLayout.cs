@@ -242,7 +242,7 @@ internal sealed partial class DocxLayoutEngine
         return Create(document, textMeasurer, cancellationToken);
     }
 
-    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken)
+    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
@@ -267,7 +267,7 @@ internal sealed partial class DocxLayoutEngine
             double key = Math.Round(Math.Max(1d, bodyWidth), 3);
             if (!relatedStoryLayoutsByBodyWidth.TryGetValue(key, out IReadOnlyList<DocxRelatedStoryLayout>? layouts))
             {
-                layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken);
+                layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer);
                 relatedStoryLayoutsByBodyWidth[key] = layouts;
             }
 
@@ -686,8 +686,8 @@ internal sealed partial class DocxLayoutEngine
         DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken).ToArray();
         return new DocxLayout(
             pagesWithStaticText,
-            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken),
-            CreateStaticFloatingDrawingLayouts(pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken),
+            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
+            CreateStaticFloatingDrawingLayouts(pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
             relatedStoryLayouts);
     }
 

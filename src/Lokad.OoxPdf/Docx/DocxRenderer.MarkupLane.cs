@@ -74,7 +74,7 @@ internal sealed partial class DocxRenderer
             top = top is null ? y + height : Math.Max(top.Value, y + height);
         }
 
-        foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex))
+        foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex, markupContext, page.Height))
         {
             if (!HasTextLineRevision(line))
             {

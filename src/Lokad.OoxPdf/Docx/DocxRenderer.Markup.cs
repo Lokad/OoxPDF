@@ -399,7 +399,7 @@ internal sealed partial class DocxRenderer
             var renderedTableRevisions = new HashSet<string>(StringComparer.Ordinal);
             var renderedTableRowRevisions = new HashSet<string>(StringComparer.Ordinal);
             var renderedTableCellRevisions = new HashSet<string>(StringComparer.Ordinal);
-            DocxTextLineLayout[] anchorTextLines = EnumerateMarkupBalloonAnchorTextLines(page, floatingDrawings).ToArray();
+            DocxTextLineLayout[] anchorTextLines = EnumerateMarkupBalloonAnchorTextLines(page, floatingDrawings, markupContext, page.Height).ToArray();
             // Office A/B (w6-tbxctl plus w6-staticfloat probes, Word-COM rendered): Word
             // balloons body-anchored comments but never floating-textbox ones (body-flow or
             // static), so Word-compatible geometry suppresses comment candidates anchored
@@ -407,7 +407,8 @@ internal sealed partial class DocxRenderer
             // rendered-comments key below). Revision candidates keep the legacy path
             // (unprobed).
             HashSet<int> floatingTextBoxParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                ? EnumerateFloatingDrawingTextBoxTextLines(floatingDrawings)
+                ? floatingDrawings
+                    .SelectMany(EnumerateFloatingDrawingTextBoxTextLines)
                     .Select(line => line.SourceParagraph)
                     .OfType<DocxParagraph>()
                     .Select(RuntimeHelpers.GetHashCode)

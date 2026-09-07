@@ -21,7 +21,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
         int? pageNumber,
-        int? pageCount)
+        int? pageCount,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         if (story.FloatingDrawings.Count == 0)
         {
@@ -49,7 +50,8 @@ internal sealed partial class DocxLayoutEngine
                     textMeasurer: textMeasurer,
                     defaultTabStopPoints: defaultTabStopPoints,
                     paragraphSpacingScale: paragraphSpacingScale,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken,
+                    unscaledTextMeasurer: unscaledTextMeasurer);
             })
             .ToArray();
 
@@ -181,7 +183,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         var layouts = new DocxFloatingDrawingLayout[drawings.Count];
         for (int i = 0; i < drawings.Count; i++)
@@ -208,7 +211,8 @@ internal sealed partial class DocxLayoutEngine
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                unscaledTextMeasurer: unscaledTextMeasurer);
         }
 
         return layouts;
@@ -219,7 +223,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         var layouts = new List<DocxFloatingDrawingLayout>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
@@ -251,7 +256,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
         {
@@ -270,7 +276,8 @@ internal sealed partial class DocxLayoutEngine
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                unscaledTextMeasurer: unscaledTextMeasurer);
         }
     }
 
@@ -306,7 +313,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
         DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
@@ -367,9 +375,21 @@ internal sealed partial class DocxLayoutEngine
                 return null;
             }
 
-            // Textbox content scales with the page like body text (Office: 9.1pt content
-            // beside scaled body, tbxrev probe); insets join scaled space with everything
-            // else. Frames stay unscaled in every mode.
+            // Textbox content lays out in design space on scaled pages (Office: the tbxrev
+            // probe shows Word center-scales design content to 9.1pt beside scaled body, so
+            // breaks must come from raw 12pt advances in the unscaled content box). The
+            // renderer maps design coordinates uniformly to emission space
+            // (FloatingTextBoxEmissionMap); unit-scale pages keep the single-measurer path.
+            // Frames stay unscaled in every mode.
+            IDocxTextMeasurer contentMeasurer = textMeasurer;
+            double contentSpacingScale = paragraphSpacingScale;
+            if (unscaledTextMeasurer is not null &&
+                Math.Abs(paragraphSpacingScale - 1d) >= 0.000000001d)
+            {
+                contentMeasurer = unscaledTextMeasurer;
+                contentSpacingScale = 1d;
+            }
+
             ResolveTextBoxContentInsets(drawing, out double insetLeft, out _, out double insetRight, out _);
             var story = new DocxRelatedStory(
                 DocxRelatedStoryKind.TextBox,
@@ -382,9 +402,9 @@ internal sealed partial class DocxLayoutEngine
                 story,
                 storyIndex: -1,
                 Math.Max(1d, width - insetLeft - insetRight),
-                textMeasurer,
+                contentMeasurer,
                 defaultTabStopPoints,
-                paragraphSpacingScale,
+                contentSpacingScale,
                 pageNumber: pageNumber,
                 pageCount: pageCount,
                 cancellationToken: cancellationToken);

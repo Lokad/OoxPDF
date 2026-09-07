@@ -36,13 +36,75 @@ internal sealed partial class DocxRenderer
     private static IEnumerable<DocxTextLineLayout> EnumerateRenderedPageTextLines(
         DocxLayout layout,
         DocxLayoutPage page,
-        int pageIndex)
+        int pageIndex,
+        DocxMarkupContext markupContext,
+        double pageHeight)
     {
+        FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumeratePlacedRelatedStoryTextLines(page))
-            .Concat(EnumerateFloatingDrawingTextBoxTextLines(EnumeratePageFloatingDrawings(layout, pageIndex)))
-            .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateFloatingDrawingTextBoxTextLines(story.FloatingDrawings)));
+            .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(EnumeratePageFloatingDrawings(layout, pageIndex), map))
+            .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
+    }
+
+    private static FloatingTextBoxEmissionMap? TryCreateFloatingTextBoxEmissionMap(DocxMarkupContext markupContext, double pageHeight)
+    {
+        return FloatingTextBoxEmissionMap.TryCreate(markupContext, pageHeight, out FloatingTextBoxEmissionMap map)
+            ? map
+            : null;
+    }
+
+    // Mapped legs translate by the inset content origin (like the renderer) and
+    // pre-compensate design coordinates into body-layout space on scaled WC pages; every
+    // other mode keeps the legacy frame-origin translation bit-identically.
+    private static IEnumerable<DocxTextLineLayout> EnumerateMappedFloatingDrawingTextBoxTextLines(
+        IEnumerable<DocxFloatingDrawingLayout> drawings,
+        FloatingTextBoxEmissionMap? map)
+    {
+        foreach (DocxFloatingDrawingLayout drawing in drawings)
+        {
+            if (drawing.PlacedX is not { } placedX ||
+                drawing.PlacedTop is not { } placedTop ||
+                drawing.TextBoxLayout is not { } textBoxLayout)
+            {
+                continue;
+            }
+
+            if (map is not { } emissionMap)
+            {
+                foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
+                {
+                    yield return TranslateTextLine(line, placedX, placedTop);
+                }
+
+                foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
+                {
+                    foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
+                    {
+                        yield return TranslateTextLine(cellLine, placedX, placedTop);
+                    }
+                }
+
+                continue;
+            }
+
+            DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out _, out _);
+            double contentX = placedX + insetLeft;
+            double contentTop = placedTop - insetTop;
+            foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
+            {
+                yield return emissionMap.PrecompensateLine(line, contentX, contentTop);
+            }
+
+            foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
+            {
+                foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
+                {
+                    yield return emissionMap.PrecompensateLine(TranslateTextLine(cellLine, contentX, contentTop), 0d, 0d);
+                }
+            }
+        }
     }
 
     // Office A/B (w6-tbxctl probe): Word never balloons body-flow floating-textbox
@@ -55,13 +117,16 @@ internal sealed partial class DocxRenderer
 
     private static IEnumerable<DocxTextLineLayout> EnumerateMarkupBalloonAnchorTextLines(
         DocxLayoutPage page,
-        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings)
+        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
+        DocxMarkupContext markupContext,
+        double pageHeight)
     {
+        FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumeratePlacedRelatedStoryTextLines(page))
-            .Concat(EnumerateFloatingDrawingTextBoxTextLines(floatingDrawings))
-            .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateFloatingDrawingTextBoxTextLines(story.FloatingDrawings)));
+            .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(floatingDrawings, map))
+            .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
     }
 
     private sealed record DocxTextEmissionLineSource(
@@ -75,12 +140,15 @@ internal sealed partial class DocxRenderer
     private static IEnumerable<DocxTextEmissionLineSource> EnumerateRenderedFloatingDrawingTextBoxTextLines(
         DocxLayout layout,
         DocxLayoutPage page,
-        int pageIndex)
+        int pageIndex,
+        DocxMarkupContext markupContext,
+        double pageHeight)
     {
+        FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         foreach (DocxFloatingDrawingLayout drawing in EnumeratePageFloatingDrawings(layout, pageIndex))
         {
             bool isStaticStory = IsStaticStoryFloatingDrawing(drawing);
-            foreach (DocxTextLineLayout line in EnumerateFloatingDrawingTextBoxTextLines(drawing))
+            foreach (DocxTextLineLayout line in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], map))
             {
                 yield return new DocxTextEmissionLineSource(
                     line,
@@ -94,7 +162,7 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
         {
-            foreach (DocxTextLineLayout line in EnumerateFloatingDrawingTextBoxTextLines(story.FloatingDrawings))
+            foreach (DocxTextLineLayout line in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map))
             {
                 yield return new DocxTextEmissionLineSource(
                     line,
@@ -153,17 +221,6 @@ internal sealed partial class DocxRenderer
                 {
                     yield return cellLine;
                 }
-            }
-        }
-    }
-
-    private static IEnumerable<DocxTextLineLayout> EnumerateFloatingDrawingTextBoxTextLines(IEnumerable<DocxFloatingDrawingLayout> drawings)
-    {
-        foreach (DocxFloatingDrawingLayout drawing in drawings)
-        {
-            foreach (DocxTextLineLayout line in EnumerateFloatingDrawingTextBoxTextLines(drawing))
-            {
-                yield return line;
             }
         }
     }

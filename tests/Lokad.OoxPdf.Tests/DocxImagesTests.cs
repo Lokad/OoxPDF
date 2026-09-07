@@ -544,4 +544,116 @@ internal static class DocxImagesTests
         TestAssert.True(lines[0].Text.StartsWith(new string('X', 21), StringComparison.Ordinal), "First inset line should hold the leading run. Text=[" + lines[0].Text + "]");
         TestAssert.True(lines[1].Text.EndsWith("Y", StringComparison.Ordinal), "Inset overflow should wrap to a second line. Text=[" + lines[1].Text + "]");
     }
+
+    public static void DocxWordCompatibleFloatingTextBoxMeasuresContentInDesignSpace()
+    {
+        // Office A/B (tbxrev probe, Word-COM rendered): scaled pages lay floating-textbox
+        // content out in design space (12pt advances in the unscaled content box) and map it
+        // uniformly to emission space, so the layout must measure it raw, not scaled.
+        DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 18));
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, scaled, CancellationToken.None, new DocxTests.FamilyWidthTextMeasurer())
+            .FloatingDrawings.Single().TextBoxLayout?.TextLines.ToArray() ?? [];
+
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.True(Math.Abs(lines[0].Width - 90d) < 0.001d, "Textbox content should measure raw design advances (18 chars at 5pt), not scaled. Width=" + lines[0].Width.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxWordCompatibleFloatingTextBoxKeepsScaledMeasurementAtUnitScale()
+    {
+        // The design-space fork only engages on scaled pages; unit-scale geometry keeps the
+        // legacy single-measurer path even when a raw measurer is threaded alongside.
+        DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 18));
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 1d)
+            .Create(document, scaled, CancellationToken.None, new DocxTests.FamilyWidthTextMeasurer())
+            .FloatingDrawings.Single().TextBoxLayout?.TextLines.ToArray() ?? [];
+
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.True(Math.Abs(lines[0].Width - 90d * 0.842391d) < 0.001d, "Unit-scale pages should keep scaled measurement. Width=" + lines[0].Width.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxWordCompatibleFloatingTextBoxEmissionMapMatchesOfficeProbe()
+    {
+        // Office A/B (tbxrev probe, Word-COM rendered at s=0.758834): design content origin
+        // X 79.2 lands at 60.1 (origin scale) and design baseline 633.12 at 576.1
+        // (page-center scale), while the body first-pin shift strands them at 61.8/557.7.
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) with
+        {
+            WordCompatiblePrintScale = 0.758834d,
+            WordCompatibleTextXOffset = -17.3639d,
+            WordCompatibleTextYOffset = 75.42d
+        };
+        TestAssert.True(DocxRenderer.FloatingTextBoxEmissionMap.TryCreate(context, 792d, out DocxRenderer.FloatingTextBoxEmissionMap map), "Scaled WC pages should engage the floating-textbox emission map.");
+        double emissionX = map.MapEmissionX(79.2d);
+        double emissionY = map.MapEmissionY(633.12d);
+        TestAssert.True(Math.Abs(emissionX - 60.1d) < 0.05d, "Mapped content X should match Word 60.1. X=" + emissionX.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(emissionY - 576.1d) < 0.3d, "Mapped baseline Y should match Word 576.1. Y=" + emissionY.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(map.PrecompensateX(79.2d) + context.WordCompatibleTextXOffset - emissionX) < 0.000000001d, "Pre-compensated X must round-trip through the body X offset.");
+        TestAssert.True(Math.Abs(map.PrecompensateY(633.12d) - context.WordCompatibleTextYOffset - emissionY) < 0.000000001d, "Pre-compensated Y must round-trip through the body Y offset.");
+        DocxMarkupContext unitScale = context with { WordCompatiblePrintScale = 1d, WordCompatibleTextXOffset = 0d, WordCompatibleTextYOffset = 0d };
+        TestAssert.True(!DocxRenderer.FloatingTextBoxEmissionMap.TryCreate(unitScale, 792d, out _), "Unit-scale pages should keep the legacy path.");
+        DocxMarkupContext preserve = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout) with { WordCompatiblePrintScale = 0.758834d };
+        TestAssert.True(!DocxRenderer.FloatingTextBoxEmissionMap.TryCreate(preserve, 792d, out _), "Preserve geometry should keep the legacy path.");
+    }
+
+    public static void DocxWordCompatibleFloatingTextBoxPrecompensatedEmissionMatchesCenterScale()
+    {
+        // Layout (design space) plus the emission map must reproduce the uniform page-center
+        // scale independently of the body first-pin shift. The box sits ~400pt below the
+        // body pin so the test reproduces the reported divergence class (pin strands text
+        // low, under its own clip, growing with distance from the first baseline).
+        const double printScale = 0.758834d;
+        DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d);
+        DocxParagraph textBoxParagraph = DocxTests.CreateDocxLayoutParagraph(new string('X', 18), 10d, 12d);
+        DocxFloatingDrawing lowDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]) with
+        {
+            VerticalOffsetValue = "6249600"
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [lowDrawing],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
+            .Create(document, scaled, CancellationToken.None, new DocxTests.FamilyWidthTextMeasurer());
+        DocxFloatingDrawingLayout drawing = layout.FloatingDrawings.Single();
+        double placedX = drawing.PlacedX ?? throw new InvalidOperationException("Probe drawing should place horizontally.");
+        double placedTop = drawing.PlacedTop ?? throw new InvalidOperationException("Probe drawing should place vertically.");
+        DocxTextLineLayout line = drawing.TextBoxLayout?.TextLines.Single() ?? throw new InvalidOperationException("Probe drawing should lay out one textbox line.");
+        double pageHeight = layout.Pages[0].Height;
+        double firstBaseline = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Max(item => item.BaselineY);
+        double xOffset = -document.MarginLeftPoints * (1d - printScale);
+        double yOffset = (firstBaseline - pageHeight / 2d) * (1d - printScale);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) with
+        {
+            WordCompatiblePrintScale = printScale,
+            WordCompatibleTextXOffset = xOffset,
+            WordCompatibleTextYOffset = yOffset
+        };
+        TestAssert.True(DocxRenderer.FloatingTextBoxEmissionMap.TryCreate(context, pageHeight, out DocxRenderer.FloatingTextBoxEmissionMap map), "Scaled WC pages should engage the floating-textbox emission map.");
+        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out _, out _);
+        double designX = placedX + insetLeft + line.X;
+        double designY = placedTop - insetTop + line.BaselineY;
+        double expectedX = designX * printScale;
+        double expectedY = designY * printScale + (pageHeight / 2d) * (1d - printScale);
+        DocxTextLineLayout mapped = map.PrecompensateLine(line, placedX + insetLeft, placedTop - insetTop);
+        TestAssert.True(Math.Abs(mapped.X + xOffset - expectedX) < 0.000000001d, "Pre-compensated X must land center-scaled through the body offset.");
+        TestAssert.True(Math.Abs(mapped.BaselineY - yOffset - expectedY) < 0.000000001d, "Pre-compensated Y must land center-scaled through the body offset.");
+        TestAssert.True(expectedY - (designY - yOffset) > 10d, "Center-scale must sit well above the first-pin prediction that stranded textbox text under its clip.");
+    }
 }

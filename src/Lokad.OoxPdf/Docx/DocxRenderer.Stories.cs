@@ -60,13 +60,14 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        ref int imageIndex)
+        ref int imageIndex,
+        double pageHeight)
     {
         foreach (DocxFloatingDrawingLayout drawing in floatingDrawings
             .Where(drawing => drawing.AnchorPageIndex == pageIndex && IsBehindDocument(drawing.Drawing) == behindDocument)
             .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)))
         {
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex, pageHeight);
         }
     }
 
@@ -80,7 +81,8 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        ref int imageIndex)
+        ref int imageIndex,
+        double pageHeight)
     {
         DocxFloatingDrawingLayout[] drawings = story.FloatingDrawings
             .Where(drawing => IsBehindDocument(drawing.Drawing) == behindDocument)
@@ -95,7 +97,7 @@ internal sealed partial class DocxRenderer
         graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex, pageHeight);
         }
 
         graphics.RestoreState();
@@ -110,7 +112,8 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        ref int imageIndex)
+        ref int imageIndex,
+        double pageHeight)
     {
         if (drawing.PlacedX is not { } placedX ||
             drawing.PlacedTop is not { } placedTop ||
@@ -133,7 +136,7 @@ internal sealed partial class DocxRenderer
 
         if (drawing.TextBoxLayout is { } textBoxLayout)
         {
-            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex);
+            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex, pageHeight);
         }
     }
 
@@ -151,7 +154,8 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        ref int imageIndex)
+        ref int imageIndex,
+        double pageHeight)
     {
         if (textBoxLayout.TextLines.Count == 0 &&
             textBoxLayout.InlineImages.Count == 0 &&
@@ -167,18 +171,36 @@ internal sealed partial class DocxRenderer
         double contentTop = placedTop - insetTop;
         double contentWidth = Math.Max(0d, width - insetLeft - insetRight);
         double contentHeight = Math.Max(0d, height - insetTop - insetBottom);
+        // Scaled WC pages map design-space content uniformly to emission space; every
+        // other mode keeps the translated layout coordinates (FloatingTextBoxEmissionMap).
+        bool uniformMap = FloatingTextBoxEmissionMap.TryCreate(markupContext, pageHeight, out FloatingTextBoxEmissionMap map);
         graphics.SaveState();
-        graphics.ClipRectangle(contentX, contentTop - contentHeight, contentWidth, contentHeight);
+        if (uniformMap)
+        {
+            (double clipX, double clipY, double clipWidth, double clipHeight) = map.MapClipRectangle(contentX, contentTop, contentWidth, contentHeight);
+            graphics.ClipRectangle(clipX, clipY, clipWidth, clipHeight);
+        }
+        else
+        {
+            graphics.ClipRectangle(contentX, contentTop - contentHeight, contentWidth, contentHeight);
+        }
+
         IReadOnlyList<DocxLayoutItem> items = textBoxLayout.TextLines
-            .Select(line => TranslateTextLine(line, contentX, contentTop))
+            .Select(line => uniformMap
+                ? map.PrecompensateLine(line, contentX, contentTop)
+                : TranslateTextLine(line, contentX, contentTop))
             .Cast<DocxLayoutItem>()
-            .Concat(textBoxLayout.InlineImages.Select(image => image with
-            {
-                X = contentX + image.X,
-                Y = contentTop + image.Y,
-                PageIndex = drawing.AnchorPageIndex ?? image.PageIndex
-            }))
-            .Concat(textBoxLayout.TableRows.Select(row => TranslateTableRow(row, contentX, contentTop)))
+            .Concat(textBoxLayout.InlineImages.Select(image => uniformMap
+                ? map.PrecompensateImage(image, contentX, contentTop, drawing.AnchorPageIndex ?? image.PageIndex)
+                : image with
+                {
+                    X = contentX + image.X,
+                    Y = contentTop + image.Y,
+                    PageIndex = drawing.AnchorPageIndex ?? image.PageIndex
+                }))
+            .Concat(textBoxLayout.TableRows.Select(row => uniformMap
+                ? map.PrecompensateRow(TranslateTableRow(row, contentX, contentTop))
+                : TranslateTableRow(row, contentX, contentTop)))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
