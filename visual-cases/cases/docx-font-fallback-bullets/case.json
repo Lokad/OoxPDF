@@ -1,0 +1,16 @@
+{
+  "id": "docx-font-fallback-bullets",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-font-fallback-bullets.docx",
+  "dpi": 144,
+  "tags": ["docx", "typography", "font-fallback", "bullets"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.5,
+    "maxChangedPixelRatioAtThreshold16": 0.006
+  },
+  "allowedUnsupportedFeatures": []
+}

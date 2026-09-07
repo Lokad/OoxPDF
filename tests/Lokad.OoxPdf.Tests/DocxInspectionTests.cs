@@ -1238,4 +1238,149 @@ internal static class DocxInspectionTests
         TestAssert.Equal(3, segments.Sum(snapshot => snapshot.TextLength));
         TestAssert.Equal(2, segments.Select(snapshot => snapshot.FontResourceName).Distinct().Count());
     }
+    public static void DocxTextEmissionFallsBackForFamilyLessNumberingBullets()
+    {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
+        if (symbolResolution.IsFallback)
+        {
+            return;
+        }
+
+        OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
+        if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
+        {
+            return;
+        }
+
+        string numbering = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+              <w:abstractNum w:abstractNumId="0">
+                <w:lvl w:ilvl="0">
+                  <w:start w:val="1"/>
+                  <w:numFmt w:val="bullet"/>
+                  <w:lvlText w:val="[BULLET]"/>
+                  <w:lvlJc w:val="left"/>
+                  <w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
+                </w:lvl>
+              </w:abstractNum>
+              <w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
+            </w:numbering>
+            """.Replace("[BULLET]", ((char)0xF0B7).ToString());
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:numPr><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">Alpha one</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/numbering.xml"] = numbering
+        });
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.Final);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        DocxResolvedRunTypeface label = plan.Runs.Single(run => run.Run.Text.IndexOf((char)0xF0B7) >= 0);
+        OpenTypeFont? labelPrimary = label.Resolution is FontFaceResolution labelResolution ? FontProgramLoader.Load(labelResolution, CancellationToken.None) : null;
+        if (labelPrimary is null || labelPrimary.MapCodePoint(0xF0B7) != 0)
+        {
+            return;
+        }
+
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxTextEmissionSnapshot emission = renderer.InspectTextEmission(document);
+        DocxTextEmissionLineSnapshot line = emission.Lines.Single();
+        DocxTextEmissionSegmentSnapshot[] labels = line.Segments.Where(snapshot => snapshot.Role == "ListLabel").ToArray();
+        TestAssert.Equal(1, labels.Length);
+        TestAssert.Equal(1, labels[0].TextLength);
+        TestAssert.True(labels[0].FontResourceName is not null, "Expected the family-less bullet label to be emitted.");
+        string[] bodyNames = line.Segments.Where(snapshot => snapshot.Role == "Text" && !snapshot.IsTerminalLineSpace).Select(snapshot => snapshot.FontResourceName ?? string.Empty).Distinct().ToArray();
+        TestAssert.True(bodyNames.Length == 1 && bodyNames[0] != labels[0].FontResourceName, "Expected the bullet label to fall back to a different font than the body run.");
+    }
+    public static void DocxTextEmissionFallsBackForExplicitSymbolLatinRuns()
+    {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
+        if (symbolResolution.IsFallback)
+        {
+            return;
+        }
+
+        OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
+        if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
+        {
+            return;
+        }
+
+        string body = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+              <w:body>
+                <w:p><w:r><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">a[BULLET]b</w:t></w:r></w:p>
+                <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+              </w:body>
+            </w:document>
+            """.Replace("[BULLET]", ((char)0xF0B7).ToString());
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = body
+        });
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.Final);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        DocxResolvedRunTypeface resolved = plan.Runs.Single(run => run.Run.Text.IndexOf((char)0xF0B7) >= 0);
+        TestAssert.True(string.Equals(resolved.ResolvedFamily, "Symbol", StringComparison.OrdinalIgnoreCase), "Expected the run to resolve to the explicit Symbol face.");
+        OpenTypeFont? primaryFont = resolved.Resolution is FontFaceResolution primaryResolution ? FontProgramLoader.Load(primaryResolution, CancellationToken.None) : null;
+        if (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) == 0 || primaryFont.MapCodePoint(97) != 0)
+        {
+            return;
+        }
+
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxTextEmissionSnapshot emission = renderer.InspectTextEmission(document);
+        DocxTextEmissionLineSnapshot line = emission.Lines.Single();
+        DocxTextEmissionSegmentSnapshot[] segments = line.Segments.Where(snapshot => !snapshot.IsTerminalLineSpace).ToArray();
+        TestAssert.Equal(3, segments.Length);
+        TestAssert.Equal(3, segments.Sum(snapshot => snapshot.TextLength));
+        TestAssert.Equal(2, segments.Select(snapshot => snapshot.FontResourceName).Distinct().Count());
+    }
 }

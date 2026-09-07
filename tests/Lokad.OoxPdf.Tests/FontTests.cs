@@ -369,6 +369,29 @@ internal static class FontTests
         TestAssert.Equal(new FontCoverageSpan(0, 3, 1), spans[2]);
     }
 
+    public static void FontCoverageFallbackReportsSingleFallbackSpan()
+    {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution primaryResolution = resolver.Resolve(new FontRequest("Aptos"));
+        FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
+        if (primaryResolution.IsFallback || symbolResolution.IsFallback)
+        {
+            return;
+        }
+
+        OpenTypeFont? primary = FontProgramLoader.Load(primaryResolution, CancellationToken.None);
+        OpenTypeFont? symbol = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
+        if (primary is null || symbol is null || primary.MapCodePoint(0xF0B7) != 0 || symbol.MapCodePoint(0xF0B7) == 0)
+        {
+            return;
+        }
+
+        string text = ((char)0xF0B7).ToString();
+        IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage(text, [primary, symbol], CancellationToken.None);
+        TestAssert.Equal(1, spans.Count);
+        TestAssert.Equal(new FontCoverageSpan(1, 0, 1), spans[0]);
+    }
+
     public static void DocxMeasurerFallsBackPerCharacterForMissingGlyphs()
     {
         var resolver = new WindowsFontResolver();
