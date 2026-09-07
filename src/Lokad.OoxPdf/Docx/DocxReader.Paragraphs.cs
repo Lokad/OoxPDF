@@ -232,7 +232,7 @@ internal sealed partial class DocxReader
             resolvedParagraph.LineSpacingPoints,
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
-            CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle, runs.FirstOrDefault()?.FontSize ?? paragraphFontSize))
+            CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle))
         {
             Indent = resolvedParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,

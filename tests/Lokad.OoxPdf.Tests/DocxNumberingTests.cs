@@ -106,7 +106,8 @@ internal static class DocxNumberingTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Equal(2, Regex.Matches(pdf, "0\\.044 Tc").Count);
+        // Office A/B 2026-09-07 (probe-labsize decimal): styles-less decimal labels resolve flat 12pt.
+        TestAssert.Equal(2, Regex.Matches(pdf, "0\\.048 Tc").Count);
         TestAssert.Equal(8, DocxTests.CountPdfTextShows(pdf));
     }
 
@@ -409,7 +410,30 @@ internal static class DocxNumberingTests
         DocxParagraph cellParagraph = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single(p => p.Runs.Any(r => r.Text == "Cell"));
         DocxParagraph bodyParagraph = document.Paragraphs.Single(p => p.Runs.Any(r => r.Text == "Body"));
         TestAssert.Equal(12d, cellParagraph.ListLabel?.Style.FontSize ?? 0d);
-        TestAssert.True(bodyParagraph.ListLabel?.Style.FontSize is null, "Unstyled body runs keep direct sizing for labels (no 12pt bake below the cap).");
+        // Office A/B 2026-09-07 (labsize/nosize probes): unresolvable style and defaults emit flat 12pt labels
+        // at direct 9/14/18pt for family-less and Symbol lvls alike, so direct size never refines the label.
+        TestAssert.Equal(12d, bodyParagraph.ListLabel?.Style.FontSize ?? 0d);
+    }
+    public static void DocxReaderFallsBackToTwelvePointsWithoutStyleOrDefaultSize()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
+            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:style></w:styles>""",
+            ["word/numbering.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="[BULLET]"/></w:lvl></w:abstractNum><w:num w:numId="7"><w:abstractNumId w:val="0"/></w:num></w:numbering>""".Replace("[BULLET]", ((char)0xF0B7).ToString()),
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>Nine</w:t></w:r></w:p><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="28"/></w:rPr><w:t>Fourteen</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        // Office A/B 2026-09-07 (probe-labsize nosize-styles-nodocdef): direct 9/14pt bodies emit flat 12pt labels
+        // when neither the style chain nor document defaults resolve a size.
+        foreach (DocxParagraph paragraph in document.Paragraphs)
+        {
+            TestAssert.Equal(12d, paragraph.ListLabel?.Style.FontSize ?? 0d);
+        }
     }
 
 
@@ -1047,7 +1071,11 @@ internal static class DocxNumberingTests
             .OfType<DocxTextLineLayout>()
             .Single();
 
-        double expectedTextX = line.Segments[0].X + embedded.MeasureTextPoints("1. ", line.FontSize);
+        // Office A/B 2026-09-07 (probe-labsize decimal): styles-less decimal labels resolve flat 12pt while the space
+        // separator keeps the body size, so each span measures at its own segment size.
+        double expectedTextX = line.Segments[0].X
+            + embedded.MeasureTextPoints("1.", line.Segments[0].FontSize ?? line.FontSize)
+            + embedded.MeasureTextPoints(" ", line.Segments[1].FontSize ?? line.FontSize);
         TestAssert.Equal("space", document.Paragraphs[0].ListLabel?.SuffixValue ?? string.Empty);
         TestAssert.Equal(" ", line.Segments[1].Text);
         TestAssert.Equal(expectedTextX, line.Segments[2].X);
