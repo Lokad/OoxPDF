@@ -374,10 +374,11 @@ internal sealed partial class DocxRenderer
         return markupContext.RendersRevisionBalloons && HasNonVoidPropertyChangeRevision(document);
     }
 
-    // Office A/B (w6-tbxctl probe, Word-COM rendered): Word balloons body-anchored
-    // comments but never body-flow floating-textbox ones, so a comment anchored only
-    // in floating drawings must not reserve the balloon lane. Static and placed
-    // floating textboxes keep the legacy trigger (unprobed). Anchors match parts by id,
+    // Office A/B (w6-tbxctl plus w6-staticfloat probes, Word-COM rendered): Word
+    // balloons body-anchored comments but never floating-textbox ones (body-flow or
+    // static), so a comment anchored only in floating drawings must not reserve the
+    // balloon lane. Placed floating textboxes keep the legacy trigger (unprobed).
+    // Anchors match parts by id,
     // mirroring balloon matching, so orphan references reserve nothing either.
     private static bool HasBalloonableCommentAnchor(DocxDocument document)
     {
@@ -423,22 +424,6 @@ internal sealed partial class DocxRenderer
             DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType).Any(HasCommentReference) ||
             DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType).Any(HasCommentReference) ||
             DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings).Any(HasCommentReference))
-        {
-            return true;
-        }
-
-        bool StaticFloatingDrawingsHaveCommentReference(IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType)
-        {
-            return drawingsByType.Values
-                .SelectMany(drawings => drawings)
-                .SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements))
-                .Any(HasCommentReference);
-        }
-
-        if (StaticFloatingDrawingsHaveCommentReference(document.HeaderFloatingDrawingsByType) ||
-            StaticFloatingDrawingsHaveCommentReference(document.FooterFloatingDrawingsByType) ||
-            StaticFloatingDrawingsHaveCommentReference(document.PageSettings.HeaderFloatingDrawingsByType) ||
-            StaticFloatingDrawingsHaveCommentReference(document.PageSettings.FooterFloatingDrawingsByType))
         {
             return true;
         }

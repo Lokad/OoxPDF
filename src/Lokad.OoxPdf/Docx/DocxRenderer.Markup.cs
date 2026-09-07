@@ -400,13 +400,14 @@ internal sealed partial class DocxRenderer
             var renderedTableRowRevisions = new HashSet<string>(StringComparer.Ordinal);
             var renderedTableCellRevisions = new HashSet<string>(StringComparer.Ordinal);
             DocxTextLineLayout[] anchorTextLines = EnumerateMarkupBalloonAnchorTextLines(page, floatingDrawings).ToArray();
-            // Office A/B (w6-tbxctl probe, Word-COM rendered): Word balloons body-anchored
-            // comments but never body-flow floating-textbox ones, so Word-compatible geometry
-            // suppresses comment candidates anchored there (keyed by paragraph reference
-            // identity, the same idiom as the rendered-comments key below). Revision
-            // candidates keep the legacy path (unprobed).
-            HashSet<int> bodyFlowFloatingTextBoxParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                ? EnumerateFloatingDrawingTextBoxTextLines(floatingDrawings.Where(drawing => !IsStaticStoryFloatingDrawing(drawing)))
+            // Office A/B (w6-tbxctl plus w6-staticfloat probes, Word-COM rendered): Word
+            // balloons body-anchored comments but never floating-textbox ones (body-flow or
+            // static), so Word-compatible geometry suppresses comment candidates anchored
+            // there (keyed by paragraph reference identity, the same idiom as the
+            // rendered-comments key below). Revision candidates keep the legacy path
+            // (unprobed).
+            HashSet<int> floatingTextBoxParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                ? EnumerateFloatingDrawingTextBoxTextLines(floatingDrawings)
                     .Select(line => line.SourceParagraph)
                     .OfType<DocxParagraph>()
                     .Select(RuntimeHelpers.GetHashCode)
@@ -421,7 +422,7 @@ internal sealed partial class DocxRenderer
                 }
 
                 if (markupContext.RendersCommentBalloons &&
-                    !bodyFlowFloatingTextBoxParagraphs.Contains(RuntimeHelpers.GetHashCode(paragraph)))
+                    !floatingTextBoxParagraphs.Contains(RuntimeHelpers.GetHashCode(paragraph)))
                 {
                     foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
                     {

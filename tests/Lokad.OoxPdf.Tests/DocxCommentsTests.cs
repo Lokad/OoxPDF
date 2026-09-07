@@ -1823,4 +1823,52 @@ internal static class DocxCommentsTests
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         TestAssert.True(DocxRenderer.ResolveWordCompatiblePrintScale(document, context) < 1d, "A body-anchored comment should reserve the balloon lane.");
     }
+    public static void DocxWordCompatibleAllMarkupSkipsStaticFloatingTextBoxCommentBalloons()
+    {
+        // Office A/B (w6-staticfloat probe, Word-COM rendered): like body-flow floating
+        // textboxes, static ones sustain no Word-compatible balloons or lane.
+        DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
+        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Static text box review anchor", "7");
+        DocxPageSettings pageSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])]
+            }
+        };
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "7",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Static text box comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            pageSettings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] commentBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Comment")
+            .ToArray();
+
+        TestAssert.Equal(0, commentBalloons.Length);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
 }
