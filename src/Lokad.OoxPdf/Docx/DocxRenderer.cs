@@ -385,6 +385,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext)).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken);
+        DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
@@ -453,7 +454,8 @@ internal sealed partial class DocxRenderer
                 EnumeratePageFloatingDrawings(layout, pageIndex).ToArray(),
                 graphics,
                 fontResources,
-                markupContext);
+                markupContext,
+                balloonTextResource);
 
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
             {

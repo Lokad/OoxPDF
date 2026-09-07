@@ -131,18 +131,8 @@ internal sealed partial class DocxRenderer
             parts.Add(prefix);
         }
 
-        DocxCommentMetadata? metadata = storyLayout.Story.CommentMetadata;
-        string? date = FormatCommentDate(metadata?.Date);
-        if (date is not null)
-        {
-            parts.Add(date);
-        }
-
-        if (metadata?.IsResolved is { } isResolved)
-        {
-            parts.Add(isResolved ? "resolved" : "open");
-        }
-
+        // Office A/B (dense and threaded references): Word-compatible balloons show the
+        // comment text with no date or resolved/open flag.
         parts.AddRange(BuildCommentStoryPreviewParts(storyLayout));
         return string.Join(" ", parts);
     }

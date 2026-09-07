@@ -44,15 +44,97 @@ internal sealed partial class DocxRenderer
             or DocxRevisionKind.SectionPropertiesChange;
     }
 
+    private static DocxRunFontResource? EnsureMarkupBalloonTextResource(
+        DocxLayout layout,
+        DocxFontResources fontResources,
+        DocxMarkupContext markupContext,
+        CancellationToken cancellationToken)
+    {
+        // Balloon titles and bodies are synthetic strings (comment metadata, revision labels),
+        // so run-collected font subsets can miss their glyphs and EncodeGlyphHex would silently
+        // drop them. Build one post-layout subset of the label typeface covering every balloon
+        // string when the label resource falls short. Returns null when no extra coverage is
+        // needed, leaving existing subsets (and their snapshots) untouched.
+        if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
+        {
+            return null;
+        }
+
+        DocxRunFontResource? labelResource = ResolveMarkupLabelFontResource(fontResources);
+        if (labelResource is null)
+        {
+            return null;
+        }
+
+        var codepoints = new HashSet<int>();
+        for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(
+                layout.Pages[pageIndex],
+                layout.RelatedStories,
+                EnumeratePageFloatingDrawings(layout, pageIndex).ToArray(),
+                markupContext))
+            {
+                foreach (string? text in new string?[] { placement.Title, placement.Body, placement.WordCompatibleTitle, placement.WordCompatibleBody })
+                {
+                    if (string.IsNullOrEmpty(text))
+                    {
+                        continue;
+                    }
+
+                    foreach (Rune rune in text.EnumerateRunes())
+                    {
+                        codepoints.Add(rune.Value);
+                    }
+                }
+            }
+        }
+
+        if (codepoints.Count == 0)
+        {
+            return null;
+        }
+
+        OpenTypeFont labelFont = labelResource.Embedded.Font;
+        bool needsExtraCoverage = false;
+        foreach (int codePoint in codepoints)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ushort glyph = labelFont.MapCodePoint(codePoint);
+            if (glyph != 0 && !labelResource.Embedded.TryGetEncodedCid(glyph, out _))
+            {
+                needsExtraCoverage = true;
+                break;
+            }
+        }
+
+        if (!needsExtraCoverage)
+        {
+            return null;
+        }
+
+        if (fontResources.Resources is not List<PdfFontResource> mutableResources)
+        {
+            return null;
+        }
+
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(labelFont, codepoints, cancellationToken);
+        string name = "F" + (mutableResources.Count + 1).ToString(CultureInfo.InvariantCulture);
+        mutableResources.Add(new PdfFontResource(name, embedded));
+        return new DocxRunFontResource(name, embedded, labelResource.Resolution);
+    }
+
     private static void RenderMarkupBalloons(
         DocxLayoutPage page,
         IReadOnlyList<DocxRelatedStoryLayout> relatedStories,
         IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
         PdfGraphicsBuilder graphics,
         DocxFontResources fontResources,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext,
+        DocxRunFontResource? balloonTextResource)
     {
-        DocxRunFontResource? labelResource = ResolveMarkupLabelFontResource(fontResources);
+        DocxRunFontResource? labelResource = balloonTextResource ?? ResolveMarkupLabelFontResource(fontResources);
         if (labelResource is null)
         {
             return;

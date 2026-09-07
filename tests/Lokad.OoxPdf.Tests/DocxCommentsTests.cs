@@ -753,8 +753,8 @@ internal static class DocxCommentsTests
             page.Content.Contains("-4.813", StringComparison.Ordinal),
             "Word-compatible grouped comment balloon titles should use positioned glyph advances.");
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "/F1 6.975 Tf") >= 1 && DocxTests.CountOccurrences(page.Content, "/F2 6.975 Tf") >= 2,
-            "Word-compatible grouped comment balloons should keep the title on the label font resource and body text on the regular body resource.");
+            DocxTests.CountOccurrences(page.Content, "/F3 6.975 Tf") >= 1 && DocxTests.CountOccurrences(page.Content, "/F2 6.975 Tf") >= 2,
+            "Word-compatible grouped comment balloons should keep the title on the dedicated balloon-label resource (same label typeface, fuller subset) and body text on the regular body resource.");
         TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
         TestAssert.True(
@@ -1442,6 +1442,70 @@ internal static class DocxCommentsTests
             .ToArray();
 
         TestAssert.Equal(0, revisionBalloons.Length);
+    }
+
+    public static void DocxBalloonTextResourceCoversSyntheticTitleGlyphs()
+    {
+        // Office A/B: balloon titles are synthetic (Commented [RV1]: ) and must render fully
+        // even when no body run contains their glyphs.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("aaa", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 1, DisplayText: null)
+            ]
+        };
+        DocxParagraph commentParagraph = DocxTests.CreateDocxLayoutParagraph("bbb", 10d, 12d);
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(commentParagraph)],
+            [],
+            [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", "2026-06-01T00:00:00Z", null, null, null, null)
+        };
+        var document = new DocxDocument(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document, null, CancellationToken.None)
+            .Single();
+
+        const string title = "Commented [RV1]: ";
+        TestAssert.True(page.Fonts.Any(resource => CoversAllTitleGlyphs(resource.Font, title)),
+            "Some page font must cover every synthetic balloon title glyph.");
+    }
+
+    private static bool CoversAllTitleGlyphs(PdfEmbeddedFont font, string text)
+    {
+        foreach (System.Text.Rune rune in text.EnumerateRunes())
+        {
+            ushort glyph = font.Font.MapCodePoint(rune.Value);
+            if (glyph == 0 || !font.TryGetEncodedCid(glyph, out _))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static void DocxWordCompatibleAllMarkupKeepsFormattingRevisionBalloons()
