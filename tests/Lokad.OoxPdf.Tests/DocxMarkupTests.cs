@@ -1778,4 +1778,41 @@ internal static class DocxMarkupTests
             },
             "placed endnote text");
     }
+    public static void DocxWordCompatibleAllMarkupScalesTabStopPositions()
+    {
+        // Office A/B (w6-tabstop probe, Word-COM rendered): tab stops are margin-relative
+        // design offsets that scale uniformly; unscaled stops overflow the narrowed body
+        // and break lines Word keeps whole.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AB\tC", 10d, 12d) with
+        {
+            TabStops = [new DocxTabStop(100d, "2000", "left", null)]
+        };
+        DocxDocument document = new(
+            360d,
+            300d,
+            36d,
+            36d,
+            36d,
+            36d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages.Single()
+            .Items.OfType<DocxTextLineLayout>()
+            .Single();
+
+        TestAssert.True(
+            Math.Abs(line.Segments[1].X - (36d + 100d * 0.842391d)) < 0.001d,
+            "Tab text should start at the margin plus the scaled tab stop. X=" + line.Segments[1].X);
+    }
 }
