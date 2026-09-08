@@ -26,9 +26,18 @@ internal sealed partial class DocxRenderer
         int pageCount,
         ref int imageIndex)
     {
-        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        // Office A/B (comment-table and w6-celltuckborders probes, Word-COM rendered):
+        // the first-pin emission shift moves text but table geometry was painted raw, so
+        // cell text rendered a full offset below its rows and clips. Geometry follows the
+        // same text offset (a no-op outside the Word-compatible profile, where it is 0).
+        double geometryXOffset = ResolveTextEmissionXOffset(markupContext);
+        double geometryYOffset = ResolveTextEmissionBaselineOffset(markupContext);
+        DocxTableRowLayout geometryRow = geometryXOffset == 0d && geometryYOffset == 0d ? row : ShiftTableRowGeometry(row, geometryXOffset, geometryYOffset);
+        DocxTableRowLayout? geometryPreviousRow = previousRow is null || (geometryXOffset == 0d && geometryYOffset == 0d) ? previousRow : ShiftTableRowGeometry(previousRow, geometryXOffset, geometryYOffset);
+        DocxTableRowLayout? geometryNextRow = nextRow is null || (geometryXOffset == 0d && geometryYOffset == 0d) ? nextRow : ShiftTableRowGeometry(nextRow, geometryXOffset, geometryYOffset);
+        foreach (DocxTableCellLayout cellLayout in geometryRow.Cells)
         {
-            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
+            if (!ShouldRenderTableCellVisualFragment(cellLayout, geometryPreviousRow))
             {
                 continue;
             }
@@ -37,12 +46,13 @@ internal sealed partial class DocxRenderer
             RenderShadingFill(cell.FillHex, cell.ShadingValue, cell.ShadingColor, graphics, cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
         }
 
-        RenderTableRowBorders(row, previousRow, nextRow, graphics);
-        RenderTableBorderJunctions(row, previousRow, nextRow, graphics);
+        RenderTableRowBorders(geometryRow, geometryPreviousRow, geometryNextRow, graphics);
+        RenderTableBorderJunctions(geometryRow, geometryPreviousRow, geometryNextRow, graphics);
         RenderTableRowMarkupIndicators(row, graphics, markupContext);
 
-        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
+            DocxTableCellLayout cellLayout = row.Cells[cellIndex];
             if (!ShouldRenderTableCellContentFragment(cellLayout, previousRow))
             {
                 continue;
@@ -50,8 +60,9 @@ internal sealed partial class DocxRenderer
 
             if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0 || cellLayout.InlineTextBoxes.Count != 0 || cellLayout.NestedRows.Count != 0)
             {
+                DocxTableCellLayout geometryCell = geometryRow.Cells[cellIndex];
                 graphics.SaveState();
-                graphics.ClipRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
+                graphics.ClipRectangle(geometryCell.X, geometryCell.Y, geometryCell.Width, geometryCell.Height);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
                     RenderTextLine(line, graphics, fontResources, markupContext, pageNumber, pageCount);
@@ -59,7 +70,7 @@ internal sealed partial class DocxRenderer
 
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
                 {
-                    RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
+                    RenderInlineImage(geometryXOffset == 0d && geometryYOffset == 0d ? image : image with { X = image.X + geometryXOffset, Y = image.Y - geometryYOffset }, graphics, pageImages, diagnosticSink, ref imageIndex);
                 }
 
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
@@ -91,6 +102,14 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    private static DocxTableRowLayout ShiftTableRowGeometry(DocxTableRowLayout row, double xOffset, double yOffset)
+    {
+        return row with
+        {
+            Y = row.Y - yOffset,
+            Cells = row.Cells.Select(cell => cell with { X = cell.X + xOffset, Y = cell.Y - yOffset }).ToArray(),
+        };
+    }
     private static void RenderTableRowMarkupIndicators(
         DocxTableRowLayout row,
         PdfGraphicsBuilder graphics,

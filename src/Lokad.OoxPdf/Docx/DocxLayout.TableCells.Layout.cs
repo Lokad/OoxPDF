@@ -18,6 +18,39 @@ internal sealed partial class DocxLayoutEngine
         return DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "top")) * fixedScale;
     }
 
+    // Office A/B (w6-celltucksize probes at two lane-fit scales plus w6-celltuckspacing
+    // spacing/box-order probes, Word-COM rendered): a box-only cell paragraph after a
+    // text paragraph tucks its top below the last text baseline by a font-size affine
+    // law, honoring only spacing excess over the 8pt default. Same-paragraph boxes keep
+    // the legacy block rule, as do boxes after empty, image-bearing, or nested content.
+    private const double CellInlineTextBoxTuckSlope = 0.470d;
+    private const double CellInlineTextBoxTuckInterceptPoints = 3.65d;
+    private const double CellInlineTextBoxTuckDefaultAfterPoints = 8d;
+
+    private static bool HasVisibleTextSpans(IReadOnlyList<DocxTextSpan> textSpans)
+    {
+        foreach (DocxTextSpan span in textSpans)
+        {
+            if (!string.IsNullOrWhiteSpace(span.Text))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static double ResolveCellInlineTextBoxTuckTop(
+        double previousBaselineY,
+        double previousFontSize,
+        double spacingBefore,
+        double paragraphSpacingScale)
+    {
+        double tuck = paragraphSpacingScale * (CellInlineTextBoxTuckSlope * previousFontSize + CellInlineTextBoxTuckInterceptPoints);
+        double excess = Math.Max(0d, spacingBefore - CellInlineTextBoxTuckDefaultAfterPoints * paragraphSpacingScale);
+        return previousBaselineY - tuck - excess;
+    }
+
     private static double MeasureTableCellContentHeight(
         DocxTableCell cell,
         double cellWidth,
@@ -42,6 +75,9 @@ internal sealed partial class DocxLayoutEngine
         double contentHeight = paddingTop + paddingBottom;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        bool previousParagraphHasText = false;
+        double previousTextFontSize = 0d;
+        double previousTextLineHeight = 0d;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
             if (bodyElement is DocxTableElement tableElement)
@@ -49,6 +85,7 @@ internal sealed partial class DocxLayoutEngine
                 contentHeight += pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                previousParagraphHasText = false;
                 contentHeight += MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
                 continue;
             }
@@ -73,6 +110,8 @@ internal sealed partial class DocxLayoutEngine
                 double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 int lineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count();
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
+                previousTextFontSize = fontSize;
+                previousTextLineHeight = lineHeight;
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                 contentHeight += lineCount * lineHeight;
             }
@@ -89,13 +128,28 @@ internal sealed partial class DocxLayoutEngine
                 contentHeight += imageHeight + InlineImageParagraphGapPoints;
             }
 
+            bool currentHasVisibleText = HasVisibleTextSpans(textSpans);
+            bool tuckApplied = false;
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
-                contentHeight += EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) + InlineImageParagraphGapPoints;
+                double boxContribution = EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) + InlineImageParagraphGapPoints;
+                if (!tuckApplied &&
+                    previousParagraphHasText &&
+                    paragraph.Images.Count == 0 &&
+                    !currentHasVisibleText)
+                {
+                    double tuck = paragraphSpacingScale * (CellInlineTextBoxTuckSlope * previousTextFontSize + CellInlineTextBoxTuckInterceptPoints);
+                    double excess = Math.Max(0d, spacingProfile.AppliedBeforeSpacing - CellInlineTextBoxTuckDefaultAfterPoints * paragraphSpacingScale);
+                    boxContribution += tuck + excess - (previousTextLineHeight + spacingProfile.AppliedBeforeSpacing);
+                    tuckApplied = true;
+                }
+
+                contentHeight += boxContribution;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
+            previousParagraphHasText = currentHasVisibleText && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
         }
 
         contentHeight += pendingSpacingAfter;
@@ -385,6 +439,9 @@ internal sealed partial class DocxLayoutEngine
         var boxes = new List<DocxInlineTextBoxLayout>();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        bool previousParagraphHasText = false;
+        double previousTextBaselineY = 0d;
+        double previousTextFontSize = 0d;
         int paragraphIndex = 0;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
@@ -393,6 +450,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                previousParagraphHasText = false;
                 if (textMeasurer is not null)
                 {
                     cursorY -= MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
@@ -410,6 +468,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
+            bool currentHasVisibleText = false;
             if (textMeasurer is not null)
             {
                 double fontSize = GetParagraphFontSize(paragraph);
@@ -420,7 +479,15 @@ internal sealed partial class DocxLayoutEngine
                     double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
                     double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                    cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
+                    int wrappedLineCount = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count();
+                    if (wrappedLineCount != 0)
+                    {
+                        previousTextBaselineY = cursorY - (wrappedLineCount - 1) * lineHeight;
+                        previousTextFontSize = fontSize;
+                    }
+
+                    currentHasVisibleText = HasVisibleTextSpans(textSpans);
+                    cursorY -= wrappedLineCount * lineHeight;
                 }
                 else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
                 {
@@ -444,16 +511,27 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
+            bool tuckApplied = false;
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
                 double boxParagraphX = cellX + paddingLeft + GetParagraphStartOffset(paragraph, paragraphSpacingScale);
                 double boxParagraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                double boxTop = cursorY;
+                if (!tuckApplied &&
+                    previousParagraphHasText &&
+                    paragraph.Images.Count == 0 &&
+                    !currentHasVisibleText)
+                {
+                    boxTop = ResolveCellInlineTextBoxTuckTop(previousTextBaselineY, previousTextFontSize, spacingProfile.AppliedBeforeSpacing, paragraphSpacingScale);
+                    tuckApplied = true;
+                }
+
                 DocxInlineTextBoxLayout? textBoxLayout = CreateInlineTextBoxLayout(
                     textBox,
                     sourceBlockIndex: null,
                     boxParagraphX,
                     boxParagraphWidth,
-                    cursorY,
+                    boxTop,
                     paragraph.EffectiveProperties.Alignment,
                     textMeasurer,
                     defaultTabStopPoints,
@@ -467,11 +545,12 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 boxes.Add(textBoxLayout);
-                cursorY -= textBoxLayout.BoxHeight + InlineImageParagraphGapPoints;
+                cursorY = boxTop - textBoxLayout.BoxHeight - InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
+            previousParagraphHasText = currentHasVisibleText && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
             paragraphIndex++;
         }
 

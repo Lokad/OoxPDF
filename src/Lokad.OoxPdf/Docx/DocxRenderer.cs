@@ -1143,7 +1143,9 @@ internal sealed partial class DocxRenderer
                 RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount);
                 break;
             case DocxInlineImageLayout image:
-                RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
+                double imageXOffset = ResolveTextEmissionXOffset(markupContext);
+                double imageYOffset = ResolveTextEmissionBaselineOffset(markupContext);
+                RenderInlineImage(imageXOffset == 0d && imageYOffset == 0d ? image : image with { X = image.X + imageXOffset, Y = image.Y - imageYOffset }, graphics, pageImages, diagnosticSink, ref imageIndex);
                 break;
             case DocxTableRowLayout row:
                 RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);

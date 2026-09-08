@@ -817,6 +817,148 @@ internal static class DocxImagesTests
         DocxTextLineLayout firstCellLine = cellLayout.TextLines.First();
         TestAssert.True(Math.Abs((firstCellLine.BaselineY - box.BoxTop) - 12d) < 0.001d, "Cell box block should start exactly one line below the host text line (block-level, like pictures).");
     }
+    public static void DocxCellTextBoxAfterTextTucksToBaseline()
+    {
+        // Office A/B (w6-celltucksize probes, Word-COM rendered at two lane-fit scales):
+        // a box-only cell paragraph after text tucks its top below the last text baseline
+        // following a font-size affine law, instead of stacking a full line plus spacing.
+        const double printScale = 0.758834d;
+        const double fontSize = 12d;
+        DocxParagraph textParagraph = DocxTests.CreateDocxLayoutParagraph("Cell text", fontSize, fontSize);
+        var textBox = new DocxInlineTextBox("2286000", "1097280")
+        {
+            BodyElements = [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Box text", 10d, 12d))]
+        };
+        DocxParagraph boxParagraph = new DocxParagraph([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        var cell = new DocxTableCell(string.Empty, [textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
+            .Create(document, scaled, CancellationToken.None)
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single().Cells.Single();
+        DocxTextLineLayout textLine = cellLayout.TextLines.Single();
+        DocxInlineTextBoxLayout box = cellLayout.InlineTextBoxes.Single();
+        double expectedTop = textLine.BaselineY - printScale * (0.470d * fontSize + 3.65d);
+        TestAssert.True(Math.Abs(box.BoxTop - expectedTop) < 0.05d, "Cell box tops should tuck below the text baseline by the Office font-size law. BoxTop=" + box.BoxTop.ToString(CultureInfo.InvariantCulture) + " Expected=" + expectedTop.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxCellTextBoxAfterTextTuckGrowsWithFontSize()
+    {
+        // Companion slope probe (w6-celltucksize 16pt row): the tuck grows with the
+        // preceding text size, so larger text carries a deeper box top.
+        const double printScale = 0.758834d;
+        const double fontSize = 16d;
+        DocxParagraph textParagraph = DocxTests.CreateDocxLayoutParagraph("Cell text", fontSize, fontSize);
+        var textBox = new DocxInlineTextBox("2286000", "1097280")
+        {
+            BodyElements = [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Box text", 10d, 12d))]
+        };
+        DocxParagraph boxParagraph = new DocxParagraph([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        var cell = new DocxTableCell(string.Empty, [textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
+            .Create(document, scaled, CancellationToken.None)
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single().Cells.Single();
+        DocxTextLineLayout textLine = cellLayout.TextLines.Single();
+        DocxInlineTextBoxLayout box = cellLayout.InlineTextBoxes.Single();
+        double expectedTop = textLine.BaselineY - printScale * (0.470d * fontSize + 3.65d);
+        TestAssert.True(Math.Abs(box.BoxTop - expectedTop) < 0.05d, "Cell box tucks should grow with the preceding text size. BoxTop=" + box.BoxTop.ToString(CultureInfo.InvariantCulture) + " Expected=" + expectedTop.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxCellTextBoxAfterTextHonorsSpacingExcess()
+    {
+        // Office A/B (w6-celltuckspacing probes, Word-COM rendered): explicit spacing
+        // between text and a following box honors only the excess over the 8pt default,
+        // so after-8 matches the default tuck while after-24 adds 16pt.
+        const double printScale = 0.758834d;
+        const double fontSize = 12d;
+        DocxParagraph textParagraph = DocxTests.CreateDocxLayoutParagraph("Cell text", fontSize, fontSize) with
+        {
+            SpacingAfterPoints = 24d
+        };
+        var textBox = new DocxInlineTextBox("2286000", "1097280")
+        {
+            BodyElements = [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Box text", 10d, 12d))]
+        };
+        DocxParagraph boxParagraph = new DocxParagraph([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        var cell = new DocxTableCell(string.Empty, [textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
+            .Create(document, scaled, CancellationToken.None)
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single().Cells.Single();
+        DocxTextLineLayout textLine = cellLayout.TextLines.Single();
+        DocxInlineTextBoxLayout box = cellLayout.InlineTextBoxes.Single();
+        double expectedTop = textLine.BaselineY - printScale * (0.470d * fontSize + 3.65d) - (24d - 8d) * printScale;
+        TestAssert.True(Math.Abs(box.BoxTop - expectedTop) < 0.05d, "Cell boxes should honor spacing above the 8pt default on top of the tuck. BoxTop=" + box.BoxTop.ToString(CultureInfo.InvariantCulture) + " Expected=" + expectedTop.ToString(CultureInfo.InvariantCulture));
+    }
 
     public static void DocxStaticHeaderInlineTextBoxLaysOutFileGeometryContent()
     {
