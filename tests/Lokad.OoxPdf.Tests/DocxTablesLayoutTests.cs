@@ -666,7 +666,8 @@ internal static class DocxTablesLayoutTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
-        TestAssert.Equal(28d, row.Cells[0].X);
+        // Office A/B (w66/w68 indent probes): tblInd pins TEXT at the indent origin, so the grid hangs left by max(borderHalf, margin) = 0.48 here (borderless, unset margins).
+        TestAssert.Equal(27.52d, row.Cells[0].X);
         TestAssert.Equal(40d, row.Cells[0].Width);
     }
 
@@ -1292,7 +1293,7 @@ internal static class DocxTablesLayoutTests
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 11d * 0.94d - 3d, cellLayout.TextLines[0].BaselineY);
     }
 
-    public static void DocxTableLayoutStageDoesNotInventHorizontalCellPadding()
+    public static void DocxTableLayoutStageAppliesDefaultHorizontalCellMargin()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -1327,7 +1328,8 @@ internal static class DocxTablesLayoutTests
             .Cells
             .Single();
 
-        TestAssert.Equal(cellLayout.X, cellLayout.TextLines[0].X);
+        // Office A/B (w65 nil probe N): unset margins default to 0.48pt, so borderless text starts at grid + 0.48; explicit-0 restores the edge (w64).
+        TestAssert.Equal(cellLayout.X + 0.48d, cellLayout.TextLines[0].X);
         TestAssert.Equal(cellLayout.Y + cellLayout.Height - 12d * 0.94d, cellLayout.TextLines[0].BaselineY);
     }
 
@@ -1371,7 +1373,8 @@ internal static class DocxTablesLayoutTests
             .Cells
             .Single();
 
-        TestAssert.Equal(cellLayout.X + 0.24d, cellLayout.TextLines[0].X);
+        // Office A/B (w63 sz4 probe): unset margins default to 0.48pt which dominates the 0.24pt border half, so text starts at grid + 0.48.
+        TestAssert.Equal(cellLayout.X + 0.48d, cellLayout.TextLines[0].X);
     }
 
     public static void DocxTableLayoutStageDoesNotInventDefaultRowMinimumForAutoRows()
@@ -1740,7 +1743,8 @@ internal static class DocxTablesLayoutTests
         DocxTextLineLayout line = cellLayout.TextLines.Single();
         DocxTextSegmentLayout segment = line.Segments.Single();
         TestAssert.Equal(text, line.Text);
-        TestAssert.True(Math.Abs(line.Width - cellLayout.Width) < 0.001d, "Fit-text cell lines should target the cell text extents instead of keeping the natural overwide advance.");
+        // Office default insets (w68) narrow the text extents below the cell width; fit-text still targets the extents, now read off the record pads.
+        TestAssert.True(Math.Abs(line.Width - (cellLayout.Width - cellLayout.ContentPaddingLeft - cellLayout.ContentPaddingRight)) < 0.001d, "Fit-text cell lines should target the cell text extents instead of keeping the natural overwide advance.");
         TestAssert.True(segment.PdfCharacterSpacing < 0d, "Fitting overwide text should reduce inter-character spacing.");
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, segment.PdfCharacterSpacingSource);
         TestAssert.True(!segment.CompensatePdfCharacterSpacing, "Fit-text advance targets should add a text-state spacing delta instead of compensating it away.");

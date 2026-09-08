@@ -132,10 +132,33 @@ internal sealed partial class DocxReader
                 style.Element(WordprocessingNamespace + "pPr"),
                 style.Element(WordprocessingNamespace + "rPr")) with
             {
-                Margins = ReadTableStyleCellMargins(tableProperties)
+                Margins = ResolveTableNormalCellMargins(style, tableProperties)
             },
             ReadTableBorders(tableProperties),
             conditional);
+    }
+
+    // Office A/B (m1 ladder mutant, Word-COM rendered plus PdfInspect): a present
+    // TableNormal style without stored cell margins still contributes the built-in
+    // 108dxa (5.4pt) left/right margins with 0 top/bottom; removing the whole style
+    // element instead drops to the default floor. Other style ids without stored
+    // margins contribute none (unprobed, assumed).
+    private static DocxTableCellMargins ResolveTableNormalCellMargins(XElement style, XElement? tableProperties)
+    {
+        DocxTableCellMargins stored = ReadTableStyleCellMargins(tableProperties);
+        if (!string.Equals((string?)style.Attribute(WordprocessingNamespace + "styleId"), "TableNormal", StringComparison.Ordinal))
+        {
+            return stored;
+        }
+        return new DocxTableCellMargins(
+            stored.TopPoints ?? 0d,
+            stored.RightPoints ?? 108d / 20d,
+            stored.BottomPoints ?? 0d,
+            stored.LeftPoints ?? 108d / 20d,
+            stored.TopValue ?? "0",
+            stored.RightValue ?? "108",
+            stored.BottomValue ?? "0",
+            stored.LeftValue ?? "108");
     }
 
     private static DocxTableStyleProperties ReadTableStyleProperties(XElement? tableProperties)

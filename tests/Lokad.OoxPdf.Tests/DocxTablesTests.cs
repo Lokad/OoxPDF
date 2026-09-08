@@ -736,9 +736,10 @@ internal static class DocxTablesTests
 
     public static void DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking()
     {
+        // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the resolved field still fits one line; wrap-vs-Word symmetry gets its own probe.
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A {PAGE} B", 10d, 10d);
         var cell = new DocxTableCell("A {PAGE} B", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [25d], [new DocxTableRow([cell], null)]);
+        var table = new DocxTable(null, [26d], [new DocxTableRow([cell], null)]);
         var document = new DocxDocument(
             100d,
             100d,
@@ -767,9 +768,10 @@ internal static class DocxTablesTests
 
     public static void DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking()
     {
+        // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the literal field still fits one line; wrap-vs-Word symmetry gets its own probe.
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A {NUMPAGES} B", 10d, 10d);
         var cell = new DocxTableCell("A {NUMPAGES} B", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [25d], [new DocxTableRow([cell], null)]);
+        var table = new DocxTable(null, [26d], [new DocxTableRow([cell], null)]);
         var document = new DocxDocument(
             100d,
             100d,

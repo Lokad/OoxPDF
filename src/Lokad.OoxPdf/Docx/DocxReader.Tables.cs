@@ -46,6 +46,13 @@ internal sealed partial class DocxReader
             ? parsedTableStyle
             : styles.DefaultTableStyle ?? DocxTableStyle.Empty;
         DocxTableCellMargins tableCellMargins = ReadTableStyleCellMargins(tableProperties);
+        // Office A/B (m13/ladder compat15 probes): a present compatibilityMode pins the
+        // table grid at margin/indent plus the outer border half (legacy outer-edge
+        // alignment); without it the grid sits at the origin (modern) or pins text via
+        // style margins (w72/m12, see PinTextToMargin below). Any stated mode counts
+        // (survey: only 15 occurs in the wild).
+        bool useLegacyTableGrid = documentSettings is not null && documentSettings.CompatSettings.Any(setting => string.Equals(setting.Name, "compatibilityMode", StringComparison.Ordinal));
+        double? resolvedTableIndentPoints = tableIndent is not null ? ReadDxaWidth(tableIndent) : tableStyle.Table.IndentPoints;
         IReadOnlyList<double> columns = table
             .Element(WordprocessingNamespace + "tblGrid")
             ?.Elements(WordprocessingNamespace + "gridCol")
@@ -133,6 +140,11 @@ internal sealed partial class DocxReader
                     cellElements.Length);
                 DocxTableCellMargins inheritedMargins = rowInheritedMargins.Merge(conditionalStyle.Margins);
                 DocxTableCellMargins margins = ReadTableCellMargins(cellProperties).Merge(inheritedMargins);
+                DocxTableCellMargins styleMargins = tableStyle.Cell.Margins.Merge(conditionalStyle.Margins);
+                // Office A/B (w72/m12 pin probes): without compat, table-style margins pin
+                // cell text at the margin instead of maxing with the border half. Direct
+                // margins still cascade-replace style margins for the text offset (w74).
+                bool pinTextToMargin = !useLegacyTableGrid && (resolvedTableIndentPoints ?? 0d) == 0d && (styleMargins.LeftPoints ?? 0d) > 0d;
                 cells.Add(new DocxTableCell(
                     text,
                     paragraphs,
@@ -156,7 +168,9 @@ internal sealed partial class DocxReader
                     resolvedNoWrapValue,
                     resolvedFitText,
                     resolvedFitTextValue,
-                    textDirectionValue)
+                    textDirectionValue,
+                    styleMargins,
+                    pinTextToMargin)
                 {
                     BodyElements = cellBodyElements,
                     Revisions = cellRevisions
@@ -213,7 +227,8 @@ internal sealed partial class DocxReader
             tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.CellSpacingValue,
             tableCellSpacing is not null ? (string?)tableCellSpacing.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.CellSpacingType,
             tableLook,
-            hasExplicitGrid)
+            hasExplicitGrid,
+            useLegacyTableGrid)
         {
             Revisions = tableRevisions
         };

@@ -883,6 +883,31 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(0d, points ?? 0d) * fixedScale;
     }
 
+    // Office A/B (w63-w68 table border/margin probes, Word-COM rendered plus
+    // PdfInspect): cell text starts at the grid plus max(borderHalf, margin).
+    // Unset margins default to 0.48pt (nil-border text sits at grid + 0.48);
+    // explicit margins replace the default and swallow border halves; explicit-0
+    // restores content anchoring. W6-a1: the default joins scaled space through
+    // fixedScale like the other fixed table insets.
+    private const double DefaultTableCellHorizontalMarginPoints = 0.48d;
+
+    private static double ResolveTableCellHorizontalEdgeInset(DocxTableCell cell, string edge, double? marginPoints, double fixedScale)
+    {
+        double borderHalf = DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, edge)) / 2d;
+        double margin = Math.Max(0d, marginPoints ?? DefaultTableCellHorizontalMarginPoints);
+        if (!cell.PinTextToMargin)
+        {
+            return Math.Max(borderHalf, margin) * fixedScale;
+        }
+
+        // Office A/B (w72/m12 pin probes): pinned text clears the style margin box
+        // (borders swallowed); direct margins still apply by cascade (w74).
+        double style = string.Equals(edge, "left", StringComparison.OrdinalIgnoreCase)
+            ? cell.StyleMargins?.LeftPoints ?? 0d
+            : cell.StyleMargins?.RightPoints ?? 0d;
+        return Math.Max(style, margin) * fixedScale;
+    }
+
     private static double ResolveTableCellBorderContentInset(DocxTableCell cell, string edge, double fixedScale)
     {
         return DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, edge)) / 2d * fixedScale;

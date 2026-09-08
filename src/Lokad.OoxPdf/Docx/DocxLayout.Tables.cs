@@ -237,6 +237,30 @@ internal sealed partial class DocxLayoutEngine
         // fixedScale reuses the layout spacing scale: identical in every mode (WC: s, else 1).
         double indentPoints = Math.Max(0d, table.IndentPoints ?? 0d) * fixedScale;
         double tableX = x + indentPoints;
+        // Grid origin by regime (Office A/B w62-w72/m1-m14 probes; reader notes on
+        // UseLegacyTableGrid/PinTextToMargin): compat aligns the outer border edge at
+        // the origin (m13/ladder, indent or not per M14); modern pins text at an indent
+        // origin (w66); pin-regime pins text at the margin via style margins (w72/m12).
+        // Bare tables sit at the origin (w63). Table-level shift keeps columns aligned
+        // across rows (ragged-border rows unprobed); explicit-0 indent counts as absent
+        // (unprobed, assumed same).
+        double gridX = tableX;
+        if (table.Rows.FirstOrDefault()?.Cells.FirstOrDefault() is { } firstCell)
+        {
+            if (table.UseLegacyTableGrid)
+            {
+                DocxTableCellBorder? outerLeft = DocxTableBorderGeometry.Find(firstCell.Borders, "left") ?? DocxTableBorderGeometry.Find(firstCell.Borders, "start");
+                gridX = tableX + DocxTableBorderGeometry.ResolveVisibleWidth(outerLeft) / 2d * fixedScale;
+            }
+            else if (indentPoints > 0d)
+            {
+                gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
+            }
+            else if ((firstCell.StyleMargins?.LeftPoints ?? 0d) > 0d)
+            {
+                gridX = tableX - (firstCell.StyleMargins?.LeftPoints ?? 0d) * fixedScale;
+            }
+        }
         double tableAvailableWidth = Math.Max(1d, availableWidth - indentPoints);
         IReadOnlyList<double> gridPoints = table.ColumnWidthsPoints.Select(width => width * fixedScale).ToArray();
         double gridTableWidth = gridPoints.Sum();
@@ -292,7 +316,7 @@ internal sealed partial class DocxLayoutEngine
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         return new DocxResolvedTableGrid(
-            tableX,
+            gridX,
             tableAvailableWidth,
             targetTableWidth,
             effectiveColumns,
@@ -857,8 +881,8 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "left", paragraphSpacingScale);
-        double paddingRight = ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "right", paragraphSpacingScale);
+        double paddingLeft = ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, paragraphSpacingScale);
+        double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         heightBeforeBreak = rowTopPadding;
         double pendingSpacingAfter = 0d;
@@ -1057,9 +1081,9 @@ internal sealed partial class DocxLayoutEngine
                 : cell;
             double contentY = isVerticalMergeContinuation ? visualY : fullVisualY;
             double contentHeight = isVerticalMergeContinuation ? visualHeight : fullVisualHeight;
-            double contentPaddingLeft = ResolveTableCellHorizontalPadding(contentCell.Margins.LeftPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(contentCell, "left", paragraphSpacingScale);
+            double contentPaddingLeft = ResolveTableCellHorizontalEdgeInset(contentCell, "left", contentCell.Margins.LeftPoints, paragraphSpacingScale);
             double contentPaddingTop = rowTopPadding;
-            double contentPaddingRight = ResolveTableCellHorizontalPadding(contentCell.Margins.RightPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(contentCell, "right", paragraphSpacingScale);
+            double contentPaddingRight = ResolveTableCellHorizontalEdgeInset(contentCell, "right", contentCell.Margins.RightPoints, paragraphSpacingScale);
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
             IReadOnlyList<DocxTextLineLayout> textLines = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []

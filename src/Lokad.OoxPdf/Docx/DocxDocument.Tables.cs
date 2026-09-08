@@ -15,14 +15,15 @@ internal sealed record DocxTable(
     string? CellSpacingValue,
     string? CellSpacingType,
     DocxTableLook? Look,
-    bool HasExplicitGrid)
+    bool HasExplicitGrid,
+    bool UseLegacyTableGrid = false)
 {
 
     public DocxTable(
         string? LayoutValue,
         IReadOnlyList<double> ColumnWidthsPoints,
         IReadOnlyList<DocxTableRow> Rows)
-        : this(LayoutValue, ColumnWidthsPoints, Rows, null, null, null, null, null, null, null, null, null, null, null, true)
+        : this(LayoutValue, ColumnWidthsPoints, Rows, null, null, null, null, null, null, null, null, null, null, null, true, false)
     {
     }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
@@ -88,7 +89,9 @@ internal sealed record DocxTableCell(
     string? NoWrapValue,
     bool FitText,
     string? FitTextValue,
-    string? TextDirectionValue)
+    string? TextDirectionValue,
+    DocxTableCellMargins? StyleMargins = null,
+    bool PinTextToMargin = false)
 {
 
     public DocxTableCell(
@@ -100,7 +103,7 @@ internal sealed record DocxTableCell(
         string? VerticalAlignmentValue,
         IReadOnlyList<DocxTableCellBorder> Borders,
         DocxTableCellMargins Margins)
-        : this(Text, Paragraphs, FillHex, ShadingValue, ShadingColor, VerticalAlignmentValue, Borders, Margins, null, null, null, 1, null, null, false, null, false, null, false, null, null)
+        : this(Text, Paragraphs, FillHex, ShadingValue, ShadingColor, VerticalAlignmentValue, Borders, Margins, null, null, null, 1, null, null, false, null, false, null, false, null, null, null, false)
     {
     }
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];

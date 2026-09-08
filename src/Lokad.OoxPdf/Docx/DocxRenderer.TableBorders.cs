@@ -127,7 +127,7 @@ internal sealed partial class DocxRenderer
         }
 
         double leftBorderWidth = ResolveLeftVerticalBorderWidth(cellLayout);
-        double segmentX = Math.Min(right, x + leftBorderWidth);
+        double segmentX = Math.Min(right, x + leftBorderWidth / 2d);
         if (right <= segmentX)
         {
             return;
@@ -171,7 +171,7 @@ internal sealed partial class DocxRenderer
         switch (edge)
         {
             case "top":
-                double topX = cellLayout.X + ResolveLeftVerticalBorderWidth(cellLayout);
+                double topX = cellLayout.X + ResolveLeftVerticalBorderWidth(cellLayout) / 2d;
                 double topWidth = cellLayout.Width - (topX - cellLayout.X);
                 if (topWidth > 0d)
                 {
@@ -179,7 +179,7 @@ internal sealed partial class DocxRenderer
                 }
                 break;
             case "bottom":
-                double bottomX = cellLayout.X + ResolveLeftVerticalBorderWidth(cellLayout);
+                double bottomX = cellLayout.X + ResolveLeftVerticalBorderWidth(cellLayout) / 2d;
                 double bottomWidth = cellLayout.Width - (bottomX - cellLayout.X);
                 if (bottomWidth > 0d)
                 {
@@ -221,7 +221,8 @@ internal sealed partial class DocxRenderer
         RgbColor color = ReadColor(border.Color);
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         double width = DocxTableBorderGeometry.ResolveVisibleWidth(border);
-        RenderTableBorderStrip(graphics, border, boundaryX, y, width, height, DocxTableBorderOrientation.Vertical);
+        // Office A/B (w63-w68 probes): vertical bands center on grid lines.
+        RenderTableBorderStrip(graphics, border, boundaryX - width / 2d, y, width, height, DocxTableBorderOrientation.Vertical);
     }
 
     private static void RenderVerticalTableCellBorder(
@@ -239,7 +240,8 @@ internal sealed partial class DocxRenderer
         RgbColor color = ReadColor(border.Color);
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         double width = DocxTableBorderGeometry.ResolveVisibleWidth(border);
-        RenderTableBorderStrip(graphics, border, boundaryX, y, width, height, DocxTableBorderOrientation.Vertical);
+        // Office A/B (w63-w68 probes): vertical bands center on grid lines.
+        RenderTableBorderStrip(graphics, border, boundaryX - width / 2d, y, width, height, DocxTableBorderOrientation.Vertical);
     }
 
     private static void RenderTableBorderStrip(

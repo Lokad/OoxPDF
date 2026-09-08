@@ -64,11 +64,12 @@ internal static class DocxTablesMarkupTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
+        // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the token still needs exactly one emergency split past the 5-char fit.
         var cell = new DocxTableCell("ABC\u2011DEFG", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(
             null,
-            [25d],
-            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 25d };
+            [26d],
+            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 26d };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1104,21 +1105,21 @@ internal static class DocxTablesMarkupTests
         // W6-a1: fixed table geometry joins scaled space (0.842391 default print scale):
         // indent, grid, columns, spacing, and paddings all scale; model echoes stay design.
         const double tableScale = 0.842391d;
-        TestAssert.True(Math.Abs(outerRow.Table.TableX - (72d + 18d * tableScale)) < 0.000001d, "TableX should add the scaled indent to the margin. TableX=" + outerRow.Table.TableX);
+        TestAssert.True(Math.Abs(outerRow.Table.TableX - (72d + 18d * tableScale - 8d * tableScale)) < 0.000001d, "TableX should pin text at the scaled indent origin, hanging the grid left by the scaled first-cell edge inset (w68). TableX=" + outerRow.Table.TableX);
         TestAssert.True(Math.Abs(outerRow.Table.ResolvedTableWidth - 240d * tableScale) < 0.000001d, "ResolvedTableWidth should scale the preferred dxa width. Width=" + outerRow.Table.ResolvedTableWidth);
         TestAssert.Equal("fixed", outerRow.Table.LayoutValue ?? string.Empty);
         TestAssert.Equal(18d, outerRow.Table.IndentPoints ?? -1d);
         TestAssert.Equal(6d, outerRow.Table.CellSpacingPoints ?? -1d);
         TestAssert.True(Math.Abs(outerRow.Table.ResolvedColumnWidths[0] - 96d * tableScale) < 0.000001d, "Column widths should scale the explicit grid. Col0=" + outerRow.Table.ResolvedColumnWidths[0]);
         TestAssert.True(Math.Abs(outerRow.Table.ResolvedColumnWidths[1] - 144d * tableScale) < 0.000001d, "Column widths should scale the explicit grid. Col1=" + outerRow.Table.ResolvedColumnWidths[1]);
-        TestAssert.True(Math.Abs(firstCellLayout.X - (72d + 18d * tableScale)) < 0.000001d, "First cell should start at the scaled table origin. X=" + firstCellLayout.X);
-        TestAssert.True(Math.Abs(secondCellLayout.X - (72d + 18d * tableScale + 96d * tableScale + 6d * tableScale)) < 0.000001d, "Second cell should advance by scaled column plus scaled spacing. X=" + secondCellLayout.X);
+        TestAssert.True(Math.Abs(firstCellLayout.X - (72d + 18d * tableScale - 8d * tableScale)) < 0.000001d, "First cell should start at the shifted grid origin. X=" + firstCellLayout.X);
+        TestAssert.True(Math.Abs(secondCellLayout.X - (72d + 18d * tableScale + 96d * tableScale + 6d * tableScale - 8d * tableScale)) < 0.000001d, "Second cell should advance by scaled column plus scaled spacing. X=" + secondCellLayout.X);
         TestAssert.True(Math.Abs(firstCellLayout.ContentPaddingLeft - 8d * tableScale) < 0.000001d, "Cell padding should join scaled space. PadL=" + firstCellLayout.ContentPaddingLeft);
         TestAssert.True(Math.Abs(firstCellLayout.ContentPaddingRight - 10d * tableScale) < 0.000001d, "Cell padding should join scaled space. PadR=" + firstCellLayout.ContentPaddingRight);
         TestAssert.True(firstCellLayout.TextLines.Count > 1, "The first cell should wrap inside its margin-adjusted table-cell text frame.");
         TestAssert.True(secondCellLayout.TextLines.Count > 1, "The second cell paragraph should wrap before the nested table consumes cell body flow.");
         TestAssert.Equal("autofit", nestedRow.Table.LayoutValue ?? string.Empty);
-        TestAssert.True(Math.Abs(nestedRow.Table.TableX - (72d + 18d * tableScale + 96d * tableScale + 6d * tableScale + 12d * tableScale + 5d * tableScale)) < 0.000001d, "Nested table should indent from the scaled cell content origin. NestedX=" + nestedRow.Table.TableX);
+        TestAssert.True(Math.Abs(nestedRow.Table.TableX - (72d + 18d * tableScale + 96d * tableScale + 6d * tableScale + 12d * tableScale + 5d * tableScale - 13d * tableScale)) < 0.000001d, "Nested table should indent from the scaled cell content origin. NestedX=" + nestedRow.Table.TableX);
         TestAssert.True(Math.Abs(nestedRow.Table.ResolvedTableWidth - 110d * tableScale) < 0.000001d, "Nested preferred dxa width should scale. NestedW=" + nestedRow.Table.ResolvedTableWidth);
         TestAssert.True(
             nestedRow.Y >= secondCellLayout.Y &&

@@ -357,6 +357,7 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        boundaries.Add(new DocxTableBorderBoundary(x, width, border));
+        // Office A/B (w63-w68 probes): junctions ride the centered vertical bands.
+        boundaries.Add(new DocxTableBorderBoundary(x - width / 2d, width, border));
     }
 }
