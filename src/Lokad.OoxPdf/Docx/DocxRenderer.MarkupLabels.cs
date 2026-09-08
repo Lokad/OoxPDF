@@ -105,6 +105,39 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    // Single source for the Word-compatible balloon body wrap shared by text
+    // rendering and row-derived balloon heights: the title plus the first body
+    // words share the top row, an overflowing body wraps once onto a second row.
+    private static void ComputeWordCompatibleBalloonWrapWidths(
+        double titleWidth,
+        double balloonWidth,
+        out double firstLineWidth,
+        out double continuationWidth)
+    {
+        double bodyFirstLineX = WordCompatibleAllMarkupBalloonTextInsetXPoints +
+            titleWidth +
+            WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
+        double rightEdge = balloonWidth - 0.5d;
+        firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX);
+        continuationWidth = Math.Max(0d, rightEdge - WordCompatibleAllMarkupBalloonTextInsetXPoints);
+    }
+
+    private static int CountWordCompatibleBalloonTextRows(
+        string body,
+        PdfEmbeddedFont bodyEmbedded,
+        double fontSize,
+        double firstLineWidth,
+        double continuationWidth)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return 1;
+        }
+
+        string[] lines = WrapWordCompatibleBalloonBody(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
+        return lines.Length == 0 ? 1 : lines.Length;
+    }
+
     private static string FitWordCompatibleBalloonLine(
         string text,
         double maxWidth,

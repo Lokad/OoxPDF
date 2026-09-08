@@ -2342,4 +2342,147 @@ internal static class DocxCommentsTests
             placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
             "All-markup comment and revision balloon candidates should be anchored from static text-box lines before same-anchor grouping.");
     }
+
+    public static void DocxWordCompatibleBalloonHeightFitsSingleLineContent()
+    {
+        // Office A/B (tbxrev probe rects, Word-COM rendered): one-line revision balloons
+        // are 12.3 tall, not the flat 20.48 legacy height - heights must follow the
+        // rendered text rows.
+        DocxParagraph paragraph = DocxTests.CreateCommentMarkerParagraph("R anchor", "1") with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
+            ]
+        };
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Ok", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+
+        TestAssert.True(Math.Abs(placement.Height - 12.61d) < 0.05d, "Single-row balloons should fit one text row plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxWordCompatibleBalloonHeightFitsWrappedBodyContent()
+    {
+        // Office A/B (dense probe rects, Word-COM rendered): two-row comment balloons are
+        // 21.45 tall - heights must grow with the wrapped body rows.
+        DocxParagraph paragraph = DocxTests.CreateCommentMarkerParagraph("Wrapped balloon anchor text here", "1");
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph(string.Join(" ", Enumerable.Repeat("Balloon", 24)), 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
+        double expected = 9.21d + 9d * printScale * 1.2d + 3.4d;
+
+        DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+
+        TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit two text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxWordCompatibleBalloonHeightKeepsThreadedLegacyHeight()
+    {
+        // Threaded balloons keep the legacy flat height plus separator extra (their
+        // separator geometry is unprobed for row-derived sizing).
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Threaded comment anchor", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 9, DisplayText: null)
+            ]
+        };
+        DocxRelatedStory parentComment = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Parent threaded comment body", 10d, 12d))],
+            [],
+            [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer One", "RO", "2024-01-02T03:04:05Z", "11111111", null, null, true)
+        };
+        DocxRelatedStory firstReply = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "2",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("First reply body", 10d, 12d))],
+            [],
+            [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer Two", "RT", "2024-01-03T03:04:05Z", "22222222", "11111111", "1", false)
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [parentComment, firstReply],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+
+        TestAssert.True(Math.Abs(placement.Height - (20.48d + 8.37d)) < 0.05d, "Threaded balloons should keep the legacy height plus separator extra. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+    }
 }

@@ -70,11 +70,14 @@ internal sealed partial class DocxRenderer
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            DocxRunFontResource bodyCoverageResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
             foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(
                 layout.Pages[pageIndex],
                 layout.RelatedStories,
                 EnumeratePageFloatingDrawings(layout, pageIndex).ToArray(),
-                markupContext))
+                markupContext,
+                labelResource.Embedded,
+                bodyCoverageResource.Embedded))
             {
                 foreach (string? text in new string?[] { placement.Title, placement.Body, placement.WordCompatibleTitle, placement.WordCompatibleBody })
                 {
@@ -141,7 +144,7 @@ internal sealed partial class DocxRenderer
         }
 
         DocxRunFontResource bodyResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
-        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext))
+        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, labelResource.Embedded, bodyResource.Embedded))
         {
             RenderMarkupBalloonPlacement(placement, graphics, labelResource, bodyResource, markupContext);
         }
@@ -169,7 +172,9 @@ internal sealed partial class DocxRenderer
         DocxLayoutPage page,
         IReadOnlyList<DocxRelatedStoryLayout> relatedStories,
         IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext,
+        PdfEmbeddedFont? labelEmbedded,
+        PdfEmbeddedFont? bodyEmbedded)
     {
         if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
         {
@@ -242,7 +247,7 @@ internal sealed partial class DocxRenderer
             foreach (DocxMarkupBalloonCandidate candidate in laneBand.Candidates)
             {
                 double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
-                double height = ResolveMarkupBalloonHeight(candidate, markupContext);
+                double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width);
                 double topInset = ResolveMarkupBalloonTopInset(markupContext);
                 double desiredTop = Math.Min(nextTop, anchorY + topInset);
                 double y = desiredTop - height;
@@ -326,7 +331,7 @@ internal sealed partial class DocxRenderer
             foreach (DocxMarkupBalloonCandidate candidate in candidates)
             {
                 double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
-                double height = ResolveMarkupBalloonHeight(candidate, markupContext);
+                double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width);
                 double preferredTop = Math.Min(page.Height - page.MarginTop, anchorY + ResolveMarkupBalloonTopInset(markupContext));
                 double preferredBottom = preferredTop - height;
                 if (current.Count != 0 &&
@@ -716,12 +721,37 @@ internal sealed partial class DocxRenderer
 
     private static double ResolveMarkupBalloonHeight(
         DocxMarkupBalloonCandidate candidate,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext,
+        PdfEmbeddedFont? labelEmbedded,
+        PdfEmbeddedFont? bodyEmbedded,
+        double balloonWidth)
     {
         if (markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
             markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
             markupContext.ExpandsMarkupMargin)
         {
+            // Office A/B (tbxrev one-line 12.3 plus dense two-line 21.4 balloon
+            // rects, Word-COM rendered): reply-less balloon bodies fit the
+            // rendered text rows while titles stay top-anchored, so the height
+            // follows the wrapped body rows plus Office insets. Threaded
+            // balloons keep the legacy flat height plus separator extra
+            // (separator geometry is unprobed for row-derived sizing).
+            if (candidate.CommentReplyCount == 0 &&
+                !string.IsNullOrWhiteSpace(candidate.WordCompatibleTitle) &&
+                labelEmbedded is not null &&
+                bodyEmbedded is not null)
+            {
+                string title = candidate.WordCompatibleTitle ?? candidate.Title;
+                string body = candidate.WordCompatibleBody ?? string.Empty;
+                double fontSize = 9d * markupContext.WordCompatiblePrintScale;
+                double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
+                ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, out double firstLineWidth, out double continuationWidth);
+                int rows = CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
+                return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints +
+                    (rows - 1) * fontSize * 1.2d +
+                    WordCompatibleAllMarkupBalloonBottomInsetPoints;
+            }
+
             return WordCompatibleAllMarkupBalloonHeightPoints + ResolveWordCompatibleCommentThreadExtraHeight(candidate.CommentReplyCount);
         }
 
@@ -1096,10 +1126,8 @@ internal sealed partial class DocxRenderer
         }
 
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
+        ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, out double firstLineWidth, out double continuationWidth);
         double bodyFirstLineX = textX + titleWidth + WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
-        double rightEdge = placement.X + placement.Width - 0.5d;
-        double firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX);
-        double continuationWidth = Math.Max(0d, rightEdge - textX);
         string[] lines = WrapWordCompatibleBalloonBody(body, bodyResource.Embedded, fontSize, firstLineWidth, continuationWidth);
         if (lines.Length == 0)
         {

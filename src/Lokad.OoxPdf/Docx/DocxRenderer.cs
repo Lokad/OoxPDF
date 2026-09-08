@@ -81,6 +81,8 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints = -2.968d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints = 11.27d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints = WordCompatibleAllMarkupBalloonHeightPoints - WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints;
+    // Office A/B (tbxrev one-line plus dense two-line balloon rects, Word-COM rendered): reply-less balloon bodies fit the rendered text rows, so the top inset is the first-baseline inset above and 3.4pt pads the last baseline.
+    private const double WordCompatibleAllMarkupBalloonBottomInsetPoints = 3.4d;
     private const double WordCompatibleAllMarkupCommentThreadReplyHeightPoints = 8.37d;
     private const double WordCompatibleAllMarkupCommentThreadSeparatorYOffsetPoints = 1.9d;
     private const int WordCompatibleAllMarkupCommentThreadMaxSeparatorLineCount = 2;
@@ -183,13 +185,18 @@ internal sealed partial class DocxRenderer
         DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
+        DocxRunFontResource? balloonLabelResource = ResolveMarkupLabelFontResource(fontResources);
+        PdfEmbeddedFont? balloonLabelEmbedded = balloonLabelResource?.Embedded;
+        PdfEmbeddedFont? balloonBodyEmbedded = (ResolveMarkupBodyFontResource(fontResources) ?? balloonLabelResource)?.Embedded;
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
             foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(
                 layout.Pages[pageIndex],
                 layout.RelatedStories,
                 EnumeratePageFloatingDrawings(layout, pageIndex).ToArray(),
-                effectiveMarkupContext))
+                effectiveMarkupContext,
+                balloonLabelEmbedded,
+                balloonBodyEmbedded))
             {
                 snapshots.Add(placement.ToSnapshot(pageIndex));
             }
