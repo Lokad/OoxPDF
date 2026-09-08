@@ -541,10 +541,28 @@ internal sealed partial class DocxLayoutEngine
     // spacing scale (identical in every mode).
     private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight, double fixedScale, bool isLastRow)
     {
+        double MaxBottomBorderWidth()
+        {
+            return row.Cells
+                .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")))
+                .DefaultIfEmpty(0d)
+                .Max();
+        }
+
         if (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
             row.HeightPoints is { } exactHeight)
         {
-            return Math.Max(1d, exactHeight * fixedScale);
+            double exact = Math.Max(1d, exactHeight * fixedScale);
+            if (isLastRow)
+            {
+                // Office A/B (w8 exact-row probe, Word-COM rendered plus PdfInspect
+                // border rects): an exact-36 bordered row renders 36.5 tall with cell
+                // content top-anchored exactly like atLeast, so the exact height pins
+                // the content box and the last-row bottom border still hangs below it.
+                exact += MaxBottomBorderWidth();
+            }
+
+            return exact;
         }
 
         double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
@@ -557,14 +575,6 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double height = Math.Max(declaredHeight, contentHeight);
-        double MaxBottomBorderWidth()
-        {
-            return row.Cells
-                .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")))
-                .DefaultIfEmpty(0d)
-                .Max();
-        }
-
         double ResolveTableRowCollapsedHorizontalBorderAdvance()
         {
             double maxBottom = MaxBottomBorderWidth();

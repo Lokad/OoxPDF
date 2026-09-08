@@ -2922,4 +2922,25 @@ internal static class DocxTablesTests
         TestAssert.True(Math.Abs((borderedTotal - plainTotal) - 1.92d) < 0.000001d, "Bordered table should exceed the plain table by advance plus terminus. Delta=" + (borderedTotal - plainTotal).ToString(CultureInfo.InvariantCulture));
         TestAssert.True(Math.Abs((plainAfter - borderedAfter) - 1.92d) < 0.000001d, "Following text should ride lower by advance plus terminus. Shift=" + (plainAfter - borderedAfter).ToString(CultureInfo.InvariantCulture));
     }
+
+    public static void DocxTableExactLastRowBottomBorderHangsBelowContent()
+    {
+        // Office A/B (w8 exact-row probe, Word-COM rendered plus PdfInspect border
+        // rects): an exact-36 bordered row renders 36.5 tall with content top-anchored
+        // exactly like atLeast, so the exact height pins the content box and the
+        // bottom width still hangs below it (sz=8 resolves to 0.96).
+        var paragraph = DocxTests.CreateDocxLayoutParagraph("A", 10d, 10d);
+        var cell = new DocxTableCell("A", [paragraph], null, null, null, null, [new DocxTableCellBorder("bottom", "single", "auto", "8")], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 10d) with {HeightValue = "200", HeightRuleValue = "exact" }]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.True(Math.Abs(row.Height - 10.96d) < 0.000001d, "Exact last row should hang the bottom width below the declared height. Height=" + row.Height.ToString(CultureInfo.InvariantCulture));
+    }
 }

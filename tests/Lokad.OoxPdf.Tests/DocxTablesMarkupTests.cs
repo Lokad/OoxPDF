@@ -231,7 +231,7 @@ internal static class DocxTablesMarkupTests
         TestAssert.Equal(10d, row.DeclaredHeightPoints ?? 0d);
     }
 
-    public static void DocxTableLayoutStageDoesNotExpandExactRowsForCollapsedBorders()
+    public static void DocxTableLayoutStageHangsExactLastRowBottomBorderBelowContent()
     {
         var paragraph = new DocxParagraph(
             [new DocxTextRun("A", 10d, null, false, false, false, null, null)],
@@ -261,7 +261,10 @@ internal static class DocxTablesMarkupTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
-        TestAssert.Equal(10d, row.Height);
+        // Office A/B (w8 exact-row probe): exact-36 bordered renders 36.5 tall, so the
+        // single exact row keeps its declared height and hangs the 0.48 bottom width
+        // below content.
+        TestAssert.Equal(10.48d, row.Height);
     }
 
     public static void DocxLayoutSnapshotNormalizesPlainTableCellText()
