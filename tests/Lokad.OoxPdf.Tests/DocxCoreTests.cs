@@ -504,9 +504,9 @@ internal static class DocxCoreTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         TestAssert.Equal(2, document.Paragraphs.Count);
-        // Office auto single spacing measures 1.15 (line-height probe 2026-09-06: public Calibri bullets pitch 14.16 at 10pt).
-        TestAssert.Equal(1.15d, document.Paragraphs[0].LineSpacingFactor);
-        TestAssert.Equal(1.15d, document.Paragraphs[1].LineSpacingFactor);
+        // Office default auto spacing is 278/240 (w15-w20 pitch probes: style-less 11pt Arial body pitches 14.64 with after 0, so factor about 1.1573 on single 12.65; Normal styles resolve 278/240 exactly).
+        TestAssert.Equal(278d / 240d, document.Paragraphs[0].LineSpacingFactor);
+        TestAssert.Equal(278d / 240d, document.Paragraphs[1].LineSpacingFactor);
     }
 
     public static void DocxReaderPreservesRunFontTokens()

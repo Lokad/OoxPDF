@@ -586,8 +586,11 @@ internal static class DocxTextTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
-        TestAssert.Equal(34.5d, paragraph.SpacingBeforePoints);
-        TestAssert.Equal(46d, paragraph.SpacingAfterPoints);
+        // Line-based spacing scales with the auto line height, which uses the 278/240
+        // default factor (w15-w20 pitch probes): 150 percent of 20pt times 278/240 is
+        // 34.75 and 200 percent is 46.333.
+        TestAssert.True(Math.Abs(paragraph.SpacingBeforePoints - 34.75d) < 0.0001d, "150 percent of the auto line height should resolve against the default factor. Before=" + paragraph.SpacingBeforePoints.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(paragraph.SpacingAfterPoints - (139d / 3d)) < 0.0001d, "200 percent of the auto line height should resolve against the default factor. After=" + paragraph.SpacingAfterPoints.ToString(CultureInfo.InvariantCulture));
         TestAssert.Equal("150", paragraph.Spacing.BeforeLinesValue ?? string.Empty);
         TestAssert.Equal("200", paragraph.Spacing.AfterLinesValue ?? string.Empty);
     }
