@@ -12,7 +12,8 @@ internal sealed record DocxLayout(
     IReadOnlyList<DocxLayoutPage> Pages,
     IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings,
     IReadOnlyList<DocxFloatingDrawingLayout> StaticFloatingDrawings,
-    IReadOnlyList<DocxRelatedStoryLayout> RelatedStories);
+    IReadOnlyList<DocxRelatedStoryLayout> RelatedStories,
+    IReadOnlyDictionary<int, double> HeaderContentBottomByPage);
 
 internal sealed record DocxRelatedStoryLayout(
     DocxRelatedStory Story,
@@ -252,7 +253,7 @@ internal sealed partial class DocxLayoutEngine
         return Create(document, textMeasurer, cancellationToken);
     }
 
-    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null)
+    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null, IReadOnlyDictionary<int, double>? headerOverflowDisplacementByPage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
@@ -263,7 +264,7 @@ internal sealed partial class DocxLayoutEngine
         int activeColumnIndex = 0;
         double x = ResolveActiveColumnFrame(page, activeColumnIndex).X;
         double width = ResolveActiveColumnFrame(page, activeColumnIndex).Width;
-        double cursorY = page.Height - page.MarginTop;
+        double cursorY = ResolvePageStartCursor();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         bool activeColumnHasContent = false;
@@ -328,7 +329,7 @@ internal sealed partial class DocxLayoutEngine
             activeColumnIndex = 0;
             page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             ApplyActiveColumnFrame();
-            cursorY = page.Height - page.MarginTop;
+            cursorY = ResolvePageStartCursor();
             pendingSpacingAfter = 0d;
             previousParagraph = null;
             activeColumnHasContent = false;
@@ -338,6 +339,27 @@ internal sealed partial class DocxLayoutEngine
         double CurrentFrameBottom()
         {
             return page.MarginBottom + currentPageFootnoteReserveHeight;
+        }
+
+        double ResolvePageStartCursor()
+        {
+            // Office A/B (w37/w39 multi-paragraph headers plus w47 cross-story spacing,
+            // Word-COM rendered): body starts below overflowing header content. The
+            // displacement map carries per-page overflow from a previous full layout;
+            // without a map (or on fitting pages) this is exactly the legacy page top.
+            // Pages beyond a short map reuse its last entry (extra pages arise from the
+            // displacement itself under a repeated header).
+            double displacement = 0d;
+            if (headerOverflowDisplacementByPage is not null)
+            {
+                if (!headerOverflowDisplacementByPage.TryGetValue(pages.Count, out displacement) &&
+                    headerOverflowDisplacementByPage.Count != 0)
+                {
+                    headerOverflowDisplacementByPage.TryGetValue(headerOverflowDisplacementByPage.Count - 1, out displacement);
+                }
+            }
+
+            return page.Height - page.MarginTop - displacement;
         }
 
         void EnsureFootnoteReserveForSourceBlock(int sourceBlockIndex)
@@ -355,7 +377,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 activeColumnIndex++;
                 ApplyActiveColumnFrame();
-                cursorY = page.Height - page.MarginTop;
+                cursorY = ResolvePageStartCursor();
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 activeColumnHasContent = false;
@@ -375,7 +397,7 @@ internal sealed partial class DocxLayoutEngine
             activeColumnHasContent = false;
             if (!HasPageContent())
             {
-                cursorY = page.Height - page.MarginTop;
+                cursorY = ResolvePageStartCursor();
             }
         }
 
@@ -740,12 +762,14 @@ internal sealed partial class DocxLayoutEngine
         }
 
         DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken).ToArray();
-        DocxLayoutPage[] pagesWithStaticText = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken).ToArray();
+        var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
+        DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         return new DocxLayout(
             pagesWithStaticText,
             CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
             CreateStaticFloatingDrawingLayouts(pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
-            relatedStoryLayouts);
+            relatedStoryLayouts,
+            staticContent.HeaderContentBottomByPage);
     }
 
     private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY, double deltaX)

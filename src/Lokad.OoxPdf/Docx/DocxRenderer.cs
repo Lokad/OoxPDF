@@ -174,7 +174,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
-        DocxLayout layout = new DocxLayoutEngine(effectiveGeometryMode, effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
+        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, effectiveGeometryMode, CancellationToken.None);
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
     }
 
@@ -182,7 +182,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
+        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         DocxRunFontResource? balloonLabelResource = ResolveMarkupLabelFontResource(fontResources);
@@ -214,7 +214,7 @@ internal sealed partial class DocxRenderer
     {
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), effectiveMarkupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, effectiveMarkupContext), CancellationToken.None, fontResources.TextMeasurer);
+        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
@@ -313,6 +313,43 @@ internal sealed partial class DocxRenderer
     internal DocxStructureSnapshot InspectStructure(DocxDocument document)
     {
         return DocxStructureSnapshot.FromDocument(document);
+    }
+
+    private static DocxLayout CreateHeaderDisplacedLayout(
+        DocxDocument document,
+        DocxFontResources fontResources,
+        DocxMarkupContext markupContext,
+        OoxPdfDocxMarkupGeometryMode geometryMode,
+        CancellationToken cancellationToken)
+    {
+        // Office A/B (w37/w39 multi-paragraph headers plus w47 cross-story spacing,
+        // Word-COM rendered): body starts below overflowing header content, with the
+        // header trailing after-spacing swallowed at the story boundary (w47: header
+        // after-24 plus body before-12 applies 12). The first pass lays out body and
+        // statics exactly as before; only pages whose header content bottom (trailing
+        // cursor including trailing after-spacing) falls below the body top are laid
+        // out again with a per-page start displacement. Fitting headers cost nothing
+        // and change nothing (empty map returns the first layout untouched).
+        DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale);
+        IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
+        DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer);
+        Dictionary<int, double> displacementByPage = [];
+        for (int pageIndex = 0; pageIndex < first.Pages.Count; pageIndex++)
+        {
+            DocxLayoutPage page = first.Pages[pageIndex];
+            double bodyTop = page.Height - page.MarginTop;
+            double headerBottom = first.HeaderContentBottomByPage.TryGetValue(pageIndex, out double bottom)
+                ? bottom
+                : bodyTop;
+            if (headerBottom < bodyTop)
+            {
+                displacementByPage[pageIndex] = bodyTop - headerBottom;
+            }
+        }
+
+        return displacementByPage.Count == 0
+            ? first
+            : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, displacementByPage);
     }
 
     private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document)
@@ -814,7 +851,7 @@ internal sealed partial class DocxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
 
-        DocxLayout layout = new DocxLayoutEngine(ResolveEffectiveMarkupGeometryMode(markupContext), markupContext.WordCompatiblePrintScale).Create(document, ResolveLayoutTextMeasurer(fontResources, markupContext), cancellationToken, fontResources.TextMeasurer);
+        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), cancellationToken);
         markupContext = WithFirstPinYOffset(markupContext, document, layout);
         DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);

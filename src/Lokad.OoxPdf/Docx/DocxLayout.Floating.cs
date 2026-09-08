@@ -718,5 +718,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextLineLayout> TextLines,
         IReadOnlyList<DocxInlineImageLayout> InlineImages,
         IReadOnlyList<DocxTableRowLayout> TableRows,
-        IReadOnlyList<DocxInlineTextBoxLayout> InlineTextBoxes);
+        IReadOnlyList<DocxInlineTextBoxLayout> InlineTextBoxes,
+        double EndCursorY,
+        double EndPendingAfterSpacing);
 }

@@ -1107,6 +1107,204 @@ internal static class DocxHeaderFooterTests
         TestAssert.True(finalSectionLeftBaselines.Any(y => y > 63d && y < 70d), "Final-section footer should still render on its owning section.");
     }
 
+    public static void DocxEmptyHeaderDisplacesNothing()
+    {
+        // Empty header stories expose positive infinity so the renderer two-pass keeps
+        // the single-pass layout untouched (table-fragment regression 2026-09-08: an
+        // empty header cursor inside the header zone read as overflow whenever the
+        // header distance was smaller than the top margin).
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(double.PositiveInfinity, layout.HeaderContentBottomByPage[0]);
+    }
+
+    public static void DocxOverflowingHeaderBottomIsExposedOnLayout()
+    {
+        // Supports header-overflow displacement: three tokened 10pt header paras
+        // advance 11.5833 each from startY 180, so the trailing content bottom lands
+        // at 145.25 on the layout for the renderer two-pass to displace by.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(145.25, Math.Round(layout.HeaderContentBottomByPage[0], 4));
+    }
+
+    public static void DocxBodyStartsBelowOverflowingHeaderContent()
+    {
+        // Office A/B (w37/w39 multi-paragraph headers, Word-COM rendered): body starts
+        // below overflowing header content (w39 body top equals header content bottom
+        // 681.39). The displacement map pins the page start cursor, so the 10pt body
+        // first baseline lands at 135.85 instead of the undisplaced 180.6.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = new(
+            [new DocxTextRun("Body", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            8d,
+            278d / 240d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        var displacement = new Dictionary<int, double> { [0] = 34.75d };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, displacement);
+        DocxTextLineLayout bodyLine = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single();
+        TestAssert.Equal(135.85, Math.Round(bodyLine.BaselineY, 4));
+    }
+
+    public static void DocxBodyAppliesOwnBeforeBelowHeaderContentBottom()
+    {
+        // Office A/B (w47 cross-story spacing probe, Word-COM rendered): the header
+        // trailing after-spacing does not cross the story boundary (header after-24
+        // plus body before-12 applies 12, landing 682.06). The displaced page start is
+        // the header trailing cursor including trailing after-spacing; the body first
+        // paragraph then applies its own before-spacing fresh.
+        static DocxParagraph HeaderPara(string text, double afterPoints, string? afterValue) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            afterPoints,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, afterValue, null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = new(
+            [new DocxTextRun("Body", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            12d,
+            8d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing("240", null, null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [HeaderPara("Ha", 0d, "0"), HeaderPara("Hb", 24d, "480")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout undisplaced = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        double headerBottom = undisplaced.HeaderContentBottomByPage[0];
+        TestAssert.Equal(132.8333, Math.Round(headerBottom, 4));
+        var displacement = new Dictionary<int, double> { [0] = 180d - 132.8333d };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, displacement);
+        DocxTextLineLayout bodyLine = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single();
+        TestAssert.Equal(111.4333, Math.Round(bodyLine.BaselineY, 4));
+    }
+
+    public static void DocxBodyDisplacementFallsBackToLastEntryBeyondMap()
+    {
+        // Pages beyond a short displacement map reuse its last entry (extra pages arise
+        // from the displacement itself under a repeated header), so page two of a long
+        // body starts displaced by the page-zero entry here.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = new(
+            [new DocxTextRun(string.Concat(Enumerable.Repeat("word ", 80)), 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 10d,
+            FooterDistancePoints = 10d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("H")]
+            }
+        };
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        var displacement = new Dictionary<int, double> { [0] = 11.5833d };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, displacement);
+        TestAssert.True(layout.Pages.Count > 1, "The long body should paginate.");
+        DocxTextLineLayout secondPageFirstLine = layout.Pages[1].Items.OfType<DocxTextLineLayout>().First();
+        TestAssert.Equal(69.0167, Math.Round(secondPageFirstLine.BaselineY, 4));
+    }
+
     public static void DocxStaticHeaderAutoAdvanceFollowsSingleLineFactor()
     {
         // Office A/B (w37-staticfree Final-mode probe, Word-COM rendered): static auto

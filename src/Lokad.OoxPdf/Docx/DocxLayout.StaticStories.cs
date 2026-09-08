@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static IReadOnlyList<DocxLayoutPage> AddStaticContent(
+    private static (IReadOnlyList<DocxLayoutPage> Pages, IReadOnlyDictionary<int, double> HeaderContentBottomByPage) AddStaticContent(
         IReadOnlyList<DocxLayoutPage> pages,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
@@ -20,13 +20,14 @@ internal sealed partial class DocxLayoutEngine
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
-            return pages;
+            return (pages, new Dictionary<int, double>());
         }
 
         IDocxLineMetricsProvider? unscaledLineMetrics =
             (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
 
         var pagesWithStaticText = new DocxLayoutPage[pages.Count];
+        var headerBottomCursors = new double[pages.Count];
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -71,6 +72,19 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale,
                     unscaledLineMetrics,
                     cancellationToken);
+            // Stories that laid out no visible content (absent headers, empty selections)
+            // displace nothing: their untouched start cursor sits inside the header zone,
+            // which would otherwise read as overflow whenever the header distance is
+            // smaller than the top margin (table-fragment regression 2026-09-08: empty
+            // headers on a 100pt page displaced body by 8).
+            bool headerHasVisibleContent =
+                headerLayout.TextLines.Count != 0 ||
+                headerLayout.InlineImages.Count != 0 ||
+                headerLayout.TableRows.Count != 0 ||
+                headerLayout.InlineTextBoxes.Count != 0;
+            headerBottomCursors[pageIndex] = headerHasVisibleContent
+                ? headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing
+                : double.PositiveInfinity;
             pagesWithStaticText[pageIndex] = page with
             {
                 StaticTextLines = headerLayout.TextLines.Concat(footerLayout.TextLines).ToArray(),
@@ -80,7 +94,13 @@ internal sealed partial class DocxLayoutEngine
             };
         }
 
-        return pagesWithStaticText;
+        var headerContentBottomByPage = new Dictionary<int, double>();
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            headerContentBottomByPage[pageIndex] = headerBottomCursors[pageIndex];
+        }
+
+        return (pagesWithStaticText, headerContentBottomByPage);
     }
 
     private static DocxStaticStoryLayoutResult CreateStaticStoryLayout(
@@ -332,7 +352,7 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray());
+        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray(), cursorY, pendingSpacingAfter);
 
         DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs)
         {
