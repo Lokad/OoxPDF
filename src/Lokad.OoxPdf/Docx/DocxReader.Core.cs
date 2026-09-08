@@ -498,7 +498,11 @@ internal sealed partial class DocxReader
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? titlePage = sectionProperties?.Element(WordprocessingNamespace + "titlePg");
-        XElement? evenAndOddHeaders = settings?.Root?.Element(WordprocessingNamespace + "evenAndOddHeaders");
+        // Office A/B (w53 even-pages probe, Word-COM rendered): Word honors the
+        // section-level flag; settings.xml stays as a fallback for packages that carry
+        // it there (mirrors the titlePg section lookup above).
+        XElement? evenAndOddHeaders = sectionProperties?.Element(WordprocessingNamespace + "evenAndOddHeaders")
+            ?? settings?.Root?.Element(WordprocessingNamespace + "evenAndOddHeaders");
         XElement? docGrid = sectionProperties?.Element(WordprocessingNamespace + "docGrid");
         DocxPageSettings pageSettings = new(
             (string?)pageSize?.Attribute(WordprocessingNamespace + "w"),

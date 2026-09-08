@@ -391,7 +391,7 @@ internal static class DocxHeaderFooterTests
 
         TestAssert.Equal(2, snapshot.Pages.Count);
         TestAssert.Equal("first", snapshot.Pages[0].StaticStories.Single().VariantType ?? string.Empty);
-        TestAssert.Equal("default", snapshot.Pages[1].StaticStories.Single(story => story.Kind == "Header").VariantType ?? string.Empty);
+        TestAssert.True(!snapshot.Pages[1].StaticStories.Any(story => story.Kind == "Header"), "Even pages without an even header story must not fall back to the default header (w53 even-pages Office probe: Word renders those pages headerless).");
         TestAssert.Equal("even", snapshot.Pages[1].StaticStories.Single(story => story.Kind == "Footer").VariantType ?? string.Empty);
         TestAssert.True(snapshot.Pages[1].StaticItems.All(item => item.StoryVariantType is "default" or "even"), "Static item snapshots should retain the selected header/footer variant type.");
     }
@@ -1286,6 +1286,126 @@ internal static class DocxHeaderFooterTests
         TestAssert.Equal(Math.Round(FootBaseline(0d, null), 4), Math.Round(FootBaseline(24d, "480"), 4));
     }
 
+    public static void DocxReaderReadsEvenAndOddHeadersFromSectionProperties()
+    {
+        // Office A/B (w53 even-pages probe, Word-COM rendered): Word honors the
+        // section-level w:evenAndOddHeaders flag (page-two stories suppressed without
+        // even variants), but the reader only consulted settings.xml, so section-level
+        // flags never reached story selection.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Body</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:evenAndOddHeaders/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        TestAssert.True(document.FinalSectionBreak?.PageSettings.EvenAndOddHeaders == true, "Section-level evenAndOddHeaders should resolve.");
+    }
+
+    public static void DocxTitlePageSuppressesDefaultHeaderWithoutFirstStory()
+    {
+        // Office A/B (w52 title-page probe, Word-COM rendered): with titlePg set and no
+        // first story defined, page one shows no header (Word does not fall back to the
+        // default story), while page-one footers behave the same way. Guards the story
+        // selection against default-fallback regressions.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            TitlePage = true,
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("H")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(0, layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").Count());
+    }
+
+    public static void DocxEvenPagesSuppressDefaultHeaderWithoutEvenStory()
+    {
+        // Office A/B (w53 even-pages probe, Word-COM rendered): with even/odd headers on
+        // and no even story defined, even pages show no header (Word does not fall back
+        // to the default story there either), while odd pages keep the default story.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = new(
+            [new DocxTextRun(string.Concat(Enumerable.Repeat("word ", 80)), 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            EvenAndOddHeaders = true,
+            HeaderDistancePoints = 10d,
+            FooterDistancePoints = 10d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("H")]
+            }
+        };
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.True(layout.Pages.Count > 1, "The long body should paginate.");
+        TestAssert.Equal(1, layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").Count());
+        TestAssert.Equal(0, layout.Pages[1].StaticTextLines.Where(line => line.StoryKind == "Header").Count());
+    }
+
     public static void DocxOverflowingHeaderBottomIsExposedOnLayout()
     {
         // Supports header-overflow displacement: three tokened 10pt header paras
@@ -1417,6 +1537,36 @@ internal static class DocxHeaderFooterTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, displacement);
         DocxTextLineLayout bodyLine = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single();
         TestAssert.Equal(111.4333, Math.Round(bodyLine.BaselineY, 4));
+    }
+
+    public static void DocxRecordedZeroDisplacementBeatsFallback()
+    {
+        // Office A/B (w53 even-pages probe, Word-COM rendered): page two carries no
+        // stories, so it starts at the top with a full frame even though page one
+        // displaces. Explicit zero entries must win over the beyond-map last-entry
+        // fallback (which only covers pages past the first layout); a sparse map that
+        // drops the zero would wrongly displace page two by the page-one entry.
+        DocxParagraph body = new(
+            [new DocxTextRun(string.Concat(Enumerable.Repeat("word ", 80)), 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxPageSettings settings = DocxPageSettings.Empty;
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        var headerMap = new Dictionary<int, double> { [0] = 11.5833d, [1] = 0d };
+        var footerMap = new Dictionary<int, double> { [0] = 60d, [1] = 0d };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, headerMap, footerMap);
+        TestAssert.True(layout.Pages.Count > 1, "The long body should paginate.");
+        DocxTextLineLayout secondPageFirstLine = layout.Pages[1].Items.OfType<DocxTextLineLayout>().First();
+        TestAssert.Equal(80.6, Math.Round(secondPageFirstLine.BaselineY, 4));
     }
 
     public static void DocxBodyDisplacementFallsBackToLastEntryBeyondMap()

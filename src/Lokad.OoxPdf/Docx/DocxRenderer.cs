@@ -335,6 +335,11 @@ internal sealed partial class DocxRenderer
         DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale);
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
         DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer);
+        // Maps stay dense: explicitly unconstrained pages record zero so the
+        // beyond-map last-entry fallback in Create only fires past the first layout's
+        // page count, never for a recorded storyless page (w53 even-pages probe:
+        // page two has no stories, so it must start at the top with a full frame even
+        // though page one displaces by 33.27 and raises by 156.73).
         Dictionary<int, double> headerDisplacementByPage = [];
         Dictionary<int, double> footerDisplacementByPage = [];
         for (int pageIndex = 0; pageIndex < first.Pages.Count; pageIndex++)
@@ -344,21 +349,15 @@ internal sealed partial class DocxRenderer
             double headerBottom = first.HeaderContentBottomByPage.TryGetValue(pageIndex, out double bottom)
                 ? bottom
                 : bodyTop;
-            if (headerBottom < bodyTop)
-            {
-                headerDisplacementByPage[pageIndex] = bodyTop - headerBottom;
-            }
+            headerDisplacementByPage[pageIndex] = headerBottom < bodyTop ? bodyTop - headerBottom : 0d;
 
             double footerTop = first.FooterContentTopByPage.TryGetValue(pageIndex, out double top)
                 ? top
                 : double.NegativeInfinity;
-            if (footerTop > page.MarginBottom)
-            {
-                footerDisplacementByPage[pageIndex] = footerTop - page.MarginBottom;
-            }
+            footerDisplacementByPage[pageIndex] = footerTop > page.MarginBottom ? footerTop - page.MarginBottom : 0d;
         }
 
-        return headerDisplacementByPage.Count == 0 && footerDisplacementByPage.Count == 0
+        return headerDisplacementByPage.Values.All(value => value == 0d) && footerDisplacementByPage.Values.All(value => value == 0d)
             ? first
             : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, headerDisplacementByPage, footerDisplacementByPage);
     }

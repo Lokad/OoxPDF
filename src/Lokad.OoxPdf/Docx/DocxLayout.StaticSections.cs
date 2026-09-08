@@ -16,18 +16,21 @@ internal sealed partial class DocxLayoutEngine
         DocxPageSettings settings,
         int pageNumber)
     {
-        if (settings.TitlePage == true &&
-            pageNumber == 1 &&
-            DocxBlockTraversal.TryGetStaticStoryBodyElements("first", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? first))
+        // Office A/B (w52 title-page plus w53 even-pages probes, Word-COM rendered):
+        // a selected-but-undefined first/even story renders empty on its pages; Word
+        // does not fall back to the default story there.
+        if (settings.TitlePage == true && pageNumber == 1)
         {
-            return new DocxSelectedStaticStory(first, "first");
+            return DocxBlockTraversal.TryGetStaticStoryBodyElements("first", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? first)
+                ? new DocxSelectedStaticStory(first, "first")
+                : new DocxSelectedStaticStory([], null);
         }
 
-        if (settings.EvenAndOddHeaders == true &&
-            pageNumber % 2 == 0 &&
-            DocxBlockTraversal.TryGetStaticStoryBodyElements("even", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? even))
+        if (settings.EvenAndOddHeaders == true && pageNumber % 2 == 0)
         {
-            return new DocxSelectedStaticStory(even, "even");
+            return DocxBlockTraversal.TryGetStaticStoryBodyElements("even", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? even)
+                ? new DocxSelectedStaticStory(even, "even")
+                : new DocxSelectedStaticStory([], null);
         }
 
         return DocxBlockTraversal.TryGetStaticStoryBodyElements("default", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? defaults)
@@ -42,18 +45,20 @@ internal sealed partial class DocxLayoutEngine
         DocxPageSettings settings,
         int pageNumber)
     {
-        if (settings.TitlePage == true &&
-            pageNumber == 1 &&
-            drawingsByType.TryGetValue("first", out IReadOnlyList<DocxFloatingDrawing>? first))
+        // Same no-fallback rule as text stories above (mechanism consistency; floating
+        // drawings in undefined first/even stories are unprobed on their own).
+        if (settings.TitlePage == true && pageNumber == 1)
         {
-            return new DocxSelectedStaticDrawings(first, "first");
+            return drawingsByType.TryGetValue("first", out IReadOnlyList<DocxFloatingDrawing>? first)
+                ? new DocxSelectedStaticDrawings(first, "first")
+                : new DocxSelectedStaticDrawings([], null);
         }
 
-        if (settings.EvenAndOddHeaders == true &&
-            pageNumber % 2 == 0 &&
-            drawingsByType.TryGetValue("even", out IReadOnlyList<DocxFloatingDrawing>? even))
+        if (settings.EvenAndOddHeaders == true && pageNumber % 2 == 0)
         {
-            return new DocxSelectedStaticDrawings(even, "even");
+            return drawingsByType.TryGetValue("even", out IReadOnlyList<DocxFloatingDrawing>? even)
+                ? new DocxSelectedStaticDrawings(even, "even")
+                : new DocxSelectedStaticDrawings([], null);
         }
 
         return drawingsByType.TryGetValue("default", out IReadOnlyList<DocxFloatingDrawing>? defaults)
