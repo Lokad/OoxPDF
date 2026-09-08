@@ -331,6 +331,13 @@ internal sealed record DocxTextRun(
     {
     }
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
+
+    // Office A/B (w56 superscript plus w57b subscript size curves, Word-COM rendered):
+    // style-less unsized super/subscript runs scale glyphs from the 11pt document
+    // default, not the 12pt body fallback, while paragraph layout keeps the resolved
+    // nominal (max-nominal stays 12 there). Null means nominal (explicit, styled, or
+    // table-linked sizes, plus all non-script runs).
+    public double? ScriptBaseFontSize { get; init; }
     public DocxRunStyleResolution StyleResolution { get; init; } = DocxRunStyleResolution.Empty;
     public int SourceRunIndex { get; init; } = -1;
     public int SourceTextOffsetInRun { get; init; } = 0;

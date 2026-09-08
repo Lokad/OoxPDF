@@ -1260,6 +1260,9 @@ internal sealed partial class DocxReader
         string? fontFamily = complexScript
             ? FirstNonEmpty(resolvedRun.Fonts.ComplexScript, resolvedRun.FontFamily)
             : resolvedRun.FontFamily;
+        bool isScriptShiftedRun =
+            string.Equals(resolvedRun.VerticalAlignmentValue, "superscript", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(resolvedRun.VerticalAlignmentValue, "subscript", StringComparison.OrdinalIgnoreCase);
         runs.Add(new DocxTextRun(
             text,
             resolvedRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
@@ -1287,6 +1290,7 @@ internal sealed partial class DocxReader
             resolvedRun.UnderlineColorHex)
         {
             Fonts = resolvedRun.Fonts,
+            ScriptBaseFontSize = isScriptShiftedRun && resolvedRun.FontSize is null ? DocxDefaults.FontSizePoints : null,
             StyleResolution = styleResolution,
             SourceRunIndex = sourceRunIndex,
             SourceTextOffsetInRun = sourceTextOffsetInRun,

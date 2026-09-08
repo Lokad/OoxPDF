@@ -1963,4 +1963,90 @@ internal static class DocxTextTests
         TestAssert.Equal(1, block.ExternalHyperlinkCount);
         TestAssert.Equal(0, block.InternalHyperlinkCount);
     }
+
+    public static void DocxSuperscriptUnstyledRunScalesFromDocumentDefault()
+    {
+        // Office A/B (w56 superscript size curve, Word-COM rendered): explicit sizes
+        // follow half-point-floored two-thirds scaling (8pt lays 5.04, 14pt lays 9.0),
+        // while style-less unsized runs lay 6.96, i.e. nominal 11 (document default),
+        // not nominal 12 (body fallback). The script base only feeds glyph scaling;
+        // paragraph layout keeps the resolved nominal.
+        static DocxTextRun MarkRun(double nominal, double? scriptBase) => new(
+            "1",
+            nominal,
+            null,
+            false,
+            false,
+            false,
+            null,
+            null,
+            0d,
+            false,
+            "superscript",
+            false,
+            null,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            false,
+            null,
+            null)
+        {
+            ScriptBaseFontSize = scriptBase
+        };
+        TestAssert.Equal(7d, DocxVerticalAlignMetrics.ResolveFontSize(12d, MarkRun(12d, 11d)));
+        TestAssert.Equal(4d, DocxVerticalAlignMetrics.ResolveBaselineOffset(12d, 7d, MarkRun(12d, 11d)));
+        TestAssert.Equal(7d, DocxVerticalAlignMetrics.ResolveFontSize(12d, MarkRun(12d, 11d) with { VerticalAlignmentValue = "subscript" }));
+    }
+
+    public static void DocxReaderMarksUnstyledScriptRunsWithDocumentDefaultBase()
+    {
+        // The w56 size law needs the pre-fallback size, which only the reader sees:
+        // style-less unsized super/subscript runs record the 11pt document default as
+        // their script base, while sized script runs and plain unsized runs record none
+        // (nominal rules there).
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:t>U</w:t></w:r></w:p>
+                    <w:p><w:r><w:rPr><w:sz w:val="20"/><w:vertAlign w:val="superscript"/></w:rPr><w:t>S</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>P</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        static double? BaseOf(DocxDocument document, int paragraphIndex)
+        {
+            return ((DocxParagraphElement)document.BodyElements[paragraphIndex]).Paragraph.Runs.Single().ScriptBaseFontSize;
+        }
+
+        TestAssert.Equal(11d, BaseOf(document, 0) ?? 0d);
+        TestAssert.True(BaseOf(document, 1) is null, "Sized superscript runs must keep nominal scaling.");
+        TestAssert.True(BaseOf(document, 2) is null, "Plain runs must keep nominal scaling.");
+    }
 }

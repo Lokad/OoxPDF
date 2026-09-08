@@ -111,6 +111,11 @@ internal static class DocxVerticalAlignMetrics
     private const double HalfPointGrid = 2d;
     private const double SubscriptBaselineShiftEm = -0.06d;
 
+    public static double ResolveScriptBaseSize(DocxTextRun run, double nominalFontSize)
+    {
+        return run.ScriptBaseFontSize ?? nominalFontSize;
+    }
+
     public static double ResolveFontSize(double nominalFontSize, DocxTextRun run)
     {
         if (!IsSuperscript(run) && !IsSubscript(run))
@@ -118,14 +123,16 @@ internal static class DocxVerticalAlignMetrics
             return nominalFontSize;
         }
 
-        return Math.Max(0.5d, Math.Floor(nominalFontSize * SuperscriptSubscriptScale * HalfPointGrid) / HalfPointGrid);
+        double baseSize = ResolveScriptBaseSize(run, nominalFontSize);
+        return Math.Max(0.5d, Math.Floor(baseSize * SuperscriptSubscriptScale * HalfPointGrid) / HalfPointGrid);
     }
 
     public static double ResolveBaselineOffset(double nominalFontSize, double layoutFontSize, DocxTextRun run)
     {
         if (IsSuperscript(run))
         {
-            return Math.Max(0d, nominalFontSize - layoutFontSize);
+            double baseSize = ResolveScriptBaseSize(run, nominalFontSize);
+            return Math.Max(0d, baseSize - ResolveFontSize(baseSize, run));
         }
 
         return IsSubscript(run) ? nominalFontSize * SubscriptBaselineShiftEm : 0d;
