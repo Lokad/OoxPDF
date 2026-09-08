@@ -2012,6 +2012,66 @@ internal static class DocxTableCellsTests
         TestAssert.Equal(3, secondPageRows[0].Cells[0].TextLines.Count);
     }
 
+    public static void DocxSharedHorizontalTableBorderHangsBelowBoundary()
+    {
+        // Office A/B (w9 exact/atLeast bordered row pairs, Word-COM rendered plus
+        // PdfInspect, re-rendered digit-identical): interior horizontal border bands
+        // hang below the row boundary by the full nominal width (atLeast mid band at
+        // 683.02 for boundary 683.52, exact mid band at 683.50 for boundary 684.0),
+        // while the layout centered them on the boundary (atLeast 683.28, exact
+        // 683.76). Text baselines are identical both sides, so the shift is
+        // pitch-neutral paint. The band X/width (72.48/239.52 here versus Office
+        // 72.26/239.54) follows separate cell geometry and is out of scope.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr>
+                        <w:tblW w:w="0" w:type="auto"/>
+                        <w:tblBorders>
+                          <w:top w:val="single" w:color="000000" w:sz="4"/>
+                          <w:left w:val="single" w:color="000000" w:sz="4"/>
+                          <w:bottom w:val="single" w:color="000000" w:sz="4"/>
+                          <w:right w:val="single" w:color="000000" w:sz="4"/>
+                          <w:insideH w:val="single" w:color="000000" w:sz="4"/>
+                          <w:insideV w:val="single" w:color="000000" w:sz="4"/>
+                        </w:tblBorders>
+                      </w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="4800"/></w:tblGrid>
+                      <w:tr><w:trPr><w:trHeight w:val="720" w:hRule="atLeast"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="4800" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t>Row one</w:t></w:r></w:p></w:tc></w:tr>
+                      <w:tr><w:trPr><w:trHeight w:val="720" w:hRule="atLeast"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="4800" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t>Row two</w:t></w:r></w:p></w:tc></w:tr>
+                    </w:tbl>
+                    <w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/></w:rPr><w:t>After pair</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72.48 683.02 239.52 0.48 re f", pdf);
+    }
+
     public static void DocxTableRendererDoesNotDrawRowEdgeBordersAtSplitFragmentBoundaries()
     {
         DocxTableCellBorder[] borders =

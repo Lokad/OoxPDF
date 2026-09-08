@@ -35,14 +35,18 @@ internal static class DocxTableBorderGeometry
 
     public static double ResolveVisibleWidth(DocxTableCellBorder? border)
     {
+        return ResolveNominalWidth(border) * WordPdfBorderWidthScale;
+    }
+
+    public static double ResolveNominalWidth(DocxTableCellBorder? border)
+    {
         if (border is null || IsSuppressed(border))
         {
             return 0d;
         }
 
-        double nominalWidth = int.TryParse(border.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int eighths)
+        return int.TryParse(border.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int eighths)
             ? Math.Max(0.25d, eighths / 8d)
             : 0.75d;
-        return nominalWidth * WordPdfBorderWidthScale;
     }
 }

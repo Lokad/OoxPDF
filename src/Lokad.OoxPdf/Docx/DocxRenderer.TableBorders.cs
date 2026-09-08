@@ -133,7 +133,13 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        RenderTableBorderStrip(graphics, border, segmentX, cellLayout.Y - width / 2d, right - segmentX, width, DocxTableBorderOrientation.Horizontal);
+        // Office A/B (w9 exact/atLeast bordered row pairs, Word-COM rendered plus
+        // PdfInspect, re-rendered digit-identical): interior horizontal border bands hang
+        // below the row boundary by the full nominal width (atLeast mid band at 683.02
+        // for boundary 683.52, exact mid band at 683.50 for boundary 684.0), matching
+        // the inside-hang convention of the outer top/bottom strips; centering them on
+        // the boundary sat 0.26 high with identical text (pitch-neutral paint).
+        RenderTableBorderStrip(graphics, border, segmentX, cellLayout.Y - DocxTableBorderGeometry.ResolveNominalWidth(border), right - segmentX, width, DocxTableBorderOrientation.Horizontal);
     }
 
     private static DocxTableCellBorder? ResolveSharedHorizontalBorder(DocxTableCellLayout cellLayout, DocxTableCellLayout nextRowCell)
