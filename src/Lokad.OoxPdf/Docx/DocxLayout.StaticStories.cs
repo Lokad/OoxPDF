@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static (IReadOnlyList<DocxLayoutPage> Pages, IReadOnlyDictionary<int, double> HeaderContentBottomByPage) AddStaticContent(
+    private static (IReadOnlyList<DocxLayoutPage> Pages, IReadOnlyDictionary<int, double> HeaderContentBottomByPage, IReadOnlyDictionary<int, double> FooterContentTopByPage) AddStaticContent(
         IReadOnlyList<DocxLayoutPage> pages,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
@@ -20,7 +20,7 @@ internal sealed partial class DocxLayoutEngine
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
-            return (pages, new Dictionary<int, double>());
+            return (pages, new Dictionary<int, double>(), new Dictionary<int, double>());
         }
 
         IDocxLineMetricsProvider? unscaledLineMetrics =
@@ -28,6 +28,7 @@ internal sealed partial class DocxLayoutEngine
 
         var pagesWithStaticText = new DocxLayoutPage[pages.Count];
         var headerBottomCursors = new double[pages.Count];
+        var footerTopEdges = new double[pages.Count];
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -77,14 +78,37 @@ internal sealed partial class DocxLayoutEngine
             // which would otherwise read as overflow whenever the header distance is
             // smaller than the top margin (table-fragment regression 2026-09-08: empty
             // headers on a 100pt page displaced body by 8).
-            bool headerHasVisibleContent =
-                headerLayout.TextLines.Count != 0 ||
-                headerLayout.InlineImages.Count != 0 ||
-                headerLayout.TableRows.Count != 0 ||
-                headerLayout.InlineTextBoxes.Count != 0;
+            bool headerHasVisibleContent = HasVisibleStaticContent(headerLayout);
+
+            static bool HasVisibleStaticContent(DocxStaticStoryLayoutResult layout)
+            {
+                return layout.TextLines.Count != 0 ||
+                    layout.InlineImages.Count != 0 ||
+                    layout.TableRows.Count != 0 ||
+                    layout.InlineTextBoxes.Count != 0;
+            }
             headerBottomCursors[pageIndex] = headerHasVisibleContent
                 ? headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing
                 : double.PositiveInfinity;
+            // Footer content top bounds the body frame from below (w48 multi-line footer
+            // plus long body, Word-COM rendered: body breaks before footer content instead
+            // of overlapping it). Text-only stories expose their first line top under the
+            // body baseline rule; stories without text lines constrain nothing.
+            double footerContentTop = double.NegativeInfinity;
+            DocxTextLineLayout? firstFooterLine = footerLayout.TextLines.FirstOrDefault();
+            if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
+            {
+                double firstFooterSize = GetParagraphFontSize(firstFooterParagraph);
+                double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false);
+                if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
+                {
+                    firstFooterOffset += UntokenedParagraphBaselineExtraPoints;
+                }
+
+                footerContentTop = firstFooterLine.BaselineY + firstFooterOffset;
+            }
+
+            footerTopEdges[pageIndex] = footerContentTop;
             pagesWithStaticText[pageIndex] = page with
             {
                 StaticTextLines = headerLayout.TextLines.Concat(footerLayout.TextLines).ToArray(),
@@ -95,12 +119,14 @@ internal sealed partial class DocxLayoutEngine
         }
 
         var headerContentBottomByPage = new Dictionary<int, double>();
+        var footerContentTopByPage = new Dictionary<int, double>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             headerContentBottomByPage[pageIndex] = headerBottomCursors[pageIndex];
+            footerContentTopByPage[pageIndex] = footerTopEdges[pageIndex];
         }
 
-        return (pagesWithStaticText, headerContentBottomByPage);
+        return (pagesWithStaticText, headerContentBottomByPage, footerContentTopByPage);
     }
 
     private static DocxStaticStoryLayoutResult CreateStaticStoryLayout(

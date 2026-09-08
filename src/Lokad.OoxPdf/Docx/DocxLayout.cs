@@ -13,7 +13,8 @@ internal sealed record DocxLayout(
     IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings,
     IReadOnlyList<DocxFloatingDrawingLayout> StaticFloatingDrawings,
     IReadOnlyList<DocxRelatedStoryLayout> RelatedStories,
-    IReadOnlyDictionary<int, double> HeaderContentBottomByPage);
+    IReadOnlyDictionary<int, double> HeaderContentBottomByPage,
+    IReadOnlyDictionary<int, double> FooterContentTopByPage);
 
 internal sealed record DocxRelatedStoryLayout(
     DocxRelatedStory Story,
@@ -253,7 +254,7 @@ internal sealed partial class DocxLayoutEngine
         return Create(document, textMeasurer, cancellationToken);
     }
 
-    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null, IReadOnlyDictionary<int, double>? headerOverflowDisplacementByPage = null)
+    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null, IReadOnlyDictionary<int, double>? headerOverflowDisplacementByPage = null, IReadOnlyDictionary<int, double>? footerFrameBottomDisplacementByPage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
@@ -338,7 +339,11 @@ internal sealed partial class DocxLayoutEngine
 
         double CurrentFrameBottom()
         {
-            return page.MarginBottom + currentPageFootnoteReserveHeight;
+            // Office A/B (w48 multi-line footer plus long body, Word-COM rendered): body
+            // breaks before footer content instead of overlapping it, so an overflowing
+            // footer top raises the body frame just like a footnote reserve does; the
+            // higher of the two keep-out zones binds.
+            return page.MarginBottom + Math.Max(currentPageFootnoteReserveHeight, ResolvePagedDisplacement(footerFrameBottomDisplacementByPage));
         }
 
         double ResolvePageStartCursor()
@@ -349,17 +354,24 @@ internal sealed partial class DocxLayoutEngine
             // without a map (or on fitting pages) this is exactly the legacy page top.
             // Pages beyond a short map reuse its last entry (extra pages arise from the
             // displacement itself under a repeated header).
+            return page.Height - page.MarginTop - ResolvePagedDisplacement(headerOverflowDisplacementByPage);
+        }
+
+        double ResolvePagedDisplacement(IReadOnlyDictionary<int, double>? displacementByPage)
+        {
+            // Pages beyond a short map reuse its last entry (extra pages arise from the
+            // displacement itself under repeated headers and footers).
             double displacement = 0d;
-            if (headerOverflowDisplacementByPage is not null)
+            if (displacementByPage is not null)
             {
-                if (!headerOverflowDisplacementByPage.TryGetValue(pages.Count, out displacement) &&
-                    headerOverflowDisplacementByPage.Count != 0)
+                if (!displacementByPage.TryGetValue(pages.Count, out displacement) &&
+                    displacementByPage.Count != 0)
                 {
-                    headerOverflowDisplacementByPage.TryGetValue(headerOverflowDisplacementByPage.Count - 1, out displacement);
+                    displacementByPage.TryGetValue(displacementByPage.Count - 1, out displacement);
                 }
             }
 
-            return page.Height - page.MarginTop - displacement;
+            return displacement;
         }
 
         void EnsureFootnoteReserveForSourceBlock(int sourceBlockIndex)
@@ -764,12 +776,14 @@ internal sealed partial class DocxLayoutEngine
         DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken).ToArray();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
+        IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;
         return new DocxLayout(
             pagesWithStaticText,
             CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
             CreateStaticFloatingDrawingLayouts(pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
             relatedStoryLayouts,
-            staticContent.HeaderContentBottomByPage);
+            staticContent.HeaderContentBottomByPage,
+            footerContentTopByPage);
     }
 
     private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY, double deltaX)

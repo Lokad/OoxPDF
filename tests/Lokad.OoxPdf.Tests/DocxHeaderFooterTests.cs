@@ -1124,6 +1124,168 @@ internal static class DocxHeaderFooterTests
         TestAssert.Equal(double.PositiveInfinity, layout.HeaderContentBottomByPage[0]);
     }
 
+    public static void DocxOverflowingFooterTopIsExposedOnLayout()
+    {
+        // Supports footer-overflow frame raising: two tokened footer paras advance
+        // 11.5833 each inside an R1 bottom-anchored block (first baseline 33.7667),
+        // so the content top (first baseline plus the 9.4 body-rule offset) lands at
+        // 43.1667 on the layout for the renderer two-pass to raise the frame by.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Fa"), StaticPara("Fb")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(43.1667, Math.Round(layout.FooterContentTopByPage[0], 4));
+    }
+
+    public static void DocxBodyBreaksBeforeRaisedFooterFrameBottom()
+    {
+        // Office A/B (w48 multi-line footer plus long body, Word-COM rendered): body
+        // breaks before footer content instead of overlapping it (30 body lines on page
+        // one, then the break). The footer frame map raises the page bottom, so the
+        // second 10pt body para no longer fits under the first on a 100pt page.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph first = StaticPara("One");
+        DocxParagraph second = StaticPara("Two");
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 10d,
+            FooterDistancePoints = 10d,
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("F")]
+            }
+        };
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(first), new DocxParagraphElement(second)], [first, second], []);
+        var footerMap = new Dictionary<int, double> { [0] = 60d };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, null, footerMap);
+        TestAssert.Equal(2, layout.Pages.Count);
+        DocxTextLineLayout secondPageFirstLine = layout.Pages[1].Items.OfType<DocxTextLineLayout>().First();
+        TestAssert.Equal(80.6, Math.Round(secondPageFirstLine.BaselineY, 4));
+    }
+
+    public static void DocxBodyTrailingAfterDoesNotMoveFooter()
+    {
+        // Office A/B (w49 body-trailing probe, Word-COM rendered): body trailing
+        // after-spacing is swallowed at the body-to-footer boundary (footer at 47.90
+        // with body after-24 and after-0 alike). Guards against future cross-boundary
+        // tuck regressions: the footer baseline must not depend on body trailing.
+        static DocxParagraph BodyPara(double afterPoints, string? afterValue) => new(
+            [new DocxTextRun("Body", 12d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            afterPoints,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, afterValue, null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        static DocxParagraph FootPara() => new(
+            [new DocxTextRun("Foot", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        static double FootBaseline(double bodyAfterPoints, string? bodyAfterValue)
+        {
+            DocxPageSettings settings = DocxPageSettings.Empty with
+            {
+                HeaderDistancePoints = 20d,
+                FooterDistancePoints = 20d,
+                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["default"] = [FootPara()]
+                }
+            };
+            DocxParagraph body = BodyPara(bodyAfterPoints, bodyAfterValue);
+            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            return layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").Single().BaselineY;
+        }
+
+        TestAssert.Equal(Math.Round(FootBaseline(0d, "0"), 4), Math.Round(FootBaseline(24d, "480"), 4));
+    }
+
+    public static void DocxFooterLeadingBeforeDoesNotMoveFooter()
+    {
+        // Office A/B (w50 footer-before probe, Word-COM rendered): footer-first
+        // before-spacing is absorbed by the R1 bottom-anchor shift (footer at 47.90
+        // with before-24 and before-0 alike). Guards the anchor against regressions.
+        static DocxParagraph FootPara(double beforePoints, string? beforeValue) => new(
+            [new DocxTextRun("Foot", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            beforePoints,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(beforeValue, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        static double FootBaseline(double beforePoints, string? beforeValue)
+        {
+            DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+            DocxPageSettings settings = DocxPageSettings.Empty with
+            {
+                HeaderDistancePoints = 20d,
+                FooterDistancePoints = 20d,
+                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["default"] = [FootPara(beforePoints, beforeValue)]
+                }
+            };
+            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            return layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").Single().BaselineY;
+        }
+
+        TestAssert.Equal(Math.Round(FootBaseline(0d, null), 4), Math.Round(FootBaseline(24d, "480"), 4));
+    }
+
     public static void DocxOverflowingHeaderBottomIsExposedOnLayout()
     {
         // Supports header-overflow displacement: three tokened 10pt header paras

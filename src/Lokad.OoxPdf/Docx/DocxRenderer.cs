@@ -329,11 +329,14 @@ internal sealed partial class DocxRenderer
         // statics exactly as before; only pages whose header content bottom (trailing
         // cursor including trailing after-spacing) falls below the body top are laid
         // out again with a per-page start displacement. Fitting headers cost nothing
-        // and change nothing (empty map returns the first layout untouched).
+        // and change nothing (empty map returns the first layout untouched). Footer
+        // content tops raise the body frame symmetrically (w48 multi-line footer plus
+        // long body: body breaks before footer content instead of overlapping it).
         DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale);
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
         DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer);
-        Dictionary<int, double> displacementByPage = [];
+        Dictionary<int, double> headerDisplacementByPage = [];
+        Dictionary<int, double> footerDisplacementByPage = [];
         for (int pageIndex = 0; pageIndex < first.Pages.Count; pageIndex++)
         {
             DocxLayoutPage page = first.Pages[pageIndex];
@@ -343,13 +346,21 @@ internal sealed partial class DocxRenderer
                 : bodyTop;
             if (headerBottom < bodyTop)
             {
-                displacementByPage[pageIndex] = bodyTop - headerBottom;
+                headerDisplacementByPage[pageIndex] = bodyTop - headerBottom;
+            }
+
+            double footerTop = first.FooterContentTopByPage.TryGetValue(pageIndex, out double top)
+                ? top
+                : double.NegativeInfinity;
+            if (footerTop > page.MarginBottom)
+            {
+                footerDisplacementByPage[pageIndex] = footerTop - page.MarginBottom;
             }
         }
 
-        return displacementByPage.Count == 0
+        return headerDisplacementByPage.Count == 0 && footerDisplacementByPage.Count == 0
             ? first
-            : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, displacementByPage);
+            : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, headerDisplacementByPage, footerDisplacementByPage);
     }
 
     private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document)
