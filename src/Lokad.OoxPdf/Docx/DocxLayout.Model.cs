@@ -183,6 +183,7 @@ internal sealed record DocxTableCellLayout(
     DocxTableCellVisualOwnership VisualOwnership,
     IReadOnlyList<DocxTableRowLayout>? NestedTableRows)
 {
+    public IReadOnlyList<DocxInlineTextBoxLayout> InlineTextBoxes { get; init; } = [];
     public IReadOnlyList<DocxTableRowLayout> NestedRows => NestedTableRows ?? [];
 
     public DocxTableCell VisualCell =>

@@ -341,6 +341,17 @@ internal sealed partial class DocxRenderer
                     yield return nested;
                 }
             }
+
+            foreach (DocxInlineTextBoxLayout box in cell.InlineTextBoxes)
+            {
+                foreach (DocxTableRowLayout boxRow in box.TableRows)
+                {
+                    foreach (DocxTableRowLayout nested in EnumerateTableRows(boxRow))
+                    {
+                        yield return nested;
+                    }
+                }
+            }
         }
     }
 

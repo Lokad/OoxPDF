@@ -59,6 +59,59 @@ internal sealed partial class DocxRenderer
     // Mapped legs translate by the inset content origin (like the renderer) and
     // pre-compensate design coordinates into body-layout space on scaled WC pages; every
     // other mode keeps the legacy frame-origin translation bit-identically.
+    // Box-only walk for comment suppression: unlike EnumerateTableRowTextLines it yields
+    // no regular cell lines, so body-cell comments keep ballooning while box-anchored
+    // ones suppress by paragraph identity.
+    private static IEnumerable<DocxTextLineLayout> EnumerateTableRowTextBoxLines(DocxLayoutPage page)
+    {
+        foreach (DocxLayoutItem item in page.Items)
+        {
+            if (item is not DocxTableRowLayout row)
+            {
+                continue;
+            }
+
+            foreach (DocxTextLineLayout line in EnumerateTableRowTextBoxLines(row))
+            {
+                yield return line;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateTableRowTextBoxLines(DocxTableRowLayout row)
+    {
+        foreach (DocxTableCellLayout cell in row.Cells)
+        {
+            foreach (DocxInlineTextBoxLayout box in cell.InlineTextBoxes)
+            {
+                foreach (DocxTextLineLayout boxLine in box.TextLines)
+                {
+                    yield return boxLine;
+                }
+
+                foreach (DocxTableRowLayout boxRow in box.TableRows)
+                {
+                    foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
+                    {
+                        yield return boxCellLine;
+                    }
+
+                    foreach (DocxTextLineLayout nestedBoxLine in EnumerateTableRowTextBoxLines(boxRow))
+                    {
+                        yield return nestedBoxLine;
+                    }
+                }
+            }
+
+            foreach (DocxTableRowLayout nestedRow in cell.NestedRows)
+            {
+                foreach (DocxTextLineLayout nestedBoxLine in EnumerateTableRowTextBoxLines(nestedRow))
+                {
+                    yield return nestedBoxLine;
+                }
+            }
+        }
+    }
     private static IEnumerable<DocxTextLineLayout> EnumerateMappedFloatingDrawingTextBoxTextLines(
         IEnumerable<DocxFloatingDrawingLayout> drawings,
         FloatingTextBoxEmissionMap? map)
@@ -354,6 +407,22 @@ internal sealed partial class DocxRenderer
                 foreach (DocxTextLineLayout nestedLine in EnumerateTableRowTextLines(nestedRow))
                 {
                     yield return nestedLine;
+                }
+            }
+
+            foreach (DocxInlineTextBoxLayout box in cell.InlineTextBoxes)
+            {
+                foreach (DocxTextLineLayout boxLine in box.TextLines)
+                {
+                    yield return boxLine;
+                }
+
+                foreach (DocxTableRowLayout boxRow in box.TableRows)
+                {
+                    foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
+                    {
+                        yield return boxCellLine;
+                    }
                 }
             }
         }

@@ -76,7 +76,7 @@ internal sealed partial class DocxLayoutEngine
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                 contentHeight += lineCount * lineHeight;
             }
-            else if (paragraph.Images.Count == 0)
+            else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
             {
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                 contentHeight += lineHeight;
@@ -87,6 +87,11 @@ internal sealed partial class DocxLayoutEngine
                 double imageWidth = Math.Min(textWidth, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
                 contentHeight += imageHeight + InlineImageParagraphGapPoints;
+            }
+
+            foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
+            {
+                contentHeight += EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) + InlineImageParagraphGapPoints;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -185,7 +190,7 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
             if (textSpans.Count == 0)
             {
-                if (paragraph.Images.Count == 0)
+                if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
                 {
                     cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                     cursorY -= lineHeight;
@@ -347,7 +352,7 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static IReadOnlyList<DocxInlineImageLayout> LayoutTableCellInlineImages(
+    private static (IReadOnlyList<DocxInlineImageLayout> Images, IReadOnlyList<DocxInlineTextBoxLayout> TextBoxes) LayoutTableCellInlineImages(
         DocxTableCell cell,
         double cellX,
         double cellY,
@@ -363,9 +368,9 @@ internal sealed partial class DocxLayoutEngine
     {
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
-        if (paragraphs.Count == 0 || !paragraphs.Any(paragraph => paragraph.Images.Count != 0))
+        if (paragraphs.Count == 0 || !paragraphs.Any(paragraph => paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0))
         {
-            return [];
+            return ([], []);
         }
 
         double paddingLeft = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, paragraphSpacingScale) + ResolveTableCellBorderContentInset(cell, "left", paragraphSpacingScale);
@@ -377,6 +382,7 @@ internal sealed partial class DocxLayoutEngine
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;
         var images = new List<DocxInlineImageLayout>();
+        var boxes = new List<DocxInlineTextBoxLayout>();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         int paragraphIndex = 0;
@@ -416,7 +422,7 @@ internal sealed partial class DocxLayoutEngine
                     double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     cursorY -= WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber).Count() * lineHeight;
                 }
-                else if (paragraph.Images.Count == 0)
+                else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
                 {
                     cursorY -= lineHeight;
                 }
@@ -438,15 +444,41 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
+            foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
+            {
+                double boxParagraphX = cellX + paddingLeft + GetParagraphStartOffset(paragraph, paragraphSpacingScale);
+                double boxParagraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                DocxInlineTextBoxLayout? textBoxLayout = CreateInlineTextBoxLayout(
+                    textBox,
+                    sourceBlockIndex: null,
+                    boxParagraphX,
+                    boxParagraphWidth,
+                    cursorY,
+                    paragraph.EffectiveProperties.Alignment,
+                    textMeasurer,
+                    defaultTabStopPoints,
+                    paragraphSpacingScale,
+                    pageNumber ?? pageIndex,
+                    CancellationToken.None,
+                    sourceParagraphIndex: paragraphIndex);
+                if (textBoxLayout is null)
+                {
+                    continue;
+                }
+
+                boxes.Add(textBoxLayout);
+                cursorY -= textBoxLayout.BoxHeight + InlineImageParagraphGapPoints;
+            }
+
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
             paragraphIndex++;
         }
 
         cursorY -= pendingSpacingAfter;
-        if (images.Count == 0)
+        if (images.Count == 0 && boxes.Count == 0)
         {
-            return images;
+            return ([], []);
         }
 
         double usedHeight = Math.Max(0d, startBaselineY - cursorY);
@@ -458,8 +490,9 @@ internal sealed partial class DocxLayoutEngine
                 ? extra / 2d
                 : 0d;
         return verticalOffset == 0d
-            ? images
-            : images.Select(image => image with { Y = image.Y - verticalOffset }).ToArray();
+            ? (images, boxes)
+            : (images.Select(image => image with { Y = image.Y - verticalOffset }).ToArray(),
+                boxes.Select(box => ShiftInlineTextBox(box, -verticalOffset, 0d)).ToArray());
     }
 
     private static IReadOnlyList<DocxTableRowLayout> LayoutTableCellNestedTables(

@@ -92,6 +92,39 @@ internal sealed partial class DocxLayoutEngine
             cellHeight);
     }
 
+    private static bool IsInlineTextBoxOnVisibleSideOfCellPageBreak(
+        bool useCellPageBreakBoundaryPartition,
+        int lowerParagraphBoundaryIndex,
+        int? upperParagraphBoundaryIndex,
+        DocxTableCell cell,
+        DocxInlineTextBoxLayout box,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        return IsSourceParagraphIndexOnVisibleSideOfCellPageBreak(
+            useCellPageBreakBoundaryPartition,
+            lowerParagraphBoundaryIndex,
+            upperParagraphBoundaryIndex,
+            box.SourceParagraphIndex,
+            fragmentCount);
+    }
+
+    private static bool IsInlineTextBoxVisibleInCellFragmentGeometry(
+        bool cellPageBreakAlignsWithFragmentBoundary,
+        DocxInlineTextBoxLayout box,
+        double cellY,
+        double cellHeight,
+        int fragmentIndex,
+        int fragmentCount)
+    {
+        return IsCellFragmentGeometryVisible(
+            cellPageBreakAlignsWithFragmentBoundary,
+            box.BoxTop - box.BoxHeight,
+            box.BoxHeight,
+            cellY,
+            cellHeight);
+    }
+
     private static bool IsNestedTableRowVisibleInCellFragmentGeometry(
         bool cellPageBreakAlignsWithFragmentBoundary,
         DocxTableRowLayout row,

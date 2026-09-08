@@ -768,4 +768,53 @@ internal static class DocxImagesTests
         TestAssert.True(Math.Abs(line.Width - 90d * printScale) < 0.001d, "Inline box content should measure scaled like body text. Width=" + line.Width.ToString(CultureInfo.InvariantCulture));
         TestAssert.True(Math.Abs(line.X - (box.BoxX + 7.2d * printScale)) < 0.001d, "Inline box content should start at the scaled inset. X=" + line.X.ToString(CultureInfo.InvariantCulture));
     }
+
+    public static void DocxWordCompatibleTableCellInlineTextBoxLaysOutScaledContent()
+    {
+        // Office A/B (w6-tablebox probe, Word-COM rendered): cell boxes join the scaled
+        // flow uniformly (content 9.1pt, box revision ballooned, box comment suppressed),
+        // so cell layout measures box content scaled in the scaled content box.
+        const double printScale = 0.758834d;
+        DocxParagraph textBoxParagraph = DocxTests.CreateDocxLayoutParagraph(new string('X', 18), 10d, 12d);
+        var textBox = new DocxInlineTextBox("1371600", "457200", "91440", "45720", "91440", "45720")
+        {
+            BodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        DocxParagraph hostParagraph = DocxTests.CreateDocxLayoutParagraph("Cell ", 10d, 12d) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        var cell = new DocxTableCell(string.Empty, [hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
+            .Create(document, scaled, CancellationToken.None)
+            .Pages.Single()
+            .Items.OfType<DocxTableRowLayout>()
+            .Single().Cells.Single();
+        DocxInlineTextBoxLayout box = cellLayout.InlineTextBoxes.Single();
+        DocxTextLineLayout line = box.TextLines.Single();
+        TestAssert.True(Math.Abs(line.Width - 90d * printScale) < 0.001d, "Cell box content should measure scaled like body text. Width=" + line.Width.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(line.X - (box.BoxX + 7.2d * printScale)) < 0.001d, "Cell box content should start at the scaled inset. X=" + line.X.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(box.BoxHeight + 0.001d >= 36d * printScale, "Cell box height should cover the scaled extent. Height=" + box.BoxHeight.ToString(CultureInfo.InvariantCulture));
+        DocxTextLineLayout firstCellLine = cellLayout.TextLines.First();
+        TestAssert.True(Math.Abs((firstCellLine.BaselineY - box.BoxTop) - 12d) < 0.001d, "Cell box block should start exactly one line below the host text line (block-level, like pictures).");
+    }
 }

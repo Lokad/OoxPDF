@@ -314,7 +314,7 @@ internal sealed partial class DocxLayoutEngine
 
     internal static DocxInlineTextBoxLayout? CreateInlineTextBoxLayout(
         DocxInlineTextBox textBox,
-        int sourceBlockIndex,
+        int? sourceBlockIndex,
         double x,
         double width,
         double boxTop,
@@ -323,7 +323,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         int pageNumber,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int sourceParagraphIndex = 0)
     {
         double? extentWidth = ReadEmuPoints(textBox.ExtentCxValue);
         double? extentHeight = ReadEmuPoints(textBox.ExtentCyValue);
@@ -385,7 +386,7 @@ internal sealed partial class DocxLayoutEngine
                 .ToArray(),
             ShiftTableRows(storyLayout.TableRows, contentTop, contentX),
             sourceBlockIndex,
-            SourceParagraphIndex: 0,
+            SourceParagraphIndex: sourceParagraphIndex,
             StoryKind: null,
             StoryVariantType: null);
     }

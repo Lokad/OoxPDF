@@ -94,11 +94,21 @@ internal sealed partial record DocxLayoutSnapshot
 
     private static int SumTableCellTextLineCount(DocxTableCellLayout cell)
     {
-        return cell.TextLines.Count + cell.NestedRows.Sum(SumTableRowTextLineCount);
+        return cell.TextLines.Count + cell.NestedRows.Sum(SumTableRowTextLineCount) + cell.InlineTextBoxes.Sum(SumInlineTextBoxTextLineCount);
     }
 
     private static int SumTableCellTextLength(DocxTableCellLayout cell)
     {
-        return cell.TextLines.Sum(line => line.Text.Length) + cell.NestedRows.Sum(SumTableRowTextLength);
+        return cell.TextLines.Sum(line => line.Text.Length) + cell.NestedRows.Sum(SumTableRowTextLength) + cell.InlineTextBoxes.Sum(SumInlineTextBoxTextLength);
+    }
+
+    private static int SumInlineTextBoxTextLineCount(DocxInlineTextBoxLayout box)
+    {
+        return box.TextLines.Count + box.TableRows.Sum(SumTableRowTextLineCount);
+    }
+
+    private static int SumInlineTextBoxTextLength(DocxInlineTextBoxLayout box)
+    {
+        return box.TextLines.Sum(line => line.Text.Length) + box.TableRows.Sum(SumTableRowTextLength);
     }
 }

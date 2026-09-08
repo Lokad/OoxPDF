@@ -773,6 +773,18 @@ internal sealed partial class DocxLayoutEngine
         return value is null ? null : value.Value + delta;
     }
 
+    private static DocxInlineTextBoxLayout ShiftInlineTextBox(DocxInlineTextBoxLayout box, double deltaY, double deltaX)
+    {
+        return box with
+        {
+            BoxX = box.BoxX + deltaX,
+            BoxTop = box.BoxTop + deltaY,
+            TextLines = ShiftTextLines(box.TextLines, deltaY, deltaX),
+            InlineImages = ShiftInlineImages(box.InlineImages, deltaY, deltaX),
+            TableRows = ShiftTableRows(box.TableRows, deltaY, deltaX)
+        };
+    }
+
     private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows, double deltaY, double deltaX)
     {
         return rows

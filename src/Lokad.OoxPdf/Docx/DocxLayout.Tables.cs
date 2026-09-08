@@ -875,11 +875,16 @@ internal sealed partial class DocxLayoutEngine
                     .Where(line => IsTextLineOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, line, FragmentIndex, FragmentCount))
                     .Where(line => IsTextLineVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, line, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
-            IReadOnlyList<DocxInlineImageLayout> inlineImages = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
-                ? []
-                : LayoutTableCellInlineImages(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale)
+            (IReadOnlyList<DocxInlineImageLayout> cellInlineImages, IReadOnlyList<DocxInlineTextBoxLayout> cellInlineTextBoxes) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
+                ? (Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>())
+                : LayoutTableCellInlineImages(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale);
+            IReadOnlyList<DocxInlineImageLayout> inlineImages = cellInlineImages
                     .Where(image => IsInlineImageOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, image, FragmentIndex, FragmentCount))
                     .Where(image => IsInlineImageVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, image, visualY, visualHeight, FragmentIndex, FragmentCount))
+                    .ToArray();
+            IReadOnlyList<DocxInlineTextBoxLayout> inlineTextBoxes = cellInlineTextBoxes
+                    .Where(box => IsInlineTextBoxOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, box, FragmentIndex, FragmentCount))
+                    .Where(box => IsInlineTextBoxVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, box, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
             IReadOnlyList<DocxTableRowLayout> nestedTableRows = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
@@ -903,7 +908,7 @@ internal sealed partial class DocxLayoutEngine
                 verticalMergeOwnerCell,
                 verticalMergeOwner,
                 visualOwnership,
-                nestedTableRows));
+                nestedTableRows) with { InlineTextBoxes = inlineTextBoxes });
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d) * paragraphSpacingScale;
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }

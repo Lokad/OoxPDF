@@ -48,7 +48,7 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0 || cellLayout.NestedRows.Count != 0)
+            if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0 || cellLayout.InlineTextBoxes.Count != 0 || cellLayout.NestedRows.Count != 0)
             {
                 graphics.SaveState();
                 graphics.ClipRectangle(cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
@@ -60,6 +60,11 @@ internal sealed partial class DocxRenderer
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
                 {
                     RenderInlineImage(image, graphics, pageImages, diagnosticSink, ref imageIndex);
+                }
+
+                foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
+                {
+                    RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
                 }
 
                 for (int nestedRowIndex = 0; nestedRowIndex < cellLayout.NestedRows.Count; nestedRowIndex++)
