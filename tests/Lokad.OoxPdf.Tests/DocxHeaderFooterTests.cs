@@ -91,7 +91,7 @@ internal static class DocxHeaderFooterTests
         TestAssert.Equal(2, staticLines.Length);
         TestAssert.Equal("H1", staticLines[0].Text);
         TestAssert.Equal(95d, staticLines[0].X);
-        TestAssert.Equal(174d, staticLines[0].BaselineY);
+        TestAssert.Equal(174.84d, staticLines[0].BaselineY);
         TestAssert.Equal(2, staticLines[0].Segments.Count);
         TestAssert.Equal(10d, staticLines[0].Segments[0].FontSize ?? 0d);
         TestAssert.Equal(14d, staticLines[0].Segments[1].FontSize ?? 0d);
@@ -99,7 +99,7 @@ internal static class DocxHeaderFooterTests
         TestAssert.Equal("0000FF", staticLines[0].Segments[1].StyleRun.ColorHex ?? string.Empty);
         TestAssert.Equal("F", staticLines[1].Text);
         TestAssert.Equal(185d, staticLines[1].X);
-        TestAssert.Equal(14d, staticLines[1].BaselineY);
+        TestAssert.Equal(12.6d, Math.Round(staticLines[1].BaselineY, 4));
         TestAssert.Equal(1, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
@@ -508,13 +508,13 @@ internal static class DocxHeaderFooterTests
         TestAssert.Equal(2, staticLines.Length);
         TestAssert.Equal("Alpha ", staticLines[0].Text);
         TestAssert.Equal(15d, staticLines[0].X);
-        TestAssert.Equal(178d, staticLines[0].BaselineY);
+        TestAssert.Equal(178.6d, staticLines[0].BaselineY);
         TestAssert.Equal(0, staticLines[0].SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, staticLines[0].SourceLineIndex ?? -1);
         TestAssert.True(staticLines[0].IsFirstParagraphLine == true, "The first wrapped static line should carry first-line ownership.");
         TestAssert.Equal("Beta", staticLines[1].Text);
         TestAssert.Equal(20d, staticLines[1].X);
-        TestAssert.Equal(166d, staticLines[1].BaselineY);
+        TestAssert.Equal(168.6d, staticLines[1].BaselineY);
         TestAssert.Equal(0, staticLines[1].SourceParagraphIndex ?? -1);
         TestAssert.Equal(1, staticLines[1].SourceLineIndex ?? -1);
         TestAssert.True(staticLines[1].IsFirstParagraphLine == false, "Continuation static lines should not look like first paragraph lines.");
@@ -608,9 +608,9 @@ internal static class DocxHeaderFooterTests
 
         TestAssert.Equal(2, staticLines.Length);
         TestAssert.Equal("A", staticLines[0].Text);
-        TestAssert.Equal(178d, staticLines[0].BaselineY);
+        TestAssert.Equal(178.6d, staticLines[0].BaselineY);
         TestAssert.Equal("B", staticLines[1].Text);
-        TestAssert.Equal(160d, staticLines[1].BaselineY);
+        TestAssert.Equal(162.6d, staticLines[1].BaselineY);
     }
 
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()
@@ -926,7 +926,7 @@ internal static class DocxHeaderFooterTests
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
             .ToArray();
         TestAssert.True(leftAlignedBaselines.Any(y => y > 704d && y < 720d), "Header baseline should be inset from the raw header-distance top by resolved font ascender metrics.");
-        TestAssert.True(leftAlignedBaselines.Any(y => y > 54d && y < 60d), "Footer baseline should be inset from the raw footer-distance bottom by resolved font descender metrics.");
+        TestAssert.True(leftAlignedBaselines.Any(y => y > 63d && y < 70d), "Footer baseline should bottom-anchor the trailing cursor at the raw footer distance (R1: distance plus line-remainder plus after-spacing).");
         TestAssert.DoesNotContain("1 0 0 1 36 720 Tm", pdf);
         TestAssert.DoesNotContain("1 0 0 1 36 54 Tm", pdf);
     }
@@ -1019,9 +1019,9 @@ internal static class DocxHeaderFooterTests
         double[] firstSectionLeftBaselines = DocxTests.ExtractTextBaselinesAtX(pdf, 18d);
         double[] finalSectionLeftBaselines = DocxTests.ExtractTextBaselinesAtX(pdf, 72d);
         TestAssert.True(firstSectionLeftBaselines.Any(y => y > 168d && y < 182d), "First-section header should use the first section header distance and left margin.");
-        TestAssert.True(firstSectionLeftBaselines.Any(y => y > 18d && y < 30d), "First-section footer should use the first section footer distance and left margin.");
+        TestAssert.True(firstSectionLeftBaselines.Any(y => y > 27d && y < 34d), "First-section footer should bottom-anchor its trailing cursor at the first section footer distance.");
         TestAssert.True(finalSectionLeftBaselines.Any(y => y > 232d && y < 246d), "Final-section header should use the final section header distance and left margin.");
-        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 54d && y < 66d), "Final-section footer should use the final section footer distance and left margin.");
+        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 63d && y < 70d), "Final-section footer should bottom-anchor its trailing cursor at the final section footer distance.");
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.Contains("0 0 1 rg", pdf);
         TestAssert.Contains("0 1 0 rg", pdf);
@@ -1104,6 +1104,200 @@ internal static class DocxHeaderFooterTests
         TestAssert.True(!firstSectionLeftBaselines.Any(y => y > 168d && y < 182d), "Final-section header should not backfill the earlier section that omits a header reference.");
         TestAssert.True(!firstSectionLeftBaselines.Any(y => y > 18d && y < 30d), "Final-section footer should not backfill the earlier section that omits a footer reference.");
         TestAssert.True(finalSectionLeftBaselines.Any(y => y > 232d && y < 246d), "Final-section header should still render on its owning section.");
-        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 54d && y < 66d), "Final-section footer should still render on its owning section.");
+        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 63d && y < 70d), "Final-section footer should still render on its owning section.");
+    }
+
+    public static void DocxStaticHeaderAutoAdvanceFollowsSingleLineFactor()
+    {
+        // Office A/B (w37-staticfree Final-mode probe, Word-COM rendered): static auto
+        // lineHeight is single-height times 278/240 (Arial10 pitch 13.32 vs 13.321,
+        // Aptos16 22.56 vs 22.624), while the layout used windows extents (12.0 here);
+        // header origin follows the body baseline rule (w39 bare-11 inset 10.44 vs
+        // body-bare 10.46), not winAscent (which sits 0.31 high at this size).
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").ToArray();
+        TestAssert.Equal(2, headerLines.Length);
+        TestAssert.Equal(170.6, Math.Round(headerLines[0].BaselineY, 4));
+        TestAssert.Equal(11.5833, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));
+    }
+
+    public static void DocxStaticFooterAutoAdvanceBottomAnchorsBlock()
+    {
+        // Office A/B (w38 default, w39 tokened and w40 bare multi-line footers at
+        // distances 36/72/54 plus w43-solo single-line bare footer, Word-COM rendered):
+        // footer auto advances follow the single-times-factor law and the text-only
+        // block bottom-anchors its trailing cursor at the footer distance, so this
+        // two-line tokened block lands its first baseline at 33.7667 with the 11.5833
+        // pitch preserved.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Fa"), StaticPara("Fb")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").ToArray();
+        TestAssert.Equal(2, footerLines.Length);
+        TestAssert.Equal(33.7667, Math.Round(footerLines[0].BaselineY, 4));
+        TestAssert.Equal(11.5833, Math.Round(footerLines[0].BaselineY - footerLines[1].BaselineY, 4));
+    }
+
+    public static void DocxStaticFooterFollowerLinesUseBodyRuleOffsets()
+    {
+        // Office A/B (w38/w39/w40 footer probes, Word-COM rendered): footer lines use
+        // body-rule offsets inside a bottom-anchored block (Ften-b to Fsix-a gaps read
+        // 19.08 to 19.11 for a 18.96 body-rule prediction). FamilyWidth arithmetic
+        // here: top-down first baseline 10.6, advances 11.5833 and 18.5333, then the
+        // block shift of 30.1167 pins the trailing cursor at the footer distance 20.
+        static DocxParagraph StaticPara(string text, double fontSize) => new(
+            [new DocxTextRun(text, fontSize, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Fa", 10d), StaticPara("Fb", 16d)]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").ToArray();
+        TestAssert.Equal(2, footerLines.Length);
+        TestAssert.Equal(40.7167, Math.Round(footerLines[0].BaselineY, 4));
+        TestAssert.Equal(23.4933, Math.Round(footerLines[1].BaselineY, 4));
+    }
+
+    public static void DocxStaticHeaderAutoAdvanceScalesUniformlyWithSpacing()
+    {
+        // Office A/B (w36 WC re-baselines, Word-COM balloon refs): Word scales static
+        // advances uniformly with the lane scale (single-x-factor times s, after-steps
+        // agree to 0.03), while the layout scaled line metrics by the 0.7936 fitted
+        // compromise (9.5232 here) and spacing by s. The production-plumbing mirror
+        // (scaled layout measurer plus raw fallback) must advance by raw single times
+        // factor times the spacing scale.
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            278d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        var raw = new DocxTests.FamilyWidthTextMeasurer();
+        var scaled = new DocxTests.ScaledLayoutTextMeasurer(raw, 0.76d, 0.79359971328d);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.76d).Create(document, scaled, CancellationToken.None, raw);
+        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").ToArray();
+        TestAssert.Equal(2, headerLines.Length);
+        TestAssert.Equal(170.6, Math.Round(headerLines[0].BaselineY, 4));
+        TestAssert.Equal(8.8033, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));
+    }
+
+    public static void DocxStaticHeaderExplicitLineFactorFollowsSingleLineFactor()
+    {
+        // Office A/B (w44 explicit-factor probe, Word-COM rendered): explicit w:line
+        // factors scale the single height too (Arial12 E100 pitch 13.80 vs 13.80, E115
+        // pitch 15.86 vs 15.871), and explicit-rule origin follows the body baseline
+        // rule (locked explicit-100 header2 inset 9.36 vs 9.40). Only exact/atLeast
+        // statics keep legacy behavior (unprobed).
+        static DocxParagraph StaticPara(string text) => new(
+            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            276d / 240d,
+            null,
+            new DocxParagraphSpacing(null, "0", null, null, null, null, "276", "auto", null),
+            DocxParagraphKeepRules.Empty,
+            null);
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderDistancePoints = 20d,
+            FooterDistancePoints = 20d,
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
+            }
+        };
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").ToArray();
+        TestAssert.Equal(2, headerLines.Length);
+        TestAssert.Equal(170.6d, Math.Round(headerLines[0].BaselineY, 4));
+        TestAssert.Equal(11.5d, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));
     }
 }

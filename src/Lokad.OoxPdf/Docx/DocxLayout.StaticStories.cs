@@ -15,12 +15,16 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
+        IDocxTextMeasurer? unscaledTextMeasurer,
         CancellationToken cancellationToken)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
             return pages;
         }
+
+        IDocxLineMetricsProvider? unscaledLineMetrics =
+            (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
 
         var pagesWithStaticText = new DocxLayoutPage[pages.Count];
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
@@ -51,6 +55,7 @@ internal sealed partial class DocxLayoutEngine
                     staticMetrics,
                     defaultTabStopPoints,
                     paragraphSpacingScale,
+                    unscaledLineMetrics,
                     cancellationToken);
             DocxStaticStoryLayoutResult footerLayout = CreateStaticStoryLayout(
                     selectedFooter,
@@ -64,6 +69,7 @@ internal sealed partial class DocxLayoutEngine
                     staticMetrics,
                     defaultTabStopPoints,
                     paragraphSpacingScale,
+                    unscaledLineMetrics,
                     cancellationToken);
             pagesWithStaticText[pageIndex] = page with
             {
@@ -89,6 +95,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxStaticTextMetricsProvider staticMetrics,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
+        IDocxLineMetricsProvider? unscaledLineMetrics,
         CancellationToken cancellationToken)
     {
         var lines = new List<DocxTextLineLayout>();
@@ -184,17 +191,52 @@ internal sealed partial class DocxLayoutEngine
                     };
                     double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
                     double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
-                    double baselineY = isHeader ? cursorY - ascender : cursorY + descender;
+                    DocxEffectiveParagraphProperties staticEffective = paragraph.EffectiveProperties;
+                    double staticFontSize = GetParagraphFontSize(paragraph);
+                    double staticLineHeight = ascender + descender;
+                    double staticBaselineY = isHeader ? cursorY - ascender : cursorY + descender;
+                    double? staticSingleLineHeight = null;
+                    if (unscaledLineMetrics is not null &&
+                        staticEffective.LineSpacingPoints is null)
+                    {
+                        // Office A/B (w37-staticfree/w38-footer-free/w43-solo Final-mode
+                        // probes at s=1 plus w36 WC balloon re-baselines, the w39 bare-11
+                        // header probe, the w44 explicit-factor probe, and locked
+                        // header2/footer2, all Word-COM rendered): static lineHeight is
+                        // single-height times the spacing factor whenever no exact or
+                        // atLeast height is pinned (auto Arial10 pitch 13.32 vs 13.321,
+                        // explicit-100 Arial12 pitch 13.80 vs 13.80, explicit-115 pitch
+                        // 15.86 vs 15.871, all 16 within 0.08), not windows extents; Word
+                        // scales static advances uniformly with the lane scale
+                        // (after-steps agree to 0.03), not the 0.7936 line-metric
+                        // compromise, so the raw single height advances by the spacing
+                        // scale here. Origin follows the body baseline rule including the
+                        // bare-11 bump (w39 header inset 10.44 vs body-bare 10.46, locked
+                        // explicit-100 header2 inset 9.36 vs 9.40); exact/atLeast statics
+                        // keep legacy behavior (unprobed).
+                        double rawSingleLineHeight = unscaledLineMetrics.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), staticFontSize);
+                        double staticAutoFactor = ResolveAutoLineSpacingFactor(paragraph, out _);
+                        double staticDesignLineHeight = rawSingleLineHeight * staticAutoFactor;
+                        staticSingleLineHeight = rawSingleLineHeight;
+                        staticLineHeight = staticDesignLineHeight * paragraphSpacingScale;
+                        double staticBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(staticFontSize, staticDesignLineHeight, hasExplicitLineSpacing: false);
+                        if (HasNoSpacingElement(staticEffective) && Math.Abs(staticFontSize - 11d) < 0.000000001d)
+                        {
+                            staticBaselineOffset += UntokenedParagraphBaselineExtraPoints;
+                        }
+
+                        staticBaselineY = cursorY - staticBaselineOffset;
+                    }
                     IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
                     lines.Add(new DocxTextLineLayout(
                         line.Text,
                         line.Spans[0].StyleRun,
                         line.Spans.Max(span => span.StyleRun.EffectiveProperties.FontSize),
                         lineX,
-                        baselineY,
+                        staticBaselineY,
                         lineWidth,
                         segments,
-                        LineHeight: ascender + descender,
+                        LineHeight: staticLineHeight,
                         AppliedBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: sourceLineIndex == 0,
                         SourceLineIndex: sourceLineIndex,
@@ -206,9 +248,9 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraphIndex: paragraphIndex,
                         StoryKind: isHeader ? "Header" : "Footer",
                         StoryVariantType: story.VariantType,
-                        LineHeightSource: DocxLineHeightSource.StaticWindowsExtents, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: null, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
+                        LineHeightSource: DocxLineHeightSource.StaticWindowsExtents, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
                     sourceLineIndex++;
-                    cursorY -= ascender + descender;
+                    cursorY -= staticLineHeight;
                 }
             }
 
@@ -265,6 +307,29 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
             paragraphIndex++;
+        }
+
+        if (!isHeader &&
+            images.Count == 0 &&
+            boxes.Count == 0 &&
+            tableRows.Count == 0 &&
+            lines.Any(line => line.SingleLineHeight.HasValue))
+        {
+            // Office A/B (w38 default multi-line footer at distance 36, w39 tokened
+            // multi-line footer at 72, w40 bare multi-line footer at 54, w43-solo
+            // single-line bare footer, all Word-COM rendered): a text-only footer
+            // block bottom-anchors its trailing cursor (content plus trailing after
+            // spacing) at the footer distance (residuals minus 0.11, minus 0.15,
+            // minus 0.11, minus 0.02). The shift preserves every internal pitch (all
+            // proven above) and only translates the block; stories with images,
+            // textboxes, tables, or exact/atLeast lines keep legacy placement
+            // (unprobed there), as do explicit-rule single lines by construction of
+            // the gate below combined with the unchanged legacy path above.
+            double footerShift = startY - (cursorY - pendingSpacingAfter);
+            for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
+            {
+                lines[lineIndex] = lines[lineIndex] with { BaselineY = lines[lineIndex].BaselineY + footerShift };
+            }
         }
 
         return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray());
