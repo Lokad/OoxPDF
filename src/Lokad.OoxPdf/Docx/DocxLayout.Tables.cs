@@ -207,7 +207,7 @@ internal sealed partial class DocxLayoutEngine
             table.LayoutValue,
             table.Revisions);
         var rowHeights = new double[table.Rows.Count];
-        double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale)
+        double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, bool isLastRow)
         {
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
@@ -217,13 +217,13 @@ internal sealed partial class DocxLayoutEngine
                     .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale))
                     .DefaultIfEmpty(0d)
                     .Max();
-            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale);
+            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow);
         }
 
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale);
+            rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale, isLastRow: rowIndex == table.Rows.Count - 1);
         }
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
@@ -539,7 +539,7 @@ internal sealed partial class DocxLayoutEngine
 
     // W6-a1: fixed table geometry joins scaled space; fixedScale reuses the layout
     // spacing scale (identical in every mode).
-    private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight, double fixedScale)
+    private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight, double fixedScale, bool isLastRow)
     {
         if (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
             row.HeightPoints is { } exactHeight)
@@ -557,12 +557,17 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double height = Math.Max(declaredHeight, contentHeight);
-        double ResolveTableRowCollapsedHorizontalBorderAdvance()
+        double MaxBottomBorderWidth()
         {
-            double maxBottom = row.Cells
+            return row.Cells
                 .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")))
                 .DefaultIfEmpty(0d)
                 .Max();
+        }
+
+        double ResolveTableRowCollapsedHorizontalBorderAdvance()
+        {
+            double maxBottom = MaxBottomBorderWidth();
             if (maxBottom > 0d)
             {
                 return maxBottom;
@@ -575,6 +580,17 @@ internal sealed partial class DocxLayoutEngine
         }
 
         height += ResolveTableRowCollapsedHorizontalBorderAdvance();
+        if (isLastRow)
+        {
+            // Office A/B (w7 doc-start table probe, Word-COM rendered plus PdfInspect
+            // border rects): Word hangs the last row bottom border BELOW cell content
+            // (outside: 689.14 to 689.62 under content ending 689.62), while shared
+            // interior borders straddle boundaries pitch-neutrally, so the table
+            // terminus consumes one extra bottom width and following flow rides lower.
+            // Unbordered last rows resolve zero width and stay bit-identical.
+            height += MaxBottomBorderWidth();
+        }
+
         return Math.Max(1d, height);
     }
 

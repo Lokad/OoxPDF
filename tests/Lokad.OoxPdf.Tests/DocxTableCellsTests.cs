@@ -1538,7 +1538,10 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72.48 683.52 143.52 0.48 re f", pdf);
+        // Table terminus (w7 doc-start probe): the last-row bottom border hangs below
+        // content, so the single-row bottom strip sits one 0.48pt width lower than the
+        // legacy bottom-inside convention placed it.
+        TestAssert.Contains("72.48 683.04 143.52 0.48 re f", pdf);
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
@@ -2046,7 +2049,10 @@ internal static class DocxTableCellsTests
         TestAssert.DoesNotContain("10.48 10 59.52 0.48 re f", pages[0].Content);
         TestAssert.DoesNotContain("10.48 89.52 59.52 0.48 re f", pages[1].Content);
         TestAssert.Contains("10 10 0.48 20 re f", pages[0].Content);
-        TestAssert.Contains("10.48 29.52 59.52 0.48 re f", pages[1].Content);
+        // Table terminus (w7 doc-start probe): the split row is the last row, so its
+        // continuation fragment carries the extra bottom width and its bottom strip
+        // sits 0.48pt lower; fragment-edge suppression at the split itself is unchanged.
+        TestAssert.Contains("10.48 29.04 59.52 0.48 re f", pages[1].Content);
     }
 
     public static void DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations()

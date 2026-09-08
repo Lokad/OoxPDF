@@ -263,7 +263,7 @@ internal sealed partial class DocxLayoutEngine
                 .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, null, paragraphSpacingScale: paragraphSpacingScale))
                 .DefaultIfEmpty(0d)
                 .Max();
-            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale);
+            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow: table.Rows.Count == 1);
         }
     }
 

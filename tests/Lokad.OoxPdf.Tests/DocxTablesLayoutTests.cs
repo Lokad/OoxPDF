@@ -1467,7 +1467,9 @@ internal static class DocxTablesLayoutTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
-        TestAssert.Equal(10.48d, row.Height);
+        // Table terminus (w7 doc-start probe): single-row bottom border hangs below
+        // content, so height is content plus collapsed advance plus terminus width.
+        TestAssert.Equal(10.96d, row.Height);
     }
 
     public static void DocxTableLayoutStageLetsTablePropertyExceptionRowsUseContentHeight()

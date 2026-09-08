@@ -2887,4 +2887,39 @@ internal static class DocxTablesTests
         TestAssert.Equal(1, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
     }
+
+    public static void DocxTableBottomBorderHangsBelowLastRowContent()
+    {
+        // Office A/B (w7 doc-start table probe, Word-COM rendered plus PdfInspect border
+        // rects): Word hangs the last row bottom border BELOW cell content (outside:
+        // 689.14 to 689.62 under content ending 689.62), while shared interior borders
+        // straddle boundaries pitch-neutrally. The table terminus must consume the bottom
+        // width, or following flow rides high (here by a full border width).
+        static DocxLayout LayoutPair(bool withBottomBorder, out double tableTotal, out double afterBaseline)
+        {
+            var first = new DocxTableCell("A1", [DocxTests.CreateDocxLayoutParagraph("A1", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty);
+            IReadOnlyList<DocxTableCellBorder> bottom = withBottomBorder
+                ? [new DocxTableCellBorder("bottom", "single", "auto", "8")]
+                : [];
+            var last = new DocxTableCell("B1", [DocxTests.CreateDocxLayoutParagraph("B1", 10d, 10d)], null, null, null, null, bottom, DocxTableCellMargins.Empty);
+            var table = new DocxTable(null, [180d], [new DocxTableRow([first], null), new DocxTableRow([last], null)]);
+            DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxTableElement(table), new DocxParagraphElement(after)],
+                [table]);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxTableRowLayout[] rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            tableTotal = rows.Sum(row => row.Height);
+            afterBaseline = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single(line => line.Text == "After").BaselineY;
+            return layout;
+        }
+
+        _ = LayoutPair(false, out double plainTotal, out double plainAfter);
+        _ = LayoutPair(true, out double borderedTotal, out double borderedAfter);
+        // sz=8 resolves to a 0.96pt visible width; the bordered table carries one 0.96
+        // collapsed advance plus one 0.96 terminus extension over the plain table.
+        TestAssert.True(Math.Abs((borderedTotal - plainTotal) - 1.92d) < 0.000001d, "Bordered table should exceed the plain table by advance plus terminus. Delta=" + (borderedTotal - plainTotal).ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs((plainAfter - borderedAfter) - 1.92d) < 0.000001d, "Following text should ride lower by advance plus terminus. Shift=" + (plainAfter - borderedAfter).ToString(CultureInfo.InvariantCulture));
+    }
 }
