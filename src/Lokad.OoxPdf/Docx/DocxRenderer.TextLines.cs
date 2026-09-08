@@ -271,6 +271,7 @@ internal sealed partial class DocxRenderer
         return page.StaticTextLines
             .Cast<DocxLayoutItem>()
             .Concat(page.StaticInlineImages)
+            .Concat(page.StaticInlineTextBoxes)
             .Concat(page.StaticTableRows)
             .OrderByDescending(item => item switch
             {
@@ -283,9 +284,22 @@ internal sealed partial class DocxRenderer
 
     private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page)
     {
+        return EnumerateStaticTextLines(page, includeTextBoxes: true);
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, bool includeTextBoxes)
+    {
         foreach (DocxTextLineLayout line in page.StaticTextLines)
         {
             yield return line;
+        }
+
+        if (includeTextBoxes)
+        {
+            foreach (DocxTextLineLayout boxLine in EnumerateStaticTextBoxLines(page))
+            {
+                yield return boxLine;
+            }
         }
 
         foreach (DocxTableRowLayout row in page.StaticTableRows)
@@ -293,6 +307,27 @@ internal sealed partial class DocxRenderer
             foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
             {
                 yield return cellLine;
+            }
+        }
+    }
+
+    // Box-only static walk for comment suppression: static text comments keep
+    // ballooning while static-box ones suppress by paragraph identity.
+    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextBoxLines(DocxLayoutPage page)
+    {
+        foreach (DocxInlineTextBoxLayout box in page.StaticInlineTextBoxes)
+        {
+            foreach (DocxTextLineLayout boxLine in box.TextLines)
+            {
+                yield return boxLine;
+            }
+
+            foreach (DocxTableRowLayout boxRow in box.TableRows)
+            {
+                foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
+                {
+                    yield return boxCellLine;
+                }
             }
         }
     }

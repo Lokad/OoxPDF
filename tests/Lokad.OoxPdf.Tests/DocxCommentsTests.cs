@@ -2224,4 +2224,122 @@ internal static class DocxCommentsTests
             placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
             "All-markup comment and revision balloon candidates should be anchored from cell text-box lines before same-anchor grouping.");
     }
+
+    public static void DocxWordCompatibleAllMarkupSkipsStaticInlineTextBoxCommentBalloons()
+    {
+        // Office A/B (w6-staticinline probe, Word-COM rendered): Word balloons
+        // body-anchored comments but never static-box ones, so a static-inline-box-only
+        // comment sustains no Word-compatible balloon and reserves no lane.
+        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Static box review anchor", "9");
+        var textBox = new DocxInlineTextBox("1371600", "457200")
+        {
+            BodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        DocxParagraph hostParagraph = DocxTests.CreateDocxLayoutParagraph("Header host", 10d, 12d) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(hostParagraph)]
+            }
+        };
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "9",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Static box comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] commentBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Comment")
+            .ToArray();
+
+        TestAssert.Equal(0, commentBalloons.Length);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
+
+    public static void DocxAllMarkupRendererPlacesStaticInlineTextBoxMarkupBalloons()
+    {
+        // Companion: revisions anchored in static-box content keep balloon candidates
+        // anchored from box lines (Office: the w6-staticinline probe balloons the box revision).
+        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Static box review anchor", "9") with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "9", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
+            ]
+        };
+        var textBox = new DocxInlineTextBox("1371600", "457200")
+        {
+            BodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        DocxParagraph hostParagraph = DocxTests.CreateDocxLayoutParagraph("Header host", 10d, 12d) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(hostParagraph)]
+            }
+        };
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "9",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Static box comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .InspectMarkupBalloons(document)
+            .ToArray();
+
+        TestAssert.True(
+            placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
+            "All-markup comment and revision balloon candidates should be anchored from static text-box lines before same-anchor grouping.");
+    }
 }

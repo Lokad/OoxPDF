@@ -69,7 +69,8 @@ internal sealed partial class DocxLayoutEngine
             {
                 StaticTextLines = headerLayout.TextLines.Concat(footerLayout.TextLines).ToArray(),
                 StaticInlineImages = headerLayout.InlineImages.Concat(footerLayout.InlineImages).ToArray(),
-                StaticTableRows = headerLayout.TableRows.Concat(footerLayout.TableRows).ToArray()
+                StaticTableRows = headerLayout.TableRows.Concat(footerLayout.TableRows).ToArray(),
+                StaticInlineTextBoxes = headerLayout.InlineTextBoxes.Concat(footerLayout.InlineTextBoxes).ToArray()
             };
         }
 
@@ -93,6 +94,7 @@ internal sealed partial class DocxLayoutEngine
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
         var tableRows = new List<DocxTableRowLayout>();
+        var boxes = new List<DocxInlineTextBoxLayout>();
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
@@ -235,12 +237,37 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
+            foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                DocxInlineTextBoxLayout? textBoxLayout = CreateInlineTextBoxLayout(
+                    textBox,
+                    sourceBlockIndex: null,
+                    x,
+                    width,
+                    cursorY,
+                    paragraph.EffectiveProperties.Alignment,
+                    textMeasurer,
+                    defaultTabStopPoints,
+                    paragraphSpacingScale,
+                    pageNumber,
+                    cancellationToken,
+                    sourceParagraphIndex: paragraphIndex);
+                if (textBoxLayout is null)
+                {
+                    continue;
+                }
+
+                boxes.Add(textBoxLayout with { StoryKind = isHeader ? "Header" : "Footer", StoryVariantType = story.VariantType });
+                cursorY -= textBoxLayout.BoxHeight + InlineImageParagraphGapPoints;
+            }
+
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
             paragraphIndex++;
         }
 
-        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray());
+        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray());
 
         DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs)
         {

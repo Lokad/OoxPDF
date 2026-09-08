@@ -817,4 +817,49 @@ internal static class DocxImagesTests
         DocxTextLineLayout firstCellLine = cellLayout.TextLines.First();
         TestAssert.True(Math.Abs((firstCellLine.BaselineY - box.BoxTop) - 12d) < 0.001d, "Cell box block should start exactly one line below the host text line (block-level, like pictures).");
     }
+
+    public static void DocxStaticHeaderInlineTextBoxLaysOutFileGeometryContent()
+    {
+        // Static stories lay out inline boxes like body flow (scaled extents and insets
+        // with the ambient measurer); at unit scale the file geometry passes through.
+        DocxParagraph textBoxParagraph = DocxTests.CreateDocxLayoutParagraph(new string('X', 18), 10d, 12d);
+        var textBox = new DocxInlineTextBox("1371600", "457200", "91440", "45720", "91440", "45720")
+        {
+            BodyElements = [new DocxParagraphElement(textBoxParagraph)]
+        };
+        DocxParagraph hostParagraph = DocxTests.CreateDocxLayoutParagraph("Header host", 10d, 12d) with
+        {
+            InlineTextBoxes = [textBox]
+        };
+        DocxPageSettings settings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [new DocxParagraphElement(hostParagraph)]
+            }
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            settings,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
+            [],
+            []);
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        DocxInlineTextBoxLayout box = layout.Pages[0].StaticInlineTextBoxes.Single();
+        TestAssert.True(Math.Abs(box.BoxWidth - 108d) < 0.001d, "Static box width should keep file geometry at unit scale. Width=" + box.BoxWidth.ToString(CultureInfo.InvariantCulture));
+        DocxTextLineLayout line = box.TextLines.Single();
+        TestAssert.True(Math.Abs(line.Width - 90d) < 0.001d, "Static box content should measure raw at unit scale. Width=" + line.Width.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(line.X - (box.BoxX + 7.2d)) < 0.001d, "Static box content should start at the file inset. X=" + line.X.ToString(CultureInfo.InvariantCulture));
+    }
 }

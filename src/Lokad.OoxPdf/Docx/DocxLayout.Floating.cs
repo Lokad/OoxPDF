@@ -717,5 +717,6 @@ internal sealed partial class DocxLayoutEngine
     private sealed record DocxStaticStoryLayoutResult(
         IReadOnlyList<DocxTextLineLayout> TextLines,
         IReadOnlyList<DocxInlineImageLayout> InlineImages,
-        IReadOnlyList<DocxTableRowLayout> TableRows);
+        IReadOnlyList<DocxTableRowLayout> TableRows,
+        IReadOnlyList<DocxInlineTextBoxLayout> InlineTextBoxes);
 }

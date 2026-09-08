@@ -736,7 +736,7 @@ internal sealed partial class DocxRenderer
             firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
         }
 
-        foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page))
+        foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page, includeTextBoxes: false))
         {
             firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
         }

@@ -264,6 +264,7 @@ internal sealed partial class DocxRenderer
             DocxTextLineLayout textLine => textLine.BaselineY,
             DocxInlineImageLayout image => image.Y + image.Height,
             DocxTableRowLayout row => row.Y + row.Height,
+            DocxInlineTextBoxLayout box => box.BoxTop,
             _ => 0d
         };
     }

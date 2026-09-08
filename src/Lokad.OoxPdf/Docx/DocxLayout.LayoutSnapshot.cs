@@ -379,6 +379,7 @@ internal sealed partial record DocxLayoutSnapshot(
         IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines
             .Select(ToStaticSnapshot)
             .Concat(page.StaticInlineImages.Select(ToStaticSnapshot))
+            .Concat(page.StaticInlineTextBoxes.Select(ToStaticSnapshot))
             .Concat(page.StaticTableRows.Select(ToStaticSnapshot))
             .ToArray();
         int?[] sourceBlockIndexes = items
@@ -535,6 +536,17 @@ internal sealed partial record DocxLayoutSnapshot(
             _ => "StaticInlineImage"
         };
         return ToSnapshot(image, []) with { Kind = kind };
+    }
+
+    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxInlineTextBoxLayout box)
+    {
+        string kind = box.StoryKind switch
+        {
+            "Header" => "StaticHeaderInlineTextBox",
+            "Footer" => "StaticFooterInlineTextBox",
+            _ => "StaticInlineTextBox"
+        };
+        return ToSnapshot(box, []) with { Kind = kind };
     }
 
     private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTableRowLayout row)

@@ -23,7 +23,10 @@ internal sealed record DocxLayoutPage(
     IReadOnlyList<DocxInlineImageLayout> StaticInlineImages,
     IReadOnlyList<DocxTableRowLayout> StaticTableRows,
     IReadOnlyList<DocxPlacedRelatedStoryLayout> PlacedRelatedStories,
-    IReadOnlyList<DocxLayoutItem> Items);
+    IReadOnlyList<DocxLayoutItem> Items)
+{
+    public IReadOnlyList<DocxInlineTextBoxLayout> StaticInlineTextBoxes { get; init; } = [];
+}
 
 // One positioned content item on a laid-out page, emitted in the order the
 // renderer draws it. Implementors (text line, inline image, table row fragment)
