@@ -549,6 +549,96 @@ internal static class DocxTextTests
         TestAssert.Equal(24d, Math.Round(lines[0].BaselineY - lines[2].BaselineY, 3));
     }
 
+    public static void DocxBodyBaselineSitsLowerWithoutSpacingElement()
+    {
+        // Office A/B (w18/w20/w21 untokened probes, Word-COM rendered): paragraphs with
+        // no w:spacing element place baselines 0.12 deeper with identical boxes
+        // (doc-start first baselines 709.54 versus 709.66 at top 72 and 637.54 versus
+        // 637.66 at top 144; mixed mid-doc edges plus 0.09 and minus 0.09 with page
+        // totals preserved; phantom-before refuted by the shrunken following gap).
+        static double LayoutBaseline(DocxParagraphSpacing spacing, double afterPoints)
+        {
+            var paragraph = new DocxParagraph(
+                [new DocxTextRun("Hello", 11d, null, false, false, false, null, null)],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                afterPoints,
+                278d / 240d,
+                null,
+                spacing,
+                DocxParagraphKeepRules.Empty,
+                null);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(paragraph)], []);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            return layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+        }
+
+        double bare = LayoutBaseline(DocxParagraphSpacing.Empty, 8d);
+        double tokened = LayoutBaseline(new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null), 0d);
+        TestAssert.True(Math.Abs((tokened - bare) - 0.12d) < 0.000001d, "Untokened baselines should sit 0.12 deeper with identical boxes. Shift=" + (tokened - bare).ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxReaderAppliesUntokenedBaselineShift()
+    {
+        // Office A/B (w18/w20/w21 untokened probes, Word-COM rendered): paragraphs with
+        // no w:spacing element place baselines 0.12 deeper with identical boxes, so a
+        // bare paragraph sits 0.12 below a spacing-token paragraph with the same
+        // resolved spacing while the following paragraph lands identically (totals
+        // preserved; phantom-before refuted by the shrunken following gap).
+        static DocxDocument ReadBarePair(bool middleBare)
+        {
+            string middle = middleBare ? "<w:p><w:pPr><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/><w:sz w:val=\"22\"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/><w:sz w:val=\"22\"/></w:rPr><w:t>B</w:t></w:r></w:p>" : "<w:p><w:pPr><w:spacing w:after=\"160\"/><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/><w:sz w:val=\"22\"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/><w:sz w:val=\"22\"/></w:rPr><w:t>B</w:t></w:r></w:p>";
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+                ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+                ["word/document.xml"] = $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t>A</w:t></w:r></w:p>
+                    {middle}
+                    <w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t>C</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+            });
+            using FileStream stream = File.OpenRead(input);
+            return new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        static double BaselineAt(DocxDocument document, string text)
+        {
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            return layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single(line => line.Text == text).BaselineY;
+        }
+
+        DocxDocument bare = ReadBarePair(true);
+        DocxDocument tokened = ReadBarePair(false);
+        TestAssert.True(Math.Abs(BaselineAt(bare, "A") - BaselineAt(tokened, "A")) < 0.000001d, "Leading tokened baselines should match across documents.");
+        TestAssert.True(Math.Abs((BaselineAt(tokened, "B") - BaselineAt(bare, "B")) - 0.12d) < 0.000001d, "Bare middle baseline should sit 0.12 deeper.");
+        TestAssert.True(Math.Abs(BaselineAt(bare, "C") - BaselineAt(tokened, "C")) < 0.000001d, "Following baselines should land identically (totals preserved).");
+    }
+
     public static void DocxReaderAppliesParagraphLineBasedSpacing()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

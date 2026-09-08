@@ -185,6 +185,16 @@ internal sealed partial class DocxLayoutEngine
     private const double MinimumMarkupBodyWidthPoints = 216d;
     private const double WordCompatibleAllMarkupParagraphSpacingScale = 0.842391d;
     private const double TableCellNoWrapLineWidthPoints = 1_000_000d;
+    private const double UntokenedParagraphBaselineExtraPoints = 0.12d;
+
+    private static bool HasNoSpacingElement(DocxEffectiveParagraphProperties effective)
+    {
+        return !DocxParagraphSpacing.HasBeforeSpacingSide(effective.Spacing) &&
+            !DocxParagraphSpacing.HasAfterSpacingSide(effective.Spacing) &&
+            effective.Spacing.LineValue is null &&
+            effective.Spacing.LineRuleValue is null &&
+            effective.LineSpacingPoints is null;
+    }
     private readonly bool reserveMarkupMargin;
     private readonly double paragraphSpacingScale;
     private readonly bool retuneReserveToPrintScale;
@@ -581,6 +591,22 @@ internal sealed partial class DocxLayoutEngine
                         _ => paragraphX
                     };
                     double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective));
+                    if (HasNoSpacingElement(effective) && Math.Abs(paragraphFontSize - 11d) < 0.000000001d)
+                    {
+                        // Office A/B (w18/w20/w21/w26/w29/w32 untokened probes, Word-COM
+                        // rendered): bare 11pt paragraphs (no w:spacing element, max
+                        // nominal size 11 including footnote marks) place baselines 0.12
+                        // deeper with identical boxes (doc-start first baselines minus
+                        // 0.12 at top 72 and 144; mixed mid-doc edges plus 0.09 and
+                        // minus 0.09 with page totals preserved; phantom-before refuted
+                        // by the shrunken following gap). Other sizes keep legacy
+                        // placement (10/12/14/20pt bare match the tokened model to
+                        // 0.06); w:line-only paragraphs keep legacy placement
+                        // (explicit-rule first-gap anomaly persists); serif residuals
+                        // (Times exact, Georgia minus 0.24) await the font-by-size
+                        // inset matrix program.
+                        baselineOffset += UntokenedParagraphBaselineExtraPoints;
+                    }
                     DocxParagraphLineShape lineShape = CreateParagraphLineShape(
                         paragraph,
                         line,
