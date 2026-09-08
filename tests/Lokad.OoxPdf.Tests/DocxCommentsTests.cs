@@ -1977,4 +1977,143 @@ internal static class DocxCommentsTests
             placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
             "All-markup comment and revision balloon candidates should be anchored from inline text-box lines before same-anchor grouping.");
     }
+
+    public static void DocxWordCompatibleAllMarkupSkipsPlacedFloatingTextBoxCommentBalloons()
+    {
+        // Uniformity extension of the probed floating-textbox policy (Word-COM rendered
+        // body-flow and static cases; Word rejects anchor-in-footnote files so no Office
+        // reference exists for placed stories): comments anchored in placed-story floating
+        // textboxes sustain no balloons and reserve no lane either.
+        DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Body anchor", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    DocxRelatedStoryKind.Footnote,
+                    "11",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 5)
+            ]
+        };
+        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Placed box review anchor", "9");
+        DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        var footnoteStory = new DocxRelatedStory(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            "11",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Footnote host text", 10d, 12d))],
+            [],
+            [], null)
+        {
+            FloatingDrawings = [floatingDrawing]
+        };
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "9",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Placed box comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [footnoteStory, commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] commentBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Comment")
+            .ToArray();
+
+        TestAssert.Equal(0, commentBalloons.Length);
+        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
+    }
+
+    public static void DocxAllMarkupRendererPlacesPlacedFloatingTextBoxMarkupBalloons()
+    {
+        // Companion: revisions anchored in placed-story floating textboxes keep balloon
+        // candidates anchored from box lines (uniform with body-flow floatings).
+        DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Body anchor", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    DocxRelatedStoryKind.Footnote,
+                    "11",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 5)
+            ]
+        };
+        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Placed box review anchor", "9") with
+        {
+            Revisions =
+            [
+                new DocxRevisionInfo(DocxRevisionKind.Insertion, "9", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
+            ]
+        };
+        DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
+        var footnoteStory = new DocxRelatedStory(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            "11",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Footnote host text", 10d, 12d))],
+            [],
+            [], null)
+        {
+            FloatingDrawings = [floatingDrawing]
+        };
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "9",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Placed box comment body", 10d, 12d))],
+            [],
+            [], null);
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(bodyParagraph)],
+            [],
+            [])
+        {
+            RelatedStories = [footnoteStory, commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .InspectMarkupBalloons(document)
+            .ToArray();
+
+        TestAssert.True(
+            placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
+            "All-markup comment and revision balloon candidates should be anchored from placed floating text-box lines before same-anchor grouping.");
+    }
 }

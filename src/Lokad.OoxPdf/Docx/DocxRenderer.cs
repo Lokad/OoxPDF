@@ -374,11 +374,12 @@ internal sealed partial class DocxRenderer
         return markupContext.RendersRevisionBalloons && HasNonVoidPropertyChangeRevision(document);
     }
 
-    // Office A/B (w6-tbxctl plus w6-staticfloat probes, Word-COM rendered): Word
-    // balloons body-anchored comments but never floating-textbox ones (body-flow or
-    // static), so a comment anchored only in floating drawings must not reserve the
-    // balloon lane. Placed floating textboxes keep the legacy trigger (unprobed).
-    // Anchors match parts by id,
+    // Office A/B (w6-tbxctl plus w6-staticfloat probes, Word-COM rendered, plus
+    // uniformity for placed stories): Word balloons body-anchored comments but never
+    // floating-textbox ones (body-flow, static, or placed - Word rejects
+    // anchor-in-footnote files so the placed case extends the probed policy by
+    // uniformity), so a comment anchored only in floating drawings must not reserve
+    // the balloon lane. Anchors match parts by id,
     // mirroring balloon matching, so orphan references reserve nothing either.
     private static bool HasBalloonableCommentAnchor(DocxDocument document)
     {
@@ -431,8 +432,7 @@ internal sealed partial class DocxRenderer
         foreach (DocxRelatedStory story in document.RelatedStories)
         {
             if (story.Paragraphs.Any(HasCommentReference) ||
-                story.Tables.Any(TableHasCommentReference) ||
-                story.FloatingDrawings.SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements)).Any(HasCommentReference))
+                story.Tables.Any(TableHasCommentReference))
             {
                 return true;
             }
