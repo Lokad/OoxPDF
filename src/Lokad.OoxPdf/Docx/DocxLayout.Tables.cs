@@ -188,7 +188,7 @@ internal sealed partial class DocxLayoutEngine
         int? pageCount,
         double paragraphSpacingScale)
     {
-        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale);
+        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount);
         var tableContext = new DocxTableLayoutContext(
             tableIndex,
             sourceBlockIndex,
@@ -229,7 +229,7 @@ internal sealed partial class DocxLayoutEngine
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
     }
 
-    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale)
+    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount)
     {
         // W6-a1: fixed table geometry joins scaled space (fixed lengths times the layout
         // scale) so the uniform shift-composition maps frames like body text. Percent and
@@ -348,6 +348,19 @@ internal sealed partial class DocxLayoutEngine
                 {
                     return preferredWidths.Select(width => width ?? 0d).ToArray();
                 }
+
+                IReadOnlyList<double>? autoContentColumns = TryResolveAutoLayoutContentColumns(
+                    table,
+                    preferredTableWidth,
+                    textMeasurer,
+                    defaultTabStopPoints,
+                    pageNumber,
+                    pageCount,
+                    fixedScale);
+                if (autoContentColumns is not null)
+                {
+                    return autoContentColumns;
+                }
             }
 
             if (!table.HasExplicitGrid)
@@ -363,6 +376,159 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
+    // Office A/B (comment-table autofit probes: baseline/long/short/words plus comment
+    // permutation renders, Word-COM rendered): tables without a fixed layout distribute
+    // width by column content instead of the grid, so skewed content yields skewed columns.
+    // Explicit per-column preferred widths, spans, and differentiated grids keep the
+    // legacy path; content measurement mirrors cell layout inputs (single source with
+    // LayoutTableCellTextLines for text, design extents for drawings).
+    private static IReadOnlyList<double>? TryResolveAutoLayoutContentColumns(
+        DocxTable table,
+        double targetTableWidth,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        int? pageNumber,
+        int? pageCount,
+        double fixedScale)
+    {
+        if (textMeasurer is null)
+        {
+            return null;
+        }
+
+        if (table.LayoutValue is not null &&
+            !string.Equals(table.LayoutValue, "autofit", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        foreach (DocxTableRow row in table.Rows)
+        {
+            foreach (DocxTableCell cell in row.Cells)
+            {
+                if (Math.Max(1, cell.GridSpan) != 1)
+                {
+                    return null;
+                }
+
+                if (HasPreferredCellWidth(cell))
+                {
+                    return null;
+                }
+            }
+        }
+
+        if (table.ColumnWidthsPoints.Count != 0)
+        {
+            double minGrid = table.ColumnWidthsPoints.Min();
+            double maxGrid = table.ColumnWidthsPoints.Max();
+            if (maxGrid - minGrid > 0.001d)
+            {
+                return null;
+            }
+        }
+
+        int columnCount = table.ColumnWidthsPoints.Count != 0
+            ? table.ColumnWidthsPoints.Count
+            : GetMaxGridColumnCount(table);
+        if (columnCount <= 0 || table.Rows.Count == 0)
+        {
+            return null;
+        }
+
+        double[] maxWidths = new double[columnCount];
+        double[] pads = new double[columnCount];
+        foreach (DocxTableRow row in table.Rows)
+        {
+            for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
+            {
+                DocxTableCell cell = row.Cells[cellIndex];
+                double cellMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale);
+                if (cellMax > maxWidths[cellIndex])
+                {
+                    maxWidths[cellIndex] = cellMax;
+                }
+
+                double cellPad = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, fixedScale) +
+                    ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, fixedScale) +
+                    ResolveTableCellBorderContentInset(cell, "left", fixedScale) +
+                    ResolveTableCellBorderContentInset(cell, "right", fixedScale);
+                if (cellPad > pads[cellIndex])
+                {
+                    pads[cellIndex] = cellPad;
+                }
+            }
+        }
+
+        double totalMax = maxWidths.Sum();
+        double totalPad = pads.Sum();
+        double contentTarget = targetTableWidth - totalPad;
+        if (totalMax <= 0d || contentTarget <= 0d)
+        {
+            return null;
+        }
+
+        return maxWidths
+            .Select((maxWidth, index) => pads[index] + contentTarget * maxWidth / totalMax)
+            .ToArray();
+    }
+
+    private static bool HasPreferredCellWidth(DocxTableCell cell)
+    {
+        if (cell.PreferredWidthPoints is > 0d)
+        {
+            return true;
+        }
+
+        return cell.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+            int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent) &&
+            fiftiethsPercent > 0;
+    }
+
+    private static double MeasureTableCellMaxContentWidth(
+        DocxTableCell cell,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints,
+        int? pageNumber,
+        int? pageCount,
+        double fixedScale)
+    {
+        double maxWidth = 0d;
+        foreach (DocxBodyElement bodyElement in GetTableCellLayoutBodyElements(cell))
+        {
+            if (bodyElement is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+            IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
+            if (textSpans.Count != 0)
+            {
+                double fontSize = GetParagraphFontSize(paragraph);
+                maxWidth = Math.Max(maxWidth, MeasureTextSpansForLayout(
+                    textSpans,
+                    fontSize,
+                    textMeasurer,
+                    ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale),
+                    defaultTabStopPoints * fixedScale,
+                    pageNumber));
+            }
+
+            foreach (DocxInlineImage image in paragraph.Images)
+            {
+                maxWidth = Math.Max(maxWidth, Math.Max(0d, image.WidthPoints) * fixedScale);
+            }
+
+            foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
+            {
+                double boxWidth = ReadEmuPoints(textBox.ExtentCxValue) ?? 0d;
+                maxWidth = Math.Max(maxWidth, Math.Max(0d, boxWidth) * fixedScale);
+            }
+        }
+
+        return maxWidth;
+    }
     private static int GetMaxGridColumnCount(DocxTable table)
     {
         return table.Rows

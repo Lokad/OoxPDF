@@ -256,7 +256,7 @@ internal sealed partial class DocxLayoutEngine
                 return 0d;
             }
 
-            DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth, paragraphSpacingScale);
+            DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, null);
             double[] cellWidths = GetTableRowCellWidths(row, grid.EffectiveColumns, grid.Scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
             double contentHeight = row.Cells

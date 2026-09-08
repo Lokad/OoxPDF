@@ -425,6 +425,84 @@ internal static class DocxTablesLayoutTests
         TestAssert.Equal(90d, row.Cells[1].Width);
     }
 
+    public static void DocxTableLayoutStageDistributesAutoLayoutByContentWidth()
+    {
+        // Office A/B (comment-table autofit probes, Word-COM rendered): tables without a
+        // fixed layout distribute width by column content instead of the grid, so skewed
+        // content yields skewed columns.
+        var table = new DocxTable(
+            null,
+            [100d, 100d],
+            [new DocxTableRow([
+                new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty),
+                new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AAAAAAAA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], null)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.True(Math.Abs(row.Cells[0].Width - 36d) < 1d, "Auto-layout columns should share width by content. Width0=" + row.Cells[0].Width.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(row.Cells[1].Width - 144d) < 1d, "Auto-layout columns should share width by content. Width1=" + row.Cells[1].Width.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxTableLayoutStageKeepsFixedLayoutGridWidths()
+    {
+        // Companion guard: explicit fixed layout keeps grid widths regardless of content.
+        var table = new DocxTable(
+            "fixed",
+            [100d, 100d],
+            [new DocxTableRow([
+                new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty),
+                new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AAAAAAAA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], null)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.True(Math.Abs(row.Cells[0].Width - 90d) < 1d, "Fixed-layout columns should keep grid widths. Width0=" + row.Cells[0].Width.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(row.Cells[1].Width - 90d) < 1d, "Fixed-layout columns should keep grid widths. Width1=" + row.Cells[1].Width.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxTableLayoutStageKeepsAutoPreferredCellWidths()
+    {
+        // Companion guard: explicit preferred cell widths win over measured content.
+        DocxTableCell wideCell = new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty) with
+        {
+            PreferredWidthPoints = 150d
+        };
+        DocxTableCell narrowCell = new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AAAAAAAA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty) with
+        {
+            PreferredWidthPoints = 30d
+        };
+        var table = new DocxTable(
+            null,
+            [100d, 100d],
+            [new DocxTableRow([
+                wideCell,
+                narrowCell
+            ], null)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTableRowLayout>()
+            .Single();
+
+        TestAssert.True(row.Cells[0].Width > row.Cells[1].Width, "Preferred cell widths should survive auto layout. Width0=" + row.Cells[0].Width.ToString(CultureInfo.InvariantCulture) + " Width1=" + row.Cells[1].Width.ToString(CultureInfo.InvariantCulture));
+    }
+
     public static void DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns()
     {
         var table = new DocxTable(
