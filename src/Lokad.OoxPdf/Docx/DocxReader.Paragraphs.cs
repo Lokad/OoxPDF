@@ -272,7 +272,8 @@ internal sealed partial class DocxReader
                     {
                         SourceRunIndex = fieldSourceRunIndex,
                         Revision = revision,
-                        Revisions = RevisionList(revision)
+                        Revisions = RevisionList(revision),
+                        FieldKind = kind
                     });
                     AddFieldReference(
                         kind,
@@ -290,7 +291,7 @@ internal sealed partial class DocxReader
                     return;
                 }
 
-                AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex, revision);
+                AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex, revision, kind);
                 images.AddRange(ReadInlineImages(firstRun, package, relationships, revision));
                 AddFieldReference(
                     kind,
@@ -327,7 +328,7 @@ internal sealed partial class DocxReader
                 runs: runs);
         }
 
-        void AddFieldPlaceholderRun(XElement run, string text, int sourceRunIndex, DocxRevisionInfo? revision)
+        void AddFieldPlaceholderRun(XElement run, string text, int sourceRunIndex, DocxRevisionInfo? revision, DocxFieldKind? placeholderKind = null)
         {
             XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
             string? characterStyleId = ReadCharacterStyleId(run);
@@ -345,15 +346,7 @@ internal sealed partial class DocxReader
                 tableCellStyle?.Run);
             IReadOnlyList<DocxRevisionInfo> runRevisions = ReadPropertyChangeRevisions(runProperties);
             AddRevisions(paragraphRevisions, runRevisions);
-            AddResolvedTextRuns(
-                runs,
-                resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text,
-                ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode),
-                runStyleResolution,
-                sourceRunIndex,
-                sourceTextOffsetInRun: 0,
-                revision,
-                MergeRevisionLists(revision, runRevisions));
+            AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
         }
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen, DocxRevisionInfo? revision)
@@ -365,6 +358,7 @@ internal sealed partial class DocxReader
                 .Select(instruction => (string?)instruction)
                 .FirstOrDefault(value => value is not null);
             string? placeholder = ResolveFieldPlaceholder(fieldInstruction);
+            DocxFieldKind? placeholderKind = placeholder is null ? null : ResolveFieldKind(fieldInstruction);
             int fieldTextRunIndex = runs.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
             XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
@@ -424,7 +418,7 @@ internal sealed partial class DocxReader
             }
             else if (text.Length != 0)
             {
-                AddParagraphDisplayText(text, currentSourceRunIndex, sourceTextOffset: 0, resolvedRun, runStyleResolution, revision, effectiveRevisions);
+                AddParagraphDisplayText(text, currentSourceRunIndex, sourceTextOffset: 0, resolvedRun, runStyleResolution, revision, effectiveRevisions, placeholderKind);
                 AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false, revision, effectiveRevisions);
             }
             else
@@ -456,14 +450,7 @@ internal sealed partial class DocxReader
             inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
         }
 
-        void AddParagraphDisplayText(
-            string text,
-            int currentSourceRunIndex,
-            int sourceTextOffset,
-            DocxResolvedRunProperties resolvedRun,
-            DocxRunStyleResolution runStyleResolution,
-            DocxRevisionInfo? revision,
-            IReadOnlyList<DocxRevisionInfo> effectiveRevisions)
+        void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions, DocxFieldKind? fieldKind = null)
         {
             if (text.Length == 0)
             {
@@ -484,7 +471,7 @@ internal sealed partial class DocxReader
             }
 
             int runsBefore = runs.Count;
-            AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffset, revision, effectiveRevisions);
+            AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffset, revision, effectiveRevisions, fieldKind);
             int addedRuns = runs.Count - runsBefore;
             foreach (DocxComplexFieldState field in resultFields)
             {
@@ -658,7 +645,8 @@ internal sealed partial class DocxReader
                         currentSourceRunIndex,
                         sourceTextOffsetInRun: 0,
                         revision,
-                        revisions);
+                        revisions,
+                        ResolveFieldKind(instructionText));
                     currentPageInstructionSeen = true;
                 }
 
@@ -697,7 +685,8 @@ internal sealed partial class DocxReader
                     currentSourceRunIndex,
                     sourceTextOffsetInRun: 0,
                     revision,
-                    revisions);
+                    revisions,
+                    ResolveFieldKind(field.Instruction.ToString()));
                 field.ResultRunCount += runs.Count - runsBefore;
                 field.PlaceholderEmitted = true;
                 currentPageInstructionSeen = true;
@@ -1206,15 +1195,7 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static void AddResolvedTextRuns(
-        List<DocxTextRun> runs,
-        string text,
-        DocxResolvedRunProperties resolvedRun,
-        DocxRunStyleResolution styleResolution,
-        int sourceRunIndex,
-        int sourceTextOffsetInRun,
-        DocxRevisionInfo? revision,
-        IReadOnlyList<DocxRevisionInfo>? revisions)
+    private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
         var segment = new StringBuilder();
         bool? currentComplexScript = null;
@@ -1225,7 +1206,7 @@ internal sealed partial class DocxReader
             if (currentComplexScript is not null && currentComplexScript.Value != complexScript)
             {
                 string segmentText = segment.ToString();
-                AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions);
+                AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions, fieldKind);
                 segmentSourceOffset += segmentText.Length;
                 segment.Clear();
             }
@@ -1236,20 +1217,11 @@ internal sealed partial class DocxReader
 
         if (segment.Length != 0 && currentComplexScript is not null)
         {
-            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions);
+            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions, fieldKind);
         }
     }
 
-    private static void AddResolvedTextRun(
-        List<DocxTextRun> runs,
-        string text,
-        DocxResolvedRunProperties resolvedRun,
-        DocxRunStyleResolution styleResolution,
-        bool complexScript,
-        int sourceRunIndex,
-        int sourceTextOffsetInRun,
-        DocxRevisionInfo? revision,
-        IReadOnlyList<DocxRevisionInfo>? revisions)
+    private static void AddResolvedTextRun(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, bool complexScript, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
         bool bold = complexScript
             ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
@@ -1290,6 +1262,7 @@ internal sealed partial class DocxReader
             resolvedRun.UnderlineColorHex)
         {
             Fonts = resolvedRun.Fonts,
+            FieldKind = fieldKind,
             ScriptBaseFontSize = isScriptShiftedRun && resolvedRun.FontSize is null ? DocxDefaults.FontSizePoints : null,
             StyleResolution = styleResolution,
             SourceRunIndex = sourceRunIndex,

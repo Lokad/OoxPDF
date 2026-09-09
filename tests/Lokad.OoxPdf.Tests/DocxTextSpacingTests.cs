@@ -17,7 +17,7 @@ internal static class DocxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var paragraph = new DocxParagraph(
@@ -245,7 +245,7 @@ internal static class DocxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -326,7 +326,7 @@ internal static class DocxTextSpacingTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         var first = new DocxParagraph(
@@ -419,7 +419,7 @@ internal static class DocxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, null, true);
@@ -515,7 +515,7 @@ internal static class DocxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, null, true);
@@ -675,7 +675,7 @@ internal static class DocxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         DocxParagraph widowOff = DocxTests.CreateDocxLayoutParagraph(

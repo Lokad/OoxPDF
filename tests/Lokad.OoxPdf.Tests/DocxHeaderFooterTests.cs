@@ -17,7 +17,7 @@ internal static class DocxHeaderFooterTests
         DocxParagraph header = new(
             [
                 new DocxTextRun("H", 10d, "FF0000", false, false, false, null, "Narrow"),
-                new DocxTextRun("{PAGE}", 14d, "0000FF", false, false, false, null, "Narrow")
+                new DocxTextRun("{PAGE}", 14d, "0000FF", false, false, false, null, "Narrow") { FieldKind = DocxFieldKind.Page }
             ],
             [],
             null,
@@ -120,7 +120,7 @@ internal static class DocxHeaderFooterTests
         DocxParagraph header = new(
             [
                 new DocxTextRun("H", 10d, "000000", false, false, false, null, "Narrow"),
-                new DocxTextRun("{PAGE}", 10d, "000000", false, false, false, null, "Narrow")
+                new DocxTextRun("{PAGE}", 10d, "000000", false, false, false, null, "Narrow") { FieldKind = DocxFieldKind.Page }
             ],
             [],
             null,
@@ -618,7 +618,7 @@ internal static class DocxHeaderFooterTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -682,7 +682,7 @@ internal static class DocxHeaderFooterTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -866,7 +866,7 @@ internal static class DocxHeaderFooterTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -936,7 +936,7 @@ internal static class DocxHeaderFooterTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -1033,7 +1033,7 @@ internal static class DocxHeaderFooterTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

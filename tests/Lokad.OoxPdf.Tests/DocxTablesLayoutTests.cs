@@ -700,7 +700,7 @@ internal static class DocxTablesLayoutTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var firstParagraph = new DocxParagraph(
@@ -798,7 +798,7 @@ internal static class DocxTablesLayoutTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         DocxParagraph nestedParagraph = DocxTests.CreateDocxLayoutParagraph("Nested", 10d, 10d);
@@ -835,7 +835,7 @@ internal static class DocxTablesLayoutTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
@@ -1258,7 +1258,7 @@ internal static class DocxTablesLayoutTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var paragraph = new DocxParagraph(
@@ -1298,7 +1298,7 @@ internal static class DocxTablesLayoutTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var paragraph = new DocxParagraph(
@@ -1338,7 +1338,7 @@ internal static class DocxTablesLayoutTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var paragraph = new DocxParagraph(
@@ -1597,7 +1597,7 @@ internal static class DocxTablesLayoutTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var paragraph = new DocxParagraph(
@@ -1639,7 +1639,7 @@ internal static class DocxTablesLayoutTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var paragraph = new DocxParagraph(

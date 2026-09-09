@@ -332,6 +332,10 @@ internal sealed record DocxTextRun(
     }
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
 
+    // Typed field identity for PAGE/NUMPAGES placeholders. Null for ordinary text, including
+    // literal {PAGE}/{NUMPAGES} content, so downstream substitution touches only actual fields.
+    public DocxFieldKind? FieldKind { get; init; }
+
     // Office A/B (w56 superscript plus w57b subscript size curves, Word-COM rendered):
     // style-less unsized super/subscript runs scale glyphs from the 11pt document
     // default, not the 12pt body fallback, while paragraph layout keeps the resolved

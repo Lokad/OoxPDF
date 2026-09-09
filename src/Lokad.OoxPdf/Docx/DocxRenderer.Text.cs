@@ -239,7 +239,7 @@ internal sealed partial class DocxRenderer
                     emissionStyleRun,
                     useWordCompatibleTextProfile,
                     ReadColor(emissionEffective.ColorHex));
-                string emittedText = ResolveStaticFieldPlaceholders(part.Text, pageNumber, pageCount);
+                string emittedText = ResolveStaticFieldPlaceholders(emissionStyleRun, part.Text, pageNumber, pageCount);
                 double emittedWidth = ResolveSubstitutedFieldEmissionWidth(part.Text, emittedText, emissionStyleRun, fontSize, fontResources.TextMeasurer, part.Width);
                 AddEmissionSegmentWithFontFallback(emissionSegments, new DocxTextEmissionSegment(
                     emittedText,

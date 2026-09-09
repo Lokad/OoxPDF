@@ -395,7 +395,7 @@ internal static class DocxPageTests
     public static void DocxLayoutRightAlignsBodyNumPagesUsingCompactFieldWidth()
     {
         var paragraph = new DocxParagraph(
-            [new DocxTextRun("A {NUMPAGES} B", 10d, null, false, false, false, null, null)],
+            [new DocxTextRun("A {NUMPAGES} B", 10d, null, false, false, false, null, null) { FieldKind = DocxFieldKind.NumPages }],
             [],
             null,
             DocxTextAlignment.Right,
@@ -437,7 +437,7 @@ internal static class DocxPageTests
     public static void DocxLayoutRightAlignsFloatingTextBoxNumPagesUsingCompactFieldWidth()
     {
         var textBoxParagraph = new DocxParagraph(
-            [new DocxTextRun("A {NUMPAGES} B", 10d, null, false, false, false, null, null)],
+            [new DocxTextRun("A {NUMPAGES} B", 10d, null, false, false, false, null, null) { FieldKind = DocxFieldKind.NumPages }],
             [],
             null,
             DocxTextAlignment.Right,
@@ -479,16 +479,16 @@ internal static class DocxPageTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;
         var textBoxParagraph = new DocxParagraph(
             [
                 new DocxTextRun("Box ", 10d, null, false, false, false, null, familyName),
-                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName) { FieldKind = DocxFieldKind.Page },
                 new DocxTextRun(" of ", 10d, null, false, false, false, null, familyName),
-                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName)
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName) { FieldKind = DocxFieldKind.NumPages }
             ],
             [],
             null,
@@ -573,14 +573,14 @@ internal static class DocxPageTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;
         var paragraph = new DocxParagraph(
             [
                 new DocxTextRun("A", 10d, null, false, false, false, null, familyName),
-                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName) { FieldKind = DocxFieldKind.NumPages },
                 new DocxTextRun("B", 10d, null, false, false, false, null, familyName)
             ],
             [],
@@ -633,7 +633,7 @@ internal static class DocxPageTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;
@@ -654,9 +654,9 @@ internal static class DocxPageTests
         var footnoteParagraph = new DocxParagraph(
             [
                 new DocxTextRun("Note ", 10d, null, false, false, false, null, familyName),
-                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName) { FieldKind = DocxFieldKind.Page },
                 new DocxTextRun(" of ", 10d, null, false, false, false, null, familyName),
-                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName)
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName) { FieldKind = DocxFieldKind.NumPages }
             ],
             [],
             null,
@@ -723,7 +723,7 @@ internal static class DocxPageTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;
@@ -744,9 +744,9 @@ internal static class DocxPageTests
         var endnoteParagraph = new DocxParagraph(
             [
                 new DocxTextRun("Note ", 10d, null, false, false, false, null, familyName),
-                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName),
+                new DocxTextRun("{PAGE}", 10d, null, false, false, false, null, familyName) { FieldKind = DocxFieldKind.Page },
                 new DocxTextRun(" of ", 10d, null, false, false, false, null, familyName),
-                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName)
+                new DocxTextRun("{NUMPAGES}", 10d, null, false, false, false, null, familyName) { FieldKind = DocxFieldKind.NumPages }
             ],
             [],
             null,
@@ -813,7 +813,7 @@ internal static class DocxPageTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var body = new StringBuilder();
@@ -866,7 +866,7 @@ internal static class DocxPageTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -1606,7 +1606,7 @@ internal static class DocxPageTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         DocxParagraph kept = DocxTests.CreateDocxLayoutParagraph(
@@ -1651,7 +1651,7 @@ internal static class DocxPageTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         DocxParagraph keepNext = DocxTests.CreateDocxLayoutParagraph(
@@ -1744,7 +1744,7 @@ internal static class DocxPageTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         DocxParagraph keepFirst = DocxTests.CreateDocxLayoutParagraph(
@@ -1804,7 +1804,7 @@ internal static class DocxPageTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         DocxParagraph widowControlled = DocxTests.CreateDocxLayoutParagraph(
@@ -1854,7 +1854,7 @@ internal static class DocxPageTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         DocxParagraph widowControlled = DocxTests.CreateDocxLayoutParagraph("One\nTwo\nThree", fontSize: 10d, lineSpacingPoints: 10d);

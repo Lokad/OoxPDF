@@ -2050,8 +2050,9 @@ internal static class DocxTests
         DocxParagraphKeepRules? keepRules = null,
         DocxParagraphIndent? indent = null)
     {
+        DocxFieldKind? fieldKind = text.Contains("{PAGE}", StringComparison.Ordinal) ? DocxFieldKind.Page : text.Contains("{NUMPAGES}", StringComparison.Ordinal) ? DocxFieldKind.NumPages : null;
         return new DocxParagraph(
-            [new DocxTextRun(text, fontSize, null, false, false, false, null, null)],
+            [new DocxTextRun(text, fontSize, null, false, false, false, null, null) { FieldKind = fieldKind }],
             [],
             null,
             DocxTextAlignment.Left,

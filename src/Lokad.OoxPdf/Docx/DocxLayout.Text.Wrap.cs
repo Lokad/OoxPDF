@@ -344,14 +344,14 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber)
     {
         if (pageNumber is null ||
-            !spans.Any(span => span.Text.Contains("{NUMPAGES}", StringComparison.Ordinal)))
+            !spans.Any(span => span.StyleRun.FieldKind == DocxFieldKind.NumPages))
         {
             return spans;
         }
 
         string proxy = pageNumber.Value.ToString(CultureInfo.InvariantCulture);
         return spans
-            .Select(span => span.Text.Contains("{NUMPAGES}", StringComparison.Ordinal)
+            .Select(span => span.StyleRun.FieldKind == DocxFieldKind.NumPages
                 ? span with { Text = span.Text.Replace("{NUMPAGES}", proxy, StringComparison.Ordinal) }
                 : span)
             .ToArray();

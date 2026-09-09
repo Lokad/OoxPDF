@@ -887,7 +887,7 @@ internal static class DocxCoreTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         var run = new DocxTextRun("Metric probe", 10d, null, false, false, false, null, font.Value.Resolution.FamilyName)

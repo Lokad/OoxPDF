@@ -472,7 +472,7 @@ internal static class DocxRevisionsTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;
@@ -515,7 +515,7 @@ internal static class DocxRevisionsTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;
@@ -716,7 +716,7 @@ internal static class DocxRevisionsTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         var insertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "8", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
@@ -838,7 +838,7 @@ internal static class DocxRevisionsTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;
@@ -1020,7 +1020,7 @@ internal static class DocxRevisionsTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string familyName = font.Value.Resolution.FamilyName;

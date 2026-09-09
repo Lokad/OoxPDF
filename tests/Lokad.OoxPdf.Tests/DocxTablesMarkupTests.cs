@@ -198,7 +198,7 @@ internal static class DocxTablesMarkupTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         var paragraph = new DocxParagraph(
@@ -419,7 +419,7 @@ internal static class DocxTablesMarkupTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", 10d, 12d);

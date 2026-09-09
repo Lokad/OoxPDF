@@ -1186,13 +1186,13 @@ internal static class DocxInspectionTests
         FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
         if (symbolResolution.IsFallback)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (symbolResolution.IsFallback)");
         }
 
         OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
         if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)");
         }
 
         string body = """
@@ -1229,7 +1229,7 @@ internal static class DocxInspectionTests
         OpenTypeFont? primaryFont = resolved.Resolution is FontFaceResolution primaryResolution ? FontProgramLoader.Load(primaryResolution, CancellationToken.None) : null;
         if (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) != 0)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) != 0)");
         }
 
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -1246,13 +1246,13 @@ internal static class DocxInspectionTests
         FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
         if (symbolResolution.IsFallback)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (symbolResolution.IsFallback)");
         }
 
         OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
         if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)");
         }
 
         string numbering = """
@@ -1311,7 +1311,7 @@ internal static class DocxInspectionTests
         OpenTypeFont? labelPrimary = label.Resolution is FontFaceResolution labelResolution ? FontProgramLoader.Load(labelResolution, CancellationToken.None) : null;
         if (labelPrimary is null || labelPrimary.MapCodePoint(0xF0B7) != 0)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (labelPrimary is null || labelPrimary.MapCodePoint(0xF0B7) != 0)");
         }
 
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -1330,13 +1330,13 @@ internal static class DocxInspectionTests
         FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
         if (symbolResolution.IsFallback)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (symbolResolution.IsFallback)");
         }
 
         OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
         if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)");
         }
 
         string body = """
@@ -1374,7 +1374,7 @@ internal static class DocxInspectionTests
         OpenTypeFont? primaryFont = resolved.Resolution is FontFaceResolution primaryResolution ? FontProgramLoader.Load(primaryResolution, CancellationToken.None) : null;
         if (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) == 0 || primaryFont.MapCodePoint(97) != 0)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) == 0 || primaryFont.MapCodePoint(97) != 0)");
         }
 
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

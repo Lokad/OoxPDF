@@ -629,11 +629,19 @@ internal sealed partial class DocxRenderer
             : thickness;
     }
 
-    private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)
+    private static string ResolveStaticFieldPlaceholders(DocxTextRun styleRun, string text, int pageNumber, int pageCount)
     {
-        return text
-            .Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
-            .Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        if (styleRun.FieldKind == DocxFieldKind.Page)
+        {
+            text = text.Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        }
+
+        if (styleRun.FieldKind == DocxFieldKind.NumPages)
+        {
+            text = text.Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        }
+
+        return text;
     }
 
     private static double ResolveSubstitutedFieldEmissionWidth(
@@ -646,8 +654,7 @@ internal sealed partial class DocxRenderer
     {
         if (string.Equals(sourceText, emittedText, StringComparison.Ordinal) ||
             textMeasurer is null ||
-            (!sourceText.Contains("{PAGE}", StringComparison.Ordinal) &&
-            !sourceText.Contains("{NUMPAGES}", StringComparison.Ordinal)))
+            styleRun.FieldKind is not DocxFieldKind.Page and not DocxFieldKind.NumPages)
         {
             return fallbackWidth;
         }

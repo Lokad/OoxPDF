@@ -28,20 +28,24 @@ internal sealed partial class DocxLayoutEngine
         return runs
             .Select((run, index) => (run, index))
             .Where(item => item.run.Text.Length != 0 && !item.run.EffectiveProperties.Hidden)
-            .Select(item => CreateTextSpan(ResolveLayoutFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
+            .Select(item => CreateTextSpan(ResolveLayoutFieldPlaceholders(item.run, pageNumber, pageCount), item.run, item.index))
             .ToArray();
     }
 
-    private static string ResolveLayoutFieldPlaceholders(string text, int? pageNumber, int? pageCount)
+    private static string ResolveLayoutFieldPlaceholders(DocxTextRun run, int? pageNumber, int? pageCount)
     {
-        if (pageNumber is not null)
+        string text = run.Text;
+        if (run.FieldKind == DocxFieldKind.Page && pageNumber is not null)
         {
             text = text.Replace("{PAGE}", pageNumber.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
         }
 
-        return pageCount is null
-            ? text
-            : text.Replace("{NUMPAGES}", pageCount.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        if (run.FieldKind == DocxFieldKind.NumPages && pageCount is not null)
+        {
+            text = text.Replace("{NUMPAGES}", pageCount.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        }
+
+        return text;
     }
 
     private static DocxTextSpan CreateTextSpan(string text, DocxTextRun run, int fallbackSourceRunIndex)

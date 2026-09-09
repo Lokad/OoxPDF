@@ -398,7 +398,7 @@ internal sealed partial class DocxLayoutEngine
             return runs
                 .Select((run, index) => (run, index))
                 .Where(item => !item.run.EffectiveProperties.Hidden)
-                .Select(item => CreateTextSpan(ResolveStaticFieldPlaceholders(item.run.Text, pageNumber, pageCount), item.run, item.index))
+                .Select(item => CreateTextSpan(ResolveStaticFieldPlaceholders(item.run, pageNumber, pageCount), item.run, item.index))
                 .Where(span => span.Text.Length != 0)
                 .ToArray();
         }
@@ -529,10 +529,19 @@ internal sealed partial class DocxLayoutEngine
         return MeasureStaticTextSpans(NormalizeHiddenBreakSpans(spans, preserveTerminalSoftHyphen: false), textMeasurer);
     }
 
-    private static string ResolveStaticFieldPlaceholders(string text, int pageNumber, int pageCount)
+    private static string ResolveStaticFieldPlaceholders(DocxTextRun run, int pageNumber, int pageCount)
     {
-        return text
-            .Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
-            .Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        string text = run.Text;
+        if (run.FieldKind == DocxFieldKind.Page)
+        {
+            text = text.Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        }
+
+        if (run.FieldKind == DocxFieldKind.NumPages)
+        {
+            text = text.Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        }
+
+        return text;
     }
 }

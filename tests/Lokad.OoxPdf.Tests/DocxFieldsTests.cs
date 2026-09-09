@@ -1001,6 +1001,50 @@ internal static class DocxFieldsTests
         TestAssert.Equal(7, bookmark.TextOffset);
         TestAssert.Equal("OuterTarget", paragraph.Hyperlinks.Single().Anchor ?? string.Empty);
     }
+    public static void DocxLiteralFieldLikeTextSurvivesWhileActualFieldsResolve()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Literal {PAGE} and {NUMPAGES}</w:t></w:r></w:p>
+                    <w:p><w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+        });
+
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        TestAssert.Equal(2, document.Paragraphs.Count);
+        DocxParagraph literal = document.Paragraphs[0];
+        TestAssert.True(literal.Runs.All(run => run.FieldKind is null), "Ordinary text containing braces must not be typed as a field.");
+        TestAssert.True(literal.FieldReferences.Count == 0, "Literal braces must not produce field references.");
+        DocxParagraph field = document.Paragraphs[1];
+        TestAssert.True(field.Runs.Any(run => run.FieldKind == DocxFieldKind.Page && run.Text == "{PAGE}"), "Actual PAGE fields must retain typed identity.");
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxTextLineLayout[] lines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+        TestAssert.True(lines.Any(line => line.Text.Contains("Literal {PAGE} and {NUMPAGES}", StringComparison.Ordinal)), "Literal field-like text must survive layout, got: " + string.Join("|", lines.Select(line => line.Text)));
+        TestAssert.True(lines.All(line => !line.Text.Equals("Literal 1 and 1", StringComparison.Ordinal)), "Literals must not be substituted as fields.");
+        TestAssert.True(lines.Any(line => line.Text == "1"), "Actual PAGE field must resolve to the page number.");
+    }
     public static void DocxReaderSizesRunlessFieldPlaceholderThroughStyleCascade()
     {
         // Office A/B 2026-09-07 (probe-fieldsize): styles-less empty PAGE fields compute at 12pt.
