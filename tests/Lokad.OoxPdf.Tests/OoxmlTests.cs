@@ -690,6 +690,95 @@ internal static class OoxmlTests
         TestAssert.True(headerWarnings[0].PartName?.Contains("header1.xml", StringComparison.Ordinal) is true, "Header warning must name the offending part.");
     }
 
+    public static void MustUnderstandUnknownNamespaceWarnsForStylesPart()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Hello</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
+                  <wpc:canvas mc:MustUnderstand="1"/>
+                </w:styles>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        OoxPdfDiagnostic[] styleWarnings = diagnostics.Where(d => d.Id == "OOXML_MUST_UNDERSTAND").ToArray();
+        TestAssert.Equal(1, styleWarnings.Length);
+        TestAssert.True(styleWarnings[0].PartName?.Contains("styles.xml", StringComparison.Ordinal) is true, "Styles warning must name the offending part once.");
+    }
+
+    public static void MustUnderstandUnknownNamespaceWarnsForNumberingPart()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>Hello</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/numbering.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
+                  <wpc:canvas mc:MustUnderstand="1"/>
+                </w:numbering>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        OoxPdfDiagnostic[] numberingWarnings = diagnostics.Where(d => d.Id == "OOXML_MUST_UNDERSTAND").ToArray();
+        TestAssert.Equal(1, numberingWarnings.Length);
+        TestAssert.True(numberingWarnings[0].PartName?.Contains("numbering.xml", StringComparison.Ordinal) is true, "Numbering warning must name the offending part once.");
+    }
 
     public static void AlternateContentFallbackOnlyPayloadSurvives()
     {

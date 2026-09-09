@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName, CancellationToken cancellationToken)
+    private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? styleRelationship = package.GetRelationships(documentPartName, cancellationToken)
@@ -25,6 +25,7 @@ internal sealed partial class DocxReader
 
         using Stream stream = stylesPart.OpenRead();
         XDocument stylesXml = SafeXml.Load(stream, cancellationToken);
+        OoxMarkupCompatibility.WarnMustUnderstandOnce(stylesXml, stylesPart.Name, diagnosticSink, warnedParts);
         DocxResolvedRunProperties runDefaults = ReadRunProperties(stylesXml
             .Root?
             .Element(WordprocessingNamespace + "docDefaults")

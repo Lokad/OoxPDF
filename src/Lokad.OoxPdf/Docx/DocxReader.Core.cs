@@ -43,22 +43,22 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _, cancellationToken);
+        var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
+        XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
         DocxDocumentSettings documentSettings = ReadDocumentSettings(settings);
         OoxPdfDocxMarkupMode revisionFilteringMarkupMode = ResolveRevisionFilteringMarkupMode(markupMode, documentSettings);
         DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
         DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
-        var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
-        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, diagnosticSink, cancellationToken);
+        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, diagnosticSink, warnedMustUnderstandParts, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr").LastOrDefault();
         XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
         XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
 
-        DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name, cancellationToken);
-        DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken);
-        DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken);
+        DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
+        DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
+        DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
         cancellationToken.ThrowIfCancellationRequested();
         DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
             ? null
@@ -595,7 +595,7 @@ internal sealed partial class DocxReader
         return (width, height);
     }
 
-    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName, CancellationToken cancellationToken)
+    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
@@ -606,7 +606,9 @@ internal sealed partial class DocxReader
         }
 
         using Stream stream = part.OpenRead();
-        return SafeXml.Load(stream, cancellationToken);
+        XDocument related = SafeXml.Load(stream, cancellationToken);
+        OoxMarkupCompatibility.WarnMustUnderstandOnce(related, part.Name, diagnosticSink, warnedParts);
+        return related;
     }
 
     // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
@@ -626,10 +628,10 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: entry-point stage, not a local candidate.
-    private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken)
+    private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
     {
-        XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, FontTableContentType, out _, cancellationToken);
-        XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, ThemeContentType, out _, cancellationToken);
+        XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, FontTableContentType, out _, cancellationToken, diagnosticSink, warnedParts);
+        XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, ThemeContentType, out _, cancellationToken, diagnosticSink, warnedParts);
         return new DocxFontCatalog(ReadFontTableEntries(fontTable), ReadThemeFonts(theme));
     }
 

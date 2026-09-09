@@ -18,6 +18,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<string> warnedParts,
         CancellationToken cancellationToken)
     {
         if (diagnosticSink is null)
@@ -226,7 +227,7 @@ internal sealed partial class DocxReader
             Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "continuous or unknown paragraph section break", diagnosticPartName: "", fallback: "Partially supported", approximated: false);
         }
 
-        XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, StylesContentType, out string? stylesPartName, cancellationToken);
+        XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, StylesContentType, out string? stylesPartName, cancellationToken, diagnosticSink, warnedParts);
         if (styles is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -260,7 +261,7 @@ internal sealed partial class DocxReader
             Emit("DOCX_TABLE_TEXT_DIRECTION", "table cell text direction", partName, "Approximated", approximated: true);
         }
 
-        XDocument? numbering = LoadRelatedXmlPart(package, partName, NumberingRelationshipType, NumberingContentType, out string? numberingPartName, cancellationToken);
+        XDocument? numbering = LoadRelatedXmlPart(package, partName, NumberingRelationshipType, NumberingContentType, out string? numberingPartName, cancellationToken, diagnosticSink, warnedParts);
         if (numbering is not null &&
             numbering.Descendants(WordprocessingNamespace + "lvl")
                 .Any(HasUnsupportedNumberingIndent))

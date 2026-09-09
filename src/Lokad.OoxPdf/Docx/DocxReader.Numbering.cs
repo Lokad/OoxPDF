@@ -164,7 +164,7 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: entry-point stage, not a local candidate.
-    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken)
+    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? numberingRelationship = package.GetRelationships(documentPartName, cancellationToken)
@@ -179,6 +179,7 @@ internal sealed partial class DocxReader
 
         using Stream stream = numberingPart.OpenRead();
         XDocument numberingXml = SafeXml.Load(stream, cancellationToken);
+        OoxMarkupCompatibility.WarnMustUnderstandOnce(numberingXml, numberingPart.Name, diagnosticSink, warnedParts);
         var levels = new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>();
         foreach (XElement abstractNum in numberingXml.Root?.Elements(WordprocessingNamespace + "abstractNum") ?? [])
         {
