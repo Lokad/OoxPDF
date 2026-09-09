@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-dashed-connector.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "connector", "dash"],
+  "tags": ["pptx", "ladder", "shapes", "connector", "dash", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0,
+    "minForegroundRecall": 1,
     "maxChangedPixelRatioAtThreshold16": 0
   },
   "allowedUnsupportedFeatures": []
