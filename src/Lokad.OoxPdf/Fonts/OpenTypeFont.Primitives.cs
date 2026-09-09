@@ -1,7 +1,4 @@
 using System.Buffers.Binary;
-using System.Collections.Concurrent;
-using System.Globalization;
-using System.Text;
 
 namespace Lokad.OoxPdf.Fonts;
 
