@@ -584,6 +584,177 @@ static bool LooksTextual(byte[] bytes)
     return printable >= bytes.Length * 0.85;
 }
 
+
+
+internal static class PdfContentSyntax
+{
+    // Nested literal strings with backslash escapes, shared by every content
+    // tokenizer pattern so parenthesized text never splits a token.
+    internal const string NestedLiteralStringBody = @"(?:\\.|[^()\\]|(?<StringDepth>\()|(?<-StringDepth>\)))*(?(StringDepth)(?!))";
+
+    // Removes %-comments (to end of line) and BI...ID...EI inline-image blocks
+    // so their bytes never tokenize as operators. Strings and hex strings
+    // shield their contents, including nested parentheses and escapes.
+    // Newlines survive so line-oriented extraction keeps working. A BI opener
+    // without a later ID...EI shape is left alone rather than swallowing content.
+    internal static string RemoveCommentsAndInlineImages(string stream)
+    {
+        var builder = new StringBuilder(stream.Length);
+        int index = 0;
+        while (index < stream.Length)
+        {
+            char value = stream[index];
+            if (value == '%')
+            {
+                while (index < stream.Length && stream[index] != '\r' && stream[index] != '\n')
+                {
+                    index++;
+                }
+
+                continue;
+            }
+
+            if (value == '(')
+            {
+                index = AppendBalancedString(stream, index, builder);
+                continue;
+            }
+
+            if (value == '<')
+            {
+                if (index + 1 < stream.Length && stream[index + 1] == '<')
+                {
+                    builder.Append("<<");
+                    index += 2;
+                    continue;
+                }
+
+                int end = stream.IndexOf('>', index + 1);
+                if (end < 0)
+                {
+                    builder.Append(stream, index, stream.Length - index);
+                    return builder.ToString();
+                }
+
+                builder.Append(stream, index, end - index + 1);
+                index = end + 1;
+                continue;
+            }
+
+            if (value == 'B' && TrySkipInlineImage(stream, index, out int afterImage))
+            {
+                index = afterImage;
+                continue;
+            }
+
+            builder.Append(value);
+            index++;
+        }
+
+        return builder.ToString();
+    }
+
+    private static int AppendBalancedString(string stream, int index, StringBuilder builder)
+    {
+        int depth = 0;
+        while (index < stream.Length)
+        {
+            char value = stream[index];
+            builder.Append(value);
+            index++;
+            if (value == '\\' && index < stream.Length)
+            {
+                builder.Append(stream[index]);
+                index++;
+            }
+            else if (value == '(')
+            {
+                depth++;
+            }
+            else if (value == ')')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        return index;
+    }
+
+    // Skips one BI...ID...EI inline-image block starting at index, which must
+    // point at the B. The dictionary between BI and ID must name a key (a
+    // forward slash), and the data ends at the first whitespace-EI-boundary.
+    // Returns false without consuming anything when the shape is absent, so
+    // stray BI words tokenize exactly as before.
+    private static bool TrySkipInlineImage(string stream, int index, out int after)
+    {
+        after = index;
+        if (index + 2 >= stream.Length || stream[index] != 'B' || stream[index + 1] != 'I')
+        {
+            return false;
+        }
+
+        if (!char.IsWhiteSpace(stream[index + 2]))
+        {
+            return false;
+        }
+
+        if (index > 0 && !char.IsWhiteSpace(stream[index - 1]) && !"()<>[]{}/%".Contains(stream[index - 1]))
+        {
+            return false;
+        }
+
+        int id = index + 2;
+        while (true)
+        {
+            id = stream.IndexOf("ID", id, StringComparison.Ordinal);
+            if (id < 0)
+            {
+                return false;
+            }
+
+            bool idBefore = id == 0 || char.IsWhiteSpace(stream[id - 1]) || "()<>[]{}/%".Contains(stream[id - 1]);
+            bool idAfter = id + 2 < stream.Length && char.IsWhiteSpace(stream[id + 2]);
+            bool hasKey = stream.IndexOf("/", index + 2, id - (index + 2), StringComparison.Ordinal) >= 0;
+            if (idBefore && idAfter && hasKey)
+            {
+                break;
+            }
+
+            id += 1;
+        }
+
+        int data = id + 2;
+        while (data < stream.Length && char.IsWhiteSpace(stream[data]))
+        {
+            data++;
+        }
+
+        int end = data;
+        while (true)
+        {
+            int ei = stream.IndexOf("EI", end, StringComparison.Ordinal);
+            if (ei < 0)
+            {
+                return false;
+            }
+
+            bool eiBefore = ei > 0 && char.IsWhiteSpace(stream[ei - 1]);
+            bool eiAfter = ei + 2 >= stream.Length || char.IsWhiteSpace(stream[ei + 2]);
+            if (eiBefore && eiAfter)
+            {
+                after = ei + 2;
+                return true;
+            }
+
+            end = ei + 1;
+        }
+    }
+}
+
 internal sealed record PdfObject(int Number, int Generation, string Body, string Dictionary, PdfStream? Stream)
 {
     private static readonly Regex ObjectRegex = new(
@@ -821,11 +992,11 @@ internal sealed record PdfTextOperation(
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex ShowRegex = new(
-        @"(?<payload>\[(?:[^\[\]]|\([^)]*\)|<[^>]*>)*\]|\([^)]*\)|<[^>]*>)\s*(?<operator>TJ|Tj)",
+        @"(?<payload>\[(?:[^\[\]]|\(" + PdfContentSyntax.NestedLiteralStringBody + @"\)|<[^>]*>)*\]|\(" + PdfContentSyntax.NestedLiteralStringBody + @"\)|<[^>]*>)\s*(?<operator>TJ|Tj)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex PayloadTokenRegex = new(
-        @"\((?:\\.|[^\\)])*\)|<[^>]*>|-?(?:\d+\.?\d*|\.\d+)",
+        @"(?:\(" + PdfContentSyntax.NestedLiteralStringBody + @"\)|<[^>]*>|-?(?:\d+\.?\d*|\.\d+))",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static IReadOnlyList<PdfTextOperation> Extract(
@@ -836,6 +1007,7 @@ internal sealed record PdfTextOperation(
         IReadOnlyDictionary<(int PageNumber, string FontName), IReadOnlyDictionary<int, string>> fontUnicodeMaps,
         IReadOnlyDictionary<(int PageNumber, string FontName), PdfFontWidthMap> fontWidthMaps)
     {
+        stream = PdfContentSyntax.RemoveCommentsAndInlineImages(stream);
         var operations = new List<PdfTextOperation>();
         string font = string.Empty;
         double fontSize = 0d;
@@ -1101,7 +1273,7 @@ internal sealed record PdfTextOperation(
     private static IReadOnlyList<int> ReadPayloadTextCodes(string payload, IReadOnlyDictionary<int, string>? unicodeMap)
     {
         var codes = new List<int>();
-        foreach (Match match in Regex.Matches(payload, @"\((?<literal>(?:\\.|[^\\)])*)\)|<(?<hex>[0-9A-Fa-f\s]+)>", RegexOptions.CultureInvariant))
+        foreach (Match match in Regex.Matches(payload,         @"\((?<literal>" + PdfContentSyntax.NestedLiteralStringBody + @")\)|<(?<hex>[0-9A-Fa-f\s]+)>", RegexOptions.CultureInvariant))
         {
             if (match.Groups["literal"].Success)
             {
@@ -1142,7 +1314,7 @@ internal sealed record PdfTextOperation(
     private static string DecodePayload(string payload, IReadOnlyDictionary<int, string>? unicodeMap)
     {
         var builder = new StringBuilder();
-        foreach (Match match in Regex.Matches(payload, @"\((?<literal>(?:\\.|[^\\)])*)\)|<(?<hex>[0-9A-Fa-f\s]+)>", RegexOptions.CultureInvariant))
+        foreach (Match match in Regex.Matches(payload,         @"\((?<literal>" + PdfContentSyntax.NestedLiteralStringBody + @")\)|<(?<hex>[0-9A-Fa-f\s]+)>", RegexOptions.CultureInvariant))
         {
             if (match.Groups["literal"].Success)
             {
@@ -1317,6 +1489,7 @@ internal sealed record PdfGraphicsOperation(
 
     public static IReadOnlyList<PdfGraphicsOperation> Extract(int? pageNumber, int objectNumber, int generation, string stream)
     {
+        stream = PdfContentSyntax.RemoveCommentsAndInlineImages(stream);
         var operations = new List<PdfGraphicsOperation>();
         var operands = new List<string>();
         var graphicsStack = new Stack<GraphicsState>();
