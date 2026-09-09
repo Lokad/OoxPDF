@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-custom-geometry-default-fill.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shape", "custom-geometry", "fill"],
+  "tags": ["pptx", "ladder", "shape", "custom-geometry", "fill", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.05,
+    "minForegroundRecall": 0.98,
     "maxChangedPixelRatioAtThreshold16": 0.001
   },
   "allowedUnsupportedFeatures": []
