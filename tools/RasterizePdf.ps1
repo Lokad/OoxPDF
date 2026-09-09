@@ -18,6 +18,16 @@ if (-not (Test-Path -LiteralPath $pdfium)) {
     throw "Missing PDFium DLL: $pdfium. Retrieve https://github.com/bblanchon/pdfium-binaries/releases/latest/download/pdfium-win-x64.tgz and unpack it under tools/vendor/pdfium/win-x64."
 }
 
+$pinFile = Join-Path $PSScriptRoot "vendor/pdfium/win-x64/pdfium.sha256"
+$pinnedHash = @((Get-Content -LiteralPath $pinFile) | Where-Object { $_ -match "^[0-9a-fA-F]{64}" } | ForEach-Object { ($_.Substring(0, 64).ToLowerInvariant()) })
+if ($pinnedHash.Count -ne 1) {
+    throw "PDFium pin file is missing or ambiguous."
+}
+$actualHash = (Get-FileHash -LiteralPath $pdfium -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actualHash -ne $pinnedHash[0]) {
+    throw "PDFium binary does not match the pinned hash."
+}
+
 $inputFull = (Resolve-Path -LiteralPath $InputPdf).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path

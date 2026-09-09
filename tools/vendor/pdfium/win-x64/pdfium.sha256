@@ -1,0 +1,6 @@
+# Pinned SHA256 of the vendored PDFium rasterizer binary (T08).
+# RasterizePdf.ps1 refuses to run against any other build: re-fetching from
+# releases/latest silently changes raster output, so a mismatch fails loudly
+# instead. To upgrade, replace bin/pdfium.dll from a versioned (never latest)
+# release matching VERSION, and update the hash below in the same commit.
+a487e1d2a18f164adc3a17aacee158787fa86049e6d91d3712b0a43f745e6905 *bin/pdfium.dll
