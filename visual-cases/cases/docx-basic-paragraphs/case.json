@@ -3,11 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-basic-paragraphs.docx",
   "dpi": 144,
-  "tags": ["docx", "paragraphs", "smoke"],
+  "tags": ["docx", "paragraphs", "smoke", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "maxMeanAbsoluteError": 0.15,
+    "maxChangedPixelRatioAtThreshold16": 0.0022,
+    "minForegroundRecall": 0.92
   },
   "allowedUnsupportedFeatures": []
 }

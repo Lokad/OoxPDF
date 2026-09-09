@@ -3,11 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-tables.docx",
   "dpi": 144,
-  "tags": ["docx", "tables", "smoke"],
+  "tags": ["docx", "tables", "smoke", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "maxMeanAbsoluteError": 0.38,
+    "maxChangedPixelRatioAtThreshold16": 0.0032,
+    "minForegroundRecall": 0.98
   },
   "allowedUnsupportedFeatures": []
 }
