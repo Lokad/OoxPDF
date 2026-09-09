@@ -1351,4 +1351,99 @@ internal static class FontTests
             File.Delete(path);
         }
     }
+
+    public static void DiscoveryHeadersMatchFullLoadOnSyntheticFonts()
+    {
+        CheckDiscoveryHeaders(TestFontBuilder.CreateTestFont(), 0);
+        CheckDiscoveryHeaders(TestFontBuilder.CreateCffKindFont(), 0);
+        byte[] collection = TestFontBuilder.CreateCollection("TestFontA", "TestFontB");
+        CheckDiscoveryHeaders(collection, 0);
+        CheckDiscoveryHeaders(collection, 1);
+        TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.ReadDiscoveryHeaders(new byte[20], 0));
+    }
+
+    public static void DiscoveryHeadersMatchFullLoadAcrossWindowsFonts()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!Directory.Exists(fontsDirectory))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!Directory.Exists(fontsDirectory))");
+        }
+
+        int checkedFaces = 0;
+        string[] paths = Directory.EnumerateFiles(fontsDirectory)
+            .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase)
+                || p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase)
+                || p.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        foreach (string path in paths)
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            int faceCount;
+            try
+            {
+                faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
+            }
+            catch (InvalidDataException)
+            {
+                continue;
+            }
+
+            // Cap mirrors the collection header limit; real files stay far below it.
+            for (int faceIndex = 0; faceIndex < faceCount && faceIndex < 256; faceIndex++)
+            {
+                CheckDiscoveryOutcome(bytes, faceIndex, path);
+                checkedFaces++;
+            }
+        }
+
+        TestAssert.True(checkedFaces > 0, "Expected to check at least one font face.");
+    }
+
+    private static void CheckDiscoveryHeaders(byte[] bytes, int fontIndex)
+    {
+        OpenTypeFont font = OpenTypeFont.Load(bytes, fontIndex);
+        OpenTypeFont.FontDiscoveryHeaders headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, fontIndex);
+        TestAssert.Equal(font.FamilyName, headers.FamilyName);
+        TestAssert.Equal(font.Os2.WeightClass, headers.WeightClass);
+        TestAssert.True(Math.Abs(font.Post.ItalicAngle - headers.ItalicAngle) < 1e-9, "Italic angle must match.");
+        TestAssert.Equal(font.TableTags.Contains("MATH"), headers.HasMathTable);
+    }
+
+    private static void CheckDiscoveryOutcome(byte[] bytes, int fontIndex, string path)
+    {
+        OpenTypeFont? full = null;
+        bool fullFailed = false;
+        try
+        {
+            full = OpenTypeFont.Load(bytes, fontIndex);
+        }
+        catch (InvalidDataException)
+        {
+            fullFailed = true;
+        }
+
+        OpenTypeFont.FontDiscoveryHeaders? light = null;
+        bool lightFailed = false;
+        try
+        {
+            light = OpenTypeFont.ReadDiscoveryHeaders(bytes, fontIndex);
+        }
+        catch (InvalidDataException)
+        {
+            lightFailed = true;
+        }
+
+        TestAssert.Equal(fullFailed, lightFailed);
+        if (fullFailed || full is null || light is null)
+        {
+            return;
+        }
+
+        TestAssert.Equal(full.FamilyName, light.Value.FamilyName);
+        TestAssert.Equal(full.Os2.WeightClass, light.Value.WeightClass);
+        TestAssert.True(Math.Abs(full.Post.ItalicAngle - light.Value.ItalicAngle) < 1e-9, "Italic angle must match.");
+        TestAssert.Equal(full.TableTags.Contains("MATH"), light.Value.HasMathTable);
+    }
 }

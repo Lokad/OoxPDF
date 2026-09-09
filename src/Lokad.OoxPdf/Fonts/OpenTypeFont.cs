@@ -121,6 +121,71 @@ internal sealed partial class OpenTypeFont
         }
     }
 
+    // Discovery headers (G04): everything font discovery needs without kern-pair
+    // expansion, the dominant parse transient on big faces. Same validation and header
+    // reads as Load, so malformed files are accepted/rejected identically; kern-only
+    // defects surface at first full load through the existing fallback instead.
+    internal readonly record struct FontDiscoveryHeaders(
+        string FamilyName,
+        ushort WeightClass,
+        double ItalicAngle,
+        bool HasMathTable);
+
+    internal static FontDiscoveryHeaders ReadDiscoveryHeaders(byte[] bytes, int fontIndex)
+    {
+        if (bytes.Length < 12)
+        {
+            throw new InvalidDataException("Font file is too small.");
+        }
+
+        if (Encoding.ASCII.GetString(bytes, 0, 4) == "ttcf")
+        {
+            bytes = ExtractCollectionFont(bytes, fontIndex);
+        }
+        else if (fontIndex != 0)
+        {
+            throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
+        }
+
+        ReadScalerTag(bytes);
+        try
+        {
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, U16(bytes, 4), "font");
+        RequireMinimumLength(tables, "head", 54);
+        RequireMinimumLength(tables, "hhea", 36);
+        RequireMinimumLength(tables, "maxp", 6);
+        RequireMinimumLength(tables, "name", 6);
+        RequireMinimumLength(tables, "OS/2", 78);
+        RequireMinimumLength(tables, "post", 16);
+        RequireMinimumLength(tables, "cmap", 4);
+        RequireHmtxLength(bytes, tables);
+
+        ushort unitsPerEm = ReadUnitsPerEm(bytes, tables);
+        if (unitsPerEm == 0)
+        {
+            throw new InvalidDataException("Font has zero units-per-em.");
+        }
+        string familyName = ReadFamilyName(bytes, tables);
+        Os2Metrics os2 = ReadOs2(bytes, tables);
+        PostMetrics post = ReadPost(bytes, tables);
+        // Parsed and discarded: keeps malformed-file rejection identical to Load
+        // without retaining anything beyond the discovery headers.
+        ReadBounds(bytes, tables);
+        ReadGlyphCount(bytes, tables);
+        ReadCmap(bytes, tables);
+        ReadAdvances(bytes, tables);
+        return new FontDiscoveryHeaders(familyName, os2.WeightClass, post.ItalicAngle, tables.ContainsKey("MATH"));
+        }
+        catch (InvalidDataException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
+        {
+            throw new InvalidDataException("Font file is malformed: " + ex.Message, ex);
+        }
+    }
+
     private static byte[] ExtractCollectionFont(byte[] bytes, int fontIndex)
         {
             if (bytes.Length < 16)

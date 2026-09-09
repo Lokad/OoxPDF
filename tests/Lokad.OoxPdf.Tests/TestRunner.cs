@@ -10,7 +10,8 @@ internal static class TestRunner
         nameof(CliTests.CliStrictReturnsThreeWhenWarningsAreEmitted),
         nameof(PptxModelTests.PptxSceneBuilderBuildsResolvedNodeLists),
         nameof(PptxTypographyTests.PptxSyntheticRotatedTextBoxProducesTransform),
-        nameof(PptxTypographyTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs)
+        nameof(PptxTypographyTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs),
+        nameof(FontTests.DiscoveryHeadersMatchFullLoadAcrossWindowsFonts)
     };
 
     public static int Run(params Action[] tests)

@@ -59,22 +59,22 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                             int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
                             for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
                             {
-                                OpenTypeFont font = OpenTypeFont.Load(bytes, faceIndex);
-                                if (!string.IsNullOrWhiteSpace(font.FamilyName))
+                                OpenTypeFont.FontDiscoveryHeaders headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex);
+                                if (!string.IsNullOrWhiteSpace(headers.FamilyName))
                                 {
                                     fonts.Add(new FontFaceResolution(
-                                        font.FamilyName,
-                                        font.FamilyName,
+                                        headers.FamilyName,
+                                        headers.FamilyName,
                                         new FontStyleKey(
-                                            Bold: font.Os2.WeightClass >= 600,
-                                            Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
-                                            WeightClass: font.Os2.WeightClass,
+                                            Bold: headers.WeightClass >= 600,
+                                            Italic: Math.Abs(headers.ItalicAngle) > 0.01d,
+                                            WeightClass: headers.WeightClass,
                                             FaceIndex: faceIndex,
-                                            HasMathTable: font.TableTags.Contains("MATH")),
+                                            HasMathTable: headers.HasMathTable),
                                         source,
                                         IsFallback: false));
                                 }
-                            }
+                        }
                         }
                         catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
                         {
