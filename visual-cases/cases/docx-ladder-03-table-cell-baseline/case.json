@@ -3,10 +3,11 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-cell-baseline.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "baseline", "cell-padding"],
+  "tags": ["docx", "ladder", "table", "baseline", "cell-padding", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "minForegroundRecall": 0.97
   }
 }
