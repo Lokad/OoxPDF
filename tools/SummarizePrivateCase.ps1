@@ -11,13 +11,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $privateRoot = Join-Path $repoRoot "private-cases"
 $artifactRoot = Join-Path $repoRoot "artifacts/private-visual"
 
-function Test-UnderDirectory([string] $Path, [string] $Directory) {
-    $fullPath = [System.IO.Path]::GetFullPath($Path).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    $fullDirectory = [System.IO.Path]::GetFullPath($Directory).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    return $fullPath.Equals($fullDirectory, [System.StringComparison]::OrdinalIgnoreCase) -or
-        $fullPath.StartsWith($fullDirectory + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase) -or
-        $fullPath.StartsWith($fullDirectory + [System.IO.Path]::AltDirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
-}
+. (Join-Path $PSScriptRoot "PrivateGuard.ps1")
 
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 if (-not (Test-UnderDirectory $caseFull $privateRoot)) {

@@ -11,29 +11,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $privateRoot = Join-Path $repoRoot "private-cases"
 $artifactRoot = Join-Path $repoRoot "artifacts/private-visual"
 
-function Test-UnderDirectory([string] $Path, [string] $Directory) {
-    $fullPath = [System.IO.Path]::GetFullPath($Path).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    $fullDirectory = [System.IO.Path]::GetFullPath($Directory).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    return $fullPath.Equals($fullDirectory, [System.StringComparison]::OrdinalIgnoreCase) -or
-        $fullPath.StartsWith($fullDirectory + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase) -or
-        $fullPath.StartsWith($fullDirectory + [System.IO.Path]::AltDirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
-}
-
-function Test-GitTracked([string] $Path) {
-    $relative = [System.IO.Path]::GetRelativePath($repoRoot, $Path)
-    git -C $repoRoot ls-files --error-unmatch -- $relative *> $null
-    return $LASTEXITCODE -eq 0
-}
-
-function Assert-PrivateUntracked([string] $Path, [string] $Label) {
-    if (-not (Test-UnderDirectory $Path $privateRoot)) {
-        throw "$Label must be under $privateRoot."
-    }
-
-    if (Test-GitTracked $Path) {
-        throw "$Label is tracked by git and must not be used as a private case: $Path"
-    }
-}
+. (Join-Path $PSScriptRoot "PrivateGuard.ps1")
 
 function Read-ZipXml([System.IO.Compression.ZipArchive] $Zip, [string] $PartName) {
     $entryName = $PartName.TrimStart("/")
