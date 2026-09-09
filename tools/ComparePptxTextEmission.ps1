@@ -28,18 +28,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Read-JsonArray($path) {
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return ,@()
-    }
-
-    if ($items -is [array]) {
-        return ,$items
-    }
-
-    return ,@($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Delta([double] $left, [double] $right) {
     return [Math]::Round($right - $left, 6)

@@ -14,18 +14,7 @@ $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-function Read-JsonArray([string] $Path) {
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return ,@()
-    }
-
-    if ($items -is [array]) {
-        return ,$items
-    }
-
-    return ,@($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Read-ZipXml([System.IO.Compression.ZipArchive] $Zip, [string] $PartName) {
     $entry = $Zip.GetEntry($PartName.TrimStart("/"))

@@ -9,18 +9,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Read-JsonArray([string] $Path) {
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return ,@()
-    }
-
-    if ($items -is [array]) {
-        return ,$items
-    }
-
-    return ,@($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Rounded($Value, [int] $Digits) {
     if ($null -eq $Value -or [string]$Value -eq "") {
