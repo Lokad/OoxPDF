@@ -118,7 +118,7 @@ internal static class PdfWriterTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
 
@@ -328,7 +328,7 @@ internal static class PdfWriterTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
 
@@ -353,7 +353,7 @@ internal static class PdfWriterTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c), CancellationToken.None);
         var firstPage = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", first)]);
@@ -374,7 +374,7 @@ internal static class PdfWriterTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
 
@@ -392,7 +392,7 @@ internal static class PdfWriterTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         int[] codePoints = Enumerable.Range(0x20, 300).ToArray();
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, codePoints, CancellationToken.None);
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);

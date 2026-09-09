@@ -34,7 +34,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), " Alpha Beta".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), " Alpha Beta".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, embedded, CancellationToken.None)
@@ -451,7 +451,7 @@ internal static class DocxTextSpacingTests
             [new DocxParagraphElement(first), new DocxParagraphElement(second)],
             [first, second],
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "FirstSecond".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, embedded, CancellationToken.None)
@@ -551,7 +551,7 @@ internal static class DocxTextSpacingTests
             [new DocxParagraphElement(first), new DocxParagraphElement(second)],
             [first, second],
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FirstSecond".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "FirstSecond".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, embedded, CancellationToken.None)
@@ -707,7 +707,7 @@ internal static class DocxTextSpacingTests
             body,
             body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
             []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
 

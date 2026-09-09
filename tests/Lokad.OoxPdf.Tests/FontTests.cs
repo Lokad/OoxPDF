@@ -43,7 +43,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
 
         TestAssert.Equal("Arial", font.FamilyName);
         TestAssert.True(font.UnitsPerEm > 0, "Expected a positive units-per-em value.");
@@ -103,7 +103,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort glyph = font.MapCodePoint('A');
         if (glyph == 0)
         {
@@ -128,7 +128,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort glyph = font.MapCodePoint('O');
         if (glyph == 0)
         {
@@ -150,7 +150,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort glyph = font.MapCodePoint('é');
         if (glyph == 0)
         {
@@ -176,7 +176,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
 
         TestAssert.True(!font.TryReadGlyphOutline(ushort.MaxValue, out _), "Expected out-of-range glyph outline reads to fail.");
     }
@@ -190,7 +190,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort glyph = font.MapCodePoint('A');
         if (glyph == 0)
         {
@@ -216,7 +216,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort glyph = font.MapCodePoint('O');
         if (glyph == 0)
         {
@@ -240,7 +240,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort glyph = font.MapCodePoint('é');
         if (glyph == 0 || !font.TryReadGlyphOutline(glyph, out var outline) || !outline.IsCompound)
         {
@@ -264,7 +264,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         if (!font.TableTags.Contains("GPOS"))
         {
             TestAssert.Skip("Environmental precondition not met: (!font.TableTags.Contains(\"GPOS\"))");
@@ -284,7 +284,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(cambria);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(cambria));
         AssertNoKerning(font, 'D', 'é');
     }
 
@@ -297,7 +297,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(cambria);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(cambria));
         TestAssert.True(
             HasAnyKerning(font, "Lokad en quelques mots") ||
             HasAnyKerning(font, "Dépendance à l'offre") ||
@@ -315,7 +315,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(calibri))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(calibri);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(calibri));
         AssertNoKerning(font, (char)34, (char)44);
         AssertHasKerning(font, (char)84, (char)111);
     }
@@ -329,7 +329,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(symbol))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(symbol);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(symbol));
         ushort glyph = font.MapCodePoint(0xF0B7);
 
         TestAssert.True(glyph > 0, "Expected a glyph mapping for the common Symbol bullet code point.");
@@ -344,8 +344,8 @@ internal static class FontTests
         {
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(calibri) || !File.Exists(symbol))");
         }
-        OpenTypeFont primary = OpenTypeFont.Load(calibri);
-        OpenTypeFont fallback = OpenTypeFont.Load(symbol);
+        OpenTypeFont primary = OpenTypeFont.Load(File.ReadAllBytes(calibri));
+        OpenTypeFont fallback = OpenTypeFont.Load(File.ReadAllBytes(symbol));
         IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage("a" + (char)0xF0B7 + "b", [primary, fallback], CancellationToken.None);
         TestAssert.Equal(3, spans.Count);
         TestAssert.Equal(new FontCoverageSpan(0, 0, 1), spans[0]);
@@ -360,7 +360,7 @@ internal static class FontTests
         {
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(calibri))");
         }
-        OpenTypeFont primary = OpenTypeFont.Load(calibri);
+        OpenTypeFont primary = OpenTypeFont.Load(File.ReadAllBytes(calibri));
         string text = "a" + char.ConvertFromUtf32(0x1F600) + "b";
         IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage(text, [primary], CancellationToken.None);
         TestAssert.Equal(3, spans.Count);
@@ -734,7 +734,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
 
         TestAssert.True(embedded.UsesSubsetFontProgram, "Expected PDF font embedding to use a subset font program.");
@@ -759,7 +759,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort originalGlyph = font.MapCodePoint('é');
         if (originalGlyph == 0 ||
             !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) ||
@@ -787,7 +787,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambriaCollection))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(cambriaCollection);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(cambriaCollection));
 
         TestAssert.True(font.FamilyName.Length > 0, "Expected a family name from the first TTC face.");
         TestAssert.True(font.GlyphCount > 0, "Expected glyphs from the first TTC face.");
@@ -980,7 +980,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c), CancellationToken.None);
 
@@ -996,7 +996,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
 
@@ -1014,7 +1014,7 @@ internal static class FontTests
         {
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(calibri))");
         }
-        OpenTypeFont font = OpenTypeFont.Load(calibri);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(calibri));
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, new[] { 65, 32, 160, 66 }, CancellationToken.None);
         string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
         TestAssert.Contains("<0020>", cmap);
@@ -1051,7 +1051,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont repeat = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
@@ -1084,7 +1084,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, [], CancellationToken.None);
 
         TestAssert.True(!embedded.UsesSubsetFontProgram, "Expected empty codepoint set to fall back to whole-font embedding.");
@@ -1101,7 +1101,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         CheckCMapBatching(font, new[] { 65 });
         CheckCMapBatching(font, Enumerable.Range(0x20, 95).ToArray());
         CheckCMapBatching(font, Enumerable.Range(0x20, 300).ToArray());
@@ -1155,7 +1155,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         int[] candidates = [0x1F600, 0x1D11E, 0x10428, 0x20000];
         foreach (int codePoint in candidates)
         {
@@ -1182,7 +1182,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        OpenTypeFont font = OpenTypeFont.Load(arial);
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
         ushort combining = font.MapCodePoint(0x0301);
         if (combining == 0 || font.GetAdvanceWidth(combining) != 0)
         {
@@ -1273,6 +1273,46 @@ internal static class FontTests
                 IsFallback = !request.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase),
                 Style = resolution.Style with { Bold = request.Bold, Italic = request.Italic }
             };
+        }
+    }
+    public static void FileFontProgramSourceConcurrentReadsReturnSameBytes()
+    {
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        string path = Path.Combine(Path.GetTempPath(), "ooxpdf-concurrent-" + Guid.NewGuid().ToString("N") + ".ttf");
+        File.WriteAllBytes(path, bytes);
+        try
+        {
+            var source = new FileFontProgramSource(path);
+            Task<ReadOnlyMemory<byte>>[] reads = Enumerable.Range(0, 16)
+                .Select(_ => source.GetBytesAsync(CancellationToken.None).AsTask())
+                .ToArray();
+            Task.WaitAll(reads);
+            foreach (Task<ReadOnlyMemory<byte>> read in reads)
+            {
+                TestAssert.True(read.Result.Span.SequenceEqual(bytes), "Concurrent first-reads must all observe the same bytes.");
+            }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    public static void FileFontProgramSourcePrecancelledTokenThrowsBeforeRead()
+    {
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        string path = Path.Combine(Path.GetTempPath(), "ooxpdf-cancelled-" + Guid.NewGuid().ToString("N") + ".ttf");
+        File.WriteAllBytes(path, bytes);
+        try
+        {
+            var source = new FileFontProgramSource(path);
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => source.GetBytesAsync(cts.Token).AsTask().GetAwaiter().GetResult());
+        }
+        finally
+        {
+            File.Delete(path);
         }
     }
 }

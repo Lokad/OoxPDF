@@ -1419,7 +1419,7 @@ internal static class DocxTableCellsTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(arial), "1. Item".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "1. Item".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, embedded, CancellationToken.None)
             .Pages[0]

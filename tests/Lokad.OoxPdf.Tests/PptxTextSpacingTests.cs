@@ -1321,7 +1321,7 @@ internal static class PptxTextSpacingTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(times), "To".Select(c => (int)c), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(times)), "To".Select(c => (int)c), CancellationToken.None);
         string expected = "[<" + embedded.EncodeGlyphHex("T") + "><" + embedded.EncodeGlyphHex("o") + ">] TJ";
         TestAssert.Contains(expected, pdf);
     }
