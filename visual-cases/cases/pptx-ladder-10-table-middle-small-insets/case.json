@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-table-middle-small-insets.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "tables", "middle-anchor", "explicit-margins"],
+  "tags": ["pptx", "ladder", "tables", "middle-anchor", "explicit-margins", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 1.2,
+    "minForegroundRecall": 0.92,
     "maxChangedPixelRatioAtThreshold16": 0.03
   },
   "allowedUnsupportedFeatures": []
