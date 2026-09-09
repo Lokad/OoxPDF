@@ -10,6 +10,37 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
+    // O02: one must-understand warning per subsidiary part per document. Story parts
+    // load repeatedly (body/drawings readers); the gate keeps repeats quiet while naming
+    // each offending part once. Passes without a gate stay quiet: document-level loads
+    // already cover the same parts.
+    private static void WarnMustUnderstandOnce(
+        XDocument partXml,
+        string partName,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<string>? warnedParts)
+    {
+        if (diagnosticSink is null || warnedParts is null || !OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(partXml))
+        {
+            return;
+        }
+
+        if (!warnedParts.Add(partName))
+        {
+            return;
+        }
+
+        diagnosticSink(new OoxPdfDiagnostic(
+            "OOXML_MUST_UNDERSTAND",
+            OoxPdfSeverity.Warning,
+            "Content marked must-understand uses unsupported namespaces and was ignored.",
+            partName,
+            SlideIndex: null,
+            PageIndex: null,
+            Feature: "must-understand",
+            Fallback: "Ignored"));
+    }
+
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ReadReferencedHeaderFooterBodyElementsByType(
         XContainer referenceRoot,
         OoxPackage package,
@@ -19,7 +50,9 @@ internal sealed partial class DocxReader
         string relationshipType,
         string referenceElementName,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        HashSet<string>? warnedParts = null)
     {
         var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
@@ -39,6 +72,7 @@ internal sealed partial class DocxReader
 
             using Stream stream = part.OpenRead();
             XDocument partXml = SafeXml.Load(stream, cancellationToken);
+            WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
             IReadOnlyDictionary<string, OoxRelationship> partRelationships = package.GetRelationships(part.Name, cancellationToken)
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
@@ -75,7 +109,9 @@ internal sealed partial class DocxReader
         string relationshipType,
         string referenceElementName,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        HashSet<string>? warnedParts = null)
     {
         var drawings = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
@@ -95,6 +131,7 @@ internal sealed partial class DocxReader
 
             using Stream stream = part.OpenRead();
             XDocument partXml = SafeXml.Load(stream, cancellationToken);
+            WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
             IReadOnlyDictionary<string, OoxRelationship> partRelationships = package.GetRelationships(part.Name, cancellationToken)
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -119,11 +156,13 @@ internal sealed partial class DocxReader
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        HashSet<string>? warnedParts = null)
     {
-        return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null))
+        return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts)
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts))
             .ToArray();
     }
 
@@ -134,7 +173,9 @@ internal sealed partial class DocxReader
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        HashSet<string>? warnedParts = null)
     {
         IReadOnlyDictionary<string, DocxCommentThreadMetadata> threadMetadataByParagraphId =
             ReadCommentThreadMetadata(package, documentPartName, cancellationToken);
@@ -149,7 +190,9 @@ internal sealed partial class DocxReader
             "comment",
             markupMode,
             cancellationToken,
-            threadMetadataByParagraphId);
+            threadMetadataByParagraphId,
+            diagnosticSink,
+            warnedParts);
         return ResolveCommentThreadParents(stories);
     }
 
@@ -164,7 +207,9 @@ internal sealed partial class DocxReader
         string storyElementName,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId)
+        IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        HashSet<string>? warnedParts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
@@ -175,6 +220,7 @@ internal sealed partial class DocxReader
 
         using Stream stream = part.OpenRead();
         XDocument partXml = SafeXml.Load(stream, cancellationToken);
+        WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name, cancellationToken)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();

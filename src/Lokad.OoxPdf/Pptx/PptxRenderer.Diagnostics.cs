@@ -59,6 +59,19 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TRANSITION", "transition");
         }
 
+        if (OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(slideXml))
+        {
+            diagnosticSink(new OoxPdfDiagnostic(
+                "OOXML_MUST_UNDERSTAND",
+                OoxPdfSeverity.Warning,
+                "Content marked must-understand uses unsupported namespaces and was ignored.",
+                partName,
+                PageIndex: null,
+                SlideIndex: slideIndex,
+                Feature: "must-understand",
+                Fallback: "Ignored"));
+        }
+
         if (sceneSlide.HasTiming ||
             slideXml.Descendants(PresentationNamespace + "timing").Any())
         {

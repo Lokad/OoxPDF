@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Ooxml;
 // Choice and Fallback content nor silently keep both. The first Choice whose
 // Requires prefixes all resolve to understood namespaces wins, else the Fallback,
 // else the block is removed. Ignorable content needs no handling (unknown elements
-// are already skipped, which subsumes ProcessContent); MustUnderstand stays open.
+// are already skipped, which subsumes ProcessContent); layout/master parts stay open.
 internal static class OoxMarkupCompatibility
 {
     private static readonly HashSet<string> UnderstoodNamespaces = new(
@@ -24,7 +24,7 @@ internal static class OoxMarkupCompatibility
         StringComparer.Ordinal);
 
     // MustUnderstand scan (O02): true when an element demands a namespace outside
-    // the understood set. Readers warn once per document; subsidiary parts stay open.
+    // the understood set. Readers warn once per document; slides and DOCX story parts warn with their part names.
     public static bool HasUnrecognizedMustUnderstand(XDocument? document)
     {
         if (document?.Root is null)

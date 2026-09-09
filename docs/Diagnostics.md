@@ -9,7 +9,7 @@ Diagnostics are emitted through `OoxPdfOptions.DiagnosticSink` and through the C
 Top-level package or dialect issues:
 
 - `OOXML_STRICT_DIALECT`: Strict OOXML (ISO 29500) content was detected; only the transitional dialect is supported and content may be missing.
-- `OOXML_MUST_UNDERSTAND`: content marked must-understand uses unsupported namespaces and was ignored.
+- `OOXML_MUST_UNDERSTAND`: content marked must-understand uses unsupported namespaces and was ignored. Main parts warn once per document; slides and DOCX story parts warn with their part names.
 
 ## PPTX
 
