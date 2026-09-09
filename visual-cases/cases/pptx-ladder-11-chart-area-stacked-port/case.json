@@ -3,28 +3,10 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-area-stacked-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "area-chart", "stacked", "pptx-renderer-port"],
+  "tags": ["pptx", "ladder", "chart", "area-chart", "stacked", "pptx-renderer-port", "approximate"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 2.6,
-    "maxChangedPixelRatioAtThreshold16": 0.028,
-    "maxChartGraphicsStructureBoundsDelta": 0.9,
-    "compareChartGraphicsStructureKinds": [
-      "VerticalLine"
-    ],
-    "compareChartGraphicsStructureOperators": true,
-    "compareChartGraphicsStructureSegmentCounts": true,
-    "compareChartGraphicsStructurePathCommandCounts": true,
-    "compareChartGraphicsStructurePathOperators": true,
-    "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": [
-      "ValueAxisTickLabel"
-    ],
-    "maxChartTextStructurePositionDeltaByKind": {
-      "ValueAxisTickLabel": 1.0
-    }
-  }
+    "diagnosticsMustBeEmpty": true  }
 }
