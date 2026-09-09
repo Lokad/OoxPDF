@@ -67,13 +67,13 @@ internal static class OpenTypeFontSubsetter
             throw new InvalidDataException("Font subsetting requires complete outline tables.");
         }
 
-        ushort originalGlyphCount = U16(source, maxp.Offset + 4);
+        ushort originalGlyphCount = OpenTypeFont.U16(source, maxp.Offset + 4);
         if (originalGlyphCount == 0)
         {
             throw new InvalidDataException("Font declares zero glyphs.");
         }
 
-        short indexToLocFormat = I16(source, head.Offset + 50);
+        short indexToLocFormat = OpenTypeFont.I16(source, head.Offset + 50);
         if (indexToLocFormat is not 0 and not 1)
         {
             throw new InvalidDataException("Font uses an unsupported loca format.");
@@ -96,10 +96,10 @@ internal static class OpenTypeFontSubsetter
         byte[] subsetHhea = CopyTable(source, hhea);
         byte[] subsetHmtx = BuildHmtx();
         byte[] subsetMaxp = CopyTable(source, maxp);
-        W16(subsetMaxp, 4, (ushort)originalGlyphs.Length);
+        OpenTypeFont.W16(subsetMaxp, 4, (ushort)originalGlyphs.Length);
         byte[] subsetHead = CopyTable(source, head);
-        W32(subsetHead, 8, 0);
-        W16(subsetHead, 50, 1);
+        OpenTypeFont.W32(subsetHead, 8, 0);
+        OpenTypeFont.W16(subsetHead, 50, 1);
         byte[] subsetPost = BuildPost();
         byte[] subsetCmap = BuildCmap();
 
@@ -137,13 +137,13 @@ internal static class OpenTypeFontSubsetter
             int outputLength = directoryLength;
             foreach (TableData table in tables)
             {
-                outputLength = Align4(outputLength);
+                outputLength = OpenTypeFont.Align4(outputLength);
                 outputLength += table.Data.Length;
             }
 
-            var output = new byte[Align4(outputLength)];
+            var output = new byte[OpenTypeFont.Align4(outputLength)];
             scalerType.CopyTo(output);
-            W16(output, 4, (ushort)tableCount);
+            OpenTypeFont.W16(output, 4, (ushort)tableCount);
             WriteSearchFields(output, 6, tableCount, 16);
 
             int dataOffset = directoryLength;
@@ -152,11 +152,11 @@ internal static class OpenTypeFontSubsetter
             foreach (TableData table in tables)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                dataOffset = Align4(dataOffset);
+                dataOffset = OpenTypeFont.Align4(dataOffset);
                 Encoding.ASCII.GetBytes(table.Tag, output.AsSpan(directoryOffset, 4));
-                W32(output, directoryOffset + 4, Checksum(table.Data));
-                W32(output, directoryOffset + 8, (uint)dataOffset);
-                W32(output, directoryOffset + 12, (uint)table.Data.Length);
+                OpenTypeFont.W32(output, directoryOffset + 4, Checksum(table.Data));
+                OpenTypeFont.W32(output, directoryOffset + 8, (uint)dataOffset);
+                OpenTypeFont.W32(output, directoryOffset + 12, (uint)table.Data.Length);
                 Array.Copy(table.Data, 0, output, dataOffset, table.Data.Length);
                 if (table.Tag.Equals("head", StringComparison.Ordinal))
                 {
@@ -172,9 +172,9 @@ internal static class OpenTypeFontSubsetter
                 throw new InvalidDataException("Subset font is missing head table.");
             }
 
-            W32(output, headOffset + 8, 0);
+            OpenTypeFont.W32(output, headOffset + 8, 0);
             uint adjustment = unchecked(0xB1B0AFBAu - Checksum(output));
-            W32(output, headOffset + 8, adjustment);
+            OpenTypeFont.W32(output, headOffset + 8, adjustment);
             return output;
         }
 
@@ -182,19 +182,19 @@ internal static class OpenTypeFontSubsetter
         {
             var output = new byte[32];
             Array.Copy(source, post.Offset, output, 0, Math.Min(post.Length, output.Length));
-            W32(output, 0, 0x00030000);
+            OpenTypeFont.W32(output, 0, 0x00030000);
             return output;
         }
 
         byte[] BuildHmtx()
         {
-            ushort numberOfHMetrics = U16(source, hhea.Offset + 34);
+            ushort numberOfHMetrics = OpenTypeFont.U16(source, hhea.Offset + 34);
             if (numberOfHMetrics == 0)
             {
                 throw new InvalidDataException("Horizontal metrics table is empty.");
             }
 
-            W16(subsetHhea, 34, (ushort)originalGlyphs.Length);
+            OpenTypeFont.W16(subsetHhea, 34, (ushort)originalGlyphs.Length);
             var output = new byte[originalGlyphs.Length * 4];
             for (int i = 0; i < originalGlyphs.Length; i++)
             {
@@ -204,8 +204,8 @@ internal static class OpenTypeFontSubsetter
                     throw new InvalidDataException("Horizontal metric is invalid.");
                 }
 
-                W16(output, i * 4, advance);
-                W16(output, i * 4 + 2, unchecked((ushort)leftSideBearing));
+                OpenTypeFont.W16(output, i * 4, advance);
+                OpenTypeFont.W16(output, i * 4 + 2, unchecked((ushort)leftSideBearing));
             }
 
             return output;
@@ -218,13 +218,13 @@ internal static class OpenTypeFontSubsetter
             for (int i = 0; i < originalGlyphs.Length; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int alignedOffset = Align4((int)glyfStream.Position);
+                int alignedOffset = OpenTypeFont.Align4((int)glyfStream.Position);
                 while (glyfStream.Position < alignedOffset)
                 {
                     glyfStream.WriteByte(0);
                 }
 
-                W32(subsetLoca, i * 4, (uint)glyfStream.Position);
+                OpenTypeFont.W32(subsetLoca, i * 4, (uint)glyfStream.Position);
                 if (!TryGetGlyphData(source, originalGlyphs[i], originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
                 {
                     throw new InvalidDataException("Glyph range is invalid.");
@@ -240,13 +240,13 @@ internal static class OpenTypeFontSubsetter
                 glyfStream.Write(glyphData);
             }
 
-            int finalOffset = Align4((int)glyfStream.Position);
+            int finalOffset = OpenTypeFont.Align4((int)glyfStream.Position);
             while (glyfStream.Position < finalOffset)
             {
                 glyfStream.WriteByte(0);
             }
 
-            W32(subsetLoca, originalGlyphs.Length * 4, (uint)glyfStream.Position);
+            OpenTypeFont.W32(subsetLoca, originalGlyphs.Length * 4, (uint)glyfStream.Position);
             return glyfStream.ToArray();
         }
 
@@ -306,14 +306,14 @@ internal static class OpenTypeFontSubsetter
             int format4Offset = 4 + 8 * 2;
             int format12Offset = format4Offset + format4.Length;
             var output = new byte[format12Offset + format12.Length];
-            W16(output, 0, 0);
-            W16(output, 2, 2);
-            W16(output, 4, 3);
-            W16(output, 6, 1);
-            W32(output, 8, (uint)format4Offset);
-            W16(output, 12, 3);
-            W16(output, 14, 10);
-            W32(output, 16, (uint)format12Offset);
+            OpenTypeFont.W16(output, 0, 0);
+            OpenTypeFont.W16(output, 2, 2);
+            OpenTypeFont.W16(output, 4, 3);
+            OpenTypeFont.W16(output, 6, 1);
+            OpenTypeFont.W32(output, 8, (uint)format4Offset);
+            OpenTypeFont.W16(output, 12, 3);
+            OpenTypeFont.W16(output, 14, 10);
+            OpenTypeFont.W32(output, 16, (uint)format12Offset);
             Array.Copy(format4, 0, output, format4Offset, format4.Length);
             Array.Copy(format12, 0, output, format12Offset, format12.Length);
             return output;
@@ -326,10 +326,10 @@ internal static class OpenTypeFontSubsetter
                 int segmentCount = bmp.Length + 1;
                 int length = 16 + segmentCount * 8;
                 var format4Output = new byte[length];
-                W16(format4Output, 0, 4);
-                W16(format4Output, 2, (ushort)length);
-                W16(format4Output, 4, 0);
-                W16(format4Output, 6, (ushort)(segmentCount * 2));
+                OpenTypeFont.W16(format4Output, 0, 4);
+                OpenTypeFont.W16(format4Output, 2, (ushort)length);
+                OpenTypeFont.W16(format4Output, 4, 0);
+                OpenTypeFont.W16(format4Output, 6, (ushort)(segmentCount * 2));
                 WriteSearchFields(format4Output, 8, segmentCount, 2);
 
                 int endCodes = 14;
@@ -340,17 +340,17 @@ internal static class OpenTypeFontSubsetter
                 {
                     int bmpCodePoint = bmp[i].Key;
                     ushort glyph = bmp[i].Value;
-                    W16(format4Output, endCodes + i * 2, (ushort)bmpCodePoint);
-                    W16(format4Output, startCodes + i * 2, (ushort)bmpCodePoint);
-                    W16(format4Output, idDeltas + i * 2, unchecked((ushort)(glyph - bmpCodePoint)));
-                    W16(format4Output, idRangeOffsets + i * 2, 0);
+                    OpenTypeFont.W16(format4Output, endCodes + i * 2, (ushort)bmpCodePoint);
+                    OpenTypeFont.W16(format4Output, startCodes + i * 2, (ushort)bmpCodePoint);
+                    OpenTypeFont.W16(format4Output, idDeltas + i * 2, unchecked((ushort)(glyph - bmpCodePoint)));
+                    OpenTypeFont.W16(format4Output, idRangeOffsets + i * 2, 0);
                 }
 
                 int sentinel = segmentCount - 1;
-                W16(format4Output, endCodes + sentinel * 2, 0xFFFF);
-                W16(format4Output, startCodes + sentinel * 2, 0xFFFF);
-                W16(format4Output, idDeltas + sentinel * 2, 1);
-                W16(format4Output, idRangeOffsets + sentinel * 2, 0);
+                OpenTypeFont.W16(format4Output, endCodes + sentinel * 2, 0xFFFF);
+                OpenTypeFont.W16(format4Output, startCodes + sentinel * 2, 0xFFFF);
+                OpenTypeFont.W16(format4Output, idDeltas + sentinel * 2, 1);
+                OpenTypeFont.W16(format4Output, idRangeOffsets + sentinel * 2, 0);
                 return format4Output;
             }
 
@@ -364,17 +364,17 @@ internal static class OpenTypeFontSubsetter
 
                 int length = 16 + groups.Count * 12;
                 var format12Output = new byte[length];
-                W16(format12Output, 0, 12);
-                W16(format12Output, 2, 0);
-                W32(format12Output, 4, (uint)length);
-                W32(format12Output, 8, 0);
-                W32(format12Output, 12, (uint)groups.Count);
+                OpenTypeFont.W16(format12Output, 0, 12);
+                OpenTypeFont.W16(format12Output, 2, 0);
+                OpenTypeFont.W32(format12Output, 4, (uint)length);
+                OpenTypeFont.W32(format12Output, 8, 0);
+                OpenTypeFont.W32(format12Output, 12, (uint)groups.Count);
                 int offset = 16;
                 foreach (CmapGroup group in groups)
                 {
-                    W32(format12Output, offset, group.StartCode);
-                    W32(format12Output, offset + 4, group.EndCode);
-                    W32(format12Output, offset + 8, group.StartGlyph);
+                    OpenTypeFont.W32(format12Output, offset, group.StartCode);
+                    OpenTypeFont.W32(format12Output, offset + 4, group.EndCode);
+                    OpenTypeFont.W32(format12Output, offset + 8, group.StartGlyph);
                     offset += 12;
                 }
 
@@ -390,7 +390,7 @@ internal static class OpenTypeFontSubsetter
             throw new InvalidDataException("Font file is too small.");
         }
 
-        ushort tableCount = U16(bytes, 4);
+        ushort tableCount = OpenTypeFont.U16(bytes, 4);
         if (12 + tableCount * 16 > bytes.Length)
         {
             throw new InvalidDataException("Font table directory exceeds file length.");
@@ -401,8 +401,8 @@ internal static class OpenTypeFontSubsetter
         for (int i = 0; i < tableCount; i++)
         {
             string tag = Encoding.ASCII.GetString(bytes, recordOffset, 4);
-            uint tableOffset = U32(bytes, recordOffset + 8);
-            uint tableLength = U32(bytes, recordOffset + 12);
+            uint tableOffset = OpenTypeFont.U32(bytes, recordOffset + 8);
+            uint tableLength = OpenTypeFont.U32(bytes, recordOffset + 12);
             if (tableOffset > int.MaxValue || tableLength > int.MaxValue || tableOffset + tableLength > bytes.Length)
             {
                 throw new InvalidDataException("Font table exceeds file length.");
@@ -439,8 +439,8 @@ internal static class OpenTypeFontSubsetter
                 return false;
             }
 
-            advance = U16(source, offset);
-            leftSideBearing = I16(source, offset + 2);
+            advance = OpenTypeFont.U16(source, offset);
+            leftSideBearing = OpenTypeFont.I16(source, offset + 2);
             return true;
         }
 
@@ -451,8 +451,8 @@ internal static class OpenTypeFontSubsetter
             return false;
         }
 
-        advance = U16(source, advanceOffset);
-        leftSideBearing = I16(source, lsbOffset);
+        advance = OpenTypeFont.U16(source, advanceOffset);
+        leftSideBearing = OpenTypeFont.I16(source, lsbOffset);
         return true;
     }
 
@@ -481,7 +481,7 @@ internal static class OpenTypeFontSubsetter
             return false;
         }
 
-        short contourCount = I16(source, glyphOffset);
+        short contourCount = OpenTypeFont.I16(source, glyphOffset);
         if (contourCount >= 0)
         {
             return true;
@@ -498,8 +498,8 @@ internal static class OpenTypeFontSubsetter
                 return false;
             }
 
-            flags = U16(source, cursor);
-            result.Add(U16(source, cursor + 2));
+            flags = OpenTypeFont.U16(source, cursor);
+            result.Add(OpenTypeFont.U16(source, cursor + 2));
             cursor += 4;
             cursor += (flags & Arg1And2AreWords) != 0 ? 4 : 2;
             if ((flags & WeHaveAScale) != 0)
@@ -529,7 +529,7 @@ internal static class OpenTypeFontSubsetter
                 return false;
             }
 
-            ushort instructionLength = U16(source, cursor);
+            ushort instructionLength = OpenTypeFont.U16(source, cursor);
             if (cursor + 2 + instructionLength > glyphEnd)
             {
                 return false;
@@ -552,7 +552,7 @@ internal static class OpenTypeFontSubsetter
             return false;
         }
 
-        short contourCount = I16(glyphData, 0);
+        short contourCount = OpenTypeFont.I16(glyphData, 0);
         if (contourCount >= 0)
         {
             return true;
@@ -567,14 +567,14 @@ internal static class OpenTypeFontSubsetter
                 return false;
             }
 
-            flags = U16(glyphData, cursor);
-            ushort originalComponent = U16(glyphData, cursor + 2);
+            flags = OpenTypeFont.U16(glyphData, cursor);
+            ushort originalComponent = OpenTypeFont.U16(glyphData, cursor + 2);
             if (!cidByOriginalGlyph.TryGetValue(originalComponent, out ushort subsetComponent))
             {
                 return false;
             }
 
-            W16(glyphData, cursor + 2, subsetComponent);
+            OpenTypeFont.W16(glyphData, cursor + 2, subsetComponent);
             cursor += 4;
             cursor += (flags & Arg1And2AreWords) != 0 ? 4 : 2;
             if ((flags & WeHaveAScale) != 0)
@@ -627,8 +627,8 @@ internal static class OpenTypeFontSubsetter
                 return false;
             }
 
-            start = U16(source, entry) * 2;
-            end = U16(source, entry + 2) * 2;
+            start = OpenTypeFont.U16(source, entry) * 2;
+            end = OpenTypeFont.U16(source, entry + 2) * 2;
         }
         else
         {
@@ -638,8 +638,8 @@ internal static class OpenTypeFontSubsetter
                 return false;
             }
 
-            uint start32 = U32(source, entry);
-            uint end32 = U32(source, entry + 4);
+            uint start32 = OpenTypeFont.U32(source, entry);
+            uint end32 = OpenTypeFont.U32(source, entry + 4);
             if (start32 > int.MaxValue || end32 > int.MaxValue)
             {
                 return false;
@@ -677,9 +677,9 @@ internal static class OpenTypeFontSubsetter
         }
 
         int searchRange = power * unitSize;
-        W16(output, offset, (ushort)searchRange);
-        W16(output, offset + 2, (ushort)entrySelector);
-        W16(output, offset + 4, (ushort)(count * unitSize - searchRange));
+        OpenTypeFont.W16(output, offset, (ushort)searchRange);
+        OpenTypeFont.W16(output, offset + 2, (ushort)entrySelector);
+        OpenTypeFont.W16(output, offset + 4, (ushort)(count * unitSize - searchRange));
     }
 
     private static uint Checksum(byte[] bytes)
@@ -701,36 +701,6 @@ internal static class OpenTypeFontSubsetter
         }
 
         return sum;
-    }
-
-    private static int Align4(int value)
-    {
-        return (value + 3) & ~3;
-    }
-
-    private static ushort U16(byte[] bytes, int offset)
-    {
-        return BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(offset, 2));
-    }
-
-    private static uint U32(byte[] bytes, int offset)
-    {
-        return BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(offset, 4));
-    }
-
-    private static short I16(byte[] bytes, int offset)
-    {
-        return BinaryPrimitives.ReadInt16BigEndian(bytes.AsSpan(offset, 2));
-    }
-
-    private static void W16(byte[] bytes, int offset, ushort value)
-    {
-        BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(offset, 2), value);
-    }
-
-    private static void W32(byte[] bytes, int offset, uint value)
-    {
-        BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(offset, 4), value);
     }
 
     private readonly record struct TableRecord(int Offset, int Length);

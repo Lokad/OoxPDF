@@ -14,17 +14,17 @@ internal sealed partial class OpenTypeFont
             : throw new InvalidDataException($"Font is missing required '{tag}' table.");
     }
 
-    private static ushort U16(byte[] bytes, int offset)
+    internal static ushort U16(byte[] bytes, int offset)
     {
         return BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(offset, 2));
     }
 
-    private static uint U32(byte[] bytes, int offset)
+    internal static uint U32(byte[] bytes, int offset)
     {
         return BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(offset, 4));
     }
 
-    private static short I16(byte[] bytes, int offset)
+    internal static short I16(byte[] bytes, int offset)
     {
         return BinaryPrimitives.ReadInt16BigEndian(bytes.AsSpan(offset, 2));
     }
@@ -34,7 +34,12 @@ internal sealed partial class OpenTypeFont
         return BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
     }
 
-    private static void W32(byte[] bytes, int offset, uint value)
+    internal static void W16(byte[] bytes, int offset, ushort value)
+    {
+        BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(offset, 2), value);
+    }
+
+    internal static void W32(byte[] bytes, int offset, uint value)
     {
         BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(offset, 4), value);
     }
@@ -44,7 +49,7 @@ internal sealed partial class OpenTypeFont
         return I16(bytes, offset) / 16384d;
     }
 
-    private static int Align4(int value)
+    internal static int Align4(int value)
     {
         return (value + 3) & ~3;
     }
