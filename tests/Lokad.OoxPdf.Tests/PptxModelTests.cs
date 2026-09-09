@@ -1538,7 +1538,7 @@ internal static class PptxModelTests
         string? output = Environment.GetEnvironmentVariable("OOXPDF_PRIVATE_LAYOUT_JSON");
         if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(output))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(output))");
         }
 
         int slideIndex = int.TryParse(Environment.GetEnvironmentVariable("OOXPDF_PRIVATE_SLIDE_INDEX"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)

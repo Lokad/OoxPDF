@@ -1,4 +1,11 @@
-# Renders or copies cached Office reference PDFs (helper for cache-only gates).
+# Renders or copies cached Office reference PDFs.
+#
+# Cache identity (protocol v2) is the reference PDF itself: input hash,
+# extension, variant, and rendering protocol. Rasterizer/DPI page PNGs are
+# derivatives of that identity, verified against recorded page hashes on every
+# hit. Pre-v2 flat entries resolve as legacy hits and are adopted into the v2
+# layout. Corrupt or incomplete entries never satisfy a hit: CacheOnly throws a
+# corrupt-entry error, while rendering mode deletes and re-renders.
 
 param(
     [Parameter(Mandatory = $true)]
@@ -11,7 +18,13 @@ param(
 
     [switch] $CacheOnly,
 
-    [string] $CacheVariant
+    [string] $CacheVariant,
+
+    [string] $CaseId,
+
+    [switch] $SkipBuild,
+
+    [int] $RenderTimeoutSeconds = 600
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,51 +35,117 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
-if (-not $CacheOnly -and -not [string]::IsNullOrWhiteSpace($CacheVariant)) {
-    throw "CacheVariant is only supported in cache-only mode until the Office reference renderer accepts variant-specific settings."
+
+function New-CacheMissMessage($resolution) {
+    $variantMessage = if ([string]::IsNullOrWhiteSpace($CacheVariant)) { "" } else { " for variant '$CacheVariant'" }
+    $populate = "pwsh tools/RenderCachedReference.ps1 -InputPath '$inputFull' -OutputDirectory <output-dir> -Dpi $Dpi" +
+        $(if ([string]::IsNullOrWhiteSpace($CacheVariant)) { "" } else { " -CacheVariant '$CacheVariant'" })
+    if (-not [string]::IsNullOrWhiteSpace($CaseId)) {
+        $populate += " -CaseId '$CaseId'"
+    }
+
+    return "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI ($($resolution.Reason)). Cache-only mode refuses to invoke Office/COM reference rendering. Expected identity directory: artifacts/reference-cache/$($resolution.IdentityKey). To populate it on an Office setup, run: $populate"
 }
 
-$inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
-$renderReference = Join-Path $PSScriptRoot "RenderReference.ps1"
-$extension = [System.IO.Path]::GetExtension($inputFull).TrimStart(".").ToLowerInvariant()
-$variantKeyPart = ""
-if (-not [string]::IsNullOrWhiteSpace($CacheVariant)) {
-    $variantHash = Get-ShortSha256 ([System.Text.Encoding]::UTF8.GetBytes($CacheVariant.Trim().ToLowerInvariant())) 12
-
-    $variantKeyPart = "-variant" + $variantHash.Substring(0, 12)
+$resolution = Use-ReferenceCacheLock ("resolve-" + (Get-ReferenceIdentityKey $inputFull $CacheVariant)) {
+    Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
 }
 
-$key = "{0}-{1}-{2}{3}-dpi{4}" -f $extension, $inputHash.Substring(0, 24), $ReferenceCacheProtocol, $variantKeyPart, $Dpi
-$cacheRoot = Join-Path $repoRoot "artifacts/reference-cache"
-$cacheDir = Join-Path $cacheRoot $key
-$completeMarker = Join-Path $cacheDir "complete.txt"
+if ($resolution.Outcome -eq "LegacyHit") {
+    Write-Host ("Reference cache legacy entry ($($resolution.Reason)): $($resolution.CacheDirectory)")
+    $resolution = Use-ReferenceCacheLock $resolution.IdentityKey {
+        Move-LegacyReferenceEntry $resolution.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $resolution.IdentityKey) $inputFull $Dpi $resolution.DerivativeName $CacheVariant $CaseId
+        Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
+    }
+}
 
-if (-not (Test-Path -LiteralPath $completeMarker)) {
+if ($resolution.Outcome -eq "Corrupt") {
     if ($CacheOnly) {
-        $variantMessage = if ([string]::IsNullOrWhiteSpace($CacheVariant)) { "" } else { " for variant '$CacheVariant'" }
-        $populate = "pwsh tools/RenderCachedReference.ps1 -InputPath '$inputFull' -OutputDirectory <output-dir> -Dpi $Dpi" +
-            $(if ([string]::IsNullOrWhiteSpace($CacheVariant)) { "" } else { " -CacheVariant '$CacheVariant'" })
-        throw "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI. Cache-only mode refuses to invoke Office/COM reference rendering. Expected cache directory: $cacheDir. To populate it on an Office setup, run: $populate"
+        throw "Reference cache entry is corrupt and CacheOnly refuses to re-render: $($resolution.Reason) Entry: $($resolution.CacheDirectory)"
     }
 
-    $tempDir = Join-Path $cacheRoot ("_tmp-" + [System.Guid]::NewGuid().ToString("N"))
-    New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-    try {
-        & $renderReference -InputPath $inputFull -OutputDirectory $tempDir -Dpi $Dpi
-        New-Item -ItemType Directory -Force -Path $cacheRoot | Out-Null
-        if (Test-Path -LiteralPath $cacheDir) {
-            Remove-Item -LiteralPath $cacheDir -Recurse -Force
+    Write-Host ("Reference cache entry corrupt ($($resolution.Reason)); re-rendering: $($resolution.CacheDirectory)")
+    Use-ReferenceCacheLock $resolution.IdentityKey {
+        if (Test-Path -LiteralPath $resolution.CacheDirectory) {
+            Remove-Item -LiteralPath $resolution.CacheDirectory -Recurse -Force
         }
-
-        Move-Item -LiteralPath $tempDir -Destination $cacheDir
-        Set-Content -LiteralPath $completeMarker -Value ("input={0}`ndpi={1}`nvariant={2}`n" -f $inputFull, $Dpi, $CacheVariant)
     }
-    finally {
-        if (Test-Path -LiteralPath $tempDir) {
-            Remove-Item -LiteralPath $tempDir -Recurse -Force
+    $resolution = [pscustomobject]@{ Outcome = "Miss"; IdentityKey = $resolution.IdentityKey; CacheDirectory = $resolution.CacheDirectory; Reason = "corrupt entry removed" }
+}
+
+if ($resolution.Outcome -eq "Miss") {
+    if ($CacheOnly) {
+        throw (New-CacheMissMessage $resolution)
+    }
+
+    $renderReference = Join-Path $PSScriptRoot "RenderReference.ps1"
+    Use-ReferenceCacheLock $resolution.IdentityKey {
+        $staging = Join-Path (Get-ReferenceCacheRoot) ("_render-" + [System.Guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Force -Path $staging | Out-Null
+        try {
+            & $renderReference -InputPath $inputFull -OutputDirectory $staging -Dpi $Dpi -TimeoutSeconds $RenderTimeoutSeconds
+            $workerStatus = $null
+            $workerStatusPath = Join-Path $staging "reference-worker-status.json"
+            if (Test-Path -LiteralPath $workerStatusPath) {
+                $workerStatus = Get-Content -Raw -LiteralPath $workerStatusPath | ConvertFrom-Json
+            }
+
+            foreach ($scratch in @("reference-status.json", "reference-worker-status.json", "reference-supervisor.log", "reference-worker.log", "reference-progress.log")) {
+                $scratchPath = Join-Path $staging $scratch
+                if (Test-Path -LiteralPath $scratchPath) {
+                    Remove-Item -LiteralPath $scratchPath -Force
+                }
+            }
+
+            $null = Write-ReferenceIdentityMetadata $staging $resolution.IdentityKey $inputFull ((Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()) $CacheVariant $CaseId @{
+                Producer = "office-com"
+                OfficeApp = $(if ($null -ne $workerStatus) { [string]$workerStatus.OfficeApp } else { "" })
+                OfficeVersion = $(if ($null -ne $workerStatus) { [string]$workerStatus.OfficeVersion } else { "" })
+                ExportSettings = $(if ($null -ne $workerStatus) { [string]$workerStatus.ExportSettings } else { "" })
+            } $null
+            Publish-ReferenceStagedDirectory $staging $resolution.CacheDirectory
+            Add-ReferenceDerivativeRecord $resolution.CacheDirectory $derivativeName $Dpi (Get-RasterizerId)
         }
+        finally {
+            if (Test-Path -LiteralPath $staging) {
+                Remove-Item -LiteralPath $staging -Recurse -Force
+            }
+        }
+    }
+    $resolution = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
+    if ($resolution.Outcome -ne "Hit") {
+        throw "Reference render completed but the cache entry failed verification: $($resolution.Reason)"
     }
 }
 
-Copy-Item -Path (Join-Path $cacheDir "*") -Destination $outputFull -Recurse -Force
-Write-Host "Reference cache: $cacheDir"
+# At this point the identity entry is verified. Ensure the requested DPI
+# derivative exists (rasterize offline from the cached PDF when missing).
+$metadata = [string]$resolution.Metadata.ReferencePdfSha256
+$derivative = $resolution.Derivative
+if ($derivative.State -eq "Missing") {
+    if ($CacheOnly) {
+        # Rasterizing from the cached PDF needs only local PDFium, so a missing
+        # derivative is fulfillable offline. Fall through to rasterize below.
+        Write-Host ("Reference derivative '$($resolution.DerivativeName)' missing; rasterizing offline from the cached PDF.")
+    }
+
+    Use-ReferenceCacheLock $resolution.IdentityKey {
+        $derivativeDir = Join-Path (Join-Path $resolution.CacheDirectory "raster") $resolution.DerivativeName
+        New-Item -ItemType Directory -Force -Path $derivativeDir | Out-Null
+        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf (Join-Path $resolution.CacheDirectory "reference.pdf") -OutputDirectory $derivativeDir -Dpi $Dpi -SkipBuild:$SkipBuild
+        Add-ReferenceDerivativeRecord $resolution.CacheDirectory $resolution.DerivativeName $Dpi (Get-RasterizerId)
+    }
+    $derivative = Test-ReferenceDerivative $resolution.CacheDirectory $resolution.DerivativeName $metadata
+}
+
+if ($derivative.State -ne "Complete") {
+    throw "Reference cache derivative is unusable ($($derivative.Reason)): $($derivative.Directory)"
+}
+
+Copy-Item -LiteralPath (Join-Path $resolution.CacheDirectory "reference.pdf") -Destination (Join-Path $outputFull "reference.pdf") -Force
+foreach ($page in @(Get-ChildItem -LiteralPath $derivative.Directory -Filter "page-*.png" | Sort-Object Name)) {
+    Copy-Item -LiteralPath $page.FullName -Destination (Join-Path $outputFull $page.Name) -Force
+}
+
+Copy-Item -LiteralPath (Join-Path $resolution.CacheDirectory "reference-metadata.json") -Destination (Join-Path $outputFull "reference-metadata.json") -Force
+Write-Host ("Reference cache: {0} derivative {1}" -f $resolution.CacheDirectory, $resolution.DerivativeName)

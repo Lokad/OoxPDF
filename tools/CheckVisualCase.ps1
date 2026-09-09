@@ -2,7 +2,11 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $Case,
 
-    [switch] $CacheOnlyReference
+    [switch] $CacheOnlyReference,
+
+    [string] $RunId,
+
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,7 +15,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
 $manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
-$runId = Get-Date -Format "yyyyMMdd-HHmmss"
+$runId = if (-not [string]::IsNullOrWhiteSpace($RunId)) { ($RunId -replace '[^A-Za-z0-9_.-]', '-') } else { "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8)) }
 $runRoot = Join-Path $repoRoot ("artifacts/visual/{0}/{1}" -f $manifest.id, $runId)
 $referenceDir = Join-Path $runRoot "reference"
 $candidateDir = Join-Path $runRoot "candidate"
@@ -19,38 +23,22 @@ $comparisonDir = Join-Path $runRoot "comparison"
 
 New-Item -ItemType Directory -Force -Path $referenceDir, $candidateDir, $comparisonDir | Out-Null
 
-function Invoke-DotnetBuildIfStale {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $Project,
+function Invoke-RepoBuild([string] $Project, [string] $OutputDll, [string] $Description, [string] $RecordPath) {
+    if ($SkipBuild) {
+        if (-not (Test-Path -LiteralPath $OutputDll)) {
+            throw "$Description DLL is missing and -SkipBuild was requested: $OutputDll. Build once without -SkipBuild first."
+        }
 
-        [Parameter(Mandatory = $true)]
-        [string] $OutputDll,
-
-        [Parameter(Mandatory = $true)]
-        [string] $Description,
-
-        [string[]] $AdditionalSourceDirectories = @()
-    )
-
-    $projectDirectory = Split-Path -Parent $Project
-    $sourceDirectories = @($projectDirectory) + $AdditionalSourceDirectories
-    $sourceNewest = $sourceDirectories | ForEach-Object {
-        Get-ChildItem -LiteralPath $_ -Recurse -Include *.cs,*.csproj
-    } |
-        Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
-        Sort-Object LastWriteTimeUtc -Descending |
-        Select-Object -First 1
-    if ((Test-Path -LiteralPath $OutputDll) -and $sourceNewest.LastWriteTimeUtc -le (Get-Item -LiteralPath $OutputDll).LastWriteTimeUtc) {
         return
     }
 
-    dotnet build $Project --nologo
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Description build failed with exit code $LASTEXITCODE."
+    $params = @{ Project = $Project; OutputDll = $OutputDll; Description = $Description }
+    if (-not [string]::IsNullOrWhiteSpace($RecordPath)) {
+        $params.RecordPath = $RecordPath
     }
-}
 
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") @params
+}
 function Read-JsonArray([string] $Path) {
     if (-not (Test-Path -LiteralPath $Path)) {
         return ,@()
@@ -78,8 +66,9 @@ $docxMarkupGeometry = if ($manifest.PSObject.Properties.Name -contains "docxMark
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
 $cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
-$librarySourceDirectory = Join-Path $repoRoot "src/Lokad.OoxPdf"
-Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -AdditionalSourceDirectories @($librarySourceDirectory)
+$buildInfoDir = Join-Path $runRoot "build-info"
+New-Item -ItemType Directory -Force -Path $buildInfoDir | Out-Null
+Invoke-RepoBuild $cliProject $cliDll "CLI" (Join-Path $buildInfoDir "cli.json")
 $candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
 if (-not [string]::IsNullOrWhiteSpace($docxMarkup)) {
     if ($manifest.kind -ne "docx") {
@@ -106,6 +95,8 @@ $referenceArgs = @{
     InputPath = $inputFull
     OutputDirectory = $referenceDir
     Dpi = $dpi
+    CaseId = $manifest.id
+    SkipBuild = $SkipBuild
 }
 if ($CacheOnlyReference) {
     $referenceArgs.CacheOnly = $true
@@ -118,11 +109,11 @@ if ($CacheOnlyReference) {
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rendering reference...";
 & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") @referenceArgs
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rasterizing candidate...";
-& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
+& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi -SkipBuild:$SkipBuild
 
 $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
 $visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
-Invoke-DotnetBuildIfStale -Project $visualDiffProject -OutputDll $visualDiffDll -Description "VisualDiff"
+Invoke-RepoBuild $visualDiffProject $visualDiffDll "VisualDiff" (Join-Path $buildInfoDir "visual-diff.json")
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Comparing pages...";
 dotnet $visualDiffDll $referenceDir $candidateDir $comparisonDir
 if ($LASTEXITCODE -ne 0) {
@@ -853,5 +844,45 @@ Agent rating: <0-5>
 <The smallest renderer improvement likely to improve this case.>
 "@
 
+$runInfo = [ordered]@{
+    Schema = "ooxpdf-visual-run-info/1"
+    RunId = $runId
+    CaseId = $manifest.id
+    Kind = $manifest.kind
+    Input = $inputFull.Substring($repoRoot.Length).TrimStart("\", "/").Replace("\", "/")
+    InputSha256 = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
+    Dpi = $dpi
+    DocxMarkup = $docxMarkup
+    DocxMarkupGeometry = $docxMarkupGeometry
+    CliDll = $cliDll
+    CliSha256 = if (Test-Path -LiteralPath $cliDll) { (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
+    LibraryDll = $null
+    VisualDiffDll = $visualDiffDll
+    VisualDiffSha256 = if (Test-Path -LiteralPath $visualDiffDll) { (Get-FileHash -LiteralPath $visualDiffDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
+    RasterizerDll = $null
+    GitCommit = $null
+    GitDirty = $null
+    GeneratedAtUtc = [DateTime]::UtcNow.ToString("O", [Globalization.CultureInfo]::InvariantCulture)
+}
+$libraryDll = Join-Path (Split-Path -Parent $cliDll) "Lokad.OoxPdf.dll"
+if (Test-Path -LiteralPath $libraryDll) {
+    $runInfo.LibraryDll = $libraryDll
+    $runInfo.LibrarySha256 = (Get-FileHash -LiteralPath $libraryDll -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll"
+if (Test-Path -LiteralPath $rasterizerDll) {
+    $runInfo.RasterizerDll = $rasterizerDll
+    $runInfo.RasterizerSha256 = (Get-FileHash -LiteralPath $rasterizerDll -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+try {
+    $runInfo.GitCommit = (& git -C $repoRoot rev-parse HEAD 2>$null | Select-Object -First 1).Trim()
+    $runInfo.GitDirty = [bool](& git -C $repoRoot status --short 2>$null | Select-Object -First 1)
+}
+catch {
+}
+
+$runInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runRoot "run-info.json") -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $runRoot "assessment.md") -Value $assessment
 Write-Host "Visual case artifacts: $runRoot"

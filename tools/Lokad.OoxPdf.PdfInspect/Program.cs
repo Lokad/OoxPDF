@@ -26,8 +26,8 @@ string pdf = Encoding.Latin1.GetString(bytes);
 var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
 IReadOnlyList<PdfFontResource> fontResources = BuildFontResources(objects);
-Dictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
-Dictionary<string, PdfFontWidthMap> fontWidthMaps = BuildFontWidthMaps(objects);
+Dictionary<(int PageNumber, string FontName), IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
+Dictionary<(int PageNumber, string FontName), PdfFontWidthMap> fontWidthMaps = BuildFontWidthMaps(objects);
 HashSet<int>? filteredContentObjects = pageFilter is null
     ? null
     : contentPageNumbers
@@ -250,12 +250,14 @@ static IReadOnlyList<int> ReadContentObjectNumbers(string body)
         .ToArray();
 }
 
-static Dictionary<string, IReadOnlyDictionary<int, string>> BuildFontUnicodeMaps(IReadOnlyList<PdfObject> objects)
+static Dictionary<(int PageNumber, string FontName), IReadOnlyDictionary<int, string>> BuildFontUnicodeMaps(IReadOnlyList<PdfObject> objects)
 {
     var objectByNumber = objects.ToDictionary(item => item.Number);
-    var maps = new Dictionary<string, IReadOnlyDictionary<int, string>>(StringComparer.Ordinal);
+    var maps = new Dictionary<(int PageNumber, string FontName), IReadOnlyDictionary<int, string>>();
+    int unicodePageNumber = 0;
     foreach (PdfObject page in objects.Where(item => IsPageObject(item.Body)))
     {
+        unicodePageNumber++;
         foreach ((string fontName, int fontObjectNumber) in ReadPageFontResources(page.Body))
         {
             if (!objectByNumber.TryGetValue(fontObjectNumber, out PdfObject? fontObject))
@@ -272,19 +274,21 @@ static Dictionary<string, IReadOnlyDictionary<int, string>> BuildFontUnicodeMaps
             }
 
             string cmap = Encoding.Latin1.GetString(cmapObject.Stream.Decoded);
-            maps[fontName] = PdfToUnicodeMap.Parse(cmap);
+            maps[(unicodePageNumber, fontName)] = PdfToUnicodeMap.Parse(cmap);
         }
     }
 
     return maps;
 }
 
-static Dictionary<string, PdfFontWidthMap> BuildFontWidthMaps(IReadOnlyList<PdfObject> objects)
+static Dictionary<(int PageNumber, string FontName), PdfFontWidthMap> BuildFontWidthMaps(IReadOnlyList<PdfObject> objects)
 {
     var objectByNumber = objects.ToDictionary(item => item.Number);
-    var maps = new Dictionary<string, PdfFontWidthMap>(StringComparer.Ordinal);
+    var maps = new Dictionary<(int PageNumber, string FontName), PdfFontWidthMap>();
+    int widthPageNumber = 0;
     foreach (PdfObject page in objects.Where(item => IsPageObject(item.Body)))
     {
+        widthPageNumber++;
         foreach ((string fontName, int fontObjectNumber) in ReadPageFontResources(page.Body))
         {
             if (!objectByNumber.TryGetValue(fontObjectNumber, out PdfObject? fontObject))
@@ -296,7 +300,7 @@ static Dictionary<string, PdfFontWidthMap> BuildFontWidthMaps(IReadOnlyList<PdfO
                 ReadSimpleWidthMap(fontObject, objectByNumber);
             if (widthMap is not null)
             {
-                maps[fontName] = widthMap;
+                maps[(widthPageNumber, fontName)] = widthMap;
             }
         }
     }
@@ -306,18 +310,31 @@ static Dictionary<string, PdfFontWidthMap> BuildFontWidthMaps(IReadOnlyList<PdfO
 
 static PdfFontWidthMap? ReadType0WidthMap(PdfObject fontObject, IReadOnlyDictionary<int, PdfObject> objectByNumber)
 {
-    Match descendantFonts = Regex.Match(fontObject.Body, @"/DescendantFonts\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant);
-    if (!descendantFonts.Success ||
-        !objectByNumber.TryGetValue(int.Parse(descendantFonts.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? descendantArray))
+    // Our writer emits an inline DescendantFonts array (/DescendantFonts [N 0 R]); Office may use an indirect array object.
+    // Handle the inline form first, then fall back to the indirect form. Missing/ambiguous widths stay explicit nulls.
+    PdfObject? descendant = null;
+    Match inlineDescendant = Regex.Match(fontObject.Body, @"/DescendantFonts\s*\[\s*(?<number>\d+)\s+\d+\s+R\s*\]", RegexOptions.CultureInvariant);
+    if (inlineDescendant.Success && objectByNumber.TryGetValue(int.Parse(inlineDescendant.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? inlineDescendantObject))
     {
-        return null;
+        descendant = inlineDescendantObject;
     }
-
-    Match descendantRef = Regex.Match(descendantArray.Body, @"\[\s*(?<number>\d+)\s+\d+\s+R\s*\]", RegexOptions.CultureInvariant);
-    if (!descendantRef.Success ||
-        !objectByNumber.TryGetValue(int.Parse(descendantRef.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? descendant))
+    else
     {
-        return null;
+        Match descendantFonts = Regex.Match(fontObject.Body, @"/DescendantFonts\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant);
+        if (!descendantFonts.Success ||
+            !objectByNumber.TryGetValue(int.Parse(descendantFonts.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? descendantArray))
+        {
+            return null;
+        }
+
+        Match descendantRef = Regex.Match(descendantArray.Body, @"\[\s*(?<number>\d+)\s+\d+\s+R\s*\]", RegexOptions.CultureInvariant);
+        if (!descendantRef.Success ||
+            !objectByNumber.TryGetValue(int.Parse(descendantRef.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? indirectDescendant))
+        {
+            return null;
+        }
+
+        descendant = indirectDescendant;
     }
 
     int defaultWidth = ReadDictionaryInt(descendant.Body, "DW");
@@ -816,8 +833,8 @@ internal sealed record PdfTextOperation(
         int objectNumber,
         int generation,
         string stream,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps,
-        IReadOnlyDictionary<string, PdfFontWidthMap> fontWidthMaps)
+        IReadOnlyDictionary<(int PageNumber, string FontName), IReadOnlyDictionary<int, string>> fontUnicodeMaps,
+        IReadOnlyDictionary<(int PageNumber, string FontName), PdfFontWidthMap> fontWidthMaps)
     {
         var operations = new List<PdfTextOperation>();
         string font = string.Empty;
@@ -876,7 +893,7 @@ internal sealed record PdfTextOperation(
             {
                 PdfMatrix effective = currentMatrix.Multiply(new PdfMatrix(a, b, c, d, x, y));
                 string payload = match.Groups["payload"].Value;
-                string decodedText = DecodePayload(payload, fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMap)
+                string decodedText = DecodePayload(payload, (pageNumber is not null && fontUnicodeMaps.TryGetValue((pageNumber.Value, font), out IReadOnlyDictionary<int, string>? unicodeMap))
                     ? unicodeMap
                     : null);
                 PdfTextPayloadProfile payloadProfile = ReadPayloadProfile(payload);
@@ -887,14 +904,14 @@ internal sealed record PdfTextOperation(
                 int characterSpacingGapCount = Math.Max(0, decodedRuneCount - 1);
                 double characterSpacingGapTotalPoints = characterSpacing * characterSpacingGapCount;
                 double adjustmentTotalPoints = -payloadProfile.AdjustmentSum * fontSize / 1000d;
-                double? naturalWidthPoints = fontWidthMaps.TryGetValue(font, out PdfFontWidthMap? widthMap)
-                    ? MeasurePayloadWidth(payload, fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMapForCodes) ? unicodeMapForCodes : null, widthMap, fontSize)
-                    : null;
+                PdfFontWidthMap? widthMap = (pageNumber is not null && fontWidthMaps.TryGetValue((pageNumber.Value, font), out PdfFontWidthMap? scopedWidthMap)) ? scopedWidthMap : null;
+                IReadOnlyDictionary<int, string>? unicodeMapForCodes = (pageNumber is not null && fontUnicodeMaps.TryGetValue((pageNumber.Value, font), out IReadOnlyDictionary<int, string>? scopedUnicodeMapForCodes)) ? scopedUnicodeMapForCodes : null;
+                double? naturalWidthPoints = widthMap is null ? null : MeasurePayloadWidth(payload, unicodeMapForCodes, widthMap, fontSize);
                 PdfTextPayloadWidthSignature? widthSignature = widthMap is null
                     ? null
                     : CreatePayloadWidthSignature(
                         payload,
-                        fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMapForSignature) ? unicodeMapForSignature : null,
+                        ((pageNumber is not null && fontUnicodeMaps.TryGetValue((pageNumber.Value, font), out IReadOnlyDictionary<int, string>? unicodeMapForSignature)) ? unicodeMapForSignature : null),
                         widthMap);
                 operations.Add(new PdfTextOperation(
                     pageNumber,

@@ -126,7 +126,7 @@ function New-ReferenceRequestItem($CaseInfo, [int] $DpiValue) {
     $inputFull = Get-CaseInputPath $CaseInfo
     $inputSha256 = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
     $cacheVariant = Get-CaseCacheVariant $CaseInfo
-    $cacheKey = Get-ReferenceCacheKey $inputFull $DpiValue $cacheVariant
+    $cacheKey = Get-ReferenceIdentityKey $inputFull $cacheVariant
     $cacheDirectory = Join-Path (Join-Path $repoRoot "artifacts/reference-cache") $cacheKey
     $completeMarker = Join-Path $cacheDirectory "complete.txt"
     $referencePdf = Join-Path $cacheDirectory "reference.pdf"

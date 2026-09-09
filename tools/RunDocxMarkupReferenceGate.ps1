@@ -184,18 +184,28 @@ function Get-CaseReferenceCacheStatus($CaseInfo, [int] $DpiValue) {
     $inputFull = Get-CaseInputPath $CaseInfo
     $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
     $cacheVariant = Get-CaseCacheVariant $CaseInfo
-    $cacheKey = Get-ReferenceCacheKey $inputFull $DpiValue $cacheVariant
+    $cacheKey = Get-ReferenceIdentityKey $inputFull $cacheVariant
     $cacheDir = Join-Path (Join-Path $repoRoot "artifacts/reference-cache") $cacheKey
     $completeMarker = Join-Path $cacheDir "complete.txt"
     $metadata = Get-CacheMetadata $cacheDir
     $referencePdfPath = Join-Path $cacheDir "reference.pdf"
-    $rasterPageCount = if (Test-Path -LiteralPath $cacheDir) {
+    $derivativeName = Get-ReferenceDerivativeName $DpiValue
+    $derivativeDir = Join-Path (Join-Path $cacheDir "raster") $derivativeName
+    $rasterPageCount = if (Test-Path -LiteralPath $derivativeDir) {
+        @(Get-ChildItem -LiteralPath $derivativeDir -Filter "page-*.png" -ErrorAction SilentlyContinue).Count
+    }
+    elseif (Test-Path -LiteralPath $cacheDir) {
         @(Get-ChildItem -LiteralPath $cacheDir -Filter "page-*.png" -ErrorAction SilentlyContinue).Count
     }
     else {
         0
     }
-    $ready = (Test-Path -LiteralPath $completeMarker) -and (Test-Path -LiteralPath $referencePdfPath)
+
+    $entryState = $null
+    if (Test-Path -LiteralPath $cacheDir) {
+        $entryState = (Test-ReferenceIdentityEntry $cacheDir $inputHash $cacheVariant).State
+    }
+    $ready = ($entryState -eq "Complete")
     $isPrivateSafe = $CaseInfo.PSObject.Properties.Name -contains "PrivateSafe" -and $CaseInfo.PrivateSafe -eq $true
 
     [pscustomobject]@{

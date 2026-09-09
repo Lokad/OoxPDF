@@ -4,6 +4,13 @@ Diagnostics use stable code prefixes such as `OOXML_`, `PPTX_`, `DOCX_`, `PDF_`,
 
 Diagnostics are emitted through `OoxPdfOptions.DiagnosticSink` and through the CLI `--diagnostics` JSON file. Warnings mean conversion continued with a fallback or omission. Errors mean conversion failed or the output cannot be trusted.
 
+## OOXML
+
+Top-level package or dialect issues:
+
+- `OOXML_STRICT_DIALECT`: Strict OOXML (ISO 29500) content was detected; only the transitional dialect is supported and content may be missing.
+- `OOXML_MUST_UNDERSTAND`: content marked must-understand uses unsupported namespaces and was ignored.
+
 ## PPTX
 
 Unsupported feature warnings:
@@ -18,6 +25,7 @@ Unsupported feature warnings:
 - `PPTX_CHART_MISSING_CACHED_DATA`: a supported chart referenced formula-only data without chart-side cached numeric values; workbook provenance is preserved but not used for layout.
 - `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`: default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.
 - `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION`: a default-placement chart axis title has an unsupported or missing axis kind/position.
+- `PPTX_UNSUPPORTED_CHART_NUMBER_FORMAT`: a chart number format uses unsupported syntax (locale rules, colors, native digit shapes, `!` escapes, `@` placeholders, or unknown brackets) that is dropped; one warning per construct per chart.
 - `PPTX_UNSUPPORTED_GRAPHIC_FRAME`: an unsupported graphic frame was detected and ignored.
 - `PPTX_UNSUPPORTED_GRADIENT_FILL`: an unsupported gradient fill was detected and ignored.
 - `PPTX_UNSUPPORTED_PATTERN_FILL`: an unsupported pattern fill was detected and ignored.
@@ -31,6 +39,8 @@ Unsupported feature warnings:
 - `PPTX_UNSUPPORTED_CUSTOM_GEOMETRY`: unsupported custom geometry was detected and ignored.
 - `PPTX_UNSUPPORTED_CALLOUT`: a callout shape was detected and ignored.
 - `PPTX_UNSUPPORTED_TABLE_STYLE`: an unsupported table style was detected.
+- `PPTX_UNSUPPORTED_HYPERLINK`: a shape, frame, text-run, or chart title hyperlink pointed at an unresolvable, empty, unknown-slide, or unsupported-typed relationship and was ignored. Repeated uses of the same relationship on one slide report once.
+- `PPTX_UNSUPPORTED_HYPERLINK_ACTION`: a hyperlink carried only an action (no relationship target) and was ignored. Repeated uses of the same action on one slide report once.
 - `PPTX_NODE_RENDER_FAILED`: a slide node failed to render.
 
 These warnings are slide-scoped when a slide index is available. Duplicate occurrences of the same unsupported feature on one slide are aggregated into one warning for that slide.

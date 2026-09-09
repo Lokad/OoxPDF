@@ -86,17 +86,6 @@ function Convert-ToRepoPath([string] $path) {
     return (Resolve-Path -LiteralPath $path).Path.Substring($repoRoot.Length).TrimStart("\", "/").Replace("\", "/")
 }
 
-function Get-LatestCaseRun([string] $caseId) {
-    $caseArtifactRoot = Join-Path $artifactRoot $caseId
-    if (-not (Test-Path -LiteralPath $caseArtifactRoot)) {
-        return $null
-    }
-
-    return Get-ChildItem -LiteralPath $caseArtifactRoot -Directory |
-        Sort-Object LastWriteTimeUtc -Descending |
-        Select-Object -First 1
-}
-
 function Get-ManifestDouble($object, [string] $name, $defaultValue) {
     if ($object -ne $null -and $object.PSObject.Properties.Name -contains $name -and $object.$name -ne $null) {
         return [double]$object.$name
@@ -126,10 +115,10 @@ function Get-CaseClassification($caseManifest) {
     return "unclassified"
 }
 
-function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
+function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$explicitRunRoot) {
     $caseManifestPath = Join-Path $case.FullName "case.json"
     $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
-    $latestRun = Get-LatestCaseRun $caseManifest.id
+    $latestRun = if (-not [string]::IsNullOrWhiteSpace($explicitRunRoot) -and (Test-Path -LiteralPath $explicitRunRoot)) { Get-Item -LiteralPath $explicitRunRoot } else { $null }
     $metrics = @()
     $diagnostics = @()
     if ($latestRun -ne $null) {
@@ -265,15 +254,28 @@ if ($cases.Count -eq 0) {
 }
 
 Write-Host ("Visual family: {0} ({1} cases)" -f $Family, $cases.Count)
+# Build once per family invocation; cases reuse the binaries via -SkipBuild with
+# explicit run binding, so concurrent invocations cannot observe a half-built DLL.
+& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -OutputDll (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll") -Description "CLI"
+& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
+& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
 $rows = @()
 foreach ($case in $cases) {
     $manifest = Join-Path $case.FullName "case.json"
     Write-Host ("==> {0}" -f $case.Name)
+    # Explicit run binding: the family mints a collision-resistant run id and
+    # hands the resulting run root to reporting instead of rediscovering the
+    # latest run directory by mtime (which races concurrent and failed runs).
+    $caseManifestJson = Get-Content -Raw -LiteralPath $manifest | ConvertFrom-Json
+    $caseRunId = "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8))
+    $caseRunRoot = Join-Path $artifactRoot ([System.IO.Path]::Combine([string]$caseManifestJson.id, $caseRunId))
     $passed = $true
     $errorMessage = ""
     try {
         $caseArgs = @{
             Case = $manifest
+            RunId = $caseRunId
+            SkipBuild = $true
         }
         if ($CacheOnlyReference) {
             $caseArgs.CacheOnlyReference = $true
@@ -287,11 +289,11 @@ foreach ($case in $cases) {
         Write-Host ("FAILED {0}: {1}" -f $case.Name, $errorMessage)
     }
 
-    $rows += New-ReportRow $case $passed $errorMessage
+    $rows += New-ReportRow $case $passed $errorMessage $caseRunRoot
 }
 
 New-Item -ItemType Directory -Force -Path $reportRoot | Out-Null
-$runId = Get-Date -Format "yyyyMMdd-HHmmss"
+$runId = "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8))
 $report = [pscustomobject]@{
     family = $Family
     generatedAt = (Get-Date).ToString("o")
@@ -312,6 +314,11 @@ $rows | Export-Csv -NoTypeInformation -LiteralPath $reportCsvPath
 $rows | Export-Csv -NoTypeInformation -LiteralPath $timestampedCsvPath
 
 if ($UpdateCatalog) {
+    $catalogMutex = New-Object System.Threading.Mutex($false, "Global\OoxPdfSupportCatalog")
+    if (-not $catalogMutex.WaitOne([TimeSpan]::FromMinutes(5))) {
+        throw "Timed out waiting for the support-catalog lock."
+    }
+    try {
     foreach ($row in $rows) {
         $supportCatalog[$row.id] = [pscustomobject]@{
             id = $row.id
@@ -337,6 +344,11 @@ if ($UpdateCatalog) {
     $catalogDirectory = Split-Path -Parent $supportCatalogPath
     New-Item -ItemType Directory -Force -Path $catalogDirectory | Out-Null
     Set-Content -LiteralPath $supportCatalogPath -Value ($catalog | ConvertTo-Json -Depth 8)
+    }
+    finally {
+        $catalogMutex.ReleaseMutex()
+        $catalogMutex.Dispose()
+    }
 }
 
 Write-Host "Visual family report: $reportJsonPath"

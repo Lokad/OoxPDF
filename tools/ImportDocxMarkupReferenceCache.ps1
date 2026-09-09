@@ -1,3 +1,8 @@
+# Trusted DOCX markup reference import. Thin wrapper over the shared
+# Import-ReferenceCacheEntry path: derives the cache variant from the visual
+# case manifest (or explicit overrides) and delegates keying, verification,
+# atomic publish, and provenance recording to ReferenceCache.ps1.
+
 param(
     [Parameter(Mandatory = $true)]
     [string] $Case,
@@ -10,7 +15,13 @@ param(
     [string] $DocxMarkup,
 
     [ValidateSet("preserve", "preserve-layout", "preserve-document-layout", "reserve", "reserve-margin", "markup-margin", "reserve-markup-margin", "word", "word-compatible", "word-compatible-all-markup", "office", "office-compatible", "office-compatible-all-markup")]
-    [string] $DocxMarkupGeometry,
+    [string] $DocxMarkupGeometry = "preserve",
+
+    [string] $OfficeApp,
+
+    [string] $OfficeVersion,
+
+    [string] $ExportSettings,
 
     [int] $Dpi = 144,
 
@@ -22,14 +33,6 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 . (Join-Path $PSScriptRoot "ReferenceCache.ps1")
-
-function Copy-ReferenceDirectory([string] $SourceDirectory, [string] $DestinationDirectory) {
-    if (-not (Test-Path -LiteralPath (Join-Path $SourceDirectory "reference.pdf"))) {
-        throw "Reference directory does not contain reference.pdf: $SourceDirectory"
-    }
-
-    Copy-Item -Path (Join-Path $SourceDirectory "*") -Destination $DestinationDirectory -Recurse -Force
-}
 
 function ConvertTo-CanonicalDocxMarkup([string] $Value) {
     if ([string]::IsNullOrWhiteSpace($Value)) {
@@ -98,83 +101,14 @@ if ([string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
     $docxMarkupGeometry = "preserve"
 }
 
-$caseId = if ($manifest.PSObject.Properties.Name -contains "docxMarkup" -and -not [string]::IsNullOrWhiteSpace([string]$manifest.docxMarkup)) {
-    [string]$manifest.id
-}
-else {
-    "private-docx-markup-{0}" -f $docxMarkup
-}
+$caseId = [string]$manifest.id
 $cacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $docxMarkup, $docxMarkupGeometry
-$cacheKey = Get-ReferenceCacheKey $inputFull $Dpi $cacheVariant
-$cacheRoot = Join-Path $repoRoot "artifacts/reference-cache"
-$cacheDir = Join-Path $cacheRoot $cacheKey
-$completeMarker = Join-Path $cacheDir "complete.txt"
-
-if ((Test-Path -LiteralPath $completeMarker) -and -not $Force) {
-    throw "Reference cache already exists: $cacheDir. Pass -Force to replace it."
-}
-
-$tempDir = Join-Path $cacheRoot ("_import-" + [System.Guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-try {
-    if (-not [string]::IsNullOrWhiteSpace($ReferencePdf)) {
-        Copy-Item -LiteralPath (Resolve-Path -LiteralPath $ReferencePdf).Path -Destination (Join-Path $tempDir "reference.pdf") -Force
-    }
-    else {
-        $referenceDirectoryFull = (Resolve-Path -LiteralPath $ReferenceDirectory).Path
-        Copy-ReferenceDirectory $referenceDirectoryFull $tempDir
-    }
-
-    $referencePdfPath = Join-Path $tempDir "reference.pdf"
-    if (-not (Test-Path -LiteralPath $referencePdfPath)) {
-        throw "Imported reference did not provide reference.pdf."
-    }
-
-    $rasterPages = @(Get-ChildItem -LiteralPath $tempDir -Filter "page-*.png" -ErrorAction SilentlyContinue)
-    if ($rasterPages.Count -eq 0) {
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdfPath -OutputDirectory $tempDir -Dpi $Dpi
-    }
-
-    $referencePdfHash = (Get-FileHash -LiteralPath $referencePdfPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    $pageHashes = @(
-        Get-ChildItem -LiteralPath $tempDir -Filter "page-*.png" -ErrorAction SilentlyContinue |
-            Sort-Object Name |
-            ForEach-Object {
-                [pscustomobject]@{
-                    Name = $_.Name
-                    Length = $_.Length
-                    Sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-                }
-            }
-    )
-
-    $metadata = [ordered]@{
-        CaseId = $caseId
-        InputExtension = [System.IO.Path]::GetExtension($inputFull).TrimStart(".").ToLowerInvariant()
-        InputSha256 = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
-        Dpi = $Dpi
-        CacheVariant = $cacheVariant
-        CacheKey = $cacheKey
-        ReferencePdfLength = (Get-Item -LiteralPath $referencePdfPath).Length
-        ReferencePdfSha256 = $referencePdfHash
-        RasterPageCount = $pageHashes.Count
-        RasterPages = $pageHashes
-        ImportedAtUtc = [DateTime]::UtcNow.ToString("O", [Globalization.CultureInfo]::InvariantCulture)
-    }
-    $metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $tempDir "reference-metadata.json") -Encoding UTF8
-
-    New-Item -ItemType Directory -Force -Path $cacheRoot | Out-Null
-    if (Test-Path -LiteralPath $cacheDir) {
-        Remove-Item -LiteralPath $cacheDir -Recurse -Force
-    }
-
-    Move-Item -LiteralPath $tempDir -Destination $cacheDir
-    Set-Content -LiteralPath (Join-Path $cacheDir "complete.txt") -Value ("inputSha256={0}`ndpi={1}`nvariant={2}`nreferencePdfSha256={3}`n" -f $metadata.InputSha256, $Dpi, $cacheVariant, $referencePdfHash)
-}
-finally {
-    if (Test-Path -LiteralPath $tempDir) {
-        Remove-Item -LiteralPath $tempDir -Recurse -Force
-    }
-}
-
-Write-Host "Imported DOCX markup reference cache: $cacheDir"
+Import-ReferenceCacheEntry `
+    -InputPath $inputFull `
+    -ReferencePdf $ReferencePdf `
+    -ReferenceDirectory $ReferenceDirectory `
+    -DpiValue $Dpi `
+    -CacheVariant $cacheVariant `
+    -CaseId $caseId `
+    -Producer @{ Producer = "import"; OfficeApp = $OfficeApp; OfficeVersion = $OfficeVersion; ExportSettings = $ExportSettings } `
+    -Force:$Force

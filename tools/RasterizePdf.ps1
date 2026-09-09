@@ -5,7 +5,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $OutputDirectory,
 
-    [int] $Dpi = 144
+    [int] $Dpi = 144,
+
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,15 +24,13 @@ $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
 $rasterizerProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj"
 $rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll"
-$sourceNewest = Get-ChildItem -LiteralPath (Split-Path -Parent $rasterizerProject) -Recurse -Include *.cs,*.csproj |
-    Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
-    Sort-Object LastWriteTimeUtc -Descending |
-    Select-Object -First 1
-if (-not (Test-Path -LiteralPath $rasterizerDll) -or $sourceNewest.LastWriteTimeUtc -gt (Get-Item -LiteralPath $rasterizerDll).LastWriteTimeUtc) {
-    dotnet build $rasterizerProject --nologo
-    if ($LASTEXITCODE -ne 0) {
-        throw "PDFium rasterizer build failed with exit code $LASTEXITCODE."
+if ($SkipBuild) {
+    if (-not (Test-Path -LiteralPath $rasterizerDll)) {
+        throw "PDFium rasterizer DLL is missing and -SkipBuild was requested: $rasterizerDll."
     }
+}
+else {
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project $rasterizerProject -OutputDll $rasterizerDll -Description "PDFium rasterizer"
 }
 
 dotnet $rasterizerDll $inputFull $outputFull $Dpi
