@@ -3,10 +3,11 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-punctuation-wrapping.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "wrapping", "word-break"],
+  "tags": ["docx", "ladder", "table", "wrapping", "word-break", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "minForegroundRecall": 0.96
   }
 }
