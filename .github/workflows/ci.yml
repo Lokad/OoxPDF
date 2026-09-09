@@ -44,3 +44,5 @@ jobs:
         run: pwsh -NoProfile -File tools/TestPptxEmissionComparison.ps1
       - name: Content tokenization checks
         run: pwsh -NoProfile -File tools/TestPdfContentTokenization.ps1
+      - name: Chart classifier adversarial checks
+        run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
