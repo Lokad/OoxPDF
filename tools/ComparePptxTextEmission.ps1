@@ -30,9 +30,7 @@ $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
-function Delta([double] $left, [double] $right) {
-    return [Math]::Round($right - $left, 6)
-}
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
 function RoundAway([double] $value) {
     return [Math]::Round($value, 6, [MidpointRounding]::AwayFromZero)
@@ -146,40 +144,7 @@ function RefBaselineFromCandidateShapeTop($reference, $candidate) {
     return [Math]::Round([double]$pageTopBaseline - [double]$shapeTop, 6)
 }
 
-function Group-Count($items, [scriptblock] $keySelector) {
-    $groups = @{}
-    foreach ($item in $items) {
-        $key = & $keySelector $item
-        if ($null -eq $key -or [string]$key -eq "") {
-            $key = "(missing)"
-        }
 
-        $key = [string]$key
-        if ($groups.ContainsKey($key)) {
-            $groups[$key]++
-        }
-        else {
-            $groups[$key] = 1
-        }
-    }
-
-    return @(
-        foreach ($key in ($groups.Keys | Sort-Object)) {
-            [pscustomobject]@{
-                Key = $key
-                Count = $groups[$key]
-            }
-        }
-    )
-}
-
-function RoundedKey($value) {
-    if ($null -eq $value -or [string]$value -eq "") {
-        return "(missing)"
-    }
-
-    return ([Math]::Round([double]$value, 6)).ToString("0.######", [Globalization.CultureInfo]::InvariantCulture)
-}
 
 function StringKey($value) {
     if ($null -eq $value -or [string]$value -eq "") {

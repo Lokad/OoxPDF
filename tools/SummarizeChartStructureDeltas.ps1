@@ -111,13 +111,8 @@ function Ensure-Probe($runPath, $side) {
     & (Join-Path $PSScriptRoot "ClassifyPdfChartText.ps1") -InputPath $text -ChartStructures $chartGraphics -Output $chartText -PageNumber 1 *> $null
 }
 
-function CenterX($item) {
-    return ([double]$item.MinX + [double]$item.MaxX) / 2d
-}
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
-function CenterY($item) {
-    return ([double]$item.MinY + [double]$item.MaxY) / 2d
-}
 
 function BoundsDelta($reference, $candidate) {
     return @(

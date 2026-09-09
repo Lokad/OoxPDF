@@ -22,9 +22,7 @@ $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
-function Delta([double] $left, [double] $right) {
-    return [Math]::Round([double]$right - [double]$left, 6)
-}
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
 function TextX($op) {
     if ($UseEffectiveMatrix -and $op.EffectiveX -ne $null) {

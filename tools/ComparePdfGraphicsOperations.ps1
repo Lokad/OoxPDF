@@ -87,11 +87,9 @@ function OperationSourceOperator($op) {
     return ""
 }
 
-function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
-function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 function Width($op) { return [double]$op.MaxX - [double]$op.MinX }
 function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
-function Delta([double] $left, [double] $right) { return [Math]::Round($right - $left, 6) }
 function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
 function HasValue($value) { return $null -ne $value -and [string]$value -ne "" }
 function ColorValues($value) {

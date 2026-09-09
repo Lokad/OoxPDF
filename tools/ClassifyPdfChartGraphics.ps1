@@ -25,8 +25,7 @@ $ErrorActionPreference = "Stop"
 
 function Width($op) { return [double]$op.MaxX - [double]$op.MinX }
 function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
-function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
-function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 function TextX($op) { if ($op.EffectiveX -ne $null) { return [double]$op.EffectiveX } return [double]$op.X }
 function TextY($op) { if ($op.EffectiveY -ne $null) { return [double]$op.EffectiveY } return [double]$op.Y }
 function Round([double]$value) { return [Math]::Round($value, 6) }

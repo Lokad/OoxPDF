@@ -19,41 +19,8 @@ function Rounded($Value, [int] $Digits) {
     return [Math]::Round([double]$Value, $Digits)
 }
 
-function RoundedKey($Value, [int] $Digits) {
-    $rounded = Rounded $Value $Digits
-    if ($null -eq $rounded) {
-        return "(missing)"
-    }
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
-    return $rounded.ToString("0.######", [Globalization.CultureInfo]::InvariantCulture)
-}
-
-function Group-Count($Items, [scriptblock] $KeySelector) {
-    $groups = @{}
-    foreach ($item in $Items) {
-        $key = & $KeySelector $item
-        if ($null -eq $key -or [string]$key -eq "") {
-            $key = "(missing)"
-        }
-
-        $key = [string]$key
-        if ($groups.ContainsKey($key)) {
-            $groups[$key]++
-        }
-        else {
-            $groups[$key] = 1
-        }
-    }
-
-    return @(
-        foreach ($key in ($groups.Keys | Sort-Object)) {
-            [pscustomobject]@{
-                Key = $key
-                Count = $groups[$key]
-            }
-        }
-    )
-}
 
 function TextClass($Operation) {
     if ($null -eq $Operation.DecodedText) {

@@ -74,9 +74,7 @@ function New-LineGroups($operations) {
     }
 }
 
-function Delta([double] $left, [double] $right) {
-    return [Math]::Round($right - $left, 6)
-}
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
 function TextContent($op) {
     if ($op.DecodedText -ne $null) {

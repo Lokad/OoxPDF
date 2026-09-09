@@ -65,13 +65,8 @@ function Stable-TextHash([string] $text) {
     return [Convert]::ToHexString($hash).Substring(0, 16)
 }
 
-function CenterX($item) {
-    return ([double]$item.MinX + [double]$item.MaxX) / 2d
-}
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
-function CenterY($item) {
-    return ([double]$item.MinY + [double]$item.MaxY) / 2d
-}
 
 function BoundsDelta($reference, $candidate) {
     return @(

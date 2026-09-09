@@ -29,13 +29,7 @@ function Expand-PathList([string[]] $Values) {
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
-function RoundedKey($Value, [int] $Digits) {
-    if ($null -eq $Value -or [string]$Value -eq "") {
-        return "(missing)"
-    }
-
-    return ([Math]::Round([double]$Value, $Digits)).ToString("0.######", [Globalization.CultureInfo]::InvariantCulture)
-}
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
 function SubtractOrNull($Left, $Right) {
     if ($null -eq $Left -or [string]$Left -eq "" -or $null -eq $Right -or [string]$Right -eq "") {
@@ -66,32 +60,6 @@ function Test-NumericClose($Left, $Right, [double] $Tolerance) {
     return [Math]::Abs([double]$Left - [double]$Right) -le $Tolerance
 }
 
-function Group-Count($Items, [scriptblock] $KeySelector) {
-    $groups = @{}
-    foreach ($item in $Items) {
-        $key = & $KeySelector $item
-        if ($null -eq $key -or [string]$key -eq "") {
-            $key = "(missing)"
-        }
-
-        $key = [string]$key
-        if ($groups.ContainsKey($key)) {
-            $groups[$key]++
-        }
-        else {
-            $groups[$key] = 1
-        }
-    }
-
-    return @(
-        foreach ($key in ($groups.Keys | Sort-Object)) {
-            [pscustomobject]@{
-                Key = $key
-                Count = $groups[$key]
-            }
-        }
-    )
-}
 
 function New-TcTargetHypothesisReport(
     [string] $Name,
