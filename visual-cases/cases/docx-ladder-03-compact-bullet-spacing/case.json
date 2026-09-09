@@ -3,12 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-compact-bullet-spacing.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "docgrid"],
+  "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "docgrid", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "minForegroundRecall": 0.72
   },
   "allowedUnsupportedFeatures": []
 }

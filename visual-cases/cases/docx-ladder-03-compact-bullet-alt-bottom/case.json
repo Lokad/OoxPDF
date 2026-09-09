@@ -3,12 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-compact-bullet-alt-bottom.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "font-table"],
+  "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "font-table", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "minForegroundRecall": 0.65
   },
   "allowedUnsupportedFeatures": []
 }
