@@ -24,9 +24,7 @@ $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
-function Read-JsonObject([string] $Path) {
-    return Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Path).Path | ConvertFrom-Json
-}
+. (Join-Path $PSScriptRoot "JsonObject.ps1")
 
 function Get-Coordinate($Operation, [string] $Name) {
     $effectiveName = "Effective$Name"

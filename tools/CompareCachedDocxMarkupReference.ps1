@@ -105,13 +105,7 @@ function Invoke-DotnetBuildIfStale {
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
-function Read-JsonObject([string] $Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return $null
-    }
-
-    return Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
-}
+. (Join-Path $PSScriptRoot "JsonObject.ps1")
 
 function Get-PdfObjects([string] $PdfPath) {
     $bytes = [System.IO.File]::ReadAllBytes($PdfPath)
@@ -3363,8 +3357,8 @@ $candidateMarkupDensity = if ($null -ne $candidateMarkupSummary -and
 else {
     @()
 }
-$candidateLayoutSnapshot = Read-JsonObject (Join-Path $candidateDocxInspect "layout-snapshot.json")
-$candidateTextEmissionSummary = Read-JsonObject (Join-Path $candidateDocxInspect "text-emission-summary.json")
+$candidateLayoutSnapshot = Read-JsonObjectIfExists (Join-Path $candidateDocxInspect "layout-snapshot.json")
+$candidateTextEmissionSummary = Read-JsonObjectIfExists (Join-Path $candidateDocxInspect "text-emission-summary.json")
 $readCandidateSourceBlocks = Read-JsonArrayIfExists (Join-Path $candidateDocxInspect "source-block-summary.json")
 $candidateSourceBlocks = @($readCandidateSourceBlocks)
 $candidateLayoutTableCount = if ($null -ne $candidateLayoutSnapshot -and $candidateLayoutSnapshot.PSObject.Properties.Name -contains "Tables") {

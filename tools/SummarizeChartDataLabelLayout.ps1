@@ -30,13 +30,7 @@ $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
-function Read-JsonObject($path) {
-    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
-        return $null
-    }
-
-    return Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
-}
+. (Join-Path $PSScriptRoot "JsonObject.ps1")
 
 function Resolve-ComMetadataJsonPath([string] $explicitPath, [string] $pptxPath) {
     if (-not [string]::IsNullOrWhiteSpace($explicitPath)) {
@@ -770,7 +764,7 @@ $candidateLabelClusters = Group-TextClusters $candidateLabels
 $referenceLeaderLines = Select-Kind $referenceGraphics "DataLabelLeaderLineCandidate"
 $candidateLeaderLines = Select-Kind $candidateGraphics "DataLabelLeaderLineCandidate"
 $ComMetadataJson = Resolve-ComMetadataJsonPath $ComMetadataJson $Pptx
-$comMetadata = Read-JsonObject $ComMetadataJson
+$comMetadata = Read-JsonObjectIfExists $ComMetadataJson
 $chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml $Pptx $ChartPart $comMetadata
 $referencePolarPlotBox = Select-PrimaryKind $referenceGraphics "PolarPlotBoxCandidate"
 $candidatePolarPlotBox = Select-PrimaryKind $candidateGraphics "PolarPlotBoxCandidate"

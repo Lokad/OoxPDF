@@ -106,13 +106,7 @@ function Read-PrivateCacheStatusManifests([string] $Path) {
     )
 }
 
-function Read-JsonObjectIfExists([string] $Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return $null
-    }
-
-    return Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
-}
+. (Join-Path $PSScriptRoot "JsonObject.ps1")
 
 function Get-JsonPropertyValue($Object, [string] $Name) {
     if ($null -eq $Object -or $Object.PSObject.Properties.Name -notcontains $Name) {
