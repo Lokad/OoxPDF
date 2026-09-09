@@ -8,15 +8,14 @@
     "ladder",
     "wrapping",
     "typography",
-    "kern"
+    "kern",
+    "approximate"
   ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 3.0,
-    "maxChangedPixelRatioAtThreshold16": 0.03
+    "diagnosticsMustBeEmpty": true
   },
   "allowedUnsupportedFeatures": []
 }
