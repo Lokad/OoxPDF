@@ -9,6 +9,8 @@ param(
 
     [double] $MaxColorHistogramDrop = 0.02,
 
+    [double] $MaxForegroundRecallDrop = 0.02,
+
     [double] $MaxMeanAbsoluteErrorIncrease = 0.02,
 
     [double] $MaxChangedPixelRatioIncrease = 0.002
@@ -238,6 +240,22 @@ foreach ($id in $baselineMap.Keys | Sort-Object) {
             current = $afterHist
             delta = $afterHist - $beforeHist
             limit = -$MaxColorHistogramDrop
+        }
+    }
+
+    # Foreground recall is newer than archived reports: a missing value on
+    # either side is skipped (not a regression); only a finite drop beyond
+    # the limit fails. Null means the metric did not apply (empty reference).
+    $beforeRecall = To-FiniteDouble $before.minForegroundRecall
+    $afterRecall = To-FiniteDouble $after.minForegroundRecall
+    if ($null -ne $beforeRecall -and $null -ne $afterRecall -and ($beforeRecall - $afterRecall -gt $MaxForegroundRecallDrop)) {
+        $regressions += [pscustomobject]@{
+            id = $id
+            metric = "minForegroundRecall"
+            baseline = $beforeRecall
+            current = $afterRecall
+            delta = $afterRecall - $beforeRecall
+            limit = -$MaxForegroundRecallDrop
         }
     }
 
