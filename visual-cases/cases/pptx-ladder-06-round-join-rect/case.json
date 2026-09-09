@@ -3,14 +3,15 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-round-join-rect.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "line-join"],
+  "tags": ["pptx", "ladder", "shapes", "line-join", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0,
-    "maxChangedPixelRatioAtThreshold16": 0
+    "maxChangedPixelRatioAtThreshold16": 0,
+    "minForegroundRecall": 1
   },
   "allowedUnsupportedFeatures": []
 }
