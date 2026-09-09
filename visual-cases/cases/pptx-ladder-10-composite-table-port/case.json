@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-composite-table-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "table", "composite", "pptx-renderer-port"],
+  "tags": ["pptx", "ladder", "table", "composite", "pptx-renderer-port", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 13.92,
+    "minForegroundRecall": 0.98,
     "maxChangedPixelRatioAtThreshold16": 0.2363
   },
   "allowedUnsupportedFeatures": []

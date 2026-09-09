@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-table-center-explicit-multiline.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "tables", "explicit-margins", "multiline"],
+  "tags": ["pptx", "ladder", "tables", "explicit-margins", "multiline", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 14.0,
+    "minForegroundRecall": 0.94,
     "maxChangedPixelRatioAtThreshold16": 0.15
   },
   "allowedUnsupportedFeatures": []
