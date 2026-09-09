@@ -75,7 +75,7 @@ if ($manifest.kind -ne "docx") {
 }
 
 $inputFull = (Resolve-Path -LiteralPath (Join-Path $caseDirectory $manifest.input)).Path
-$docxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkup)) {
+$resolvedDocxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkup)) {
         $DocxMarkup
     }
     elseif ($manifest.PSObject.Properties.Name -contains "docxMarkup") {
@@ -84,11 +84,11 @@ $docxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSp
     else {
         $null
     })
-if ([string]::IsNullOrWhiteSpace($docxMarkup)) {
+if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkup)) {
     throw "DOCX markup reference cache import requires docxMarkup in the visual case or -DocxMarkup."
 }
 
-$docxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkupGeometry)) {
+$resolvedDocxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkupGeometry)) {
         $DocxMarkupGeometry
     }
     elseif ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry") {
@@ -97,12 +97,12 @@ $docxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]:
     else {
         $null
     })
-if ([string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
-    $docxMarkupGeometry = "preserve"
+if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkupGeometry)) {
+    $resolvedDocxMarkupGeometry = "preserve"
 }
 
 $caseId = [string]$manifest.id
-$cacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $docxMarkup, $docxMarkupGeometry
+$cacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $resolvedDocxMarkup, $resolvedDocxMarkupGeometry
 Import-ReferenceCacheEntry `
     -InputPath $inputFull `
     -ReferencePdf $ReferencePdf `

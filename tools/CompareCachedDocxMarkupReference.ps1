@@ -3116,7 +3116,7 @@ if ($manifest.kind -ne "docx") {
 }
 
 $inputFull = (Resolve-Path -LiteralPath (Join-Path $caseDirectory $manifest.input)).Path
-$docxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkup)) {
+$resolvedDocxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkup)) {
         $DocxMarkup
     }
     elseif ($manifest.PSObject.Properties.Name -contains "docxMarkup") {
@@ -3125,11 +3125,11 @@ $docxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSp
     else {
         $null
     })
-if ([string]::IsNullOrWhiteSpace($docxMarkup)) {
+if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkup)) {
     throw "Cached DOCX markup comparison requires docxMarkup in the case or -DocxMarkup."
 }
 
-$docxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkupGeometry)) {
+$resolvedDocxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkupGeometry)) {
         $DocxMarkupGeometry
     }
     elseif ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry") {
@@ -3138,8 +3138,8 @@ $docxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]:
     else {
         $null
     })
-if ([string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
-    $docxMarkupGeometry = "preserve"
+if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkupGeometry)) {
+    $resolvedDocxMarkupGeometry = "preserve"
 }
 
 $resolvedCaseId = if (-not [string]::IsNullOrWhiteSpace($CaseId)) {
@@ -3190,7 +3190,7 @@ elseif (-not [string]::IsNullOrWhiteSpace($ReferenceDirectory)) {
     Copy-Item -Path (Join-Path $referenceDirectoryFull "*") -Destination $referenceDir -Recurse -Force
 }
 else {
-    $referenceCacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $docxMarkup, $docxMarkupGeometry
+    $referenceCacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $resolvedDocxMarkup, $resolvedDocxMarkupGeometry
     & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $Dpi -CacheOnly -CacheVariant $referenceCacheVariant
 }
 
@@ -3217,12 +3217,12 @@ Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "
 
 $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
-dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnostics --docx-markup $docxMarkup --docx-markup-geometry $docxMarkupGeometry
+dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnostics --docx-markup $resolvedDocxMarkup --docx-markup-geometry $resolvedDocxMarkupGeometry
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "InspectDocx.ps1") -InputDocx $inputFull -OutputDirectory $candidateDocxInspect -DocxMarkup $docxMarkup -DocxMarkupGeometry $docxMarkupGeometry | Out-Null
+& (Join-Path $PSScriptRoot "InspectDocx.ps1") -InputDocx $inputFull -OutputDirectory $candidateDocxInspect -DocxMarkup $resolvedDocxMarkup -DocxMarkupGeometry $resolvedDocxMarkupGeometry | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "DOCX inspection failed with exit code $LASTEXITCODE."
 }
@@ -3629,8 +3629,8 @@ $summary = [ordered]@{
     RunId = $runId
     Input = if ($PrivateSafeSummary) { $null } else { $inputFull }
     InputSha256 = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
-    MarkupMode = $docxMarkup
-    MarkupGeometry = $docxMarkupGeometry
+    MarkupMode = $resolvedDocxMarkup
+    MarkupGeometry = $resolvedDocxMarkupGeometry
     ReferencePdf = $referencePdfPath
     CandidatePdf = $candidatePdf
     Diagnostics = $diagnostics
