@@ -46,3 +46,5 @@ jobs:
         run: pwsh -NoProfile -File tools/TestPdfContentTokenization.ps1
       - name: Chart classifier adversarial checks
         run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
+      - name: VisualDiff metric probe
+        run: pwsh -NoProfile -File tools/TestVisualDiffMetrics.ps1
