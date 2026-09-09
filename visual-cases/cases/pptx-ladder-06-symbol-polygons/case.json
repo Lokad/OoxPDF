@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-symbol-polygons.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "symbols"],
+  "tags": ["pptx", "ladder", "shapes", "symbols", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0,
+    "minForegroundRecall": 1,
     "maxChangedPixelRatioAtThreshold16": 0
   },
   "allowedUnsupportedFeatures": []
