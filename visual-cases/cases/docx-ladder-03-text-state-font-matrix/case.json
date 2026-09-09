@@ -3,11 +3,12 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-text-state-font-matrix.docx",
   "dpi": 144,
-  "tags": ["docx", "text", "tables", "text-state", "font", "ladder-03"],
+  "tags": ["docx", "text", "tables", "text-state", "font", "ladder-03", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "minForegroundRecall": 0.97
   },
   "allowedUnsupportedFeatures": []
 }
