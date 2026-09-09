@@ -7,3 +7,5 @@ artifacts/**
 private-cases/**
 *.user
 *.suo
+# Local-only open-work plan; never commit.
+/PLAN.md
