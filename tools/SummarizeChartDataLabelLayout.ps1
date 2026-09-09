@@ -28,22 +28,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Read-JsonArray($path) {
-    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
-        return ,@()
-    }
-
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return ,@()
-    }
-
-    if ($items -is [array]) {
-        return ,$items
-    }
-
-    return ,@($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Read-JsonObject($path) {
     if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
@@ -773,10 +758,10 @@ if (-not [string]::IsNullOrWhiteSpace($RunPath)) {
 $ReferenceChartTextStructures = Ensure-ChartTextStructures "reference" $ReferenceTextOperations $ReferenceChartStructures $ReferenceChartTextStructures
 $CandidateChartTextStructures = Ensure-ChartTextStructures "candidate" $CandidateTextOperations $CandidateChartStructures $CandidateChartTextStructures
 
-$referenceGraphics = Read-JsonArray $ReferenceChartStructures
-$candidateGraphics = Read-JsonArray $CandidateChartStructures
-$referenceText = Read-JsonArray $ReferenceChartTextStructures
-$candidateText = Read-JsonArray $CandidateChartTextStructures
+$referenceGraphics = Read-JsonArrayIfExists $ReferenceChartStructures
+$candidateGraphics = Read-JsonArrayIfExists $CandidateChartStructures
+$referenceText = Read-JsonArrayIfExists $ReferenceChartTextStructures
+$candidateText = Read-JsonArrayIfExists $CandidateChartTextStructures
 
 $referenceLabels = Select-Kind $referenceText "DataLabelText"
 $candidateLabels = Select-Kind $candidateText "DataLabelText"

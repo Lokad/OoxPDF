@@ -16,3 +16,11 @@ function Read-JsonArray([string] $Path) {
 
     return ,@($items)
 }
+
+function Read-JsonArrayIfExists([string] $Path) {
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        return @()
+    }
+
+    return Read-JsonArray $Path
+}

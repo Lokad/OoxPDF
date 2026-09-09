@@ -15,22 +15,7 @@ $ErrorActionPreference = "Stop"
 
 $ChartTitleCenterToleranceFactor = 0.45d
 
-function Read-JsonArray($path) {
-    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
-        return ,@()
-    }
-
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return ,@()
-    }
-
-    if ($items -is [array]) {
-        return ,$items
-    }
-
-    return ,@($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Round([double]$value) { return [Math]::Round($value, 6) }
 
@@ -509,7 +494,7 @@ if ($PageNumber -gt 0) {
     $textOps = @($textOps | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }
 
-$structures = Read-JsonArray $ChartStructures
+$structures = Read-JsonArrayIfExists $ChartStructures
 if ($PageNumber -gt 0) {
     $structures = @($structures | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }

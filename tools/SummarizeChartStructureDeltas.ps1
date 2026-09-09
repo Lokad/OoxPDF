@@ -16,22 +16,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Read-JsonArray($path) {
-    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
-        return ,@()
-    }
-
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return ,@()
-    }
-
-    if ($items -is [array]) {
-        return ,$items
-    }
-
-    return ,@($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Has-AnyProperty($object, [string[]] $patterns) {
     if ($null -eq $object) {
@@ -298,8 +283,8 @@ foreach ($caseFile in $caseFiles) {
     foreach ($set in @(
         [pscustomobject]@{ Name = "GRAPHICS"; File = "chart-graphics-structures.json" },
         [pscustomobject]@{ Name = "TEXT"; File = "chart-text-structures.json" })) {
-        $referenceItems = Read-JsonArray (Join-Path $run.FullName "probe-reference/$($set.File)")
-        $candidateItems = Read-JsonArray (Join-Path $run.FullName "probe-candidate/$($set.File)")
+        $referenceItems = Read-JsonArrayIfExists (Join-Path $run.FullName "probe-reference/$($set.File)")
+        $candidateItems = Read-JsonArrayIfExists (Join-Path $run.FullName "probe-candidate/$($set.File)")
         $keys = if ($ByRegion) {
             @(
                 foreach ($item in @($referenceItems + $candidateItems)) {
