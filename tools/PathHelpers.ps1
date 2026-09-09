@@ -33,3 +33,8 @@ function Expand-PathList([string[]] $Values) {
 
     return ,$expanded.ToArray()
 }
+
+function Get-CaseInputPath($CaseInfo) {
+    $caseDirectory = Split-Path -Parent $CaseInfo.Path
+    return (Resolve-Path -LiteralPath (Join-Path $caseDirectory $CaseInfo.Manifest.input)).Path
+}

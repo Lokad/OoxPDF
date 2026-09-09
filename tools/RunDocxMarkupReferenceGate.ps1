@@ -120,10 +120,6 @@ function Get-JsonPropertyValue($Object, [string] $Name) {
 . (Join-Path $PSScriptRoot "PathHelpers.ps1")
 
 
-function Get-CaseInputPath($CaseInfo) {
-    $caseDirectory = Split-Path -Parent $CaseInfo.Path
-    return (Resolve-Path -LiteralPath (Join-Path $caseDirectory $CaseInfo.Manifest.input)).Path
-}
 
 function Get-CaseCacheVariant($CaseInfo) {
     $docxMarkup = [string]$CaseInfo.Manifest.docxMarkup

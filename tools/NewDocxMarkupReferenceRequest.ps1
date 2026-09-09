@@ -95,10 +95,7 @@ function Get-DefaultDocxMarkupCases {
         Sort-Object Id
 }
 
-function Get-CaseInputPath($CaseInfo) {
-    $caseDirectory = Split-Path -Parent $CaseInfo.Path
-    return (Resolve-Path -LiteralPath (Join-Path $caseDirectory $CaseInfo.Manifest.input)).Path
-}
+. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 
 function Get-CaseCacheVariant($CaseInfo) {
     $docxMarkup = [string]$CaseInfo.Manifest.docxMarkup
@@ -112,7 +109,6 @@ function Get-CaseCacheVariant($CaseInfo) {
     "docxMarkup={0};docxMarkupGeometry={1}" -f $docxMarkup, $docxMarkupGeometry
 }
 
-. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 
 function New-ReferenceRequestItem($CaseInfo, [int] $DpiValue) {
     $inputFull = Get-CaseInputPath $CaseInfo
