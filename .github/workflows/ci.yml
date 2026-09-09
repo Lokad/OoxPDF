@@ -1,0 +1,32 @@
+name: ci
+
+# Clean-checkout non-Office gate (T08): Release build, deterministic console
+# suite, visual manifest gate, and allocation-probe self-test. Needs no
+# Office/COM, no reference cache, and no private cases. Windows-only: the
+# tracked PDFium validation binary is win-x64 and several suites cover
+# Windows' installed fonts (missing fonts skip instead of failing).
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build (Release)
+        run: dotnet build Lokad.OoxPdf.slnx -c Release --nologo
+      - name: Console suite (skip slow)
+        run: >-
+          dotnet run --project tests/Lokad.OoxPdf.Tests
+          -c Release -- --skip-slow
+      - name: Visual manifest gate
+        run: pwsh -NoProfile -File tools/ValidateVisualCases.ps1
+      - name: Allocation probe self-test
+        run: pwsh -NoProfile -File tools/MeasureAllocation.ps1 -SelfTest
