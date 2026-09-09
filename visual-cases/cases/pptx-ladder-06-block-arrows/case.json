@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-block-arrows.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "arrows"],
+  "tags": ["pptx", "ladder", "shapes", "arrows", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0,
+    "minForegroundRecall": 1,
     "maxChangedPixelRatioAtThreshold16": 0
   },
   "allowedUnsupportedFeatures": []
