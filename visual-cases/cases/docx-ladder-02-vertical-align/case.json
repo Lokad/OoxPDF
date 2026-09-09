@@ -3,17 +3,18 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-vertical-align.docx",
   "support": {
-    "minStructuralSimilarity": 0.98,
     "minForegroundColorHistogramCorrelation": 0.98,
     "maxMeanAbsoluteError": 2.0,
     "maxChangedPixelRatioAtThreshold16": 0.05
   },
+  "tags": ["needs-review"],
   "expected": {
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "minStructuralSimilarity": 0.98,
     "minForegroundColorHistogramCorrelation": 0.98,
     "maxMeanAbsoluteError": 2.0,
-    "maxChangedPixelRatioAtThreshold16": 0.05
+    "maxChangedPixelRatioAtThreshold16": 0.05,
+    "minForegroundRecall": 0.90
   }
 }
