@@ -847,6 +847,27 @@ internal static class FontTests
         TestAssert.Equal("ooxpdf-fonts/test-pack/files/aptos.ttf", handler.Requests[1]);
     }
 
+    public static void FontPackResolverCoalescesConcurrentFontDownloads()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest("test-pack", "files/aptos.ttf", fontBytes, "Aptos", "Aptos", "Aptos");
+        OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out StubHttpMessageHandler handler, responseDelay: TimeSpan.FromMilliseconds(50));
+
+        FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
+        Task<ReadOnlyMemory<byte>>[] reads = Enumerable.Range(0, 16)
+            .Select(_ => resolution.Source.GetBytesAsync(CancellationToken.None).AsTask())
+            .ToArray();
+        Task.WaitAll(reads);
+
+        foreach (Task<ReadOnlyMemory<byte>> read in reads)
+        {
+            TestAssert.True(read.Result.Span.SequenceEqual(fontBytes), "Concurrent reads must all observe the downloaded bytes.");
+        }
+
+        TestAssert.Equal(2, handler.TotalRequests);
+        TestAssert.Equal(1, handler.Requests.Count(path => path == "ooxpdf-fonts/test-pack/files/aptos.ttf"));
+    }
+
     public static void FontPackResolverRejectsHashMismatch()
     {
         byte[] expectedFontBytes = [1, 2, 3, 4];
@@ -916,7 +937,7 @@ internal static class FontTests
             "Expected presentation font discovery to expose font pack sources.");
     }
 
-    private static OoxPdfFontPackResolver CreateFontPackResolver(byte[] manifest, byte[]? fontBytes, out StubHttpMessageHandler handler)
+    private static OoxPdfFontPackResolver CreateFontPackResolver(byte[] manifest, byte[]? fontBytes, out StubHttpMessageHandler handler, TimeSpan responseDelay = default)
     {
         var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal)
         {
@@ -928,7 +949,7 @@ internal static class FontTests
             responses["ooxpdf-fonts/test-pack/files/fallback.ttf"] = fontBytes;
         }
 
-        handler = new StubHttpMessageHandler(responses);
+        handler = new StubHttpMessageHandler(responses, responseDelay: responseDelay);
         var httpClient = new HttpClient(handler);
         return OoxPdfFontPackResolver.CreateHttpAsync(
             "test-pack",
@@ -1233,33 +1254,48 @@ internal static class FontTests
         TestAssert.Throws<OoxPdfFontPackException>(() => OoxPdfFontPackResolver.CopyCappedAsync(over, 3, "probe", "https://example.test/x", CancellationToken.None).GetAwaiter().GetResult());
     }
 
-    private sealed class StubHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses, IReadOnlyDictionary<string, HttpContent>? rawContents = null) : HttpMessageHandler
+    private sealed class StubHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses, IReadOnlyDictionary<string, HttpContent>? rawContents = null, TimeSpan responseDelay = default) : HttpMessageHandler
     {
         public List<string> Requests { get; } = [];
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        public int TotalRequests => totalRequests;
+
+        private readonly object requestLock = new();
+        private int totalRequests;
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (responseDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(responseDelay, cancellationToken).ConfigureAwait(false);
+            }
+
             string path = request.RequestUri?.AbsolutePath.TrimStart('/') ?? "";
-            Requests.Add(path);
+            lock (requestLock)
+            {
+                Requests.Add(path);
+            }
+
+            Interlocked.Increment(ref totalRequests);
             if (rawContents is not null && rawContents.TryGetValue(path, out HttpContent? raw))
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = raw
-                });
+                };
             }
 
 
             if (!responses.TryGetValue(path, out byte[]? bytes))
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new ByteArrayContent(bytes)
-            });
+                    Content = new ByteArrayContent(bytes)
+                };
         }
     }
 

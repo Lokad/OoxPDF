@@ -432,6 +432,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         HttpClient httpClient,
         FontPackFile file) : IFontProgramSource
     {
+        private readonly SemaphoreSlim gate = new(1, 1);
         private ReadOnlyMemory<byte>? cachedBytes;
 
         public string StableId => "ooxpdf-font-pack:" + packId + ":" + file.Sha256;
@@ -443,16 +444,29 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
                 return cached;
             }
 
-            byte[] bytes = await DownloadBytesAsync(
-                httpClient,
-                new Uri(packRootUri, file.RelativePath),
-                "font file '" + file.RelativePath + "'",
-                Math.Min(file.ByteSize, MaxFontFileBytes),
-                ct).ConfigureAwait(false);
+            await gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                if (cachedBytes is ReadOnlyMemory<byte> rechecked)
+                {
+                    return rechecked;
+                }
 
-            ValidateFontBytes(file, bytes);
-            cachedBytes = bytes;
-            return bytes;
+                byte[] bytes = await DownloadBytesAsync(
+                    httpClient,
+                    new Uri(packRootUri, file.RelativePath),
+                    "font file '" + file.RelativePath + "'",
+                    Math.Min(file.ByteSize, MaxFontFileBytes),
+                    ct).ConfigureAwait(false);
+
+                ValidateFontBytes(file, bytes);
+                cachedBytes = bytes;
+                return bytes;
+            }
+            finally
+            {
+                gate.Release();
+            }
         }
 
         private static void ValidateFontBytes(FontPackFile file, byte[] bytes)
