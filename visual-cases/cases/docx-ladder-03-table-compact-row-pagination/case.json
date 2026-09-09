@@ -3,10 +3,11 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-compact-row-pagination.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "row-height", "pagination"],
+  "tags": ["docx", "ladder", "table", "row-height", "pagination", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "minForegroundRecall": 0.97
   }
 }

@@ -3,10 +3,11 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-cell-percentage-shading.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "shading"],
+  "tags": ["docx", "ladder", "table", "shading", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "minForegroundRecall": 0.98
   }
 }
