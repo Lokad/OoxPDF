@@ -3,7 +3,7 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-compact-before-spacing.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "paragraph", "spacing"],
+  "tags": ["docx", "ladder", "paragraph", "spacing", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
@@ -14,7 +14,8 @@
     "maxTextLineStartDelta": 0.25,
     "maxTextLineStartYDelta": 0.25,
     "matchTextLineStartsByPosition": true,
-    "compareFirstTextLineStartOnly": true
+    "compareFirstTextLineStartOnly": true,
+    "minForegroundRecall": 0.79
   },
   "allowedUnsupportedFeatures": []
 }
