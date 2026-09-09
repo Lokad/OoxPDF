@@ -10,7 +10,8 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.005,
-    "maxChangedPixelRatioAtThreshold16": 0.00013
+    "maxChangedPixelRatioAtThreshold16": 0.00013,
+    "minForegroundRecall": 0.95
   },
   "allowedUnsupportedFeatures": []
 }
