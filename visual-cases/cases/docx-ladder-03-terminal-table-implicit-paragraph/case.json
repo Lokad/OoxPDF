@@ -9,13 +9,15 @@
     "table",
     "terminal-table",
     "paragraph-mark",
-    "text-state"
+    "text-state",
+    "needs-review"
   ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "minForegroundRecall": 0.87
   },
   "allowedUnsupportedFeatures": []
 }
