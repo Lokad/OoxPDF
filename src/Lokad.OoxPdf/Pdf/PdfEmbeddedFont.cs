@@ -110,6 +110,16 @@ internal sealed class PdfEmbeddedFont
             // Whole-TrueType fallback is only valid for TrueType outlines: embedding
             // another format (e.g. CFF) as FontFile2/CIDFontType2 would silently
             // produce a mismatched font dictionary.
+            //
+            // P04 embed-call-site audit: every Create/Merge caller either gates on
+            // HasTrueTypeOutlines with a FONT_UNSUPPORTED_OUTLINES diagnostic
+            // (DOCX substitution, document-fallback, and per-character guards;
+            // PPTX substitution and emission skip) or re-embeds from an existing
+            // PdfEmbeddedFont.Font, which is TrueType by construction here (subset
+            // success and the whole-font fallback above both imply it). This throw
+            // is therefore unreachable through diagnosed conversion paths and stays
+            // as a loud backstop. Pinned by
+            // FontFormatTests.CffKindFontRefusesCidFontType2Embedding.
             if (!font.HasTrueTypeOutlines)
             {
                 throw new InvalidDataException("Cannot embed font '" + font.FamilyName + "' without TrueType outlines as CIDFontType2: " + subsetFailure);
