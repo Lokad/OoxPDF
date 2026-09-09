@@ -3,13 +3,13 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-border-alpha.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "table", "alpha", "border"],
+  "tags": ["pptx", "ladder", "table", "alpha", "border", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.224,
+    "minForegroundRecall": 0.98,
     "maxChangedPixelRatioAtThreshold16": 0.0025
   },
   "allowedUnsupportedFeatures": []
