@@ -3,13 +3,13 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-table.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "tables", "basic-table"],
+  "tags": ["pptx", "ladder", "tables", "basic-table", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.05,
+    "minForegroundRecall": 0.98,
     "maxChangedPixelRatioAtThreshold16": 0.00092
   },
   "allowedUnsupportedFeatures": []
