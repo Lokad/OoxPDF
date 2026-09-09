@@ -320,6 +320,28 @@ internal static class PdfWriterTests
         TestAssert.Contains("/C1 [0 0 1]", pdf);
     }
 
+    public static void SharedSpaceGlyphExtractsAsPlainSpace()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        TestAssert.Equal(font.MapCodePoint(0x20), font.MapCodePoint(0xA0));
+
+        // Both insertion orders resolve the shared space glyph to plain
+        // space: Office extracts spaces where sources mix NBSPs (see P03).
+        int[][] orders = [ [0x20, 0xA0], [0xA0, 0x20] ];
+        foreach (int[] codePoints in orders)
+        {
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, codePoints, CancellationToken.None);
+            TestAssert.True(embedded.TryGetEncodedCid(font.MapCodePoint(0x20), out ushort cid), "Shared space glyph must be encoded.");
+            TestAssert.Equal(0x20, embedded.UnicodeByCid[cid]);
+        }
+    }
+
     public static void WritesSubsetBaseFontWithSixLetterTagAndPlus()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

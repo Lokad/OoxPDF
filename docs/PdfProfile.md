@@ -41,8 +41,8 @@ CMap. Subsets cover exactly the used glyphs.
 - Only TrueType outlines embed. CFF/OpenType-CFF faces fall back to an
 embeddable typeface with `FONT_UNSUPPORTED_OUTLINES` (see Diagnostics);
 they are never written as FontFile3/CIDFontType0.
-- ToUnicode maps preserve source scalars per emitted CID, including shared
-glyphs resolved to one scalar (see the NBSP note in PLAN.md P03).
+- ToUnicode maps preserve source scalars per emitted CID. Glyphs shared by several source scalars resolve to one scalar: spaces win over NBSP (matching Word extraction; pinned by SharedSpaceGlyphExtractsAsPlainSpace and PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace). Private-use scalars pass through (pinned by the docx-symbols text-content gate).
+- Unbroken soft hyphens never reach the font layer: DOCX layout strips them before emission (pinned by DocxParagraphLayoutSuppressesUnbrokenSoftHyphens).
 Extraction fidelity is gated by `tools/CheckPdfTextContent.ps1`.
 
 ## Annotations and metadata
