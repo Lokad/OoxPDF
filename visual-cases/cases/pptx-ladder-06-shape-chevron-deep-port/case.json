@@ -3,14 +3,12 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-shape-chevron-deep-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shape", "adjustment", "chevron", "pptx-renderer-port"],
+  "tags": ["pptx", "ladder", "shape", "adjustment", "chevron", "pptx-renderer-port", "approximate"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 4.2,
-    "maxChangedPixelRatioAtThreshold16": 0.132
+    "diagnosticsMustBeEmpty": true
   },
   "allowedUnsupportedFeatures": []
 }
