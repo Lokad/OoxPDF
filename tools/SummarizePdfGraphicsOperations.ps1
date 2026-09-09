@@ -17,18 +17,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Read-JsonArray([string] $Path) {
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return @()
-    }
-
-    if ($items -is [array]) {
-        return @($items)
-    }
-
-    return @($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function OperationSourceOperator($Operation) {
     if ($null -eq $Operation) {
@@ -70,7 +59,8 @@ function Round-Bounds([double] $Value) {
 $selectedKinds = @($Kinds | ForEach-Object { [string]$_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
 $selectedOperators = @($Operators | ForEach-Object { [string]$_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
 
-$operations = @(Read-JsonArray $InputJson | Where-Object { $selectedKinds -contains $_.Kind })
+$allOperations = Read-JsonArray $InputJson
+$operations = @($allOperations | Where-Object { $selectedKinds -contains $_.Kind })
 if ($selectedOperators.Count -gt 0) {
     $operations = @($operations | Where-Object { $selectedOperators -contains (OperationSourceOperator $_) })
 }

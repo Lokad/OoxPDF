@@ -26,18 +26,7 @@ function Expand-PathList([string[]] $Values) {
     return ,$expanded.ToArray()
 }
 
-function Read-JsonArray([string] $Path) {
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return ,@()
-    }
-
-    if ($items -is [array]) {
-        return $items
-    }
-
-    return ,@($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function OptionalValue($Item, [string] $Name) {
     if ($null -eq $Item) {
@@ -172,7 +161,8 @@ if ($paths.Count -eq 0) {
 
 $summaries = foreach ($path in $paths) {
     $resolved = (Resolve-Path -LiteralPath $path).Path
-    $rows = @(Read-JsonArray $resolved)
+$readRows = Read-JsonArray $resolved
+$rows = @($readRows)
     $matchedRows = @($rows | Where-Object { (OptionalValue $_ "Status") -ne "missing" })
     $reliableRows = @($matchedRows | Where-Object { IsReliablePositionMatch $_ })
     $nonzeroRefRows = @($matchedRows | Where-Object { HasNonzeroRefTc $_ })

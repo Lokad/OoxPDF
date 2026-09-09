@@ -9,18 +9,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Read-JsonArray([string] $Path) {
-    $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Path).Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return @()
-    }
-
-    if ($items -is [array]) {
-        return $items
-    }
-
-    return @($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Optional-Double($Value) {
     if ($Value -is [array]) {
@@ -61,7 +50,8 @@ $summaryPaths = @(
 
 $rows = foreach ($path in $summaryPaths) {
     $resolved = Resolve-Path -LiteralPath $path
-    $items = @(Read-JsonArray $resolved.Path)
+$readItems = Read-JsonArray $resolved.Path
+$items = @($readItems)
     if ($items.Count -eq 0) {
         continue
     }
