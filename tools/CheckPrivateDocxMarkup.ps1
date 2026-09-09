@@ -674,19 +674,7 @@ function Get-DocxMarkupFeatureCounts([string] $Path) {
     }
 }
 
-function Read-JsonArray([string] $Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return @()
-    }
-
-    $json = Get-Content -Raw -LiteralPath $Path
-    if ([string]::IsNullOrWhiteSpace($json) -or $json.Trim() -eq "[]") {
-        return @()
-    }
-
-    return @(ConvertFrom-Json -InputObject $json)
-}
-
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 Assert-PrivateUntracked $caseFull "Private case manifest"
 

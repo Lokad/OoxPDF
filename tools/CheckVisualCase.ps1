@@ -39,22 +39,7 @@ function Invoke-RepoBuild([string] $Project, [string] $OutputDll, [string] $Desc
 
     & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") @params
 }
-function Read-JsonArray([string] $Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return ,@()
-    }
-
-    $items = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return @()
-    }
-
-    if ($items -is [array]) {
-        return $items
-    }
-
-    return @($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 $inputPath = Join-Path $caseDirectory $manifest.input
 $inputFull = (Resolve-Path -LiteralPath $inputPath).Path
@@ -748,7 +733,8 @@ if ($requiresCandidateFontInspection) {
             -OutputDirectory $candidateFontInspect
     }
 
-    $fontResources = @(Read-JsonArray $candidateFontResources)
+    $readFontResources = Read-JsonArray $candidateFontResources
+    $fontResources = @($readFontResources)
     if ($fontResources.Count -eq 0) {
         throw "PDF font gate failed because the candidate PDF had no page font resources."
     }

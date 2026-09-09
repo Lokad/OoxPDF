@@ -103,22 +103,7 @@ function Invoke-DotnetBuildIfStale {
     }
 }
 
-function Read-JsonArray([string] $Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return ,@()
-    }
-
-    $items = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
-    if ($null -eq $items) {
-        return @()
-    }
-
-    if ($items -is [array]) {
-        return $items
-    }
-
-    return @($items)
-}
+. (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function Read-JsonObject([string] $Path) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -3272,15 +3257,20 @@ if (-not $SkipRasterDiff) {
         throw "VisualDiff failed with exit code $LASTEXITCODE."
     }
 
-    $visualMetrics = @(Read-JsonArray (Join-Path $visualDiffDir "metrics.json"))
+    $readVisualMetrics = Read-JsonArrayIfExists (Join-Path $visualDiffDir "metrics.json")
+    $visualMetrics = @($readVisualMetrics)
 }
 
 $referenceTextOperations = Join-Path $referencePdfInspect "text-operations.json"
 $candidateTextOperations = Join-Path $candidatePdfInspect "text-operations.json"
-$referenceTextOperationItems = @(Read-JsonArray $referenceTextOperations)
-$candidateTextOperationItems = @(Read-JsonArray $candidateTextOperations)
-$referenceFontResources = @(Read-JsonArray (Join-Path $referencePdfInspect "font-resources.json"))
-$candidateFontResources = @(Read-JsonArray (Join-Path $candidatePdfInspect "font-resources.json"))
+$readReferenceTextOperationItems = Read-JsonArrayIfExists $referenceTextOperations
+$referenceTextOperationItems = @($readReferenceTextOperationItems)
+$readCandidateTextOperationItems = Read-JsonArrayIfExists $candidateTextOperations
+$candidateTextOperationItems = @($readCandidateTextOperationItems)
+$readReferenceFontResources = Read-JsonArrayIfExists (Join-Path $referencePdfInspect "font-resources.json")
+$referenceFontResources = @($readReferenceFontResources)
+$readCandidateFontResources = Read-JsonArrayIfExists (Join-Path $candidatePdfInspect "font-resources.json")
+$candidateFontResources = @($readCandidateFontResources)
 $fontResourceSummary = [ordered]@{
     Reference = New-FontResourceSummary $referenceFontResources
     Candidate = New-FontResourceSummary $candidateFontResources
@@ -3308,8 +3298,10 @@ if ((Test-Path -LiteralPath $referenceTextOperations) -and (Test-Path -LiteralPa
 
 $referenceGraphicsOperations = Join-Path $referencePdfInspect "graphics-operations.json"
 $candidateGraphicsOperations = Join-Path $candidatePdfInspect "graphics-operations.json"
-$referenceGraphicsOperationItems = @(Read-JsonArray $referenceGraphicsOperations)
-$candidateGraphicsOperationItems = @(Read-JsonArray $candidateGraphicsOperations)
+$readReferenceGraphicsOperationItems = Read-JsonArrayIfExists $referenceGraphicsOperations
+$referenceGraphicsOperationItems = @($readReferenceGraphicsOperationItems)
+$readCandidateGraphicsOperationItems = Read-JsonArrayIfExists $candidateGraphicsOperations
+$candidateGraphicsOperationItems = @($readCandidateGraphicsOperationItems)
 $referenceVisibleGraphicsOperationItems = @(Select-VisibleGraphicsOperations $referenceGraphicsOperationItems)
 $candidateVisibleGraphicsOperationItems = @(Select-VisibleGraphicsOperations $candidateGraphicsOperationItems)
 $graphicsComparisonExitCode = $null
@@ -3343,7 +3335,8 @@ Write-JsonFile (Join-Path $annotationsDir "comparison.json") $annotationComparis
 Write-JsonFile (Join-Path $annotationsDir "summary.json") $annotationDeltaSummary
 
 $candidateBalloonsPath = Join-Path $candidateDocxInspect "markup-balloons.json"
-$candidateBalloons = @(Read-JsonArray $candidateBalloonsPath | ForEach-Object { Convert-BalloonToRect $_ })
+$readCandidateBalloons = Read-JsonArrayIfExists $candidateBalloonsPath
+$candidateBalloons = @($readCandidateBalloons | ForEach-Object { Convert-BalloonToRect $_ })
 $referenceBalloonGraphics = @(Select-ReferenceBalloonGraphicCandidates $referenceGraphicsOperationItems)
 $candidateBalloonGraphics = @(Select-ReferenceBalloonGraphicCandidates $candidateGraphicsOperationItems)
 $broadBalloonGraphicComparison = @(Compare-RectLists $referenceBalloonGraphics $candidateBalloonGraphics $BalloonBoundsTolerance)
@@ -3372,7 +3365,8 @@ else {
 }
 $candidateLayoutSnapshot = Read-JsonObject (Join-Path $candidateDocxInspect "layout-snapshot.json")
 $candidateTextEmissionSummary = Read-JsonObject (Join-Path $candidateDocxInspect "text-emission-summary.json")
-$candidateSourceBlocks = @(Read-JsonArray (Join-Path $candidateDocxInspect "source-block-summary.json"))
+$readCandidateSourceBlocks = Read-JsonArrayIfExists (Join-Path $candidateDocxInspect "source-block-summary.json")
+$candidateSourceBlocks = @($readCandidateSourceBlocks)
 $candidateLayoutTableCount = if ($null -ne $candidateLayoutSnapshot -and $candidateLayoutSnapshot.PSObject.Properties.Name -contains "Tables") {
     @($candidateLayoutSnapshot.Tables | Where-Object { $null -ne $_ }).Count
 }
@@ -3566,7 +3560,8 @@ if (-not $SkipRasterDiff) {
             throw "VisualDiff region comparison failed with exit code $LASTEXITCODE."
         }
 
-        $rasterRegionMetrics = @(Read-JsonArray (Join-Path $visualDiffDir "region-metrics.json"))
+                $readRasterRegionMetrics = Read-JsonArrayIfExists (Join-Path $visualDiffDir "region-metrics.json")
+        $rasterRegionMetrics = @($readRasterRegionMetrics)
         $rasterRegionSummary = @(New-RasterRegionMetricSummary $rasterRegionMetrics)
     }
 }
