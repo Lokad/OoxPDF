@@ -801,9 +801,19 @@ internal sealed partial class OpenTypeFont
 
     private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables)
     {
-        var pairs = new Dictionary<uint, short>();
-        ReadLegacyKerningPairs(bytes, tables, pairs);
-        ReadGposPairAdjustments(bytes, tables, pairs);
+        // Collect first so the map below allocates exactly once: kern-pair
+        // expansion (especially class-based GPOS format 2) otherwise regrows the
+        // dictionary ~18 times on big faces. Insertion order is preserved, so
+        // duplicate keys keep last-wins semantics.
+        var collected = new List<(uint Key, short Value)>();
+        ReadLegacyKerningPairs(bytes, tables, collected);
+        ReadGposPairAdjustments(bytes, tables, collected);
+        var pairs = new Dictionary<uint, short>(collected.Count);
+        foreach ((uint key, short value) in collected)
+        {
+            pairs[key] = value;
+        }
+
         return pairs;
     }
 

@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Fonts;
 
 internal sealed partial class OpenTypeFont
 {
-    private static void ReadLegacyKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, Dictionary<uint, short> pairs)
+    private static void ReadLegacyKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, List<(uint Key, short Value)> pairs)
     {
         if (!tables.TryGetValue("kern", out TableRecord kern) || kern.Length < 4)
         {
@@ -34,7 +34,7 @@ internal sealed partial class OpenTypeFont
                     short value = I16(bytes, pairOffset + 4);
                     if (value != 0)
                     {
-                        pairs[((uint)left << 16) | right] = value;
+                        pairs.Add((((uint)left << 16) | right, value));
                     }
 
                     pairOffset += 6;
@@ -50,7 +50,7 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, Dictionary<uint, short> pairs)
+    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, List<(uint Key, short Value)> pairs)
     {
         if (!tables.TryGetValue("GPOS", out TableRecord gpos) || gpos.Length < 10)
         {
@@ -204,7 +204,7 @@ internal sealed partial class OpenTypeFont
         int subtable,
         ushort lookupType,
         int tableEnd,
-        Dictionary<uint, short> pairs)
+        List<(uint Key, short Value)> pairs)
     {
         if (lookupType == 2)
         {
@@ -233,7 +233,7 @@ internal sealed partial class OpenTypeFont
         ReadGposPairAdjustmentSubtable(bytes, extensionSubtable, tableEnd, pairs);
     }
 
-    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, Dictionary<uint, short> pairs)
+    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, List<(uint Key, short Value)> pairs)
     {
         if (subtable + 10 > tableEnd)
         {
@@ -270,7 +270,7 @@ internal sealed partial class OpenTypeFont
                     short xAdvance = ReadXAdvance(bytes, pairValue + 2, valueFormat1);
                     if (xAdvance != 0)
                     {
-                        pairs[((uint)coverageGlyphs[i] << 16) | rightGlyph] = xAdvance;
+                        pairs.Add((((uint)coverageGlyphs[i] << 16) | rightGlyph, xAdvance));
                     }
 
                     pairValue += 2 + valueRecordSize1 + valueRecordSize2;
@@ -317,7 +317,7 @@ internal sealed partial class OpenTypeFont
                     {
                         foreach (ushort rightGlyph in rightClassGlyphs.Value)
                         {
-                            pairs[((uint)leftGlyph << 16) | rightGlyph] = xAdvance;
+                            pairs.Add((((uint)leftGlyph << 16) | rightGlyph, xAdvance));
                         }
                     }
                 }
