@@ -3,10 +3,11 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-continuation-adjacency.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "paragraph", "pagination", "spacing"],
+  "tags": ["docx", "ladder", "table", "paragraph", "pagination", "spacing", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "minForegroundRecall": 0.89
   }
 }

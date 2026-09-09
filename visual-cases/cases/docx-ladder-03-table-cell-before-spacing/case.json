@@ -3,10 +3,11 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-cell-before-spacing.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "paragraph-spacing", "row-height"],
+  "tags": ["docx", "ladder", "table", "paragraph-spacing", "row-height", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "minForegroundRecall": 0.97
   }
 }
