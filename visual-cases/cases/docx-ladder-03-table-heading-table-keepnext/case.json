@@ -3,7 +3,7 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-heading-table-keepnext.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "heading", "keep-next", "spacing"],
+  "tags": ["docx", "ladder", "table", "heading", "keep-next", "spacing", "approximate"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
