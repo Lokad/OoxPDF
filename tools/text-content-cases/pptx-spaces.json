@@ -1,0 +1,4 @@
+{
+  "input": "tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-repeated-spaces.pptx",
+  "expected": ["Alpha  beta   gamma", "Left  middle   right"]
+}

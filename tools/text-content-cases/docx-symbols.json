@@ -1,0 +1,4 @@
+{
+  "input": "tests/Lokad.OoxPdf.Tests/Cases/docx-font-fallback-bullets.docx",
+  "expected": ["Item one with text", "Item \uf0b7 with marker", "Item three with text", "Item \uf0b7 with marker", "Item \u2022 with marker", "Item \u2022 with marker"]
+}

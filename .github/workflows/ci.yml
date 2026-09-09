@@ -28,5 +28,7 @@ jobs:
           -c Release -- --skip-slow
       - name: Visual manifest gate
         run: pwsh -NoProfile -File tools/ValidateVisualCases.ps1
+      - name: Text content gate
+        run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1
       - name: Allocation probe self-test
         run: pwsh -NoProfile -File tools/MeasureAllocation.ps1 -SelfTest
