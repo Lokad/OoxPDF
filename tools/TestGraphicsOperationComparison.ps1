@@ -1,7 +1,10 @@
 # Adversarial checks for ComparePdfGraphicsOperations (T05): reordered runs
 # must match robustly while duplicated, deleted, kind-mismatched, or moved
-# runs fail loudly with reported (not invented) deltas. No Office/COM or
-# reference cache needed.
+# runs fail loudly with reported (not invented) deltas. Translated and scaled
+# equivalents (Fill and Clip, with and without path-coordinate matching) must
+# likewise fail loudly: the comparison has no transform normalization, so a
+# shifted path reports its real delta instead of passing or crashing.
+# No Office/COM or reference cache needed.
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -19,6 +22,21 @@ function Write-Ops([string] $Name, [object[]] $Ops) {
 
 function New-Rect($Kind, $MinX, $MinY, $MaxX, $MaxY, $Operator = "f*") {
     return [pscustomobject]@{ PageNumber = 1; Kind = $Kind; Operator = $Operator; SegmentCount = 4; MoveCount = 1; LineCount = 3; CurveCount = 0; CloseCount = 1; MinX = $MinX; MinY = $MinY; MaxX = $MaxX; MaxY = $MaxY; LineWidth = 1 }
+}
+
+function New-PathRect($Kind, $MinX, $MinY, $MaxX, $MaxY, $Dx = 0, $Dy = 0, $Operator = "f*") {
+    $x0 = $MinX + $Dx
+    $y0 = $MinY + $Dy
+    $x1 = $MaxX + $Dx
+    $y1 = $MaxY + $Dy
+    $commands = @(
+        [pscustomobject]@{ Operator = "m"; Values = @($x0, $y0) },
+        [pscustomobject]@{ Operator = "l"; Values = @($x1, $y0) },
+        [pscustomobject]@{ Operator = "l"; Values = @($x1, $y1) },
+        [pscustomobject]@{ Operator = "l"; Values = @($x0, $y1) },
+        [pscustomobject]@{ Operator = "h"; Values = @() }
+    )
+    return [pscustomobject]@{ PageNumber = 1; Kind = $Kind; Operator = $Operator; SegmentCount = 4; MoveCount = 1; LineCount = 3; CurveCount = 0; CloseCount = 1; MinX = $x0; MinY = $y0; MaxX = $x1; MaxY = $y1; LineWidth = 1; PathCommands = $commands }
 }
 
 $failures = @()
@@ -56,8 +74,15 @@ Invoke-Case "clip-reordered" @($k1, $k2) @($k2, $k1) 0 0
 Invoke-Case "clip-deleted" @($k1, $k2) @($k1) 1 1
 Invoke-Case "operator-ignored" @($a) @((New-Rect "Fill" 10 10 30 30 "f")) 0 0
 Invoke-Case "operator-mismatch" @($a) @((New-Rect "Fill" 10 10 30 30 "f")) 1 0 "-MatchOperator"
+$pa = New-PathRect "Fill" 10 10 30 30
+Invoke-Case "path-identical" @($pa) @((New-PathRect "Fill" 10 10 30 30)) 0 0
+Invoke-Case "path-translated" @($pa) @((New-PathRect "Fill" 10 10 30 30 10 0)) 1 0
+Invoke-Case "path-translated-coords" @($pa) @((New-PathRect "Fill" 10 10 30 30 10 0)) 1 0 "-MatchPathCommandCoordinates"
+Invoke-Case "path-scaled" @($pa) @((New-PathRect "Fill" 10 10 50 50)) 1 0
+$pc = New-PathRect "Clip" 10 10 30 30 0 0 "W*"
+Invoke-Case "clip-translated" @($pc) @((New-PathRect "Clip" 10 10 30 30 10 0 "W*")) 1 0
 
 if ($failures.Count -ne 0) {
     throw ("Graphics comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Graphics comparison adversarial checks passed (11 cases)."
+Write-Host "Graphics comparison adversarial checks passed (16 cases)."
