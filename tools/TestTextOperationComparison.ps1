@@ -16,17 +16,18 @@ function Write-Ops([string] $Name, [object[]] $Ops) {
     return $path
 }
 
-function New-Op($X, $Y, $Text) {
-    return [pscustomobject]@{ X = $X; Y = $Y; FontSize = 12; CharacterSpacing = 0; Payload = $Text }
+function New-Op($X, $Y, $Text, $EffX = $null, $EffY = $null) {
+    return [pscustomobject]@{ X = $X; Y = $Y; FontSize = 12; CharacterSpacing = 0; Payload = $Text; EffectiveX = $EffX; EffectiveY = $EffY }
 }
 
 $failures = @()
-function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidate, [int] $ExpectedExit, [int] $ExpectedMissing) {
+function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidate, [int] $ExpectedExit, [int] $ExpectedMissing, [string] $ExtraArgs = "") {
     $refPath = Write-Ops ($Name + "-ref") $Reference
     $candPath = Write-Ops ($Name + "-cand") $Candidate
     $outPath = Join-Path $scratch ($Name + "-out.txt")
     $tool = Join-Path $repoRoot "tools/ComparePdfTextOperations.ps1"
-    $proc = Start-Process pwsh -ArgumentList "-NoProfile", "-File", $tool, "-Reference", $refPath, "-Candidate", $candPath, "-MatchByPosition" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outPath
+    $toolArgs = @("-NoProfile", "-File", $tool, "-Reference", $refPath, "-Candidate", $candPath, "-MatchByPosition") + @($ExtraArgs -split " " | Where-Object { $_ -ne "" })
+    $proc = Start-Process pwsh -ArgumentList $toolArgs -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outPath
     $code = $proc.ExitCode
     $missing = @(Get-Content -LiteralPath $outPath | Where-Object { $_ -match "^\s*\d+\s+missing\b" }).Count
     if ($code -ne $ExpectedExit -or $missing -ne $ExpectedMissing) {
@@ -47,8 +48,13 @@ Invoke-Case "deleted" @($a, $b, $c) @($a, $c) 1 1
 Invoke-Case "duplicated" @($a, $b) @($a, $b, (New-Op 30 20 "Beta")) 1 1
 Invoke-Case "split" @((New-Op 10 20 "Hello")) @((New-Op 10 20 "Hel"), (New-Op 25 20 "lo")) 1 1
 Invoke-Case "moved" @($a) @((New-Op 10.5 20 "Alpha")) 1 0
+$mEff = New-Op 10 20 "Shifted" 110 120
+$mCand = New-Op 110 120 "Shifted" 110 120
+Invoke-Case "matrix-raw" @($mEff) @($mCand) 1 0
+Invoke-Case "matrix-effective" @($mEff) @($mCand) 0 0 "-UseEffectiveMatrix"
+Invoke-Case "matrix-fallback" @((New-Op 10 20 "Plain")) @((New-Op 10 20 "Plain")) 0 0 "-UseEffectiveMatrix"
 
 if ($failures.Count -ne 0) {
     throw ("Text comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Text comparison adversarial checks passed (6 cases)."
+Write-Host "Text comparison adversarial checks passed (9 cases)."
