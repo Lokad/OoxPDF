@@ -902,8 +902,8 @@ internal sealed partial record DocxLayoutSnapshot(
             lastLine?.BaselineY,
             cellLayout.InlineImages.Count,
             paragraphs.Count,
-            paragraphs.Count(paragraph => HasBeforeSpacingToken(paragraph.EffectiveProperties.Spacing)),
-            paragraphs.Count(paragraph => HasAfterSpacingToken(paragraph.EffectiveProperties.Spacing)),
+            paragraphs.Count(paragraph => DocxParagraphSpacing.HasBeforeSpacingSide(paragraph.EffectiveProperties.Spacing)),
+            paragraphs.Count(paragraph => DocxParagraphSpacing.HasAfterSpacingSide(paragraph.EffectiveProperties.Spacing)),
             paragraphs.Count(paragraph => string.Equals(paragraph.EffectiveProperties.Spacing.BeforeValue, "0", StringComparison.Ordinal)),
             paragraphs.Count(paragraph => string.Equals(paragraph.EffectiveProperties.Spacing.AfterValue, "0", StringComparison.Ordinal)),
             spacingBeforePoints.Count == 0 ? null : spacingBeforePoints.Min(),
@@ -1049,17 +1049,4 @@ internal sealed partial record DocxLayoutSnapshot(
         return value is '-' or '/' or '\\' or '\u2010' or '\u2012' or '\u2013' or '\u2014';
     }
 
-    private static bool HasBeforeSpacingToken(DocxParagraphSpacing spacing)
-    {
-        return spacing.BeforeValue is not null ||
-            spacing.BeforeLinesValue is not null ||
-            spacing.BeforeAutoSpacingValue is not null;
-    }
-
-    private static bool HasAfterSpacingToken(DocxParagraphSpacing spacing)
-    {
-        return spacing.AfterValue is not null ||
-            spacing.AfterLinesValue is not null ||
-            spacing.AfterAutoSpacingValue is not null;
-    }
 }

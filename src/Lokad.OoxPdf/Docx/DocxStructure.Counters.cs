@@ -247,20 +247,6 @@ internal sealed partial record DocxStructureSnapshot
         return reference.SourceRunIndex >= 0 && reference.RunChildIndex >= 0;
     }
 
-    private static bool HasBeforeSpacingToken(DocxParagraphSpacing spacing)
-    {
-        return spacing.BeforeValue is not null ||
-            spacing.BeforeLinesValue is not null ||
-            spacing.BeforeAutoSpacingValue is not null;
-    }
-
-    private static bool HasAfterSpacingToken(DocxParagraphSpacing spacing)
-    {
-        return spacing.AfterValue is not null ||
-            spacing.AfterLinesValue is not null ||
-            spacing.AfterAutoSpacingValue is not null;
-    }
-
     private static int TextLength(DocxParagraph paragraph)
     {
         return paragraph.Runs.Sum(run => run.Text.Length);
