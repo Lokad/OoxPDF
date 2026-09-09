@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-09-title-placeholder.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "inheritance", "placeholders"],
+  "tags": ["pptx", "ladder", "inheritance", "placeholders", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.15,
+    "minForegroundRecall": 0.98,
     "maxChangedPixelRatioAtThreshold16": 0.003
   },
   "allowedUnsupportedFeatures": []
