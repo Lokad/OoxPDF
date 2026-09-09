@@ -361,6 +361,41 @@ internal sealed partial class PptxRenderer
     private const int MaxSpreadsheetColumn = 16384;
     private const int MaxSpreadsheetRow = 1048576;
 
+    // Single owner for A1-style references. Formula ranges use the Excel grid
+    // bounds; worksheet table/dimension refs pass unbounded limits to preserve
+    // their validation policy.
+    private static bool TryParseCellReference(
+        string reference,
+        out int column,
+        out int row,
+        int maxColumn = MaxSpreadsheetColumn,
+        int maxRow = MaxSpreadsheetRow,
+        int maxLetters = 3)
+    {
+        column = 0;
+        row = 0;
+        string normalized = reference.Replace("$", string.Empty, StringComparison.Ordinal).Trim();
+        int index = 0;
+        int letters = 0;
+        while (index < normalized.Length && char.IsAsciiLetter(normalized[index]))
+        {
+            column = column * 26 + (char.ToUpperInvariant(normalized[index]) - 'A' + 1);
+            index++;
+            letters++;
+            if (letters > maxLetters)
+            {
+                return false;
+            }
+        }
+
+        if (letters == 0 || letters > maxLetters || column <= 0 || column > maxColumn || index == normalized.Length)
+        {
+            return false;
+        }
+
+        return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row >= 1 && row <= maxRow;
+    }
+
     // Total hidden-column insertions examined across all <col> runs in one
     // worksheet. The grid holds at most MaxSpreadsheetColumn distinct columns,
     // so genuine files stay far below this budget; anything beyond signals a
@@ -661,7 +696,7 @@ internal sealed partial class PptxRenderer
         lastColumn = 0;
         lastRow = 0;
         string[] references = reference.Split(':', 2, StringSplitOptions.TrimEntries);
-        if (!TryParseSpreadsheetCellReference(references[0], out firstColumn, out firstRow))
+        if (!TryParseCellReference(references[0], out firstColumn, out firstRow, maxColumn: int.MaxValue, maxRow: int.MaxValue, maxLetters: int.MaxValue))
         {
             return false;
         }
@@ -673,27 +708,7 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        return TryParseSpreadsheetCellReference(references[1], out lastColumn, out lastRow);
-    }
-
-    private static bool TryParseSpreadsheetCellReference(string reference, out int column, out int row)
-    {
-        column = 0;
-        row = 0;
-        string normalized = reference.Replace("$", string.Empty, StringComparison.Ordinal).Trim();
-        int index = 0;
-        while (index < normalized.Length && char.IsAsciiLetter(normalized[index]))
-        {
-            column = (column * 26) + (char.ToUpperInvariant(normalized[index]) - 'A' + 1);
-            index++;
-        }
-
-        if (column <= 0 || index == normalized.Length)
-        {
-            return false;
-        }
-
-        return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row > 0;
+        return TryParseCellReference(references[1], out lastColumn, out lastRow, maxColumn: int.MaxValue, maxRow: int.MaxValue, maxLetters: int.MaxValue);
     }
 
     private static int? ReadSpreadsheetCellStyleIndex(XElement cell)

@@ -682,32 +682,6 @@ internal sealed partial class PptxRenderer
             return sheetName;
         }
 
-        private static bool TryParseCellReference(string reference, out int column, out int row)
-        {
-            column = 0;
-            row = 0;
-            string normalized = reference.Replace("$", string.Empty, StringComparison.Ordinal).Trim();
-            int index = 0;
-            int letters = 0;
-            while (index < normalized.Length && char.IsAsciiLetter(normalized[index]))
-            {
-                column = column * 26 + (char.ToUpperInvariant(normalized[index]) - 'A' + 1);
-                index++;
-                letters++;
-                if (letters > 3)
-                {
-                    return false;
-                }
-            }
-
-            if (letters == 0 || letters > 3 || column <= 0 || column > 16384 || index == normalized.Length)
-            {
-                return false;
-            }
-
-            return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row >= 1 && row <= 1048576;
-        }
-
         private static string ToCellReference(int column, int row)
         {
             Span<char> buffer = stackalloc char[16];

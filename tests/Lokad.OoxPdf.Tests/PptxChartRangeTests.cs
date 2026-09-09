@@ -27,6 +27,20 @@ internal static class PptxChartRangeTests
         TestAssert.Equal(0, ReadCellCount(workbook, "Sheet1!$AAAA$1:$AAAA$2"));
     }
 
+    public static void TableReferencesKeepUnboundedValidation()
+    {
+        MethodInfo parse = typeof(PptxRenderer).GetMethod(
+            "TryParseTableReference",
+            BindingFlags.NonPublic | BindingFlags.Static) ?? throw new InvalidOperationException("Expected table reference parser.");
+        object?[] args = ["A1:XFE1048577", 0, 0, 0, 0];
+        bool parsed = (bool)parse.Invoke(null, args)!;
+        TestAssert.True(parsed, "Worksheet table refs keep unbounded validation (column 16385, row 1048577 must parse).");
+        TestAssert.Equal(1, (int)args[1]!);
+        TestAssert.Equal(1, (int)args[2]!);
+        TestAssert.Equal(16385, (int)args[3]!);
+        TestAssert.Equal(1048577, (int)args[4]!);
+    }
+
     public static void SmallRangeReadsCells()
     {
         object workbook = CreateWorkbook();
